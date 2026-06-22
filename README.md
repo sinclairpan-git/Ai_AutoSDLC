@@ -189,6 +189,13 @@ AI-SDLC now also persists a project-level preferred command shell in `.ai-sdlc/p
 
 If your goal is the current governed frontend path from requirement to browser-gate closure, the beginner command loop starts with one setup command:
 
+In the current source checkout, the ordinary recommended frontend provider is
+`vue3` + `public-primevue` + `modern-saas`. This uses PrimeVue with the
+framework-managed Vue3 template, Vite, UnoCSS, CSS variables, Pinia, Vue Router,
+and the Base component layer. If the requirement explicitly targets the built-in
+Vue2 enterprise component library, choose `vue2` + `enterprise-vue2` explicitly
+instead of relying on the ordinary default.
+
 1. `python -m ai_sdlc init .`
 What it does: initializes `.ai-sdlc/`, asks only for the necessary AI-agent and shell choices, installs the adapter file, records project bootstrap state, and runs the safe rehearsal automatically.
 Next command: describe the requirement in chat.
@@ -211,6 +218,11 @@ Next command: `python -m ai_sdlc program browser-gate-probe --execute`
 
 5. `python -m ai_sdlc program browser-gate-probe --execute`
 What it does: runs the browser gate against the managed frontend entry, writes `.ai-sdlc/memory/frontend-browser-gate/latest.yaml`, and reports the next action based on gate state.
+For generated Vue3 `public-primevue` frontends, the gate starts the Vite dev
+server, verifies the page is not blank, and treats browser console/page errors
+as blockers. It also writes desktop/mobile visual evidence under the gate
+artifact root and records first-version visual/accessibility/interaction
+findings as advisory warnings.
 What it may download: nothing by itself if runtime prerequisites already exist; otherwise the earlier apply step should already have installed the browser runtime.
 Next command:
 - If the output says the baseline is ready to materialize: `python -m ai_sdlc program browser-gate-baseline --execute --yes`

@@ -48,7 +48,7 @@
 
 20. **文件存在不等于阶段完成**：`recover --reconcile`、断点修复、resume-pack 重建等状态恢复路径不得仅依据 `spec.md` / `plan.md` / `tasks.md` / `task-execution-log.md` 的文件存在性推断阶段已完成。若 formal 文档 frontmatter 标记 `stage: design-placeholder`，当前阶段最多停在 **design**，不得记录 design/decompose/verify/execute 已完成；若标记 `stage: decompose-placeholder`，当前阶段最多停在 **decompose**，不得记录 decompose/verify/execute 已完成。阶段推进必须尊重 frontmatter、门禁结果与可验证 evidence，缺少这些证据时应 fail-closed 到对应下一阶段。
 
-21. **前端方案确认先于实现**：当用户需求涉及前端需求、UI、页面、组件、浏览器交互或前端工程时，在进入 **execute** 或修改产品前端代码前，必须先给出技术栈 / 组件库建议，并等待用户明确确认。确认内容至少包括 `frontend_stack`、`provider_id`、组件库 / 组件来源、样式方案和是否使用框架内置 provider；可用 `program solution-confirm --dry-run` 预览，并且只有在用户确认后才允许执行 `program solution-confirm --execute --yes` 或等价落库动作。若用户目标是框架自带 Vue2 企业级组件库，默认建议必须包含 `enterprise-vue2` / `vue2` 路径，不得擅自切到 `public-primevue`、Vue3、React 或其他栈。技术栈 / 组件库未确认时，法定下一步只能停在 refine/design/decompose 或输出确认卡，**不得进入 execute、不得生成实现代码、不得运行 managed delivery apply**。
+21. **前端方案确认先于实现**：当用户需求涉及前端需求、UI、页面、组件、浏览器交互或前端工程时，在进入 **execute** 或修改产品前端代码前，必须先给出技术栈 / 组件库建议，并等待用户明确确认。确认内容至少包括 `frontend_stack`、`provider_id`、组件库 / 组件来源、样式方案和是否使用框架内置 provider；可用 `program solution-confirm --dry-run` 预览，并且只有在用户确认后才允许执行 `program solution-confirm --execute --yes` 或等价落库动作。普通未显式指定 provider 的新前端需求，首个推荐应为 `vue3` / `public-primevue` / `modern-saas`。若用户目标是框架自带 Vue2 企业级组件库，默认建议必须包含 `enterprise-vue2` / `vue2` 路径，不得擅自切到 `public-primevue`、Vue3、React 或其他栈。技术栈 / 组件库未确认时，法定下一步只能停在 refine/design/decompose 或输出确认卡，**不得进入 execute、不得生成实现代码、不得运行 managed delivery apply**。
 
 ## 阶段执行顺序
 

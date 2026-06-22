@@ -1854,6 +1854,11 @@ specs:
 - id: 187-agentops-self-iteration-monitoring
   path: specs/187-agentops-self-iteration-monitoring
   depends_on: []
+- id: 188-vue3-public-primevue-default-provider-governance
+  path: specs/188-vue3-public-primevue-default-provider-governance
+  depends_on:
+  - 073-frontend-p2-provider-style-solution-baseline
+  - 143-frontend-mainline-browser-gate-real-probe-runtime-baseline
 truth_snapshot:
   generated_at: '2026-06-02T04:02:26Z'
   generated_by: ai-sdlc program truth sync
@@ -10409,6 +10414,51 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 187-agentops-self-iteration-monitoring
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/188-vue3-public-primevue-default-provider-governance/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 188-vue3-public-primevue-default-provider-governance
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/188-vue3-public-primevue-default-provider-governance/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 188-vue3-public-primevue-default-provider-governance
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/188-vue3-public-primevue-default-provider-governance/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 188-vue3-public-primevue-default-provider-governance
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/188-vue3-public-primevue-default-provider-governance/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 188-vue3-public-primevue-default-provider-governance
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/188-vue3-public-primevue-default-provider-governance/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 188-vue3-public-primevue-default-provider-governance
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0

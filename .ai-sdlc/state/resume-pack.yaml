@@ -1,28 +1,19 @@
 current_stage: execute
-current_batch: 3
-last_committed_task: T31
+current_batch: 7
+last_committed_task: T71
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/187-agentops-self-iteration-monitoring/spec.md
-  plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
-  tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
+  spec_path: specs/188-vue3-public-primevue-default-provider-governance/spec.md
+  plan_path: specs/188-vue3-public-primevue-default-provider-governance/plan.md
+  tasks_path: specs/188-vue3-public-primevue-default-provider-governance/tasks.md
   active_files: []
-  context_summary: 'Goal: Publish AI-SDLC v0.8.3 patch release for the frontend stack/component-library
-    confirmation guard. | State: Prepared release branch codex/release-v0.8.3. Version
-    surfaces updated from 0.8.2 to 0.8.3 across pyproject, package fallback version,
-    release entry docs, offline packaging docs, release workflows, Windows offline
-    upgrade smoke expected version, verify_constraints release truth, and tests. Added
-    docs/releases/v0.8.3.md describing the frontend-governance safety patch. | Next:
-    Commit v0.8.3 release branch, push, open PR, request @codex review, create 5-minute
-    heartbeat, monitor checks/review, merge when clean, create GitHub Release v0.8.3,
-    run release-build.yml with upload_to_release=true, then run release-artifact-smoke.yml
-    for v0.8.3.'
-current_branch: codex/release-v0.8.3
+  context_summary: 'Goal: 188 vue3/public-primevue default provider governance PR #84 closeout | State: Addressed latest Codex P2 by making the Python browser-gate timeout path kill the Node runner process tree. Local targeted browser/visual/a11y tests, ruff, diff check, and verify constraints passed. | Next: Commit, push, re-request Codex review, and monitor PR #84 checks until clean.'
+current_branch: feature/188-vue3-public-primevue-default-provider-governance-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-11T01:08:21+00:00'
+timestamp: '2026-06-22T10:28:00+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f

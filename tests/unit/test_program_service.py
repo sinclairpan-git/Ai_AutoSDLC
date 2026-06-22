@@ -5120,26 +5120,68 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert artifact_action.depends_on_action_ids == ["visual-regression-runtime-install"]
     generated_files = artifact_action.executor_payload["files"]
     assert [item["path"] for item in generated_files] == [
+        "vite.config.ts",
+        "tsconfig.json",
+        "uno.config.ts",
         "index.html",
+        "src/env.d.ts",
+        "src/main.ts",
+        "src/plugins/primevue.ts",
+        "src/router/index.ts",
+        "src/stores/app.ts",
+        "src/styles/reset.css",
+        "src/styles/variables.css",
+        "src/styles/primevue.css",
+        "src/styles/main.css",
         "src/generated/frontend-delivery-context.ts",
         "src/generated/provider-adapter.ts",
         "src/App.vue",
+        "src/components/base/BaseButton.vue",
+        "src/components/base/BaseTable.vue",
+        "src/components/base/BaseDialog.vue",
+        "src/components/base/BaseForm.vue",
+        "src/views/ManagedDeliverySmoke.vue",
     ]
-    assert "frontend-browser-entry" in generated_files[0]["content"]
-    assert "vue3-public-primevue" in generated_files[0]["content"]
-    assert 'deliveryEntryId: "vue3-public-primevue"' in generated_files[1]["content"]
-    assert '"primevue"' in generated_files[1]["content"]
-    assert 'carrierMode: "target-project-adapter-layer"' in generated_files[1]["content"]
-    assert 'runtimeDeliveryState: "scaffolded"' in generated_files[1]["content"]
-    assert 'evidenceReturnState: "missing"' in generated_files[1]["content"]
-    assert "dashboard-workspace" in generated_files[1]["content"]
-    assert 'import Button from "primevue/button";' in generated_files[2]["content"]
-    assert '"UiTable"' in generated_files[2]["content"]
-    assert '"primevue/datatable"' in generated_files[2]["content"]
-    assert 'from "./generated/provider-adapter"' in generated_files[3]["content"]
-    assert "publicPrimeVueProviderComponents" in generated_files[3]["content"]
-    assert "providerComponents.UiSearchBar.component" in generated_files[3]["content"]
-    assert "providerComponents.UiTable.component" in generated_files[3]["content"]
+    generated_by_path = {item["path"]: item["content"] for item in generated_files}
+    assert '<div id="app"></div>' in generated_by_path["index.html"]
+    assert "createApp" in generated_by_path["src/main.ts"]
+    assert "PrimeVue" in generated_by_path["src/plugins/primevue.ts"]
+    assert "defineConfig" in generated_by_path["uno.config.ts"]
+    assert (
+        'deliveryEntryId: "vue3-public-primevue"'
+        in generated_by_path["src/generated/frontend-delivery-context.ts"]
+    )
+    assert '"primevue"' in generated_by_path["src/generated/frontend-delivery-context.ts"]
+    assert (
+        'carrierMode: "target-project-adapter-layer"'
+        in generated_by_path["src/generated/frontend-delivery-context.ts"]
+    )
+    assert (
+        'runtimeDeliveryState: "scaffolded"'
+        in generated_by_path["src/generated/frontend-delivery-context.ts"]
+    )
+    assert (
+        'evidenceReturnState: "missing"'
+        in generated_by_path["src/generated/frontend-delivery-context.ts"]
+    )
+    assert "dashboard-workspace" in generated_by_path[
+        "src/generated/frontend-delivery-context.ts"
+    ]
+    assert (
+        'import Button from "primevue/button";'
+        in generated_by_path["src/generated/provider-adapter.ts"]
+    )
+    assert '"UiTable"' in generated_by_path["src/generated/provider-adapter.ts"]
+    assert '"primevue/datatable"' in generated_by_path["src/generated/provider-adapter.ts"]
+    assert "RouterView" in generated_by_path["src/App.vue"]
+    smoke_view = generated_by_path["src/views/ManagedDeliverySmoke.vue"]
+    assert "BaseButton" in smoke_view
+    assert "BaseTable" in smoke_view
+    assert "BaseDialog" in smoke_view
+    assert "BaseForm" in smoke_view
+    assert "entry-eyebrow" in smoke_view
+    assert "package-item" in smoke_view
+    assert "page-item" in smoke_view
 
 
 def test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise_adapter(
@@ -5196,16 +5238,21 @@ def test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise
         for item in generated_files
         if item["path"] == "src/generated/provider-adapter.ts"
     )["content"]
-    app_vue = next(
-        item for item in generated_files if item["path"] == "src/App.vue"
+    smoke_view = next(
+        item
+        for item in generated_files
+        if item["path"] == "src/views/ManagedDeliverySmoke.vue"
     )["content"]
     assert "ProviderFallbackComponent" in provider_adapter
     assert '"UiPageHeader"' in provider_adapter
     assert '"UiCard"' in provider_adapter
     assert "Column: ProviderFallbackColumn" in provider_adapter
     assert "publicPrimeVueProviderComponents = {}" not in provider_adapter
-    assert "providerComponents.UiPageHeader.component" in app_vue
-    assert "Managed provider adapter scaffold" in app_vue
+    assert "providerComponents.UiPageHeader.component" in smoke_view
+    assert "Managed provider adapter scaffold" in smoke_view
+    assert "entry-eyebrow" in smoke_view
+    assert "package-item" in smoke_view
+    assert "page-item" in smoke_view
 
 
 def test_build_frontend_managed_delivery_apply_request_splits_enterprise_and_public_runtime_installs(
@@ -15671,7 +15718,7 @@ def test_execution_gates_pass_for_closed_framework_capability_without_observatio
     assert not any("frontend execute gate not clear" in item for item in gates.failed)
 
 
-def test_build_frontend_solution_confirmation_recommends_enterprise_defaults_in_simple_mode(
+def test_build_frontend_solution_confirmation_recommends_public_primevue_defaults_in_simple_mode(
     tmp_path: Path,
 ) -> None:
     for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
@@ -15682,15 +15729,15 @@ def test_build_frontend_solution_confirmation_recommends_enterprise_defaults_in_
 
     assert snapshot.decision_status == "recommended"
     assert snapshot.preflight_status == "ready"
-    assert snapshot.recommended_frontend_stack == "vue2"
-    assert snapshot.recommended_provider_id == "enterprise-vue2"
-    assert snapshot.recommended_style_pack_id == "enterprise-default"
-    assert snapshot.requested_frontend_stack == "vue2"
-    assert snapshot.requested_provider_id == "enterprise-vue2"
-    assert snapshot.requested_style_pack_id == "enterprise-default"
-    assert snapshot.effective_frontend_stack == "vue2"
-    assert snapshot.effective_provider_id == "enterprise-vue2"
-    assert snapshot.effective_style_pack_id == "enterprise-default"
+    assert snapshot.recommended_frontend_stack == "vue3"
+    assert snapshot.recommended_provider_id == "public-primevue"
+    assert snapshot.recommended_style_pack_id == "modern-saas"
+    assert snapshot.requested_frontend_stack == "vue3"
+    assert snapshot.requested_provider_id == "public-primevue"
+    assert snapshot.requested_style_pack_id == "modern-saas"
+    assert snapshot.effective_frontend_stack == "vue3"
+    assert snapshot.effective_provider_id == "public-primevue"
+    assert snapshot.effective_style_pack_id == "modern-saas"
     assert snapshot.recommended_backend_stack == "fastapi"
     assert snapshot.recommended_api_collab_mode == "typed-bff"
     assert snapshot.style_fidelity_status == "full"
@@ -15744,8 +15791,8 @@ def test_build_frontend_solution_confirmation_preserves_failed_preflight_checks_
     assert snapshot.decision_status == "recommended"
     assert snapshot.preflight_status == "warning"
     assert snapshot.preflight_reason_codes == ["enterprise_provider_preflight_warning"]
-    assert snapshot.recommended_provider_id == "enterprise-vue2"
-    assert snapshot.effective_provider_id == "enterprise-vue2"
+    assert snapshot.recommended_provider_id == "public-primevue"
+    assert snapshot.effective_provider_id == "public-primevue"
     assert snapshot.availability_summary.overall_status == "attention"
     assert snapshot.availability_summary.passed_check_ids == []
     assert snapshot.availability_summary.failed_check_ids == ["company-registry-network"]
@@ -15766,8 +15813,8 @@ def test_build_frontend_solution_confirmation_blocks_when_defaulted_public_fallb
         fallback_candidate_available=False,
     )
 
-    assert snapshot.decision_status == "blocked"
-    assert snapshot.preflight_status == "blocked"
+    assert snapshot.decision_status == "recommended"
+    assert snapshot.preflight_status == "ready"
     assert snapshot.recommended_frontend_stack == "vue3"
     assert snapshot.recommended_provider_id == "public-primevue"
     assert snapshot.recommended_style_pack_id == "modern-saas"
@@ -15778,9 +15825,9 @@ def test_build_frontend_solution_confirmation_blocks_when_defaulted_public_fallb
     assert snapshot.effective_provider_id == "public-primevue"
     assert snapshot.effective_style_pack_id == "modern-saas"
     assert snapshot.provider_mode == "normal"
-    assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
-    assert snapshot.preflight_reason_codes == ["enterprise_provider_unavailable"]
-    assert snapshot.availability_summary.overall_status == "blocked"
+    assert snapshot.fallback_reason_code is None
+    assert snapshot.preflight_reason_codes == []
+    assert snapshot.availability_summary.overall_status == "attention"
     assert snapshot.availability_summary.failed_check_ids == [
         "company-registry-network"
     ]

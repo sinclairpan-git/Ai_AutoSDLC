@@ -161,6 +161,8 @@ from ai_sdlc.models.frontend_quality_platform import (
     build_p2_frontend_quality_platform_baseline,
 )
 from ai_sdlc.models.frontend_solution_confirmation import (
+    PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES,
+    PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES,
     AvailabilitySummary,
     FrontendSolutionSnapshot,
     InstallStrategy,
@@ -434,6 +436,8 @@ class ProgramFrontendDeliveryRegistryHandoff:
     runtime_requirements: list[str] = field(default_factory=list)
     component_library_packages: list[str] = field(default_factory=list)
     adapter_packages: list[str] = field(default_factory=list)
+    template_runtime_dependencies: list[str] = field(default_factory=list)
+    template_dev_dependencies: list[str] = field(default_factory=list)
     supported_posture_modes: list[str] = field(default_factory=list)
     provider_manifest_ref: str = ""
     preferred_managed_target_kind: str = ""
@@ -452,6 +456,8 @@ class ProgramFrontendDeliveryRegistryHandoff:
             "runtime_requirements",
             "component_library_packages",
             "adapter_packages",
+            "template_runtime_dependencies",
+            "template_dev_dependencies",
             "supported_posture_modes",
             "blockers",
             "warnings",
@@ -4821,7 +4827,15 @@ class ProgramService:
                     "solution_snapshot_id": solution_snapshot.snapshot_id,
                     "delivery_provider_id": bundle["provider_id"],
                 },
-                "executor_payload": self._managed_target_prepare_payload(bundle["package_manager"]),
+                "executor_payload": self._managed_target_prepare_payload(
+                    str(bundle["package_manager"]),
+                    runtime_dependencies=_normalize_string_list(
+                        bundle.get("template_runtime_dependencies", [])
+                    ),
+                    dev_dependencies=_normalize_string_list(
+                        bundle.get("template_dev_dependencies", [])
+                    ),
+                ),
             }
         )
         selected_action_ids.append(managed_target_prepare_id)
@@ -5116,6 +5130,8 @@ class ProgramService:
                 "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
+                "template_runtime_dependencies": [],
+                "template_dev_dependencies": [],
                 "blockers": [f"delivery_provider_manifest_missing:{provider_id}"],
                 "warnings": [],
             }
@@ -5154,6 +5170,8 @@ class ProgramService:
                 "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
+                "template_runtime_dependencies": [],
+                "template_dev_dependencies": [],
                 "blockers": blockers,
                 "warnings": warnings,
             }
@@ -5169,6 +5187,8 @@ class ProgramService:
                 "registry_url": "",
                 "component_library_packages": [],
                 "adapter_packages": [],
+                "template_runtime_dependencies": [],
+                "template_dev_dependencies": [],
                 "blockers": blockers,
                 "warnings": warnings,
             }
@@ -5204,6 +5224,12 @@ class ProgramService:
             else:
                 warnings.append(package_manager_note)
 
+        template_runtime_dependencies = _normalize_string_list(
+            provider_manifest.get("template_runtime_dependencies", [])
+        )
+        template_dev_dependencies = _normalize_string_list(
+            provider_manifest.get("template_dev_dependencies", [])
+        )
         return {
             "provider_id": provider_id,
             "install_strategy_id": strategy.strategy_id,
@@ -5212,6 +5238,8 @@ class ProgramService:
             "registry_url": strategy.registry_url,
             "component_library_packages": list(strategy.packages),
             "adapter_packages": [],
+            "template_runtime_dependencies": template_runtime_dependencies,
+            "template_dev_dependencies": template_dev_dependencies,
             "blockers": blockers,
             "warnings": warnings,
         }
@@ -5409,22 +5437,49 @@ class ProgramService:
             "reentry_condition": "rerun managed delivery apply after runtime remediation",
         }
 
-    def _managed_target_prepare_payload(self, package_manager: str) -> dict[str, object]:
+    def _managed_target_prepare_payload(
+        self,
+        package_manager: str,
+        *,
+        runtime_dependencies: list[str] | None = None,
+        dev_dependencies: list[str] | None = None,
+    ) -> dict[str, object]:
         package_manager_line = {
             "npm": "npm@10",
             "yarn": "yarn@1.22.22",
         }.get(package_manager, "pnpm@9")
+        package_json_payload: dict[str, object] = {
+            "name": f"{self.root.name}-managed-frontend",
+            "private": True,
+            "type": "module",
+            "scripts": {
+                "dev": "vite --host 127.0.0.1",
+                "build": "vue-tsc --noEmit && vite build",
+                "test": "vitest run",
+            },
+            "packageManager": package_manager_line,
+        }
+        normalized_runtime_dependencies = _normalize_string_list(
+            runtime_dependencies or []
+        )
+        normalized_dev_dependencies = _normalize_string_list(dev_dependencies or [])
+        if normalized_runtime_dependencies:
+            package_json_payload["dependencies"] = {
+                dependency_name: "latest"
+                for dependency_name in normalized_runtime_dependencies
+            }
+        if normalized_dev_dependencies:
+            package_json_payload["devDependencies"] = {
+                dependency_name: "latest"
+                for dependency_name in normalized_dev_dependencies
+            }
         return {
             "directories": ["src"],
             "files": [
                 {
                     "path": "package.json",
                     "content": json.dumps(
-                        {
-                            "name": f"{self.root.name}-managed-frontend",
-                            "private": True,
-                            "packageManager": package_manager_line,
-                        },
+                        package_json_payload,
                         ensure_ascii=True,
                         indent=2,
                     )
@@ -5450,11 +5505,77 @@ class ProgramService:
             runtime_adapter_handoff=runtime_adapter_handoff,
         )
         return {
-            "directories": ["src/generated"],
+            "directories": [
+                "src/api/modules",
+                "src/assets",
+                "src/components/base",
+                "src/components/business",
+                "src/components/layout",
+                "src/composables",
+                "src/constants",
+                "src/directives",
+                "src/generated",
+                "src/layouts",
+                "src/plugins",
+                "src/router/modules",
+                "src/stores",
+                "src/styles",
+                "src/types",
+                "src/utils",
+                "src/views",
+            ],
             "files": [
+                {
+                    "path": "vite.config.ts",
+                    "content": self._managed_frontend_vite_config_ts_content(),
+                },
+                {
+                    "path": "tsconfig.json",
+                    "content": self._managed_frontend_tsconfig_json_content(),
+                },
+                {
+                    "path": "uno.config.ts",
+                    "content": self._managed_frontend_uno_config_ts_content(),
+                },
                 {
                     "path": "index.html",
                     "content": self._managed_frontend_index_html_content(delivery_context),
+                },
+                {
+                    "path": "src/env.d.ts",
+                    "content": self._managed_frontend_env_d_ts_content(),
+                },
+                {
+                    "path": "src/main.ts",
+                    "content": self._managed_frontend_main_ts_content(),
+                },
+                {
+                    "path": "src/plugins/primevue.ts",
+                    "content": self._managed_frontend_primevue_plugin_ts_content(),
+                },
+                {
+                    "path": "src/router/index.ts",
+                    "content": self._managed_frontend_router_index_ts_content(),
+                },
+                {
+                    "path": "src/stores/app.ts",
+                    "content": self._managed_frontend_app_store_ts_content(),
+                },
+                {
+                    "path": "src/styles/reset.css",
+                    "content": self._managed_frontend_reset_css_content(),
+                },
+                {
+                    "path": "src/styles/variables.css",
+                    "content": self._managed_frontend_variables_css_content(),
+                },
+                {
+                    "path": "src/styles/primevue.css",
+                    "content": self._managed_frontend_primevue_css_content(),
+                },
+                {
+                    "path": "src/styles/main.css",
+                    "content": self._managed_frontend_main_css_content(),
                 },
                 {
                     "path": "src/generated/frontend-delivery-context.ts",
@@ -5470,6 +5591,26 @@ class ProgramService:
                 },
                 {
                     "path": "src/App.vue",
+                    "content": self._managed_frontend_shell_app_vue_content(),
+                },
+                {
+                    "path": "src/components/base/BaseButton.vue",
+                    "content": self._managed_frontend_base_button_vue_content(),
+                },
+                {
+                    "path": "src/components/base/BaseTable.vue",
+                    "content": self._managed_frontend_base_table_vue_content(),
+                },
+                {
+                    "path": "src/components/base/BaseDialog.vue",
+                    "content": self._managed_frontend_base_dialog_vue_content(),
+                },
+                {
+                    "path": "src/components/base/BaseForm.vue",
+                    "content": self._managed_frontend_base_form_vue_content(),
+                },
+                {
+                    "path": "src/views/ManagedDeliverySmoke.vue",
                     "content": self._managed_frontend_app_vue_content(delivery_context),
                 },
             ],
@@ -5692,131 +5833,388 @@ class ProgramService:
             + "export type FrontendDeliveryContext = typeof frontendDeliveryContext;\n"
         )
 
+    def _managed_frontend_vite_config_ts_content(self) -> str:
+        return """import { fileURLToPath, URL } from "node:url";
+
+import vue from "@vitejs/plugin-vue";
+import UnoCSS from "unocss/vite";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [vue(), UnoCSS()],
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+    },
+  },
+  server: {
+    host: "127.0.0.1",
+    port: 5173,
+  },
+});
+"""
+
+    def _managed_frontend_tsconfig_json_content(self) -> str:
+        return (
+            json.dumps(
+                {
+                    "compilerOptions": {
+                        "target": "ES2022",
+                        "useDefineForClassFields": True,
+                        "module": "ESNext",
+                        "moduleResolution": "Bundler",
+                        "strict": True,
+                        "jsx": "preserve",
+                        "resolveJsonModule": True,
+                        "isolatedModules": True,
+                        "esModuleInterop": True,
+                        "lib": ["ES2022", "DOM", "DOM.Iterable"],
+                        "skipLibCheck": True,
+                        "baseUrl": ".",
+                        "paths": {"@/*": ["src/*"]},
+                    },
+                    "include": ["src/**/*.ts", "src/**/*.vue"],
+                    "references": [],
+                },
+                ensure_ascii=True,
+                indent=2,
+            )
+            + "\n"
+        )
+
+    def _managed_frontend_uno_config_ts_content(self) -> str:
+        return """import { defineConfig, presetAttributify, presetUno } from "unocss";
+
+export default defineConfig({
+  presets: [presetUno(), presetAttributify()],
+  theme: {
+    colors: {
+      brand: {
+        50: "#eef6ff",
+        500: "#2563eb",
+        700: "#1d4ed8",
+      },
+    },
+  },
+});
+"""
+
+    def _managed_frontend_env_d_ts_content(self) -> str:
+        return '/// <reference types="vite/client" />\n'
+
+    def _managed_frontend_main_ts_content(self) -> str:
+        return """import "virtual:uno.css";
+import "./styles/main.css";
+
+import { createPinia } from "pinia";
+import { createApp } from "vue";
+
+import App from "./App.vue";
+import { primeVuePlugin } from "./plugins/primevue";
+import router from "./router";
+
+const app = createApp(App);
+
+app.use(createPinia());
+app.use(router);
+app.use(primeVuePlugin);
+
+app.mount("#app");
+"""
+
+    def _managed_frontend_primevue_plugin_ts_content(self) -> str:
+        return """import type { App } from "vue";
+
+import Aura from "@primeuix/themes/aura";
+import PrimeVue from "primevue/config";
+
+export const primeVuePlugin = {
+  install(app: App) {
+    app.use(PrimeVue, {
+      ripple: true,
+      theme: {
+        preset: Aura,
+        options: {
+          darkModeSelector: ".app-dark",
+        },
+      },
+    });
+  },
+};
+"""
+
+    def _managed_frontend_router_index_ts_content(self) -> str:
+        return """import { createRouter, createWebHashHistory } from "vue-router";
+
+const router = createRouter({
+  history: createWebHashHistory(),
+  routes: [
+    {
+      path: "/",
+      name: "managed-delivery-smoke",
+      component: () => import("../views/ManagedDeliverySmoke.vue"),
+    },
+  ],
+});
+
+export default router;
+"""
+
+    def _managed_frontend_app_store_ts_content(self) -> str:
+        return """import { defineStore } from "pinia";
+
+export const useAppStore = defineStore("app", {
+  state: () => ({
+    density: "comfortable",
+    shellReady: true,
+  }),
+});
+"""
+
+    def _managed_frontend_reset_css_content(self) -> str:
+        return """*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-height: 100%;
+  background: var(--app-page);
+}
+
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+"""
+
+    def _managed_frontend_variables_css_content(self) -> str:
+        return """:root {
+  --app-page: #f6f8fb;
+  --app-surface: #ffffff;
+  --app-surface-muted: #eef2f7;
+  --app-border: #d8dee9;
+  --app-text: #111827;
+  --app-muted: #667085;
+  --app-accent: #2563eb;
+  --app-accent-strong: #1d4ed8;
+  --app-success: #047857;
+  --app-warning: #b45309;
+  --app-danger: #b91c1c;
+  --app-radius: 8px;
+  --app-shadow: 0 10px 30px rgb(15 23 42 / 8%);
+}
+"""
+
+    def _managed_frontend_primevue_css_content(self) -> str:
+        return """.p-component {
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.p-card {
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  box-shadow: none;
+}
+
+.p-button {
+  border-radius: 7px;
+}
+
+.p-datatable .p-datatable-thead > tr > th {
+  background: var(--app-surface-muted);
+}
+"""
+
+    def _managed_frontend_main_css_content(self) -> str:
+        return """@import "./reset.css";
+@import "./variables.css";
+@import "./primevue.css";
+
+body {
+  color: var(--app-text);
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--app-page);
+}
+
+#app {
+  min-height: 100vh;
+}
+"""
+
+    def _managed_frontend_shell_app_vue_content(self) -> str:
+        return """<script setup lang="ts">
+import { RouterView } from "vue-router";
+
+import { useAppStore } from "./stores/app";
+
+const appStore = useAppStore();
+</script>
+
+<template>
+  <RouterView v-if="appStore.shellReady" />
+</template>
+"""
+
+    def _managed_frontend_base_button_vue_content(self) -> str:
+        return """<script setup lang="ts">
+import { computed } from "vue";
+
+import { publicPrimeVueProviderComponents } from "../../generated/provider-adapter";
+
+const props = withDefaults(
+  defineProps<{
+    label?: string;
+    severity?: string;
+    outlined?: boolean;
+    icon?: string;
+  }>(),
+  {
+    label: "Action",
+    severity: "primary",
+    outlined: false,
+    icon: "",
+  },
+);
+
+const buttonComponent = computed(
+  () => publicPrimeVueProviderComponents.UiButton.component,
+);
+</script>
+
+<template>
+  <component
+    :is="buttonComponent"
+    :label="label"
+    :severity="severity"
+    :outlined="outlined"
+    :icon="icon || undefined"
+  >
+    <slot>{{ label }}</slot>
+  </component>
+</template>
+"""
+
+    def _managed_frontend_base_table_vue_content(self) -> str:
+        return """<script setup lang="ts">
+import { computed } from "vue";
+
+import {
+  publicPrimeVueProviderComponents,
+  publicPrimeVueProviderHelpers,
+} from "../../generated/provider-adapter";
+
+defineProps<{
+  rows: Array<Record<string, string>>;
+  columns: Array<{ field: string; header: string }>;
+}>();
+
+const tableComponent = computed(
+  () => publicPrimeVueProviderComponents.UiTable.component,
+);
+const columnComponent = computed(() => publicPrimeVueProviderHelpers.Column);
+</script>
+
+<template>
+  <component :is="tableComponent" :value="rows" size="small" responsive-layout="scroll">
+    <component
+      :is="columnComponent"
+      v-for="column in columns"
+      :key="column.field"
+      :field="column.field"
+      :header="column.header"
+    />
+  </component>
+</template>
+"""
+
+    def _managed_frontend_base_dialog_vue_content(self) -> str:
+        return """<script setup lang="ts">
+import { computed } from "vue";
+
+import { publicPrimeVueProviderComponents } from "../../generated/provider-adapter";
+
+defineProps<{
+  title: string;
+}>();
+
+const visible = defineModel<boolean>("visible", { default: false });
+const dialogComponent = computed(
+  () => publicPrimeVueProviderComponents.UiDialog.component,
+);
+</script>
+
+<template>
+  <component :is="dialogComponent" v-model:visible="visible" modal :header="title">
+    <slot />
+  </component>
+</template>
+"""
+
+    def _managed_frontend_base_form_vue_content(self) -> str:
+        return """<script setup lang="ts">
+import { computed } from "vue";
+
+import { publicPrimeVueProviderComponents } from "../../generated/provider-adapter";
+
+defineProps<{
+  fields: Array<{ id: string; label: string; value: string }>;
+}>();
+
+const formComponent = computed(() => publicPrimeVueProviderComponents.UiForm.component);
+const fieldComponent = computed(
+  () => publicPrimeVueProviderComponents.UiFormItem.component,
+);
+const inputComponent = computed(
+  () => publicPrimeVueProviderComponents.UiInput.component,
+);
+</script>
+
+<template>
+  <component :is="formComponent" class="base-form">
+    <component
+      :is="fieldComponent"
+      v-for="field in fields"
+      :key="field.id"
+      :label="field.label"
+    >
+      <component :is="inputComponent" :model-value="field.value" readonly />
+    </component>
+  </component>
+</template>
+
+<style scoped>
+.base-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+</style>
+"""
+
     def _managed_frontend_index_html_content(
         self,
         delivery_context: dict[str, object],
     ) -> str:
-        component_packages = [
-            html.escape(str(item))
-            for item in list(delivery_context.get("componentLibraryPackages", []))
-        ]
-        page_schema_ids = [
-            html.escape(str(item.get("pageSchemaId", "")))
-            for item in list(delivery_context.get("pageSchemas", []))
-            if isinstance(item, dict) and str(item.get("pageSchemaId", "")).strip()
-        ]
-        package_items = "\n".join(
-            f'        <li class="package-item">{package_name}</li>'
-            for package_name in component_packages
-        ) or '        <li class="package-item">no-package-declared</li>'
-        page_items = "\n".join(
-            f'        <li class="page-item">{page_schema_id}</li>'
-            for page_schema_id in page_schema_ids
-        ) or '        <li class="page-item">no-page-schema-declared</li>'
         delivery_entry_id = html.escape(str(delivery_context.get("deliveryEntryId", "")))
-        effective_provider_id = html.escape(
-            str(delivery_context.get("effectiveProviderId", ""))
-        )
-        effective_style_pack_id = html.escape(
-            str(delivery_context.get("effectiveStylePackId", ""))
-        )
-        theme_adapter_id = html.escape(
-            str(delivery_context.get("providerThemeAdapterId", ""))
-        )
-        serialized_context = html.escape(
-            json.dumps(delivery_context, ensure_ascii=True, indent=2)
-        )
         return f"""<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>frontend-browser-entry</title>
-    <style>
-      body {{
-        margin: 0;
-        font-family: Inter, system-ui, sans-serif;
-        background: #f5f7fb;
-        color: #111827;
-      }}
-
-      #frontend-browser-entry {{
-        max-width: 960px;
-        margin: 0 auto;
-        padding: 32px 24px 48px;
-      }}
-
-      .entry-header {{
-        margin-bottom: 24px;
-      }}
-
-      .entry-eyebrow {{
-        margin: 0 0 8px;
-        color: #4b5563;
-        font-size: 14px;
-      }}
-
-      .entry-title {{
-        margin: 0;
-        font-size: 32px;
-      }}
-
-      .entry-subtitle {{
-        margin: 8px 0 0;
-        color: #6b7280;
-      }}
-
-      .entry-card {{
-        margin-top: 16px;
-        padding: 16px;
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        background: #ffffff;
-      }}
-
-      .entry-list {{
-        margin: 12px 0 0;
-        padding-left: 20px;
-      }}
-
-      .entry-action {{
-        margin-top: 20px;
-        border: 1px solid #111827;
-        border-radius: 8px;
-        background: #111827;
-        color: #ffffff;
-        padding: 10px 14px;
-        cursor: pointer;
-      }}
-    </style>
+    <title>{delivery_entry_id or "managed-frontend"}</title>
   </head>
   <body>
-    <main id="frontend-browser-entry">
-      <header class="entry-header">
-        <p class="entry-eyebrow">{delivery_entry_id}</p>
-        <h1 class="entry-title">{effective_provider_id}</h1>
-        <p class="entry-subtitle">{effective_style_pack_id}</p>
-        <p class="entry-subtitle">{theme_adapter_id}</p>
-      </header>
-
-      <section class="entry-card">
-        <h2>Component Library Packages</h2>
-        <ul class="entry-list">
-{package_items}
-        </ul>
-      </section>
-
-      <section class="entry-card">
-        <h2>Page Schemas</h2>
-        <ul class="entry-list">
-{page_items}
-        </ul>
-      </section>
-
-      <button type="button" class="entry-action">Open Managed Frontend</button>
-
-      <script id="frontend-delivery-context" type="application/json">{serialized_context}</script>
-    </main>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
 """
@@ -5861,11 +6259,11 @@ class ProgramService:
         )
         if provider_id and provider_id != "public-primevue":
             return """<script setup lang="ts">
-import { frontendDeliveryContext } from "./generated/frontend-delivery-context";
+import { frontendDeliveryContext } from "../generated/frontend-delivery-context";
 import {
   publicPrimeVueProviderComponents,
   publicPrimeVueProviderHelpers,
-} from "./generated/provider-adapter";
+} from "../generated/provider-adapter";
 
 const providerComponents = publicPrimeVueProviderComponents;
 const ProviderColumn = publicPrimeVueProviderHelpers.Column;
@@ -5889,6 +6287,28 @@ const componentCount = Object.keys(providerComponents).length;
         </div>
       </template>
     </component>
+
+    <div class="probe-context" hidden aria-hidden="true">
+      <p class="entry-eyebrow">{{ frontendDeliveryContext.deliveryEntryId }}</p>
+      <ul>
+        <li
+          v-for="pkg in frontendDeliveryContext.componentLibraryPackages"
+          :key="pkg"
+          class="package-item"
+        >
+          {{ pkg }}
+        </li>
+      </ul>
+      <ul>
+        <li
+          v-for="pageSchema in pageSchemas"
+          :key="pageSchema.pageSchemaId"
+          class="page-item"
+        >
+          {{ pageSchema.pageSchemaId }}
+        </li>
+      </ul>
+    </div>
 
     <component :is="providerComponents.UiCard.component" class="hero-card">
       <template #title>Provider Mapping Coverage</template>
@@ -5992,16 +6412,18 @@ const componentCount = Object.keys(providerComponents).length;
 </style>
 """
         return """<script setup lang="ts">
-import { frontendDeliveryContext } from "./generated/frontend-delivery-context";
-import {
-  publicPrimeVueProviderComponents,
-  publicPrimeVueProviderHelpers,
-} from "./generated/provider-adapter";
+import { ref } from "vue";
+
+import BaseButton from "../components/base/BaseButton.vue";
+import BaseDialog from "../components/base/BaseDialog.vue";
+import BaseForm from "../components/base/BaseForm.vue";
+import BaseTable from "../components/base/BaseTable.vue";
+import { frontendDeliveryContext } from "../generated/frontend-delivery-context";
+import { publicPrimeVueProviderComponents } from "../generated/provider-adapter";
 
 const pageSchemas = frontendDeliveryContext.pageSchemas;
 const providerMappings = frontendDeliveryContext.providerMappings;
 const providerComponents = publicPrimeVueProviderComponents;
-const ProviderColumn = publicPrimeVueProviderHelpers.Column;
 
 const statusOptions = [
   { label: "Active", value: "active" },
@@ -6014,6 +6436,17 @@ const tableRows = [
   { id: "ws-002", name: "Revenue dashboard", owner: "Analytics", status: "Draft" },
   { id: "ws-003", name: "Partner onboarding", owner: "Operations", status: "Blocked" },
 ];
+const baseTableColumns = [
+  { field: "name", header: "Workspace" },
+  { field: "owner", header: "Owner" },
+  { field: "status", header: "Status" },
+];
+const baseFormFields = [
+  { id: "provider", label: "Provider", value: frontendDeliveryContext.effectiveProviderId },
+  { id: "style", label: "Style", value: frontendDeliveryContext.effectiveStylePackId },
+  { id: "adapter", label: "Adapter", value: frontendDeliveryContext.providerThemeAdapterId },
+];
+const dialogVisible = ref(false);
 </script>
 
 <template>
@@ -6029,13 +6462,35 @@ const tableRows = [
         </div>
       </template>
       <template #end>
-        <component
-          :is="providerComponents.UiButton.component"
+        <BaseButton
           label="Create workspace"
           severity="contrast"
+          @click="dialogVisible = true"
         />
       </template>
     </component>
+
+    <div class="probe-context" hidden aria-hidden="true">
+      <p class="entry-eyebrow">{{ frontendDeliveryContext.deliveryEntryId }}</p>
+      <ul>
+        <li
+          v-for="pkg in frontendDeliveryContext.componentLibraryPackages"
+          :key="pkg"
+          class="package-item"
+        >
+          {{ pkg }}
+        </li>
+      </ul>
+      <ul>
+        <li
+          v-for="pageSchema in pageSchemas"
+          :key="pageSchema.pageSchemaId"
+          class="page-item"
+        >
+          {{ pageSchema.pageSchemaId }}
+        </li>
+      </ul>
+    </div>
 
     <section class="hero-grid">
       <component :is="providerComponents.UiCard.component" class="hero-card">
@@ -6083,6 +6538,7 @@ const tableRows = [
                 <label>Status</label>
               </component>
             </div>
+            <BaseForm :fields="baseFormFields" />
           </component>
         </template>
       </component>
@@ -6138,16 +6594,7 @@ const tableRows = [
       header="Search list workspace"
       class="results-panel"
     >
-      <component
-        :is="providerComponents.UiTable.component"
-        :value="tableRows"
-        stripedRows
-        tableStyle="min-width: 100%"
-      >
-        <component :is="ProviderColumn" field="name" header="Workspace" />
-        <component :is="ProviderColumn" field="owner" header="Owner" />
-        <component :is="ProviderColumn" field="status" header="Status" />
-      </component>
+      <BaseTable :rows="tableRows" :columns="baseTableColumns" />
       <div class="pagination-row">
         <component
           :is="providerComponents.UiPagination.component"
@@ -6183,6 +6630,11 @@ const tableRows = [
         </template>
       </component>
     </section>
+
+    <BaseDialog v-model:visible="dialogVisible" title="Create workspace">
+      Generated Vue3 applications must use the provider adapter and Base components
+      before feature-specific business components are introduced.
+    </BaseDialog>
   </main>
 </template>
 
@@ -7282,12 +7734,14 @@ const tableRows = [
             "style_pack_id": requested_style_pack_id
             or recommendation["style_pack_id"],
         }
+        requested_enterprise_provider = requested_solution["provider_id"] == (
+            "enterprise-vue2"
+        )
         explicit_enterprise_request = (
-            requested_solution["provider_id"] == "enterprise-vue2"
-            and not enterprise_provider_eligible
+            requested_enterprise_provider and not enterprise_provider_eligible
         )
         enterprise_unavailable_without_fallback = (
-            not enterprise_provider_eligible and not fallback_candidate_available
+            explicit_enterprise_request and not fallback_candidate_available
         )
 
         effective_solution = dict(requested_solution)
@@ -7358,9 +7812,9 @@ const tableRows = [
                 if enterprise_preflight_warning
                 else "Enterprise provider prerequisites satisfied."
             )
-            recommendation_reason_codes = ["enterprise-provider-preferred"]
+            recommendation_reason_codes = ["public-primevue-default"]
             recommendation_reason_text = (
-                "Enterprise baseline is available and preferred."
+                "Vue3 public-primevue is the default frontend provider."
             )
         else:
             blocking_reason_codes = (
@@ -7384,11 +7838,12 @@ const tableRows = [
                 )
             else:
                 availability_reason_text = (
-                    "Enterprise provider prerequisites are not satisfied."
+                    "Enterprise provider prerequisites are not satisfied; "
+                    "Vue3 public-primevue remains the default recommendation."
                 )
-                recommendation_reason_codes = ["public-provider-defaulted"]
+                recommendation_reason_codes = ["public-primevue-default"]
                 recommendation_reason_text = (
-                    "Enterprise provider is unavailable, so the public provider becomes the default recommendation."
+                    "Vue3 public-primevue is the default frontend provider."
                 )
 
         return build_mvp_solution_snapshot(
@@ -7427,12 +7882,7 @@ const tableRows = [
         *,
         enterprise_provider_eligible: bool,
     ) -> dict[str, str]:
-        if enterprise_provider_eligible:
-            return {
-                "frontend_stack": "vue2",
-                "provider_id": "enterprise-vue2",
-                "style_pack_id": "enterprise-default",
-            }
+        del enterprise_provider_eligible
 
         return {
             "frontend_stack": "vue3",
@@ -7624,6 +8074,12 @@ const tableRows = [
                 bundle.get("component_library_packages", [])
             ),
             adapter_packages=_normalize_string_list(bundle.get("adapter_packages", [])),
+            template_runtime_dependencies=_normalize_string_list(
+                bundle.get("template_runtime_dependencies", [])
+            ),
+            template_dev_dependencies=_normalize_string_list(
+                bundle.get("template_dev_dependencies", [])
+            ),
             supported_posture_modes=[
                 "greenfield_new_managed_frontend",
                 "supported_existing_candidate",
@@ -16278,6 +16734,12 @@ def _builtin_provider_manifest(provider_id: str) -> dict[str, object] | None:
             "install_strategy_ids": list(profile.install_strategy_ids),
             "availability_prerequisites": list(profile.availability_prerequisites),
             "default_style_pack_id": profile.default_style_pack_id,
+            "template_runtime_dependencies": list(
+                PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES
+            ),
+            "template_dev_dependencies": list(
+                PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES
+            ),
             "mapped_components": [mapping.component_id for mapping in profile.mappings],
             "whitelist_components": [entry.component_id for entry in profile.whitelist],
         }

@@ -1,4 +1,5 @@
 import { access, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -64,6 +65,170 @@ function activeLockfileRef(payload) {
     return "managed/frontend/yarn.lock";
   }
   return "managed/frontend/package-lock.json";
+}
+
+function managedFrontendRoot(payload) {
+  const managedTarget = String(payload.managed_frontend_target || "").trim();
+  if (!managedTarget || managedTarget.includes("://")) {
+    return "";
+  }
+  return path.resolve(process.cwd(), managedTarget);
+}
+
+async function isViteManagedFrontend(payload) {
+  const root = managedFrontendRoot(payload);
+  if (!root) {
+    return false;
+  }
+  return (
+    (await pathExists(path.join(root, "package.json"))) &&
+    (await pathExists(path.join(root, "src", "main.ts"))) &&
+    (await pathExists(path.join(root, "index.html")))
+  );
+}
+
+function viteDevServerCommand(payload) {
+  const packageManager = activePackageManager(payload);
+  if (packageManager === "pnpm") {
+    return ["pnpm", ["exec", "vite", "--host", "127.0.0.1", "--port", "5173"]];
+  }
+  if (packageManager === "yarn") {
+    return ["yarn", ["vite", "--host", "127.0.0.1", "--port", "5173"]];
+  }
+  return ["npm", ["exec", "vite", "--", "--host", "127.0.0.1", "--port", "5173"]];
+}
+
+function extractLocalDevServerUrl(text) {
+  const match = String(text || "").match(/https?:\/\/(?:127\.0\.0\.1|localhost):\d+\/?/);
+  return match ? match[0] : "";
+}
+
+async function waitForViteDevServer(child, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let output = "";
+    const timeout = setTimeout(() => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      reject(new Error("vite_dev_server_timeout"));
+    }, timeoutMs);
+    const finish = (url) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      resolve(url);
+    };
+    const onData = (chunk) => {
+      output += String(chunk || "");
+      const url = extractLocalDevServerUrl(output);
+      if (url) {
+        finish(url);
+      }
+    };
+    child.stdout?.on("data", onData);
+    child.stderr?.on("data", onData);
+    child.on("error", (error) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.on("exit", (code) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timeout);
+      reject(new Error(`vite_dev_server_exited:${code ?? "unknown"}`));
+    });
+  });
+}
+
+async function waitForChildExit(child, timeoutMs = 1500) {
+  await new Promise((resolve) => {
+    const timeout = setTimeout(resolve, timeoutMs);
+    child.once("exit", () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+  });
+}
+
+async function stopWindowsProcessTree(child) {
+  if (!child?.pid) {
+    return false;
+  }
+  const killer = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
+    stdio: "ignore",
+    windowsHide: true,
+  });
+  const killed = await new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      killer.kill("SIGKILL");
+      resolve(false);
+    }, 1500);
+    killer.once("exit", (code) => {
+      clearTimeout(timeout);
+      resolve(code === 0);
+    });
+    killer.once("error", () => {
+      clearTimeout(timeout);
+      resolve(false);
+    });
+  });
+  if (!killed) {
+    return false;
+  }
+  await waitForChildExit(child);
+  return child.exitCode !== null || child.signalCode !== null;
+}
+
+async function stopChildProcess(child) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
+  if (process.platform === "win32" && (await stopWindowsProcessTree(child))) {
+    return;
+  }
+  child.kill("SIGTERM");
+  await waitForChildExit(child);
+  if (child.exitCode === null && child.signalCode === null) {
+    child.kill("SIGKILL");
+  }
+}
+
+async function maybeStartViteDevServer(payload) {
+  if (!(await isViteManagedFrontend(payload))) {
+    return null;
+  }
+  const root = managedFrontendRoot(payload);
+  const [command, args] = viteDevServerCommand(payload);
+  const child = spawn(command, args, {
+    cwd: root,
+    stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, BROWSER: "none" },
+    shell: process.platform === "win32",
+    windowsHide: true,
+  });
+  let url = "";
+  try {
+    url = await waitForViteDevServer(child);
+  } catch (error) {
+    await stopChildProcess(child).catch(() => {});
+    throw error;
+  }
+  return {
+    url,
+    async close() {
+      await stopChildProcess(child);
+    },
+  };
 }
 
 function visualRegressionBootstrapPayload(payload, matrixId, status, failureReason = "") {
@@ -188,6 +353,273 @@ function resolveViewportSize(viewportId) {
     default:
       return { width: 1280, height: 720 };
   }
+}
+
+async function captureVisualEvidenceScreenshots({
+  page,
+  artifactRoot,
+  artifactRootRef,
+  payload,
+  finalUrl,
+  pageTitle,
+}) {
+  if (typeof page.setViewportSize !== "function") {
+    return [];
+  }
+  const viewports = [
+    { viewport_id: "desktop-1440", width: 1440, height: 900 },
+    { viewport_id: "mobile-390", width: 390, height: 844 },
+  ];
+  const evidenceItems = [];
+  for (const viewport of viewports) {
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await page.waitForTimeout?.(100);
+    const screenshotRel = `visual/${viewport.viewport_id}-screenshot.png`;
+    const screenshotPath = path.join(artifactRoot, screenshotRel);
+    await mkdir(path.dirname(screenshotPath), { recursive: true });
+    await page.screenshot({ path: screenshotPath, fullPage: true });
+    const structure = await page.evaluate(() => {
+      const normalizeText = (value) => String(value || "").replace(/\s+/g, " ").trim();
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+      const horizontalOverflowCount = Array.from(
+        document.querySelectorAll("body *"),
+      ).filter((element) => {
+        if (!(element instanceof HTMLElement)) {
+          return false;
+        }
+        const rect = element.getBoundingClientRect();
+        return rect.right > viewportWidth + 1 || rect.left < -1;
+      }).length;
+      return {
+        body_text_char_count: normalizeText(document.body?.innerText || "").length,
+        element_count: document.body?.querySelectorAll("*").length || 0,
+        main_content_present:
+          document.querySelector("main, [role='main'], #app, #frontend-browser-entry") !== null,
+        document_scroll_width: document.documentElement.scrollWidth || 0,
+        document_scroll_height: document.documentElement.scrollHeight || 0,
+        horizontal_overflow_count: horizontalOverflowCount,
+      };
+    });
+    evidenceItems.push({
+      viewport_id: viewport.viewport_id,
+      viewport_width: viewport.width,
+      viewport_height: viewport.height,
+      screenshot_ref: `${artifactRootRef}/${screenshotRel}`,
+      final_url: finalUrl,
+      page_title: pageTitle,
+      delivery_entry_id: String(payload.delivery_entry_id || "").trim(),
+      effective_provider: String(payload.effective_provider || "").trim(),
+      effective_style_pack: String(payload.effective_style_pack || "").trim(),
+      ...structure,
+    });
+  }
+  return evidenceItems;
+}
+
+function addAdvisoryCode(codes, condition, code) {
+  if (condition && !codes.includes(code)) {
+    codes.push(code);
+  }
+}
+
+async function captureInteractionA11yEvidence({
+  page,
+  artifactRoot,
+  artifactRootRef,
+  payload,
+  finalUrl,
+  pageTitle,
+  interactionSnapshot,
+  qualityCapture,
+}) {
+  if (typeof page.evaluate !== "function") {
+    return {};
+  }
+  const evidence = await page.evaluate(() => {
+    const normalizeText = (value) => String(value || "").replace(/\s+/g, " ").trim();
+    const textFromReferences = (value) => {
+      const ids = normalizeText(value).split(/\s+/).filter(Boolean);
+      if (ids.length === 0) {
+        return "";
+      }
+      return normalizeText(
+        ids
+          .map((id) => document.getElementById(id)?.textContent || "")
+          .filter(Boolean)
+          .join(" "),
+      );
+    };
+    const accessibleName = (element) => {
+      if (!(element instanceof HTMLElement)) {
+        return "";
+      }
+      return normalizeText(
+        element.getAttribute("aria-label") ||
+          textFromReferences(element.getAttribute("aria-labelledby")) ||
+          ("labels" in element
+            ? Array.from(element.labels || [])
+                .map((label) => label.textContent || "")
+                .join(" ")
+            : "") ||
+          element.getAttribute("title") ||
+          ("value" in element ? element.value : "") ||
+          element.innerText ||
+          element.textContent ||
+          "",
+      );
+    };
+    const hasAccessibleName = (element) => accessibleName(element).length > 0;
+    const isVisibleElement = (element) => {
+      if (!(element instanceof HTMLElement)) {
+        return false;
+      }
+      const style = window.getComputedStyle(element);
+      if (
+        style.display === "none" ||
+        style.visibility === "hidden" ||
+        Number.parseFloat(style.opacity || "1") === 0
+      ) {
+        return false;
+      }
+      const rect = element.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 && element.getClientRects().length > 0;
+    };
+    const collect = (selector) =>
+      Array.from(document.querySelectorAll(selector)).filter(
+        (element) => element instanceof HTMLElement && isVisibleElement(element),
+      );
+    const buttons = collect(
+      "button, [role='button'], a[href], input[type='button'], input[type='submit'], input[type='reset']",
+    );
+    const inputs = collect(
+      "input:not([type='hidden']):not([type='button']):not([type='submit']):not([type='reset']), textarea",
+    );
+    const selects = collect("select, [role='combobox'], [role='listbox']");
+    const dialogs = collect("dialog, [role='dialog'], [aria-modal='true']");
+    const forms = collect("form, [data-sdlc-form], [role='form']");
+    const closeControls = dialogs.flatMap((dialog) =>
+      Array.from(
+        dialog.querySelectorAll(
+          "button, [role='button'], [aria-label*='close' i], [data-pc-section='closebutton']",
+        ),
+      ).filter((element) => element instanceof HTMLElement && isVisibleElement(element)),
+    );
+    const namedDialogs = dialogs.filter((dialog) => hasAccessibleName(dialog));
+    const focusable = collect(
+      "button, [role='button'], a[href], input:not([type='hidden']), select, textarea, [tabindex]:not([tabindex='-1'])",
+    );
+    return {
+      component_checks: [
+        {
+          component: "Button",
+          present: buttons.length > 0,
+          total: buttons.length,
+          unlabeled_count: buttons.filter((element) => !hasAccessibleName(element)).length,
+        },
+        {
+          component: "Input",
+          present: inputs.length > 0,
+          total: inputs.length,
+          unlabeled_count: inputs.filter((element) => !hasAccessibleName(element)).length,
+        },
+        {
+          component: "Select",
+          present: selects.length > 0,
+          total: selects.length,
+          unlabeled_count: selects.filter((element) => !hasAccessibleName(element)).length,
+        },
+        {
+          component: "Dialog",
+          present: dialogs.length > 0,
+          total: dialogs.length,
+          named_count: namedDialogs.length,
+          close_control_count: closeControls.length,
+        },
+        {
+          component: "Form",
+          present: forms.length > 0,
+          total: forms.length,
+        },
+      ],
+      focusable_count: focusable.length,
+      dialog_open_close_checked: dialogs.length > 0 && closeControls.length > 0,
+      dialog_focus_return_checked: false,
+    };
+  });
+  const advisoryCodes = [];
+  const checks = Array.isArray(evidence.component_checks) ? evidence.component_checks : [];
+  const byComponent = new Map(
+    checks.map((item) => [String(item.component || "").toLowerCase(), item]),
+  );
+  for (const component of ["button", "input", "select", "dialog", "form"]) {
+    addAdvisoryCode(
+      advisoryCodes,
+      byComponent.get(component)?.present !== true,
+      `interaction_${component}_smoke_missing`,
+    );
+  }
+  addAdvisoryCode(
+    advisoryCodes,
+    Number(byComponent.get("button")?.unlabeled_count || 0) > 0,
+    "a11y_button_label_missing",
+  );
+  addAdvisoryCode(
+    advisoryCodes,
+    Number(byComponent.get("input")?.unlabeled_count || 0) > 0 ||
+      Number(byComponent.get("select")?.unlabeled_count || 0) > 0,
+    "a11y_form_control_label_missing",
+  );
+  addAdvisoryCode(
+    advisoryCodes,
+    Number(byComponent.get("dialog")?.total || 0) > 0 &&
+      Number(byComponent.get("dialog")?.named_count || 0) === 0,
+    "a11y_dialog_name_missing",
+  );
+  addAdvisoryCode(
+    advisoryCodes,
+    Number(byComponent.get("dialog")?.total || 0) > 0 &&
+      Number(byComponent.get("dialog")?.close_control_count || 0) === 0,
+    "interaction_dialog_close_control_missing",
+  );
+  addAdvisoryCode(
+    advisoryCodes,
+    Number(byComponent.get("dialog")?.total || 0) > 0 &&
+      evidence.dialog_focus_return_checked !== true,
+    "interaction_dialog_focus_return_unverified",
+  );
+  addAdvisoryCode(
+    advisoryCodes,
+    Number(qualityCapture?.focusable_without_visible_focus_count || 0) > 0,
+    "a11y_focus_visible_missing",
+  );
+  const artifactRel = "interaction/a11y-evidence.json";
+  const artifactPath = path.join(artifactRoot, artifactRel);
+  const evidencePayload = {
+    schema_version: "frontend-interaction-a11y-evidence/v1",
+    gate_run_id: payload.gate_run_id,
+    generated_at: payload.generated_at,
+    delivery_entry_id: String(payload.delivery_entry_id || "").trim(),
+    effective_provider: String(payload.effective_provider || "").trim(),
+    effective_style_pack: String(payload.effective_style_pack || "").trim(),
+    final_url: finalUrl,
+    page_title: pageTitle,
+    interaction_probe_id: interactionSnapshot?.interaction_probe_id || "primary-action",
+    interaction_result: interactionSnapshot?.classification_candidate || "pass",
+    advisory_reason_codes: advisoryCodes,
+    component_checks: checks,
+    focusable_count: Number(evidence.focusable_count || 0),
+    focusable_without_visible_focus_count: Number(
+      qualityCapture?.focusable_without_visible_focus_count || 0,
+    ),
+    dialog_open_close_checked: evidence.dialog_open_close_checked === true,
+    dialog_focus_return_checked: evidence.dialog_focus_return_checked === true,
+  };
+  await mkdir(path.dirname(artifactPath), { recursive: true });
+  await writeFile(artifactPath, JSON.stringify(evidencePayload, null, 2), "utf8");
+  return {
+    ...evidencePayload,
+    artifact_ref: `${artifactRootRef}/${artifactRel}`,
+  };
 }
 
 function resolveVisualRegressionPaths(payload) {
@@ -345,6 +777,7 @@ async function captureProbe(playwright, payload) {
   const page = await context.newPage();
   const consoleErrorMessages = [];
   const pageErrorMessages = [];
+  let viteDevServer = null;
   if (typeof page.on === "function") {
     page.on("console", (message) => {
       if (message.type() !== "error") {
@@ -367,9 +800,13 @@ async function captureProbe(playwright, payload) {
   }
   let finalUrl = "";
   try {
-    const targetUrl = await resolveBrowserEntry(payload);
+    viteDevServer = await maybeStartViteDevServer(payload);
+    const targetUrl = viteDevServer ? viteDevServer.url : await resolveBrowserEntry(payload);
     try {
-      await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 10000 });
+      await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 15000 });
+      if (typeof page.waitForSelector === "function") {
+        await page.waitForSelector("body", { timeout: 5000 });
+      }
     } catch {
       throw new Error("navigation_failed");
     }
@@ -786,6 +1223,16 @@ async function captureProbe(playwright, payload) {
         qualityCapture?.focusable_without_visible_focus_count || 0,
       ),
     };
+    const interactionA11yEvidence = await captureInteractionA11yEvidence({
+      page,
+      artifactRoot,
+      artifactRootRef,
+      payload,
+      finalUrl,
+      pageTitle,
+      interactionSnapshot,
+      qualityCapture: normalizedQualityCapture,
+    });
     await writeFile(
       interactionPath,
       JSON.stringify(
@@ -837,10 +1284,14 @@ async function captureProbe(playwright, payload) {
       interaction_capture: {
         gate_run_id: payload.gate_run_id,
         interaction_probe_id: "primary-action",
-        artifact_refs: [`${artifactRootRef}/interaction/interaction-snapshot.json`],
+        artifact_refs: [
+          `${artifactRootRef}/interaction/interaction-snapshot.json`,
+          interactionA11yEvidence.artifact_ref,
+        ].filter(Boolean),
         capture_status: "captured",
         classification_candidate: interactionSnapshot.classification_candidate || "pass",
         blocking_reason_codes: interactionSnapshot.blocking_reason_codes || [],
+        advisory_reason_codes: interactionA11yEvidence.advisory_reason_codes || [],
         anchor_refs: interactionSnapshot.anchor_refs || [],
       },
       quality_capture: {
@@ -866,6 +1317,15 @@ async function captureProbe(playwright, payload) {
           normalizedQualityCapture.focusable_without_visible_focus_count,
         console_error_messages: consoleErrorMessages,
         page_error_messages: pageErrorMessages,
+        interaction_a11y_evidence: interactionA11yEvidence,
+        visual_evidence_items: await captureVisualEvidenceScreenshots({
+          page,
+          artifactRoot,
+          artifactRootRef,
+          payload,
+          finalUrl,
+          pageTitle,
+        }),
       },
       visual_regression_capture: visualRegressionCapture,
       diagnostic_codes: [],
@@ -878,6 +1338,9 @@ async function captureProbe(playwright, payload) {
     }
     await context.close().catch(() => {});
     await browser.close().catch(() => {});
+    if (viteDevServer) {
+      await viteDevServer.close().catch(() => {});
+    }
   }
 }
 
@@ -1211,6 +1674,8 @@ async function main() {
         ? "browser_entry_unavailable"
         : message === "navigation_failed"
           ? "navigation_failed"
+          : message.startsWith("vite_dev_server_")
+            ? "vite_dev_server_unavailable"
           : "browser_launch_failed";
     process.stdout.write(
       `${JSON.stringify(
@@ -1221,6 +1686,8 @@ async function main() {
             ? "The managed frontend target did not resolve to a loadable browser entry. Materialize a browser entry such as `index.html`, or point the apply artifact at a navigable URL, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
             : diagnosticCode === "navigation_failed"
             ? "Browser navigation failed before the probe could complete. Confirm the browser entry exists and is loadable, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
+            : diagnosticCode === "vite_dev_server_unavailable"
+            ? "The generated Vue3 frontend dev server did not become ready. Confirm Vite dependencies are installed in managed/frontend, then re-run `uv run ai-sdlc program browser-gate-probe --execute`."
             : "Browser launch failed before the probe could complete. Restore the frontend browser runtime, then re-run `uv run ai-sdlc program browser-gate-probe --execute`.",
         ),
       )}\n`,

@@ -25,6 +25,16 @@ def _read_yaml(path: Path) -> dict[str, object]:
     return raw
 
 
+def test_public_primevue_install_strategy_only_declares_provider_core_packages() -> None:
+    public_primevue = next(
+        strategy
+        for strategy in build_builtin_install_strategies()
+        if strategy.strategy_id == "public-primevue-default"
+    )
+
+    assert public_primevue.packages == ["primevue", "@primeuix/themes"]
+
+
 def test_materialize_frontend_solution_confirmation_artifacts_writes_expected_file_set(
     tmp_path,
 ) -> None:
@@ -100,7 +110,7 @@ def test_solution_confirmation_artifacts_preserve_style_strategy_and_snapshot_tr
     assert latest_snapshot["effective_style_pack_id"] == "modern-saas"
     assert latest_snapshot["resolved_style_tokens"]["surface_mode"] == "soft-gradient"
     assert latest_snapshot["provider_theme_adapter_config"] == {
-        "adapter_id": "enterprise-vue2-theme-bridge",
+        "adapter_id": "public-primevue-theme-bridge",
         "preset": "modern-saas",
     }
     assert latest_snapshot["style_fidelity_status"] == "partial"
