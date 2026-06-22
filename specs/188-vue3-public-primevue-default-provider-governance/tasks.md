@@ -227,3 +227,13 @@ related_doc:
 - Visual and accessibility warnings are structured and non-silent.
 - `enterprise-vue2` explicit path remains tested.
 - Handoff and task-execution-log include commands, results, risks, and exact next steps.
+
+## Close-out evidence
+
+- status: complete
+- PR: https://github.com/sinclairpan-git/Ai_AutoSDLC/pull/84
+- merge_commit: `e97c10c583c5208ecb780bc7d7d88fce37e97489`
+- merged_at: 2026-06-22T10:45:08Z
+- final_review: Codex review on head `4c15536` reported no major issues.
+- final_checks: GitHub Compatibility Gate, Cross Platform Validation, Upgrade, Windows Shell Smoke, core-smoke, smoke, and verify checks passed.
+- closeout_note: Batch 1-7 tasks are complete; no remaining implementation task is open under this work item.
