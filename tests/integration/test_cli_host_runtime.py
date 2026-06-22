@@ -121,7 +121,9 @@ def test_host_runtime_plan_text_reports_ready_status(
     assert "当前结果 / Result" in result.output
     assert "运行环境已就绪" in result.output
     assert "the runtime is ready" in result.output
-    assert "ai-sdlc run --dry-run" in result.output
+    assert "ai-sdlc run --dry-run" in _single_space(result.output)
+    assert "只有排查启动门禁时才手动运行" in result.output
+    assert "only when troubleshooting startup gates" in _single_space(result.output)
     assert "Host Runtime Plan" not in result.output
     assert "surface: installed_cli / bound" not in result.output
 

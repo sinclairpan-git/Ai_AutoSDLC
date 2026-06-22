@@ -147,9 +147,9 @@ def _host_runtime_beginner_guidance(plan: HostRuntimePlan) -> str:
         return render_single_next_step(
             result_zh="正常：运行环境已就绪。你不需要手动检查 Python 或安装额外依赖。",
             result_en="OK: the runtime is ready. You do not need to manually check Python or install extra dependencies.",
-            next_command="ai-sdlc run --dry-run",
-            next_zh="继续安全预演，确认项目初始化路径正常。",
-            next_en="Continue with the safe rehearsal to confirm the project startup path.",
+            next_command=None,
+            next_zh="回到 Codex/AI 对话输入需求；只有排查启动门禁时才手动运行 `ai-sdlc run --dry-run`。",
+            next_en="Return to Codex/AI chat and describe the requirement; run `ai-sdlc run --dry-run` manually only when troubleshooting startup gates.",
         )
     if plan.status == "remediation_required":
         missing_entries = getattr(plan, "missing_runtime_entries", None)

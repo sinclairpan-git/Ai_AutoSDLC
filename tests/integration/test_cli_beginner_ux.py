@@ -34,10 +34,10 @@ def test_vibe_coder_can_initialize_without_reading_internal_state(
     assert "不用再手动执行初始化命令" in result.output
     assert "No more CLI setup commands are needed" in result.output
     assert "请先读取 AGENTS.md" in result.output
-    assert "AI 对话里要先发送上面这句话" in result.output
+    assert "在 AI 对话里先发送上面这句话" in result.output
     plain = _single_space(result.output)
     assert "send the line above in the AI chat" in plain
-    assert "before describing the requirement" in plain
+    assert "then describe the requirement directly" in plain
 
     assert "ai-sdlc adapter status" not in result.output
     assert "ai-sdlc host-runtime plan" not in result.output
@@ -67,7 +67,7 @@ def test_adapter_status_default_is_beginner_safe_but_json_keeps_truth(
     assert "下一步 / Next" in status.output
     assert "ai-sdlc run --dry-run" not in status.output
     assert "请先读取 AGENTS.md" in status.output
-    assert "AI 明确读取 adapter 规则" in status.output
+    assert "AI 明确读取项目规则" in _single_space(status.output)
     assert "governance_activation" not in status.output
     assert "adapter_canonical_content_digest" not in status.output
 
@@ -76,6 +76,36 @@ def test_adapter_status_default_is_beginner_safe_but_json_keeps_truth(
     assert machine.exit_code == 0
     assert "governance_activation_state" in machine.output
     assert "adapter_canonical_content_digest" in machine.output
+
+
+def test_run_dry_run_materialized_adapter_explains_upgrade_is_not_failed(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    """Upgrade users should not have to decode adapter ingress internals."""
+
+    assert (
+        runner.invoke(
+            app,
+            ["init", str(tmp_path), "--agent-target", "codex", "--shell", "zsh"],
+        ).exit_code
+        == 0
+    )
+
+    monkeypatch.chdir(tmp_path)
+
+    result = runner.invoke(app, ["run", "--dry-run"])
+
+    assert result.exit_code == 0
+    assert "当前结果 / Result" in result.output
+    assert "不是安装或升级失败" in result.output
+    assert "This safe rehearsal will continue" in _single_space(result.output)
+    assert "普通使用路径：回到 Codex/AI 对话输入需求" in result.output
+    assert "adapter ingress truth not yet verified" not in result.output
+    assert "Current ingress truth is not yet verified" not in result.output
+    assert "ai-sdlc host-runtime plan" not in result.output
+    assert "governance_activation" not in result.output
+    assert "materialized_unverified" not in result.output
 
 
 def test_adapter_status_generic_recovery_does_not_reselect_generic(

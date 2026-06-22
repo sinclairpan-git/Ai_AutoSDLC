@@ -161,8 +161,26 @@ def _failed_gate_messages(result: Any) -> list[str]:
 def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
     """Return a warning/blocker based on persisted ingress truth."""
     payload = build_adapter_governance_surface(root)
-    if payload["adapter_ingress_state"] in {"verified_loaded", "materialized"}:
+    ingress_state = str(payload["adapter_ingress_state"])
+    if ingress_state == "verified_loaded":
         return None
+    if ingress_state == "materialized":
+        if not dry_run:
+            return None
+        result_zh, result_en = adapter_result_text(payload)
+        return render_single_next_step(
+            result_zh=result_zh,
+            result_en=result_en,
+            next_command=None,
+            next_zh="本次安全预演会继续执行；如果后面显示 open gates，通常表示项目还没有完成需求或测试，不是升级失败。",
+            next_en="This safe rehearsal will continue; if open gates appear later, they usually mean the requirement or tests are unfinished, not that the upgrade failed.",
+            notes=(
+                (
+                    "普通使用路径：回到 Codex/AI 对话输入需求；只有排查时才查看 `adapter status --json`。",
+                    "Normal path: return to Codex/AI chat and describe the requirement; inspect `adapter status --json` only for troubleshooting.",
+                ),
+            ),
+        )
     result_zh, result_en = adapter_result_text(payload)
     if dry_run:
         return render_single_next_step(
