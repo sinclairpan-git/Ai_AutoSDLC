@@ -992,44 +992,60 @@ def test_run_default_browser_gate_probe_uses_packaged_runner_when_project_script
         def joinpath(self, _name: str) -> Path:
             return packaged_runner
 
-    def _fake_run(*args, **kwargs):
-        assert args[0] == ["node", str(packaged_runner)]
-        return subprocess.CompletedProcess(
-            args=args[0],
-            returncode=0,
-            stdout=json.dumps(
-                {
-                    "runtime_status": "completed",
-                    "shared_capture": {
-                        "gate_run_id": "gate-run-001",
-                        "trace_artifact_ref": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-001/shared-runtime/playwright-trace.zip",
-                        "navigation_screenshot_ref": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-001/shared-runtime/navigation-screenshot.png",
-                        "capture_status": "captured",
-                        "final_url": "http://localhost:4173/",
-                        "anchor_refs": ["page:landing"],
+    class _FakeProcess:
+        returncode = 0
+        pid = 1234
+
+        def __init__(self, command, **kwargs):
+            assert command == ["node", str(packaged_runner)]
+            assert kwargs["cwd"] == tmp_path
+            assert kwargs["stdin"] == subprocess.PIPE
+            assert kwargs["stdout"] == subprocess.PIPE
+            assert kwargs["stderr"] == subprocess.PIPE
+            assert kwargs["text"] is True
+
+        def communicate(self, **kwargs):
+            input_payload = kwargs.get("input")
+            timeout = kwargs.get("timeout")
+            assert input_payload
+            assert timeout == runtime_module._DEFAULT_BROWSER_GATE_PROBE_TIMEOUT_SECONDS
+            return (
+                json.dumps(
+                    {
+                        "runtime_status": "completed",
+                        "shared_capture": {
+                            "gate_run_id": "gate-run-001",
+                            "trace_artifact_ref": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-001/shared-runtime/playwright-trace.zip",
+                            "navigation_screenshot_ref": ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-001/shared-runtime/navigation-screenshot.png",
+                            "capture_status": "captured",
+                            "final_url": "http://localhost:4173/",
+                            "anchor_refs": ["page:landing"],
+                            "diagnostic_codes": [],
+                        },
+                        "interaction_capture": {
+                            "gate_run_id": "gate-run-001",
+                            "interaction_probe_id": "primary-action",
+                            "artifact_refs": [
+                                ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-001/interaction/interaction-snapshot.json"
+                            ],
+                            "capture_status": "captured",
+                            "classification_candidate": "pass",
+                            "blocking_reason_codes": [],
+                            "anchor_refs": ["interaction:primary-action"],
+                        },
                         "diagnostic_codes": [],
-                    },
-                    "interaction_capture": {
-                        "gate_run_id": "gate-run-001",
-                        "interaction_probe_id": "primary-action",
-                        "artifact_refs": [
-                            ".ai-sdlc/artifacts/frontend-browser-gate/gate-run-001/interaction/interaction-snapshot.json"
-                        ],
-                        "capture_status": "captured",
-                        "classification_candidate": "pass",
-                        "blocking_reason_codes": [],
-                        "anchor_refs": ["interaction:primary-action"],
-                    },
-                    "diagnostic_codes": [],
-                    "warnings": [],
-                }
-            ),
-            stderr="",
-        )
+                        "warnings": [],
+                    }
+                ),
+                "",
+            )
+
+        def poll(self):
+            return self.returncode
 
     monkeypatch.setattr(runtime_module.importlib_resources, "files", lambda _pkg: _FakeResource())
     monkeypatch.setattr(runtime_module.importlib_resources, "as_file", _as_file)
-    monkeypatch.setattr(runtime_module.subprocess, "run", _fake_run)
+    monkeypatch.setattr(runtime_module.subprocess, "Popen", _FakeProcess)
     monkeypatch.setattr(
         runtime_module,
         "__file__",
@@ -1044,6 +1060,54 @@ def test_run_default_browser_gate_probe_uses_packaged_runner_when_project_script
     )
 
     assert result.runtime_status == "completed"
+
+
+def test_run_default_browser_gate_probe_kills_process_tree_on_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    script_path = tmp_path / "scripts" / "frontend_browser_gate_probe_runner.mjs"
+    script_path.parent.mkdir()
+    script_path.write_text("// project runner\n", encoding="utf-8")
+    killed_pids: list[int] = []
+
+    class _FakeProcess:
+        returncode = None
+        pid = 4321
+        _timed_out = False
+
+        def __init__(self, command, **kwargs):
+            assert command == ["node", str(script_path)]
+            assert kwargs["cwd"] == tmp_path
+            assert kwargs["start_new_session"] == (runtime_module.os.name != "nt")
+
+        def communicate(self, **kwargs):
+            timeout = kwargs.get("timeout")
+            if not self._timed_out:
+                self._timed_out = True
+                raise subprocess.TimeoutExpired(["node", str(script_path)], timeout)
+            self.returncode = -9
+            return "", ""
+
+        def poll(self):
+            return self.returncode
+
+    def _fake_kill(process):
+        killed_pids.append(process.pid)
+        process.returncode = -9
+
+    monkeypatch.setattr(runtime_module.subprocess, "Popen", _FakeProcess)
+    monkeypatch.setattr(runtime_module, "_kill_probe_runner_process_tree", _fake_kill)
+
+    result = run_default_browser_gate_probe(
+        root=tmp_path,
+        artifact_root=tmp_path / ".ai-sdlc" / "artifacts" / "frontend-browser-gate" / "gate-run-001",
+        execution_context=_context(),
+        generated_at="2026-04-24T10:00:00Z",
+    )
+
+    assert result.runtime_status == "failed_transient"
+    assert result.diagnostic_codes == ["browser_probe_timeout"]
+    assert killed_pids == [4321]
 
 
 def test_materialize_browser_gate_probe_runtime_auto_materializes_visual_a11y_evidence_from_runner_quality_capture(

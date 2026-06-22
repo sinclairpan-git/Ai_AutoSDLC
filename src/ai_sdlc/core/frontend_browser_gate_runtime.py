@@ -5,6 +5,8 @@ from __future__ import annotations
 import importlib.resources as importlib_resources
 import inspect
 import json
+import os
+import signal
 import subprocess
 from collections.abc import Callable, Iterable
 from contextlib import contextmanager
@@ -202,13 +204,10 @@ def run_default_browser_gate_probe(
             "effective_style_pack": execution_context.effective_style_pack,
         }
         try:
-            completed = subprocess.run(
+            completed = _run_probe_runner_process(
                 ["node", str(script_path)],
                 cwd=root,
-                input=json.dumps(payload),
-                text=True,
-                capture_output=True,
-                check=False,
+                stdin=json.dumps(payload),
                 timeout=_DEFAULT_BROWSER_GATE_PROBE_TIMEOUT_SECONDS,
             )
         except FileNotFoundError:
@@ -249,6 +248,99 @@ def run_default_browser_gate_probe(
             diagnostic_code="playwright_runner_output_invalid",
             warning=warning,
         )
+
+
+def _run_probe_runner_process(
+    command: list[str],
+    *,
+    cwd: Path,
+    stdin: str,
+    timeout: int,
+) -> subprocess.CompletedProcess[str]:
+    creationflags = (
+        getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0) if os.name == "nt" else 0
+    )
+    process = subprocess.Popen(
+        command,
+        cwd=cwd,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=os.name != "nt",
+        creationflags=creationflags,
+    )
+    try:
+        stdout, stderr = process.communicate(input=stdin, timeout=timeout)
+    except subprocess.TimeoutExpired as exc:
+        _kill_probe_runner_process_tree(process)
+        try:
+            stdout, stderr = process.communicate(timeout=2)
+        except subprocess.TimeoutExpired:
+            stdout, stderr = "", ""
+        raise subprocess.TimeoutExpired(
+            command,
+            timeout,
+            output=stdout,
+            stderr=stderr,
+        ) from exc
+    return subprocess.CompletedProcess(
+        args=command,
+        returncode=process.returncode or 0,
+        stdout=stdout,
+        stderr=stderr,
+    )
+
+
+def _kill_probe_runner_process_tree(process: subprocess.Popen[str]) -> None:
+    if process.poll() is not None:
+        return
+    if os.name == "nt":
+        _kill_windows_process_tree(process)
+        return
+    _kill_posix_process_group(process)
+
+
+def _kill_windows_process_tree(process: subprocess.Popen[str]) -> None:
+    try:
+        subprocess.run(
+            ["taskkill", "/pid", str(process.pid), "/T", "/F"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+            timeout=5,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        process.kill()
+    if process.poll() is None:
+        try:
+            process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            process.kill()
+
+
+def _kill_posix_process_group(process: subprocess.Popen[str]) -> None:
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    except PermissionError:
+        process.terminate()
+    try:
+        process.wait(timeout=2)
+        return
+    except subprocess.TimeoutExpired:
+        pass
+    try:
+        os.killpg(process.pid, signal.SIGKILL)
+    except ProcessLookupError:
+        return
+    except PermissionError:
+        process.kill()
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        process.kill()
 
 
 @contextmanager
