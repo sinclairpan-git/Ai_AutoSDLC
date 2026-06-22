@@ -2257,6 +2257,11 @@ def test_frontend_browser_gate_probe_runner_starts_vite_for_generated_managed_fr
         encoding="utf-8",
     )
     fake_npm.chmod(0o755)
+    fake_npm_cmd = fake_bin_dir / "npm.cmd"
+    fake_npm_cmd.write_text(
+        "@echo off\r\nnode \"%~dp0npm\" %*\r\n",
+        encoding="utf-8",
+    )
     fake_playwright_dir = tmp_path / "node_modules" / "playwright"
     fake_playwright_dir.mkdir(parents=True)
     (fake_playwright_dir / "package.json").write_text(
@@ -2431,7 +2436,7 @@ export const chromium = {
         text=True,
         capture_output=True,
         check=True,
-        env={"PATH": f"{fake_bin_dir}:{os.environ.get('PATH', '')}"},
+        env={**os.environ, "PATH": f"{fake_bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"},
     )
 
     result = json.loads(completed.stdout)

@@ -10,15 +10,14 @@ working_set_snapshot:
   tasks_path: specs/188-vue3-public-primevue-default-provider-governance/tasks.md
   active_files: []
   context_summary: 'Goal: 188 vue3/public-primevue default provider governance PR
-    #84 closeout | State: Addressed latest Codex P1: generated ManagedDeliverySmoke
-    now preserves browser-gate probe anchors for delivery id, component packages,
-    and page schema ids in both public-primevue and fallback templates. | Next: Stage
-    program_service/test/handoff changes, commit P1 anchor fix, push PR #84, re-request
-    Codex review, then monitor checks.'
+    #84 closeout | State: Fixed Windows compatibility CI failure in test_frontend_browser_gate_probe_runner_starts_vite_for_generated_managed_frontend:
+    fake npm fixture now includes npm.cmd, inherits full environment, and uses os.pathsep
+    for PATH. | Next: Stage fixture/handoff changes, commit, push PR #84, re-request
+    Codex review, then monitor checks until clean.'
 current_branch: feature/188-vue3-public-primevue-default-provider-governance-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-22T09:25:02+00:00'
+timestamp: '2026-06-22T09:44:03+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f
