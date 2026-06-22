@@ -196,6 +196,23 @@ def test_materialize_builtin_frontend_provider_profile_artifacts_writes_public_p
             "UiCard",
         ],
         "cross_stack_fallback_targets": [],
+        "template_runtime_dependencies": [
+            "@vueuse/core",
+            "axios",
+            "dayjs",
+            "pinia",
+            "vue",
+            "vue-i18n",
+            "vue-router",
+        ],
+        "template_dev_dependencies": [
+            "@vitejs/plugin-vue",
+            "typescript",
+            "unocss",
+            "vite",
+            "vitest",
+            "vue-tsc",
+        ],
     }
     assert mappings["items"][0]["component_id"] == "UiButton"
     assert mappings["items"][0]["implementation_ref"] == "Button"
