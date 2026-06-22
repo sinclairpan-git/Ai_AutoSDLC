@@ -1,32 +1,43 @@
 # Continuity Handoff
 
-- Updated: 2026-06-22T12:49:38+00:00
-- Reason: 用户反馈升级后 adapter ingress/materialized/unverified 文案令人困惑
-- Goal: 修复 v0.8.4 升级后 adapter 未验证提示造成用户困惑的问题
-- State: 已调整 beginner-facing CLI 文案：materialized/unverified 明确说明不是安装或升级失败；run --dry-run 指向 AI 对话而非排障循环；host-runtime ready 默认不再把 dry-run 当主路径；用户手册已补充解释。
+- Updated: 2026-06-22T13:16:00+00:00
+- Reason: v0.8.5 补丁发布分支版本漂移修正后验证完成
+- Goal: 发布 v0.8.5 补丁版，修复升级后 adapter 未验证提示造成用户困惑的问题
+- State: 已修正 Windows upgrade smoke 仍匹配 0.8.4 的版本漂移；v0.8.5 release docs、workflow 默认 tag、offline 文档、约束标记和测试夹具已对齐。
 - Stage: close
-- Work Item: adapter-upgrade-guidance-ux
-- Branch: codex/adapter-upgrade-guidance-ux
+- Work Item: release-0.8.5
+- Branch: codex/release-0.8.5
 
 ## Changed Files
+- M .ai-sdlc/state/codex-handoff.md
+- M .github/workflows/release-artifact-smoke.yml
+- M .github/workflows/release-build.yml
+- M .github/workflows/windows-offline-smoke.yml
+- M README.md
 - M USER_GUIDE.zh-CN.md
-- M src/ai_sdlc/cli/beginner_guidance.py
-- M src/ai_sdlc/cli/host_runtime_cmd.py
-- M src/ai_sdlc/cli/run_cmd.py
-- M tests/integration/test_cli_beginner_ux.py
-- M tests/integration/test_cli_host_runtime.py
+- M docs/pull-request-checklist.zh.md
+- M docs/框架自迭代开发与发布约定.md
+- M packaging/offline/README.md
+- M packaging/offline/RELEASE_CHECKLIST.md
+- M pyproject.toml
+- M src/ai_sdlc/__init__.py
+- M src/ai_sdlc/core/verify_constraints.py
+- M tests/integration/test_github_workflows.py
+- M tests/integration/test_offline_bundle_scripts.py
+- M tests/unit/test_verify_constraints.py
+- M uv.lock
+- ?? docs/releases/v0.8.5.md
 
 ## Key Decisions
-- 保留机器可读 adapter 真值，但默认输出只展示用户结论和下一步；内部状态继续通过 adapter status --json 供排查使用。
+- Windows offline upgrade smoke 必须断言 0.8.5，不能只更新错误文案而保留 0.8.4 正则。
 
 ## Commands / Tests
-- uv run pytest tests/integration/test_cli_beginner_ux.py tests/integration/test_cli_host_runtime.py tests/integration/test_cli_run.py::TestRunCommand::test_run_dry_run_continues_without_manual_adapter_activation -q => 10 passed
-- uv run pytest tests/integration/test_cli_beginner_ux.py tests/integration/test_cli_host_runtime.py tests/integration/test_cli_init.py tests/integration/test_cli_adapter.py tests/integration/test_cli_run.py tests/unit/test_verify_constraints.py -q => 210 passed
-- uv run ruff check src tests => pass
+- uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py -q => 173 passed
 - uv run ai-sdlc verify constraints => no BLOCKERs
+- git diff --check => pass
 
 ## Blockers / Risks
-- 源码态临时 dry-run 在本地自开发环境末尾出现 AgentOps missing_token，与本次用户提示文案无关；正式测试路径已关闭/隔离该配置并通过。
+- 需完成 PR/Codex review、合并、tag/release/build/smoke。
 
 ## Exact Next Steps
-- 如需发布补丁版，提交当前分支并走 PR/Codex review/release 流程。
+- 提交并推送 codex/release-0.8.5，创建 PR，等待 Codex review 与 required checks。
