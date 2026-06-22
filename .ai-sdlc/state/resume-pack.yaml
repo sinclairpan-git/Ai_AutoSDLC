@@ -10,15 +10,14 @@ working_set_snapshot:
   tasks_path: specs/188-vue3-public-primevue-default-provider-governance/tasks.md
   active_files: []
   context_summary: 'Goal: 188 vue3/public-primevue default provider governance PR
-    #84 closeout | State: Post-CI-failure fixes applied: program manifest now maps
-    spec 188 and unit expectations align with public-primevue default/generated Vite
-    scaffold. Local full pytest is green. | Next: Stage program-manifest.yaml and
-    updated unit tests, commit CI expectation fixes, push PR #84, then monitor Codex
-    review and required checks.'
+    #84 closeout | State: Addressed Codex review P2 findings on frontend_browser_gate_probe_runner:
+    avoid SPA networkidle false timeouts and clean up spawned Vite child process when
+    readiness wait fails. | Next: Stage runner and refreshed handoff state, commit
+    Codex review fixes, push PR #84, then monitor new review and required checks.'
 current_branch: feature/188-vue3-public-primevue-default-provider-governance-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-22T09:06:00+00:00'
+timestamp: '2026-06-22T09:13:33+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f

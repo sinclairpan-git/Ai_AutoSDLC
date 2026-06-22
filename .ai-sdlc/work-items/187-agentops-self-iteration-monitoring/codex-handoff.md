@@ -1,24 +1,22 @@
 # Continuity Handoff
 
-- Updated: 2026-06-22T09:10:03+00:00
-- Reason: Post-CI compatibility failure fix checkpoint before commit/push
+- Updated: 2026-06-22T09:13:33+00:00
+- Reason: Codex review fix checkpoint before commit/push
 - Goal: 188 vue3/public-primevue default provider governance PR #84 closeout
-- State: Post-CI-failure fixes applied: program manifest now maps spec 188 and unit expectations align with public-primevue default/generated Vite scaffold. Local full pytest is green.
+- State: Addressed Codex review P2 findings on frontend_browser_gate_probe_runner: avoid SPA networkidle false timeouts and clean up spawned Vite child process when readiness wait fails.
 - Stage: close
 - Work Item: 188-vue3-public-primevue-default-provider-governance
 - Branch: feature/188-vue3-public-primevue-default-provider-governance-docs
 
 ## Changed Files
-- M .ai-sdlc/state/resume-pack.yaml
-- M program-manifest.yaml
-- M tests/unit/test_frontend_provider_profile_artifacts.py
-- M tests/unit/test_program_service.py
+- M scripts/frontend_browser_gate_probe_runner.mjs
 
 ## Key Decisions
-- Keep ordinary frontend default as vue3/public-primevue/modern-saas; enterprise-vue2 remains explicit opt-in only.
+- Use domcontentloaded plus optional body selector readiness for browser gate navigation; keep child process cleanup shared for success close and readiness rejection.
 
 ## Commands / Tests
-- uv run pytest -q => 2677 passed, 2 skipped in 379.95s
+- node --check scripts/frontend_browser_gate_probe_runner.mjs => pass
+- uv run pytest tests/unit/test_frontend_browser_gate_runtime.py tests/integration -k 'visual or browser_gate or a11y' -q => 86 passed, 601 deselected
 - uv run ruff check src tests => All checks passed
 - uv run ai-sdlc verify constraints => no BLOCKERs
 - git diff --check => clean
@@ -27,4 +25,4 @@
 - none
 
 ## Exact Next Steps
-- Stage program-manifest.yaml and updated unit tests, commit CI expectation fixes, push PR #84, then monitor Codex review and required checks.
+- Stage runner and refreshed handoff state, commit Codex review fixes, push PR #84, then monitor new review and required checks.

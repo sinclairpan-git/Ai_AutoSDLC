@@ -150,6 +150,23 @@ async function waitForViteDevServer(child, timeoutMs = 15000) {
   });
 }
 
+async function stopChildProcess(child) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
+  child.kill("SIGTERM");
+  await new Promise((resolve) => {
+    const timeout = setTimeout(resolve, 1500);
+    child.once("exit", () => {
+      clearTimeout(timeout);
+      resolve();
+    });
+  });
+  if (child.exitCode === null && child.signalCode === null) {
+    child.kill("SIGKILL");
+  }
+}
+
 async function maybeStartViteDevServer(payload) {
   if (!(await isViteManagedFrontend(payload))) {
     return null;
@@ -161,24 +178,17 @@ async function maybeStartViteDevServer(payload) {
     stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, BROWSER: "none" },
   });
-  const url = await waitForViteDevServer(child);
+  let url = "";
+  try {
+    url = await waitForViteDevServer(child);
+  } catch (error) {
+    await stopChildProcess(child).catch(() => {});
+    throw error;
+  }
   return {
     url,
     async close() {
-      if (child.exitCode !== null || child.signalCode !== null) {
-        return;
-      }
-      child.kill("SIGTERM");
-      await new Promise((resolve) => {
-        const timeout = setTimeout(resolve, 1500);
-        child.once("exit", () => {
-          clearTimeout(timeout);
-          resolve();
-        });
-      });
-      if (child.exitCode === null && child.signalCode === null) {
-        child.kill("SIGKILL");
-      }
+      await stopChildProcess(child);
     },
   };
 }
@@ -755,7 +765,10 @@ async function captureProbe(playwright, payload) {
     viteDevServer = await maybeStartViteDevServer(payload);
     const targetUrl = viteDevServer ? viteDevServer.url : await resolveBrowserEntry(payload);
     try {
-      await page.goto(targetUrl, { waitUntil: "networkidle", timeout: 15000 });
+      await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 15000 });
+      if (typeof page.waitForSelector === "function") {
+        await page.waitForSelector("body", { timeout: 5000 });
+      }
     } catch {
       throw new Error("navigation_failed");
     }
