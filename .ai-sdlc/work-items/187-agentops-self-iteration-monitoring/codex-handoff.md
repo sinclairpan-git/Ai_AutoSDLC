@@ -1,29 +1,32 @@
 # Continuity Handoff
 
-- Updated: 2026-06-22T09:44:03+00:00
+- Updated: 2026-06-22T10:05:30+00:00
 - Reason: Windows compatibility CI failure fix checkpoint before commit/push
 - Goal: 188 vue3/public-primevue default provider governance PR #84 closeout
-- State: Fixed Windows compatibility CI failure in test_frontend_browser_gate_probe_runner_starts_vite_for_generated_managed_frontend: fake npm fixture now includes npm.cmd, inherits full environment, and uses os.pathsep for PATH.
+- State: PR #84 is open for Vue3 public-primevue default provider governance. A Windows CI failure in the frontend browser gate Vite probe is being fixed by starting package-manager commands through a Windows shell.
 - Stage: close
 - Work Item: 188-vue3-public-primevue-default-provider-governance
 - Branch: feature/188-vue3-public-primevue-default-provider-governance-docs
 
 ## Changed Files
-- M tests/unit/test_frontend_browser_gate_runtime.py
+- M scripts/frontend_browser_gate_probe_runner.mjs
 
 ## Key Decisions
-- Treat the Windows failure as a test fixture portability bug; keep production runner changes unchanged.
+- Keep the browser gate Vite startup behavior unchanged on non-Windows platforms.
+- Use `shell: process.platform === "win32"` plus `windowsHide: true` for the generated frontend Vite probe so npm/pnpm/yarn command shims resolve correctly on Windows runners.
 
 ## Commands / Tests
-- uv run pytest tests/unit/test_frontend_browser_gate_runtime.py::test_frontend_browser_gate_probe_runner_starts_vite_for_generated_managed_frontend -q => 1 passed
-- uv run pytest tests/unit/test_frontend_browser_gate_runtime.py tests/integration -k 'visual or browser_gate or a11y' -q => 86 passed, 601 deselected
-- uv run pytest tests/unit/test_program_service.py::test_build_frontend_managed_delivery_apply_request_materializes_artifact_generate_from_delivery_context tests/unit/test_program_service.py::test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise_adapter -q => 2 passed
-- uv run ruff check src tests => All checks passed
-- uv run ai-sdlc verify constraints => no BLOCKERs
-- git diff --check => clean
+- `node --check scripts/frontend_browser_gate_probe_runner.mjs` passed.
+- `uv run pytest tests/unit/test_frontend_browser_gate_runtime.py::test_frontend_browser_gate_probe_runner_starts_vite_for_generated_managed_frontend -q` passed.
+- `uv run pytest tests/unit/test_frontend_browser_gate_runtime.py tests/integration -k "visual or browser_gate or a11y" -q` passed: 86 passed, 601 deselected.
+- `uv run ruff check src tests` passed.
+- `uv run ai-sdlc verify constraints` passed: no BLOCKERs.
+- `git diff --check` passed.
 
 ## Blockers / Risks
-- none
+- Windows Compatibility checks on PR #84 previously failed on the Vite startup unit test; the shell-spawn fix still needs GitHub CI confirmation after push.
 
 ## Exact Next Steps
-- Stage fixture/handoff changes, commit, push PR #84, re-request Codex review, then monitor checks until clean.
+- Commit and push the Windows Vite probe startup fix.
+- Re-request Codex review on PR #84.
+- Monitor PR #84 checks and Codex review until all required checks pass and no actionable review findings remain, then ready/merge per repository PR protocol.

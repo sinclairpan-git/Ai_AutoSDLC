@@ -177,6 +177,8 @@ async function maybeStartViteDevServer(payload) {
     cwd: root,
     stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, BROWSER: "none" },
+    shell: process.platform === "win32",
+    windowsHide: true,
   });
   let url = "";
   try {
