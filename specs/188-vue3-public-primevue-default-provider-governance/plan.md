@@ -2,7 +2,7 @@
 
 **功能编号**：`188-vue3-public-primevue-default-provider-governance`  
 **输入**：`spec.md`、`docs/vue3-public-primevue-default-provider-prd.zh-CN.md`  
-**阶段**：设计冻结草案  
+**阶段**：已完成并归档；Batch 1-7 已通过 PR #84 合并至 `main`（merge commit `e97c10c`）
 
 ## 技术背景
 
@@ -109,8 +109,8 @@ Web smoke 是 blocker，视觉和基础 a11y 是 warning evidence。首版不使
 | 视觉 diff 误报 | 首版仅要求截图和结构化 warning，不做严格 pixel blocker |
 | Base/Ui 封装不足 | 先以 import scan 暴露风险，再逐步升级 targeted blocker |
 
-## 待确认项
+## 关闭决议
 
-1. Web smoke 使用现有 frontend browser gate runner 扩展，还是新增专用 public-primevue smoke runner。
-2. 视觉证据归档路径沿用现有 browser gate artifacts，还是建立 Vue3 default provider 专用 evidence path。
-3. import scan 首版采用简单 import parser 还是 TypeScript AST。
+1. Web smoke 使用现有 frontend browser gate runner 扩展，并增加 Vite dev server 探测。
+2. 视觉证据沿用 browser gate artifacts，输出桌面/移动截图和结构化 metadata。
+3. import boundary 首版采用受控源码扫描输出 warning evidence，后续可按独立工作项升级为 TypeScript AST 或 targeted blocker。

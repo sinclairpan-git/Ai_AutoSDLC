@@ -1,33 +1,32 @@
 # Continuity Handoff
 
-- Updated: 2026-06-22T10:28:00+00:00
-- Reason: Address latest Codex review P2 before PR closeout
-- Goal: 188 vue3/public-primevue default provider governance PR #84 closeout
-- State: Codex flagged that Python timeout could kill the Node runner before JS cleanup ran, leaving Vite orphaned. The Python wrapper now runs Node via `Popen`, starts a killable process group/session, and kills the process tree on timeout.
+- Updated: 2026-06-22T10:49:09+00:00
+- Reason: Close out 188 spec plan tasks archive
+- Goal: Complete all PRD-derived spec/plan/tasks for work item 188
+- State: PR #84 is merged into main at e97c10c. Closeout branch codex/188-prd-spec-plan-task-closeout updates spec.md, plan.md, tasks.md, and task-execution-log.md from draft/ready-for-closeout wording to completed archived evidence, while preserving no functional code changes.
 - Stage: close
 - Work Item: 188-vue3-public-primevue-default-provider-governance
-- Branch: feature/188-vue3-public-primevue-default-provider-governance-docs
+- Branch: codex/188-prd-spec-plan-task-closeout
 
 ## Changed Files
-- M src/ai_sdlc/core/frontend_browser_gate_runtime.py
-- M tests/unit/test_frontend_browser_gate_runtime.py
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M specs/188-vue3-public-primevue-default-provider-governance/plan.md
+- M specs/188-vue3-public-primevue-default-provider-governance/spec.md
+- M specs/188-vue3-public-primevue-default-provider-governance/task-execution-log.md
+- M specs/188-vue3-public-primevue-default-provider-governance/tasks.md
 
 ## Key Decisions
-- Replace `subprocess.run(..., timeout=...)` with a `Popen` helper so timeout handling can clean the runner process tree.
-- Use `taskkill /T /F /PID` on Windows and POSIX process-group termination elsewhere.
+- Treat stale archive status text as a completion gap because the objective is completion of spec/plan/tasks, not only code merge.
 
 ## Commands / Tests
-- `node --check scripts/frontend_browser_gate_probe_runner.mjs` passed.
-- `uv run pytest tests/unit/test_frontend_browser_gate_runtime.py::test_run_default_browser_gate_probe_uses_packaged_runner_when_project_script_missing tests/unit/test_frontend_browser_gate_runtime.py::test_run_default_browser_gate_probe_kills_process_tree_on_timeout tests/unit/test_frontend_browser_gate_runtime.py::test_frontend_browser_gate_probe_runner_starts_vite_for_generated_managed_frontend -q` passed: 3 passed.
-- `uv run pytest tests/unit/test_frontend_browser_gate_runtime.py tests/integration -k "visual or browser_gate or a11y" -q` passed: 87 passed, 601 deselected.
-- `uv run ruff check src tests` passed.
-- `uv run ai-sdlc verify constraints` passed: no BLOCKERs.
-- `git diff --check` passed.
+- rg stale archive status terms in 188 docs: no matches
+- uv run ai-sdlc verify constraints: no BLOCKERs
+- git diff --check: pass
+- Codex review P2 on PR #85: restored 187 scoped handoff so 188 closeout does not overwrite the active 187 scoped artifact.
 
 ## Blockers / Risks
-- PR #84 still needs a new push, Codex re-review, and GitHub CI confirmation after the parent-timeout process-tree cleanup fix.
+- None.
 
 ## Exact Next Steps
-- Commit and push the parent-timeout process-tree cleanup fix.
-- Re-request Codex review on PR #84.
-- Monitor PR #84 checks and Codex review until all required checks pass and no actionable review findings remain, then ready/merge per repository PR protocol.
+- Amend and push closeout archive updates, re-request Codex review, monitor checks, and merge when clean.

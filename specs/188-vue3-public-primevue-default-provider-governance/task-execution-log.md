@@ -2,7 +2,7 @@
 
 **功能编号**：`188-vue3-public-primevue-default-provider-governance`  
 **创建日期**：2026-06-22  
-**当前阶段**：Batch 7 complete; implementation ready for close-out
+**当前阶段**：已完成并归档；PR #84 已合并至 `main`
 
 ## 统一验证命令
 
@@ -171,5 +171,9 @@ Batch 2 through Batch 7 implementation paths passed targeted verification.
 
 ## Git close-out
 
-- 当前未提交。
-- 后续提交前需确认是否包含源 PRD、formal docs 与 handoff 状态文件。
+- PR #84: https://github.com/sinclairpan-git/Ai_AutoSDLC/pull/84
+- merge commit: `e97c10c583c5208ecb780bc7d7d88fce37e97489`
+- merged_at: 2026-06-22T10:45:08Z
+- Codex review: 最新针对 head `4c15536` 的评论为 “Didn't find any major issues.”
+- GitHub checks: Compatibility Gate、Cross Platform Validation（macOS/Ubuntu/Windows, Python 3.11/3.12）、Upgrade、Windows Shell Smoke、core-smoke、smoke、verify 全部通过。
+- Local close-out: 当前归档更新仅修正 spec/plan/task-execution-log 与 handoff/resume 的完成状态，不改变已合并功能代码。
