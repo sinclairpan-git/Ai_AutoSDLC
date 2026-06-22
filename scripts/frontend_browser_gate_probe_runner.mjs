@@ -150,18 +150,54 @@ async function waitForViteDevServer(child, timeoutMs = 15000) {
   });
 }
 
-async function stopChildProcess(child) {
-  if (!child || child.exitCode !== null || child.signalCode !== null) {
-    return;
-  }
-  child.kill("SIGTERM");
+async function waitForChildExit(child, timeoutMs = 1500) {
   await new Promise((resolve) => {
-    const timeout = setTimeout(resolve, 1500);
+    const timeout = setTimeout(resolve, timeoutMs);
     child.once("exit", () => {
       clearTimeout(timeout);
       resolve();
     });
   });
+}
+
+async function stopWindowsProcessTree(child) {
+  if (!child?.pid) {
+    return false;
+  }
+  const killer = spawn("taskkill", ["/pid", String(child.pid), "/T", "/F"], {
+    stdio: "ignore",
+    windowsHide: true,
+  });
+  const killed = await new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      killer.kill("SIGKILL");
+      resolve(false);
+    }, 1500);
+    killer.once("exit", (code) => {
+      clearTimeout(timeout);
+      resolve(code === 0);
+    });
+    killer.once("error", () => {
+      clearTimeout(timeout);
+      resolve(false);
+    });
+  });
+  if (!killed) {
+    return false;
+  }
+  await waitForChildExit(child);
+  return child.exitCode !== null || child.signalCode !== null;
+}
+
+async function stopChildProcess(child) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) {
+    return;
+  }
+  if (process.platform === "win32" && (await stopWindowsProcessTree(child))) {
+    return;
+  }
+  child.kill("SIGTERM");
+  await waitForChildExit(child);
   if (child.exitCode === null && child.signalCode === null) {
     child.kill("SIGKILL");
   }

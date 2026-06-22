@@ -9,11 +9,11 @@ working_set_snapshot:
   plan_path: specs/188-vue3-public-primevue-default-provider-governance/plan.md
   tasks_path: specs/188-vue3-public-primevue-default-provider-governance/tasks.md
   active_files: []
-  context_summary: 'Goal: 188 vue3/public-primevue default provider governance PR #84 closeout | State: Fixed Windows Compatibility failure by spawning generated frontend Vite package-manager probes through a Windows shell; local targeted tests, ruff, diff check, and verify constraints passed. | Next: Commit, push, re-request Codex review, and monitor PR #84 checks until clean.'
+  context_summary: 'Goal: 188 vue3/public-primevue default provider governance PR #84 closeout | State: Addressed latest Codex P2 by keeping Windows shell startup for package-manager shims but terminating the whole Vite process tree with taskkill /T /F. Local targeted tests, ruff, diff check, and verify constraints passed. | Next: Commit, push, re-request Codex review, and monitor PR #84 checks until clean.'
 current_branch: feature/188-vue3-public-primevue-default-provider-governance-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-22T10:05:30+00:00'
+timestamp: '2026-06-22T10:16:21+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f
