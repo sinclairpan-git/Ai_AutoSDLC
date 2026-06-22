@@ -1,32 +1,44 @@
 # Continuity Handoff
 
-- Updated: 2026-06-22T10:49:09+00:00
-- Reason: Close out 188 spec plan tasks archive
-- Goal: Complete all PRD-derived spec/plan/tasks for work item 188
-- State: PR #84 is merged into main at e97c10c. Closeout branch codex/188-prd-spec-plan-task-closeout updates spec.md, plan.md, tasks.md, and task-execution-log.md from draft/ready-for-closeout wording to completed archived evidence, while preserving no functional code changes.
+- Updated: 2026-06-22T11:24:38+00:00
+- Reason: v0.8.4 release validation passed
+- Goal: Publish AI-SDLC v0.8.4
+- State: v0.8.4 version truth, release docs, workflows, verify constraints, and tests are updated on codex/release-0.8.4. Local release verification set passed.
 - Stage: close
-- Work Item: 188-vue3-public-primevue-default-provider-governance
-- Branch: codex/188-prd-spec-plan-task-closeout
+- Work Item: release-v0.8.4
+- Branch: codex/release-0.8.4
 
 ## Changed Files
 - M .ai-sdlc/state/codex-handoff.md
 - M .ai-sdlc/state/resume-pack.yaml
-- M specs/188-vue3-public-primevue-default-provider-governance/plan.md
-- M specs/188-vue3-public-primevue-default-provider-governance/spec.md
-- M specs/188-vue3-public-primevue-default-provider-governance/task-execution-log.md
-- M specs/188-vue3-public-primevue-default-provider-governance/tasks.md
+- M .github/workflows/release-artifact-smoke.yml
+- M .github/workflows/release-build.yml
+- M .github/workflows/windows-offline-smoke.yml
+- M README.md
+- M USER_GUIDE.zh-CN.md
+- M docs/pull-request-checklist.zh.md
+- M docs/releases/v0.8.4.md
+- M "docs/\346\241\206\346\236\266\350\207\252\350\277\255\344\273\243\345\274\200\345\217\221\344\270\216\345\217\221\345\270\203\347\272\246\345\256\232.md"
+- M packaging/offline/README.md
+- M packaging/offline/RELEASE_CHECKLIST.md
+- M pyproject.toml
+- M src/ai_sdlc/__init__.py
+- M src/ai_sdlc/core/verify_constraints.py
+- M tests/unit/test_verify_constraints.py
+- M uv.lock
 
 ## Key Decisions
-- Treat stale archive status text as a completion gap because the objective is completion of spec/plan/tasks, not only code merge.
+- Keep the release PR focused on version and release-entry consistency before creating the GitHub Release/tag.
 
 ## Commands / Tests
-- rg stale archive status terms in 188 docs: no matches
+- uv run pytest tests/unit/test_frontend_solution_confirmation_artifacts.py tests/unit/test_managed_delivery_apply.py tests/unit/test_verify_constraints.py tests/unit/test_frontend_browser_gate_runtime.py -q: 211 passed, 2 skipped
+- uv run pytest tests/integration -k 'visual or browser_gate or a11y' -q: 56 passed, 601 deselected
+- uv run ruff check src tests: pass
 - uv run ai-sdlc verify constraints: no BLOCKERs
 - git diff --check: pass
-- Codex review P2 on PR #85: restored 187 scoped handoff so 188 closeout does not overwrite the active 187 scoped artifact.
 
 ## Blockers / Risks
-- None.
+- PR review/checks and GitHub release/tag still pending.
 
 ## Exact Next Steps
-- Amend and push closeout archive updates, re-request Codex review, monitor checks, and merge when clean.
+- Commit and push codex/release-0.8.4, open PR, request Codex review, monitor checks, merge, then tag and publish v0.8.4.

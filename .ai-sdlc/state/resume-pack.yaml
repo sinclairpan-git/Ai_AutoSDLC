@@ -1,24 +1,22 @@
 current_stage: execute
-current_batch: 7
-last_committed_task: T71
+current_batch: 3
+last_committed_task: T31
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/188-vue3-public-primevue-default-provider-governance/spec.md
-  plan_path: specs/188-vue3-public-primevue-default-provider-governance/plan.md
-  tasks_path: specs/188-vue3-public-primevue-default-provider-governance/tasks.md
+  spec_path: specs/187-agentops-self-iteration-monitoring/spec.md
+  plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
+  tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
-  context_summary: 'Goal: Complete all PRD-derived spec/plan/tasks for work item 188
-    | State: PR #84 is merged into main at e97c10c. Closeout branch codex/188-prd-spec-plan-task-closeout
-    updates spec.md, plan.md, tasks.md, and task-execution-log.md from draft/ready-for-closeout
-    wording to completed archived evidence, while preserving no functional code changes.
-    | Next: Commit closeout archive updates, push branch, open PR, request Codex review,
-    monitor checks, and merge when clean.'
-current_branch: codex/188-prd-spec-plan-task-closeout
+  context_summary: 'Goal: Publish AI-SDLC v0.8.4 | State: v0.8.4 version truth, release
+    docs, workflows, verify constraints, and tests are updated on codex/release-0.8.4.
+    Local release verification set passed. | Next: Commit and push codex/release-0.8.4,
+    open PR, request Codex review, monitor checks, merge, then tag and publish v0.8.4.'
+current_branch: codex/release-0.8.4
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-22T10:49:09+00:00'
+timestamp: '2026-06-22T11:24:38+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f
