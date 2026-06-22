@@ -1,32 +1,25 @@
 # Continuity Handoff
 
-- Updated: 2026-06-22T10:49:09+00:00
-- Reason: Close out 188 spec plan tasks archive
-- Goal: Complete all PRD-derived spec/plan/tasks for work item 188
-- State: PR #84 is merged into main at e97c10c. Closeout branch codex/188-prd-spec-plan-task-closeout updates spec.md, plan.md, tasks.md, and task-execution-log.md from draft/ready-for-closeout wording to completed archived evidence, while preserving no functional code changes.
+- Updated: 2026-06-22T11:46:50+00:00
+- Reason: Codex review P2 修复后交接
+- Goal: 发布 AI-SDLC v0.8.4
+- State: PR #86 checks 已通过；Codex review 对最新提交提出 P2：Windows release note 不应把 install_offline.ps1 写成 --upgrade-existing。已修正为 install_offline.ps1 -UpgradeExisting。
 - Stage: close
-- Work Item: 188-vue3-public-primevue-default-provider-governance
-- Branch: codex/188-prd-spec-plan-task-closeout
+- Work Item: release-v0.8.4
+- Branch: codex/release-0.8.4
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M specs/188-vue3-public-primevue-default-provider-governance/plan.md
-- M specs/188-vue3-public-primevue-default-provider-governance/spec.md
-- M specs/188-vue3-public-primevue-default-provider-governance/task-execution-log.md
-- M specs/188-vue3-public-primevue-default-provider-governance/tasks.md
+- M docs/releases/v0.8.4.md
 
 ## Key Decisions
-- Treat stale archive status text as a completion gap because the objective is completion of spec/plan/tasks, not only code merge.
+- Windows .ps1 示例使用 -UpgradeExisting；macOS/Linux shell installer 继续使用 --upgrade-existing。
 
 ## Commands / Tests
-- rg stale archive status terms in 188 docs: no matches
-- uv run ai-sdlc verify constraints: no BLOCKERs
-- git diff --check: pass
-- Codex review P2 on PR #85: restored 187 scoped handoff so 188 closeout does not overwrite the active 187 scoped artifact.
+- uv run ai-sdlc verify constraints => no BLOCKERs
+- uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py -q => 173 passed
 
 ## Blockers / Risks
-- None.
+- none
 
 ## Exact Next Steps
-- Amend and push closeout archive updates, re-request Codex review, monitor checks, and merge when clean.
+- 提交并推送 Codex P2 修复，重新请求 Codex review 并等待 PR #86 checks 重新通过后合并。
