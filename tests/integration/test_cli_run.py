@@ -179,6 +179,31 @@ class TestRunCommand:
         assert cfg.adapter_ingress_state == "materialized"
         assert cfg.adapter_verification_result == "unverified"
 
+    def test_run_dry_run_continues_when_adapter_metadata_config_is_locked(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+
+        def _locked_project_config(_root: Path) -> object:
+            raise PermissionError(
+                "[WinError 5] Access is denied: "
+                "'.ai-sdlc/project/config/project-config.yaml'"
+            )
+
+        monkeypatch.setattr(
+            "ai_sdlc.cli.cli_hooks.ensure_ide_adaptation",
+            _locked_project_config,
+        )
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+
+        assert result.exit_code == 0
+        normalized_output = " ".join(result.output.split())
+        assert "project-config.yaml appears to be temporarily locked" in normalized_output
+        assert "Current command will continue" in normalized_output
+        assert "Dry-run completed with open gates." in result.output
+
     def test_run_dry_run_reports_stage_progress(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

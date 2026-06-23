@@ -42,8 +42,8 @@ console = Console()
 
 adapter_app = typer.Typer(
     help=(
-        "Select adapters, inspect ingress truth plus verification result, "
-        "and keep operator acknowledgement for compatibility/debug flows."
+        "Select the AI chat entry and inspect project instruction setup. "
+        "Use --details or --json only for compatibility/debug flows."
     )
 )
 _EXEC_CONTEXT_SETTINGS = {"allow_extra_args": True, "ignore_unknown_options": True}
@@ -143,12 +143,6 @@ def adapter_select(
             next_command=None,
             next_zh="回到 AI 对话输入需求即可；需要排查时再运行 status 或 dry-run。",
             next_en="Return to AI chat and describe the requirement; use status or dry-run only for troubleshooting.",
-            notes=(
-                (
-                    f"当前接入状态：{cfg.adapter_ingress_state or 'unknown'}",
-                    f"Current ingress state: {cfg.adapter_ingress_state or 'unknown'}",
-                ),
-            ),
         )
     )
 
@@ -206,26 +200,19 @@ def adapter_activate(
         help="Optionally override the current adapter target while acknowledging it.",
     ),
 ) -> None:
-    """Record operator acknowledgement for compatibility/debug use only; this does not change ingress verification."""
+    """Record a compatibility/debug acknowledgement; normal users do not need this."""
     root = _require_project_root()
     result = acknowledge_adapter(root, agent_target=agent_target)
     note = format_adapter_notice(result)
     if note:
         console.print(note)
-    cfg = _adapter_status_payload(root)
     console.print(
         render_single_next_step(
-            result_zh="已记录 adapter 人工确认；这不是宿主加载验证。",
-            result_en="Adapter acknowledgement was recorded; this is not host-load verification.",
-            next_command="ai-sdlc adapter status",
-            next_zh="查看规则安装状态；默认状态页会告诉你下一步。",
-            next_en="Check instruction installation status; the default status view will show the next step.",
-            notes=(
-                (
-                    f"当前入口：{cfg['agent_target']}，确认状态：{cfg['adapter_activation_state']}",
-                    f"Current target: {cfg['agent_target']}, acknowledgement state: {cfg['adapter_activation_state']}",
-                ),
-            ),
+            result_zh="已记录排查用确认信息。",
+            result_en="Troubleshooting acknowledgement was recorded.",
+            next_command=None,
+            next_zh="普通使用不需要继续执行 adapter 命令；回到 AI 对话输入需求即可。",
+            next_en="Normal use does not require more adapter commands; return to AI chat and describe the requirement.",
         )
     )
 
@@ -239,7 +226,7 @@ def adapter_status(
         help="Show the full diagnostic table for framework developers.",
     ),
 ) -> None:
-    """Show ingress state, verification result, and derived governance mode."""
+    """Show project instruction setup, with diagnostic detail available on request."""
     root = _require_project_root()
     payload = _adapter_status_payload(root)
     if as_json:

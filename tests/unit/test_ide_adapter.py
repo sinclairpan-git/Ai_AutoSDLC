@@ -208,15 +208,15 @@ class TestApplyAdapter:
             assert "安全预演" in text
             assert "切换到 AI 对话" in text
             assert "ai-sdlc adapter status" in text
-            assert "用户主路径不依赖宿主加载证明" in text
-            assert "仅用于排查" in text
+            assert "内部诊断详情只在排查命令的 `--details` / `--json` 输出中查看" in text
             assert "ai-sdlc run --dry-run" in text
-            assert "verified_loaded" in text
             assert "后续 agent 或人工需要维护" in text
             assert "维护契约" in text
             assert "docstring" in text
             assert "payload 字段映射" in text
             assert "先检查接入真值" not in text
+            assert "宿主加载证明" not in text
+            assert "verified_loaded" not in text
             assert "启动入口（先执行）" not in text
             assert "优先引导并先执行上述启动入口" not in text
             assert "adapter activate" not in text

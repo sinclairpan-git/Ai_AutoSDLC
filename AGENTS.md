@@ -10,9 +10,9 @@
 - 排查入口（仅当 CLI 明确要求时执行）：`ai-sdlc adapter status`、`ai-sdlc run --dry-run` 或对应 `python -m ai_sdlc ...` 写法。
 - 全流程执行：`ai-sdlc run`
 
-当前 Codex adapter 以 `AGENTS.md` 作为 canonical path。用户主路径不依赖宿主加载证明；规则安装后，写代码前以当前可执行任务为准。诊断侧仍可能显示 `materialized / verified_loaded / degraded / unsupported`，仅用于排查。
+当前 Codex adapter 以 `AGENTS.md` 作为 canonical path。规则安装后，写代码前以当前可执行任务为准；内部诊断详情只在排查命令的 `--details` / `--json` 输出中查看。
 
-当用户在聊天中输入任何需求/任务描述时，如果项目尚未初始化，先引导用户执行 `init`。如果 `init` 已完成且 CLI 输出的下一步是切换到 AI 对话，则不要再要求用户手动执行 `adapter status` 或 `run --dry-run`；直接进入需求细化与分解。`run --dry-run` 保留为异常排查入口，它本身不构成治理激活证明。
+当用户在聊天中输入任何需求/任务描述时，如果项目尚未初始化，先引导用户执行 `init`。如果 `init` 已完成且 CLI 输出的下一步是切换到 AI 对话，则不要再要求用户手动执行 `adapter status` 或 `run --dry-run`；直接进入需求细化与分解。`run --dry-run` 仅作为异常排查入口，普通需求路径无需手动运行。
 
 若需求涉及前端需求、UI、页面、组件、浏览器交互或前端工程，进入实现前必须先给出技术栈 / 组件库建议，并等待用户明确确认；确认前不得进入 execute、不得生成前端实现代码、不得运行 managed delivery apply。确认可通过 `program solution-confirm --dry-run` 预览，只有用户确认后才允许 `program solution-confirm --execute --yes`。当用户目标是框架自带 Vue2 企业级组件库时，默认建议必须包含 `enterprise-vue2` / `vue2`，不得擅自改用 Vue3、React 或 public fallback。
 

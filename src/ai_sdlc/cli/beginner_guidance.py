@@ -96,22 +96,22 @@ def adapter_result_text(payload: dict[str, object]) -> tuple[str, str]:
     ingress = str(payload.get("adapter_ingress_state") or "")
     if ingress == "verified_loaded":
         return (
-            f"正常：{target} 规则已安装并完成宿主验证。",
-            f"OK: {target} instructions are installed and host verification passed.",
+            f"正常：{target} 项目规则已准备好。",
+            f"OK: {target} project instructions are ready.",
         )
     if ingress == "materialized":
         return (
-            f"正常：{target} 规则已安装到 {path}。当前终端只是无法机器证明 AI 宿主已自动读取；这不是安装或升级失败。",
-            f"OK: {target} instructions are installed at {path}. This terminal simply cannot machine-verify that the AI host loaded them automatically; this is not an install or upgrade failure.",
+            f"正常：{target} 项目规则已准备好（{path}）。",
+            f"OK: {target} project instructions are ready at {path}.",
         )
     if ingress == "degraded":
         return (
-            "需要处理：当前 adapter 只能以降级方式运行。",
-            "Action needed: the current adapter is running in degraded mode.",
+            "需要处理：项目规则文件不完整，需要重新选择 AI 入口。",
+            "Action needed: project instruction files are incomplete; select the AI entry again.",
         )
     return (
-        "需要处理：adapter 规则文件尚未安装到可用位置。",
-        "Action needed: adapter instructions are not installed at a usable path.",
+        "需要处理：项目规则文件尚未准备好。",
+        "Action needed: project instruction files are not ready yet.",
     )
 
 
@@ -148,8 +148,8 @@ def render_adapter_status_for_beginner(payload: dict[str, object]) -> str:
             result_zh=result_zh,
             result_en=result_en,
             next_command=prompt,
-            next_zh="在 AI 对话里先发送上面这句话，让 AI 明确读取项目规则；之后直接输入需求，不需要反复运行 dry-run。",
-            next_en="Send the line above in the AI chat first so the AI explicitly reads the project instructions; then describe the requirement without repeatedly running dry-run.",
+            next_zh="在 AI 对话里发送上面这句话后，直接输入需求；不需要反复运行 dry-run。",
+            next_en="Send the line above in the AI chat, then describe the requirement directly; repeated dry-run commands are not needed.",
         )
     select_command = "ai-sdlc adapter select"
     if target in _VERIFICATION_ENV_FOR_TARGET:
@@ -180,8 +180,8 @@ def render_mutating_run_blocker(payload: dict[str, object]) -> str:
         result_zh=result_zh,
         result_en=result_en,
         next_command=command,
-        next_zh="正式执行需要宿主验证信号。请在实际 AI 工具终端中重新运行，或在当前 shell 用上面的命令带上验证信号后再运行。",
-        next_en="A mutating run needs host verification. Run it from the actual AI-tool terminal, or use the command above to pass the verification signal in this shell.",
+        next_zh="正式执行前需要确认当前入口就是实际聊天开发入口。请在实际 AI 工具终端中重新运行，或使用上面的命令后再运行。",
+        next_en="Before a full run, confirm this is the AI entry used for chat development. Rerun from that AI-tool terminal, or use the command above first.",
     )
 
 

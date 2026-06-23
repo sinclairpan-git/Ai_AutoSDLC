@@ -14,11 +14,9 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ai_sdlc.cli.beginner_guidance import (
-    adapter_result_text,
     render_dry_run_open_gate_guidance,
     render_dry_run_pass_guidance,
     render_mutating_run_blocker,
-    render_single_next_step,
 )
 from ai_sdlc.cli.commands import _print_reconcile_guidance
 from ai_sdlc.context.state import load_checkpoint
@@ -159,37 +157,15 @@ def _failed_gate_messages(result: Any) -> list[str]:
 
 
 def _adapter_gate_message(root: object, *, dry_run: bool) -> str | None:
-    """Return a warning/blocker based on persisted ingress truth."""
+    """Return a warning/blocker based on persisted adapter readiness."""
     payload = build_adapter_governance_surface(root)
     ingress_state = str(payload["adapter_ingress_state"])
     if ingress_state == "verified_loaded":
         return None
     if ingress_state == "materialized":
-        if not dry_run:
-            return None
-        result_zh, result_en = adapter_result_text(payload)
-        return render_single_next_step(
-            result_zh=result_zh,
-            result_en=result_en,
-            next_command=None,
-            next_zh="本次安全预演会继续执行；如果后面显示 open gates，通常表示项目还没有完成需求或测试，不是升级失败。",
-            next_en="This safe rehearsal will continue; if open gates appear later, they usually mean the requirement or tests are unfinished, not that the upgrade failed.",
-            notes=(
-                (
-                    "普通使用路径：回到 Codex/AI 对话输入需求；只有排查时才查看 `adapter status --json`。",
-                    "Normal path: return to Codex/AI chat and describe the requirement; inspect `adapter status --json` only for troubleshooting.",
-                ),
-            ),
-        )
-    result_zh, result_en = adapter_result_text(payload)
+        return None
     if dry_run:
-        return render_single_next_step(
-            result_zh=result_zh,
-            result_en=result_en,
-            next_command=None,
-            next_zh="本次 dry-run 会自动继续执行；你不需要先手动理解这些内部验证状态。",
-            next_en="This dry-run will continue automatically; you do not need to interpret internal verification states first.",
-        )
+        return None
     return render_mutating_run_blocker(payload)
 
 
@@ -349,9 +325,11 @@ def _flush_agentops_runtime_report(
     try:
         agentops_config = load_agentops_ingestion_config(Path(root))
     except Exception as exc:
-        console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
         if _agentops_config_load_failure_is_required():
+            console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
             raise typer.Exit(code=2) from None
+        if _agentops_verbose_output():
+            console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
         return
     if not agentops_config.enabled:
         return
@@ -518,9 +496,11 @@ def _flush_agentops_runtime_report(
             dry_run=dry_run,
         )
     except Exception as exc:
-        console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
         if agentops_config.required:
+            console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
             raise typer.Exit(code=2) from None
+        if _agentops_verbose_output():
+            console.print(f"[yellow]AgentOps report pending: {exc}[/yellow]")
         return
     if result.receipt is not None:
         if result.receipt.has_diagnostics:
@@ -550,12 +530,17 @@ def _flush_agentops_runtime_report(
     elif result.dry_run and result.config_ready:
         console.print("[yellow]AgentOps report dry-run: delivery skipped[/yellow]")
     elif result.diagnostic is not None:
-        console.print(
-            "[yellow]AgentOps report pending: "
-            f"{result.diagnostic.reason_code}[/yellow]"
-        )
         if agentops_config.required:
+            console.print(
+                "[yellow]AgentOps report pending: "
+                f"{result.diagnostic.reason_code}[/yellow]"
+            )
             raise typer.Exit(code=2)
+        if _agentops_verbose_output():
+            console.print(
+                "[yellow]AgentOps report pending: "
+                f"{result.diagnostic.reason_code}[/yellow]"
+            )
 
 
 def _agentops_config_load_failure_is_required() -> bool:
@@ -568,6 +553,11 @@ def _agentops_config_load_failure_is_required() -> bool:
         return any(path.is_file() for path in enterprise_profile_paths())
     except OSError:
         return True
+
+
+def _agentops_verbose_output() -> bool:
+    value = os.environ.get("AI_SDLC_AGENTOPS_VERBOSE", "").strip().lower()
+    return value in {"1", "true", "yes", "on"}
 
 
 def _record_halt_result(

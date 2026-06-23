@@ -101,13 +101,13 @@ def _print_plan(plan: HostRuntimePlan) -> None:
 def _host_runtime_guidance(plan: HostRuntimePlan) -> str:
     if plan.status == "ready":
         return render_status_guidance(
-            current_status_zh="宿主运行时已就绪，可以继续检查 adapter 接入真值。",
-            current_status_en="Host runtime is ready. You can now verify adapter ingress truth.",
+            current_status_zh="运行环境已就绪，可以回到 AI 对话继续输入需求。",
+            current_status_en="The runtime is ready. Return to the AI chat and continue with the requirement.",
             next_steps=(
                 (
                     "ai-sdlc run --dry-run",
-                    "执行安全预演；如 adapter 还没验证，输出会给出恢复动作。",
-                    "Run the safe rehearsal; if adapter verification is still missing, the output will give the recovery action.",
+                    "仅在排查启动问题时执行安全预演。",
+                    "Run the safe rehearsal only when troubleshooting startup issues.",
                 ),
             ),
         )
@@ -117,9 +117,9 @@ def _host_runtime_guidance(plan: HostRuntimePlan) -> str:
             current_status_en="Host runtime is usable, but supporting dependencies are still missing.",
             next_steps=(
                 (
-                    "ai-sdlc adapter status",
-                    "先确认接入真值，再根据 remediation_targets 补齐剩余依赖。",
-                    "Verify adapter ingress truth, then fill the remaining remediation targets.",
+                    "ai-sdlc run --dry-run",
+                    "先继续安全预演；真正需要附加依赖的阶段会给出处理路径。",
+                    "Continue with the safe rehearsal; stages that need extra dependencies will provide the handling path.",
                 ),
             ),
         )
