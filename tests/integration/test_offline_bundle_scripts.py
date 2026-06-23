@@ -1548,7 +1548,9 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "current parent terminal may still resolve an older ai-sdlc command" in offline_ps1
     assert "Get-Command ai-sdlc | Select-Object Source" in offline_ps1
     assert "Direct shim" in offline_ps1
+    assert "Codex + PowerShell project init" in offline_ps1
     assert '{1}{2}{1} init .' in offline_ps1
+    assert "--agent-target codex --shell powershell" in offline_ps1
 
     assert "winget install --id Python.Python.3.11" in online_ps1
     assert "choco install python311 -y" in online_ps1
@@ -1567,7 +1569,9 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Get-Command ai-sdlc | Select-Object Source" in online_ps1
     assert "Bare ai-sdlc may still resolve an older install" in online_ps1
     assert "Direct shim" in online_ps1
+    assert "Codex + PowerShell project init" in online_ps1
     assert '{1}{2}{1} init .' in online_ps1
+    assert "--agent-target codex --shell powershell" in online_ps1
 
 
 def test_windows_install_guidance_is_safe_for_windows_powershell_parser() -> None:

@@ -188,6 +188,42 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     assert "command -v ai-sdlc" in workflow
 
 
+def test_windows_user_guide_e2e_replays_existing_project_install_path() -> None:
+    workflow_path = _WORKFLOWS_DIR / "windows-user-guide-e2e.yml"
+
+    assert workflow_path.is_file()
+
+    workflow = workflow_path.read_text(encoding="utf-8")
+
+    assert "workflow_dispatch:" in workflow
+    assert "pull_request:" in workflow
+    assert "windows-latest" in workflow
+    assert "default: v0.8.6" in workflow
+    assert "USER_GUIDE.zh-CN.md Chapter 2, Scenario B" in workflow
+    assert "my-existing-project" in workflow
+    assert "ai-sdlc-offline-0.8.6-windows-amd64" in workflow
+    assert "releases/download/v0.8.6" in workflow
+    assert "Invoke-WebRequest" in workflow
+    assert "Expand-Archive" in workflow
+    assert "-ExecutionPolicy Bypass -File .\\install_offline.ps1 -AddToPath" in workflow
+    assert ".\\.venv\\Scripts\\python.exe -m ai_sdlc --help" in workflow
+    assert "Direct shim" in workflow
+    assert "Codex \\+ PowerShell project init" in workflow
+    assert "released-package-guide-gap.txt" in workflow
+    assert "& $directShim init . --agent-target codex --shell powershell" in workflow
+    assert "当前结果 / Result" in workflow
+    assert "下一步 / Next" in workflow
+    assert "adapter ingress|materialized|unverified|host ingress" in workflow
+    assert "& $directShim adopt ." in workflow
+    assert "接入已有项目" in workflow
+    assert "business-file-hashes-before.txt" in workflow
+    assert "business-file-hashes-after.txt" in workflow
+    assert "Compare-Object" in workflow
+    assert "init/adopt modified existing business files" in workflow
+    assert "windows-user-guide-existing-project-evidence" in workflow
+    assert "actions/upload-artifact@v7" in workflow
+
+
 def test_posix_offline_smoke_matrix_concurrency_is_job_scoped() -> None:
     workflow_path = _WORKFLOWS_DIR / "posix-offline-smoke.yml"
 
