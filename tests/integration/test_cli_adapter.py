@@ -44,14 +44,16 @@ def _digest(path: Path) -> str:
 
 
 class TestCliAdapter:
-    def test_adapter_help_surfaces_governance_language(self) -> None:
+    def test_adapter_help_keeps_default_language_user_facing(self) -> None:
         result = runner.invoke(app, ["adapter", "--help"])
 
         assert result.exit_code == 0
         assert "Select, acknowledge, and inspect IDE adapters" not in result.output
-        assert "ingress truth" in result.output
-        assert "verification result" in result.output
+        assert "Select the AI chat entry" in result.output
+        assert "project instruction setup" in result.output
         assert "compatibility/debug" in result.output
+        assert "ingress truth" not in result.output
+        assert "verification result" not in result.output
 
     def test_adapter_activate_help_describes_compatibility_acknowledgement(self) -> None:
         result = runner.invoke(app, ["adapter", "activate", "--help"])
@@ -59,15 +61,17 @@ class TestCliAdapter:
         assert result.exit_code == 0
         assert "acknowledged by the user" not in result.output
         assert "compatibility/debug" in result.output
-        assert "does" in result.output
-        assert "ingress verification" in result.output
+        assert "normal users do not need this" in result.output
+        assert "ingress verification" not in result.output
 
-    def test_adapter_status_help_describes_ingress_and_verification_state(self) -> None:
+    def test_adapter_status_help_uses_instruction_setup_language(self) -> None:
         result = runner.invoke(app, ["adapter", "status", "--help"])
 
         assert result.exit_code == 0
-        assert "ingress state" in result.output
-        assert "verification result" in result.output
+        assert "project instruction setup" in result.output
+        assert "diagnostic detail" in result.output
+        assert "ingress state" not in result.output
+        assert "verification result" not in result.output
 
     def test_init_interactive_selector_persists_user_choice(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

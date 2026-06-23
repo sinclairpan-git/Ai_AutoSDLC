@@ -404,7 +404,8 @@ def render_notice_lines(evaluation: UpdateEvaluation) -> list[str]:
             f"检测到 GitHub 上游新 release：AI-SDLC {latest}。",
             f"A newer upstream AI-SDLC release is available: {latest}.",
             f"查看发布 / Release: {release_url}",
-            "当前运行环境不支持 CLI 自动更新；请使用公司或项目提供的安装入口更新。",
+            "当前运行入口不能被 CLI 安全覆盖；请使用离线安装包或公司/项目提供的安装入口更新。",
+            "This CLI entry cannot be safely replaced automatically; use the offline bundle or your company/project installer.",
         ]
     if evaluation.refresh_result in {REFRESH_NETWORK_ERROR, REFRESH_PARSE_ERROR, REFRESH_TIMEOUT}:
         return [

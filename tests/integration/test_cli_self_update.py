@@ -124,6 +124,7 @@ def test_self_update_check_auto_installs_actionable_update(
     assert "Updating now" in result.output
     assert "无需复制下一条命令" in result.output
     assert "ai-sdlc self-update install --version" not in result.output
+    assert "未确认可自动升级" not in result.output
 
 
 def test_self_update_check_reports_retry_and_offline_rescue_on_refresh_failure(

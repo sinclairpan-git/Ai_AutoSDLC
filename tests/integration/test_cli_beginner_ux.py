@@ -67,9 +67,12 @@ def test_adapter_status_default_is_beginner_safe_but_json_keeps_truth(
     assert "下一步 / Next" in status.output
     assert "ai-sdlc run --dry-run" not in status.output
     assert "请先读取 AGENTS.md" in status.output
-    assert "AI 明确读取项目规则" in _single_space(status.output)
+    assert "直接输入需求" in status.output
     assert "governance_activation" not in status.output
     assert "adapter_canonical_content_digest" not in status.output
+    assert "materialized" not in status.output
+    assert "unverified" not in status.output
+    assert "ingress" not in status.output.lower()
 
     machine = runner.invoke(app, ["adapter", "status", "--json"])
 
@@ -98,14 +101,15 @@ def test_run_dry_run_materialized_adapter_explains_upgrade_is_not_failed(
 
     assert result.exit_code == 0
     assert "当前结果 / Result" in result.output
-    assert "不是安装或升级失败" in result.output
-    assert "This safe rehearsal will continue" in _single_space(result.output)
-    assert "普通使用路径：回到 Codex/AI 对话输入需求" in result.output
+    assert "安全预演已完成" in result.output
     assert "adapter ingress truth not yet verified" not in result.output
     assert "Current ingress truth is not yet verified" not in result.output
     assert "ai-sdlc host-runtime plan" not in result.output
     assert "governance_activation" not in result.output
     assert "materialized_unverified" not in result.output
+    assert "materialized" not in result.output
+    assert "unverified" not in result.output
+    assert "ingress" not in result.output.lower()
 
 
 def test_adapter_status_generic_recovery_does_not_reselect_generic(

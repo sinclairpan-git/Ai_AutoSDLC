@@ -201,3 +201,5 @@ def test_host_runtime_plan_details_keeps_diagnostic_table(
     assert "Host Runtime Plan" in result.output
     assert "status: ready" in result.output
     assert "surface: installed_cli / bound" in result.output
+    assert "adapter ingress truth" not in result.output
+    assert "接入真值" not in result.output
