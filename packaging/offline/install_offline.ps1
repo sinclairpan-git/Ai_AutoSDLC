@@ -266,6 +266,7 @@ $callOperator = [char]38
 $doubleQuote = [char]34
 $cliDir = Split-Path -Parent $resolvedCliExe
 $directInitCommand = 'cd YOUR_PROJECT_PATH; {0} {1}{2}{1} init .' -f $callOperator, $doubleQuote, $resolvedCliExe
+$codexPowerShellInitCommand = 'cd YOUR_PROJECT_PATH; {0} {1}{2}{1} init . --agent-target codex --shell powershell' -f $callOperator, $doubleQuote, $resolvedCliExe
 if ($AddToPath) {
   Add-DirectoryToUserPath $cliDir
   $nextCommand = $directInitCommand
@@ -304,5 +305,7 @@ if ($AddToPath) {
 }
 Write-Host "Direct shim:"
 Write-Host ('  {0} {1}{2}{1} init .' -f $callOperator, $doubleQuote, $resolvedCliExe)
+Write-Host "Codex + PowerShell project init:"
+Write-Host "  $codexPowerShellInitCommand"
 Write-Host ('  {0} {1}{2}{1} --help' -f $callOperator, $doubleQuote, $resolvedCliExe)
 Write-Host ('  {0} {1}{2}{1} -m ai_sdlc --help' -f $callOperator, $doubleQuote, $resolvedVenvPython)

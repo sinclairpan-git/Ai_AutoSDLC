@@ -242,12 +242,12 @@ ai-sdlc --help
 
 安装包目录只是安装位置，不是业务项目。下一步统一回到刚创建的项目目录执行初始化；不要在安装包目录里执行 `init`。
 
-Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`。先回到项目根目录，然后复制安装脚本刚刚输出的 `Direct shim` 里的 `init .` 那一行执行；下面是形状示例，路径必须替换成你终端里实际打印的完整路径：
+Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`。先回到项目根目录，然后复制安装脚本刚刚输出的完整路径命令。如果你当前就是 Codex + PowerShell，优先复制 `Codex + PowerShell project init` 那一行；如果你的安装包还没有打印这一行，就复制 `Direct shim` 的 `init .` 命令，并在末尾补上 `--agent-target codex --shell powershell`。下面是形状示例，路径必须替换成你终端里实际打印的完整路径：
 
 ```powershell
 # D:\work\ui-test-platform 是示例路径；请替换成你的真实项目根目录
 cd D:\work\ui-test-platform
-& "D:\work\.ai-sdlc-install\ai-sdlc-offline-0.8.6-windows-amd64\.venv\Scripts\ai-sdlc.exe" init .
+& "D:\work\.ai-sdlc-install\ai-sdlc-offline-0.8.6-windows-amd64\.venv\Scripts\ai-sdlc.exe" init . --agent-target codex --shell powershell
 ```
 
 如果你已经新开了一个终端，并且 `Get-Command ai-sdlc | Select-Object Source` 显示的是刚安装的 `0.8.6` 路径，也可以执行：
@@ -493,12 +493,12 @@ ai-sdlc --help
 
 进入已有项目根目录后执行；不要在安装包目录里执行 `init`。
 
-Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`。先进入已有项目根目录，然后复制安装脚本刚刚输出的 `Direct shim` 里的 `init .` 那一行执行；下面是形状示例，路径必须替换成你终端里实际打印的完整路径：
+Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`。先进入已有项目根目录，然后复制安装脚本刚刚输出的完整路径命令。如果你当前就是 Codex + PowerShell，优先复制 `Codex + PowerShell project init` 那一行；如果你的安装包还没有打印这一行，就复制 `Direct shim` 的 `init .` 命令，并在末尾补上 `--agent-target codex --shell powershell`。下面是形状示例，路径必须替换成你终端里实际打印的完整路径：
 
 ```powershell
 # D:\work\my-existing-project 是示例路径；请替换成你的真实项目根目录
 cd D:\work\my-existing-project
-& "D:\work\.ai-sdlc-install\ai-sdlc-offline-0.8.6-windows-amd64\.venv\Scripts\ai-sdlc.exe" init .
+& "D:\work\.ai-sdlc-install\ai-sdlc-offline-0.8.6-windows-amd64\.venv\Scripts\ai-sdlc.exe" init . --agent-target codex --shell powershell
 ```
 
 如果你已经新开了一个终端，并且 `Get-Command ai-sdlc | Select-Object Source` 显示的是刚安装的 `0.8.6` 路径，也可以执行：

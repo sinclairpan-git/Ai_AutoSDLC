@@ -1,0 +1,189 @@
+name: Windows User Guide E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag to verify against the user guide.
+        required: true
+        default: v0.8.6
+  pull_request:
+    paths:
+      - ".github/workflows/windows-user-guide-e2e.yml"
+      - "USER_GUIDE.zh-CN.md"
+      - "packaging/offline/**"
+      - "tests/integration/test_github_workflows.py"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-user-guide-e2e-${{ github.event.pull_request.number || inputs.tag || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  existing-project-online-install:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ inputs.tag || 'v0.8.6' }}
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - name: Checkout repository truth
+        uses: actions/checkout@v6
+
+      - name: Replay Windows existing-project guide path
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $utf8 = [System.Text.UTF8Encoding]::new($false)
+          [Console]::InputEncoding = $utf8
+          [Console]::OutputEncoding = $utf8
+          $OutputEncoding = $utf8
+
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-windows-user-guide-e2e"
+          $workRoot = Join-Path $env:RUNNER_TEMP "work"
+          $projectRoot = Join-Path $workRoot "my-existing-project"
+          Remove-Item -Recurse -Force $evidenceRoot, $workRoot -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $evidenceRoot, $projectRoot | Out-Null
+
+          "release_tag=$env:RELEASE_TAG" | Out-File -FilePath (Join-Path $evidenceRoot "scenario.txt") -Encoding utf8
+
+          @"
+          {
+            "scripts": {
+              "build": "node -e \"console.log('existing project build placeholder')\""
+            },
+            "dependencies": {}
+          }
+          "@ | Out-File -FilePath (Join-Path $projectRoot "package.json") -Encoding utf8
+          New-Item -ItemType Directory -Force -Path (Join-Path $projectRoot "src") | Out-Null
+          "console.log('existing project source file');" | Out-File -FilePath (Join-Path $projectRoot "src\main.js") -Encoding utf8
+          "# Existing Project" | Out-File -FilePath (Join-Path $projectRoot "README.md") -Encoding utf8
+          "- [ ] Existing imported task" | Out-File -FilePath (Join-Path $projectRoot "TODO.md") -Encoding utf8
+          $businessFiles = @(
+            (Join-Path $projectRoot "package.json"),
+            (Join-Path $projectRoot "src\main.js"),
+            (Join-Path $projectRoot "README.md"),
+            (Join-Path $projectRoot "TODO.md")
+          )
+          Get-ChildItem -LiteralPath $projectRoot -Recurse |
+            Select-Object FullName, Length |
+            Format-Table -AutoSize |
+            Out-String |
+            Out-File -FilePath (Join-Path $evidenceRoot "existing-project-before.txt") -Encoding utf8
+          $businessFileHashesBefore = Get-FileHash -Algorithm SHA256 -LiteralPath $businessFiles | Sort-Object Path
+          $businessFileHashesBefore |
+            Format-Table -AutoSize |
+            Out-String |
+            Out-File -FilePath (Join-Path $evidenceRoot "business-file-hashes-before.txt") -Encoding utf8
+
+          # USER_GUIDE.zh-CN.md Chapter 2, Scenario B: online download from Release.
+          Push-Location $projectRoot
+          cd ..
+          $BundleName = "ai-sdlc-offline-0.8.6-windows-amd64"
+          $PackageName = "$BundleName.zip"
+          $PackageDir = (Get-Location).Path
+          $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
+          if ($env:RELEASE_TAG -ne "v0.8.6") {
+            throw "This guide replay intentionally follows the current USER_GUIDE.zh-CN.md v0.8.6 Windows commands."
+          }
+          Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.8.6/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
+          New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
+          Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
+          Write-Host "Extracting package; existing installer files will be overwritten quietly."
+          Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force
+          Set-Location (Join-Path $ExtractRoot $BundleName)
+          powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath *>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "install.log")
+          if ($LASTEXITCODE -ne 0) {
+            throw "install_offline.ps1 -AddToPath failed with exit code $LASTEXITCODE"
+          }
+          .\.venv\Scripts\python.exe -m ai_sdlc --help *>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "help-via-bundle-python.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "bundle python -m ai_sdlc --help failed with exit code $LASTEXITCODE"
+          }
+          Pop-Location
+
+          $installOutput = Get-Content -LiteralPath (Join-Path $evidenceRoot "install.log") -Raw
+          if ($installOutput -notmatch "Direct shim") {
+            throw "installer output did not include Direct shim guidance required by USER_GUIDE.zh-CN.md"
+          }
+          if ($installOutput -notmatch "Codex \+ PowerShell project init") {
+            "installer_printed_codex_powershell_init=false" |
+              Out-File -FilePath (Join-Path $evidenceRoot "released-package-guide-gap.txt") -Encoding utf8
+            Write-Warning "Published package did not print Codex + PowerShell project init; continuing with the explicit command documented by USER_GUIDE.zh-CN.md."
+          } else {
+            "installer_printed_codex_powershell_init=true" |
+              Out-File -FilePath (Join-Path $evidenceRoot "released-package-guide-gap.txt") -Encoding utf8
+          }
+
+          $directShim = Join-Path $ExtractRoot "$BundleName\.venv\Scripts\ai-sdlc.exe"
+          if (-not (Test-Path $directShim)) {
+            throw "expected Direct shim executable was missing: $directShim"
+          }
+
+          # USER_GUIDE.zh-CN.md Chapter 2, Step 3: return to the existing project
+          # root and run the Direct shim init command shape.
+          Set-Location $projectRoot
+          & $directShim init . --agent-target codex --shell powershell *>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "init-existing-project.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "Direct shim Codex + PowerShell init failed with exit code $LASTEXITCODE"
+          }
+          $initOutput = Get-Content -LiteralPath (Join-Path $evidenceRoot "init-existing-project.txt") -Raw
+          if (($initOutput -notmatch "当前结果 / Result") -or ($initOutput -notmatch "下一步 / Next")) {
+            throw "init output did not include the guide's bilingual Result/Next surface"
+          }
+          if ($initOutput -match "adapter ingress|materialized|unverified|host ingress|governance activation") {
+            throw "init output exposed internal adapter diagnostic terminology"
+          }
+          if (-not (Test-Path (Join-Path $projectRoot ".ai-sdlc"))) {
+            throw "init did not create .ai-sdlc in the existing project"
+          }
+          if (-not (Test-Path (Join-Path $projectRoot "AGENTS.md"))) {
+            throw "init did not create the Codex adapter guidance file AGENTS.md"
+          }
+
+          & $directShim adopt . *>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "adopt-existing-project.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "adopt . failed with exit code $LASTEXITCODE"
+          }
+          $adoptOutput = Get-Content -LiteralPath (Join-Path $evidenceRoot "adopt-existing-project.txt") -Raw
+          if ($adoptOutput -notmatch "接入已有项目") {
+            throw "adopt output did not include the guide's existing-project adoption wording"
+          }
+
+          $businessFileHashesAfter = Get-FileHash -Algorithm SHA256 -LiteralPath $businessFiles | Sort-Object Path
+          $businessFileHashesAfter |
+            Format-Table -AutoSize |
+            Out-String |
+            Out-File -FilePath (Join-Path $evidenceRoot "business-file-hashes-after.txt") -Encoding utf8
+          $businessFileHashDiff = Compare-Object `
+            -ReferenceObject $businessFileHashesBefore `
+            -DifferenceObject $businessFileHashesAfter `
+            -Property Path, Hash
+          if ($businessFileHashDiff) {
+            $businessFileHashDiff |
+              Format-Table -AutoSize |
+              Out-String |
+              Out-File -FilePath (Join-Path $evidenceRoot "business-file-hash-diff.txt") -Encoding utf8
+            throw "init/adopt modified existing business files"
+          }
+          Get-ChildItem -LiteralPath $projectRoot -Recurse |
+            Select-Object FullName, Length |
+            Format-Table -AutoSize |
+            Out-String |
+            Out-File -FilePath (Join-Path $evidenceRoot "existing-project-after.txt") -Encoding utf8
+
+      - name: Upload guide replay evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-user-guide-existing-project-evidence
+          path: ${{ runner.temp }}/ai-sdlc-windows-user-guide-e2e
+          if-no-files-found: error
