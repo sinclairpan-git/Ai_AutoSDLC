@@ -60,6 +60,7 @@ jobs:
             PYTHONIOENCODING="utf-8" \
             AI_SDLC_OFFLINE_PYTHON_RUNTIME="$runtime_root" \
             AI_SDLC_OFFLINE_PYTHON_VERSIONS="3.11,3.12" \
+            AI_SDLC_OFFLINE_ASSET_SUFFIX="-windows-amd64" \
             AI_SDLC_OFFLINE_TARGET_PLATFORM="win_amd64" \
             bash packaging/offline/build_offline_bundle.sh
 
