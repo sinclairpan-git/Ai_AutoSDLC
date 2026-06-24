@@ -107,7 +107,11 @@ def _can_prompt_for_update_confirmation() -> bool:
     if os.environ.get("AI_SDLC_UPDATE_ADVISOR_FORCE_TTY") == "1":
         return True
     try:
-        return bool(sys.stdin.isatty()) and bool(sys.stderr.isatty())
+        return (
+            bool(sys.stdin.isatty())
+            and bool(sys.stdout.isatty())
+            and bool(sys.stderr.isatty())
+        )
     except OSError:
         return False
 

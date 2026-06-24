@@ -244,7 +244,7 @@ def test_noninteractive_cli_prints_ai_conversation_update_prompt(tmp_path) -> No
     assert "ai-sdlc self-update check" in result.output
 
 
-def test_update_confirmation_requires_stderr_tty(monkeypatch) -> None:
+def test_update_confirmation_requires_all_streams_tty(monkeypatch) -> None:
     class FakeStream:
         def __init__(self, *, tty: bool) -> None:
             self._tty = tty
@@ -254,6 +254,16 @@ def test_update_confirmation_requires_stderr_tty(monkeypatch) -> None:
 
     monkeypatch.delenv("AI_SDLC_UPDATE_ADVISOR_FORCE_TTY", raising=False)
     monkeypatch.setattr(self_update_cmd.sys, "stdin", FakeStream(tty=True))
+    monkeypatch.setattr(self_update_cmd.sys, "stdout", FakeStream(tty=True))
+    monkeypatch.setattr(self_update_cmd.sys, "stderr", FakeStream(tty=True))
+
+    assert self_update_cmd._can_prompt_for_update_confirmation()
+
+    monkeypatch.setattr(self_update_cmd.sys, "stdout", FakeStream(tty=False))
+
+    assert not self_update_cmd._can_prompt_for_update_confirmation()
+
+    monkeypatch.setattr(self_update_cmd.sys, "stdout", FakeStream(tty=True))
     monkeypatch.setattr(self_update_cmd.sys, "stderr", FakeStream(tty=False))
 
     assert not self_update_cmd._can_prompt_for_update_confirmation()

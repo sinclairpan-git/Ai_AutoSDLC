@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-24T06:17:38+00:00
-- Reason: Codex review actionable P2 fixed
-- Goal: 修复 PR #94 Codex review P2：更新确认提示不能污染 stdout 重定向。
-- State: 已将 typer.confirm 改为 err=True，并要求 stdin+stderr 都是 TTY 才进入阻塞确认；否则走非交互式 AI 提醒。
+- Updated: 2026-06-24T06:29:58+00:00
+- Reason: Post-review fix and verification checkpoint
+- Goal: PR #94 update prompt review follow-up
+- State: Fixed second Codex review issue: interactive update confirmation now requires stdin, stdout, and stderr TTY so stdout redirection falls back to noninteractive notice.
 - Stage: close
 - Work Item: 187-agentops-self-iteration-monitoring
 - Branch: codex/update-prompt-confirmation
@@ -14,14 +14,15 @@
 - M tests/integration/test_cli_self_update.py
 
 ## Key Decisions
-- none
+- Preserve redirected stdout by only entering blocking install confirmation when all standard streams are TTY; otherwise show the noninteractive AI conversation update prompt.
 
 ## Commands / Tests
 - uv run pytest tests/integration/test_cli_self_update.py tests/unit/test_update_advisor.py -q => 29 passed, 1 skipped
 - uv run ruff check src/ai_sdlc/cli/self_update_cmd.py tests/integration/test_cli_self_update.py => passed
+- uv run ai-sdlc verify constraints => no BLOCKERs
 
 ## Blockers / Risks
 - none
 
 ## Exact Next Steps
-- 提交并推送 PR #94 review 修复，重新请求 Codex review 与 checks。
+- Commit and push stdout TTY fix, request @codex review again, monitor PR #94 checks and review comments.
