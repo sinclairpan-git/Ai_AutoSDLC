@@ -1555,7 +1555,7 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "current parent terminal may still resolve an older ai-sdlc command" not in offline_ps1
     assert "Get-Command ai-sdlc | Select-Object Source" not in offline_ps1
     assert "Set-PreferredAiSdlcPath" in offline_ps1
-    assert "Test-DirectoryHasAiSdlc" in offline_ps1
+    assert "Test-DirectoryHasAiSdlc" not in offline_ps1
     assert "Direct shim" in offline_ps1
     assert "Codex + PowerShell project init" in offline_ps1
     assert '{1}{2}{1} init .' in offline_ps1
@@ -1580,7 +1580,7 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Get-Command ai-sdlc | Select-Object Source" not in online_ps1
     assert "Bare ai-sdlc may still resolve an older install" not in online_ps1
     assert "Set-PreferredAiSdlcPath" in online_ps1
-    assert "Test-DirectoryHasAiSdlc" in online_ps1
+    assert "Test-DirectoryHasAiSdlc" not in online_ps1
     assert "Direct shim" in online_ps1
     assert "Codex + PowerShell project init" in online_ps1
     assert '{1}{2}{1} init .' in online_ps1

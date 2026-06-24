@@ -634,7 +634,6 @@ def _prefer_cli_dir_in_process_path(cli_dir: Path) -> None:
     entries = _dedupe_preferred_path_entries(
         os.environ.get("PATH", ""),
         str(cli_dir),
-        remove_other_ai_sdlc_dirs=True,
     )
     os.environ["PATH"] = os.pathsep.join(entries)
 
@@ -660,7 +659,6 @@ def _repair_windows_user_path(preferred_dir: Path) -> None:
         entries = _dedupe_preferred_path_entries(
             str(current_user_path),
             preferred,
-            remove_other_ai_sdlc_dirs=True,
         )
         winreg.SetValueEx(key, "Path", 0, value_type, os.pathsep.join(entries))
 
@@ -668,7 +666,6 @@ def _repair_windows_user_path(preferred_dir: Path) -> None:
         _dedupe_preferred_path_entries(
             os.environ.get("PATH", ""),
             preferred,
-            remove_other_ai_sdlc_dirs=True,
         )
     )
 
@@ -676,9 +673,8 @@ def _repair_windows_user_path(preferred_dir: Path) -> None:
 def _dedupe_preferred_path_entries(
     path_value: str,
     preferred_dir: str,
-    *,
-    remove_other_ai_sdlc_dirs: bool,
 ) -> list[str]:
+    # 只前置当前 CLI 目录；旧目录可能是共享 Scripts 目录，不能静默移除。
     preferred_norm = _norm_path(Path(preferred_dir))
     result = [preferred_dir]
     seen = {preferred_norm}
@@ -689,15 +685,9 @@ def _dedupe_preferred_path_entries(
         normalized = _norm_path(Path(entry))
         if normalized in seen:
             continue
-        if remove_other_ai_sdlc_dirs and _path_dir_has_ai_sdlc(Path(entry)):
-            continue
         seen.add(normalized)
         result.append(entry)
     return result
-
-
-def _path_dir_has_ai_sdlc(directory: Path) -> bool:
-    return any((directory / name).exists() for name in _candidate_names())
 
 
 def _norm_path(path: Path) -> str:

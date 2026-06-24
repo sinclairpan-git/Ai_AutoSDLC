@@ -49,20 +49,6 @@ function Assert-LastExitCode {
   }
 }
 
-function Test-DirectoryHasAiSdlc {
-  param([string]$Directory)
-
-  if (-not $Directory) {
-    return $false
-  }
-  foreach ($name in @("ai-sdlc.exe", "ai-sdlc.cmd", "ai-sdlc.bat", "ai-sdlc")) {
-    if (Test-Path -LiteralPath (Join-Path $Directory $name)) {
-      return $true
-    }
-  }
-  return $false
-}
-
 function Normalize-PathEntry {
   param([string]$Directory)
 
@@ -86,9 +72,6 @@ function Set-PreferredAiSdlcPath {
   foreach ($entry in @($PathValue -split [IO.Path]::PathSeparator | Where-Object { $_ })) {
     $key = Normalize-PathEntry $entry
     if ($seen.ContainsKey($key)) {
-      continue
-    }
-    if (Test-DirectoryHasAiSdlc $entry) {
       continue
     }
     $seen[$key] = $true

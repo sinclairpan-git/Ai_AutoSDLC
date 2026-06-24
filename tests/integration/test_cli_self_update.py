@@ -321,6 +321,9 @@ def test_self_update_bare_cli_validation_repairs_process_path_silently(
     assert os.path.normcase(os.environ["PATH"].split(os.pathsep)[0]) == os.path.normcase(
         str(new_dir)
     )
+    assert os.path.normcase(str(old_dir)) in {
+        os.path.normcase(entry) for entry in os.environ["PATH"].split(os.pathsep)
+    }
 
 
 def test_self_update_reexecs_windows_launcher_only_once() -> None:
