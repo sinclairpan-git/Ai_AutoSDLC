@@ -127,6 +127,28 @@ def test_self_update_check_auto_installs_actionable_update(
     assert "未确认可自动升级" not in result.output
 
 
+def test_self_update_check_auto_installs_unknown_channel_for_076_plus(
+    tmp_path, monkeypatch
+) -> None:
+    calls: list[str] = []
+
+    def fake_install(*, version: str) -> None:
+        calls.append(version)
+
+    monkeypatch.setattr(self_update_cmd, "self_update_install", fake_install)
+    env = _env(tmp_path, channel="unknown")
+    env["AI_SDLC_UPDATE_ADVISOR_TEST_VERSION"] = "0.7.6"
+    env["AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION"] = "v0.8.6"
+
+    result = runner.invoke(app, ["self-update", "check"], env=env)
+
+    assert result.exit_code == 0
+    assert calls == ["0.8.6"]
+    assert "现在自动更新" in result.output
+    assert "未确认可自动升级" not in result.output
+    assert "请使用你的安装渠道更新" not in result.output
+
+
 def test_self_update_check_reports_retry_and_offline_rescue_on_refresh_failure(
     tmp_path, monkeypatch
 ) -> None:

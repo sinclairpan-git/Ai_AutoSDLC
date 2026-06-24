@@ -256,9 +256,9 @@ def render_init_complete_guidance(
     return render_single_next_step(
         result_zh=f"初始化完成。{adapter_zh} {dry_zh}",
         result_en=f"Initialization complete. {adapter_en} {dry_en}",
-        next_command="ai-sdlc adapter status",
-        next_zh="先查看 adapter 状态页给出的下一步；不要假设 AI 已自动加载规则。",
-        next_en="Check the adapter status page for the next step first; do not assume the AI loaded the instructions automatically.",
+        next_command="ai-sdlc adapter select",
+        next_zh="如果当前 AI 入口不是你正在使用的聊天工具，先重新选择；否则回到 AI 对话直接输入需求。",
+        next_en="If the current AI entry is not the chat tool you are using, select it first; otherwise return to AI chat and describe the requirement.",
         notes=notes,
     )
 
