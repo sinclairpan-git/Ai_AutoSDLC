@@ -139,12 +139,12 @@ def test_self_update_check_auto_installs_unknown_channel_for_076_plus(
     monkeypatch.setattr(self_update_cmd, "self_update_install", fake_install)
     env = _env(tmp_path, channel="unknown")
     env["AI_SDLC_UPDATE_ADVISOR_TEST_VERSION"] = "0.7.6"
-    env["AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION"] = "v0.8.7"
+    env["AI_SDLC_UPDATE_ADVISOR_TEST_LATEST_VERSION"] = "v0.8.8"
 
     result = runner.invoke(app, ["self-update", "check"], env=env)
 
     assert result.exit_code == 0
-    assert calls == ["0.8.7"]
+    assert calls == ["0.8.8"]
     assert "现在自动更新" in result.output
     assert "未确认可自动升级" not in result.output
     assert "请使用你的安装渠道更新" not in result.output
@@ -397,13 +397,13 @@ def test_self_update_bare_cli_validation_repairs_windows_process_path_silently(
     old_cli = old_dir / "ai-sdlc.cmd"
     new_cli = new_dir / "ai-sdlc.cmd"
     old_cli.write_text("@echo off\r\necho 0.7.6\r\n", encoding="utf-8")
-    new_cli.write_text("@echo off\r\necho 0.8.7\r\n", encoding="utf-8")
+    new_cli.write_text("@echo off\r\necho 0.8.8\r\n", encoding="utf-8")
     monkeypatch.setenv("PATH", f"{old_dir}{os.pathsep}{new_dir}")
     monkeypatch.setattr(self_update_cmd, "_current_cli_directory", lambda: new_dir)
 
-    version = self_update_cmd._verify_bare_cli_version("0.8.7")
+    version = self_update_cmd._verify_bare_cli_version("0.8.8")
 
-    assert version == "0.8.7"
+    assert version == "0.8.8"
     assert os.path.normcase(os.environ["PATH"].split(os.pathsep)[0]) == os.path.normcase(
         str(new_dir)
     )
@@ -423,7 +423,7 @@ def test_self_update_bare_cli_validation_does_not_mask_posix_path_gaps(
     old_cli = old_dir / "ai-sdlc"
     new_cli = new_dir / "ai-sdlc"
     old_cli.write_text("#!/bin/sh\necho 0.7.6\n", encoding="utf-8")
-    new_cli.write_text("#!/bin/sh\necho 0.8.7\n", encoding="utf-8")
+    new_cli.write_text("#!/bin/sh\necho 0.8.8\n", encoding="utf-8")
     old_cli.chmod(0o755)
     new_cli.chmod(0o755)
     original_path = str(old_dir)
@@ -431,7 +431,7 @@ def test_self_update_bare_cli_validation_does_not_mask_posix_path_gaps(
     monkeypatch.setattr(self_update_cmd, "_current_cli_directory", lambda: new_dir)
 
     with pytest.raises(self_update_cmd.SelfUpdateError):
-        self_update_cmd._verify_bare_cli_version("0.8.7")
+        self_update_cmd._verify_bare_cli_version("0.8.8")
 
     assert os.environ["PATH"] == original_path
 
