@@ -1,33 +1,28 @@
 # Continuity Handoff
 
-- Updated: 2026-06-22T10:28:00+00:00
-- Reason: Address latest Codex review P2 before PR closeout
-- Goal: 188 vue3/public-primevue default provider governance PR #84 closeout
-- State: Codex flagged that Python timeout could kill the Node runner before JS cleanup ran, leaving Vite orphaned. The Python wrapper now runs Node via `Popen`, starts a killable process group/session, and kills the process tree on timeout.
+- Updated: 2026-06-24T06:29:58+00:00
+- Reason: Post-review fix and verification checkpoint
+- Goal: PR #94 update prompt review follow-up
+- State: Fixed second Codex review issue: interactive update confirmation now requires stdin, stdout, and stderr TTY so stdout redirection falls back to noninteractive notice.
 - Stage: close
-- Work Item: 188-vue3-public-primevue-default-provider-governance
-- Branch: feature/188-vue3-public-primevue-default-provider-governance-docs
+- Work Item: 187-agentops-self-iteration-monitoring
+- Branch: codex/update-prompt-confirmation
 
 ## Changed Files
-- M src/ai_sdlc/core/frontend_browser_gate_runtime.py
-- M tests/unit/test_frontend_browser_gate_runtime.py
+- M .ai-sdlc/state/resume-pack.yaml
+- M src/ai_sdlc/cli/self_update_cmd.py
+- M tests/integration/test_cli_self_update.py
 
 ## Key Decisions
-- Replace `subprocess.run(..., timeout=...)` with a `Popen` helper so timeout handling can clean the runner process tree.
-- Use `taskkill /T /F /PID` on Windows and POSIX process-group termination elsewhere.
+- Preserve redirected stdout by only entering blocking install confirmation when all standard streams are TTY; otherwise show the noninteractive AI conversation update prompt.
 
 ## Commands / Tests
-- `node --check scripts/frontend_browser_gate_probe_runner.mjs` passed.
-- `uv run pytest tests/unit/test_frontend_browser_gate_runtime.py::test_run_default_browser_gate_probe_uses_packaged_runner_when_project_script_missing tests/unit/test_frontend_browser_gate_runtime.py::test_run_default_browser_gate_probe_kills_process_tree_on_timeout tests/unit/test_frontend_browser_gate_runtime.py::test_frontend_browser_gate_probe_runner_starts_vite_for_generated_managed_frontend -q` passed: 3 passed.
-- `uv run pytest tests/unit/test_frontend_browser_gate_runtime.py tests/integration -k "visual or browser_gate or a11y" -q` passed: 87 passed, 601 deselected.
-- `uv run ruff check src tests` passed.
-- `uv run ai-sdlc verify constraints` passed: no BLOCKERs.
-- `git diff --check` passed.
+- uv run pytest tests/integration/test_cli_self_update.py tests/unit/test_update_advisor.py -q => 29 passed, 1 skipped
+- uv run ruff check src/ai_sdlc/cli/self_update_cmd.py tests/integration/test_cli_self_update.py => passed
+- uv run ai-sdlc verify constraints => no BLOCKERs
 
 ## Blockers / Risks
-- PR #84 still needs a new push, Codex re-review, and GitHub CI confirmation after the parent-timeout process-tree cleanup fix.
+- none
 
 ## Exact Next Steps
-- Commit and push the parent-timeout process-tree cleanup fix.
-- Re-request Codex review on PR #84.
-- Monitor PR #84 checks and Codex review until all required checks pass and no actionable review findings remain, then ready/merge per repository PR protocol.
+- Commit and push stdout TTY fix, request @codex review again, monitor PR #94 checks and review comments.

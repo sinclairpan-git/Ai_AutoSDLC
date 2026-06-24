@@ -379,11 +379,7 @@ def record_notice_rendered(
 
 def should_auto_render_notice(env: dict[str, str] | None = None) -> bool:
     env_map = env or os.environ
-    if _update_check_disabled(env_map):
-        return False
-    if env_map.get("AI_SDLC_UPDATE_ADVISOR_FORCE_TTY") == "1":
-        return True
-    return bool(getattr(sys.stdout, "isatty", lambda: False)())
+    return not _update_check_disabled(env_map)
 
 
 def render_notice_lines(evaluation: UpdateEvaluation) -> list[str]:
