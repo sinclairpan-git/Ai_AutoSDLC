@@ -2171,7 +2171,7 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
         "recover --reconcile\n"
         "ai-sdlc run --dry-run reported repo-state reconciliation diagnostics; treating this as smoke pass.\n"
         "expected upgraded ai-sdlc version 0.8.9\n"
-        "$upgradedVersion -notmatch \"0\\.8\\.8\"\n",
+        "$upgradedVersion -notmatch \"0\\.8\\.9\"\n",
         encoding="utf-8",
     )
 

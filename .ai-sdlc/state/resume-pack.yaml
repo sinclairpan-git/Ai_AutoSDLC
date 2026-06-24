@@ -10,15 +10,14 @@ working_set_snapshot:
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
   context_summary: 'Goal: Prepare v0.8.9 patch release with truthful Windows upgrade
-    guidance | State: Bumped current release surfaces to v0.8.9, added v0.8.9 release
-    notes, kept 0.7.6+ self-update check as first upgrade path, and documented package
-    rescue only when historical installs do not finish upgrading. | Next: Commit and
-    push v0.8.9 patch surfaces, monitor PR checks including Windows user guide E2E,
-    request review, then merge and publish v0.8.9.'
+    guidance | State: PR checks found stale Windows offline smoke regex 0.8.8 after
+    version bump; upgrade itself installed 0.8.9 successfully. Fixed workflow assertion
+    and test fixture to require 0.8.9. | Next: Commit and push stale regex fix, rerun
+    PR checks, then request review and publish v0.8.9 after green.'
 current_branch: codex/windows-update-e2e-v088
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-24T13:24:22+00:00'
+timestamp: '2026-06-24T13:31:17+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f
