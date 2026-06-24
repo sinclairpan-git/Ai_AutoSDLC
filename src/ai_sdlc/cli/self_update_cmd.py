@@ -75,7 +75,7 @@ def maybe_render_update_notice() -> None:
 
     prompt = _update_confirmation_prompt(current_version, latest_version)
     if _can_prompt_for_update_confirmation():
-        if not typer.confirm(prompt, default=False):
+        if not typer.confirm(prompt, default=False, err=True):
             notice_console.print("已跳过本次升级，继续执行当前命令。")
             return
         self_update_install(version=latest_version)
@@ -107,7 +107,7 @@ def _can_prompt_for_update_confirmation() -> bool:
     if os.environ.get("AI_SDLC_UPDATE_ADVISOR_FORCE_TTY") == "1":
         return True
     try:
-        return bool(sys.stdin.isatty())
+        return bool(sys.stdin.isatty()) and bool(sys.stderr.isatty())
     except OSError:
         return False
 
