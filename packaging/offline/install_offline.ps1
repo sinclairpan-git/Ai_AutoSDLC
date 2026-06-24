@@ -79,6 +79,37 @@ function Write-BilingualStatus {
   }
 }
 
+function Normalize-PathEntry {
+  param([string]$Directory)
+
+  try {
+    return (Resolve-Path -LiteralPath $Directory).Path.TrimEnd('\').ToLowerInvariant()
+  } catch {
+    return $Directory.TrimEnd('\').ToLowerInvariant()
+  }
+}
+
+function Set-PreferredAiSdlcPath {
+  param(
+    [string]$PathValue,
+    [string]$PreferredDirectory
+  )
+
+  $preferredKey = Normalize-PathEntry $PreferredDirectory
+  $result = @($PreferredDirectory)
+  $seen = @{}
+  $seen[$preferredKey] = $true
+  foreach ($entry in @($PathValue -split [IO.Path]::PathSeparator | Where-Object { $_ })) {
+    $key = Normalize-PathEntry $entry
+    if ($seen.ContainsKey($key)) {
+      continue
+    }
+    $seen[$key] = $true
+    $result += $entry
+  }
+  return ($result -join [IO.Path]::PathSeparator)
+}
+
 function Add-DirectoryToUserPath {
   param([string]$Directory)
 
@@ -87,33 +118,9 @@ function Add-DirectoryToUserPath {
   if (-not $currentUserPath) {
     $currentUserPath = ""
   }
-  $entries = @($currentUserPath -split [IO.Path]::PathSeparator | Where-Object { $_ })
-  $alreadyPresent = $false
-  foreach ($entry in $entries) {
-    if ($entry.TrimEnd('\') -ieq $resolvedDirectory.TrimEnd('\')) {
-      $alreadyPresent = $true
-      break
-    }
-  }
-  if (-not $alreadyPresent) {
-    $updatedPath = if ($currentUserPath) {
-      $currentUserPath + [IO.Path]::PathSeparator + $resolvedDirectory
-    } else {
-      $resolvedDirectory
-    }
-    [Environment]::SetEnvironmentVariable("Path", $updatedPath, "User")
-  }
-  $sessionEntries = @($env:Path -split [IO.Path]::PathSeparator | Where-Object { $_ })
-  $sessionPresent = $false
-  foreach ($entry in $sessionEntries) {
-    if ($entry.TrimEnd('\') -ieq $resolvedDirectory.TrimEnd('\')) {
-      $sessionPresent = $true
-      break
-    }
-  }
-  if (-not $sessionPresent) {
-    $env:Path = $resolvedDirectory + [IO.Path]::PathSeparator + $env:Path
-  }
+  $updatedPath = Set-PreferredAiSdlcPath -PathValue $currentUserPath -PreferredDirectory $resolvedDirectory
+  [Environment]::SetEnvironmentVariable("Path", $updatedPath, "User")
+  $env:Path = Set-PreferredAiSdlcPath -PathValue $env:Path -PreferredDirectory $resolvedDirectory
 }
 
 if (-not (Test-Path $Wheels)) {
@@ -282,26 +289,10 @@ Write-BilingualStatus `
   -PurposeEn "Enter your project and initialize it; init will automatically run the required checks and safe rehearsal."
 Write-Host ""
 if ($AddToPath) {
-  Write-Host "PATH consent:"
-  Write-Host "  -AddToPath was provided, so the installer wrote User PATH for future terminals."
-  Write-Host "  The current parent terminal may still resolve an older ai-sdlc command."
-  Write-Host "PATH entry added:"
-  Write-Host "  $cliDir"
-  Write-Host "Check resolved command before using bare ai-sdlc:"
-  Write-Host "  Get-Command ai-sdlc | Select-Object Source"
+  Write-Host "New terminals can run ai-sdlc directly."
 } else {
-  Write-Host "PATH was not changed. Bare ai-sdlc may still resolve an older install."
-  Write-Host "Use the direct shim above, or rerun with -AddToPath for new terminals."
+  Write-Host "Use the full command above, or rerun with -AddToPath for new terminals."
   Write-Host "To upgrade the existing bare ai-sdlc entrypoint, rerun with -UpgradeExisting."
-  $currentCommand = Get-Command ai-sdlc -ErrorAction SilentlyContinue
-  if ($null -ne $currentCommand) {
-    Write-Host "Current bare ai-sdlc:"
-    Write-Host "  $($currentCommand.Source)"
-    $currentVersion = (& ai-sdlc --version 2>$null)
-    if ($LASTEXITCODE -eq 0) {
-      Write-Host "  $currentVersion"
-    }
-  }
 }
 Write-Host "Direct shim:"
 Write-Host ('  {0} {1}{2}{1} init .' -f $callOperator, $doubleQuote, $resolvedCliExe)

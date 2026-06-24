@@ -50,6 +50,21 @@ def test_python_m_ai_sdlc_help_exits_zero() -> None:
     assert "ai-sdlc" in combined.lower() or "SDLC" in combined
 
 
+def test_python_m_ai_sdlc_version_exits_zero() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "ai_sdlc", "--version"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        cwd=str(_REPO_ROOT),
+        env=_env_with_src_on_path(),
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip()
+    assert "No such option" not in result.stderr
+
+
 def test_python_m_ai_sdlc_no_args_shows_help() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "ai_sdlc"],

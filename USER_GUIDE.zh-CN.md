@@ -16,7 +16,7 @@
 
 本手册推荐安装时显式同意写入 PATH，这样后续可以直接执行 `ai-sdlc ...`。Windows 用 `-AddToPath`，macOS / Linux 用 `--add-to-path`。这些参数本身就是写入 PATH 的确认信号；安装器不会再弹出第二次确认。
 
-Windows 注意：如果你是用 `powershell -ExecutionPolicy Bypass -File ... -AddToPath` 启动安装脚本，PATH 会写入用户 PATH，通常需要新开一个终端后裸 `ai-sdlc ...` 才会被父终端识别。安装完成后的当前终端如果要立刻初始化项目，请使用安装脚本最后打印的 Direct shim；否则裸 `ai-sdlc init .` 可能仍解析到机器上已有的旧版本。可用 `Get-Command ai-sdlc | Select-Object Source` 检查当前命中的入口。
+Windows 注意：如果你是用 `powershell -ExecutionPolicy Bypass -File ... -AddToPath` 启动安装脚本，安装器会把最新 AI-SDLC 命令入口设为优先。新开终端后可直接运行裸 `ai-sdlc ...`；安装完成后的当前终端如果要立刻初始化项目，请复制安装脚本最后打印的完整命令。
 
 写入 PATH 后并且新终端已经识别新 PATH 时，通用命令就是：
 
@@ -250,7 +250,7 @@ cd D:\work\ui-test-platform
 & "D:\work\.ai-sdlc-install\ai-sdlc-offline-0.8.6-windows-amd64\.venv\Scripts\ai-sdlc.exe" init . --agent-target codex --shell powershell
 ```
 
-如果你已经新开了一个终端，并且 `Get-Command ai-sdlc | Select-Object Source` 显示的是刚安装的 `0.8.6` 路径，也可以执行：
+如果你已经新开了一个终端，也可以执行：
 
 ```powershell
 cd D:\work\ui-test-platform
@@ -501,7 +501,7 @@ cd D:\work\my-existing-project
 & "D:\work\.ai-sdlc-install\ai-sdlc-offline-0.8.6-windows-amd64\.venv\Scripts\ai-sdlc.exe" init . --agent-target codex --shell powershell
 ```
 
-如果你已经新开了一个终端，并且 `Get-Command ai-sdlc | Select-Object Source` 显示的是刚安装的 `0.8.6` 路径，也可以执行：
+如果你已经新开了一个终端，也可以执行：
 
 ```powershell
 cd D:\work\my-existing-project
@@ -599,11 +599,11 @@ ai-sdlc self-update check
 
 - 输出 `Update check failed` 或“无法刷新 update state”：当前网络无法稳定访问 GitHub，改用本章第 2 节的安装包救援路径
 - 输出“当前运行入口不能被 CLI 安全覆盖”：改用本章第 2 节的安装包救援路径
-- 更新后版本仍没有变化：说明 PATH 命中的还是旧入口，改用本章第 2 节的 `--upgrade-existing`
+- 更新后版本仍没有变化：重新执行本章第 2 节的安装包救援升级命令
 
-### 2. 更旧版本或 `No such command 'install'`
+### 2. 已安装版本无法直接升级或 `No such command 'install'`
 
-如果旧版本提示 `No such command 'install'`，说明旧 CLI 太老，不能靠旧 CLI 学会新子命令。直接下载最新平台包，并让安装包覆盖当前 `PATH` 命中的旧入口。
+如果当前命令提示 `No such command 'install'`，直接下载最新平台包并执行下面的救援升级命令；安装器会把最新 AI-SDLC 命令入口设为优先。
 
 下面的救援升级命令请在业务项目父目录或临时下载目录执行，不要在业务项目根目录执行。命令会把安装包和 `.ai-sdlc-install` 解压目录放到当前目录，并自动进入解压后的安装包目录运行升级脚本；升级完成后再回到业务项目根目录继续。
 
@@ -653,7 +653,7 @@ ai-sdlc --version
 ai-sdlc self-update check
 ```
 
-`--upgrade-existing` 的成功标准不是“安装包运行完”，而是当前 `ai-sdlc` 入口已经换成新版本。安装器会在结束前校验版本和 `self-update` 子命令；如果它无法安全覆盖旧入口，会直接报错并给下一步，不会假装成功。
+`--upgrade-existing` 的成功标准不是“安装包运行完”，而是后续 `ai-sdlc --version` 和 `ai-sdlc self-update check` 都能正常显示新版本。安装器会在结束前完成校验；如果当前终端还没有识别新命令，按输出提示重新打开终端后再执行一次检查。
 
 ### 3. 升级后回到项目继续
 
@@ -669,12 +669,12 @@ ai-sdlc init .
 - `下一步 / Next` 给出唯一下一步
 - 下一步通常是切换到 AI 对话输入需求；只有排查时才需要手动运行 `ai-sdlc adapter status`
 
-正常升级后，普通命令不需要理解 `adapter ingress`、`materialized`、`unverified`、`host ingress` 这类诊断词。默认输出只看两件事：
+正常升级后，普通命令不需要理解内部诊断词。默认输出只看两件事：
 
 - `当前结果 / Result` 是否说明项目规则、运行环境或安全预演已准备好
 - `下一步 / Next` 是否让你回到 Codex / AI 对话输入需求
 
-只有在以下情况才需要排查：`init` 明确提示 AI 入口不匹配、正式 `ai-sdlc run` 被阻断、或 AI 对话明显没有遵守项目规则。排查时再运行 `ai-sdlc adapter status --details` 或 `ai-sdlc adapter status --json`，诊断词只用于框架开发者定位问题，不是普通用户的升级成功标准。
+只有在以下情况才需要排查：`init` 明确提示 AI 入口不匹配、正式 `ai-sdlc run` 被阻断、或 AI 对话明显没有遵守项目规则。排查时再运行 `ai-sdlc adapter status --details` 或 `ai-sdlc adapter status --json`；这些诊断输出不是普通用户的升级成功标准。
 
 如果这个项目本来就有 JSON、Markdown、TODO 或 issue 导出的任务进度，再执行一次：
 
@@ -764,7 +764,7 @@ python -m ai_sdlc <子命令>
 | --- | --- |
 | `ai-sdlc: command not found` / `ai-sdlc 不是内部或外部命令` | 用安装包输出的完整路径，或执行 `python -m ai_sdlc --help`；再用 `ai-sdlc doctor` 排查 PATH |
 | `No module named ai_sdlc` | 当前 Python 环境没有安装 AI-SDLC；回到安装包目录重新安装 |
-| `No such command 'install'` | 旧 CLI 太老；下载 `v0.8.6` 同平台包并执行 `--upgrade-existing` / `-UpgradeExisting` |
+| `No such command 'install'` | 当前命令不支持自动升级；下载 `v0.8.6` 同平台包并执行 `--upgrade-existing` / `-UpgradeExisting` |
 | `Update check failed` | GitHub 网络不可用或超时；用离线包救援升级 |
 | `offline bundle platform mismatch` | 安装包平台不匹配；换 Windows x64、macOS arm64 或 Linux x64 对应包 |
 | `need Python >= 3.11` | 包内没有可用 Python runtime 且系统 Python 太旧；换带 `python-runtime/` 的安装包 |
@@ -772,7 +772,7 @@ python -m ai_sdlc <子命令>
 | Windows `ExpandArchiveFileExists` | 旧解压目录里已有同名文件；改用本指南带 `.ai-sdlc-install` 和 `-Force` 的 Windows 命令 |
 | `tar: command not found` / `curl: command not found` | 让管理员下载并解压包，或在具备这些工具的终端执行 |
 | `init` 输出提示 adapter target 不匹配 | 按 `下一步 / Next` 执行 `adapter select`，选择真实聊天入口 |
-| 普通输出仍出现 `adapter ingress` / `materialized` / `unverified` / `host ingress` | 说明当前 CLI 仍是旧版本或你打开了诊断详情；先执行本章升级命令，只有排查时才查看 `adapter status --details` / `--json` |
+| 普通输出仍出现内部诊断信息 | 重新执行本章升级命令；普通使用不需要查看这些诊断详情 |
 | Windows `WinError 5` / `project-config.yaml` 写入权限 | 通常是 IDE、索引器、杀软、同步工具或另一个终端短暂占用运行态配置文件。若 Codex 已经完成代码和 `npm run build`，这不代表前端实现失败；稍后在终端重跑 `ai-sdlc adapter status` 或 `ai-sdlc run --dry-run` 排查即可 |
 | `init` 或 `run --dry-run` 显示 open gates | 看 `下一步 / Next` 和 `说明 / Notes`；新项目未开始需求时不一定是错误 |
 | 在聊天框里粘贴命令没有反应 | 命令必须在终端执行；聊天框只输入自然语言需求 |

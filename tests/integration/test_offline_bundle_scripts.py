@@ -879,8 +879,10 @@ def test_install_offline_accepts_matching_platform_manifest(tmp_path: Path) -> N
     assert "当前结果 / Result" in result.stdout
     expected_python = _bash_path(bundle_dir / ".venv" / "bin" / "python")
     assert f'"{expected_python}" -m ai_sdlc init .' in result.stdout
-    assert "PATH was not changed" in result.stdout
-    assert "Bare ai-sdlc may still resolve an older install" in result.stdout
+    assert "Use the full command above" in result.stdout
+    assert "PATH was not changed" not in result.stdout
+    assert "Bare ai-sdlc may still resolve an older install" not in result.stdout
+    assert "Current bare ai-sdlc" not in result.stdout
     assert "--upgrade-existing" in result.stdout
 
 
@@ -910,7 +912,8 @@ def test_install_offline_add_to_path_enables_bare_cli_guidance(tmp_path: Path) -
     assert (bundle_dir / ".venv" / "bin" / "ai-sdlc").is_file()
     assert (home_dir / ".local" / "bin" / "ai-sdlc").is_symlink()
     assert "cd <your-project> && ai-sdlc init ." in result.stdout
-    assert f"PATH entry added: {_bash_path(home_dir / '.local' / 'bin')}" in result.stdout
+    assert "New terminals can run ai-sdlc directly." in result.stdout
+    assert "PATH entry added" not in result.stdout
     assert f'export PATH="{_bash_path(home_dir / ".local" / "bin")}:$PATH"' in (
         home_dir / ".bashrc"
     ).read_text(encoding="utf-8")
@@ -1247,8 +1250,9 @@ def test_install_online_uses_detected_python_and_prints_bilingual_guidance(
     assert "下一步 / Next" in result.stdout
     expected_python = _bash_path(tmp_path / ".venv" / "bin" / "python")
     assert f'"{expected_python}" -m ai_sdlc init .' in result.stdout
-    assert "PATH was not changed" in result.stdout
-    assert "Bare ai-sdlc may still resolve an older install" in result.stdout
+    assert "Use the full command above" in result.stdout
+    assert "PATH was not changed" not in result.stdout
+    assert "Bare ai-sdlc may still resolve an older install" not in result.stdout
     assert "ai-sdlc adapter status" not in result.stdout
     assert "ai-sdlc run --dry-run" not in result.stdout
 
@@ -1284,7 +1288,8 @@ def test_install_online_add_to_path_enables_bare_cli_guidance(tmp_path: Path) ->
     assert (tmp_path / ".venv" / "bin" / "ai-sdlc").is_file()
     assert (home_dir / ".local" / "bin" / "ai-sdlc").is_symlink()
     assert "cd <your-project> && ai-sdlc init ." in result.stdout
-    assert f"PATH entry added: {_bash_path(home_dir / '.local' / 'bin')}" in result.stdout
+    assert "New terminals can run ai-sdlc directly." in result.stdout
+    assert "PATH entry added" not in result.stdout
     assert f'export PATH="{_bash_path(home_dir / ".local" / "bin")}:$PATH"' in (
         home_dir / ".bashrc"
     ).read_text(encoding="utf-8")
@@ -1544,9 +1549,13 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "PYTHONIOENCODING" in offline_ps1
     assert "UTF8Encoding" in offline_ps1
     assert "`run --dry-run`" not in offline_ps1
-    assert "-AddToPath was provided, so the installer wrote User PATH" in offline_ps1
-    assert "current parent terminal may still resolve an older ai-sdlc command" in offline_ps1
-    assert "Get-Command ai-sdlc | Select-Object Source" in offline_ps1
+    assert "New terminals can run ai-sdlc directly." in offline_ps1
+    assert "-AddToPath was provided, so the installer updated User PATH" not in offline_ps1
+    assert "The latest AI-SDLC command entry is now preferred" not in offline_ps1
+    assert "current parent terminal may still resolve an older ai-sdlc command" not in offline_ps1
+    assert "Get-Command ai-sdlc | Select-Object Source" not in offline_ps1
+    assert "Set-PreferredAiSdlcPath" in offline_ps1
+    assert "Test-DirectoryHasAiSdlc" not in offline_ps1
     assert "Direct shim" in offline_ps1
     assert "Codex + PowerShell project init" in offline_ps1
     assert '{1}{2}{1} init .' in offline_ps1
@@ -1564,10 +1573,14 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "PYTHONUTF8" in online_ps1
     assert "PYTHONIOENCODING" in online_ps1
     assert "UTF8Encoding" in online_ps1
-    assert "-AddToPath was provided, so the installer wrote User PATH" in online_ps1
-    assert "current parent terminal may still resolve an older ai-sdlc command" in online_ps1
-    assert "Get-Command ai-sdlc | Select-Object Source" in online_ps1
-    assert "Bare ai-sdlc may still resolve an older install" in online_ps1
+    assert "New terminals can run ai-sdlc directly." in online_ps1
+    assert "-AddToPath was provided, so the installer updated User PATH" not in online_ps1
+    assert "The latest AI-SDLC command entry is now preferred" not in online_ps1
+    assert "current parent terminal may still resolve an older ai-sdlc command" not in online_ps1
+    assert "Get-Command ai-sdlc | Select-Object Source" not in online_ps1
+    assert "Bare ai-sdlc may still resolve an older install" not in online_ps1
+    assert "Set-PreferredAiSdlcPath" in online_ps1
+    assert "Test-DirectoryHasAiSdlc" not in online_ps1
     assert "Direct shim" in online_ps1
     assert "Codex + PowerShell project init" in online_ps1
     assert '{1}{2}{1} init .' in online_ps1

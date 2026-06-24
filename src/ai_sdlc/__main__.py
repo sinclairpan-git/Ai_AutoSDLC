@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 
+from ai_sdlc import __version__
 from ai_sdlc.cli.main import app
 
 
@@ -45,5 +46,8 @@ if __name__ == "__main__":
         len(sys.argv) == 2 and sys.argv[1] in {"--help", "-h"}
     ):
         _emit_ascii_module_help()
+        raise SystemExit(0)
+    if len(sys.argv) == 2 and sys.argv[1] == "--version":
+        sys.stdout.write(f"{__version__}\n")
         raise SystemExit(0)
     app()

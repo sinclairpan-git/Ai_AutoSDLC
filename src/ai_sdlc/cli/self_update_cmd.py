@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -11,6 +12,7 @@ import tempfile
 import urllib.error
 import urllib.request
 import zipfile
+from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 
 import typer
@@ -49,6 +51,13 @@ notice_console = Console(stderr=True)
 
 class SelfUpdateError(RuntimeError):
     """Raised when the automatic self-update cannot complete safely."""
+
+
+@dataclass(frozen=True)
+class PathCandidate:
+    path: str
+    version: str | None
+    error: str | None = None
 
 
 def _print_json(payload: dict[str, object]) -> None:
@@ -259,6 +268,14 @@ def self_update_install(
             bundle_dir = _extract_release_asset(archive_path, temp_path / "bundle", hint)
             _install_bundle_into_current_runtime(bundle_dir, release_version)
             installed_version = _read_installed_version()
+            _repair_current_user_path_if_possible()
+            bare_version: str | None
+            try:
+                bare_version = _verify_bare_cli_version(release_version)
+            except SelfUpdateError:
+                if shutil.which("ai-sdlc"):
+                    raise
+                bare_version = None
         if installed_version != release_version:
             raise SelfUpdateError(
                 f"installed version is {installed_version}, expected {release_version}"
@@ -279,6 +296,17 @@ def self_update_install(
         )
         raise typer.Exit(1) from exc
 
+    verification_note = (
+        (
+            f"已校验命令：ai-sdlc --version => {bare_version}",
+            f"Verified command: ai-sdlc --version => {bare_version}",
+        )
+        if bare_version is not None
+        else (
+            f"已校验安装版本：AI-SDLC {installed_version}",
+            f"Verified installed version: AI-SDLC {installed_version}",
+        )
+    )
     console.print(
         Panel(
             render_single_next_step(
@@ -287,16 +315,7 @@ def self_update_install(
                 next_command=None,
                 next_zh="不需要继续执行升级命令；回到原项目继续使用 AI-SDLC。",
                 next_en="No more update commands are needed; return to your project and keep using AI-SDLC.",
-                notes=(
-                    (
-                        f"已自动安装 release 资产：{hint['filename']}",
-                        f"Installed release asset automatically: {hint['filename']}",
-                    ),
-                    (
-                        f"已校验当前运行环境：{sys.executable}",
-                        f"Verified current runtime: {sys.executable}",
-                    ),
-                ),
+                notes=(verification_note,),
             ),
             title="AI-SDLC Self Update",
             border_style="green",
@@ -496,6 +515,205 @@ def _read_installed_version() -> str:
         detail = (result.stderr or result.stdout or "version verification failed").strip()
         raise SelfUpdateError(_tail(detail))
     return result.stdout.strip()
+
+
+def _candidate_names() -> tuple[str, ...]:
+    if sys.platform == "win32":
+        return ("ai-sdlc.exe", "ai-sdlc.cmd", "ai-sdlc.bat", "ai-sdlc")
+    return ("ai-sdlc",)
+
+
+def _discover_path_candidates(env_path: str | None = None) -> list[PathCandidate]:
+    path_value = env_path if env_path is not None else os.environ.get("PATH", "")
+    seen: set[str] = set()
+    candidates: list[PathCandidate] = []
+    for raw_entry in path_value.split(os.pathsep):
+        if not raw_entry:
+            continue
+        entry = Path(raw_entry)
+        for name in _candidate_names():
+            candidate = entry / name
+            if not candidate.exists() or not candidate.is_file():
+                continue
+            try:
+                key = str(candidate.resolve()).lower()
+            except OSError:
+                key = str(candidate).lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            version, error = _read_cli_candidate_version(candidate)
+            candidates.append(
+                PathCandidate(path=str(candidate), version=version, error=error)
+            )
+            break
+    return candidates
+
+
+def _read_cli_candidate_version(candidate: Path) -> tuple[str | None, str | None]:
+    try:
+        result = subprocess.run(
+            [str(candidate), "--version"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, _tail(str(exc), limit=200)
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout or "version command failed").strip()
+        return None, _tail(detail, limit=200)
+    version = result.stdout.strip().splitlines()[-1].strip() if result.stdout else ""
+    return version or None, None
+
+
+def _verify_bare_cli_version(expected_version: str) -> str:
+    candidates = _discover_path_candidates()
+    resolved = shutil.which("ai-sdlc")
+    if resolved:
+        version, _error = _read_cli_candidate_version(Path(resolved))
+        if version == expected_version:
+            return version
+
+    if sys.platform != "win32":
+        raise SelfUpdateError(
+            "更新已安装；请重新打开终端后再次执行 ai-sdlc self-update check 完成确认。"
+        )
+
+    preferred_dirs = _preferred_cli_dirs_for_update(expected_version, candidates)
+    for preferred_dir in preferred_dirs:
+        _prefer_cli_dir_in_process_path(preferred_dir)
+        _repair_user_path_if_possible(preferred_dir)
+
+    resolved = shutil.which("ai-sdlc")
+    if resolved:
+        version, _error = _read_cli_candidate_version(Path(resolved))
+        if version == expected_version:
+            return version
+
+    # Keep default output user-facing. Detailed PATH diagnostics stay out of
+    # normal update screens because beginners cannot act on them reliably.
+    raise SelfUpdateError(
+        "更新已安装；请重新打开终端后再次执行 ai-sdlc self-update check 完成确认。"
+    )
+
+
+def _preferred_cli_dirs_for_update(
+    expected_version: str, candidates: list[PathCandidate]
+) -> list[Path]:
+    dirs: list[Path] = []
+    current_dir = _current_cli_directory()
+    if current_dir is not None:
+        dirs.append(current_dir)
+    for candidate in candidates:
+        if candidate.version != expected_version:
+            continue
+        candidate_dir = Path(candidate.path).parent
+        if candidate_dir not in dirs:
+            dirs.append(candidate_dir)
+    return dirs
+
+
+def _current_cli_directory() -> Path | None:
+    executable = Path(sys.executable)
+    if sys.platform == "win32" and executable.name.lower() == "python.exe":
+        if executable.parent.name.lower() == "scripts":
+            return executable.parent
+    argv0 = Path(sys.argv[0])
+    if argv0.name.lower() in _candidate_names():
+        return argv0.parent
+    return None
+
+
+def _repair_current_user_path_if_possible() -> None:
+    if sys.platform != "win32":
+        return
+    cli_dir = _current_cli_directory()
+    if cli_dir is None:
+        return
+    _repair_user_path_if_possible(cli_dir)
+
+
+def _prefer_current_cli_dir_in_process_path() -> None:
+    cli_dir = _current_cli_directory()
+    if cli_dir is None:
+        return
+    _prefer_cli_dir_in_process_path(cli_dir)
+
+
+def _repair_user_path_if_possible(preferred_dir: Path) -> None:
+    if sys.platform == "win32":
+        _repair_windows_user_path(preferred_dir)
+
+
+def _prefer_cli_dir_in_process_path(cli_dir: Path) -> None:
+    entries = _dedupe_preferred_path_entries(
+        os.environ.get("PATH", ""),
+        str(cli_dir),
+    )
+    os.environ["PATH"] = os.pathsep.join(entries)
+
+
+def _repair_windows_user_path(preferred_dir: Path) -> None:
+    """Prefer the current ai-sdlc directory in User PATH without deleting files."""
+
+    try:
+        import winreg  # type: ignore[import-not-found]
+    except ImportError:  # pragma: no cover - only available on Windows.
+        return
+    preferred = _norm_path(preferred_dir)
+    with winreg.OpenKey(
+        winreg.HKEY_CURRENT_USER,
+        "Environment",
+        0,
+        winreg.KEY_READ | winreg.KEY_SET_VALUE,
+    ) as key:
+        try:
+            current_user_path, value_type = winreg.QueryValueEx(key, "Path")
+        except FileNotFoundError:
+            current_user_path, value_type = "", winreg.REG_EXPAND_SZ
+        entries = _dedupe_preferred_path_entries(
+            str(current_user_path),
+            preferred,
+        )
+        winreg.SetValueEx(key, "Path", 0, value_type, os.pathsep.join(entries))
+
+    os.environ["PATH"] = os.pathsep.join(
+        _dedupe_preferred_path_entries(
+            os.environ.get("PATH", ""),
+            preferred,
+        )
+    )
+
+
+def _dedupe_preferred_path_entries(
+    path_value: str,
+    preferred_dir: str,
+) -> list[str]:
+    # 只前置当前 CLI 目录；旧目录可能是共享 Scripts 目录，不能静默移除。
+    preferred_norm = _norm_path(Path(preferred_dir))
+    result = [preferred_dir]
+    seen = {preferred_norm}
+    for raw_entry in path_value.split(os.pathsep):
+        entry = raw_entry.strip()
+        if not entry:
+            continue
+        normalized = _norm_path(Path(entry))
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        result.append(entry)
+    return result
+
+
+def _norm_path(path: Path) -> str:
+    try:
+        resolved = path.expanduser().resolve()
+    except OSError:
+        resolved = path.expanduser()
+    text = str(resolved)
+    return text.lower() if sys.platform == "win32" else text
 
 
 def _tail(text: str, limit: int = 800) -> str:
