@@ -6,7 +6,7 @@ on:
       tag:
         description: Published release tag to verify against the user guide.
         required: true
-        default: v0.8.6
+        default: v0.8.7
   pull_request:
     paths:
       - ".github/workflows/windows-user-guide-e2e.yml"
@@ -26,7 +26,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
-      RELEASE_TAG: ${{ inputs.tag || 'v0.8.6' }}
+      RELEASE_TAG: ${{ inputs.tag || 'v0.8.7' }}
       PYTHONUTF8: "1"
       PYTHONIOENCODING: utf-8
 
@@ -83,14 +83,14 @@ jobs:
           # USER_GUIDE.zh-CN.md Chapter 2, Scenario B: online download from Release.
           Push-Location $projectRoot
           cd ..
-          $BundleName = "ai-sdlc-offline-0.8.6-windows-amd64"
+          $BundleName = "ai-sdlc-offline-0.8.7-windows-amd64"
           $PackageName = "$BundleName.zip"
           $PackageDir = (Get-Location).Path
           $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
-          if ($env:RELEASE_TAG -ne "v0.8.6") {
-            throw "This guide replay intentionally follows the current USER_GUIDE.zh-CN.md v0.8.6 Windows commands."
+          if ($env:RELEASE_TAG -ne "v0.8.7") {
+            throw "This guide replay intentionally follows the current USER_GUIDE.zh-CN.md v0.8.7 Windows commands."
           }
-          Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.8.6/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
+          Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.8.7/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
           New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
           Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
           Write-Host "Extracting package; existing installer files will be overwritten quietly."
