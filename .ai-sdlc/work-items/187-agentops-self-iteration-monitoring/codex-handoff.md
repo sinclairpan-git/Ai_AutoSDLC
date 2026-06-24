@@ -1,33 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-06-22T10:28:00+00:00
-- Reason: Address latest Codex review P2 before PR closeout
-- Goal: 188 vue3/public-primevue default provider governance PR #84 closeout
-- State: Codex flagged that Python timeout could kill the Node runner before JS cleanup ran, leaving Vite orphaned. The Python wrapper now runs Node via `Popen`, starts a killable process group/session, and kills the process tree on timeout.
+- Updated: 2026-06-24T05:21:56+00:00
+- Reason: meaningful code/test change batch completed
+- Goal: 实现 AI-SDLC 新版本提醒确认：CLI 任意命令检测到新版本时提示当前/最新版本并支持确认升级；AI 非交互式命令输出对话提醒。
+- State: 已修改 self-update 入口提醒逻辑与回归测试；保留每日 GitHub 检查缓存逻辑。
 - Stage: close
-- Work Item: 188-vue3-public-primevue-default-provider-governance
-- Branch: feature/188-vue3-public-primevue-default-provider-governance-docs
+- Work Item: 187-agentops-self-iteration-monitoring
+- Branch: main
 
 ## Changed Files
-- M src/ai_sdlc/core/frontend_browser_gate_runtime.py
-- M tests/unit/test_frontend_browser_gate_runtime.py
+- M .ai-sdlc/state/resume-pack.yaml
+- M src/ai_sdlc/cli/self_update_cmd.py
+- M src/ai_sdlc/core/update_advisor.py
+- M tests/integration/test_cli_self_update.py
 
 ## Key Decisions
-- Replace `subprocess.run(..., timeout=...)` with a `Popen` helper so timeout handling can clean the runner process tree.
-- Use `taskkill /T /F /PID` on Windows and POSIX process-group termination elsewhere.
+- 交互式终端使用 y/n 确认，y 调用 self_update_install 后停止旧命令；非交互式 AI 会话不阻塞 stdin，输出确认升级提示和 ai-sdlc self-update check 命令。
 
 ## Commands / Tests
-- `node --check scripts/frontend_browser_gate_probe_runner.mjs` passed.
-- `uv run pytest tests/unit/test_frontend_browser_gate_runtime.py::test_run_default_browser_gate_probe_uses_packaged_runner_when_project_script_missing tests/unit/test_frontend_browser_gate_runtime.py::test_run_default_browser_gate_probe_kills_process_tree_on_timeout tests/unit/test_frontend_browser_gate_runtime.py::test_frontend_browser_gate_probe_runner_starts_vite_for_generated_managed_frontend -q` passed: 3 passed.
-- `uv run pytest tests/unit/test_frontend_browser_gate_runtime.py tests/integration -k "visual or browser_gate or a11y" -q` passed: 87 passed, 601 deselected.
-- `uv run ruff check src tests` passed.
-- `uv run ai-sdlc verify constraints` passed: no BLOCKERs.
-- `git diff --check` passed.
+- uv run pytest tests/integration/test_cli_self_update.py tests/unit/test_update_advisor.py -q => 28 passed, 1 skipped
+- uv run ruff check src/ai_sdlc/cli/self_update_cmd.py src/ai_sdlc/core/update_advisor.py tests/integration/test_cli_self_update.py tests/unit/test_update_advisor.py => passed
+- uv run ai-sdlc verify constraints => no BLOCKERs
 
 ## Blockers / Risks
-- PR #84 still needs a new push, Codex re-review, and GitHub CI confirmation after the parent-timeout process-tree cleanup fix.
+- none
 
 ## Exact Next Steps
-- Commit and push the parent-timeout process-tree cleanup fix.
-- Re-request Codex review on PR #84.
-- Monitor PR #84 checks and Codex review until all required checks pass and no actionable review findings remain, then ready/merge per repository PR protocol.
+- 如需发布，开 v0.8.8 补丁分支并跑 Windows/Release upgrade E2E。

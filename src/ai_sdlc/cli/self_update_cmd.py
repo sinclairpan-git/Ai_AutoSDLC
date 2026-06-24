@@ -23,8 +23,6 @@ from ai_sdlc.cli.beginner_guidance import render_single_next_step
 from ai_sdlc.core.update_advisor import (
     EXPLICIT_CHECK_TIMEOUT_SECONDS,
     NOTICE_ACTIONABLE,
-    NOTICE_FAILED,
-    NOTICE_LIGHT,
     REFRESH_BACKOFF,
     REFRESH_NETWORK_ERROR,
     REFRESH_PARSE_ERROR,
@@ -32,11 +30,7 @@ from ai_sdlc.core.update_advisor import (
     ack_notice,
     detect_runtime_identity,
     evaluate_update_advisor,
-    notice_already_acknowledged,
-    notice_recently_rendered,
-    notice_version_for,
     platform_asset_hint,
-    record_notice_rendered,
     render_notice_lines,
     should_auto_render_notice,
 )
@@ -65,47 +59,57 @@ def _print_json(payload: dict[str, object]) -> None:
 
 
 def maybe_render_update_notice() -> None:
-    """Render the Stage 0 update notice for interactive installed CLI runs."""
+    """Prompt installed CLI users and AI sessions when a newer release exists."""
     if not should_auto_render_notice():
         return
     evaluation = evaluate_update_advisor()
-    classes = list(evaluation.eligible_notice_classes)
-    if not classes and evaluation.refresh_result not in {
-        "network_error",
-        "parse_error",
-        "timeout",
-    }:
-        return
-
-    notice_class = None
-    if NOTICE_ACTIONABLE in classes:
-        notice_class = NOTICE_ACTIONABLE
-    elif NOTICE_LIGHT in classes:
-        notice_class = NOTICE_LIGHT
-    elif evaluation.refresh_attempted:
-        notice_class = NOTICE_FAILED
-
-    if notice_class is None:
-        return
-    if notice_already_acknowledged(evaluation, notice_class) or notice_recently_rendered(
-        evaluation, notice_class
+    if (
+        NOTICE_ACTIONABLE not in evaluation.eligible_notice_classes
+        or not evaluation.upgrade_command
     ):
         return
-
-    lines = render_notice_lines(evaluation)
-    if not lines:
+    current_version = evaluation.runtime_identity.installed_version or "unknown"
+    latest_version = evaluation.channel_latest_version or evaluation.upstream_latest_version
+    if not latest_version:
         return
+
+    prompt = _update_confirmation_prompt(current_version, latest_version)
+    if _can_prompt_for_update_confirmation():
+        if not typer.confirm(prompt, default=False):
+            notice_console.print("已跳过本次升级，继续执行当前命令。")
+            return
+        self_update_install(version=latest_version)
+        raise typer.Exit(0)
+
     notice_console.print(
         Panel(
-            "\n".join(lines),
-            title="AI-SDLC Update Advisor",
+            "\n".join(
+                [
+                    prompt,
+                    "请在对话中回复“确认升级”或“y”；AI 助手应执行：ai-sdlc self-update check",
+                    "If you approve the update in chat, the AI assistant should run: ai-sdlc self-update check",
+                ]
+            ),
+            title="AI-SDLC Update",
             border_style="yellow",
         )
     )
-    record_notice_rendered(
-        notice_class,
-        notice_version_for(evaluation, notice_class),
+
+
+def _update_confirmation_prompt(current_version: str, latest_version: str) -> str:
+    return (
+        f"当前AI-SDLC版本是{current_version}，最新版本是{latest_version}，"
+        "是否升级？回复 y/n"
     )
+
+
+def _can_prompt_for_update_confirmation() -> bool:
+    if os.environ.get("AI_SDLC_UPDATE_ADVISOR_FORCE_TTY") == "1":
+        return True
+    try:
+        return bool(sys.stdin.isatty())
+    except OSError:
+        return False
 
 
 @self_update_app.command("identity")

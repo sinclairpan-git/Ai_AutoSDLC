@@ -200,19 +200,48 @@ def test_self_update_check_reports_retry_and_offline_rescue_on_refresh_failure(
     assert "install_offline.ps1 -UpgradeExisting" in result.output
 
 
-def test_interactive_cli_renders_update_notice_once(tmp_path) -> None:
+def test_interactive_cli_prompts_for_update_on_each_command(tmp_path) -> None:
     env = _env(tmp_path)
     env["AI_SDLC_UPDATE_ADVISOR_FORCE_TTY"] = "1"
 
-    first = runner.invoke(app, ["status"], env=env)
-    second = runner.invoke(app, ["status"], env=env)
+    first = runner.invoke(app, ["status"], env=env, input="n\n")
+    second = runner.invoke(app, ["status"], env=env, input="n\n")
 
     assert first.exit_code == 0
-    assert "AI-SDLC Update Advisor" in first.output
-    assert "自动下载、安装并校验版本" in first.output
-    assert "ai-sdlc self-update check" in first.output
+    assert "当前AI-SDLC版本是0.7.0，最新版本是0.7.4，是否升级？回复 y/n" in first.output
+    assert "已跳过本次升级，继续执行当前命令" in first.output
     assert second.exit_code == 0
-    assert "AI-SDLC Update Advisor" not in second.output
+    assert "当前AI-SDLC版本是0.7.0，最新版本是0.7.4，是否升级？回复 y/n" in second.output
+
+
+def test_interactive_cli_confirmation_runs_self_update_and_stops_command(
+    tmp_path, monkeypatch
+) -> None:
+    calls: list[str] = []
+
+    def fake_install(*, version: str) -> None:
+        calls.append(version)
+
+    monkeypatch.setattr(self_update_cmd, "self_update_install", fake_install)
+    env = _env(tmp_path)
+    env["AI_SDLC_UPDATE_ADVISOR_FORCE_TTY"] = "1"
+
+    result = runner.invoke(app, ["status"], env=env, input="y\n")
+
+    assert result.exit_code == 0
+    assert calls == ["0.7.4"]
+    assert "当前AI-SDLC版本是0.7.0，最新版本是0.7.4，是否升级？回复 y/n" in result.output
+    assert "Project not initialized" not in result.output
+
+
+def test_noninteractive_cli_prints_ai_conversation_update_prompt(tmp_path) -> None:
+    result = runner.invoke(app, ["status"], env=_env(tmp_path))
+
+    assert result.exit_code == 0
+    assert "AI-SDLC Update" in result.output
+    assert "当前AI-SDLC版本是0.7.0，最新版本是0.7.4，是否升级？回复 y/n" in result.output
+    assert "请在对话中回复“确认升级”或“y”" in result.output
+    assert "ai-sdlc self-update check" in result.output
 
 
 def test_self_update_install_completes_without_manual_followup(monkeypatch, tmp_path) -> None:
