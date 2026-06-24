@@ -263,6 +263,45 @@ def test_self_update_install_completes_without_manual_followup(monkeypatch, tmp_
     assert "install_offline" not in result.output
 
 
+def test_self_update_install_allows_module_entry_without_bare_cli(
+    monkeypatch, tmp_path
+) -> None:
+    def fake_download(_asset_url, archive_path):
+        archive_path.write_text("archive", encoding="utf-8")
+
+    def fake_extract(_archive_path, extract_root, _hint):
+        bundle = extract_root / "bundle"
+        wheels = bundle / "wheels"
+        wheels.mkdir(parents=True)
+        (wheels / "ai_sdlc-0.7.4-py3-none-any.whl").write_text(
+            "wheel", encoding="utf-8"
+        )
+        return bundle
+
+    def fake_verify(_version):
+        raise self_update_cmd.SelfUpdateError("bare command unavailable")
+
+    monkeypatch.setattr(self_update_cmd, "_download_asset", fake_download)
+    monkeypatch.setattr(self_update_cmd, "_extract_release_asset", fake_extract)
+    monkeypatch.setattr(
+        self_update_cmd, "_install_bundle_into_current_runtime", lambda *_args: None
+    )
+    monkeypatch.setattr(self_update_cmd, "_read_installed_version", lambda: "0.7.4")
+    monkeypatch.setattr(self_update_cmd, "_verify_bare_cli_version", fake_verify)
+    monkeypatch.setattr(self_update_cmd.shutil, "which", lambda _name: None)
+
+    result = runner.invoke(
+        app,
+        ["self-update", "install", "--version", "0.7.4"],
+        env=_env(tmp_path),
+    )
+
+    assert result.exit_code == 0
+    assert "更新完成" in result.output
+    assert "已校验安装版本：AI-SDLC 0.7.4" in result.output
+    assert "ai-sdlc --version =>" not in result.output
+
+
 def test_self_update_installs_wheel_matching_requested_version(
     tmp_path, monkeypatch
 ) -> None:

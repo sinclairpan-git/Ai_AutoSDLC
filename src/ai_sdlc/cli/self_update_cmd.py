@@ -269,7 +269,13 @@ def self_update_install(
             _install_bundle_into_current_runtime(bundle_dir, release_version)
             installed_version = _read_installed_version()
             _repair_current_user_path_if_possible()
-            bare_version = _verify_bare_cli_version(release_version)
+            bare_version: str | None
+            try:
+                bare_version = _verify_bare_cli_version(release_version)
+            except SelfUpdateError:
+                if shutil.which("ai-sdlc"):
+                    raise
+                bare_version = None
         if installed_version != release_version:
             raise SelfUpdateError(
                 f"installed version is {installed_version}, expected {release_version}"
@@ -290,6 +296,17 @@ def self_update_install(
         )
         raise typer.Exit(1) from exc
 
+    verification_note = (
+        (
+            f"已校验命令：ai-sdlc --version => {bare_version}",
+            f"Verified command: ai-sdlc --version => {bare_version}",
+        )
+        if bare_version is not None
+        else (
+            f"已校验安装版本：AI-SDLC {installed_version}",
+            f"Verified installed version: AI-SDLC {installed_version}",
+        )
+    )
     console.print(
         Panel(
             render_single_next_step(
@@ -298,12 +315,7 @@ def self_update_install(
                 next_command=None,
                 next_zh="不需要继续执行升级命令；回到原项目继续使用 AI-SDLC。",
                 next_en="No more update commands are needed; return to your project and keep using AI-SDLC.",
-                notes=(
-                    (
-                        f"已校验命令：ai-sdlc --version => {bare_version}",
-                        f"Verified command: ai-sdlc --version => {bare_version}",
-                    ),
-                ),
+                notes=(verification_note,),
             ),
             title="AI-SDLC Self Update",
             border_style="green",
