@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from ai_sdlc.core.update_advisor import (
     AUTO_NOTICE_REPEAT_INTERVAL,
@@ -36,6 +37,35 @@ def test_source_runtime_fails_closed(monkeypatch, tmp_path) -> None:
     assert evaluation.refresh_attempted is False
     assert evaluation.refresh_result == "disabled"
     assert evaluation.eligible_notice_classes == ()
+
+
+def test_installed_module_invocation_is_installed_runtime(monkeypatch, tmp_path) -> None:
+    site_packages = tmp_path / "site-packages"
+    executable = site_packages / "ai_sdlc" / "__main__.py"
+    executable.parent.mkdir(parents=True)
+    executable.write_text("", encoding="utf-8")
+
+    class FakeDistribution:
+        version = "0.8.8"
+
+        def read_text(self, name: str) -> str | None:
+            return None
+
+        def locate_file(self, path: str) -> Path:
+            return site_packages / path
+
+    monkeypatch.setattr("sys.argv", [str(executable), "self-update", "check"])
+    monkeypatch.setattr(
+        "ai_sdlc.core.update_advisor.metadata.distribution",
+        lambda name: FakeDistribution(),
+    )
+    monkeypatch.setenv("AI_SDLC_UPDATE_ADVISOR_CACHE_DIR", str(tmp_path / "cache"))
+
+    identity = detect_runtime_identity()
+
+    assert identity.installed_runtime is True
+    assert identity.installed_version == "0.8.8"
+    assert identity.reason_code == "installed_runtime"
 
 
 def test_github_archive_installed_runtime_gets_actionable_notice(
