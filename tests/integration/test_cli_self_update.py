@@ -300,12 +300,18 @@ def test_self_update_bare_cli_validation_repairs_process_path_silently(
     new_dir = tmp_path / "new"
     old_dir.mkdir()
     new_dir.mkdir()
-    old_cli = old_dir / "ai-sdlc"
-    new_cli = new_dir / "ai-sdlc"
-    old_cli.write_text("#!/bin/sh\necho 0.7.6\n", encoding="utf-8")
-    new_cli.write_text("#!/bin/sh\necho 0.8.6\n", encoding="utf-8")
-    old_cli.chmod(0o755)
-    new_cli.chmod(0o755)
+    if sys.platform == "win32":
+        old_cli = old_dir / "ai-sdlc.cmd"
+        new_cli = new_dir / "ai-sdlc.cmd"
+        old_cli.write_text("@echo off\r\necho 0.7.6\r\n", encoding="utf-8")
+        new_cli.write_text("@echo off\r\necho 0.8.6\r\n", encoding="utf-8")
+    else:
+        old_cli = old_dir / "ai-sdlc"
+        new_cli = new_dir / "ai-sdlc"
+        old_cli.write_text("#!/bin/sh\necho 0.7.6\n", encoding="utf-8")
+        new_cli.write_text("#!/bin/sh\necho 0.8.6\n", encoding="utf-8")
+        old_cli.chmod(0o755)
+        new_cli.chmod(0o755)
     monkeypatch.setenv("PATH", f"{old_dir}{os.pathsep}{new_dir}")
     monkeypatch.setattr(self_update_cmd, "_current_cli_directory", lambda: new_dir)
 
