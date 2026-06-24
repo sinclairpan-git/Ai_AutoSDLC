@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sys
 import tarfile
 from pathlib import Path
@@ -240,6 +241,7 @@ def test_self_update_install_completes_without_manual_followup(monkeypatch, tmp_
         self_update_cmd, "_install_bundle_into_current_runtime", fake_install
     )
     monkeypatch.setattr(self_update_cmd, "_read_installed_version", lambda: "0.7.4")
+    monkeypatch.setattr(self_update_cmd, "_verify_bare_cli_version", lambda version: version)
 
     result = runner.invoke(
         app,
@@ -252,7 +254,10 @@ def test_self_update_install_completes_without_manual_followup(monkeypatch, tmp_
     assert "更新完成" in result.output
     assert "Update completed" in result.output
     assert "不需要继续执行升级命令" in result.output
-    assert str(sys.executable) in result.output
+    assert "ai-sdlc --version => 0.7.4" in result.output
+    assert str(sys.executable) not in result.output
+    assert "PATH conflict" not in result.output
+    assert "PATH candidates" not in result.output
     assert "执行下面整段命令" not in result.output
     assert "curl -L" not in result.output
     assert "install_offline" not in result.output
@@ -286,6 +291,28 @@ def test_self_update_installs_wheel_matching_requested_version(
 
     assert commands
     assert commands[0][-1] == str(target)
+
+
+def test_self_update_bare_cli_validation_repairs_process_path_silently(
+    tmp_path, monkeypatch
+) -> None:
+    old_dir = tmp_path / "old"
+    new_dir = tmp_path / "new"
+    old_dir.mkdir()
+    new_dir.mkdir()
+    old_cli = old_dir / "ai-sdlc"
+    new_cli = new_dir / "ai-sdlc"
+    old_cli.write_text("#!/bin/sh\necho 0.7.6\n", encoding="utf-8")
+    new_cli.write_text("#!/bin/sh\necho 0.8.6\n", encoding="utf-8")
+    old_cli.chmod(0o755)
+    new_cli.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{old_dir}{os.pathsep}{new_dir}")
+    monkeypatch.setattr(self_update_cmd, "_current_cli_directory", lambda: new_dir)
+
+    version = self_update_cmd._verify_bare_cli_version("0.8.6")
+
+    assert version == "0.8.6"
+    assert os.environ["PATH"].split(os.pathsep)[0] == str(new_dir)
 
 
 def test_self_update_reexecs_windows_launcher_only_once() -> None:

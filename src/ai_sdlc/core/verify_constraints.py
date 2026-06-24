@@ -344,7 +344,7 @@ BEGINNER_GUIDE_REQUIRED_TOKENS = (
     'cd D:\\work\\ui-test-platform\n& "D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.8.6-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe" init . --agent-target codex --shell powershell',
     "Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`",
     "Direct shim",
-    "Get-Command ai-sdlc | Select-Object Source",
+    "安装器会把最新 AI-SDLC 命令入口设为优先",
     "No such command 'install'",
     "--upgrade-existing",
 )
@@ -352,7 +352,7 @@ BEGINNER_GUIDE_EXISTING_PROJECT_INIT_TOKENS = (
     "D:\\work\\my-existing-project 是示例路径；请替换成你的真实项目根目录",
     "Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`",
     "Direct shim",
-    "Get-Command ai-sdlc | Select-Object Source",
+    "安装器会把最新 AI-SDLC 命令入口设为优先",
     "Codex + PowerShell project init",
     'cd D:\\work\\my-existing-project\n& "D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.8.6-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe" init . --agent-target codex --shell powershell',
     "~/work/my-existing-project 是示例路径；请替换成你的真实项目根目录",

@@ -42,18 +42,18 @@ AI_SDLC_OFFLINE_PYTHON_RUNTIME=/path/to/python-runtime \
 
 推荐显式写入 PATH，这样后续可以直接执行 `ai-sdlc --help`、`ai-sdlc init .`、`ai-sdlc adapter status` 和 `ai-sdlc run --dry-run`。Windows 的 `-AddToPath`、macOS / Linux 的 `--add-to-path` 本身就是写入 PATH 的确认信号；安装器不会再弹出第二次确认。
 
-Windows 注意：如果从父 PowerShell 里用 `powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath` 启动安装脚本，用户 PATH 会被写入，但父终端当前会话不会继承子进程的 `$env:Path`。新开终端后可直接运行裸 `ai-sdlc ...`；当前终端立即初始化时，请用安装脚本输出的 Direct shim。否则裸 `ai-sdlc init .` 可能仍解析到机器上已有的旧版本。可用 `Get-Command ai-sdlc | Select-Object Source` 检查当前命中的入口。
+Windows 注意：如果从父 PowerShell 里用 `powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -AddToPath` 启动安装脚本，安装器会把最新 AI-SDLC 命令入口设为优先。新开终端后可直接运行裸 `ai-sdlc ...`；当前终端立即初始化时，请用安装脚本输出的完整命令。
 
 如果没有写入 PATH，就不能直接执行裸 `ai-sdlc` 命令；需要使用包内 Python 入口。相对路径只适用于仍在安装包目录里验证 CLI；如果要先进入业务项目目录，请使用安装脚本最后输出的完整 Python 路径。
 
 - Windows：`.\.venv\Scripts\python.exe -m ai_sdlc <子命令>`
 - macOS / Linux：`./.venv/bin/python -m ai_sdlc <子命令>`
 
-如果机器上已经有旧版 `ai-sdlc`，并且你要覆盖当前 `PATH` 命中的旧入口，使用升级模式。
+如果机器上已经安装过 `ai-sdlc`，使用升级模式；安装器会把最新 AI-SDLC 命令入口设为优先。
 
 升级模式请在业务项目父目录或临时下载目录执行，不要在业务项目根目录执行。下面的命令会在当前目录解压安装包或创建 `.ai-sdlc-install` 临时目录，并进入安装包目录运行升级脚本；升级完成后再回业务项目根目录继续执行 `ai-sdlc init .`、`ai-sdlc run --dry-run` 等项目命令。
 
-### Linux/macOS 升级旧入口
+### Linux/macOS 升级已安装版本
 
 ```bash
 tar xzf ai-sdlc-offline-<version>-<platform>.tar.gz
@@ -62,7 +62,7 @@ chmod +x install_offline.sh
 ./install_offline.sh --upgrade-existing
 ```
 
-### Windows 升级旧入口
+### Windows 升级已安装版本
 
 ```powershell
 $BundleName = "ai-sdlc-offline-<version>-windows-amd64"
@@ -75,7 +75,7 @@ Set-Location (Join-Path $ExtractRoot $BundleName)
 powershell -ExecutionPolicy Bypass -File .\install_offline.ps1 -UpgradeExisting
 ```
 
-升级模式会安装到当前 `ai-sdlc` 入口背后的运行环境，并在结束前校验版本和 `self-update` 子命令。如果无法安全覆盖旧入口，脚本会失败并输出明确原因。
+升级模式会更新当前 `ai-sdlc` 运行环境，并在结束前校验版本和 `self-update` 子命令。如果当前终端还没有识别新命令，按输出提示重新打开终端后再执行一次检查。
 
 如果是全新安装，使用下面的默认模式。
 

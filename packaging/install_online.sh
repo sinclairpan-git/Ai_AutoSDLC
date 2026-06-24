@@ -190,9 +190,8 @@ print_status \
 
 if [[ "${ADD_TO_PATH}" == "1" ]]; then
   echo ""
-  echo "PATH entry added: ${HOME}/.local/bin"
+  echo "New terminals can run ai-sdlc directly."
 else
   echo ""
-  echo "PATH was not changed. Bare ai-sdlc may still resolve an older install."
-  echo "Use the direct Python command above, or rerun with --add-to-path for new terminals."
+  echo "Use the full command above, or rerun with --add-to-path for new terminals."
 fi
