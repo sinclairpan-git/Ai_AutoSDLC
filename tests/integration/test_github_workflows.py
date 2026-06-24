@@ -199,6 +199,9 @@ def test_windows_user_guide_e2e_replays_existing_project_install_path() -> None:
     assert "pull_request:" in workflow
     assert "windows-latest" in workflow
     assert "default: v0.8.7" in workflow
+    assert "Build Windows offline bundle for pull request replay" in workflow
+    assert "build_offline_bundle.sh" in workflow
+    assert "pull_request_local_bundle" in workflow
     assert "USER_GUIDE.zh-CN.md Chapter 2, Scenario B" in workflow
     assert "my-existing-project" in workflow
     assert "ai-sdlc-offline-0.8.7-windows-amd64" in workflow
