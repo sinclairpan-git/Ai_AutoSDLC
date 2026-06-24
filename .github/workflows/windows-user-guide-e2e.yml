@@ -6,7 +6,7 @@ on:
       tag:
         description: Published release tag to verify against the user guide.
         required: true
-        default: v0.8.6
+        default: v0.8.7
   pull_request:
     paths:
       - ".github/workflows/windows-user-guide-e2e.yml"
@@ -26,13 +26,43 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
-      RELEASE_TAG: ${{ inputs.tag || 'v0.8.6' }}
+      RELEASE_TAG: ${{ inputs.tag || 'v0.8.7' }}
       PYTHONUTF8: "1"
       PYTHONIOENCODING: utf-8
 
     steps:
       - name: Checkout repository truth
         uses: actions/checkout@v6
+
+      - name: Set up package build Python
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Build Windows offline bundle for pull request replay
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv python install 3.11
+          runtime_python="$(uv python find --managed-python 3.11)"
+          runtime_python="$(cygpath -u "$runtime_python")"
+          runtime_root="$(dirname "$runtime_python")"
+          PYTHON="$runtime_python" \
+            PYTHONUTF8="1" \
+            PYTHONIOENCODING="utf-8" \
+            AI_SDLC_OFFLINE_PYTHON_RUNTIME="$runtime_root" \
+            AI_SDLC_OFFLINE_PYTHON_VERSIONS="3.11,3.12" \
+            AI_SDLC_OFFLINE_ASSET_SUFFIX="-windows-amd64" \
+            AI_SDLC_OFFLINE_TARGET_PLATFORM="win_amd64" \
+            bash packaging/offline/build_offline_bundle.sh
 
       - name: Replay Windows existing-project guide path
         shell: pwsh
@@ -49,7 +79,9 @@ jobs:
           Remove-Item -Recurse -Force $evidenceRoot, $workRoot -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force -Path $evidenceRoot, $projectRoot | Out-Null
 
-          "release_tag=$env:RELEASE_TAG" | Out-File -FilePath (Join-Path $evidenceRoot "scenario.txt") -Encoding utf8
+          $packageSourceMode = if ($env:GITHUB_EVENT_NAME -eq "pull_request") { "pull_request_local_bundle" } else { "published_release" }
+          "release_tag=$env:RELEASE_TAG; package_source=$packageSourceMode" |
+            Out-File -FilePath (Join-Path $evidenceRoot "scenario.txt") -Encoding utf8
 
           @"
           {
@@ -83,14 +115,24 @@ jobs:
           # USER_GUIDE.zh-CN.md Chapter 2, Scenario B: online download from Release.
           Push-Location $projectRoot
           cd ..
-          $BundleName = "ai-sdlc-offline-0.8.6-windows-amd64"
+          $BundleName = "ai-sdlc-offline-0.8.7-windows-amd64"
           $PackageName = "$BundleName.zip"
           $PackageDir = (Get-Location).Path
           $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
-          if ($env:RELEASE_TAG -ne "v0.8.6") {
-            throw "This guide replay intentionally follows the current USER_GUIDE.zh-CN.md v0.8.6 Windows commands."
+          if ($env:RELEASE_TAG -ne "v0.8.7") {
+            throw "This guide replay intentionally follows the current USER_GUIDE.zh-CN.md v0.8.7 Windows commands."
           }
-          Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.8.6/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
+          $packagePath = Join-Path $PackageDir $PackageName
+          if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
+            $localPackage = Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE "dist-offline") -Filter $PackageName -File |
+              Select-Object -First 1
+            if (-not $localPackage) {
+              throw "Pull request guide replay expected local package from dist-offline: $PackageName"
+            }
+            Copy-Item -LiteralPath $localPackage.FullName -Destination $packagePath -Force
+          } else {
+            Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.8.7/$PackageName" -OutFile $packagePath
+          }
           New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
           Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
           Write-Host "Extracting package; existing installer files will be overwritten quietly."
