@@ -318,7 +318,9 @@ def test_self_update_bare_cli_validation_repairs_process_path_silently(
     version = self_update_cmd._verify_bare_cli_version("0.8.6")
 
     assert version == "0.8.6"
-    assert os.environ["PATH"].split(os.pathsep)[0] == str(new_dir)
+    assert os.path.normcase(os.environ["PATH"].split(os.pathsep)[0]) == os.path.normcase(
+        str(new_dir)
+    )
 
 
 def test_self_update_reexecs_windows_launcher_only_once() -> None:
