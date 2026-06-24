@@ -293,25 +293,18 @@ def test_self_update_installs_wheel_matching_requested_version(
     assert commands[0][-1] == str(target)
 
 
-def test_self_update_bare_cli_validation_repairs_process_path_silently(
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows PATH repair only")
+def test_self_update_bare_cli_validation_repairs_windows_process_path_silently(
     tmp_path, monkeypatch
 ) -> None:
     old_dir = tmp_path / "old"
     new_dir = tmp_path / "new"
     old_dir.mkdir()
     new_dir.mkdir()
-    if sys.platform == "win32":
-        old_cli = old_dir / "ai-sdlc.cmd"
-        new_cli = new_dir / "ai-sdlc.cmd"
-        old_cli.write_text("@echo off\r\necho 0.7.6\r\n", encoding="utf-8")
-        new_cli.write_text("@echo off\r\necho 0.8.6\r\n", encoding="utf-8")
-    else:
-        old_cli = old_dir / "ai-sdlc"
-        new_cli = new_dir / "ai-sdlc"
-        old_cli.write_text("#!/bin/sh\necho 0.7.6\n", encoding="utf-8")
-        new_cli.write_text("#!/bin/sh\necho 0.8.6\n", encoding="utf-8")
-        old_cli.chmod(0o755)
-        new_cli.chmod(0o755)
+    old_cli = old_dir / "ai-sdlc.cmd"
+    new_cli = new_dir / "ai-sdlc.cmd"
+    old_cli.write_text("@echo off\r\necho 0.7.6\r\n", encoding="utf-8")
+    new_cli.write_text("@echo off\r\necho 0.8.6\r\n", encoding="utf-8")
     monkeypatch.setenv("PATH", f"{old_dir}{os.pathsep}{new_dir}")
     monkeypatch.setattr(self_update_cmd, "_current_cli_directory", lambda: new_dir)
 
@@ -324,6 +317,30 @@ def test_self_update_bare_cli_validation_repairs_process_path_silently(
     assert os.path.normcase(str(old_dir)) in {
         os.path.normcase(entry) for entry in os.environ["PATH"].split(os.pathsep)
     }
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX validation path")
+def test_self_update_bare_cli_validation_does_not_mask_posix_path_gaps(
+    tmp_path, monkeypatch
+) -> None:
+    old_dir = tmp_path / "old"
+    new_dir = tmp_path / "new"
+    old_dir.mkdir()
+    new_dir.mkdir()
+    old_cli = old_dir / "ai-sdlc"
+    new_cli = new_dir / "ai-sdlc"
+    old_cli.write_text("#!/bin/sh\necho 0.7.6\n", encoding="utf-8")
+    new_cli.write_text("#!/bin/sh\necho 0.8.6\n", encoding="utf-8")
+    old_cli.chmod(0o755)
+    new_cli.chmod(0o755)
+    original_path = str(old_dir)
+    monkeypatch.setenv("PATH", original_path)
+    monkeypatch.setattr(self_update_cmd, "_current_cli_directory", lambda: new_dir)
+
+    with pytest.raises(self_update_cmd.SelfUpdateError):
+        self_update_cmd._verify_bare_cli_version("0.8.6")
+
+    assert os.environ["PATH"] == original_path
 
 
 def test_self_update_reexecs_windows_launcher_only_once() -> None:

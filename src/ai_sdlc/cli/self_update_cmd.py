@@ -564,6 +564,11 @@ def _verify_bare_cli_version(expected_version: str) -> str:
         if version == expected_version:
             return version
 
+    if sys.platform != "win32":
+        raise SelfUpdateError(
+            "更新已安装；请重新打开终端后再次执行 ai-sdlc self-update check 完成确认。"
+        )
+
     preferred_dirs = _preferred_cli_dirs_for_update(expected_version, candidates)
     for preferred_dir in preferred_dirs:
         _prefer_cli_dir_in_process_path(preferred_dir)
