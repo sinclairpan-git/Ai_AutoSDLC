@@ -1,0 +1,320 @@
+name: Windows Update Prompt E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      latest_version:
+        description: Latest release version expected after update.
+        required: true
+        default: "0.8.9"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/windows-update-prompt-e2e.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  legacy-pre-auto:
+    name: Legacy pre-auto update v0.7.4
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      OLD_VERSION: "0.7.4"
+      LATEST_VERSION: ${{ inputs.latest_version || '0.8.9' }}
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - name: Checkout repository truth
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Run Windows update prompt E2E
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $utf8 = [System.Text.UTF8Encoding]::new($false)
+          [Console]::InputEncoding = $utf8
+          [Console]::OutputEncoding = $utf8
+          $OutputEncoding = $utf8
+
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-update-prompt-e2e-pre-auto"
+          $venvRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-update-prompt-e2e-pre-auto-venv"
+          Remove-Item -Recurse -Force $evidenceRoot, $venvRoot -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $evidenceRoot | Out-Null
+
+          python -m venv $venvRoot
+          $python = Join-Path $venvRoot "Scripts\python.exe"
+          $scripts = Join-Path $venvRoot "Scripts"
+          & $python -m pip install --upgrade pip pywinpty
+          & $python -m pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v$env:OLD_VERSION" *>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "old-install.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "old ai-sdlc install failed with exit code $LASTEXITCODE"
+          }
+
+          $env:Path = $scripts + [IO.Path]::PathSeparator + $env:Path
+          $env:AI_SDLC_UPDATE_ADVISOR_CACHE_DIR = Join-Path $evidenceRoot "cache"
+
+          @'
+          import json
+          import os
+          import subprocess
+          import sys
+          import time
+          from pathlib import Path
+
+          from winpty import PtyProcess
+
+          evidence = Path(os.environ["EVIDENCE_ROOT"])
+          old_version = os.environ["OLD_VERSION"]
+          latest_version = os.environ["LATEST_VERSION"]
+
+          def run_text(command: list[str], name: str) -> tuple[int, str]:
+              completed = subprocess.run(command, text=True, capture_output=True, encoding="utf-8", errors="replace")
+              output = (completed.stdout or "") + (completed.stderr or "")
+              (evidence / f"{name}.txt").write_text(output, encoding="utf-8")
+              return completed.returncode, output
+
+          def package_version(name: str) -> str:
+              code = "from importlib.metadata import version; print(version('ai-sdlc'))"
+              rc, out = run_text([sys.executable, "-c", code], name)
+              if rc != 0:
+                  raise SystemExit(f"{name} failed: {out}")
+              return out.strip().splitlines()[-1].strip()
+
+          def run_pty(command: str, name: str, timeout: float = 120.0) -> tuple[int | None, str, bool]:
+              env = os.environ.copy()
+              proc = PtyProcess.spawn(command, env=env)
+              chunks: list[str] = []
+              sent_yes = False
+              deadline = time.time() + timeout
+              while time.time() < deadline:
+                  if not proc.isalive():
+                      break
+                  try:
+                      data = proc.read(4096)
+                  except EOFError:
+                      break
+                  if data:
+                      chunks.append(data)
+                      text = "".join(chunks)
+                      if (not sent_yes) and ("是否升级" in text or "回复 y/n" in text):
+                          proc.write("y\r\n")
+                          sent_yes = True
+                  else:
+                      time.sleep(0.1)
+              alive = proc.isalive()
+              if alive:
+                  proc.terminate(force=True)
+              output = "".join(chunks)
+              (evidence / f"{name}.txt").write_text(output, encoding="utf-8")
+              return (None if alive else proc.exitstatus), output, sent_yes
+
+          before = package_version("version-before")
+          doctor_exit, doctor_output, doctor_sent_yes = run_pty("ai-sdlc doctor", "ordinary-cli-doctor-pty")
+          after_doctor = package_version("version-after-ordinary-cli")
+          check_exit, check_output = run_text(["ai-sdlc", "self-update", "check"], "self-update-check-bare-nonpty")
+          after_check = package_version("version-after-self-update-check-bare")
+          module_check_exit = None
+          module_after_check = after_check
+          if after_check != latest_version:
+              module_check_exit, module_check_output = run_text([sys.executable, "-m", "ai_sdlc", "self-update", "check"], "self-update-check-module-nonpty")
+              module_after_check = package_version("version-after-self-update-check-module")
+
+          result = {
+              "scenario": "legacy-pre-auto",
+              "old_version": old_version,
+              "latest_version": latest_version,
+              "before_version": before,
+              "ordinary_cli_exit": doctor_exit,
+              "ordinary_cli_update_prompt_detected": "是否升级" in doctor_output and "回复 y/n" in doctor_output,
+              "ordinary_cli_sent_yes": doctor_sent_yes,
+              "version_after_ordinary_cli": after_doctor,
+              "ordinary_cli_updated_to_latest": after_doctor == latest_version,
+              "self_update_check_exit": check_exit,
+              "self_update_check_sent_yes": False,
+              "version_after_self_update_check": after_check,
+              "self_update_check_updated_to_latest": after_check == latest_version,
+              "module_self_update_check_exit": module_check_exit,
+              "version_after_module_self_update_check": module_after_check,
+              "module_self_update_check_updated_to_latest": module_after_check == latest_version,
+          }
+          (evidence / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+          print(json.dumps(result, ensure_ascii=False, indent=2))
+
+          # This workflow records real behavior. Historical versions may fail the desired UX
+          # contract; keep the job green so both scenario artifacts are always available.
+          if not result["ordinary_cli_update_prompt_detected"] or not result["ordinary_cli_updated_to_latest"]:
+              print("OBSERVED_GAP: ordinary CLI did not complete y/n prompted update")
+          '@ | Out-File -FilePath (Join-Path $evidenceRoot "run_update_prompt_e2e.py") -Encoding utf8
+
+          $env:EVIDENCE_ROOT = $evidenceRoot
+          & $python (Join-Path $evidenceRoot "run_update_prompt_e2e.py")
+
+      - name: Upload legacy pre-auto evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-update-prompt-e2e-v0.7.4-evidence
+          path: ${{ runner.temp }}/ai-sdlc-update-prompt-e2e-pre-auto
+          if-no-files-found: error
+
+  auto-capable:
+    name: Auto-capable update v0.8.0
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      OLD_VERSION: "0.8.0"
+      LATEST_VERSION: ${{ inputs.latest_version || '0.8.9' }}
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - name: Checkout repository truth
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Run Windows update prompt E2E
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $utf8 = [System.Text.UTF8Encoding]::new($false)
+          [Console]::InputEncoding = $utf8
+          [Console]::OutputEncoding = $utf8
+          $OutputEncoding = $utf8
+
+          $evidenceRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-update-prompt-e2e-auto"
+          $venvRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-update-prompt-e2e-auto-venv"
+          Remove-Item -Recurse -Force $evidenceRoot, $venvRoot -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $evidenceRoot | Out-Null
+
+          python -m venv $venvRoot
+          $python = Join-Path $venvRoot "Scripts\python.exe"
+          $scripts = Join-Path $venvRoot "Scripts"
+          & $python -m pip install --upgrade pip pywinpty
+          & $python -m pip install "git+https://github.com/sinclairpan-git/Ai_AutoSDLC.git@v$env:OLD_VERSION" *>&1 |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "old-install.txt")
+          if ($LASTEXITCODE -ne 0) {
+            throw "old ai-sdlc install failed with exit code $LASTEXITCODE"
+          }
+
+          $env:Path = $scripts + [IO.Path]::PathSeparator + $env:Path
+          $env:AI_SDLC_UPDATE_ADVISOR_CACHE_DIR = Join-Path $evidenceRoot "cache"
+
+          @'
+          import json
+          import os
+          import subprocess
+          import sys
+          import time
+          from pathlib import Path
+
+          from winpty import PtyProcess
+
+          evidence = Path(os.environ["EVIDENCE_ROOT"])
+          old_version = os.environ["OLD_VERSION"]
+          latest_version = os.environ["LATEST_VERSION"]
+
+          def run_text(command: list[str], name: str) -> tuple[int, str]:
+              completed = subprocess.run(command, text=True, capture_output=True, encoding="utf-8", errors="replace")
+              output = (completed.stdout or "") + (completed.stderr or "")
+              (evidence / f"{name}.txt").write_text(output, encoding="utf-8")
+              return completed.returncode, output
+
+          def package_version(name: str) -> str:
+              code = "from importlib.metadata import version; print(version('ai-sdlc'))"
+              rc, out = run_text([sys.executable, "-c", code], name)
+              if rc != 0:
+                  raise SystemExit(f"{name} failed: {out}")
+              return out.strip().splitlines()[-1].strip()
+
+          def run_pty(command: str, name: str, timeout: float = 120.0) -> tuple[int | None, str, bool]:
+              env = os.environ.copy()
+              proc = PtyProcess.spawn(command, env=env)
+              chunks: list[str] = []
+              sent_yes = False
+              deadline = time.time() + timeout
+              while time.time() < deadline:
+                  if not proc.isalive():
+                      break
+                  try:
+                      data = proc.read(4096)
+                  except EOFError:
+                      break
+                  if data:
+                      chunks.append(data)
+                      text = "".join(chunks)
+                      if (not sent_yes) and ("是否升级" in text or "回复 y/n" in text):
+                          proc.write("y\r\n")
+                          sent_yes = True
+                  else:
+                      time.sleep(0.1)
+              alive = proc.isalive()
+              if alive:
+                  proc.terminate(force=True)
+              output = "".join(chunks)
+              (evidence / f"{name}.txt").write_text(output, encoding="utf-8")
+              return (None if alive else proc.exitstatus), output, sent_yes
+
+          before = package_version("version-before")
+          doctor_exit, doctor_output, doctor_sent_yes = run_pty("ai-sdlc doctor", "ordinary-cli-doctor-pty")
+          after_doctor = package_version("version-after-ordinary-cli")
+          check_exit, check_output = run_text(["ai-sdlc", "self-update", "check"], "self-update-check-bare-nonpty")
+          after_check = package_version("version-after-self-update-check-bare")
+          module_check_exit = None
+          module_after_check = after_check
+          if after_check != latest_version:
+              module_check_exit, module_check_output = run_text([sys.executable, "-m", "ai_sdlc", "self-update", "check"], "self-update-check-module-nonpty")
+              module_after_check = package_version("version-after-self-update-check-module")
+
+          result = {
+              "scenario": "auto-capable",
+              "old_version": old_version,
+              "latest_version": latest_version,
+              "before_version": before,
+              "ordinary_cli_exit": doctor_exit,
+              "ordinary_cli_update_prompt_detected": "是否升级" in doctor_output and "回复 y/n" in doctor_output,
+              "ordinary_cli_sent_yes": doctor_sent_yes,
+              "version_after_ordinary_cli": after_doctor,
+              "ordinary_cli_updated_to_latest": after_doctor == latest_version,
+              "self_update_check_exit": check_exit,
+              "self_update_check_sent_yes": False,
+              "version_after_self_update_check": after_check,
+              "self_update_check_updated_to_latest": after_check == latest_version,
+              "module_self_update_check_exit": module_check_exit,
+              "version_after_module_self_update_check": module_after_check,
+              "module_self_update_check_updated_to_latest": module_after_check == latest_version,
+          }
+          (evidence / "result.json").write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+          print(json.dumps(result, ensure_ascii=False, indent=2))
+
+          # This workflow records real behavior. Historical versions may fail the desired UX
+          # contract; keep the job green so both scenario artifacts are always available.
+          if not result["ordinary_cli_update_prompt_detected"] or not result["ordinary_cli_updated_to_latest"]:
+              print("OBSERVED_GAP: ordinary CLI did not complete y/n prompted update")
+          if not result["self_update_check_updated_to_latest"] and not result["module_self_update_check_updated_to_latest"]:
+              print("OBSERVED_GAP: self-update check did not update to latest")
+          '@ | Out-File -FilePath (Join-Path $evidenceRoot "run_update_prompt_e2e.py") -Encoding utf8
+
+          $env:EVIDENCE_ROOT = $evidenceRoot
+          & $python (Join-Path $evidenceRoot "run_update_prompt_e2e.py")
+
+      - name: Upload auto-capable evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-update-prompt-e2e-v0.8.0-evidence
+          path: ${{ runner.temp }}/ai-sdlc-update-prompt-e2e-auto
+          if-no-files-found: error

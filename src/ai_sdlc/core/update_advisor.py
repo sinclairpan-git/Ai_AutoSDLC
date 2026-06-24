@@ -213,9 +213,6 @@ def detect_runtime_identity(env: dict[str, str] | None = None) -> RuntimeIdentit
         )
 
     executable = str(Path(sys.argv[0]).expanduser())
-    if _is_source_or_module_invocation(executable, env_map):
-        return _not_installed_identity(executable, "source_or_module_runtime")
-
     try:
         dist = metadata.distribution(PACKAGE_NAME)
     except metadata.PackageNotFoundError:
@@ -226,6 +223,11 @@ def detect_runtime_identity(env: dict[str, str] | None = None) -> RuntimeIdentit
         return _not_installed_identity(executable, "editable_runtime")
 
     distribution_path = _distribution_path(dist)
+    if _is_source_or_module_invocation(executable, env_map) and not (
+        _module_invocation_uses_distribution(executable, distribution_path)
+    ):
+        return _not_installed_identity(executable, "source_or_module_runtime")
+
     channel = _detect_install_channel(Path(executable), Path(distribution_path))
     identity = _runtime_identity_hash(
         executable=executable,
@@ -646,6 +648,17 @@ def _is_source_or_module_invocation(executable: str, env: dict[str, str]) -> boo
     if env.get("UV_RUN_RECURSION"):
         return True
     return env.get("AI_SDLC_SOURCE_RUNTIME") == "1"
+
+
+def _module_invocation_uses_distribution(executable: str, distribution_path: str) -> bool:
+    if Path(executable).name.lower() != "__main__.py" or not distribution_path:
+        return False
+    try:
+        executable_path = Path(executable).resolve()
+        distribution_root = Path(distribution_path).resolve()
+    except OSError:
+        return False
+    return executable_path.is_relative_to(distribution_root)
 
 
 def _distribution_is_editable(dist: metadata.Distribution) -> bool:
