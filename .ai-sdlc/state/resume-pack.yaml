@@ -9,14 +9,15 @@ working_set_snapshot:
   plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
-  context_summary: 'Goal: 发布 AI-SDLC v0.8.4 | State: PR #86 checks 已通过；Codex review
-    对最新提交提出 P2：Windows release note 不应把 install_offline.ps1 写成 --upgrade-existing。已修正为
-    install_offline.ps1 -UpgradeExisting。 | Next: 提交并推送 Codex P2 修复，重新请求 Codex review
-    并等待 PR #86 checks 重新通过后合并。'
-current_branch: codex/release-0.8.4
+  context_summary: 'Goal: Publish AI-SDLC v0.8.8 patch package | State: Prepared v0.8.8
+    release anchors and fixed Windows offline smoke version regex to match 0.8.8.
+    Targeted pytest, ruff, and verify constraints all pass. | Next: Commit release
+    prep, push PR, request Codex review, monitor checks, merge, tag v0.8.8, create
+    GitHub Release, run release build and artifact smoke.'
+current_branch: codex/release-0.8.8
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-22T11:46:50+00:00'
+timestamp: '2026-06-24T09:03:38+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f
