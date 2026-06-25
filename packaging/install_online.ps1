@@ -151,7 +151,7 @@ function Sync-AiSdlcLaunchersOnPath {
   }
 }
 
-function Add-DirectoryToUserPath {
+function Repair-AiSdlcCommandPath {
   param([string]$Directory)
 
   $resolvedDirectory = (Resolve-Path -LiteralPath $Directory).Path
@@ -306,6 +306,8 @@ function Update-GitBashProfilePath {
   $profileNames = @(".bashrc")
   if (Test-Path (Join-Path $gitBashHome ".bash_profile")) {
     $profileNames += ".bash_profile"
+  } elseif (Test-Path (Join-Path $gitBashHome ".bash_login")) {
+    $profileNames += ".bash_login"
   } elseif (Test-Path (Join-Path $gitBashHome ".profile")) {
     $profileNames += ".profile"
   } else {
@@ -402,7 +404,7 @@ $directInitCommand = 'cd YOUR_PROJECT_PATH; {0} {1}{2}{1} init .' -f $callOperat
 $codexPowerShellInitCommand = 'cd YOUR_PROJECT_PATH; {0} {1}{2}{1} init . --agent-target codex --shell powershell' -f $callOperator, $doubleQuote, $resolvedCliExe
 if ($AddToPath) {
   $commandShimDir = Install-AiSdlcCommandShim -CliExe $resolvedCliExe -RuntimePython $resolvedVenvPython
-  Add-DirectoryToUserPath $commandShimDir
+  Repair-AiSdlcCommandPath $commandShimDir
   Update-GitBashProfilePath $commandShimDir
   $nextCommand = $directInitCommand
 } else {

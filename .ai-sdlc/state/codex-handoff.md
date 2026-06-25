@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-25T02:47:19+00:00
-- Reason: After addressing Machine PATH precedence review on PR 97.
+- Updated: 2026-06-25T03:05:52+00:00
+- Reason: After addressing bash_login and helper clarity review on PR 97.
 - Goal: Fix and release Windows online/offline install PATH issue where bare ai-sdlc resolves stale Python Scripts entries.
-- State: Addressed latest Codex review on PR 97: installers now detect ai-sdlc launchers in Machine PATH, try to promote the stable AI-SDLC shim into Machine PATH when writable, and sync existing PATH launchers to the current shim when writable so cmd, PowerShell, and Git Bash stop resolving stale versions.
+- State: Addressed latest Codex review on PR 97: Git Bash profile updates now respect .bash_profile, .bash_login, .profile order, and the command PATH repair helper is named Repair-AiSdlcCommandPath to reflect user PATH, machine PATH, and stale launcher synchronization behavior.
 - Stage: close
 - Work Item: 187-agentops-self-iteration-monitoring
 - Branch: codex/windows-gitbash-path-shim-v0810
@@ -15,7 +15,7 @@
 - M tests/integration/test_offline_bundle_scripts.py
 
 ## Key Decisions
-- Treat PATH repair as installer-owned: keep user-facing output success-only while automatically repairing stale launcher directories and machine-level path precedence where permissions allow.
+- Follow Bash login startup precedence exactly and keep installer-owned PATH repair explicit in code structure.
 
 ## Commands / Tests
 - uv run pytest tests/integration/test_offline_bundle_scripts.py tests/integration/test_github_workflows.py tests/unit/test_verify_constraints.py -q => 174 passed
@@ -27,4 +27,4 @@
 - Need push latest review fix, re-request Codex review, monitor PR checks, then merge and release v0.8.10 if green.
 
 ## Exact Next Steps
-- Commit and push Machine PATH launcher repair, request @codex review again, and monitor checks/review results.
+- Commit and push bash_login/profile-order fix, request @codex review again, and monitor checks/review results.

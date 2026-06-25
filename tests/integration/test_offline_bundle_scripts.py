@@ -1555,6 +1555,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "current parent terminal may still resolve an older ai-sdlc command" not in offline_ps1
     assert "Get-Command ai-sdlc | Select-Object Source" not in offline_ps1
     assert "Set-PreferredAiSdlcPath" in offline_ps1
+    assert "Repair-AiSdlcCommandPath" in offline_ps1
+    assert "Add-DirectoryToUserPath" not in offline_ps1
     assert "Test-PathValueHasAiSdlcLauncher" in offline_ps1
     assert "Sync-AiSdlcLaunchersOnPath" in offline_ps1
     assert '[Environment]::GetEnvironmentVariable("Path", "Machine")' in offline_ps1
@@ -1570,6 +1572,7 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Get-GitBashHomeDirectory" in offline_ps1
     assert "Update-GitBashProfilePath" in offline_ps1
     assert '$profileNames = @(".bashrc")' in offline_ps1
+    assert 'Join-Path $gitBashHome ".bash_login"' in offline_ps1
     assert 'Join-Path $gitBashHome ".profile"' in offline_ps1
     assert 'Join-Path $gitBashHome $profileName' in offline_ps1
     assert 'foreach ($profileName in ($profileNames | Select-Object -Unique))' in offline_ps1
@@ -1600,6 +1603,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Get-Command ai-sdlc | Select-Object Source" not in online_ps1
     assert "Bare ai-sdlc may still resolve an older install" not in online_ps1
     assert "Set-PreferredAiSdlcPath" in online_ps1
+    assert "Repair-AiSdlcCommandPath" in online_ps1
+    assert "Add-DirectoryToUserPath" not in online_ps1
     assert "Test-PathValueHasAiSdlcLauncher" in online_ps1
     assert "Sync-AiSdlcLaunchersOnPath" in online_ps1
     assert '[Environment]::GetEnvironmentVariable("Path", "Machine")' in online_ps1
@@ -1615,6 +1620,7 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Get-GitBashHomeDirectory" in online_ps1
     assert "Update-GitBashProfilePath" in online_ps1
     assert '$profileNames = @(".bashrc")' in online_ps1
+    assert 'Join-Path $gitBashHome ".bash_login"' in online_ps1
     assert 'Join-Path $gitBashHome ".profile"' in online_ps1
     assert 'Join-Path $gitBashHome $profileName' in online_ps1
     assert 'foreach ($profileName in ($profileNames | Select-Object -Unique))' in online_ps1
