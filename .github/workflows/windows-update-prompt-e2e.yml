@@ -6,7 +6,7 @@ on:
       latest_version:
         description: Latest release version expected after update.
         required: true
-        default: "0.8.9"
+        default: "0.8.10"
   pull_request:
     branches:
       - main
@@ -23,7 +23,7 @@ jobs:
     timeout-minutes: 30
     env:
       OLD_VERSION: "0.7.4"
-      LATEST_VERSION: ${{ inputs.latest_version || '0.8.9' }}
+      LATEST_VERSION: ${{ inputs.latest_version || '0.8.10' }}
       PYTHONUTF8: "1"
       PYTHONIOENCODING: utf-8
 
@@ -173,7 +173,7 @@ jobs:
     timeout-minutes: 30
     env:
       OLD_VERSION: "0.8.0"
-      LATEST_VERSION: ${{ inputs.latest_version || '0.8.9' }}
+      LATEST_VERSION: ${{ inputs.latest_version || '0.8.10' }}
       PYTHONUTF8: "1"
       PYTHONIOENCODING: utf-8
 

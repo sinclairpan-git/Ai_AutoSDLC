@@ -6,7 +6,7 @@ on:
       tag:
         description: Published release tag to verify against the user guide.
         required: true
-        default: v0.8.9
+        default: v0.8.10
   pull_request:
     paths:
       - ".github/workflows/windows-user-guide-e2e.yml"
@@ -26,7 +26,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
-      RELEASE_TAG: ${{ inputs.tag || 'v0.8.9' }}
+      RELEASE_TAG: ${{ inputs.tag || 'v0.8.10' }}
       PYTHONUTF8: "1"
       PYTHONIOENCODING: utf-8
 
@@ -115,12 +115,12 @@ jobs:
           # USER_GUIDE.zh-CN.md Chapter 2, Scenario B: online download from Release.
           Push-Location $projectRoot
           cd ..
-          $BundleName = "ai-sdlc-offline-0.8.9-windows-amd64"
+          $BundleName = "ai-sdlc-offline-0.8.10-windows-amd64"
           $PackageName = "$BundleName.zip"
           $PackageDir = (Get-Location).Path
           $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
-          if ($env:RELEASE_TAG -ne "v0.8.9") {
-            throw "This guide replay intentionally follows the current USER_GUIDE.zh-CN.md v0.8.9 Windows commands."
+          if ($env:RELEASE_TAG -ne "v0.8.10") {
+            throw "This guide replay intentionally follows the current USER_GUIDE.zh-CN.md v0.8.10 Windows commands."
           }
           $packagePath = Join-Path $PackageDir $PackageName
           if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
@@ -131,7 +131,7 @@ jobs:
             }
             Copy-Item -LiteralPath $localPackage.FullName -Destination $packagePath -Force
           } else {
-            Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.8.9/$PackageName" -OutFile $packagePath
+            Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.8.10/$PackageName" -OutFile $packagePath
           }
           New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
           Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"
@@ -147,6 +147,47 @@ jobs:
             Tee-Object -FilePath (Join-Path $evidenceRoot "help-via-bundle-python.txt")
           if ($LASTEXITCODE -ne 0) {
             throw "bundle python -m ai_sdlc --help failed with exit code $LASTEXITCODE"
+          }
+          $stableShimDir = Join-Path $env:LOCALAPPDATA "AI-SDLC\bin"
+          $stableShim = Join-Path $stableShimDir "ai-sdlc.exe"
+          if (-not (Test-Path $stableShim)) {
+            throw "installer did not create stable user command shim: $stableShim"
+          }
+          $stalePathDir = Join-Path $workRoot "old-python\Scripts"
+          New-Item -ItemType Directory -Force -Path $stalePathDir | Out-Null
+          @"
+          #!/usr/bin/env sh
+          echo stale ai-sdlc should not run >&2
+          exit 127
+          "@ | Out-File -FilePath (Join-Path $stalePathDir "ai-sdlc") -Encoding ascii
+          $bashCandidates = @(
+            "C:\Program Files\Git\bin\bash.exe",
+            "C:\Program Files\Git\usr\bin\bash.exe"
+          )
+          $bashExe = $bashCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $bashExe) {
+            throw "Git Bash was not found on the Windows runner"
+          }
+          $originalPath = $env:Path
+          $env:Path = "$stalePathDir;$originalPath"
+          try {
+            $gitBashOutput = & $bashExe -lc 'type -a ai-sdlc; ai-sdlc --version' 2>&1
+            $gitBashExit = $LASTEXITCODE
+          } finally {
+            $env:Path = $originalPath
+          }
+          $gitBashOutput |
+            Tee-Object -FilePath (Join-Path $evidenceRoot "git-bash-bare-version.txt")
+          if ($gitBashExit -ne 0) {
+            throw "Git Bash bare ai-sdlc --version failed with exit code $gitBashExit"
+          }
+          $expectedVersion = $env:RELEASE_TAG -replace '^v', ''
+          $gitBashText = ($gitBashOutput | Out-String)
+          if ($gitBashText -notmatch [regex]::Escape($expectedVersion)) {
+            throw "Git Bash bare ai-sdlc --version did not report $expectedVersion"
+          }
+          if ($gitBashText -match "stale ai-sdlc should not run") {
+            throw "Git Bash resolved the stale PATH entry instead of the stable AI-SDLC shim"
           }
           Pop-Location
 

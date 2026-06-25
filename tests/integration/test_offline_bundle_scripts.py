@@ -1532,6 +1532,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "UpgradeExisting" in offline_ps1
     assert "Using existing AI-SDLC runtime" in offline_ps1
     assert 'Join-Path $baseDir "python.exe"' in offline_ps1
+    assert "$existingCommandSource = (Resolve-Path -LiteralPath $aiSdlcCommand.Source).Path" in offline_ps1
+    assert "$existingCliCandidates += $existingCommandSource" in offline_ps1
     assert "supported_python_versions" in offline_ps1
     assert "Get-ManifestPythonVersions" in offline_ps1
     assert "ai-sdlc --version" in offline_ps1
@@ -1555,6 +1557,30 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "current parent terminal may still resolve an older ai-sdlc command" not in offline_ps1
     assert "Get-Command ai-sdlc | Select-Object Source" not in offline_ps1
     assert "Set-PreferredAiSdlcPath" in offline_ps1
+    assert "Repair-AiSdlcCommandPath" in offline_ps1
+    assert "Add-DirectoryToUserPath" not in offline_ps1
+    assert "Sync-AiSdlcLaunchersOnPath" in offline_ps1
+    assert '[Environment]::GetEnvironmentVariable("Path", "Machine")' not in offline_ps1
+    assert '[Environment]::SetEnvironmentVariable("Path", $updatedMachinePath, "Machine")' not in offline_ps1
+    assert "Install-AiSdlcCommandShim" in offline_ps1
+    assert 'Join-Path $env:LOCALAPPDATA "AI-SDLC\\bin"' in offline_ps1
+    assert 'Join-Path $shimDir "ai-sdlc.exe"' in offline_ps1
+    assert 'Join-Path $shimDir "ai-sdlc.cmd"' in offline_ps1
+    assert 'Join-Path $shimDir "ai-sdlc.ps1"' in offline_ps1
+    assert 'Write-TextUtf8NoBom -Path (Join-Path $shimDir "ai-sdlc.ps1")' not in offline_ps1
+    assert 'Remove-Item -LiteralPath $legacyPsShim -Force' in offline_ps1
+    assert 'Join-Path $shimDir "ai-sdlc-runtime.txt"' in offline_ps1
+    assert "Write-TextUtf8NoBom" in offline_ps1
+    assert "ConvertFrom-GitBashPath" in offline_ps1
+    assert "Get-GitBashHomeDirectory" in offline_ps1
+    assert "Update-GitBashProfilePath" in offline_ps1
+    assert '$profileNames = @(".bashrc")' in offline_ps1
+    assert '@(".bash_profile", ".bash_login", ".profile")' in offline_ps1
+    assert "candidateProfileName" in offline_ps1
+    assert 'Join-Path $gitBashHome $profileName' in offline_ps1
+    assert 'foreach ($profileName in ($profileNames | Select-Object -Unique))' in offline_ps1
+    assert "hash -r 2>/dev/null || true" in offline_ps1
+    assert "stableShimRuntimePath" in offline_ps1
     assert "Test-DirectoryHasAiSdlc" not in offline_ps1
     assert "Direct shim" in offline_ps1
     assert "Codex + PowerShell project init" in offline_ps1
@@ -1580,6 +1606,29 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Get-Command ai-sdlc | Select-Object Source" not in online_ps1
     assert "Bare ai-sdlc may still resolve an older install" not in online_ps1
     assert "Set-PreferredAiSdlcPath" in online_ps1
+    assert "Repair-AiSdlcCommandPath" in online_ps1
+    assert "Add-DirectoryToUserPath" not in online_ps1
+    assert "Sync-AiSdlcLaunchersOnPath" in online_ps1
+    assert '[Environment]::GetEnvironmentVariable("Path", "Machine")' not in online_ps1
+    assert '[Environment]::SetEnvironmentVariable("Path", $updatedMachinePath, "Machine")' not in online_ps1
+    assert "Install-AiSdlcCommandShim" in online_ps1
+    assert 'Join-Path $env:LOCALAPPDATA "AI-SDLC\\bin"' in online_ps1
+    assert 'Join-Path $shimDir "ai-sdlc.exe"' in online_ps1
+    assert 'Join-Path $shimDir "ai-sdlc.cmd"' in online_ps1
+    assert 'Join-Path $shimDir "ai-sdlc.ps1"' in online_ps1
+    assert 'Write-TextUtf8NoBom -Path (Join-Path $shimDir "ai-sdlc.ps1")' not in online_ps1
+    assert 'Remove-Item -LiteralPath $legacyPsShim -Force' in online_ps1
+    assert 'Join-Path $shimDir "ai-sdlc-runtime.txt"' in online_ps1
+    assert "Write-TextUtf8NoBom" in online_ps1
+    assert "ConvertFrom-GitBashPath" in online_ps1
+    assert "Get-GitBashHomeDirectory" in online_ps1
+    assert "Update-GitBashProfilePath" in online_ps1
+    assert '$profileNames = @(".bashrc")' in online_ps1
+    assert '@(".bash_profile", ".bash_login", ".profile")' in online_ps1
+    assert "candidateProfileName" in online_ps1
+    assert 'Join-Path $gitBashHome $profileName' in online_ps1
+    assert 'foreach ($profileName in ($profileNames | Select-Object -Unique))' in online_ps1
+    assert "hash -r 2>/dev/null || true" in online_ps1
     assert "Test-DirectoryHasAiSdlc" not in online_ps1
     assert "Direct shim" in online_ps1
     assert "Codex + PowerShell project init" in online_ps1
@@ -1621,7 +1670,7 @@ def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> 
     assert "如果使用场景 B，在线下载到项目父目录并安装" not in guide
     assert "ai-sdlc init ." in guide
     assert "如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示" in guide
-    assert 'Set-Location ..; $BundleName = "ai-sdlc-offline-0.8.9-windows-amd64"' in guide
+    assert 'Set-Location ..; $BundleName = "ai-sdlc-offline-0.8.10-windows-amd64"' in guide
     assert "是示例路径；请替换成你的真实项目根目录" in guide
     assert len(scenario_a_sections) == 2
     assert guide.count("Invoke-WebRequest -Uri") >= 2
