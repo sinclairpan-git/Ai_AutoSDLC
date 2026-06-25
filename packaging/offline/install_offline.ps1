@@ -123,6 +123,101 @@ function Add-DirectoryToUserPath {
   $env:Path = Set-PreferredAiSdlcPath -PathValue $env:Path -PreferredDirectory $resolvedDirectory
 }
 
+function ConvertTo-GitBashPath {
+  param([string]$PathValue)
+
+  $resolvedPath = $PathValue
+  try {
+    $resolvedPath = (Resolve-Path -LiteralPath $PathValue).Path
+  } catch {
+    $resolvedPath = [IO.Path]::GetFullPath($PathValue)
+  }
+  if ($resolvedPath -match '^([A-Za-z]):\\(.*)$') {
+    $drive = $matches[1].ToLowerInvariant()
+    $rest = $matches[2] -replace '\\', '/'
+    return "/$drive/$rest"
+  }
+  return ($resolvedPath -replace '\\', '/')
+}
+
+function Get-AiSdlcShimDirectory {
+  if ($env:LOCALAPPDATA) {
+    return (Join-Path $env:LOCALAPPDATA "AI-SDLC\bin")
+  }
+  if ($env:USERPROFILE) {
+    return (Join-Path $env:USERPROFILE ".ai-sdlc\bin")
+  }
+  return (Join-Path $Root ".ai-sdlc-bin")
+}
+
+function Install-AiSdlcCommandShim {
+  param([string]$CliExe)
+
+  $resolvedCliExe = (Resolve-Path -LiteralPath $CliExe).Path
+  $shimDir = Get-AiSdlcShimDirectory
+  New-Item -ItemType Directory -Force -Path $shimDir | Out-Null
+
+  Copy-Item -LiteralPath $resolvedCliExe -Destination (Join-Path $shimDir "ai-sdlc.exe") -Force
+  $scriptPy = Join-Path (Split-Path -Parent $resolvedCliExe) (([IO.Path]::GetFileNameWithoutExtension($resolvedCliExe)) + "-script.py")
+  if (Test-Path $scriptPy) {
+    Copy-Item -LiteralPath $scriptPy -Destination (Join-Path $shimDir "ai-sdlc-script.py") -Force
+  }
+  $manifest = "$resolvedCliExe.manifest"
+  if (Test-Path $manifest) {
+    Copy-Item -LiteralPath $manifest -Destination (Join-Path $shimDir "ai-sdlc.exe.manifest") -Force
+  }
+
+  $cmdShim = @(
+    "@echo off",
+    ('"{0}" %*' -f $resolvedCliExe),
+    "exit /b %ERRORLEVEL%"
+  ) -join "`r`n"
+  Set-Content -LiteralPath (Join-Path $shimDir "ai-sdlc.cmd") -Value $cmdShim -Encoding ascii
+
+  $psShim = @(
+    ('& "{0}" @args' -f $resolvedCliExe),
+    'exit $LASTEXITCODE'
+  ) -join "`r`n"
+  Set-Content -LiteralPath (Join-Path $shimDir "ai-sdlc.ps1") -Value $psShim -Encoding ascii
+
+  return (Resolve-Path -LiteralPath $shimDir).Path
+}
+
+function Update-GitBashProfilePath {
+  param([string]$Directory)
+
+  if (-not $env:USERPROFILE) {
+    return
+  }
+  $bashDirectory = ConvertTo-GitBashPath $Directory
+  $begin = "# >>> AI-SDLC managed PATH >>>"
+  $end = "# <<< AI-SDLC managed PATH <<<"
+  $block = @(
+    $begin,
+    'case ":$PATH:" in',
+    ('  *":{0}:"*) ;;' -f $bashDirectory),
+    ('  *) export PATH="{0}:$PATH" ;;' -f $bashDirectory),
+    'esac',
+    'hash -r 2>/dev/null || true',
+    $end
+  ) -join "`n"
+
+  foreach ($profileName in @(".bashrc", ".bash_profile")) {
+    $profilePath = Join-Path $env:USERPROFILE $profileName
+    $content = ""
+    if (Test-Path $profilePath) {
+      $content = Get-Content -LiteralPath $profilePath -Raw
+    }
+    $pattern = "(?s)" + [regex]::Escape($begin) + ".*?" + [regex]::Escape($end) + "\r?\n?"
+    $content = [regex]::Replace($content, $pattern, "")
+    $content = $content.TrimEnd()
+    if ($content) {
+      $content = $content + "`n"
+    }
+    Set-Content -LiteralPath $profilePath -Value ($content + $block + "`n") -Encoding ascii
+  }
+}
+
 if (-not (Test-Path $Wheels)) {
   throw "missing wheels directory next to this script"
 }
@@ -275,7 +370,9 @@ $cliDir = Split-Path -Parent $resolvedCliExe
 $directInitCommand = 'cd YOUR_PROJECT_PATH; {0} {1}{2}{1} init .' -f $callOperator, $doubleQuote, $resolvedCliExe
 $codexPowerShellInitCommand = 'cd YOUR_PROJECT_PATH; {0} {1}{2}{1} init . --agent-target codex --shell powershell' -f $callOperator, $doubleQuote, $resolvedCliExe
 if ($AddToPath) {
-  Add-DirectoryToUserPath $cliDir
+  $commandShimDir = Install-AiSdlcCommandShim $resolvedCliExe
+  Add-DirectoryToUserPath $commandShimDir
+  Update-GitBashProfilePath $commandShimDir
   $nextCommand = $directInitCommand
 } else {
   $nextCommand = 'cd YOUR_PROJECT_PATH; Start-Process -Wait -NoNewWindow -FilePath {0}{1}{0} -ArgumentList ''-m'', ''ai_sdlc'', ''init'', ''.''' -f $doubleQuote, $resolvedVenvPython

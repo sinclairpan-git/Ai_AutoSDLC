@@ -46,7 +46,7 @@ def test_installed_module_invocation_is_installed_runtime(monkeypatch, tmp_path)
     executable.write_text("", encoding="utf-8")
 
     class FakeDistribution:
-        version = "0.8.9"
+        version = "0.8.10"
 
         def read_text(self, name: str) -> str | None:
             return None
@@ -64,7 +64,7 @@ def test_installed_module_invocation_is_installed_runtime(monkeypatch, tmp_path)
     identity = detect_runtime_identity()
 
     assert identity.installed_runtime is True
-    assert identity.installed_version == "0.8.9"
+    assert identity.installed_version == "0.8.10"
     assert identity.reason_code == "installed_runtime"
 
 
