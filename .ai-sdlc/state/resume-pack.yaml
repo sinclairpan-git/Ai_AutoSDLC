@@ -11,15 +11,14 @@ working_set_snapshot:
   active_files: []
   context_summary: 'Goal: Fix and release Windows online/offline install PATH issue
     where bare ai-sdlc resolves stale Python Scripts entries. | State: Addressed latest
-    Codex review on PR 97: stale launcher synchronization is now restricted to User
-    PATH entries only, avoiding Machine PATH shared launcher mutation; Git Bash login
-    profile selection uses an explicit .bash_profile, .bash_login, .profile order.
-    | Next: Commit and push User PATH-only stale launcher sync fix, request @codex
-    review again, and monitor checks/review results.'
+    Codex review on PR 97: PATH shim directories no longer create same-basename ai-sdlc.ps1
+    wrappers, and installers remove legacy ai-sdlc.ps1 files from user PATH shim directories
+    to avoid PowerShell execution policy precedence failures. | Next: Commit and push
+    ps1 shim removal fix, request @codex review again, and monitor checks/review results.'
 current_branch: codex/windows-gitbash-path-shim-v0810
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-25T03:36:46+00:00'
+timestamp: '2026-06-25T03:54:25+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f

@@ -134,11 +134,15 @@ function Sync-AiSdlcLauncherDirectory {
     if (-not $hasLauncher) {
       return
     }
-    foreach ($fileName in @("ai-sdlc.exe", "ai-sdlc.cmd", "ai-sdlc.ps1", "ai-sdlc-script.py", "ai-sdlc.exe.manifest", "ai-sdlc-runtime.txt")) {
+    foreach ($fileName in @("ai-sdlc.exe", "ai-sdlc.cmd", "ai-sdlc-script.py", "ai-sdlc.exe.manifest", "ai-sdlc-runtime.txt")) {
       $sourcePath = Join-Path $SourceShimDirectory $fileName
       if (Test-Path $sourcePath) {
         Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $TargetDirectory $fileName) -Force -ErrorAction Stop
       }
+    }
+    $targetPsShim = Join-Path $TargetDirectory "ai-sdlc.ps1"
+    if (Test-Path $targetPsShim) {
+      Remove-Item -LiteralPath $targetPsShim -Force -ErrorAction Stop
     }
   } catch {
   }
@@ -264,11 +268,10 @@ function Install-AiSdlcCommandShim {
   ) -join "`r`n"
   Write-TextUtf8NoBom -Path (Join-Path $shimDir "ai-sdlc.cmd") -Value $cmdShim
 
-  $psShim = @(
-    ('& "{0}" @args' -f $resolvedCliExe),
-    'exit $LASTEXITCODE'
-  ) -join "`r`n"
-  Write-TextUtf8NoBom -Path (Join-Path $shimDir "ai-sdlc.ps1") -Value $psShim
+  $legacyPsShim = Join-Path $shimDir "ai-sdlc.ps1"
+  if (Test-Path $legacyPsShim) {
+    Remove-Item -LiteralPath $legacyPsShim -Force
+  }
 
   if (-not $RuntimePython) {
     $candidateRuntimePython = Join-Path (Split-Path -Parent $resolvedCliExe) "python.exe"

@@ -1565,6 +1565,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert 'Join-Path $shimDir "ai-sdlc.exe"' in offline_ps1
     assert 'Join-Path $shimDir "ai-sdlc.cmd"' in offline_ps1
     assert 'Join-Path $shimDir "ai-sdlc.ps1"' in offline_ps1
+    assert 'Write-TextUtf8NoBom -Path (Join-Path $shimDir "ai-sdlc.ps1")' not in offline_ps1
+    assert 'Remove-Item -LiteralPath $legacyPsShim -Force' in offline_ps1
     assert 'Join-Path $shimDir "ai-sdlc-runtime.txt"' in offline_ps1
     assert "Write-TextUtf8NoBom" in offline_ps1
     assert "ConvertFrom-GitBashPath" in offline_ps1
@@ -1612,6 +1614,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert 'Join-Path $shimDir "ai-sdlc.exe"' in online_ps1
     assert 'Join-Path $shimDir "ai-sdlc.cmd"' in online_ps1
     assert 'Join-Path $shimDir "ai-sdlc.ps1"' in online_ps1
+    assert 'Write-TextUtf8NoBom -Path (Join-Path $shimDir "ai-sdlc.ps1")' not in online_ps1
+    assert 'Remove-Item -LiteralPath $legacyPsShim -Force' in online_ps1
     assert 'Join-Path $shimDir "ai-sdlc-runtime.txt"' in online_ps1
     assert "Write-TextUtf8NoBom" in online_ps1
     assert "ConvertFrom-GitBashPath" in online_ps1
