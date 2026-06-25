@@ -123,6 +123,16 @@ function Add-DirectoryToUserPath {
   $env:Path = Set-PreferredAiSdlcPath -PathValue $env:Path -PreferredDirectory $resolvedDirectory
 }
 
+function Write-TextUtf8NoBom {
+  param(
+    [string]$Path,
+    [string]$Value
+  )
+
+  $encoding = [System.Text.UTF8Encoding]::new($false)
+  [System.IO.File]::WriteAllText($Path, $Value, $encoding)
+}
+
 function ConvertTo-GitBashPath {
   param([string]$PathValue)
 
@@ -151,7 +161,10 @@ function Get-AiSdlcShimDirectory {
 }
 
 function Install-AiSdlcCommandShim {
-  param([string]$CliExe)
+  param(
+    [string]$CliExe,
+    [string]$RuntimePython = ""
+  )
 
   $resolvedCliExe = (Resolve-Path -LiteralPath $CliExe).Path
   $shimDir = Get-AiSdlcShimDirectory
@@ -172,13 +185,24 @@ function Install-AiSdlcCommandShim {
     ('"{0}" %*' -f $resolvedCliExe),
     "exit /b %ERRORLEVEL%"
   ) -join "`r`n"
-  Set-Content -LiteralPath (Join-Path $shimDir "ai-sdlc.cmd") -Value $cmdShim -Encoding ascii
+  Write-TextUtf8NoBom -Path (Join-Path $shimDir "ai-sdlc.cmd") -Value $cmdShim
 
   $psShim = @(
     ('& "{0}" @args' -f $resolvedCliExe),
     'exit $LASTEXITCODE'
   ) -join "`r`n"
-  Set-Content -LiteralPath (Join-Path $shimDir "ai-sdlc.ps1") -Value $psShim -Encoding ascii
+  Write-TextUtf8NoBom -Path (Join-Path $shimDir "ai-sdlc.ps1") -Value $psShim
+
+  if (-not $RuntimePython) {
+    $candidateRuntimePython = Join-Path (Split-Path -Parent $resolvedCliExe) "python.exe"
+    if (Test-Path $candidateRuntimePython) {
+      $RuntimePython = $candidateRuntimePython
+    }
+  }
+  if ($RuntimePython -and (Test-Path $RuntimePython)) {
+    $resolvedRuntimePython = (Resolve-Path -LiteralPath $RuntimePython).Path
+    Write-TextUtf8NoBom -Path (Join-Path $shimDir "ai-sdlc-runtime.txt") -Value ($resolvedRuntimePython + "`n")
+  }
 
   return (Resolve-Path -LiteralPath $shimDir).Path
 }
@@ -202,7 +226,16 @@ function Update-GitBashProfilePath {
     $end
   ) -join "`n"
 
-  foreach ($profileName in @(".bashrc", ".bash_profile")) {
+  $profileNames = @(".bashrc")
+  if (Test-Path (Join-Path $env:USERPROFILE ".bash_profile")) {
+    $profileNames += ".bash_profile"
+  } elseif (Test-Path (Join-Path $env:USERPROFILE ".profile")) {
+    $profileNames += ".profile"
+  } else {
+    $profileNames += ".bash_profile"
+  }
+
+  foreach ($profileName in ($profileNames | Select-Object -Unique)) {
     $profilePath = Join-Path $env:USERPROFILE $profileName
     $content = ""
     if (Test-Path $profilePath) {
@@ -214,7 +247,7 @@ function Update-GitBashProfilePath {
     if ($content) {
       $content = $content + "`n"
     }
-    Set-Content -LiteralPath $profilePath -Value ($content + $block + "`n") -Encoding ascii
+    Write-TextUtf8NoBom -Path $profilePath -Value ($content + $block + "`n")
   }
 }
 
@@ -234,11 +267,13 @@ $mainWheel = $mainWheels[0].FullName
 if ($UpgradeExisting) {
   $aiSdlcCommand = Get-Command ai-sdlc -ErrorAction Stop
   $shimDir = Split-Path -Parent $aiSdlcCommand.Source
+  $stableShimRuntimePath = Join-Path $shimDir "ai-sdlc-runtime.txt"
   $baseDir = Split-Path -Parent $shimDir
   $candidatePythons = @(
+    $(if (Test-Path $stableShimRuntimePath) { (Get-Content -LiteralPath $stableShimRuntimePath -Raw).Trim() }),
     (Join-Path $shimDir "python.exe"),
     (Join-Path $baseDir "python.exe")
-  )
+  ) | Where-Object { $_ }
   $existingPython = $null
   foreach ($candidatePython in $candidatePythons) {
     if (Test-Path $candidatePython) {
@@ -331,6 +366,14 @@ if ($UpgradeExisting) {
   if ($installedVersion -ne $expectedVersion) {
     throw "installed version is $installedVersion, expected $expectedVersion"
   }
+  if (Test-Path $stableShimRuntimePath) {
+    $existingCli = Join-Path (Split-Path -Parent $existingPython) "ai-sdlc.exe"
+    if (Test-Path $existingCli) {
+      $commandShimDir = Install-AiSdlcCommandShim -CliExe $existingCli -RuntimePython $existingPython
+      Add-DirectoryToUserPath $commandShimDir
+      Update-GitBashProfilePath $commandShimDir
+    }
+  }
   $pathVersionOutput = (& ai-sdlc --version 2>$null)
   if ($LASTEXITCODE -ne 0) {
     throw "current PATH still resolves an older ai-sdlc command after installation"
@@ -370,7 +413,7 @@ $cliDir = Split-Path -Parent $resolvedCliExe
 $directInitCommand = 'cd YOUR_PROJECT_PATH; {0} {1}{2}{1} init .' -f $callOperator, $doubleQuote, $resolvedCliExe
 $codexPowerShellInitCommand = 'cd YOUR_PROJECT_PATH; {0} {1}{2}{1} init . --agent-target codex --shell powershell' -f $callOperator, $doubleQuote, $resolvedCliExe
 if ($AddToPath) {
-  $commandShimDir = Install-AiSdlcCommandShim $resolvedCliExe
+  $commandShimDir = Install-AiSdlcCommandShim -CliExe $resolvedCliExe -RuntimePython $resolvedVenvPython
   Add-DirectoryToUserPath $commandShimDir
   Update-GitBashProfilePath $commandShimDir
   $nextCommand = $directInitCommand

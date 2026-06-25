@@ -1560,9 +1560,14 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert 'Join-Path $shimDir "ai-sdlc.exe"' in offline_ps1
     assert 'Join-Path $shimDir "ai-sdlc.cmd"' in offline_ps1
     assert 'Join-Path $shimDir "ai-sdlc.ps1"' in offline_ps1
+    assert 'Join-Path $shimDir "ai-sdlc-runtime.txt"' in offline_ps1
+    assert "Write-TextUtf8NoBom" in offline_ps1
     assert "Update-GitBashProfilePath" in offline_ps1
-    assert 'foreach ($profileName in @(".bashrc", ".bash_profile"))' in offline_ps1
+    assert '$profileNames = @(".bashrc")' in offline_ps1
+    assert 'Join-Path $env:USERPROFILE ".profile"' in offline_ps1
+    assert 'foreach ($profileName in ($profileNames | Select-Object -Unique))' in offline_ps1
     assert "hash -r 2>/dev/null || true" in offline_ps1
+    assert "stableShimRuntimePath" in offline_ps1
     assert "Test-DirectoryHasAiSdlc" not in offline_ps1
     assert "Direct shim" in offline_ps1
     assert "Codex + PowerShell project init" in offline_ps1
@@ -1593,8 +1598,12 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert 'Join-Path $shimDir "ai-sdlc.exe"' in online_ps1
     assert 'Join-Path $shimDir "ai-sdlc.cmd"' in online_ps1
     assert 'Join-Path $shimDir "ai-sdlc.ps1"' in online_ps1
+    assert 'Join-Path $shimDir "ai-sdlc-runtime.txt"' in online_ps1
+    assert "Write-TextUtf8NoBom" in online_ps1
     assert "Update-GitBashProfilePath" in online_ps1
-    assert 'foreach ($profileName in @(".bashrc", ".bash_profile"))' in online_ps1
+    assert '$profileNames = @(".bashrc")' in online_ps1
+    assert 'Join-Path $env:USERPROFILE ".profile"' in online_ps1
+    assert 'foreach ($profileName in ($profileNames | Select-Object -Unique))' in online_ps1
     assert "hash -r 2>/dev/null || true" in online_ps1
     assert "Test-DirectoryHasAiSdlc" not in online_ps1
     assert "Direct shim" in online_ps1
