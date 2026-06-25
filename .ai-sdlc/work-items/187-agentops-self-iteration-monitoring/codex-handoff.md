@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-25T03:05:52+00:00
-- Reason: After addressing bash_login and helper clarity review on PR 97.
+- Updated: 2026-06-25T03:20:49+00:00
+- Reason: After addressing Machine PATH per-user shim review on PR 97.
 - Goal: Fix and release Windows online/offline install PATH issue where bare ai-sdlc resolves stale Python Scripts entries.
-- State: Addressed latest Codex review on PR 97: Git Bash profile updates now respect .bash_profile, .bash_login, .profile order, and the command PATH repair helper is named Repair-AiSdlcCommandPath to reflect user PATH, machine PATH, and stale launcher synchronization behavior.
+- State: Addressed latest Codex review on PR 97: command repair no longer writes the current user's LOCALAPPDATA shim into Machine PATH. It still repairs User PATH and best-effort syncs existing ai-sdlc launchers found on Machine/User/Process PATH when those directories are writable.
 - Stage: close
 - Work Item: 187-agentops-self-iteration-monitoring
 - Branch: codex/windows-gitbash-path-shim-v0810
@@ -15,7 +15,7 @@
 - M tests/integration/test_offline_bundle_scripts.py
 
 ## Key Decisions
-- Follow Bash login startup precedence exactly and keep installer-owned PATH repair explicit in code structure.
+- Do not pollute Machine PATH with per-user shim directories; repair stale launchers in-place where possible and keep user-facing install output simple.
 
 ## Commands / Tests
 - uv run pytest tests/integration/test_offline_bundle_scripts.py tests/integration/test_github_workflows.py tests/unit/test_verify_constraints.py -q => 174 passed
@@ -27,4 +27,4 @@
 - Need push latest review fix, re-request Codex review, monitor PR checks, then merge and release v0.8.10 if green.
 
 ## Exact Next Steps
-- Commit and push bash_login/profile-order fix, request @codex review again, and monitor checks/review results.
+- Commit and push Machine PATH non-pollution fix, request @codex review again, and monitor checks/review results.

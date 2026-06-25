@@ -110,27 +110,6 @@ function Set-PreferredAiSdlcPath {
   return ($result -join [IO.Path]::PathSeparator)
 }
 
-function Test-PathValueHasAiSdlcLauncher {
-  param(
-    [string]$PathValue,
-    [string]$ExcludedDirectory
-  )
-
-  $excludedKey = Normalize-PathEntry $ExcludedDirectory
-  foreach ($entry in @($PathValue -split [IO.Path]::PathSeparator | Where-Object { $_ })) {
-    $entryKey = Normalize-PathEntry $entry
-    if ($entryKey -eq $excludedKey) {
-      continue
-    }
-    foreach ($fileName in @("ai-sdlc.exe", "ai-sdlc.cmd", "ai-sdlc.ps1")) {
-      if (Test-Path (Join-Path $entry $fileName)) {
-        return $true
-      }
-    }
-  }
-  return $false
-}
-
 function Sync-AiSdlcLauncherDirectory {
   param(
     [string]$SourceShimDirectory,
@@ -185,14 +164,6 @@ function Repair-AiSdlcCommandPath {
   param([string]$Directory)
 
   $resolvedDirectory = (Resolve-Path -LiteralPath $Directory).Path
-  $currentMachinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
-  if ($currentMachinePath -and (Test-PathValueHasAiSdlcLauncher -PathValue $currentMachinePath -ExcludedDirectory $resolvedDirectory)) {
-    try {
-      $updatedMachinePath = Set-PreferredAiSdlcPath -PathValue $currentMachinePath -PreferredDirectory $resolvedDirectory
-      [Environment]::SetEnvironmentVariable("Path", $updatedMachinePath, "Machine")
-    } catch {
-    }
-  }
   $currentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
   if (-not $currentUserPath) {
     $currentUserPath = ""
