@@ -1532,6 +1532,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "UpgradeExisting" in offline_ps1
     assert "Using existing AI-SDLC runtime" in offline_ps1
     assert 'Join-Path $baseDir "python.exe"' in offline_ps1
+    assert "$existingCommandSource = (Resolve-Path -LiteralPath $aiSdlcCommand.Source).Path" in offline_ps1
+    assert "$existingCliCandidates += $existingCommandSource" in offline_ps1
     assert "supported_python_versions" in offline_ps1
     assert "Get-ManifestPythonVersions" in offline_ps1
     assert "ai-sdlc --version" in offline_ps1

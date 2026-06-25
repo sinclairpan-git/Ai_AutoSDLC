@@ -352,7 +352,8 @@ $mainWheel = $mainWheels[0].FullName
 
 if ($UpgradeExisting) {
   $aiSdlcCommand = Get-Command ai-sdlc -ErrorAction Stop
-  $shimDir = Split-Path -Parent $aiSdlcCommand.Source
+  $existingCommandSource = (Resolve-Path -LiteralPath $aiSdlcCommand.Source).Path
+  $shimDir = Split-Path -Parent $existingCommandSource
   $stableShimRuntimePath = Join-Path $shimDir "ai-sdlc-runtime.txt"
   $baseDir = Split-Path -Parent $shimDir
   $candidatePythons = @(
@@ -452,8 +453,21 @@ if ($UpgradeExisting) {
   if ($installedVersion -ne $expectedVersion) {
     throw "installed version is $installedVersion, expected $expectedVersion"
   }
-  $existingCli = Join-Path (Split-Path -Parent $existingPython) "ai-sdlc.exe"
-  if (Test-Path $existingCli) {
+  $existingCliCandidates = @()
+  if (Test-Path $stableShimRuntimePath) {
+    $existingCliCandidates += (Join-Path (Split-Path -Parent $existingPython) "ai-sdlc.exe")
+  }
+  $existingCliCandidates += $existingCommandSource
+  $existingCliCandidates += (Join-Path $shimDir "ai-sdlc.exe")
+  $existingCliCandidates += (Join-Path (Split-Path -Parent $existingPython) "ai-sdlc.exe")
+  $existingCli = $null
+  foreach ($existingCliCandidate in ($existingCliCandidates | Select-Object -Unique)) {
+    if ($existingCliCandidate -and (Test-Path $existingCliCandidate)) {
+      $existingCli = $existingCliCandidate
+      break
+    }
+  }
+  if ($existingCli -and (Test-Path $existingCli)) {
     $commandShimDir = Install-AiSdlcCommandShim -CliExe $existingCli -RuntimePython $existingPython
     Repair-AiSdlcCommandPath $commandShimDir
     Update-GitBashProfilePath $commandShimDir
