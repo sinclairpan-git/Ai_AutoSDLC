@@ -1562,9 +1562,12 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert 'Join-Path $shimDir "ai-sdlc.ps1"' in offline_ps1
     assert 'Join-Path $shimDir "ai-sdlc-runtime.txt"' in offline_ps1
     assert "Write-TextUtf8NoBom" in offline_ps1
+    assert "ConvertFrom-GitBashPath" in offline_ps1
+    assert "Get-GitBashHomeDirectory" in offline_ps1
     assert "Update-GitBashProfilePath" in offline_ps1
     assert '$profileNames = @(".bashrc")' in offline_ps1
-    assert 'Join-Path $env:USERPROFILE ".profile"' in offline_ps1
+    assert 'Join-Path $gitBashHome ".profile"' in offline_ps1
+    assert 'Join-Path $gitBashHome $profileName' in offline_ps1
     assert 'foreach ($profileName in ($profileNames | Select-Object -Unique))' in offline_ps1
     assert "hash -r 2>/dev/null || true" in offline_ps1
     assert "stableShimRuntimePath" in offline_ps1
@@ -1600,9 +1603,12 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert 'Join-Path $shimDir "ai-sdlc.ps1"' in online_ps1
     assert 'Join-Path $shimDir "ai-sdlc-runtime.txt"' in online_ps1
     assert "Write-TextUtf8NoBom" in online_ps1
+    assert "ConvertFrom-GitBashPath" in online_ps1
+    assert "Get-GitBashHomeDirectory" in online_ps1
     assert "Update-GitBashProfilePath" in online_ps1
     assert '$profileNames = @(".bashrc")' in online_ps1
-    assert 'Join-Path $env:USERPROFILE ".profile"' in online_ps1
+    assert 'Join-Path $gitBashHome ".profile"' in online_ps1
+    assert 'Join-Path $gitBashHome $profileName' in online_ps1
     assert 'foreach ($profileName in ($profileNames | Select-Object -Unique))' in online_ps1
     assert "hash -r 2>/dev/null || true" in online_ps1
     assert "Test-DirectoryHasAiSdlc" not in online_ps1

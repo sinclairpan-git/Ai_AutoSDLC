@@ -11,14 +11,14 @@ working_set_snapshot:
   active_files: []
   context_summary: 'Goal: Fix and release Windows online/offline install PATH issue
     where Git Bash bare ai-sdlc resolves stale Python Scripts entry. | State: Addressed
-    second Codex review: offline -UpgradeExisting now creates/refreshed the stable
-    %LOCALAPPDATA%\AI-SDLC\bin shim even when upgrading legacy installs that do not
-    yet have ai-sdlc-runtime.txt. | Next: Commit and push second review fix, re-request
-    Codex review, monitor PR checks, then merge and publish v0.8.10 if green.'
+    latest Codex review on PR 97: online/offline installers now write Git Bash PATH
+    profile blocks under the actual Git Bash HOME, supporting /c/Users/... HOME values,
+    before falling back to USERPROFILE. | Next: Commit and push Git Bash HOME profile
+    fix, request @codex review again, and monitor checks/review results.'
 current_branch: codex/windows-gitbash-path-shim-v0810
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-25T02:18:03+00:00'
+timestamp: '2026-06-25T02:34:48+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f

@@ -120,6 +120,32 @@ function ConvertTo-GitBashPath {
   return ($resolvedPath -replace '\\', '/')
 }
 
+function ConvertFrom-GitBashPath {
+  param([string]$PathValue)
+
+  if ($PathValue -match '^/([A-Za-z])/(.*)$') {
+    $drive = $matches[1].ToUpperInvariant()
+    $rest = $matches[2] -replace '/', '\'
+    return "$drive`:\$rest"
+  }
+  return $PathValue
+}
+
+function Get-GitBashHomeDirectory {
+  $candidates = @($env:HOME, $env:USERPROFILE) | Where-Object { $_ }
+  foreach ($candidate in $candidates) {
+    $windowsCandidate = ConvertFrom-GitBashPath $candidate
+    try {
+      $fullPath = [IO.Path]::GetFullPath($windowsCandidate)
+      if (Test-Path $fullPath) {
+        return $fullPath
+      }
+    } catch {
+    }
+  }
+  return $null
+}
+
 function Get-AiSdlcShimDirectory {
   if ($env:LOCALAPPDATA) {
     return (Join-Path $env:LOCALAPPDATA "AI-SDLC\bin")
@@ -180,7 +206,8 @@ function Install-AiSdlcCommandShim {
 function Update-GitBashProfilePath {
   param([string]$Directory)
 
-  if (-not $env:USERPROFILE) {
+  $gitBashHome = Get-GitBashHomeDirectory
+  if (-not $gitBashHome) {
     return
   }
   $bashDirectory = ConvertTo-GitBashPath $Directory
@@ -197,16 +224,16 @@ function Update-GitBashProfilePath {
   ) -join "`n"
 
   $profileNames = @(".bashrc")
-  if (Test-Path (Join-Path $env:USERPROFILE ".bash_profile")) {
+  if (Test-Path (Join-Path $gitBashHome ".bash_profile")) {
     $profileNames += ".bash_profile"
-  } elseif (Test-Path (Join-Path $env:USERPROFILE ".profile")) {
+  } elseif (Test-Path (Join-Path $gitBashHome ".profile")) {
     $profileNames += ".profile"
   } else {
     $profileNames += ".bash_profile"
   }
 
   foreach ($profileName in ($profileNames | Select-Object -Unique)) {
-    $profilePath = Join-Path $env:USERPROFILE $profileName
+    $profilePath = Join-Path $gitBashHome $profileName
     $content = ""
     if (Test-Path $profilePath) {
       $content = Get-Content -LiteralPath $profilePath -Raw
