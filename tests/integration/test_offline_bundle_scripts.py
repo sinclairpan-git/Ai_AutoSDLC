@@ -1558,7 +1558,7 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Repair-AiSdlcCommandPath" in offline_ps1
     assert "Add-DirectoryToUserPath" not in offline_ps1
     assert "Sync-AiSdlcLaunchersOnPath" in offline_ps1
-    assert '[Environment]::GetEnvironmentVariable("Path", "Machine")' in offline_ps1
+    assert '[Environment]::GetEnvironmentVariable("Path", "Machine")' not in offline_ps1
     assert '[Environment]::SetEnvironmentVariable("Path", $updatedMachinePath, "Machine")' not in offline_ps1
     assert "Install-AiSdlcCommandShim" in offline_ps1
     assert 'Join-Path $env:LOCALAPPDATA "AI-SDLC\\bin"' in offline_ps1
@@ -1571,8 +1571,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Get-GitBashHomeDirectory" in offline_ps1
     assert "Update-GitBashProfilePath" in offline_ps1
     assert '$profileNames = @(".bashrc")' in offline_ps1
-    assert 'Join-Path $gitBashHome ".bash_login"' in offline_ps1
-    assert 'Join-Path $gitBashHome ".profile"' in offline_ps1
+    assert '@(".bash_profile", ".bash_login", ".profile")' in offline_ps1
+    assert "candidateProfileName" in offline_ps1
     assert 'Join-Path $gitBashHome $profileName' in offline_ps1
     assert 'foreach ($profileName in ($profileNames | Select-Object -Unique))' in offline_ps1
     assert "hash -r 2>/dev/null || true" in offline_ps1
@@ -1605,7 +1605,7 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Repair-AiSdlcCommandPath" in online_ps1
     assert "Add-DirectoryToUserPath" not in online_ps1
     assert "Sync-AiSdlcLaunchersOnPath" in online_ps1
-    assert '[Environment]::GetEnvironmentVariable("Path", "Machine")' in online_ps1
+    assert '[Environment]::GetEnvironmentVariable("Path", "Machine")' not in online_ps1
     assert '[Environment]::SetEnvironmentVariable("Path", $updatedMachinePath, "Machine")' not in online_ps1
     assert "Install-AiSdlcCommandShim" in online_ps1
     assert 'Join-Path $env:LOCALAPPDATA "AI-SDLC\\bin"' in online_ps1
@@ -1618,8 +1618,8 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Get-GitBashHomeDirectory" in online_ps1
     assert "Update-GitBashProfilePath" in online_ps1
     assert '$profileNames = @(".bashrc")' in online_ps1
-    assert 'Join-Path $gitBashHome ".bash_login"' in online_ps1
-    assert 'Join-Path $gitBashHome ".profile"' in online_ps1
+    assert '@(".bash_profile", ".bash_login", ".profile")' in online_ps1
+    assert "candidateProfileName" in online_ps1
     assert 'Join-Path $gitBashHome $profileName' in online_ps1
     assert 'foreach ($profileName in ($profileNames | Select-Object -Unique))' in online_ps1
     assert "hash -r 2>/dev/null || true" in online_ps1

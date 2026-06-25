@@ -118,7 +118,7 @@ function Sync-AiSdlcLaunchersOnPath {
   param([string]$SourceShimDirectory)
 
   $seen = @{}
-  foreach ($pathValue in @([Environment]::GetEnvironmentVariable("Path", "Machine"), [Environment]::GetEnvironmentVariable("Path", "User"), $env:Path)) {
+  foreach ($pathValue in @([Environment]::GetEnvironmentVariable("Path", "User"))) {
     foreach ($entry in @($pathValue -split [IO.Path]::PathSeparator | Where-Object { $_ })) {
       $entryKey = Normalize-PathEntry $entry
       if ($seen.ContainsKey($entryKey)) {
@@ -275,12 +275,15 @@ function Update-GitBashProfilePath {
   ) -join "`n"
 
   $profileNames = @(".bashrc")
-  if (Test-Path (Join-Path $gitBashHome ".bash_profile")) {
-    $profileNames += ".bash_profile"
-  } elseif (Test-Path (Join-Path $gitBashHome ".bash_login")) {
-    $profileNames += ".bash_login"
-  } elseif (Test-Path (Join-Path $gitBashHome ".profile")) {
-    $profileNames += ".profile"
+  $loginProfileName = $null
+  foreach ($candidateProfileName in @(".bash_profile", ".bash_login", ".profile")) {
+    if (Test-Path (Join-Path $gitBashHome $candidateProfileName)) {
+      $loginProfileName = $candidateProfileName
+      break
+    }
+  }
+  if ($loginProfileName) {
+    $profileNames += $loginProfileName
   } else {
     $profileNames += ".bash_profile"
   }
