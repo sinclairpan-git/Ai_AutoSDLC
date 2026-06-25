@@ -1555,6 +1555,10 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "current parent terminal may still resolve an older ai-sdlc command" not in offline_ps1
     assert "Get-Command ai-sdlc | Select-Object Source" not in offline_ps1
     assert "Set-PreferredAiSdlcPath" in offline_ps1
+    assert "Test-PathValueHasAiSdlcLauncher" in offline_ps1
+    assert "Sync-AiSdlcLaunchersOnPath" in offline_ps1
+    assert '[Environment]::GetEnvironmentVariable("Path", "Machine")' in offline_ps1
+    assert '[Environment]::SetEnvironmentVariable("Path", $updatedMachinePath, "Machine")' in offline_ps1
     assert "Install-AiSdlcCommandShim" in offline_ps1
     assert 'Join-Path $env:LOCALAPPDATA "AI-SDLC\\bin"' in offline_ps1
     assert 'Join-Path $shimDir "ai-sdlc.exe"' in offline_ps1
@@ -1596,6 +1600,10 @@ def test_windows_install_scripts_include_auto_python_detection_and_bilingual_gui
     assert "Get-Command ai-sdlc | Select-Object Source" not in online_ps1
     assert "Bare ai-sdlc may still resolve an older install" not in online_ps1
     assert "Set-PreferredAiSdlcPath" in online_ps1
+    assert "Test-PathValueHasAiSdlcLauncher" in online_ps1
+    assert "Sync-AiSdlcLaunchersOnPath" in online_ps1
+    assert '[Environment]::GetEnvironmentVariable("Path", "Machine")' in online_ps1
+    assert '[Environment]::SetEnvironmentVariable("Path", $updatedMachinePath, "Machine")' in online_ps1
     assert "Install-AiSdlcCommandShim" in online_ps1
     assert 'Join-Path $env:LOCALAPPDATA "AI-SDLC\\bin"' in online_ps1
     assert 'Join-Path $shimDir "ai-sdlc.exe"' in online_ps1

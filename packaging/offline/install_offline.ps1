@@ -110,10 +110,89 @@ function Set-PreferredAiSdlcPath {
   return ($result -join [IO.Path]::PathSeparator)
 }
 
+function Test-PathValueHasAiSdlcLauncher {
+  param(
+    [string]$PathValue,
+    [string]$ExcludedDirectory
+  )
+
+  $excludedKey = Normalize-PathEntry $ExcludedDirectory
+  foreach ($entry in @($PathValue -split [IO.Path]::PathSeparator | Where-Object { $_ })) {
+    $entryKey = Normalize-PathEntry $entry
+    if ($entryKey -eq $excludedKey) {
+      continue
+    }
+    foreach ($fileName in @("ai-sdlc.exe", "ai-sdlc.cmd", "ai-sdlc.ps1")) {
+      if (Test-Path (Join-Path $entry $fileName)) {
+        return $true
+      }
+    }
+  }
+  return $false
+}
+
+function Sync-AiSdlcLauncherDirectory {
+  param(
+    [string]$SourceShimDirectory,
+    [string]$TargetDirectory
+  )
+
+  try {
+    if (-not (Test-Path $TargetDirectory)) {
+      return
+    }
+    $sourceKey = Normalize-PathEntry $SourceShimDirectory
+    $targetKey = Normalize-PathEntry $TargetDirectory
+    if ($sourceKey -eq $targetKey) {
+      return
+    }
+    $hasLauncher = $false
+    foreach ($fileName in @("ai-sdlc.exe", "ai-sdlc.cmd", "ai-sdlc.ps1")) {
+      if (Test-Path (Join-Path $TargetDirectory $fileName)) {
+        $hasLauncher = $true
+      }
+    }
+    if (-not $hasLauncher) {
+      return
+    }
+    foreach ($fileName in @("ai-sdlc.exe", "ai-sdlc.cmd", "ai-sdlc.ps1", "ai-sdlc-script.py", "ai-sdlc.exe.manifest", "ai-sdlc-runtime.txt")) {
+      $sourcePath = Join-Path $SourceShimDirectory $fileName
+      if (Test-Path $sourcePath) {
+        Copy-Item -LiteralPath $sourcePath -Destination (Join-Path $TargetDirectory $fileName) -Force -ErrorAction Stop
+      }
+    }
+  } catch {
+  }
+}
+
+function Sync-AiSdlcLaunchersOnPath {
+  param([string]$SourceShimDirectory)
+
+  $seen = @{}
+  foreach ($pathValue in @([Environment]::GetEnvironmentVariable("Path", "Machine"), [Environment]::GetEnvironmentVariable("Path", "User"), $env:Path)) {
+    foreach ($entry in @($pathValue -split [IO.Path]::PathSeparator | Where-Object { $_ })) {
+      $entryKey = Normalize-PathEntry $entry
+      if ($seen.ContainsKey($entryKey)) {
+        continue
+      }
+      $seen[$entryKey] = $true
+      Sync-AiSdlcLauncherDirectory -SourceShimDirectory $SourceShimDirectory -TargetDirectory $entry
+    }
+  }
+}
+
 function Add-DirectoryToUserPath {
   param([string]$Directory)
 
   $resolvedDirectory = (Resolve-Path -LiteralPath $Directory).Path
+  $currentMachinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+  if ($currentMachinePath -and (Test-PathValueHasAiSdlcLauncher -PathValue $currentMachinePath -ExcludedDirectory $resolvedDirectory)) {
+    try {
+      $updatedMachinePath = Set-PreferredAiSdlcPath -PathValue $currentMachinePath -PreferredDirectory $resolvedDirectory
+      [Environment]::SetEnvironmentVariable("Path", $updatedMachinePath, "Machine")
+    } catch {
+    }
+  }
   $currentUserPath = [Environment]::GetEnvironmentVariable("Path", "User")
   if (-not $currentUserPath) {
     $currentUserPath = ""
@@ -121,6 +200,7 @@ function Add-DirectoryToUserPath {
   $updatedPath = Set-PreferredAiSdlcPath -PathValue $currentUserPath -PreferredDirectory $resolvedDirectory
   [Environment]::SetEnvironmentVariable("Path", $updatedPath, "User")
   $env:Path = Set-PreferredAiSdlcPath -PathValue $env:Path -PreferredDirectory $resolvedDirectory
+  Sync-AiSdlcLaunchersOnPath -SourceShimDirectory $resolvedDirectory
 }
 
 function Write-TextUtf8NoBom {
