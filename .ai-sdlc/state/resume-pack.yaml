@@ -9,15 +9,17 @@ working_set_snapshot:
   plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
-  context_summary: 'Goal: Release v0.8.10 Windows PATH/self-update patch | State:
-    PR #97 merged into main. Fixed release notes to match final Windows shim behavior:
-    PATH shim has exe/cmd only, removes legacy ai-sdlc.ps1, and updates the active
-    Git Bash login profile order. | Next: Commit release notes correction on main,
-    create GitHub release v0.8.10, run release-build upload workflow, then run release-artifact-smoke.'
-current_branch: codex/v0810-release-notes-alignment
+  context_summary: 'Goal: Fix Vue3 default guidance, restore advanced frontend choices,
+    and add anti-regression guard | State: PR #99 latest Codex review found simple
+    solution-confirm output and report showed only provider IDs, not the required
+    default PrimeVue component library and Vite/TypeScript/UnoCSS/CSS Variables tooling.
+    Added recommended_component_library and recommended_tooling to simple CLI output
+    and report. | Next: Amend PR #99 commit again, force-push, re-request Codex review,
+    and monitor checks to completion.'
+current_branch: codex/vue3-default-adapter-guidance
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-25T04:26:19+00:00'
+timestamp: '2026-06-25T08:58:06+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f

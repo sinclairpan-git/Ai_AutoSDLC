@@ -120,8 +120,17 @@ def _write_verification_profile_docs(
     verification += (
         "- `truth-only`：执行 `uv run ai-sdlc verify constraints`、`python -m ai_sdlc program truth sync --dry-run`\n"
         "- `code-change`：执行 `uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
+        "- 既有能力未退化：旧入口 / 旧选项 / 旧输出必须有回归证据，不能只验证新功能 happy path。\n"
     )
     (rules_dir / "verification.md").write_text(verification, encoding="utf-8")
+    (rules_dir / "code-review.md").write_text(
+        "# 代码审查协议\n\n"
+        "### 维度 2.1：既有能力不退化\n\n"
+        "- 检查既有用户可见能力。\n"
+        "- 未声明废弃不得删除旧入口。\n"
+        "- 必须有回归测试，不能只覆盖新能力 happy path。\n",
+        encoding="utf-8",
+    )
 
     docs_dir = root / "docs"
     docs_dir.mkdir(parents=True, exist_ok=True)
@@ -133,6 +142,10 @@ def _write_verification_profile_docs(
     )
     if include_checklist_code_change:
         checklist += "- `code-change`：`uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
+    checklist += (
+        "- 既有用户可见能力：列出旧能力 / 旧入口 / 旧选项影响面，"
+        "证明旧能力未退化；破坏性变更必须声明。\n"
+    )
     (docs_dir / "pull-request-checklist.zh.md").write_text(checklist, encoding="utf-8")
 
 

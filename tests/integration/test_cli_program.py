@@ -5381,6 +5381,17 @@ specs:
         assert "recommended_frontend_stack: vue3" in result.output
         assert "recommended_provider_id: public-primevue" in result.output
         assert "recommended_style_pack_id: modern-saas" in result.output
+        assert (
+            "recommended_component_library: PrimeVue + @primeuix/themes"
+            in result.output
+        )
+        assert (
+            "recommended_tooling: Vite + TypeScript + UnoCSS + CSS Variables"
+            in result.output
+        )
+        assert "Advanced Choice Entry" in result.output
+        assert "ai-sdlc program solution-confirm --dry-run --mode advanced" in result.output
+        assert "--frontend-stack <stack>" in result.output
         assert "fallback_required: false" in result.output
         assert not (
             root
@@ -5444,6 +5455,18 @@ specs:
         assert "Program Frontend Solution Confirm Advanced" in result.output
         assert "Step 1/7" in result.output
         assert "Step 7/7" in result.output
+        assert "Candidate Matrix" in result.output
+        assert "vue3-public-primevue-modern-saas" in result.output
+        assert "vue3-public-primevue-data-console" in result.output
+        assert "vue3-public-primevue-high-clarity" in result.output
+        assert "vue3-public-primevue-macos-glass" in result.output
+        assert "vue2-enterprise-vue2-enterprise-default" in result.output
+        assert "command=ai-sdlc program solution-confirm --dry-run" in result.output
+        assert "--frontend-stack vue3" in result.output
+        assert "--provider-id public-primevue" in result.output
+        assert "--style-pack-id data-console" in result.output
+        assert "--enterprise-provider-ineligible" in result.output
+        assert "availability=requires-company-registry" in result.output
         assert "Final Preflight" in result.output
         assert "requested_frontend_stack: vue2" in result.output
         assert "effective_frontend_stack: vue3" in result.output
@@ -5453,6 +5476,38 @@ specs:
             in result.output
         )
         assert "fallback_required: true" in result.output
+
+    def test_program_solution_confirm_advanced_mode_preserves_no_fallback_in_commands(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                [
+                    "program",
+                    "solution-confirm",
+                    "--mode",
+                    "advanced",
+                    "--frontend-stack",
+                    "vue2",
+                    "--provider-id",
+                    "enterprise-vue2",
+                    "--style-pack-id",
+                    "enterprise-default",
+                    "--enterprise-provider-ineligible",
+                    "--no-fallback-candidate",
+                ],
+            )
+
+        assert result.exit_code == 0
+        assert "Candidate Matrix" in result.output
+        assert "--enterprise-provider-ineligible" in result.output
+        assert "--no-fallback-candidate" in result.output
+        assert "preflight_status: blocked" in result.output
+        assert "fallback_required: false" in result.output
 
     def test_program_solution_confirm_execute_requires_explicit_confirmation(
         self, initialized_project_dir: Path
@@ -5582,8 +5637,15 @@ specs:
         assert result.exit_code == 0
         assert report_path.is_file()
         assert "Report written:" in result.output
-        assert "Frontend Solution Confirmation Artifact" in report_path.read_text(
-            encoding="utf-8"
+        report_text = report_path.read_text(encoding="utf-8")
+        assert "Frontend Solution Confirmation Artifact" in report_text
+        assert (
+            "recommended_component_library: `PrimeVue + @primeuix/themes`"
+            in report_text
+        )
+        assert (
+            "recommended_tooling: `Vite + TypeScript + UnoCSS + CSS Variables`"
+            in report_text
         )
 
     def test_program_solution_confirm_execute_does_not_persist_blocked_snapshot(

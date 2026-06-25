@@ -15744,6 +15744,90 @@ def test_build_frontend_solution_confirmation_recommends_public_primevue_default
     assert snapshot.provider_mode == "normal"
 
 
+def test_build_frontend_solution_candidates_keep_default_first_and_expose_advanced_choices(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(_manifest())
+
+    candidates = svc.build_frontend_solution_candidates(snapshot)
+
+    option_ids = [candidate.option_id for candidate in candidates]
+    assert option_ids[0] == "vue3-public-primevue-modern-saas"
+    assert "vue3-public-primevue-enterprise-default" in option_ids
+    assert "vue3-public-primevue-data-console" in option_ids
+    assert "vue3-public-primevue-high-clarity" in option_ids
+    assert "vue3-public-primevue-macos-glass" in option_ids
+    assert "vue2-enterprise-vue2-enterprise-default" in option_ids
+    default_candidate = candidates[0]
+    assert default_candidate.tier == "optimal"
+    assert default_candidate.frontend_stack == "vue3"
+    assert default_candidate.provider_id == "public-primevue"
+    assert default_candidate.style_pack_id == "modern-saas"
+    assert default_candidate.component_library == "PrimeVue + @primeuix/themes"
+    data_console = next(
+        candidate
+        for candidate in candidates
+        if candidate.option_id == "vue3-public-primevue-data-console"
+    )
+    assert "--style-pack-id data-console" in data_console.command_hint
+
+
+def test_build_frontend_solution_candidates_mark_enterprise_when_prerequisites_missing(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-network"],
+    )
+
+    candidates = svc.build_frontend_solution_candidates(snapshot)
+    enterprise_candidate = next(
+        candidate
+        for candidate in candidates
+        if candidate.option_id == "vue2-enterprise-vue2-enterprise-default"
+    )
+
+    assert enterprise_candidate.availability == "requires-company-registry"
+    assert "企业私有 registry" in " ".join(enterprise_candidate.caveats)
+    assert "--enterprise-provider-ineligible" in enterprise_candidate.command_hint
+    assert (
+        "--failed-preflight-check-id company-registry-network"
+        in enterprise_candidate.command_hint
+    )
+
+
+def test_build_frontend_solution_candidates_mark_enterprise_preflight_warning(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        enterprise_provider_eligible=True,
+        failed_preflight_check_ids=["company-registry-network"],
+    )
+
+    candidates = svc.build_frontend_solution_candidates(snapshot)
+    enterprise_candidate = next(
+        candidate
+        for candidate in candidates
+        if candidate.option_id == "vue2-enterprise-vue2-enterprise-default"
+    )
+
+    assert snapshot.preflight_status == "warning"
+    assert enterprise_candidate.availability == "requires-preflight-repair"
+    caveats = " ".join(enterprise_candidate.caveats)
+    assert "企业组件库预检失败项" in caveats
+    assert "company-registry-network" in caveats
+    assert "--enterprise-provider-ineligible" not in enterprise_candidate.command_hint
+    assert (
+        "--failed-preflight-check-id company-registry-network"
+        in enterprise_candidate.command_hint
+    )
+
+
 def test_build_frontend_solution_confirmation_recommends_public_fallback_in_simple_mode_when_enterprise_not_eligible(
     tmp_path: Path,
 ) -> None:
@@ -15890,6 +15974,7 @@ def test_build_frontend_solution_confirmation_blocks_when_enterprise_unavailable
     assert snapshot.effective_provider_id == "enterprise-vue2"
     assert snapshot.effective_style_pack_id == "enterprise-default"
     assert snapshot.provider_mode == "normal"
+    assert snapshot.fallback_candidate_available is False
     assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
 
 
@@ -15914,6 +15999,36 @@ def test_build_frontend_solution_confirmation_requires_fallback_when_enterprise_
     assert snapshot.effective_frontend_stack == "vue3"
     assert snapshot.fallback_reason_code == "enterprise_provider_unavailable"
     assert snapshot.provider_mode == "cross_stack_fallback"
+
+
+def test_build_frontend_solution_candidates_preserve_no_fallback_context(
+    tmp_path: Path,
+) -> None:
+    svc = ProgramService(tmp_path)
+    snapshot = svc.build_frontend_solution_confirmation(
+        _manifest(),
+        requested_frontend_stack="vue2",
+        requested_provider_id="enterprise-vue2",
+        requested_style_pack_id="enterprise-default",
+        enterprise_provider_eligible=False,
+        failed_preflight_check_ids=["company-registry-network"],
+        fallback_candidate_available=False,
+    )
+
+    candidates = svc.build_frontend_solution_candidates(snapshot)
+    enterprise_candidate = next(
+        candidate
+        for candidate in candidates
+        if candidate.option_id == "vue2-enterprise-vue2-enterprise-default"
+    )
+
+    assert snapshot.decision_status == "blocked"
+    assert "--enterprise-provider-ineligible" in enterprise_candidate.command_hint
+    assert "--no-fallback-candidate" in enterprise_candidate.command_hint
+    assert (
+        "--failed-preflight-check-id company-registry-network"
+        in enterprise_candidate.command_hint
+    )
 
 
 def test_build_frontend_solution_confirmation_marks_unknown_provider_style_fidelity_unsupported(

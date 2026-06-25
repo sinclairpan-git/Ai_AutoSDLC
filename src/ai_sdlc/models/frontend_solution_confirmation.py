@@ -146,6 +146,7 @@ class FrontendSolutionSnapshot(FrontendSolutionConfirmationModel):
     effective_api_collab_mode: str
     effective_style_pack_id: str
     enterprise_provider_eligible: bool
+    fallback_candidate_available: bool = True
     availability_checks: list[str] = Field(default_factory=list)
     availability_summary: AvailabilitySummary
     availability_reason_text: str

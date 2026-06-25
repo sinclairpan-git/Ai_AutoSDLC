@@ -192,6 +192,21 @@ class TestCliInit:
         text = (tmp_path / "AGENTS.md").read_text(encoding="utf-8")
         assert "Project preferred shell is not configured yet" not in text
         assert "Project preferred shell: PowerShell." in text
+        assert "frontend_stack=vue3" in text
+        assert "provider_id=public-primevue" in text
+        assert "style_pack_id=modern-saas" in text
+        assert "PrimeVue + @primeuix/themes" in text
+        assert "Vite + TypeScript + UnoCSS + CSS Variables" in text
+        assert "企业后台" in text
+        assert "不得被当成 Vue2 信号" in text
+        assert "高级可选方案" in text
+        assert "data-console" in text
+        assert "high-clarity" in text
+        assert "macos-glass" in text
+        assert "program solution-confirm --dry-run --mode advanced" in text
+        assert "--frontend-stack" in text
+        assert "--provider-id" in text
+        assert "--style-pack-id" in text
 
     def test_init_generic_hint_without_ide_dirs(self, tmp_path: Path) -> None:
         result = runner.invoke(app, ["init", str(tmp_path)])

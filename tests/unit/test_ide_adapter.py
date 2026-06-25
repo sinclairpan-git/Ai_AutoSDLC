@@ -214,6 +214,22 @@ class TestApplyAdapter:
             assert "维护契约" in text
             assert "docstring" in text
             assert "payload 字段映射" in text
+            assert "frontend_stack=vue3" in text
+            assert "provider_id=public-primevue" in text
+            assert "style_pack_id=modern-saas" in text
+            assert "PrimeVue + @primeuix/themes" in text
+            assert "Vite + TypeScript + UnoCSS + CSS Variables" in text
+            assert "企业后台" in text
+            assert "不得被当成 Vue2 信号" in text
+            assert "高级可选方案" in text
+            assert "data-console" in text
+            assert "high-clarity" in text
+            assert "macos-glass" in text
+            assert "program solution-confirm --dry-run --mode advanced" in text
+            assert "--frontend-stack" in text
+            assert "--provider-id" in text
+            assert "--style-pack-id" in text
+            assert "enterprise-vue2" in text
             assert "先检查接入真值" not in text
             assert "宿主加载证明" not in text
             assert "verified_loaded" not in text

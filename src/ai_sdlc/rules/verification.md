@@ -35,6 +35,7 @@
 | Lint 通过 | Lint 命令输出：0 errors | 部分检查、推断 |
 | 构建成功 | 构建命令：exit 0 | Lint 通过、"日志看着正常" |
 | Bug 已修 | 复现测试通过 | 代码改了、"应该修好了" |
+| 既有能力未退化 | 旧入口 / 旧选项 / 旧输出的回归测试或真实命令证据 | 只验证新功能 happy path |
 | 回归测试有效 | Red-Green 验证完成 | 测试通过一次 |
 | 需求已满足 | 逐条检查清单 | "测试通过了" |
 | 批次完成 | 所有任务标记 + V2 通过 + 审查通过 | 任务做完了 |
@@ -59,6 +60,7 @@
 - `code-change`
   - 适用范围：任何涉及 `src/**/*.py`、`tests/**`、生成逻辑或运行时行为的变更。
   - 最小证据：`uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`
+  - 退化防线：若变更触碰既有用户可见能力、CLI 输出、adapter 指引、配置字段、生成模板或文档主路径，必须补充旧入口 / 旧选项 / 旧输出的回归测试或真实命令证据；不得只验证新功能 happy path。
   - 收口要求：latest batch 必须显式写 `验证画像：code-change`；不得用 `docs-only` / `rules-only` / `truth-only` 伪装代码改动。
 
 `close-check` 负责对 latest batch 的画像与 execution-log 中的 fresh evidence 做只读核验；`verify constraints` 负责确认本仓库规则文档和 PR checklist 对上述画像的定义保持一致。

@@ -19,6 +19,7 @@ from ai_sdlc.core.program_service import (
     ProgramFrontendManagedDeliveryApplyResult,
     ProgramFrontendReadiness,
     ProgramFrontendRemediationInput,
+    ProgramFrontendSolutionCandidate,
     ProgramService,
     humanize_frontend_browser_gate_state,
     humanize_frontend_delivery_apply_state,
@@ -2235,6 +2236,7 @@ def program_solution_confirm(
         snapshot,
         mode=normalized_mode,
     )
+    candidates = svc.build_frontend_solution_candidates(snapshot)
 
     mode_title = (
         "Program Frontend Solution Confirm Simple"
@@ -2244,9 +2246,10 @@ def program_solution_confirm(
     console.print(f"[bold]{mode_title}[/bold]")
 
     if normalized_mode == "advanced":
-        _render_frontend_solution_confirmation_wizard(snapshot)
+        _render_frontend_solution_confirmation_wizard(snapshot, candidates)
     else:
         _render_frontend_solution_confirmation_recommendation(snapshot)
+        _render_frontend_solution_confirmation_advanced_entry()
     _render_frontend_solution_confirmation_final(snapshot)
 
     artifact_paths: list[Path] = []
@@ -2309,6 +2312,7 @@ def program_solution_confirm(
             mode=normalized_mode,
             latest_snapshot_path=latest_snapshot_path,
             artifact_paths=artifact_paths,
+            candidates=candidates,
         )
         report_path.write_text("\n".join(lines), encoding="utf-8")
         console.print(
@@ -6051,13 +6055,101 @@ def _render_frontend_solution_confirmation_recommendation(
         markup=False,
     )
     console.print(
+        "  - recommended_component_library: "
+        f"{_frontend_solution_confirmation_component_library(snapshot)}",
+        markup=False,
+    )
+    console.print(
+        "  - recommended_tooling: "
+        f"{_frontend_solution_confirmation_tooling(snapshot)}",
+        markup=False,
+    )
+    console.print(
         f"  - recommendation_reason_text: {snapshot.recommendation_reason_text}",
         markup=False,
     )
 
 
+def _frontend_solution_confirmation_component_library(
+    snapshot: FrontendSolutionSnapshot,
+) -> str:
+    if snapshot.recommended_provider_id == "public-primevue":
+        return "PrimeVue + @primeuix/themes"
+    if snapshot.recommended_provider_id == "enterprise-vue2":
+        return "enterprise-vue2 company component provider"
+    return snapshot.recommended_provider_id
+
+
+def _frontend_solution_confirmation_tooling(
+    snapshot: FrontendSolutionSnapshot,
+) -> str:
+    if (
+        snapshot.recommended_frontend_stack == "vue3"
+        and snapshot.recommended_provider_id == "public-primevue"
+    ):
+        return "Vite + TypeScript + UnoCSS + CSS Variables"
+    if snapshot.recommended_frontend_stack == "vue2":
+        return "Vue 2.7 + vue-router 3 + Vuex 3 + SCSS"
+    return snapshot.recommended_frontend_stack
+
+
+def _render_frontend_solution_confirmation_advanced_entry() -> None:
+    console.print("\n[bold cyan]Advanced Choice Entry[/bold cyan]")
+    console.print(
+        "  - 切换到多方案选择: ai-sdlc program solution-confirm --dry-run --mode advanced",
+        markup=False,
+    )
+    console.print(
+        "  - 自定义覆盖字段: --frontend-stack <stack> --provider-id <provider> --style-pack-id <style-pack>",
+        markup=False,
+    )
+
+
+def _render_frontend_solution_candidate_matrix(
+    candidates: list[ProgramFrontendSolutionCandidate],
+) -> None:
+    console.print("\n[bold cyan]Candidate Matrix[/bold cyan]")
+    for candidate in candidates:
+        console.print(
+            f"  - {candidate.option_id} [{candidate.tier}] {candidate.label}",
+            markup=False,
+        )
+        console.print(
+            "    "
+            f"stack={candidate.frontend_stack} | "
+            f"provider={candidate.provider_id} | "
+            f"style_pack={candidate.style_pack_id}",
+            markup=False,
+        )
+        console.print(
+            f"    component_library={candidate.component_library}",
+            markup=False,
+        )
+        console.print(
+            f"    style={candidate.style_summary}",
+            markup=False,
+        )
+        console.print(
+            f"    availability={candidate.availability}",
+            markup=False,
+        )
+        if candidate.recommended_for:
+            console.print(
+                "    recommended_for="
+                + ", ".join(_dedupe_cli_text_items(candidate.recommended_for)),
+                markup=False,
+            )
+        if candidate.caveats:
+            console.print(
+                "    caveats=" + ", ".join(_dedupe_cli_text_items(candidate.caveats)),
+                markup=False,
+            )
+        console.print(f"    command={candidate.command_hint}", markup=False)
+
+
 def _render_frontend_solution_confirmation_wizard(
     snapshot: FrontendSolutionSnapshot,
+    candidates: list[ProgramFrontendSolutionCandidate] | None = None,
 ) -> None:
     changed_fields = _dedupe_cli_text_items(
         _frontend_solution_confirmation_change_fields(snapshot)
@@ -6096,6 +6188,8 @@ def _render_frontend_solution_confirmation_wizard(
         + (", ".join(changed_fields) if changed_fields else "none"),
         markup=False,
     )
+    if candidates:
+        _render_frontend_solution_candidate_matrix(candidates)
 
 
 def _render_frontend_solution_confirmation_final(
@@ -6145,6 +6239,42 @@ def _render_frontend_solution_confirmation_final(
     )
 
 
+def _frontend_solution_candidate_report_lines(
+    candidates: list[ProgramFrontendSolutionCandidate],
+) -> list[str]:
+    lines: list[str] = ["## Candidate Matrix", ""]
+    for candidate in candidates:
+        lines.extend(
+            [
+                f"### {candidate.option_id}",
+                "",
+                f"- tier: `{candidate.tier}`",
+                f"- label: `{candidate.label}`",
+                f"- frontend_stack: `{candidate.frontend_stack}`",
+                f"- provider_id: `{candidate.provider_id}`",
+                f"- style_pack_id: `{candidate.style_pack_id}`",
+                f"- component_library: `{candidate.component_library}`",
+                f"- style: {candidate.style_summary}",
+                f"- availability: `{candidate.availability}`",
+                "- recommended_for: "
+                + (
+                    ", ".join(_dedupe_cli_text_items(candidate.recommended_for))
+                    if candidate.recommended_for
+                    else "-"
+                ),
+                "- caveats: "
+                + (
+                    ", ".join(_dedupe_cli_text_items(candidate.caveats))
+                    if candidate.caveats
+                    else "-"
+                ),
+                f"- command: `{candidate.command_hint}`",
+                "",
+            ]
+        )
+    return lines
+
+
 def _frontend_solution_confirmation_report_lines(
     *,
     manifest: str,
@@ -6153,6 +6283,7 @@ def _frontend_solution_confirmation_report_lines(
     mode: str,
     latest_snapshot_path: Path | None,
     artifact_paths: list[Path],
+    candidates: list[ProgramFrontendSolutionCandidate] | None = None,
 ) -> list[str]:
     changed_fields = _dedupe_cli_text_items(
         _frontend_solution_confirmation_change_fields(snapshot)
@@ -6179,6 +6310,7 @@ def _frontend_solution_confirmation_report_lines(
                 "",
             ]
         )
+        lines.extend(_frontend_solution_candidate_report_lines(candidates or []))
     else:
         lines.extend(
             [
@@ -6187,6 +6319,17 @@ def _frontend_solution_confirmation_report_lines(
                 f"- recommended_frontend_stack: `{snapshot.recommended_frontend_stack}`",
                 f"- recommended_provider_id: `{snapshot.recommended_provider_id}`",
                 f"- recommended_style_pack_id: `{snapshot.recommended_style_pack_id}`",
+                "- recommended_component_library: `"
+                + _frontend_solution_confirmation_component_library(snapshot)
+                + "`",
+                "- recommended_tooling: `"
+                + _frontend_solution_confirmation_tooling(snapshot)
+                + "`",
+                "",
+                "## Advanced Choice Entry",
+                "",
+                "- `ai-sdlc program solution-confirm --dry-run --mode advanced`",
+                "- Override fields with `--frontend-stack`, `--provider-id`, and `--style-pack-id`.",
                 "",
             ]
         )

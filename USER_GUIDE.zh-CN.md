@@ -712,6 +712,20 @@ export AI_SDLC_DISABLE_UPDATE_CHECK=1
 
 这条路径会生成框架托管的 Vue3 / PrimeVue 前端模板，并配套 Vite、UnoCSS、CSS Variables、Pinia、Vue Router 和 Base 组件层。除非需求明确要求公司内置 Vue2 企业组件库，否则普通新前端需求默认走这条 Vue3 公共 PrimeVue provider。
 
+如果你只是希望按最佳实践继续，确认默认方案即可。资深用户可以先查看技术栈、组件库和风格的候选矩阵：
+
+```bash
+ai-sdlc program solution-confirm --dry-run --mode advanced
+```
+
+当前内置可选风格包括 `modern-saas`、`enterprise-default`、`data-console`、`high-clarity` 和 `macos-glass`。例如要保留 Vue3 / PrimeVue，但切换为数据控制台风格：
+
+```bash
+ai-sdlc program solution-confirm --dry-run --frontend-stack vue3 --provider-id public-primevue --style-pack-id data-console
+```
+
+确认选择后，把 `--dry-run` 换成 `--execute --yes` 即可落档。自定义选择应优先使用已知 provider 和 style pack；未被框架治理的 provider 可能无法进入后续托管生成。
+
 如果你的目标就是框架自带 Vue2 企业组件库，需要在方案确认时显式选择：
 
 ```bash

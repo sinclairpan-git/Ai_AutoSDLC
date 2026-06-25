@@ -13,6 +13,7 @@
 - [ ] （可选）`uv run ai-sdlc verify constraints` 与 `uv run ai-sdlc workitem plan-check --wi specs/<WI>/`（若本 PR 涉及外部计划或 `related_plan`）。
 - [ ] 若本 PR 涉及 release / 安装包 / 版本号：已同步核对 `README.md`、`docs/releases/v0.8.10.md`、`USER_GUIDE.zh-CN.md`、`packaging/offline/README.md` 与 release 资产文案，确保版本入口、平台资产分工、普通用户主路径和排障话术一致（当前 published release `v0.8.10`：`ai-sdlc-offline-0.8.10-windows-amd64.zip`、`ai-sdlc-offline-0.8.10-macos-arm64.tar.gz`、`ai-sdlc-offline-0.8.10-linux-amd64.tar.gz`）。不得只同步版本号/资产名而保留旧的 venv/pip、`adapter status` 主路径、`materialized only` 等历史话术。
 - [ ] 若本 PR 涉及离线 bundle 的 `python-runtime/`、在线/离线安装器或“无需预装 Python”口径：已按 `packaging/offline/RELEASE_CHECKLIST.md` 逐项核对，并在 PR 或 execution log 中留下 manifest / smoke / CLI 验证证据。
+- [ ] 若本 PR 修改既有用户可见能力、CLI 输出、adapter 指引、配置字段、生成模板或文档主路径：已列出旧能力 / 旧入口 / 旧选项影响面，并提供旧能力未退化的回归测试或真实命令证据；若有废弃或破坏性变更，已在 PRD / spec / migration note 中明确声明。
 
 ## 最小验证集（Mandatory）
 
