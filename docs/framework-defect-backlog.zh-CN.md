@@ -1549,3 +1549,27 @@
 - 风险等级: 高
 - 可验证成功标准: 给定仅有前端需求描述且尚无用户确认的场景，adapter 指令和 pipeline 规则都要求先输出技术栈 / 组件库建议，且 `verify constraints` 能阻断缺少该规则 marker 的 pipeline / adapter 模板。
 - 是否需要回归测试补充: 是：补 `verify constraints` 单测覆盖缺失前端方案确认 marker 的阻断，以及 marker 完整时不误报。
+
+## FD-2026-06-25-001 | 前端方案确认高级选择面退化为单一推荐
+
+- 日期 (UTC): 2026-06-25
+- 来源: user_report, regression_review
+- 状态: open
+- owner: codex
+- wi_id: 001-ai-sdlc-framework
+- related_spec: specs/073-frontend-p2-provider-style-solution-baseline/spec.md
+- 现象: Vue3 默认 provider 修复后，AI adapter 和 `program solution-confirm` 的用户可见面容易只展示单一最优方案，丢失历史设计中的高级模式、多 style pack、显式 Vue2 兼容路径和自定义选择入口。
+- 触发场景: 普通用户项目输入前端需求后，Agent 只给出一个技术栈建议；高级用户无法看到 `frontend_stack -> provider -> style_pack` 的候选组合，也无法自然进入 `--mode advanced` 或字段覆盖流程。
+- 影响范围: 高级用户选择权、技术方案冻结可信度、多风格输出能力、企业兼容路径可见性，以及后续代码生成是否严格匹配用户确认方案。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: Vue3 默认推荐必须与高级候选矩阵并存。simple / 对话默认只首推 `vue3/public-primevue/modern-saas`，但必须保留 advanced 入口；advanced 必须展示可选 style pack、显式 `vue2/enterprise-vue2` 兼容路径和覆盖命令。
+- 建议改动层级: prompt / context, rule / policy, middleware, tool, eval
+- prompt / context: Adapter 指令必须要求“默认最优方案 + 高级可选方案 / 自定义入口”双层输出，不能把首推 Vue3 实现成唯一可见方案。
+- rule / policy: `rules/pipeline.md` 明确技术方案确认不得丢失高级用户选择空间；未确认前仍不得进入 execute。
+- middleware: `verify constraints` 增加高级可选方案、style pack 与 advanced 命令 marker，阻断 adapter / pipeline 文案退化。
+- workflow: 前端需求标准路径为“需求确认 -> 默认推荐 -> 高级候选 / 自定义选择入口 -> 用户确认 -> solution-confirm 落库 -> decompose/verify -> execute”；不得跳过高级入口直接实现。
+- tool: `ProgramService.build_frontend_solution_candidates()` 提供可测试候选矩阵；CLI advanced 模式展示候选矩阵和覆盖命令。
+- eval: advanced 候选矩阵缺失次数、用户反馈“没有选择空间”的次数、style pack 被忽略导致的生成偏差次数。
+- 风险等级: 高
+- 可验证成功标准: `program solution-confirm --dry-run --mode advanced` 输出包含 `vue3/public-primevue` 多 style pack、显式 `vue2/enterprise-vue2` 兼容路径和 `--frontend-stack` / `--provider-id` / `--style-pack-id` 覆盖入口；adapter / pipeline 缺少这些 marker 时 `verify constraints` 报 BLOCKER。
+- 是否需要回归测试补充: 是：补 ProgramService 候选矩阵、CLI advanced 输出、adapter 模板和 init 生成规则断言。

@@ -307,8 +307,17 @@ def _write_verification_profile_docs(
     verification += (
         "- `truth-only`：执行 `uv run ai-sdlc verify constraints`、`python -m ai_sdlc program truth sync --dry-run`\n"
         "- `code-change`：执行 `uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
+        "- 既有能力未退化：旧入口 / 旧选项 / 旧输出必须有回归证据，不能只验证新功能 happy path。\n"
     )
     (rules_dir / "verification.md").write_text(verification, encoding="utf-8")
+    (rules_dir / "code-review.md").write_text(
+        "# 代码审查协议\n\n"
+        "### 维度 2.1：既有能力不退化\n\n"
+        "- 检查既有用户可见能力。\n"
+        "- 未声明废弃不得删除旧入口。\n"
+        "- 必须有回归测试，不能只覆盖新能力 happy path。\n",
+        encoding="utf-8",
+    )
 
     docs_dir = root / "docs"
     docs_dir.mkdir(parents=True, exist_ok=True)
@@ -320,6 +329,10 @@ def _write_verification_profile_docs(
     )
     if include_checklist_code_change:
         checklist += "- `code-change`：`uv run pytest`、`uv run ruff check`、`uv run ai-sdlc verify constraints`\n"
+    checklist += (
+        "- 既有用户可见能力：列出旧能力 / 旧入口 / 旧选项影响面，"
+        "证明旧能力未退化；破坏性变更必须声明。\n"
+    )
     (docs_dir / "pull-request-checklist.zh.md").write_text(checklist, encoding="utf-8")
 
 
@@ -2153,7 +2166,8 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
         "ai-sdlc-offline-0.8.10-linux-amd64.tar.gz\n"
         "docs-only\nrules-only\ntruth-only\ncode-change\nuv run ai-sdlc verify constraints\n"
         "python -m ai_sdlc program truth sync --dry-run\n"
-        "uv run pytest\nuv run ruff check\n",
+        "uv run pytest\nuv run ruff check\n"
+        "既有用户可见能力\n旧能力 / 旧入口 / 旧选项影响面\n旧能力未退化\n破坏性变更\n",
         encoding="utf-8",
     )
     workflows_dir = tmp_path / ".github" / "workflows"
@@ -2622,6 +2636,56 @@ def test_verification_profile_docs_pass_when_both_surfaces_complete(tmp_path: Pa
     assert collect_constraint_blockers(tmp_path) == []
 
 
+def test_framework_rule_guards_ignore_user_project_checklist_only(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    docs_dir = tmp_path / "docs"
+    docs_dir.mkdir()
+    (docs_dir / "pull-request-checklist.zh.md").write_text(
+        "# 用户项目合并清单\n\n- 按业务项目要求检查。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert not any("verification profile" in x for x in blockers)
+    assert not any("feature regression guard" in x for x in blockers)
+
+
+def test_feature_regression_guard_blocks_when_review_surface_missing_old_capability_terms(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    _write_verification_profile_docs(tmp_path)
+    review_path = tmp_path / "src" / "ai_sdlc" / "rules" / "code-review.md"
+    review_path.write_text(
+        "# 代码审查协议\n\n只检查新功能 happy path。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("feature regression guard" in x for x in blockers)
+    assert any("既有能力不退化" in x for x in blockers)
+    assert any("回归测试" in x for x in blockers)
+
+
+def test_feature_regression_guard_accepts_complete_rule_surfaces(tmp_path: Path) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    _write_verification_profile_docs(tmp_path)
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert not any("feature regression guard" in x for x in blockers)
+
+
 def test_doc_first_rule_surfaces_block_when_pipeline_terms_missing(tmp_path: Path) -> None:
     mem = tmp_path / ".ai-sdlc" / "memory"
     mem.mkdir(parents=True)
@@ -2650,6 +2714,11 @@ def test_frontend_solution_confirmation_instruction_blocks_missing_pipeline_guar
 
     assert any("frontend solution confirmation instruction" in x for x in blockers)
     assert any("技术栈 / 组件库建议" in x for x in blockers)
+    assert any("provider_id=public-primevue" in x for x in blockers)
+    assert any("企业后台" in x for x in blockers)
+    assert any("高级可选方案" in x for x in blockers)
+    assert any("program solution-confirm --dry-run --mode advanced" in x for x in blockers)
+    assert any("--provider-id" in x for x in blockers)
 
 
 def test_frontend_solution_confirmation_instruction_accepts_required_pipeline_guard(
@@ -2665,6 +2734,16 @@ def test_frontend_solution_confirmation_instruction_accepts_required_pipeline_gu
         "前端需求进入实现前必须先给出技术栈 / 组件库建议，等待用户明确确认。"
         "确认前不得进入 execute。"
         "确认后才允许 program solution-confirm --execute --yes。"
+        "普通新前端需求首个推荐必须是 frontend_stack=vue3 / "
+        "provider_id=public-primevue / style_pack_id=modern-saas。"
+        "默认展示 PrimeVue + @primeuix/themes 和 "
+        "Vite + TypeScript + UnoCSS + CSS Variables。"
+        "企业后台、中后台、管理台、表格、表单、审批流、工作台等场景词"
+        "不得被当成 Vue2 信号。"
+        "方案建议必须保留高级可选方案，覆盖 data-console、high-clarity、"
+        "macos-glass 等风格。"
+        "可用 program solution-confirm --dry-run --mode advanced 查看，"
+        "并用 --frontend-stack、--provider-id、--style-pack-id 自定义选择。"
         "框架自带 Vue2 企业级组件库默认使用 enterprise-vue2。\n",
         encoding="utf-8",
     )

@@ -139,6 +139,7 @@ from ai_sdlc.telemetry.generators import (
 
 CONSTITUTION_REL = Path(".ai-sdlc") / "memory" / "constitution.md"
 PIPELINE_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "pipeline.md"
+CODE_REVIEW_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "code-review.md"
 SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.md"
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
@@ -205,6 +206,31 @@ VERIFICATION_PROFILE_SURFACES: dict[Path, tuple[str, ...]] = {
         "uv run ruff check",
     ),
 }
+VERIFICATION_PROFILE_ACTIVATION_SURFACES = (VERIFICATION_RULE_REL,)
+FEATURE_REGRESSION_GUARD_SURFACES: dict[Path, tuple[str, ...]] = {
+    CODE_REVIEW_RULE_REL: (
+        "既有能力不退化",
+        "既有用户可见能力",
+        "未声明废弃",
+        "回归测试",
+        "只覆盖新能力 happy path",
+    ),
+    VERIFICATION_RULE_REL: (
+        "既有能力未退化",
+        "旧入口 / 旧选项 / 旧输出",
+        "只验证新功能 happy path",
+    ),
+    PR_CHECKLIST_REL: (
+        "既有用户可见能力",
+        "旧能力 / 旧入口 / 旧选项影响面",
+        "旧能力未退化",
+        "破坏性变更",
+    ),
+}
+FEATURE_REGRESSION_GUARD_ACTIVATION_SURFACES = (
+    CODE_REVIEW_RULE_REL,
+    VERIFICATION_RULE_REL,
+)
 RECONCILE_SMOKE_CONTRACT_SURFACES: dict[Path, tuple[str, ...]] = {
     VERIFICATION_RULE_REL: (
         "Reconcile Smoke Contract",
@@ -430,6 +456,21 @@ FRONTEND_SOLUTION_CONFIRMATION_REQUIRED_TOKENS = (
     "用户明确确认",
     "不得进入 execute",
     "program solution-confirm --execute --yes",
+    "frontend_stack=vue3",
+    "provider_id=public-primevue",
+    "style_pack_id=modern-saas",
+    "PrimeVue + @primeuix/themes",
+    "Vite + TypeScript + UnoCSS + CSS Variables",
+    "企业后台",
+    "不得被当成 Vue2 信号",
+    "高级可选方案",
+    "data-console",
+    "high-clarity",
+    "macos-glass",
+    "program solution-confirm --dry-run --mode advanced",
+    "--frontend-stack",
+    "--provider-id",
+    "--style-pack-id",
     "enterprise-vue2",
 )
 ADAPTER_TEMPLATE_COMMENT_POLICY_RELS = (
@@ -1534,6 +1575,7 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_reconcile_smoke_contract_blockers(root))
     blockers.extend(_doc_first_surface_blockers(root))
     blockers.extend(_verification_profile_blockers(root))
+    blockers.extend(_feature_regression_guard_blockers(root))
     blockers.extend(collect_comment_deletion_blockers(root))
     blockers.extend(collect_text_quality_blockers(root))
 
@@ -3652,8 +3694,9 @@ def _doc_first_surface_blockers(root: Path) -> list[str]:
 
 def _verification_profile_blockers(root: Path) -> list[str]:
     """Validate docs-only / rules-only / code-change profile docs when surfaces exist."""
-    present = [rel for rel in VERIFICATION_PROFILE_SURFACES if (root / rel).is_file()]
-    if not present:
+    if not any(
+        (root / rel).is_file() for rel in VERIFICATION_PROFILE_ACTIVATION_SURFACES
+    ):
         return []
 
     blockers: list[str] = []
@@ -3669,6 +3712,33 @@ def _verification_profile_blockers(root: Path) -> list[str]:
         if missing:
             blockers.append(
                 "BLOCKER: verification profile surface "
+                f"{rel.as_posix()} missing required markers: {', '.join(missing)}"
+            )
+    return blockers
+
+
+def _feature_regression_guard_blockers(root: Path) -> list[str]:
+    """Validate that delivery rules protect existing user-visible behavior."""
+
+    if not any(
+        (root / rel).is_file() for rel in FEATURE_REGRESSION_GUARD_ACTIVATION_SURFACES
+    ):
+        return []
+
+    blockers: list[str] = []
+    for rel, required_tokens in FEATURE_REGRESSION_GUARD_SURFACES.items():
+        path = root / rel
+        if not path.is_file():
+            blockers.append(
+                "BLOCKER: feature regression guard surface missing: "
+                f"{rel.as_posix()}"
+            )
+            continue
+        text = path.read_text(encoding="utf-8")
+        missing = [token for token in required_tokens if token not in text]
+        if missing:
+            blockers.append(
+                "BLOCKER: feature regression guard surface "
                 f"{rel.as_posix()} missing required markers: {', '.join(missing)}"
             )
     return blockers

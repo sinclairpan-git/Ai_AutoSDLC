@@ -90,6 +90,15 @@
 - 企业私有组件库安装策略
 - 企业 provider availability/preflight 诊断
 
+### FR-002A 高级用户多方案选择
+
+Vue3 默认推荐不得被实现成唯一方案。技术方案确认必须保留“小白默认最优 + 高级用户可选”的双层体验：
+
+1. 普通用户默认看到 `vue3/public-primevue/modern-saas` 最优推荐。
+2. 高级用户可以进入候选矩阵，查看 `public-primevue` 支持的 `enterprise-default`、`data-console`、`high-clarity`、`modern-saas`、`macos-glass` 等 style pack。
+3. 显式 `vue2/enterprise-vue2/enterprise-default` 继续作为兼容路径展示，但不得因“企业后台”等场景词自动变成默认推荐。
+4. CLI 和 adapter 指引必须提供 `--frontend-stack`、`--provider-id`、`--style-pack-id` 覆盖入口，避免需求确认后的技术栈推荐与自定义选择环节丢失。
+
 ### FR-003 public-primevue 依赖分层
 
 依赖必须拆分为 provider 核心包、模板运行依赖和模板开发依赖，避免把项目模板依赖误写入 provider 核心安装契约。

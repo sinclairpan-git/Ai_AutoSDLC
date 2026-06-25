@@ -418,6 +418,29 @@ class ProgramFrontendDeliveryRegistryStyleEntry:
 
 
 @dataclass
+class ProgramFrontendSolutionCandidate:
+    option_id: str
+    tier: str
+    label: str
+    frontend_stack: str
+    provider_id: str
+    style_pack_id: str
+    component_library: str
+    style_summary: str
+    availability: str
+    recommended_for: list[str] = field(default_factory=list)
+    caveats: list[str] = field(default_factory=list)
+    command_hint: str = ""
+
+    def __post_init__(self) -> None:
+        _canonicalize_program_runtime_string_fields(
+            self,
+            "recommended_for",
+            "caveats",
+        )
+
+
+@dataclass
 class ProgramFrontendDeliveryRegistryHandoff:
     state: str
     schema_version: str
@@ -7863,6 +7886,7 @@ const dialogVisible = ref(false);
             effective_provider_id=effective_solution["provider_id"],
             effective_style_pack_id=effective_solution["style_pack_id"],
             enterprise_provider_eligible=enterprise_provider_eligible,
+            fallback_candidate_available=fallback_candidate_available,
             availability_checks=availability_checks,
             availability_summary=availability_summary,
             availability_reason_text=availability_reason_text,
@@ -7876,6 +7900,190 @@ const dialogVisible = ref(false);
             style_fidelity_status=style_fidelity_status,
             style_degradation_reason_codes=style_degradation_reason_codes,
         )
+
+    def build_frontend_solution_candidates(
+        self,
+        snapshot: FrontendSolutionSnapshot,
+    ) -> list[ProgramFrontendSolutionCandidate]:
+        """Return user-facing frontend solution choices for advanced confirmation."""
+
+        style_packs_by_id = {
+            manifest.style_pack_id: manifest
+            for manifest in build_builtin_style_pack_manifests()
+        }
+
+        def command_hint(
+            frontend_stack: str,
+            provider_id: str,
+            style_pack_id: str,
+        ) -> str:
+            preflight_flags: list[str] = []
+            if not snapshot.enterprise_provider_eligible:
+                preflight_flags.append("--enterprise-provider-ineligible")
+            if not snapshot.fallback_candidate_available:
+                preflight_flags.append("--no-fallback-candidate")
+            for check_id in snapshot.availability_summary.failed_check_ids:
+                preflight_flags.extend(["--failed-preflight-check-id", check_id])
+            preflight_suffix = "".join(f" {item}" for item in preflight_flags)
+            return (
+                "ai-sdlc program solution-confirm --dry-run "
+                f"--frontend-stack {frontend_stack} "
+                f"--provider-id {provider_id} "
+                f"--style-pack-id {style_pack_id}"
+                f"{preflight_suffix}"
+            )
+
+        def style_summary(style_pack_id: str) -> str:
+            localized = {
+                "enterprise-default": "稳健企业控制台：中性、低品牌表达，适合表单列表与内部后台",
+                "data-console": "数据控制台：高密度分析、监控和状态识别优先",
+                "high-clarity": "高可读表单：可访问性、长表单和合规审计优先",
+                "modern-saas": "现代 SaaS：轻量品牌化应用外壳、工作台和管理台",
+                "macos-glass": "macOS Glass：半透明层次与设计探索风格",
+            }
+            if style_pack_id in localized:
+                return localized[style_pack_id]
+            manifest = style_packs_by_id.get(style_pack_id)
+            if manifest is None:
+                return style_pack_id
+            return f"{manifest.display_name}: {manifest.description}"
+
+        candidates: list[ProgramFrontendSolutionCandidate] = [
+            ProgramFrontendSolutionCandidate(
+                option_id="vue3-public-primevue-modern-saas",
+                tier="optimal",
+                label="默认最优推荐",
+                frontend_stack="vue3",
+                provider_id="public-primevue",
+                style_pack_id="modern-saas",
+                component_library="PrimeVue + @primeuix/themes",
+                style_summary=style_summary("modern-saas"),
+                availability="ready",
+                recommended_for=[
+                    "普通新前端需求",
+                    "Vue3 企业中后台",
+                    "SaaS / 工作台 / 管理台",
+                ],
+                caveats=["默认首推；适合大多数新项目"],
+                command_hint=command_hint(
+                    "vue3",
+                    "public-primevue",
+                    "modern-saas",
+                ),
+            ),
+            ProgramFrontendSolutionCandidate(
+                option_id="vue3-public-primevue-enterprise-default",
+                tier="style-alternative",
+                label="Vue3 稳健企业风格",
+                frontend_stack="vue3",
+                provider_id="public-primevue",
+                style_pack_id="enterprise-default",
+                component_library="PrimeVue + @primeuix/themes",
+                style_summary=style_summary("enterprise-default"),
+                availability="ready",
+                recommended_for=["传统企业后台", "低品牌表达", "稳定表单与列表"],
+                caveats=["保留 Vue3 规范，只调整视觉语义为稳健企业风格"],
+                command_hint=command_hint(
+                    "vue3",
+                    "public-primevue",
+                    "enterprise-default",
+                ),
+            ),
+            ProgramFrontendSolutionCandidate(
+                option_id="vue3-public-primevue-data-console",
+                tier="style-alternative",
+                label="Vue3 数据控制台",
+                frontend_stack="vue3",
+                provider_id="public-primevue",
+                style_pack_id="data-console",
+                component_library="PrimeVue + @primeuix/themes",
+                style_summary=style_summary("data-console"),
+                availability="ready",
+                recommended_for=["数据看板", "监控平台", "高密度分析页面"],
+                caveats=["优先信息密度和状态识别，不适合营销型页面"],
+                command_hint=command_hint("vue3", "public-primevue", "data-console"),
+            ),
+            ProgramFrontendSolutionCandidate(
+                option_id="vue3-public-primevue-high-clarity",
+                tier="style-alternative",
+                label="Vue3 高可读表单",
+                frontend_stack="vue3",
+                provider_id="public-primevue",
+                style_pack_id="high-clarity",
+                component_library="PrimeVue + @primeuix/themes",
+                style_summary=style_summary("high-clarity"),
+                availability="ready",
+                recommended_for=["长表单", "合规审计", "可访问性优先页面"],
+                caveats=["视觉表达更克制，优先清晰度与可读性"],
+                command_hint=command_hint("vue3", "public-primevue", "high-clarity"),
+            ),
+            ProgramFrontendSolutionCandidate(
+                option_id="vue3-public-primevue-macos-glass",
+                tier="style-alternative",
+                label="Vue3 设计探索风格",
+                frontend_stack="vue3",
+                provider_id="public-primevue",
+                style_pack_id="macos-glass",
+                component_library="PrimeVue + @primeuix/themes",
+                style_summary=style_summary("macos-glass"),
+                availability="ready",
+                recommended_for=["设计验证", "高端原型", "视觉探索"],
+                caveats=["不建议作为严格企业后台默认风格"],
+                command_hint=command_hint("vue3", "public-primevue", "macos-glass"),
+            ),
+        ]
+
+        enterprise_failed_checks = snapshot.availability_summary.failed_check_ids
+        if not snapshot.enterprise_provider_eligible:
+            enterprise_availability = "requires-company-registry"
+            enterprise_caveats = [
+                "仅在用户明确要求框架自带 Vue2 企业级组件库时选择",
+                "当前环境尚未满足企业私有 registry 前置条件",
+            ]
+        elif enterprise_failed_checks:
+            enterprise_availability = "requires-preflight-repair"
+            enterprise_caveats = [
+                "仅在用户明确要求框架自带 Vue2 企业级组件库时选择",
+                "当前环境仍有企业组件库预检失败项: "
+                + ", ".join(enterprise_failed_checks),
+            ]
+        else:
+            enterprise_availability = "ready"
+            enterprise_caveats = ["仅在用户明确要求框架自带 Vue2 企业级组件库时选择"]
+        candidates.append(
+            ProgramFrontendSolutionCandidate(
+                option_id="vue2-enterprise-vue2-enterprise-default",
+                tier="compatibility",
+                label="显式 Vue2 企业兼容",
+                frontend_stack="vue2",
+                provider_id="enterprise-vue2",
+                style_pack_id="enterprise-default",
+                component_library="enterprise-vue2 company component provider",
+                style_summary=style_summary("enterprise-default"),
+                availability=enterprise_availability,
+                recommended_for=["历史 Vue2 项目", "公司内置企业组件库明确需求"],
+                caveats=enterprise_caveats,
+                command_hint=command_hint(
+                    "vue2",
+                    "enterprise-vue2",
+                    "enterprise-default",
+                ),
+            )
+        )
+
+        deduped: list[ProgramFrontendSolutionCandidate] = []
+        seen: set[tuple[str, str, str]] = set()
+        for candidate in candidates:
+            key = (
+                candidate.frontend_stack,
+                candidate.provider_id,
+                candidate.style_pack_id,
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(candidate)
+        return deduped
 
     def _default_frontend_solution_recommendation(
         self,
