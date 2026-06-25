@@ -366,13 +366,11 @@ if ($UpgradeExisting) {
   if ($installedVersion -ne $expectedVersion) {
     throw "installed version is $installedVersion, expected $expectedVersion"
   }
-  if (Test-Path $stableShimRuntimePath) {
-    $existingCli = Join-Path (Split-Path -Parent $existingPython) "ai-sdlc.exe"
-    if (Test-Path $existingCli) {
-      $commandShimDir = Install-AiSdlcCommandShim -CliExe $existingCli -RuntimePython $existingPython
-      Add-DirectoryToUserPath $commandShimDir
-      Update-GitBashProfilePath $commandShimDir
-    }
+  $existingCli = Join-Path (Split-Path -Parent $existingPython) "ai-sdlc.exe"
+  if (Test-Path $existingCli) {
+    $commandShimDir = Install-AiSdlcCommandShim -CliExe $existingCli -RuntimePython $existingPython
+    Add-DirectoryToUserPath $commandShimDir
+    Update-GitBashProfilePath $commandShimDir
   }
   $pathVersionOutput = (& ai-sdlc --version 2>$null)
   if ($LASTEXITCODE -ne 0) {
