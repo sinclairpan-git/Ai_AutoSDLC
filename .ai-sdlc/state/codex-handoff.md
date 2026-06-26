@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-26T05:52:00+00:00
+- Updated: 2026-06-26T06:01:00+00:00
 - Reason: Updated Vue3 public-primevue frontend default and test guidance to latest enterprise spec
 - Goal: Align AI-SDLC Vue3 default provider, managed frontend template, adapter guidance, PRD/docs, and tests with the latest PrimeVue + UnoCSS enterprise frontend specification.
-- State: PR #101 is open as a draft. Initial CI found one missed model-test assertion in `tests/unit/test_frontend_generation_constraints.py`; the assertion has been aligned with the new PrimeVue/UnoCSS hard rules and token deny-list.
+- State: PR #101 is open as a draft. Initial CI model-test assertion was fixed and pushed. Codex review then flagged that adding `primeicons` requires loading `primeicons/primeicons.css`; the managed Vue3 entry now imports that CSS and tests lock the import.
 - Stage: execute
 - Work Item: none
 - Branch: current checkout
@@ -24,6 +24,8 @@
 - `docs/releases/v0.9.0.md`
 - targeted frontend solution/provider/generation/CLI/init/verify tests
 - `tests/unit/test_frontend_generation_constraints.py`
+- `src/ai_sdlc/core/program_service.py`
+- `tests/unit/test_program_service.py`
 
 ## Key Decisions
 - Keep the default recommendation as `vue3/public-primevue/modern-saas`, but redefine the default style semantics as enterprise Vue3 console: `definePreset(Aura)`, `#1770e6`, `darkModeSelector=false`, PrimeVue Theme Token first, UnoCSS layout first, CSS Variables for business tokens.
@@ -42,10 +44,14 @@
 - `uv run ai-sdlc verify constraints` => no BLOCKERs after the CI fix
 - `uv run ruff check tests/unit/test_frontend_generation_constraints.py tests/unit/test_frontend_generation_constraint_artifacts.py` => passed
 - `git diff --check` => passed after the CI fix
+- Codex review P2: load PrimeIcons CSS when adding `primeicons`.
+- `uv run pytest tests/unit/test_program_service.py::test_build_frontend_managed_delivery_apply_request_materializes_artifact_generate_from_delivery_context tests/integration/test_cli_program.py::TestCliProgram::test_program_managed_delivery_apply_execute_writes_managed_artifacts` => 2 passed
+- `uv run ruff check src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py` => passed
+- `git diff --check` => passed after the Codex review fix
 
 ## Blockers / Risks
-- none
+- PR #101 still has two Windows compatibility checks in progress as of the latest poll.
 
 ## Exact Next Steps
-- Commit and push the CI assertion fix to PR #101.
+- Commit and push the Codex review fix to PR #101.
 - Continue monitoring PR #101 checks and Codex review.

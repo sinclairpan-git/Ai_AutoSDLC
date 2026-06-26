@@ -5926,7 +5926,8 @@ export default defineConfig({
         return '/// <reference types="vite/client" />\n'
 
     def _managed_frontend_main_ts_content(self) -> str:
-        return """import "virtual:uno.css";
+        return """import "primeicons/primeicons.css";
+import "virtual:uno.css";
 import "./styles/main.css";
 
 import { createPinia } from "pinia";
