@@ -5194,6 +5194,74 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert "page-item" in smoke_view
 
 
+def test_build_frontend_managed_delivery_apply_request_merges_builtin_primevue_deps_for_stale_manifest(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    stale_manifest_path = (
+        root / "providers" / "frontend" / "public-primevue" / "provider.manifest.yaml"
+    )
+    stale_manifest = yaml.safe_load(stale_manifest_path.read_text(encoding="utf-8"))
+    stale_manifest["template_runtime_dependencies"] = [
+        "@vueuse/core",
+        "axios",
+        "dayjs",
+        "pinia",
+        "vue",
+        "vue-i18n",
+        "vue-router",
+    ]
+    stale_manifest["template_dev_dependencies"] = [
+        "@vitejs/plugin-vue",
+        "typescript",
+        "unocss",
+        "vite",
+        "vitest",
+        "vue-tsc",
+    ]
+    stale_manifest_path.write_text(
+        yaml.safe_dump(stale_manifest, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    prepare_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "managed_target_prepare"
+    )
+    package_json = json.loads(prepare_action.executor_payload["files"][0]["content"])
+    assert package_json["dependencies"]["primeicons"] == "latest"
+    assert package_json["dependencies"]["vee-validate"] == "latest"
+    assert package_json["dependencies"]["zod"] == "latest"
+    assert package_json["devDependencies"]["playwright"] == "latest"
+    assert package_json["devDependencies"]["eslint"] == "latest"
+    artifact_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "artifact_generate"
+    )
+    generated_by_path = {
+        item["path"]: item["content"]
+        for item in artifact_action.executor_payload["files"]
+    }
+    assert 'import "primeicons/primeicons.css";' in generated_by_path["src/main.ts"]
+
+
 def test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise_adapter(
     initialized_project_dir: Path,
     monkeypatch,

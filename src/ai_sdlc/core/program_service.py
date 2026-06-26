@@ -5254,6 +5254,19 @@ class ProgramService:
         template_dev_dependencies = _normalize_string_list(
             provider_manifest.get("template_dev_dependencies", [])
         )
+        if provider_id == "public-primevue":
+            template_runtime_dependencies = _normalize_string_list(
+                [
+                    *template_runtime_dependencies,
+                    *PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES,
+                ]
+            )
+            template_dev_dependencies = _normalize_string_list(
+                [
+                    *template_dev_dependencies,
+                    *PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES,
+                ]
+            )
         return {
             "provider_id": provider_id,
             "install_strategy_id": strategy.strategy_id,

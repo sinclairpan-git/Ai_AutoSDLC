@@ -11,11 +11,18 @@ template_runtime_dependencies:
 - axios
 - dayjs
 - pinia
+- primeicons
+- vee-validate
 - vue
 - vue-i18n
 - vue-router
+- zod
 template_dev_dependencies:
+- '@antfu/eslint-config'
 - '@vitejs/plugin-vue'
+- eslint
+- playwright
+- prettier
 - typescript
 - unocss
 - vite
