@@ -26,8 +26,15 @@ def test_build_builtin_style_pack_manifests_covers_five_canonical_styles() -> No
     modern_saas = next(
         manifest for manifest in manifests if manifest.style_pack_id == "modern-saas"
     )
-    assert modern_saas.design_tokens["surface_mode"] == "soft-gradient"
-    assert modern_saas.recommended_for == ["marketing-sites", "self-serve-saas"]
+    assert modern_saas.design_tokens["surface_mode"] == "light-enterprise"
+    assert modern_saas.design_tokens["primary_color"] == "#1770e6"
+    assert modern_saas.design_tokens["theme_api"] == "definePreset"
+    assert modern_saas.design_tokens["dark_mode"] == "disabled"
+    assert modern_saas.recommended_for == [
+        "enterprise-admin",
+        "internal-workbench",
+        "workflow-console",
+    ]
 
 
 def test_build_builtin_install_strategies_preserves_private_and_public_distribution_modes() -> None:
@@ -88,7 +95,39 @@ def test_build_mvp_solution_snapshot_creates_versioned_requested_effective_chain
     assert fallback.provider_theme_adapter_config == {
         "adapter_id": "public-primevue-theme-bridge",
         "preset": "macos-glass",
+        "theme_api": "definePreset",
+        "base_preset": "Aura",
+        "primary_color": "#1770e6",
+        "dark_mode_selector": "false",
+        "theme_entry": "src/theme.ts",
     }
+
+
+def test_build_mvp_solution_snapshot_does_not_add_primevue_theme_metadata_to_vue2_provider() -> None:
+    snapshot = build_mvp_solution_snapshot(
+        requested_frontend_stack="vue2",
+        requested_provider_id="enterprise-vue2",
+        requested_style_pack_id="enterprise-default",
+        effective_frontend_stack="vue2",
+        effective_provider_id="enterprise-vue2",
+        effective_style_pack_id="enterprise-default",
+        recommended_frontend_stack="vue2",
+        recommended_provider_id="enterprise-vue2",
+        recommended_style_pack_id="enterprise-default",
+    )
+
+    assert snapshot.provider_theme_adapter_config == {
+        "adapter_id": "enterprise-vue2-theme-bridge",
+        "style_pack_id": "enterprise-default",
+    }
+    for primevue_only_key in [
+        "theme_api",
+        "base_preset",
+        "primary_color",
+        "dark_mode_selector",
+        "theme_entry",
+    ]:
+        assert primevue_only_key not in snapshot.provider_theme_adapter_config
 
 
 def test_build_mvp_solution_snapshot_assigns_new_snapshot_id_for_derived_versions() -> None:
@@ -153,6 +192,11 @@ def test_build_mvp_solution_snapshot_preserves_previous_state_when_versioning() 
     assert original.provider_theme_adapter_config == {
         "adapter_id": "public-primevue-theme-bridge",
         "preset": "modern-saas",
+        "theme_api": "definePreset",
+        "base_preset": "Aura",
+        "primary_color": "#1770e6",
+        "dark_mode_selector": "false",
+        "theme_entry": "src/theme.ts",
     }
     assert derived.provider_theme_adapter_config == original.provider_theme_adapter_config
 
@@ -188,8 +232,8 @@ def test_frontend_solution_confirmation_models_deduplicate_set_like_lists() -> N
     manifest = StylePackManifest(
         style_pack_id="modern-saas",
         display_name="Modern SaaS",
-        description="Soft brand-led SaaS visuals.",
-        recommended_for=["marketing-sites", "marketing-sites", "self-serve-saas"],
+        description="Modern enterprise Vue3 console style.",
+        recommended_for=["enterprise-admin", "enterprise-admin", "workflow-console"],
         not_recommended_for=["legacy-enterprise-lockstep"] * 2,
     )
     strategy = InstallStrategy(
@@ -238,7 +282,7 @@ def test_frontend_solution_confirmation_models_deduplicate_set_like_lists() -> N
         preflight_reason_codes=["network", "network", "slow"],
         user_overrode_recommendation=True,
         user_override_fields=["provider_id", "provider_id", "style_pack_id"],
-        resolved_style_tokens={"surface_mode": "soft-gradient"},
+        resolved_style_tokens={"surface_mode": "light-enterprise"},
         provider_theme_adapter_config={"adapter_id": "primevue-theme-bridge"},
         style_fidelity_status="partial",
         style_degradation_reason_codes=["token_gap", "token_gap"],
@@ -247,7 +291,7 @@ def test_frontend_solution_confirmation_models_deduplicate_set_like_lists() -> N
     assert summary.passed_check_ids == ["registry", "token"]
     assert summary.failed_check_ids == ["network"]
     assert summary.blocking_reason_codes == ["private_registry"]
-    assert manifest.recommended_for == ["marketing-sites", "self-serve-saas"]
+    assert manifest.recommended_for == ["enterprise-admin", "workflow-console"]
     assert manifest.not_recommended_for == ["legacy-enterprise-lockstep"]
     assert strategy.packages == ["primevue", "@primeuix/themes"]
     assert strategy.registry_url == "https://registry.npmjs.org"

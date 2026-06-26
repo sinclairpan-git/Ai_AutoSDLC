@@ -6060,6 +6060,11 @@ def _render_frontend_solution_confirmation_recommendation(
         markup=False,
     )
     console.print(
+        "  - recommended_theme_choice: "
+        f"{_frontend_solution_confirmation_theme_choice(snapshot)}",
+        markup=False,
+    )
+    console.print(
         "  - recommended_tooling: "
         f"{_frontend_solution_confirmation_tooling(snapshot)}",
         markup=False,
@@ -6074,10 +6079,20 @@ def _frontend_solution_confirmation_component_library(
     snapshot: FrontendSolutionSnapshot,
 ) -> str:
     if snapshot.recommended_provider_id == "public-primevue":
-        return "PrimeVue + @primeuix/themes"
+        return "PrimeVue + @primeuix/themes + primeicons"
     if snapshot.recommended_provider_id == "enterprise-vue2":
         return "enterprise-vue2 company component provider"
     return snapshot.recommended_provider_id
+
+
+def _frontend_solution_confirmation_theme_choice(
+    snapshot: FrontendSolutionSnapshot,
+) -> str:
+    if snapshot.recommended_provider_id == "public-primevue":
+        return "definePreset(Aura) + #1770e6 + darkModeSelector=false"
+    if snapshot.recommended_provider_id == "enterprise-vue2":
+        return f"enterprise-vue2 native style pack: {snapshot.recommended_style_pack_id}"
+    return snapshot.recommended_style_pack_id
 
 
 def _frontend_solution_confirmation_tooling(
@@ -6087,7 +6102,10 @@ def _frontend_solution_confirmation_tooling(
         snapshot.recommended_frontend_stack == "vue3"
         and snapshot.recommended_provider_id == "public-primevue"
     ):
-        return "Vite + TypeScript + UnoCSS + CSS Variables"
+        return (
+            "Vite + TypeScript + UnoCSS + CSS Variables + Pinia + Vue Router + "
+            "Axios + vee-validate + zod + vue-i18n + Vitest + Playwright + ESLint + Prettier"
+        )
     if snapshot.recommended_frontend_stack == "vue2":
         return "Vue 2.7 + vue-router 3 + Vuex 3 + SCSS"
     return snapshot.recommended_frontend_stack
@@ -6321,6 +6339,9 @@ def _frontend_solution_confirmation_report_lines(
                 f"- recommended_style_pack_id: `{snapshot.recommended_style_pack_id}`",
                 "- recommended_component_library: `"
                 + _frontend_solution_confirmation_component_library(snapshot)
+                + "`",
+                "- recommended_theme_choice: `"
+                + _frontend_solution_confirmation_theme_choice(snapshot)
                 + "`",
                 "- recommended_tooling: `"
                 + _frontend_solution_confirmation_tooling(snapshot)

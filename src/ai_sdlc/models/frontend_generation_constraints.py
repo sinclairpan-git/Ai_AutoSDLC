@@ -167,6 +167,95 @@ def build_mvp_frontend_generation_constraints(
 
     kernel = build_mvp_frontend_ui_kernel()
     provider = build_mvp_enterprise_vue2_provider_profile()
+    hard_rules = [
+        GenerationHardRule(
+            rule_id="no-direct-props-mutation",
+            category="absolute",
+            description="direct prop mutation is forbidden",
+        ),
+        GenerationHardRule(
+            rule_id="no-default-sf-components",
+            category="absolute",
+            description="sf components cannot be the default generation entry",
+        ),
+        GenerationHardRule(
+            rule_id="no-kernel-protocol-overwrite",
+            category="absolute",
+            description="page implementation cannot overwrite kernel protocol",
+        ),
+        GenerationHardRule(
+            rule_id="no-new-legacy-dependencies",
+            category="absolute",
+            description="new code cannot introduce fresh legacy dependencies",
+        ),
+        GenerationHardRule(
+            rule_id="whitelist-extension-by-exception",
+            category="controlled_exception",
+            description="whitelist extension requires structured exception",
+        ),
+        GenerationHardRule(
+            rule_id="token-layout-exception",
+            category="controlled_exception",
+            description="token or layout deviation requires structured exception",
+        ),
+    ]
+    disallowed_naked_values = [
+        "hex-color",
+        "rgb-color",
+        "rgba-color",
+        "shadow",
+        "spacing-or-size",
+    ]
+    if effective_provider_id == "public-primevue":
+        hard_rules.extend(
+            [
+                GenerationHardRule(
+                    rule_id="primevue-theme-token-first",
+                    category="absolute",
+                    description=(
+                        "PrimeVue component visuals must be governed by definePreset "
+                        "theme tokens before business CSS overrides"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="no-global-primevue-base-selector-rewrite",
+                    category="absolute",
+                    description=(
+                        "global rewrites of PrimeVue base selectors such as .p-button, "
+                        ".p-inputtext, .p-select, .p-inputtextarea, .p-tag, .p-card, "
+                        "or .p-dialog are forbidden"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="unocss-first-page-layout",
+                    category="absolute",
+                    description=(
+                        "page layout and spacing must prefer UnoCSS utilities and CSS "
+                        "variables over scattered local CSS"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="base-components-before-business-usage",
+                    category="absolute",
+                    description=(
+                        "business pages must consume PrimeVue through Base components "
+                        "or the governed provider adapter before feature-specific wrappers"
+                    ),
+                ),
+            ]
+        )
+        disallowed_naked_values.extend(
+            [
+                "!important",
+                ".p-button",
+                ".p-inputtext",
+                ".p-select",
+                ".p-inputtextarea",
+                ".p-tag",
+                ".p-card",
+                ".p-dialog",
+            ]
+        )
 
     return FrontendGenerationConstraintSet(
         work_item_id="017",
@@ -192,47 +281,10 @@ def build_mvp_frontend_generation_constraints(
             ]
         ),
         hard_rules=GenerationHardRuleSet(
-            rules=[
-                GenerationHardRule(
-                    rule_id="no-direct-props-mutation",
-                    category="absolute",
-                    description="direct prop mutation is forbidden",
-                ),
-                GenerationHardRule(
-                    rule_id="no-default-sf-components",
-                    category="absolute",
-                    description="sf components cannot be the default generation entry",
-                ),
-                GenerationHardRule(
-                    rule_id="no-kernel-protocol-overwrite",
-                    category="absolute",
-                    description="page implementation cannot overwrite kernel protocol",
-                ),
-                GenerationHardRule(
-                    rule_id="no-new-legacy-dependencies",
-                    category="absolute",
-                    description="new code cannot introduce fresh legacy dependencies",
-                ),
-                GenerationHardRule(
-                    rule_id="whitelist-extension-by-exception",
-                    category="controlled_exception",
-                    description="whitelist extension requires structured exception",
-                ),
-                GenerationHardRule(
-                    rule_id="token-layout-exception",
-                    category="controlled_exception",
-                    description="token or layout deviation requires structured exception",
-                ),
-            ]
+            rules=hard_rules
         ),
         token_rules=TokenRuleSet(
-            disallowed_naked_values=[
-                "hex-color",
-                "rgb-color",
-                "rgba-color",
-                "shadow",
-                "spacing-or-size",
-            ]
+            disallowed_naked_values=disallowed_naked_values
         ),
         exceptions=GenerationExceptionPolicy(),
     )

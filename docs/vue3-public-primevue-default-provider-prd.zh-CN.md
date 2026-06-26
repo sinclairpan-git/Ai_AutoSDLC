@@ -54,10 +54,10 @@
 | `provider_id` | `public-primevue` |
 | 组件库 | `PrimeVue` |
 | 主题基础 | `@primeuix/themes` |
-| 样式方案 | `UnoCSS + CSS Variables` |
+| 样式方案 | `PrimeVue definePreset(Aura) + UnoCSS + CSS Variables` |
 | 默认 style pack | `modern-saas` |
 
-本轮不新增新的默认 style pack。`public-primevue` 默认 style pack 固定为 `modern-saas`，以避免同时修改 provider 默认选择、style-support 和主题语义带来的范围膨胀。更偏企业中后台的 `enterprise-console` 可作为后续版本新增，但不得阻塞本轮默认 provider 切换。
+本轮不新增新的默认 style pack。`public-primevue` 默认 style pack 固定为 `modern-saas`，但其语义升级为企业中后台默认风格：PrimeVue Theme Token 负责组件视觉，主色固定 `#1770e6`，`darkModeSelector=false`，页面布局优先使用 UnoCSS，业务 CSS 仅用于外壳和少量例外。
 
 ### 5.2 企业 Vue2 兼容决策
 
@@ -120,8 +120,9 @@ Vue3 默认模板运行依赖必须覆盖：
 - `vue-i18n`
 - `@vueuse/core`
 - `dayjs`
-
-`primeicons` 本轮不作为默认必选依赖；图标能力默认由 UnoCSS `presetIcons` 承担。若后续具体 PrimeVue 组件或主题适配需要 `primeicons`，必须在对应 spec 中作为显式依赖加入。
+- `primeicons`
+- `vee-validate`
+- `zod`
 
 #### Template dev dependencies
 
@@ -131,8 +132,12 @@ Vue3 默认模板开发依赖必须覆盖：
 - `vite`
 - `unocss`
 - `vitest`
+- `playwright`
+- `eslint`
+- `prettier`
+- `@antfu/eslint-config`
 
-Playwright、ESLint、Prettier、`@antfu/eslint-config`、husky、lint-staged、commitlint 可作为增强项进入后续分阶段任务。
+husky、lint-staged、commitlint 可作为企业项目增强项进入后续分阶段任务，但不得替代默认 Web/视觉测试与基础 lint/format 依赖。
 
 ### FR-004 UnoCSS 默认集成
 
@@ -142,6 +147,17 @@ Vue3 默认 provider 的生成模板必须包含：
 2. Vite 插件注册 `UnoCSS()`
 3. 主入口导入 UnoCSS 生成样式
 4. 基础 preset：`presetUno`、`presetIcons`、`presetTypography`
+
+### FR-004A PrimeVue Theme Token 默认集成
+
+Vue3 默认 provider 的生成模板必须包含：
+
+1. `src/theme.ts`
+2. 使用 `definePreset(Aura, ...)`
+3. 主色 token 固定为 `#1770e6`
+4. `main.ts` 或 PrimeVue 插件中注入 `AppPreset`
+5. `darkModeSelector=false`
+6. 禁止通过全局 `.p-button`、`.p-inputtext`、`.p-select`、`.p-inputtextarea`、`.p-tag`、`.p-card`、`.p-dialog` 改写 PrimeVue 基础视觉
 
 ### FR-005 CSS Variables 设计 token
 
@@ -197,12 +213,12 @@ src/
 ├── styles/
 │   ├── reset.css
 │   ├── variables.css
-│   ├── primevue.css
 │   └── main.css
 ├── types/
 ├── utils/
 ├── views/
 ├── App.vue
+├── theme.ts
 └── main.ts
 ```
 

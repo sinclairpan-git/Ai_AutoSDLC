@@ -71,6 +71,40 @@ def test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rule
     assert "override-non-exempt-hard-rules" in constraints.exceptions.forbidden_overrides
 
 
+def test_build_mvp_frontend_generation_constraints_adds_primevue_rules_only_for_public_provider() -> None:
+    constraints = build_mvp_frontend_generation_constraints(
+        effective_provider_id="public-primevue"
+    )
+
+    assert [rule.rule_id for rule in constraints.hard_rules.rules] == [
+        "no-direct-props-mutation",
+        "no-default-sf-components",
+        "no-kernel-protocol-overwrite",
+        "no-new-legacy-dependencies",
+        "whitelist-extension-by-exception",
+        "token-layout-exception",
+        "primevue-theme-token-first",
+        "no-global-primevue-base-selector-rewrite",
+        "unocss-first-page-layout",
+        "base-components-before-business-usage",
+    ]
+    assert constraints.token_rules.disallowed_naked_values == [
+        "hex-color",
+        "rgb-color",
+        "rgba-color",
+        "shadow",
+        "spacing-or-size",
+        "!important",
+        ".p-button",
+        ".p-inputtext",
+        ".p-select",
+        ".p-inputtextarea",
+        ".p-tag",
+        ".p-card",
+        ".p-dialog",
+    ]
+
+
 def test_build_mvp_frontend_generation_constraints_preserves_delivery_context() -> None:
     constraints = build_mvp_frontend_generation_constraints(
         effective_provider_id="public-primevue",

@@ -725,6 +725,39 @@ def test_resolve_frontend_generation_constraints_inherits_current_delivery_conte
     ]
 
 
+def test_resolve_frontend_generation_constraints_does_not_emit_primevue_rules_for_enterprise_provider(
+    tmp_path: Path,
+) -> None:
+    _write_builtin_delivery_truth(
+        tmp_path,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="175-demo",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            recommended_frontend_stack="vue2",
+            requested_provider_id="enterprise-vue2",
+            effective_provider_id="enterprise-vue2",
+            recommended_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            effective_style_pack_id="enterprise-default",
+            recommended_style_pack_id="enterprise-default",
+            style_fidelity_status="full",
+        ),
+    )
+    svc = ProgramService(tmp_path)
+
+    constraints = svc.resolve_frontend_generation_constraints()
+
+    assert constraints.effective_provider_id == "enterprise-vue2"
+    assert constraints.delivery_entry_id == "vue2-enterprise-vue2"
+    rule_ids = [rule.rule_id for rule in constraints.hard_rules.rules]
+    assert "primevue-theme-token-first" not in rule_ids
+    assert "no-global-primevue-base-selector-rewrite" not in rule_ids
+    assert "unocss-first-page-layout" not in rule_ids
+    assert "base-components-before-business-usage" not in rule_ids
+    assert ".p-button" not in constraints.token_rules.disallowed_naked_values
+
+
 def test_build_frontend_generation_constraints_handoff_uses_runtime_adapter_handoff(
     tmp_path: Path,
 ) -> None:
@@ -5126,12 +5159,12 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
         "index.html",
         "src/env.d.ts",
         "src/main.ts",
+        "src/theme.ts",
         "src/plugins/primevue.ts",
         "src/router/index.ts",
         "src/stores/app.ts",
         "src/styles/reset.css",
         "src/styles/variables.css",
-        "src/styles/primevue.css",
         "src/styles/main.css",
         "src/generated/frontend-delivery-context.ts",
         "src/generated/provider-adapter.ts",
@@ -5145,8 +5178,18 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     generated_by_path = {item["path"]: item["content"] for item in generated_files}
     assert '<div id="app"></div>' in generated_by_path["index.html"]
     assert "createApp" in generated_by_path["src/main.ts"]
+    assert 'import "primeicons/primeicons.css";' in generated_by_path["src/main.ts"]
+    assert generated_by_path["src/main.ts"].index(
+        'import "primeicons/primeicons.css";'
+    ) < generated_by_path["src/main.ts"].index('import "virtual:uno.css";')
+    assert "definePreset" in generated_by_path["src/theme.ts"]
+    assert "#1770e6" in generated_by_path["src/theme.ts"]
     assert "PrimeVue" in generated_by_path["src/plugins/primevue.ts"]
+    assert "preset: AppPreset" in generated_by_path["src/plugins/primevue.ts"]
+    assert "darkModeSelector: false" in generated_by_path["src/plugins/primevue.ts"]
     assert "defineConfig" in generated_by_path["uno.config.ts"]
+    assert "presetIcons()" in generated_by_path["uno.config.ts"]
+    assert "presetTypography()" in generated_by_path["uno.config.ts"]
     assert (
         'deliveryEntryId: "vue3-public-primevue"'
         in generated_by_path["src/generated/frontend-delivery-context.ts"]
@@ -5182,6 +5225,74 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert "entry-eyebrow" in smoke_view
     assert "package-item" in smoke_view
     assert "page-item" in smoke_view
+
+
+def test_build_frontend_managed_delivery_apply_request_merges_builtin_primevue_deps_for_stale_manifest(
+    initialized_project_dir: Path,
+    monkeypatch,
+) -> None:
+    root = initialized_project_dir
+    save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+    _write_builtin_delivery_truth(root)
+    stale_manifest_path = (
+        root / "providers" / "frontend" / "public-primevue" / "provider.manifest.yaml"
+    )
+    stale_manifest = yaml.safe_load(stale_manifest_path.read_text(encoding="utf-8"))
+    stale_manifest["template_runtime_dependencies"] = [
+        "@vueuse/core",
+        "axios",
+        "dayjs",
+        "pinia",
+        "vue",
+        "vue-i18n",
+        "vue-router",
+    ]
+    stale_manifest["template_dev_dependencies"] = [
+        "@vitejs/plugin-vue",
+        "typescript",
+        "unocss",
+        "vite",
+        "vitest",
+        "vue-tsc",
+    ]
+    stale_manifest_path.write_text(
+        yaml.safe_dump(stale_manifest, allow_unicode=True, sort_keys=False),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        program_service_module,
+        "evaluate_current_host_runtime",
+        lambda project_root: _build_host_runtime_plan_for_tests(
+            node_runtime_available=True,
+            package_manager_available=True,
+            playwright_browsers_available=True,
+        ),
+    )
+    svc = ProgramService(root)
+
+    request = svc.build_frontend_managed_delivery_apply_request()
+
+    prepare_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "managed_target_prepare"
+    )
+    package_json = json.loads(prepare_action.executor_payload["files"][0]["content"])
+    assert package_json["dependencies"]["primeicons"] == "latest"
+    assert package_json["dependencies"]["vee-validate"] == "latest"
+    assert package_json["dependencies"]["zod"] == "latest"
+    assert package_json["devDependencies"]["playwright"] == "latest"
+    assert package_json["devDependencies"]["eslint"] == "latest"
+    artifact_action = next(
+        action
+        for action in request.execution_view.action_items
+        if action.action_type == "artifact_generate"
+    )
+    generated_by_path = {
+        item["path"]: item["content"]
+        for item in artifact_action.executor_payload["files"]
+    }
+    assert 'import "primeicons/primeicons.css";' in generated_by_path["src/main.ts"]
 
 
 def test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise_adapter(
@@ -15764,7 +15875,10 @@ def test_build_frontend_solution_candidates_keep_default_first_and_expose_advanc
     assert default_candidate.frontend_stack == "vue3"
     assert default_candidate.provider_id == "public-primevue"
     assert default_candidate.style_pack_id == "modern-saas"
-    assert default_candidate.component_library == "PrimeVue + @primeuix/themes"
+    assert default_candidate.component_library == "PrimeVue + @primeuix/themes + primeicons"
+    assert default_candidate.style_summary == (
+        "现代企业控制台：PrimeVue 主题令牌优先，适合企业中后台、工作台和管理台"
+    )
     data_console = next(
         candidate
         for candidate in candidates

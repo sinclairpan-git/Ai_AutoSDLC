@@ -195,8 +195,10 @@ class TestCliInit:
         assert "frontend_stack=vue3" in text
         assert "provider_id=public-primevue" in text
         assert "style_pack_id=modern-saas" in text
-        assert "PrimeVue + @primeuix/themes" in text
+        assert "PrimeVue + @primeuix/themes + primeicons" in text
+        assert "definePreset(Aura) + #1770e6 + darkModeSelector=false" in text
         assert "Vite + TypeScript + UnoCSS + CSS Variables" in text
+        assert "Vitest + Playwright + ESLint + Prettier" in text
         assert "企业后台" in text
         assert "不得被当成 Vue2 信号" in text
         assert "高级可选方案" in text

@@ -13,12 +13,22 @@ PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES = (
     "axios",
     "dayjs",
     "pinia",
+    "primeicons",
+    "vee-validate",
     "vue",
     "vue-i18n",
     "vue-router",
+    "zod",
+)
+PUBLIC_PRIMEVUE_TEMPLATE_REQUIRED_CSS_IMPORTS = (
+    "primeicons/primeicons.css",
 )
 PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES = (
+    "@antfu/eslint-config",
     "@vitejs/plugin-vue",
+    "eslint",
+    "playwright",
+    "prettier",
     "typescript",
     "unocss",
     "vite",
@@ -219,13 +229,27 @@ def build_builtin_style_pack_manifests() -> list[StylePackManifest]:
         StylePackManifest(
             style_pack_id="modern-saas",
             display_name="Modern SaaS",
-            description="Soft brand-led SaaS visuals for product marketing and app chrome.",
-            recommended_for=["marketing-sites", "self-serve-saas"],
-            not_recommended_for=["legacy-enterprise-lockstep"],
+            description=(
+                "Modern enterprise Vue3 console style: PrimeVue theme tokens first, "
+                "UnoCSS layout, CSS variables, and restrained business chrome."
+            ),
+            recommended_for=[
+                "enterprise-admin",
+                "internal-workbench",
+                "workflow-console",
+            ],
+            not_recommended_for=["marketing-sites", "complex-multi-theme"],
             design_tokens={
-                "surface_mode": "soft-gradient",
+                "surface_mode": "light-enterprise",
                 "density": "balanced",
-                "accent_mode": "brand-forward",
+                "accent_mode": "theme-primary-blue",
+                "primary_color": "#1770e6",
+                "theme_api": "definePreset",
+                "base_preset": "Aura",
+                "dark_mode": "disabled",
+                "layout_strategy": "unocss-first",
+                "component_visual_owner": "primevue-theme-token",
+                "business_css_scope": "shell-and-exceptions-only",
             },
         ),
         StylePackManifest(
@@ -290,9 +314,20 @@ def _default_provider_theme_adapter_config(
     if preserve_existing_adapter and previous_config is not None:
         adapter_id = str(previous_config.get("adapter_id", adapter_id))
 
+    if effective_provider_id != "public-primevue":
+        return {
+            "adapter_id": adapter_id,
+            "style_pack_id": effective_style_pack_id,
+        }
+
     return {
         "adapter_id": adapter_id,
         "preset": effective_style_pack_id,
+        "theme_api": "definePreset",
+        "base_preset": "Aura",
+        "primary_color": "#1770e6",
+        "dark_mode_selector": "false",
+        "theme_entry": "src/theme.ts",
     }
 
 
