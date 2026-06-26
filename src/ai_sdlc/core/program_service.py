@@ -162,6 +162,7 @@ from ai_sdlc.models.frontend_quality_platform import (
 )
 from ai_sdlc.models.frontend_solution_confirmation import (
     PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES,
+    PUBLIC_PRIMEVUE_TEMPLATE_REQUIRED_CSS_IMPORTS,
     PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES,
     AvailabilitySummary,
     FrontendSolutionSnapshot,
@@ -5926,15 +5927,19 @@ export default defineConfig({
         return '/// <reference types="vite/client" />\n'
 
     def _managed_frontend_main_ts_content(self) -> str:
-        return """import "primeicons/primeicons.css";
+        css_imports = "\n".join(
+            f'import "{css_path}";'
+            for css_path in PUBLIC_PRIMEVUE_TEMPLATE_REQUIRED_CSS_IMPORTS
+        )
+        return f"""{css_imports}
 import "virtual:uno.css";
 import "./styles/main.css";
 
-import { createPinia } from "pinia";
-import { createApp } from "vue";
+import {{ createPinia }} from "pinia";
+import {{ createApp }} from "vue";
 
 import App from "./App.vue";
-import { primeVuePlugin } from "./plugins/primevue";
+import {{ primeVuePlugin }} from "./plugins/primevue";
 import router from "./router";
 
 const app = createApp(App);

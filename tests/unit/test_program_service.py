@@ -5146,6 +5146,9 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert '<div id="app"></div>' in generated_by_path["index.html"]
     assert "createApp" in generated_by_path["src/main.ts"]
     assert 'import "primeicons/primeicons.css";' in generated_by_path["src/main.ts"]
+    assert generated_by_path["src/main.ts"].index(
+        'import "primeicons/primeicons.css";'
+    ) < generated_by_path["src/main.ts"].index('import "virtual:uno.css";')
     assert "definePreset" in generated_by_path["src/theme.ts"]
     assert "#1770e6" in generated_by_path["src/theme.ts"]
     assert "PrimeVue" in generated_by_path["src/plugins/primevue.ts"]

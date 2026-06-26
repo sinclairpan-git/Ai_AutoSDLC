@@ -20,6 +20,9 @@ PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES = (
     "vue-router",
     "zod",
 )
+PUBLIC_PRIMEVUE_TEMPLATE_REQUIRED_CSS_IMPORTS = (
+    "primeicons/primeicons.css",
+)
 PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES = (
     "@antfu/eslint-config",
     "@vitejs/plugin-vue",
