@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-26T06:48:30+00:00
+- Updated: 2026-06-26T17:34:00+00:00
 - Reason: Updated Vue3 public-primevue frontend default and test guidance to latest enterprise spec
 - Goal: Align AI-SDLC Vue3 default provider, managed frontend template, adapter guidance, PRD/docs, and tests with the latest PrimeVue + UnoCSS enterprise frontend specification.
-- State: PR #101 is open as a draft. All GitHub checks passed on commit fb5d1a49. Latest Codex review then flagged a P2 provider leakage: enterprise-vue2 generation constraints still received PrimeVue/UnoCSS/Base-component-only rules. The rules are now gated to public-primevue with targeted tests passing locally.
+- State: PR #101 is open as a draft. All GitHub checks passed on commit 9617ab7e. Latest Codex review then flagged two new items: P2 formal spec 188 still contradicted the new default `primeicons` dependency, and P3 advanced `modern-saas` summary still used the old lightweight SaaS wording. Both are fixed locally with targeted tests and constraints passing.
 - Stage: execute
 - Work Item: none
 - Branch: current checkout
@@ -35,6 +35,8 @@
 - Simple solution-confirm preview/report now surfaces `recommended_theme_choice: definePreset(Aura) + #1770e6 + darkModeSelector=false`.
 - Managed delivery merges built-in public-primevue runtime/dev dependencies when an existing project has an older persisted provider manifest, and the checked-in public-primevue manifest now includes the new dependencies.
 - PrimeVue/UnoCSS/Base-component generation hard rules and `.p-*` token bans are emitted only for `public-primevue`; explicit `enterprise-vue2` keeps the original Vue2 enterprise generation constraints.
+- Spec 188 plan/spec/tasks now align with the active Vue3 default dependency set: `primeicons`, `vee-validate`, `zod`, ESLint, Prettier, and Playwright are part of the default template dependency surface; husky/lint-staged/commitlint and full lint rules remain advisory.
+- Advanced `modern-saas` candidate wording now describes the enterprise console semantics instead of lightweight brand SaaS.
 - Remove generated `src/styles/primevue.css`; PrimeVue base visuals must not be globally rewritten through `.p-button`, `.p-inputtext`, `.p-select`, `.p-inputtextarea`, `.p-tag`, `.p-card`, or `.p-dialog`.
 - comment deletion reason: src/ai_sdlc/core/program_service.py removed comment summary `"""`; deleted the obsolete triple-quoted generated `primevue.css` content block because the latest spec forbids generated global PrimeVue base-selector CSS overrides and moves component visuals to `src/theme.ts` `definePreset(Aura)`.
 
@@ -70,10 +72,17 @@
 - `uv run ruff check src/ai_sdlc/models/frontend_generation_constraints.py tests/unit/test_frontend_generation_constraints.py tests/unit/test_program_service.py` => passed
 - `git diff --check` => passed
 - `uv run ai-sdlc verify constraints` => no BLOCKERs after provider-gating PrimeVue-only generation rules
+- GitHub PR #101 checks passed on commit `9617ab7e`.
+- Codex review on commit `9617ab7e`: P2 align default deps with active frontend spec; P3 refresh modern-saas summary.
+- `uv run pytest tests/unit/test_program_service.py::test_build_frontend_solution_candidates_keep_default_first_and_expose_advanced_choices tests/integration/test_cli_program.py::TestCliProgram::test_program_solution_confirm_advanced_mode_surfaces_wizard_and_preflight tests/unit/test_frontend_solution_confirmation_artifacts.py::test_materialize_frontend_solution_confirmation_artifacts_writes_expected_file_set tests/integration/test_cli_program.py::TestCliProgram::test_program_managed_delivery_apply_execute_writes_managed_artifacts` => 4 passed
+- `uv run ruff check src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py tests/integration/test_cli_program.py` => passed
+- `git diff --check` => passed
+- `rg -n "primeicons.*不得|不进入本轮默认|轻量品牌化应用外壳" specs/188-vue3-public-primevue-default-provider-governance src tests` => only expected test negative assertion / adapter rule content, no formal doc conflict
+- `uv run ai-sdlc verify constraints` => no BLOCKERs after spec and advanced summary alignment
 
 ## Blockers / Risks
-- PR #101 needs a new check round after the P2 provider-gated generation constraints fix is pushed.
+- PR #101 needs a new check round after the spec/dependency and advanced summary alignment fix is pushed.
 
 ## Exact Next Steps
-- Commit and push the P2 provider-gated generation constraints fix to PR #101.
+- Commit and push the spec/dependency and advanced summary alignment fix to PR #101.
 - Re-request Codex review and continue monitoring PR #101 checks and review comments.

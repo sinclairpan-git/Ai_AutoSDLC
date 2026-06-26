@@ -23,10 +23,10 @@
 依赖分为三层：
 
 1. provider core packages：`primevue`、`@primeuix/themes`。
-2. template runtime dependencies：`vue-router`、`pinia`、`axios`、`vue-i18n`、`@vueuse/core`、`dayjs`。
-3. template dev dependencies：`typescript`、`vite`、`unocss`、`vitest`。
+2. template runtime dependencies：`vue-router`、`pinia`、`axios`、`vue-i18n`、`@vueuse/core`、`dayjs`、`primeicons`、`vee-validate`、`zod`。
+3. template dev dependencies：`typescript`、`vite`、`unocss`、`vitest`、`vue-tsc`、`@vitejs/plugin-vue`、`@antfu/eslint-config`、`eslint`、`prettier`、`playwright`。
 
-`primeicons` 不进入本轮默认必选依赖。
+`primeicons` 是默认 runtime dependency，模板入口必须加载 `primeicons/primeicons.css`；husky、lint-staged、commitlint 与完整 lint 规则体系仍作为后续增强项。
 
 ### TD-188-004 模板治理
 

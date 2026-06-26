@@ -25,7 +25,7 @@
 1. 不删除 `enterprise-vue2`。
 2. 不在本工作项中新增 `enterprise-console` 默认 style pack；`public-primevue` 默认 style pack 固定为 `modern-saas`。
 3. 不把严格 pixel diff 在首版作为 blocker。
-4. 不把 Playwright、husky、lint-staged、commitlint、完整 ESLint/Prettier 体系作为首版普通生成 blocker。
+4. 不把 husky、lint-staged、commitlint、完整 ESLint/Prettier 规则体系作为首版普通生成 blocker；默认模板可以安装 ESLint、Prettier、Playwright 基础工具链。
 5. 不在 spec 阶段直接修改实现代码；实现必须由 `tasks.md` 中 executable task 驱动。
 
 ## 完成状态
@@ -88,9 +88,9 @@
 - **FR-188-002**：`enterprise_provider_eligible` 不得决定普通默认推荐是否优先 `enterprise-vue2`；它只影响显式企业 Vue2 路径的诊断。
 - **FR-188-003**：用户显式请求 `enterprise-vue2` 时，框架必须保留 `vue2/enterprise-vue2` 路径、企业安装策略和 preflight 诊断。
 - **FR-188-004**：`public-primevue` provider core packages 必须聚焦 `primevue` 与 `@primeuix/themes`。
-- **FR-188-005**：Vue3 template runtime dependencies 必须覆盖 `vue-router`、`pinia`、`axios`、`vue-i18n`、`@vueuse/core`、`dayjs`。
-- **FR-188-006**：Vue3 template dev dependencies 必须覆盖 `typescript`、`vite`、`unocss`、`vitest`。
-- **FR-188-007**：`primeicons` 本轮不得作为默认必选依赖；图标能力默认由 UnoCSS `presetIcons` 承担，后续需要时通过独立 spec 显式加入。
+- **FR-188-005**：Vue3 template runtime dependencies 必须覆盖 `vue-router`、`pinia`、`axios`、`vue-i18n`、`@vueuse/core`、`dayjs`、`primeicons`、`vee-validate`、`zod`。
+- **FR-188-006**：Vue3 template dev dependencies 必须覆盖 `typescript`、`vite`、`unocss`、`vitest`、`vue-tsc`、`@vitejs/plugin-vue`、`@antfu/eslint-config`、`eslint`、`prettier`、`playwright`。
+- **FR-188-007**：`primeicons` 是 `public-primevue` 默认 runtime dependency；模板入口必须加载 `primeicons/primeicons.css`，确保 PrimeVue `pi` 图标类可渲染。
 - **FR-188-008**：Vue3 模板必须生成 `uno.config.ts`，并在 Vite 插件中注册 `UnoCSS()`。
 - **FR-188-009**：Vue3 模板必须包含 `src/styles/variables.css`，覆盖 brand/status colors、text colors、border、radius、shadow、layout dimensions。
 - **FR-188-010**：Vue3 模板必须包含推荐目录结构：`api/`、`components/base/`、`components/business/`、`components/layout/`、`composables/`、`router/modules/`、`stores/`、`styles/`、`types/`、`utils/`、`views/`。
@@ -100,7 +100,7 @@
 - **FR-188-014**：Web smoke 中 Vite 启动失败、根页面白屏、fatal console error、PrimeVue/UnoCSS/CSS Variables 未生效必须作为 blocker。
 - **FR-188-015**：桌面/移动截图为空、主内容不可见、明显遮挡或布局重叠首版作为 warning，并保留升级 blocker 的证据格式。
 - **FR-188-016**：基础键盘焦点、Dialog 开关、表单 label/aria 问题首版作为 warning，并进入结构化证据报告。
-- **FR-188-017**：ESLint、Prettier、Playwright、husky、lint-staged、commitlint 未配置在本轮为 advisory，不阻断普通生成。
+- **FR-188-017**：husky、lint-staged、commitlint 与完整 ESLint/Prettier 规则体系未配置在本轮为 advisory，不阻断普通生成；ESLint、Prettier、Playwright 基础包可随默认模板安装。
 - **FR-188-018**：CLI 输出、用户指南、provider 文档、测试断言必须与默认 `vue3/public-primevue/modern-saas` 口径一致。
 - **FR-188-019**：旧项目中已持久化的 solution confirmation 不得被自动改写；新默认只影响未显式选择 provider 的新确认流程。
 - **FR-188-020**：发布说明必须明确默认 provider 变更属于用户可见行为变化，并说明如何显式选择 `enterprise-vue2`。

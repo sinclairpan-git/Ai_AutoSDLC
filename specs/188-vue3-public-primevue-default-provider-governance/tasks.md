@@ -68,9 +68,9 @@ related_doc:
   - tests/unit/test_frontend_solution_confirmation_artifacts.py
 - acceptance:
   - Provider core packages remain `primevue` and `@primeuix/themes`.
-  - Template runtime dependencies include `vue-router`, `pinia`, `axios`, `vue-i18n`, `@vueuse/core`, `dayjs`.
-  - Template dev dependencies include `typescript`, `vite`, `unocss`, `vitest`.
-  - `primeicons` is not treated as a default required dependency in this work item.
+  - Template runtime dependencies include `vue-router`, `pinia`, `axios`, `vue-i18n`, `@vueuse/core`, `dayjs`, `primeicons`, `vee-validate`, `zod`.
+  - Template dev dependencies include `typescript`, `vite`, `unocss`, `vitest`, `vue-tsc`, `@vitejs/plugin-vue`, `@antfu/eslint-config`, `eslint`, `prettier`, `playwright`.
+  - `primeicons` is treated as a default runtime dependency and generated entry code loads `primeicons/primeicons.css`.
 - verify:
   - uv run pytest tests/unit/test_managed_delivery_apply.py tests/unit/test_frontend_solution_confirmation_artifacts.py -q
 

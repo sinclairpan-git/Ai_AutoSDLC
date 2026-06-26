@@ -5493,6 +5493,8 @@ specs:
         assert "Step 7/7" in result.output
         assert "Candidate Matrix" in result.output
         assert "vue3-public-primevue-modern-saas" in result.output
+        assert "现代企业控制台" in result.output
+        assert "轻量品牌化应用外壳" not in result.output
         assert "vue3-public-primevue-data-console" in result.output
         assert "vue3-public-primevue-high-clarity" in result.output
         assert "vue3-public-primevue-macos-glass" in result.output

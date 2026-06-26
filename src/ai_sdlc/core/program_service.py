@@ -7982,7 +7982,7 @@ const dialogVisible = ref(false);
                 "enterprise-default": "稳健企业控制台：中性、低品牌表达，适合表单列表与内部后台",
                 "data-console": "数据控制台：高密度分析、监控和状态识别优先",
                 "high-clarity": "高可读表单：可访问性、长表单和合规审计优先",
-                "modern-saas": "现代 SaaS：轻量品牌化应用外壳、工作台和管理台",
+                "modern-saas": "现代企业控制台：PrimeVue 主题令牌优先，适合企业中后台、工作台和管理台",
                 "macos-glass": "macOS Glass：半透明层次与设计探索风格",
             }
             if style_pack_id in localized:

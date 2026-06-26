@@ -15876,6 +15876,9 @@ def test_build_frontend_solution_candidates_keep_default_first_and_expose_advanc
     assert default_candidate.provider_id == "public-primevue"
     assert default_candidate.style_pack_id == "modern-saas"
     assert default_candidate.component_library == "PrimeVue + @primeuix/themes + primeicons"
+    assert default_candidate.style_summary == (
+        "现代企业控制台：PrimeVue 主题令牌优先，适合企业中后台、工作台和管理台"
+    )
     data_console = next(
         candidate
         for candidate in candidates
