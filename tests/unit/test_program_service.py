@@ -5126,12 +5126,12 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
         "index.html",
         "src/env.d.ts",
         "src/main.ts",
+        "src/theme.ts",
         "src/plugins/primevue.ts",
         "src/router/index.ts",
         "src/stores/app.ts",
         "src/styles/reset.css",
         "src/styles/variables.css",
-        "src/styles/primevue.css",
         "src/styles/main.css",
         "src/generated/frontend-delivery-context.ts",
         "src/generated/provider-adapter.ts",
@@ -5145,8 +5145,14 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     generated_by_path = {item["path"]: item["content"] for item in generated_files}
     assert '<div id="app"></div>' in generated_by_path["index.html"]
     assert "createApp" in generated_by_path["src/main.ts"]
+    assert "definePreset" in generated_by_path["src/theme.ts"]
+    assert "#1770e6" in generated_by_path["src/theme.ts"]
     assert "PrimeVue" in generated_by_path["src/plugins/primevue.ts"]
+    assert "preset: AppPreset" in generated_by_path["src/plugins/primevue.ts"]
+    assert "darkModeSelector: false" in generated_by_path["src/plugins/primevue.ts"]
     assert "defineConfig" in generated_by_path["uno.config.ts"]
+    assert "presetIcons()" in generated_by_path["uno.config.ts"]
+    assert "presetTypography()" in generated_by_path["uno.config.ts"]
     assert (
         'deliveryEntryId: "vue3-public-primevue"'
         in generated_by_path["src/generated/frontend-delivery-context.ts"]
@@ -15764,7 +15770,7 @@ def test_build_frontend_solution_candidates_keep_default_first_and_expose_advanc
     assert default_candidate.frontend_stack == "vue3"
     assert default_candidate.provider_id == "public-primevue"
     assert default_candidate.style_pack_id == "modern-saas"
-    assert default_candidate.component_library == "PrimeVue + @primeuix/themes"
+    assert default_candidate.component_library == "PrimeVue + @primeuix/themes + primeicons"
     data_console = next(
         candidate
         for candidate in candidates

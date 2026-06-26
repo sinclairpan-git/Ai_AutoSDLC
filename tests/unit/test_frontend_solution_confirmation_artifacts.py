@@ -89,7 +89,9 @@ def test_solution_confirmation_artifacts_preserve_style_strategy_and_snapshot_tr
     )
 
     assert modern_saas["style_pack_id"] == "modern-saas"
-    assert modern_saas["design_tokens"]["surface_mode"] == "soft-gradient"
+    assert modern_saas["design_tokens"]["surface_mode"] == "light-enterprise"
+    assert modern_saas["design_tokens"]["primary_color"] == "#1770e6"
+    assert modern_saas["design_tokens"]["theme_api"] == "definePreset"
     assert enterprise_install["private_package_required"] is True
     assert enterprise_install["registry_url"] == "http://npm.uedc.sangfor.com.cn/"
     assert enterprise_install["registry_requirements"] == ["company-registry-network"]
@@ -108,10 +110,16 @@ def test_solution_confirmation_artifacts_preserve_style_strategy_and_snapshot_tr
         "@sxf/er-widget",
     ]
     assert latest_snapshot["effective_style_pack_id"] == "modern-saas"
-    assert latest_snapshot["resolved_style_tokens"]["surface_mode"] == "soft-gradient"
+    assert latest_snapshot["resolved_style_tokens"]["surface_mode"] == "light-enterprise"
+    assert latest_snapshot["resolved_style_tokens"]["primary_color"] == "#1770e6"
     assert latest_snapshot["provider_theme_adapter_config"] == {
         "adapter_id": "public-primevue-theme-bridge",
         "preset": "modern-saas",
+        "theme_api": "definePreset",
+        "base_preset": "Aura",
+        "primary_color": "#1770e6",
+        "dark_mode_selector": "false",
+        "theme_entry": "src/theme.ts",
     }
     assert latest_snapshot["style_fidelity_status"] == "partial"
     assert latest_snapshot["style_degradation_reason_codes"] == [

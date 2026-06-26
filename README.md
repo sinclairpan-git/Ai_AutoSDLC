@@ -201,10 +201,12 @@ If your goal is the current governed frontend path from requirement to browser-g
 
 In the current source checkout, the ordinary recommended frontend provider is
 `vue3` + `public-primevue` + `modern-saas`. This uses PrimeVue with the
-framework-managed Vue3 template, Vite, UnoCSS, CSS variables, Pinia, Vue Router,
-and the Base component layer. If the requirement explicitly targets the built-in
-Vue2 enterprise component library, choose `vue2` + `enterprise-vue2` explicitly
-instead of relying on the ordinary default.
+framework-managed Vue3 template, `@primeuix/themes` `definePreset(Aura)`,
+primary color `#1770e6`, Vite, UnoCSS, CSS variables, Pinia, Vue Router, Axios,
+vee-validate, zod, vue-i18n, Vitest, Playwright, and the Base component layer.
+If the requirement explicitly targets the built-in Vue2 enterprise component
+library, choose `vue2` + `enterprise-vue2` explicitly instead of relying on the
+ordinary default.
 
 1. `python -m ai_sdlc init .`
 What it does: initializes `.ai-sdlc/`, asks only for the necessary AI-agent and shell choices, installs the adapter file, records project bootstrap state, and runs the safe rehearsal automatically.

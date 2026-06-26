@@ -223,6 +223,39 @@ def build_mvp_frontend_generation_constraints(
                     category="controlled_exception",
                     description="token or layout deviation requires structured exception",
                 ),
+                GenerationHardRule(
+                    rule_id="primevue-theme-token-first",
+                    category="absolute",
+                    description=(
+                        "PrimeVue component visuals must be governed by definePreset "
+                        "theme tokens before business CSS overrides"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="no-global-primevue-base-selector-rewrite",
+                    category="absolute",
+                    description=(
+                        "global rewrites of PrimeVue base selectors such as .p-button, "
+                        ".p-inputtext, .p-select, .p-inputtextarea, .p-tag, .p-card, "
+                        "or .p-dialog are forbidden"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="unocss-first-page-layout",
+                    category="absolute",
+                    description=(
+                        "page layout and spacing must prefer UnoCSS utilities and CSS "
+                        "variables over scattered local CSS"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="base-components-before-business-usage",
+                    category="absolute",
+                    description=(
+                        "business pages must consume PrimeVue through Base components "
+                        "or the governed provider adapter before feature-specific wrappers"
+                    ),
+                ),
             ]
         ),
         token_rules=TokenRuleSet(
@@ -232,6 +265,14 @@ def build_mvp_frontend_generation_constraints(
                 "rgba-color",
                 "shadow",
                 "spacing-or-size",
+                "!important",
+                ".p-button",
+                ".p-inputtext",
+                ".p-select",
+                ".p-inputtextarea",
+                ".p-tag",
+                ".p-card",
+                ".p-dialog",
             ]
         ),
         exceptions=GenerationExceptionPolicy(),

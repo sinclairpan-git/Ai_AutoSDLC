@@ -710,7 +710,9 @@ export AI_SDLC_DISABLE_UPDATE_CHECK=1
 - `provider_id=public-primevue`
 - `style_pack_id=modern-saas`
 
-这条路径会生成框架托管的 Vue3 / PrimeVue 前端模板，并配套 Vite、UnoCSS、CSS Variables、Pinia、Vue Router 和 Base 组件层。除非需求明确要求公司内置 Vue2 企业组件库，否则普通新前端需求默认走这条 Vue3 公共 PrimeVue provider。
+这条路径会生成框架托管的 Vue3 / PrimeVue 前端模板，并配套 `@primeuix/themes` `definePreset(Aura)`、主色 `#1770e6`、Vite、UnoCSS、CSS Variables、Pinia、Vue Router、Axios、vee-validate、zod、vue-i18n、Vitest、Playwright 和 Base 组件层。除非需求明确要求公司内置 Vue2 企业组件库，否则普通新前端需求默认走这条 Vue3 公共 PrimeVue provider。
+
+默认模板的组件视觉由 PrimeVue Theme Token 统一管理，页面布局优先使用 UnoCSS，业务 CSS 只用于页面外壳和少量例外；不要通过全局 `.p-button`、`.p-inputtext`、`.p-select`、`.p-inputtextarea`、`.p-tag`、`.p-card`、`.p-dialog` 去覆盖 PrimeVue 基础组件。
 
 如果你只是希望按最佳实践继续，确认默认方案即可。资深用户可以先查看技术栈、组件库和风格的候选矩阵：
 
@@ -718,7 +720,7 @@ export AI_SDLC_DISABLE_UPDATE_CHECK=1
 ai-sdlc program solution-confirm --dry-run --mode advanced
 ```
 
-当前内置可选风格包括 `modern-saas`、`enterprise-default`、`data-console`、`high-clarity` 和 `macos-glass`。例如要保留 Vue3 / PrimeVue，但切换为数据控制台风格：
+当前内置可选风格包括 `modern-saas`、`enterprise-default`、`data-console`、`high-clarity` 和 `macos-glass`。`modern-saas` 是当前默认的企业中后台 Vue3 风格，不再代表营销站或轻量品牌页。例如要保留 Vue3 / PrimeVue，但切换为数据控制台风格：
 
 ```bash
 ai-sdlc program solution-confirm --dry-run --frontend-stack vue3 --provider-id public-primevue --style-pack-id data-console

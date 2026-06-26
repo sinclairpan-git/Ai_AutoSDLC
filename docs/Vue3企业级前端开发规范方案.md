@@ -85,7 +85,6 @@ src/
 ├── styles/
 │   ├── reset.css
 │   ├── variables.css
-│   ├── primevue.css
 │   └── main.css
 │
 ├── types/
@@ -93,6 +92,8 @@ src/
 ├── utils/
 │
 ├── views/
+│
+├── theme.ts
 │
 ├── App.vue
 └── main.ts

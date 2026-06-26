@@ -6074,7 +6074,7 @@ def _frontend_solution_confirmation_component_library(
     snapshot: FrontendSolutionSnapshot,
 ) -> str:
     if snapshot.recommended_provider_id == "public-primevue":
-        return "PrimeVue + @primeuix/themes"
+        return "PrimeVue + @primeuix/themes + primeicons"
     if snapshot.recommended_provider_id == "enterprise-vue2":
         return "enterprise-vue2 company component provider"
     return snapshot.recommended_provider_id
@@ -6087,7 +6087,10 @@ def _frontend_solution_confirmation_tooling(
         snapshot.recommended_frontend_stack == "vue3"
         and snapshot.recommended_provider_id == "public-primevue"
     ):
-        return "Vite + TypeScript + UnoCSS + CSS Variables"
+        return (
+            "Vite + TypeScript + UnoCSS + CSS Variables + Pinia + Vue Router + "
+            "Axios + vee-validate + zod + vue-i18n + Vitest + Playwright + ESLint + Prettier"
+        )
     if snapshot.recommended_frontend_stack == "vue2":
         return "Vue 2.7 + vue-router 3 + Vuex 3 + SCSS"
     return snapshot.recommended_frontend_stack

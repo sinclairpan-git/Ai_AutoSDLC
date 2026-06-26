@@ -2457,10 +2457,16 @@ class TestCliProgram:
         assert package_payload["dependencies"]["vue"] == "latest"
         assert package_payload["dependencies"]["pinia"] == "latest"
         assert package_payload["dependencies"]["vue-router"] == "latest"
+        assert package_payload["dependencies"]["primeicons"] == "latest"
+        assert package_payload["dependencies"]["vee-validate"] == "latest"
+        assert package_payload["dependencies"]["zod"] == "latest"
         assert package_payload["dependencies"]["primevue"] == "0.0.0-test"
         assert package_payload["dependencies"]["@primeuix/themes"] == "0.0.0-test"
         assert package_payload["devDependencies"]["vite"] == "latest"
         assert package_payload["devDependencies"]["unocss"] == "latest"
+        assert package_payload["devDependencies"]["eslint"] == "latest"
+        assert package_payload["devDependencies"]["prettier"] == "latest"
+        assert package_payload["devDependencies"]["playwright"] == "latest"
         for rel_path in [
             "src/api/modules",
             "src/components/base",
@@ -2479,6 +2485,17 @@ class TestCliProgram:
         assert (
             root / "managed" / "frontend" / "src" / "plugins" / "primevue.ts"
         ).is_file()
+        theme_ts = (root / "managed" / "frontend" / "src" / "theme.ts").read_text(
+            encoding="utf-8"
+        )
+        assert "definePreset" in theme_ts
+        assert "#1770e6" in theme_ts
+        primevue_plugin = (
+            root / "managed" / "frontend" / "src" / "plugins" / "primevue.ts"
+        ).read_text(encoding="utf-8")
+        assert "preset: AppPreset" in primevue_plugin
+        assert "darkModeSelector: false" in primevue_plugin
+        assert not (root / "managed" / "frontend" / "src" / "styles" / "primevue.css").exists()
         assert (root / "managed" / "frontend" / "src" / "router" / "index.ts").is_file()
         assert (
             root / "managed" / "frontend" / "src" / "stores" / "app.ts"
@@ -5382,13 +5399,27 @@ specs:
         assert "recommended_provider_id: public-primevue" in result.output
         assert "recommended_style_pack_id: modern-saas" in result.output
         assert (
-            "recommended_component_library: PrimeVue + @primeuix/themes"
+            "recommended_component_library: PrimeVue + @primeuix/themes + primeicons"
             in result.output
         )
-        assert (
-            "recommended_tooling: Vite + TypeScript + UnoCSS + CSS Variables"
-            in result.output
-        )
+        assert "recommended_tooling:" in result.output
+        for tooling_name in [
+            "Vite",
+            "TypeScript",
+            "UnoCSS",
+            "CSS Variables",
+            "Pinia",
+            "Vue Router",
+            "Axios",
+            "vee-validate",
+            "zod",
+            "vue-i18n",
+            "Vitest",
+            "Playwright",
+            "ESLint",
+            "Prettier",
+        ]:
+            assert tooling_name in result.output
         assert "Advanced Choice Entry" in result.output
         assert "ai-sdlc program solution-confirm --dry-run --mode advanced" in result.output
         assert "--frontend-stack <stack>" in result.output
@@ -5592,12 +5623,19 @@ specs:
             "axios",
             "dayjs",
             "pinia",
+            "primeicons",
+            "vee-validate",
             "vue",
             "vue-i18n",
             "vue-router",
+            "zod",
         ]
         assert provider_manifest["template_dev_dependencies"] == [
+            "@antfu/eslint-config",
             "@vitejs/plugin-vue",
+            "eslint",
+            "playwright",
+            "prettier",
             "typescript",
             "unocss",
             "vite",
@@ -5640,11 +5678,13 @@ specs:
         report_text = report_path.read_text(encoding="utf-8")
         assert "Frontend Solution Confirmation Artifact" in report_text
         assert (
-            "recommended_component_library: `PrimeVue + @primeuix/themes`"
+            "recommended_component_library: `PrimeVue + @primeuix/themes + primeicons`"
             in report_text
         )
         assert (
-            "recommended_tooling: `Vite + TypeScript + UnoCSS + CSS Variables`"
+            "recommended_tooling: `Vite + TypeScript + UnoCSS + CSS Variables + Pinia + "
+            "Vue Router + Axios + vee-validate + zod + vue-i18n + Vitest + Playwright + "
+            "ESLint + Prettier`"
             in report_text
         )
 

@@ -98,6 +98,10 @@ def test_generation_constraint_artifacts_preserve_constraint_payloads(tmp_path) 
         "no-new-legacy-dependencies",
         "whitelist-extension-by-exception",
         "token-layout-exception",
+        "primevue-theme-token-first",
+        "no-global-primevue-base-selector-rewrite",
+        "unocss-first-page-layout",
+        "base-components-before-business-usage",
     ]
     assert token_rules["disallowed_naked_values"] == [
         "hex-color",
@@ -105,6 +109,14 @@ def test_generation_constraint_artifacts_preserve_constraint_payloads(tmp_path) 
         "rgba-color",
         "shadow",
         "spacing-or-size",
+        "!important",
+        ".p-button",
+        ".p-inputtext",
+        ".p-select",
+        ".p-inputtextarea",
+        ".p-tag",
+        ".p-card",
+        ".p-dialog",
     ]
     assert "override-ui-kernel-standard-body" in exceptions["forbidden_overrides"]
 

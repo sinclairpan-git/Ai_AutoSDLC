@@ -5573,6 +5573,10 @@ class ProgramService:
                     "content": self._managed_frontend_main_ts_content(),
                 },
                 {
+                    "path": "src/theme.ts",
+                    "content": self._managed_frontend_theme_ts_content(),
+                },
+                {
                     "path": "src/plugins/primevue.ts",
                     "content": self._managed_frontend_primevue_plugin_ts_content(),
                 },
@@ -5591,10 +5595,6 @@ class ProgramService:
                 {
                     "path": "src/styles/variables.css",
                     "content": self._managed_frontend_variables_css_content(),
-                },
-                {
-                    "path": "src/styles/primevue.css",
-                    "content": self._managed_frontend_primevue_css_content(),
                 },
                 {
                     "path": "src/styles/main.css",
@@ -5906,16 +5906,16 @@ export default defineConfig({
         )
 
     def _managed_frontend_uno_config_ts_content(self) -> str:
-        return """import { defineConfig, presetAttributify, presetUno } from "unocss";
+        return """import { defineConfig, presetIcons, presetTypography, presetUno } from "unocss";
 
 export default defineConfig({
-  presets: [presetUno(), presetAttributify()],
+  presets: [presetUno(), presetIcons(), presetTypography()],
   theme: {
     colors: {
       brand: {
         50: "#eef6ff",
-        500: "#2563eb",
-        700: "#1d4ed8",
+        500: "#1770e6",
+        700: "#125fcc",
       },
     },
   },
@@ -5945,20 +5945,74 @@ app.use(primeVuePlugin);
 app.mount("#app");
 """
 
+    def _managed_frontend_theme_ts_content(self) -> str:
+        return """import { definePreset } from "@primeuix/themes";
+import Aura from "@primeuix/themes/aura";
+
+export const AppPreset = definePreset(Aura, {
+  semantic: {
+    primary: {
+      50: "#eef6ff",
+      100: "#d9ebff",
+      200: "#b7d8ff",
+      300: "#86bdff",
+      400: "#4f99ff",
+      500: "#1770e6",
+      600: "#125fcc",
+      700: "#104fa8",
+      800: "#123f82",
+      900: "#153966",
+      950: "#0d2340",
+    },
+    colorScheme: {
+      light: {
+        surface: {
+          0: "#ffffff",
+          50: "#f7f9fc",
+          100: "#eef2f7",
+          200: "#d8dee9",
+          300: "#c3ccd9",
+          400: "#98a5b8",
+          500: "#6b778c",
+          600: "#4b5565",
+          700: "#344054",
+          800: "#1f2937",
+          900: "#111827",
+          950: "#0b1220",
+        },
+        primary: {
+          color: "#1770e6",
+          contrastColor: "#ffffff",
+          hoverColor: "#125fcc",
+          activeColor: "#104fa8",
+        },
+        highlight: {
+          background: "#eef6ff",
+          focusBackground: "#d9ebff",
+          color: "#1770e6",
+          focusColor: "#125fcc",
+        },
+      },
+    },
+  },
+});
+"""
+
     def _managed_frontend_primevue_plugin_ts_content(self) -> str:
         return """import type { App } from "vue";
 
-import Aura from "@primeuix/themes/aura";
 import PrimeVue from "primevue/config";
+
+import { AppPreset } from "../theme";
 
 export const primeVuePlugin = {
   install(app: App) {
     app.use(PrimeVue, {
       ripple: true,
       theme: {
-        preset: Aura,
+        preset: AppPreset,
         options: {
-          darkModeSelector: ".app-dark",
+          darkModeSelector: false,
         },
       },
     });
@@ -6027,40 +6081,22 @@ textarea {
   --app-border: #d8dee9;
   --app-text: #111827;
   --app-muted: #667085;
-  --app-accent: #2563eb;
-  --app-accent-strong: #1d4ed8;
+  --app-primary: #1770e6;
+  --app-primary-hover: #125fcc;
+  --app-primary-active: #104fa8;
   --app-success: #047857;
   --app-warning: #b45309;
   --app-danger: #b91c1c;
   --app-radius: 8px;
+  --app-header-height: 56px;
+  --app-sidebar-width: 240px;
   --app-shadow: 0 10px 30px rgb(15 23 42 / 8%);
-}
-"""
-
-    def _managed_frontend_primevue_css_content(self) -> str:
-        return """.p-component {
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.p-card {
-  border: 1px solid var(--app-border);
-  border-radius: var(--app-radius);
-  box-shadow: none;
-}
-
-.p-button {
-  border-radius: 7px;
-}
-
-.p-datatable .p-datatable-thead > tr > th {
-  background: var(--app-surface-muted);
 }
 """
 
     def _managed_frontend_main_css_content(self) -> str:
         return """@import "./reset.css";
 @import "./variables.css";
-@import "./primevue.css";
 
 body {
   color: var(--app-text);
@@ -6667,54 +6703,43 @@ const dialogVisible = ref(false);
 }
 
 .delivery-shell {
-  --surface: rgba(255, 255, 255, 0.88);
-  --surface-strong: #ffffff;
-  --surface-border: rgba(15, 23, 42, 0.08);
-  --text-strong: #10233c;
-  --text-muted: #506273;
-  --brand: #0f766e;
-  --brand-soft: rgba(15, 118, 110, 0.14);
   margin: 0 auto;
   min-height: 100vh;
   max-width: 1200px;
   padding: 40px 24px 72px;
-  color: var(--text-strong);
-  background:
-    radial-gradient(circle at top left, rgba(14, 165, 233, 0.18), transparent 28%),
-    radial-gradient(circle at top right, rgba(16, 185, 129, 0.14), transparent 24%),
-    linear-gradient(180deg, #f4fbfb 0%, #eef4ff 48%, #f7fafc 100%);
+  color: var(--app-text);
+  background: var(--app-page);
   font-family: "Avenir Next", "Segoe UI", sans-serif;
 }
 
 .page-header {
   margin-bottom: 28px;
   padding: 18px 20px;
-  border: 1px solid var(--surface-border);
-  border-radius: 22px;
-  background: var(--surface);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.08);
-  backdrop-filter: blur(18px);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
 }
 
 .delivery-eyebrow {
   margin: 0 0 8px;
-  color: var(--brand);
+  color: var(--app-primary);
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .delivery-title {
   margin: 0;
-  font-size: clamp(2.2rem, 4vw, 3.6rem);
-  line-height: 1.02;
+  font-size: 2rem;
+  line-height: 1.15;
 }
 
 .delivery-subtitle {
   margin: 10px 0 0;
   max-width: 52rem;
-  color: var(--text-muted);
+  color: var(--app-muted);
   font-size: 1rem;
   line-height: 1.6;
 }
@@ -6730,10 +6755,10 @@ const dialogVisible = ref(false);
 .schema-card,
 .state-card,
 .results-panel {
-  border-radius: 22px;
-  border: 1px solid var(--surface-border);
-  background: var(--surface-strong);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  box-shadow: none;
 }
 
 .result-banner {
@@ -6741,7 +6766,7 @@ const dialogVisible = ref(false);
 }
 
 .form-shell {
-  background: linear-gradient(180deg, rgba(241, 245, 249, 0.7), rgba(255, 255, 255, 0.96));
+  background: var(--app-surface-muted);
 }
 
 .form-grid {
@@ -6776,9 +6801,9 @@ const dialogVisible = ref(false);
 
 .component-chip {
   padding: 6px 10px;
-  border-radius: 999px;
-  background: var(--brand-soft);
-  color: var(--brand);
+  border-radius: var(--app-radius);
+  background: var(--app-surface-muted);
+  color: var(--app-primary);
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -6786,17 +6811,17 @@ const dialogVisible = ref(false);
 .results-toolbar {
   margin-bottom: 16px;
   padding: 10px 4px;
-  border-radius: 18px;
-  border: 1px solid var(--surface-border);
-  background: var(--surface);
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
 }
 
 .toolbar-kicker {
   margin: 0 0 4px;
-  color: var(--text-muted);
+  color: var(--app-muted);
   font-size: 0.75rem;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
 }
 
 .results-panel {
@@ -6819,7 +6844,7 @@ const dialogVisible = ref(false);
   display: flex;
   align-items: center;
   gap: 14px;
-  color: var(--text-muted);
+  color: var(--app-muted);
 }
 
 @media (max-width: 768px) {
@@ -7956,7 +7981,7 @@ const dialogVisible = ref(false);
                 frontend_stack="vue3",
                 provider_id="public-primevue",
                 style_pack_id="modern-saas",
-                component_library="PrimeVue + @primeuix/themes",
+                component_library="PrimeVue + @primeuix/themes + primeicons",
                 style_summary=style_summary("modern-saas"),
                 availability="ready",
                 recommended_for=[
@@ -7978,7 +8003,7 @@ const dialogVisible = ref(false);
                 frontend_stack="vue3",
                 provider_id="public-primevue",
                 style_pack_id="enterprise-default",
-                component_library="PrimeVue + @primeuix/themes",
+                component_library="PrimeVue + @primeuix/themes + primeicons",
                 style_summary=style_summary("enterprise-default"),
                 availability="ready",
                 recommended_for=["传统企业后台", "低品牌表达", "稳定表单与列表"],
@@ -7996,7 +8021,7 @@ const dialogVisible = ref(false);
                 frontend_stack="vue3",
                 provider_id="public-primevue",
                 style_pack_id="data-console",
-                component_library="PrimeVue + @primeuix/themes",
+                component_library="PrimeVue + @primeuix/themes + primeicons",
                 style_summary=style_summary("data-console"),
                 availability="ready",
                 recommended_for=["数据看板", "监控平台", "高密度分析页面"],
@@ -8010,7 +8035,7 @@ const dialogVisible = ref(false);
                 frontend_stack="vue3",
                 provider_id="public-primevue",
                 style_pack_id="high-clarity",
-                component_library="PrimeVue + @primeuix/themes",
+                component_library="PrimeVue + @primeuix/themes + primeicons",
                 style_summary=style_summary("high-clarity"),
                 availability="ready",
                 recommended_for=["长表单", "合规审计", "可访问性优先页面"],
@@ -8024,7 +8049,7 @@ const dialogVisible = ref(false);
                 frontend_stack="vue3",
                 provider_id="public-primevue",
                 style_pack_id="macos-glass",
-                component_library="PrimeVue + @primeuix/themes",
+                component_library="PrimeVue + @primeuix/themes + primeicons",
                 style_summary=style_summary("macos-glass"),
                 availability="ready",
                 recommended_for=["设计验证", "高端原型", "视觉探索"],
