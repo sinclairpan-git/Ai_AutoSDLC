@@ -725,6 +725,39 @@ def test_resolve_frontend_generation_constraints_inherits_current_delivery_conte
     ]
 
 
+def test_resolve_frontend_generation_constraints_does_not_emit_primevue_rules_for_enterprise_provider(
+    tmp_path: Path,
+) -> None:
+    _write_builtin_delivery_truth(
+        tmp_path,
+        snapshot=build_mvp_solution_snapshot(
+            project_id="175-demo",
+            requested_frontend_stack="vue2",
+            effective_frontend_stack="vue2",
+            recommended_frontend_stack="vue2",
+            requested_provider_id="enterprise-vue2",
+            effective_provider_id="enterprise-vue2",
+            recommended_provider_id="enterprise-vue2",
+            requested_style_pack_id="enterprise-default",
+            effective_style_pack_id="enterprise-default",
+            recommended_style_pack_id="enterprise-default",
+            style_fidelity_status="full",
+        ),
+    )
+    svc = ProgramService(tmp_path)
+
+    constraints = svc.resolve_frontend_generation_constraints()
+
+    assert constraints.effective_provider_id == "enterprise-vue2"
+    assert constraints.delivery_entry_id == "vue2-enterprise-vue2"
+    rule_ids = [rule.rule_id for rule in constraints.hard_rules.rules]
+    assert "primevue-theme-token-first" not in rule_ids
+    assert "no-global-primevue-base-selector-rewrite" not in rule_ids
+    assert "unocss-first-page-layout" not in rule_ids
+    assert "base-components-before-business-usage" not in rule_ids
+    assert ".p-button" not in constraints.token_rules.disallowed_naked_values
+
+
 def test_build_frontend_generation_constraints_handoff_uses_runtime_adapter_handoff(
     tmp_path: Path,
 ) -> None:

@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-26T06:29:30+00:00
+- Updated: 2026-06-26T06:48:30+00:00
 - Reason: Updated Vue3 public-primevue frontend default and test guidance to latest enterprise spec
 - Goal: Align AI-SDLC Vue3 default provider, managed frontend template, adapter guidance, PRD/docs, and tests with the latest PrimeVue + UnoCSS enterprise frontend specification.
-- State: PR #101 is open as a draft. Initial CI model-test assertion was fixed and pushed. Codex review then flagged PrimeIcons CSS import, Vue2 provider theme metadata leakage, missing simple preview theme output, and stale public-primevue provider manifest dependencies. All fixes are implemented locally with targeted tests passing.
+- State: PR #101 is open as a draft. All GitHub checks passed on commit fb5d1a49. Latest Codex review then flagged a P2 provider leakage: enterprise-vue2 generation constraints still received PrimeVue/UnoCSS/Base-component-only rules. The rules are now gated to public-primevue with targeted tests passing locally.
 - Stage: execute
 - Work Item: none
 - Branch: current checkout
@@ -34,6 +34,7 @@
 - Only `public-primevue` snapshots receive PrimeVue/Aura theme adapter metadata; explicit `enterprise-vue2` snapshots keep a provider-native adapter id and style pack id.
 - Simple solution-confirm preview/report now surfaces `recommended_theme_choice: definePreset(Aura) + #1770e6 + darkModeSelector=false`.
 - Managed delivery merges built-in public-primevue runtime/dev dependencies when an existing project has an older persisted provider manifest, and the checked-in public-primevue manifest now includes the new dependencies.
+- PrimeVue/UnoCSS/Base-component generation hard rules and `.p-*` token bans are emitted only for `public-primevue`; explicit `enterprise-vue2` keeps the original Vue2 enterprise generation constraints.
 - Remove generated `src/styles/primevue.css`; PrimeVue base visuals must not be globally rewritten through `.p-button`, `.p-inputtext`, `.p-select`, `.p-inputtextarea`, `.p-tag`, `.p-card`, or `.p-dialog`.
 - comment deletion reason: src/ai_sdlc/core/program_service.py removed comment summary `"""`; deleted the obsolete triple-quoted generated `primevue.css` content block because the latest spec forbids generated global PrimeVue base-selector CSS overrides and moves component visuals to `src/theme.ts` `definePreset(Aura)`.
 
@@ -63,10 +64,16 @@
 - `uv run ruff check src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py` => passed
 - `git diff --check` => passed
 - `uv run ai-sdlc verify constraints` => no BLOCKERs after the stale manifest dependency fix
+- GitHub PR #101 checks passed on commit `fb5d1a49`.
+- Codex review P2 on commit `fb5d1a49`: gate PrimeVue-only rules by provider.
+- `uv run pytest tests/unit/test_frontend_generation_constraints.py tests/unit/test_frontend_generation_constraint_artifacts.py tests/unit/test_program_service.py::test_resolve_frontend_generation_constraints_inherits_current_delivery_context tests/unit/test_program_service.py::test_resolve_frontend_generation_constraints_does_not_emit_primevue_rules_for_enterprise_provider` => 15 passed
+- `uv run ruff check src/ai_sdlc/models/frontend_generation_constraints.py tests/unit/test_frontend_generation_constraints.py tests/unit/test_program_service.py` => passed
+- `git diff --check` => passed
+- `uv run ai-sdlc verify constraints` => no BLOCKERs after provider-gating PrimeVue-only generation rules
 
 ## Blockers / Risks
-- PR #101 needs a new check round after the P1 stale provider manifest dependency fix is pushed.
+- PR #101 needs a new check round after the P2 provider-gated generation constraints fix is pushed.
 
 ## Exact Next Steps
-- Commit and push the P1 stale provider manifest dependency fix to PR #101.
+- Commit and push the P2 provider-gated generation constraints fix to PR #101.
 - Re-request Codex review and continue monitoring PR #101 checks and review comments.

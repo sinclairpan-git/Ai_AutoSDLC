@@ -167,62 +167,48 @@ def build_mvp_frontend_generation_constraints(
 
     kernel = build_mvp_frontend_ui_kernel()
     provider = build_mvp_enterprise_vue2_provider_profile()
-
-    return FrontendGenerationConstraintSet(
-        work_item_id="017",
-        effective_provider_id=effective_provider_id,
-        delivery_entry_id=delivery_entry_id,
-        component_library_packages=list(component_library_packages or []),
-        provider_theme_adapter_id=provider_theme_adapter_id,
-        page_schema_ids=list(page_schema_ids or []),
-        execution_order=[
-            "contract",
-            "kernel",
-            "whitelist",
-            "hard-rules",
-            "token-rules",
-            "exceptions",
-        ],
-        recipe=RecipeGenerationConstraint(
-            allowed_recipe_ids=[recipe.recipe_id for recipe in kernel.page_recipes]
+    hard_rules = [
+        GenerationHardRule(
+            rule_id="no-direct-props-mutation",
+            category="absolute",
+            description="direct prop mutation is forbidden",
         ),
-        whitelist=WhitelistGenerationConstraint(
-            default_component_ids=[
-                entry.component_id for entry in provider.whitelist
-            ]
+        GenerationHardRule(
+            rule_id="no-default-sf-components",
+            category="absolute",
+            description="sf components cannot be the default generation entry",
         ),
-        hard_rules=GenerationHardRuleSet(
-            rules=[
-                GenerationHardRule(
-                    rule_id="no-direct-props-mutation",
-                    category="absolute",
-                    description="direct prop mutation is forbidden",
-                ),
-                GenerationHardRule(
-                    rule_id="no-default-sf-components",
-                    category="absolute",
-                    description="sf components cannot be the default generation entry",
-                ),
-                GenerationHardRule(
-                    rule_id="no-kernel-protocol-overwrite",
-                    category="absolute",
-                    description="page implementation cannot overwrite kernel protocol",
-                ),
-                GenerationHardRule(
-                    rule_id="no-new-legacy-dependencies",
-                    category="absolute",
-                    description="new code cannot introduce fresh legacy dependencies",
-                ),
-                GenerationHardRule(
-                    rule_id="whitelist-extension-by-exception",
-                    category="controlled_exception",
-                    description="whitelist extension requires structured exception",
-                ),
-                GenerationHardRule(
-                    rule_id="token-layout-exception",
-                    category="controlled_exception",
-                    description="token or layout deviation requires structured exception",
-                ),
+        GenerationHardRule(
+            rule_id="no-kernel-protocol-overwrite",
+            category="absolute",
+            description="page implementation cannot overwrite kernel protocol",
+        ),
+        GenerationHardRule(
+            rule_id="no-new-legacy-dependencies",
+            category="absolute",
+            description="new code cannot introduce fresh legacy dependencies",
+        ),
+        GenerationHardRule(
+            rule_id="whitelist-extension-by-exception",
+            category="controlled_exception",
+            description="whitelist extension requires structured exception",
+        ),
+        GenerationHardRule(
+            rule_id="token-layout-exception",
+            category="controlled_exception",
+            description="token or layout deviation requires structured exception",
+        ),
+    ]
+    disallowed_naked_values = [
+        "hex-color",
+        "rgb-color",
+        "rgba-color",
+        "shadow",
+        "spacing-or-size",
+    ]
+    if effective_provider_id == "public-primevue":
+        hard_rules.extend(
+            [
                 GenerationHardRule(
                     rule_id="primevue-theme-token-first",
                     category="absolute",
@@ -257,14 +243,9 @@ def build_mvp_frontend_generation_constraints(
                     ),
                 ),
             ]
-        ),
-        token_rules=TokenRuleSet(
-            disallowed_naked_values=[
-                "hex-color",
-                "rgb-color",
-                "rgba-color",
-                "shadow",
-                "spacing-or-size",
+        )
+        disallowed_naked_values.extend(
+            [
                 "!important",
                 ".p-button",
                 ".p-inputtext",
@@ -274,6 +255,36 @@ def build_mvp_frontend_generation_constraints(
                 ".p-card",
                 ".p-dialog",
             ]
+        )
+
+    return FrontendGenerationConstraintSet(
+        work_item_id="017",
+        effective_provider_id=effective_provider_id,
+        delivery_entry_id=delivery_entry_id,
+        component_library_packages=list(component_library_packages or []),
+        provider_theme_adapter_id=provider_theme_adapter_id,
+        page_schema_ids=list(page_schema_ids or []),
+        execution_order=[
+            "contract",
+            "kernel",
+            "whitelist",
+            "hard-rules",
+            "token-rules",
+            "exceptions",
+        ],
+        recipe=RecipeGenerationConstraint(
+            allowed_recipe_ids=[recipe.recipe_id for recipe in kernel.page_recipes]
+        ),
+        whitelist=WhitelistGenerationConstraint(
+            default_component_ids=[
+                entry.component_id for entry in provider.whitelist
+            ]
+        ),
+        hard_rules=GenerationHardRuleSet(
+            rules=hard_rules
+        ),
+        token_rules=TokenRuleSet(
+            disallowed_naked_values=disallowed_naked_values
         ),
         exceptions=GenerationExceptionPolicy(),
     )

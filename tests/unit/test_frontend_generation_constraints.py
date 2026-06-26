@@ -57,6 +57,32 @@ def test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rule
         "no-new-legacy-dependencies",
         "whitelist-extension-by-exception",
         "token-layout-exception",
+    ]
+    assert constraints.token_rules.disallowed_naked_values == [
+        "hex-color",
+        "rgb-color",
+        "rgba-color",
+        "shadow",
+        "spacing-or-size",
+    ]
+    assert constraints.token_rules.forbid_inline_core_style is True
+    assert constraints.exceptions.requires_structured_declaration is True
+    assert "override-ui-kernel-standard-body" in constraints.exceptions.forbidden_overrides
+    assert "override-non-exempt-hard-rules" in constraints.exceptions.forbidden_overrides
+
+
+def test_build_mvp_frontend_generation_constraints_adds_primevue_rules_only_for_public_provider() -> None:
+    constraints = build_mvp_frontend_generation_constraints(
+        effective_provider_id="public-primevue"
+    )
+
+    assert [rule.rule_id for rule in constraints.hard_rules.rules] == [
+        "no-direct-props-mutation",
+        "no-default-sf-components",
+        "no-kernel-protocol-overwrite",
+        "no-new-legacy-dependencies",
+        "whitelist-extension-by-exception",
+        "token-layout-exception",
         "primevue-theme-token-first",
         "no-global-primevue-base-selector-rewrite",
         "unocss-first-page-layout",
@@ -77,10 +103,6 @@ def test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rule
         ".p-card",
         ".p-dialog",
     ]
-    assert constraints.token_rules.forbid_inline_core_style is True
-    assert constraints.exceptions.requires_structured_declaration is True
-    assert "override-ui-kernel-standard-body" in constraints.exceptions.forbidden_overrides
-    assert "override-non-exempt-hard-rules" in constraints.exceptions.forbidden_overrides
 
 
 def test_build_mvp_frontend_generation_constraints_preserves_delivery_context() -> None:
