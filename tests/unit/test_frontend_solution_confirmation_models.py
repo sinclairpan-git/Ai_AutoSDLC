@@ -103,6 +103,33 @@ def test_build_mvp_solution_snapshot_creates_versioned_requested_effective_chain
     }
 
 
+def test_build_mvp_solution_snapshot_does_not_add_primevue_theme_metadata_to_vue2_provider() -> None:
+    snapshot = build_mvp_solution_snapshot(
+        requested_frontend_stack="vue2",
+        requested_provider_id="enterprise-vue2",
+        requested_style_pack_id="enterprise-default",
+        effective_frontend_stack="vue2",
+        effective_provider_id="enterprise-vue2",
+        effective_style_pack_id="enterprise-default",
+        recommended_frontend_stack="vue2",
+        recommended_provider_id="enterprise-vue2",
+        recommended_style_pack_id="enterprise-default",
+    )
+
+    assert snapshot.provider_theme_adapter_config == {
+        "adapter_id": "enterprise-vue2-theme-bridge",
+        "style_pack_id": "enterprise-default",
+    }
+    for primevue_only_key in [
+        "theme_api",
+        "base_preset",
+        "primary_color",
+        "dark_mode_selector",
+        "theme_entry",
+    ]:
+        assert primevue_only_key not in snapshot.provider_theme_adapter_config
+
+
 def test_build_mvp_solution_snapshot_assigns_new_snapshot_id_for_derived_versions() -> None:
     original = build_mvp_solution_snapshot()
     derived = build_mvp_solution_snapshot(previous_snapshot=original)

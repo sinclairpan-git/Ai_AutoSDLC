@@ -6060,6 +6060,11 @@ def _render_frontend_solution_confirmation_recommendation(
         markup=False,
     )
     console.print(
+        "  - recommended_theme_choice: "
+        f"{_frontend_solution_confirmation_theme_choice(snapshot)}",
+        markup=False,
+    )
+    console.print(
         "  - recommended_tooling: "
         f"{_frontend_solution_confirmation_tooling(snapshot)}",
         markup=False,
@@ -6078,6 +6083,16 @@ def _frontend_solution_confirmation_component_library(
     if snapshot.recommended_provider_id == "enterprise-vue2":
         return "enterprise-vue2 company component provider"
     return snapshot.recommended_provider_id
+
+
+def _frontend_solution_confirmation_theme_choice(
+    snapshot: FrontendSolutionSnapshot,
+) -> str:
+    if snapshot.recommended_provider_id == "public-primevue":
+        return "definePreset(Aura) + #1770e6 + darkModeSelector=false"
+    if snapshot.recommended_provider_id == "enterprise-vue2":
+        return f"enterprise-vue2 native style pack: {snapshot.recommended_style_pack_id}"
+    return snapshot.recommended_style_pack_id
 
 
 def _frontend_solution_confirmation_tooling(
@@ -6324,6 +6339,9 @@ def _frontend_solution_confirmation_report_lines(
                 f"- recommended_style_pack_id: `{snapshot.recommended_style_pack_id}`",
                 "- recommended_component_library: `"
                 + _frontend_solution_confirmation_component_library(snapshot)
+                + "`",
+                "- recommended_theme_choice: `"
+                + _frontend_solution_confirmation_theme_choice(snapshot)
                 + "`",
                 "- recommended_tooling: `"
                 + _frontend_solution_confirmation_tooling(snapshot)

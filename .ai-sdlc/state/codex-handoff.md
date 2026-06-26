@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-26T06:12:30+00:00
+- Updated: 2026-06-26T06:21:00+00:00
 - Reason: Updated Vue3 public-primevue frontend default and test guidance to latest enterprise spec
 - Goal: Align AI-SDLC Vue3 default provider, managed frontend template, adapter guidance, PRD/docs, and tests with the latest PrimeVue + UnoCSS enterprise frontend specification.
-- State: PR #101 is open as a draft. Initial CI model-test assertion was fixed and pushed. Codex review then flagged that adding `primeicons` requires loading `primeicons/primeicons.css`; the managed Vue3 entry now imports that CSS through a model-level required CSS import contract, and tests lock the import order.
+- State: PR #101 is open as a draft. Initial CI model-test assertion was fixed and pushed. Codex review then flagged PrimeIcons CSS import, Vue2 provider theme metadata leakage, and missing simple preview theme output; all three fixes are implemented locally with targeted tests passing.
 - Stage: execute
 - Work Item: none
 - Branch: current checkout
@@ -31,6 +31,8 @@
 - Keep the default recommendation as `vue3/public-primevue/modern-saas`, but redefine the default style semantics as enterprise Vue3 console: `definePreset(Aura)`, `#1770e6`, `darkModeSelector=false`, PrimeVue Theme Token first, UnoCSS layout first, CSS Variables for business tokens.
 - Add `primeicons`, `vee-validate`, and `zod` to template runtime dependencies; add `ESLint`, `Prettier`, `Playwright`, and `@antfu/eslint-config` to template dev dependencies.
 - Keep public-primevue required CSS imports next to the dependency contract so `primeicons` cannot be added without loading `primeicons/primeicons.css` in generated `src/main.ts`.
+- Only `public-primevue` snapshots receive PrimeVue/Aura theme adapter metadata; explicit `enterprise-vue2` snapshots keep a provider-native adapter id and style pack id.
+- Simple solution-confirm preview/report now surfaces `recommended_theme_choice: definePreset(Aura) + #1770e6 + darkModeSelector=false`.
 - Remove generated `src/styles/primevue.css`; PrimeVue base visuals must not be globally rewritten through `.p-button`, `.p-inputtext`, `.p-select`, `.p-inputtextarea`, `.p-tag`, `.p-card`, or `.p-dialog`.
 - comment deletion reason: src/ai_sdlc/core/program_service.py removed comment summary `"""`; deleted the obsolete triple-quoted generated `primevue.css` content block because the latest spec forbids generated global PrimeVue base-selector CSS overrides and moves component visuals to `src/theme.ts` `definePreset(Aura)`.
 
@@ -52,10 +54,14 @@
 - `uv run pytest tests/unit/test_program_service.py::test_build_frontend_managed_delivery_apply_request_materializes_artifact_generate_from_delivery_context tests/integration/test_cli_program.py::TestCliProgram::test_program_managed_delivery_apply_execute_writes_managed_artifacts` => 2 passed after making the PrimeIcons CSS import a model-level contract
 - `uv run ruff check src/ai_sdlc/models/frontend_solution_confirmation.py src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py` => passed
 - `uv run ai-sdlc verify constraints` => no BLOCKERs
+- `uv run pytest tests/unit/test_frontend_solution_confirmation_models.py tests/unit/test_frontend_solution_confirmation_artifacts.py tests/integration/test_cli_program.py::TestCliProgram::test_program_solution_confirm_simple_mode_preview_shows_single_recommendation tests/integration/test_cli_program.py::TestCliProgram::test_program_solution_confirm_execute_accepts_absolute_report_path tests/integration/test_cli_program.py::test_program_theme_token_governance_handoff_surfaces_requested_effective_theme_and_override_diagnostics tests/unit/test_program_service.py::test_build_frontend_managed_delivery_apply_request_materializes_artifact_generate_from_delivery_context tests/integration/test_cli_program.py::TestCliProgram::test_program_managed_delivery_apply_execute_writes_managed_artifacts` => 18 passed
+- `uv run ruff check src/ai_sdlc/models/frontend_solution_confirmation.py src/ai_sdlc/cli/program_cmd.py src/ai_sdlc/core/program_service.py tests/unit/test_frontend_solution_confirmation_models.py tests/integration/test_cli_program.py tests/unit/test_program_service.py` => passed
+- `git diff --check` => passed
+- `uv run ai-sdlc verify constraints` => no BLOCKERs after the Vue2 metadata and simple preview fixes
 
 ## Blockers / Risks
-- PR #101 needs a new check round after the model-level PrimeIcons import contract patch is pushed.
+- PR #101 needs a new check round after the latest Codex review fixes are pushed.
 
 ## Exact Next Steps
-- Commit and push the model-level PrimeIcons import contract patch to PR #101.
+- Commit and push the latest Codex review fixes to PR #101.
 - Re-request Codex review and continue monitoring PR #101 checks and review comments.

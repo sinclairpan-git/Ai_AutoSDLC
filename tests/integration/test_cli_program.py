@@ -5402,6 +5402,11 @@ specs:
             "recommended_component_library: PrimeVue + @primeuix/themes + primeicons"
             in result.output
         )
+        normalized_output = " ".join(result.output.split())
+        assert (
+            "recommended_theme_choice: definePreset(Aura) + #1770e6 + darkModeSelector=false"
+            in normalized_output
+        )
         assert "recommended_tooling:" in result.output
         for tooling_name in [
             "Vite",
@@ -5679,6 +5684,10 @@ specs:
         assert "Frontend Solution Confirmation Artifact" in report_text
         assert (
             "recommended_component_library: `PrimeVue + @primeuix/themes + primeicons`"
+            in report_text
+        )
+        assert (
+            "recommended_theme_choice: `definePreset(Aura) + #1770e6 + darkModeSelector=false`"
             in report_text
         )
         assert (

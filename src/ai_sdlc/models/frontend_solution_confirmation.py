@@ -314,6 +314,12 @@ def _default_provider_theme_adapter_config(
     if preserve_existing_adapter and previous_config is not None:
         adapter_id = str(previous_config.get("adapter_id", adapter_id))
 
+    if effective_provider_id != "public-primevue":
+        return {
+            "adapter_id": adapter_id,
+            "style_pack_id": effective_style_pack_id,
+        }
+
     return {
         "adapter_id": adapter_id,
         "preset": effective_style_pack_id,
