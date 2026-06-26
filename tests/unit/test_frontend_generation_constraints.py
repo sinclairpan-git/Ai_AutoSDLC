@@ -57,6 +57,10 @@ def test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rule
         "no-new-legacy-dependencies",
         "whitelist-extension-by-exception",
         "token-layout-exception",
+        "primevue-theme-token-first",
+        "no-global-primevue-base-selector-rewrite",
+        "unocss-first-page-layout",
+        "base-components-before-business-usage",
     ]
     assert constraints.token_rules.disallowed_naked_values == [
         "hex-color",
@@ -64,6 +68,14 @@ def test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rule
         "rgba-color",
         "shadow",
         "spacing-or-size",
+        "!important",
+        ".p-button",
+        ".p-inputtext",
+        ".p-select",
+        ".p-inputtextarea",
+        ".p-tag",
+        ".p-card",
+        ".p-dialog",
     ]
     assert constraints.token_rules.forbid_inline_core_style is True
     assert constraints.exceptions.requires_structured_declaration is True

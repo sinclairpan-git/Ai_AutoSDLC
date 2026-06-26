@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-25T10:20:00+00:00
+- Updated: 2026-06-26T05:52:00+00:00
 - Reason: Updated Vue3 public-primevue frontend default and test guidance to latest enterprise spec
 - Goal: Align AI-SDLC Vue3 default provider, managed frontend template, adapter guidance, PRD/docs, and tests with the latest PrimeVue + UnoCSS enterprise frontend specification.
-- State: Implementation and targeted verification are complete.
+- State: PR #101 is open as a draft. Initial CI found one missed model-test assertion in `tests/unit/test_frontend_generation_constraints.py`; the assertion has been aligned with the new PrimeVue/UnoCSS hard rules and token deny-list.
 - Stage: execute
 - Work Item: none
 - Branch: current checkout
@@ -23,6 +23,7 @@
 - `docs/Vue3企业级前端开发规范方案.md`
 - `docs/releases/v0.9.0.md`
 - targeted frontend solution/provider/generation/CLI/init/verify tests
+- `tests/unit/test_frontend_generation_constraints.py`
 
 ## Key Decisions
 - Keep the default recommendation as `vue3/public-primevue/modern-saas`, but redefine the default style semantics as enterprise Vue3 console: `definePreset(Aura)`, `#1770e6`, `darkModeSelector=false`, PrimeVue Theme Token first, UnoCSS layout first, CSS Variables for business tokens.
@@ -36,9 +37,15 @@
 - `uv run ai-sdlc verify constraints` => no BLOCKERs
 - `git diff --check` => passed
 - `uv run ruff check ...` on changed Python/test files => passed
+- GitHub PR #101 initial failed check: `Cross Platform Validation (ubuntu-latest, Python 3.12)` failed in pytest because `tests/unit/test_frontend_generation_constraints.py::test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rules_and_exception_boundaries` still expected the old six-rule list.
+- `uv run pytest tests/unit/test_frontend_generation_constraints.py tests/unit/test_frontend_generation_constraint_artifacts.py` => 12 passed
+- `uv run ai-sdlc verify constraints` => no BLOCKERs after the CI fix
+- `uv run ruff check tests/unit/test_frontend_generation_constraints.py tests/unit/test_frontend_generation_constraint_artifacts.py` => passed
+- `git diff --check` => passed after the CI fix
 
 ## Blockers / Risks
 - none
 
 ## Exact Next Steps
-- Summarize changed frontend/test behavior and verification result.
+- Commit and push the CI assertion fix to PR #101.
+- Continue monitoring PR #101 checks and Codex review.
