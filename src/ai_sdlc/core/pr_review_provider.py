@@ -153,6 +153,41 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
             next_action="Configure a valid local reviewer command.",
             invocation=invocation,
         )
+    except OSError as exc:
+        exit_code = None
+        mutation_blocker = _worktree_mutation_blocker(
+            root,
+            mutable_provider_outputs,
+            before_snapshot,
+        )
+        invocation = _write_invocation(
+            store=store,
+            path=invocation_path,
+            review_pack=review_pack,
+            provider_id=options.provider_id,
+            argv=argv,
+            input_path=options.review_pack_path,
+            output_path=findings_path,
+            cwd=root,
+            isolation_status=ProviderIsolationStatus.NOT_PROVEN,
+            exit_code=exit_code,
+            status=LoopStatus.BLOCKED,
+        )
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            invocation_path=str(invocation_path),
+            findings_path=str(findings_path),
+            blocker=(
+                mutation_blocker
+                or f"Reviewer command could not be started: {argv[0]}: {exc}"
+            ),
+            next_action=(
+                "Restore the worktree, then rerun with a read-only reviewer command."
+                if mutation_blocker
+                else "Configure an executable local reviewer command and rerun review."
+            ),
+            invocation=invocation,
+        )
     except subprocess.TimeoutExpired:
         exit_code = None
         mutation_blocker = _worktree_mutation_blocker(

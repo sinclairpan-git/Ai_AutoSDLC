@@ -126,6 +126,31 @@ def test_local_pr_review_close_check_allows_committed_review_artifacts_after_rev
     assert summary["head_commit"] == reviewed_head
 
 
+def test_local_pr_review_close_check_uses_reviewed_head_ref(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "README.md").write_text("# initial\n", encoding="utf-8")
+    _git(tmp_path, "add", "README.md")
+    _git(tmp_path, "commit", "-m", "initial")
+    _git(tmp_path, "checkout", "-b", "feature")
+    (tmp_path / "feature.txt").write_text("feature\n", encoding="utf-8")
+    _git(tmp_path, "add", "feature.txt")
+    _git(tmp_path, "commit", "-m", "feature work")
+    reviewed_head = _git(tmp_path, "rev-parse", "HEAD")
+    _git(tmp_path, "checkout", "main")
+    _write_local_pr_review(
+        tmp_path,
+        "review-feature-head",
+        "fully_clean",
+        head_commit=reviewed_head,
+        head_ref="feature",
+    )
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is True
+    assert summary["head_commit"] == reviewed_head
+
+
 def _write_local_pr_review(
     root: Path,
     review_id: str,
@@ -134,6 +159,7 @@ def _write_local_pr_review(
     unresolved_blockers: int = 0,
     unresolved_required: int = 0,
     head_commit: str = "",
+    head_ref: str = "",
 ) -> Path:
     review_dir = root / ".ai-sdlc" / "reviews" / "pr" / review_id
     review_dir.mkdir(parents=True, exist_ok=True)
@@ -145,10 +171,11 @@ def _write_local_pr_review(
             {
                 "review_id": review_id,
                 "verdict": verdict,
-                "final_report_path": str(final_report),
+                "final_report_path": final_report.relative_to(root).as_posix(),
                 "unresolved_blockers": unresolved_blockers,
                 "unresolved_required": unresolved_required,
                 "head_commit": head_commit,
+                "head_ref": head_ref,
             }
         ),
         encoding="utf-8",
@@ -158,7 +185,7 @@ def _write_local_pr_review(
         json.dumps(
             {
                 "review_id": review_id,
-                "review_run_path": str(review_run_path),
+                "review_run_path": review_run_path.relative_to(root).as_posix(),
             }
         ),
         encoding="utf-8",

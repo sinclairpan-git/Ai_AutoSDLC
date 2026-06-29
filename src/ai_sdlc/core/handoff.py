@@ -232,7 +232,10 @@ def _local_pr_review_handoff_lines(root: Path) -> list[str]:
         return []
     try:
         pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
-        review_run_path = Path(str(pointer.get("review_run_path", "")))
+        review_run_path = _resolve_repo_path(
+            root,
+            str(pointer.get("review_run_path", "")),
+        )
         review_run = json.loads(review_run_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         return [f"unavailable: {exc}"]
@@ -255,6 +258,13 @@ def _local_pr_review_handoff_lines(root: Path) -> list[str]:
         f"unresolved: blockers={blockers}, required={required}, advisory={advisory}",
         f"next command: {next_action}",
     ]
+
+
+def _resolve_repo_path(root: Path, path_text: str) -> Path:
+    path = Path(path_text)
+    if path.is_absolute():
+        return path
+    return root / path
 
 
 def _checkpoint_branch(checkpoint: object) -> str:

@@ -1010,7 +1010,10 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
         }
     try:
         pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
-        review_run_path = Path(str(pointer.get("review_run_path", "")))
+        review_run_path = _resolve_repo_path(
+            root,
+            str(pointer.get("review_run_path", "")),
+        )
         review_run = json.loads(review_run_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
         return {
@@ -1021,9 +1024,11 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
 
     verdict = str(review_run.get("verdict") or "")
     final_report = str(review_run.get("final_report_path") or "")
+    final_report_path = _resolve_repo_path(root, final_report) if final_report else Path()
     unresolved_blockers = int(review_run.get("unresolved_blockers", 0) or 0)
     unresolved_required = int(review_run.get("unresolved_required", 0) or 0)
     stored_head_commit = str(review_run.get("head_commit") or "").strip()
+    stored_head_ref = str(review_run.get("head_ref") or "").strip()
     if verdict == "blocked":
         return {
             "name": "local_pr_review",
@@ -1036,7 +1041,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
             "review_id": review_run.get("review_id", ""),
             "verdict": verdict,
         }
-    if verdict in {"fully_clean", "risk_accepted"} and not Path(final_report).is_file():
+    if verdict in {"fully_clean", "risk_accepted"} and not final_report_path.is_file():
         return {
             "name": "local_pr_review",
             "ok": False,
@@ -1046,7 +1051,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
         }
     if verdict in {"fully_clean", "risk_accepted"} and stored_head_commit:
         try:
-            current_head = GitClient(root).resolve_revision("HEAD")
+            current_head = GitClient(root).resolve_revision(stored_head_ref or "HEAD")
         except GitError as exc:
             return {
                 "name": "local_pr_review",
@@ -1092,7 +1097,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
         "verdict": verdict,
         "unresolved_blockers": unresolved_blockers,
         "unresolved_required": unresolved_required,
-        "final_report_path": final_report,
+        "final_report_path": str(final_report_path) if final_report else "",
         "head_commit": stored_head_commit,
     }
 
@@ -1124,6 +1129,13 @@ def _is_current_local_pr_review_artifact_path(path: str, review_run: dict[str, A
         return False
     review_prefix = f".ai-sdlc/reviews/pr/{review_id}/"
     return path == str(CURRENT_REVIEW_PATH).replace("\\", "/") or path.startswith(review_prefix)
+
+
+def _resolve_repo_path(root: Path, path_text: str) -> Path:
+    path = Path(path_text)
+    if path.is_absolute():
+        return path
+    return root / path
 
 
 def format_close_check_json(result: CloseCheckResult) -> str:

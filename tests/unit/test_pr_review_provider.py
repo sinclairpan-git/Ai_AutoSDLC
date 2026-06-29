@@ -93,6 +93,34 @@ def test_local_agent_blocks_when_findings_output_is_missing(tmp_path) -> None:
     assert Path(result.invocation_path).is_file()
 
 
+def test_local_agent_blocks_when_command_cannot_start(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    review_pack_path = _write_review_pack(tmp_path)
+    original_run = subprocess.run
+
+    def fake_run(args, *pargs, **kwargs):
+        if args and args[0] == "reviewer-bin":
+            raise PermissionError("permission denied")
+        return original_run(args, *pargs, **kwargs)
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=["reviewer-bin"],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "could not be started" in result.blocker
+    assert "permission denied" in result.blocker
+    assert Path(result.invocation_path).is_file()
+
+
 def test_local_agent_refuses_incomplete_allowlist_before_launch(tmp_path) -> None:
     review_pack_path = _write_review_pack(
         tmp_path,

@@ -201,7 +201,8 @@ def test_start_mock_reviewer_writes_pack_findings_run_and_pointer(tmp_path) -> N
 
     pointer = json.loads((tmp_path / CURRENT_REVIEW_PATH).read_text(encoding="utf-8"))
     assert pointer["review_id"] == "review-001"
-    assert pointer["review_run_path"] == result.review_run_path
+    assert pointer["review_run_path"] == ".ai-sdlc/reviews/pr/review-001/review-run.json"
+    assert status_pr_review(tmp_path).review_run_path == result.review_run_path
 
 
 def test_status_recovers_current_review(tmp_path) -> None:

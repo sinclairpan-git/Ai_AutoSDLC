@@ -380,8 +380,10 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
         review_id=review_id,
         loop_id=loop_id,
         review_dir=pack_result.review_dir,
-        review_pack_path=pack_result.review_pack_path,
-        findings_path=provider_result.findings_path,
+        review_pack_path=str(_resolve_repo_path(root, pack_result.review_pack_path)),
+        findings_path=str(_resolve_repo_path(root, provider_result.findings_path))
+        if provider_result.findings_path
+        else "",
         review_run_path=str(review_run_path),
         current_review_path=str(current_review_path),
         model_selector=pack_result.review_pack.model_selector
@@ -421,7 +423,7 @@ def status_pr_review(root: Path) -> PRReviewStatusResult:
             blocker=f"Current review pointer is malformed: {exc}",
             next_action="Rerun ai-sdlc pr-review start.",
         )
-    review_run_path = Path(str(pointer.get("review_run_path", "")))
+    review_run_path = _resolve_repo_path(root.resolve(), str(pointer.get("review_run_path", "")))
     if not review_run_path.exists():
         return PRReviewStatusResult(
             status=PRReviewCommandStatus.BLOCKED,
@@ -446,8 +448,10 @@ def status_pr_review(root: Path) -> PRReviewStatusResult:
         review_id=review_run.review_id,
         loop_id=review_run.loop_id,
         review_run_path=str(review_run_path),
-        review_pack_path=review_run.review_pack_path,
-        findings_path=review_run.findings_path,
+        review_pack_path=str(_resolve_repo_path(root.resolve(), review_run.review_pack_path)),
+        findings_path=str(_resolve_repo_path(root.resolve(), review_run.findings_path))
+        if review_run.findings_path
+        else "",
         verdict=review_run.verdict,
         unresolved_blockers=review_run.unresolved_blockers,
         unresolved_required=review_run.unresolved_required,
@@ -474,7 +478,7 @@ def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
             next_action="Rerun ai-sdlc pr-review start.",
         )
     try:
-        findings = _load_findings(review_run)
+        findings = _load_findings(root.resolve(), review_run)
     except FileNotFoundError as exc:
         return PRReviewFixResult(
             status=PRReviewCommandStatus.NO_REVIEW,
@@ -630,8 +634,8 @@ def rerun_pr_review(
             next_action="Rerun ai-sdlc pr-review start.",
         )
     try:
-        old_pack = _load_review_pack(review_run.review_pack_path)
-        findings = _load_findings(review_run)
+        old_pack = _load_review_pack(root.resolve(), review_run.review_pack_path)
+        findings = _load_findings(root.resolve(), review_run)
     except FileNotFoundError as exc:
         return PRReviewStartResult(
             status=PRReviewCommandStatus.NO_REVIEW,
@@ -675,7 +679,10 @@ def rerun_pr_review(
             next_action="Split unrelated changes or start a fresh PR review.",
         )
 
-    resolution_path = Path(review_run.review_pack_path).with_name("resolution.yaml")
+    resolution_path = _resolve_repo_path(
+        root.resolve(),
+        review_run.review_pack_path,
+    ).with_name("resolution.yaml")
     try:
         resolution_statuses = _load_resolution_statuses(resolution_path)
     except ResolutionFileError as exc:
@@ -762,8 +769,8 @@ def close_pr_review(
         not_closeable = _not_closeable_review_result(review_run)
         if not_closeable is not None:
             return not_closeable
-        findings = _load_findings(review_run)
-        review_pack = _load_review_pack(review_run.review_pack_path)
+        findings = _load_findings(root.resolve(), review_run)
+        review_pack = _load_review_pack(root.resolve(), review_run.review_pack_path)
     except FileNotFoundError as exc:
         return PRReviewCloseResult(
             status=PRReviewCommandStatus.NO_REVIEW,
@@ -832,7 +839,10 @@ def close_pr_review(
             ),
         )
 
-    resolution_path = Path(review_run.review_pack_path).with_name("resolution.yaml")
+    resolution_path = _resolve_repo_path(
+        root.resolve(),
+        review_run.review_pack_path,
+    ).with_name("resolution.yaml")
     try:
         resolution_statuses = _load_resolution_statuses(resolution_path)
         resolution_records = _load_resolution_records(resolution_path)
@@ -888,7 +898,7 @@ def close_pr_review(
         ),
     )
     review_run.verdict = verdict
-    review_run.final_report_path = str(final_report_path)
+    review_run.final_report_path = _repo_relative_path(root.resolve(), final_report_path)
     review_run.unresolved_blockers = unresolved[FindingSeverity.BLOCKER]
     review_run.unresolved_required = unresolved[FindingSeverity.REQUIRED]
     review_run.unresolved_advisory = unresolved[FindingSeverity.ADVISORY]
@@ -1314,8 +1324,10 @@ def _write_review_run(
         base_commit=review_pack.base_commit if review_pack else "",
         head_commit=review_pack.head_commit if review_pack else "",
         provider_command=options.provider_command,
-        review_pack_path=pack_result.review_pack_path,
-        findings_path=provider_result.findings_path,
+        review_pack_path=_repo_relative_path(root, Path(pack_result.review_pack_path)),
+        findings_path=_repo_relative_path(root, Path(provider_result.findings_path))
+        if provider_result.findings_path
+        else "",
         verdict=findings.verdict if findings else None,
         unresolved_blockers=_count_findings(findings, FindingSeverity.BLOCKER),
         unresolved_required=_count_findings(findings, FindingSeverity.REQUIRED),
@@ -1352,7 +1364,7 @@ def _write_current_review(
         {
             "review_id": review_id,
             "loop_id": loop_id,
-            "review_run_path": str(review_run_path),
+            "review_run_path": _repo_relative_path(root, review_run_path),
         },
     )
     return path
@@ -1441,11 +1453,12 @@ def _next_action_for_provider(result: ProviderRunResult) -> str:
 
 
 def _load_current_review_run(root: Path) -> tuple[ReviewRun, Path]:
-    pointer_path = root.resolve() / CURRENT_REVIEW_PATH
+    resolved_root = root.resolve()
+    pointer_path = resolved_root / CURRENT_REVIEW_PATH
     if not pointer_path.exists():
         raise FileNotFoundError("Current PR review pointer is missing.")
     pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
-    review_run_path = Path(str(pointer.get("review_run_path", "")))
+    review_run_path = _resolve_repo_path(resolved_root, str(pointer.get("review_run_path", "")))
     if not review_run_path.exists():
         raise FileNotFoundError("Current review-run.json is missing.")
     return (
@@ -1456,20 +1469,34 @@ def _load_current_review_run(root: Path) -> tuple[ReviewRun, Path]:
     )
 
 
-def _load_findings(review_run: ReviewRun) -> ReviewFindings:
+def _load_findings(root: Path, review_run: ReviewRun) -> ReviewFindings:
     if not review_run.findings_path.strip():
         raise FileNotFoundError("Current findings.json is missing.")
-    path = Path(review_run.findings_path)
+    path = _resolve_repo_path(root, review_run.findings_path)
     if not path.is_file():
         raise FileNotFoundError("Current findings.json is missing.")
     return ReviewFindings.model_validate(json.loads(path.read_text(encoding="utf-8")))
 
 
-def _load_review_pack(path_text: str) -> ReviewPack:
-    path = Path(path_text)
+def _load_review_pack(root: Path, path_text: str) -> ReviewPack:
+    path = _resolve_repo_path(root, path_text)
     if not path.exists():
         raise FileNotFoundError("Current review-pack.json is missing.")
     return ReviewPack.model_validate(json.loads(path.read_text(encoding="utf-8")))
+
+
+def _repo_relative_path(root: Path, path: Path) -> str:
+    try:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def _resolve_repo_path(root: Path, path_text: str) -> Path:
+    path = Path(path_text)
+    if path.is_absolute():
+        return path
+    return root / path
 
 
 def _read_resolution_round(path: Path) -> int:
