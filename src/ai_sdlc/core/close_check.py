@@ -9,9 +9,11 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import ValidationError
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
+from ai_sdlc.core.pr_review_models import ReviewRun
 from ai_sdlc.core.pr_review_service import CURRENT_REVIEW_PATH
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
@@ -1014,21 +1016,29 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
             root,
             str(pointer.get("review_run_path", "")),
         )
-        review_run = json.loads(review_run_path.read_text(encoding="utf-8"))
+        review_run = ReviewRun.model_validate(
+            json.loads(review_run_path.read_text(encoding="utf-8"))
+        )
     except (OSError, json.JSONDecodeError) as exc:
         return {
             "name": "local_pr_review",
             "ok": False,
             "detail": f"local PR review state cannot be read: {exc}",
         }
+    except ValidationError as exc:
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": f"local PR review state is invalid: {exc}",
+        }
 
-    verdict = str(review_run.get("verdict") or "")
-    final_report = str(review_run.get("final_report_path") or "")
+    verdict = str(review_run.verdict or "")
+    final_report = str(review_run.final_report_path or "")
     final_report_path = _resolve_repo_path(root, final_report) if final_report else Path()
-    unresolved_blockers = int(review_run.get("unresolved_blockers", 0) or 0)
-    unresolved_required = int(review_run.get("unresolved_required", 0) or 0)
-    stored_head_commit = str(review_run.get("head_commit") or "").strip()
-    stored_head_ref = str(review_run.get("head_ref") or "").strip()
+    unresolved_blockers = review_run.unresolved_blockers
+    unresolved_required = review_run.unresolved_required
+    stored_head_commit = review_run.head_commit.strip()
+    stored_head_ref = review_run.head_ref.strip()
     if verdict == "blocked":
         return {
             "name": "local_pr_review",
@@ -1038,7 +1048,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
                 f"unresolved_blockers={unresolved_blockers}, "
                 f"unresolved_required={unresolved_required}"
             ),
-            "review_id": review_run.get("review_id", ""),
+            "review_id": review_run.review_id,
             "verdict": verdict,
         }
     if verdict in {"fully_clean", "risk_accepted"} and not final_report_path.is_file():
@@ -1046,7 +1056,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
             "name": "local_pr_review",
             "ok": False,
             "detail": "local PR review final report is missing",
-            "review_id": review_run.get("review_id", ""),
+            "review_id": review_run.review_id,
             "verdict": verdict,
         }
     if verdict in {"fully_clean", "risk_accepted"} and stored_head_commit:
@@ -1057,7 +1067,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
                 "name": "local_pr_review",
                 "ok": False,
                 "detail": f"local PR review head cannot be verified: {exc}",
-                "review_id": review_run.get("review_id", ""),
+                "review_id": review_run.review_id,
                 "verdict": verdict,
                 "head_commit": stored_head_commit,
             }
@@ -1075,7 +1085,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
                     f"review_head={stored_head_commit[:12]}, "
                     f"current_head={current_head[:12]}"
                 ),
-                "review_id": review_run.get("review_id", ""),
+                "review_id": review_run.review_id,
                 "verdict": verdict,
                 "head_commit": stored_head_commit,
                 "current_head": current_head,
@@ -1093,7 +1103,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
         "name": "local_pr_review",
         "ok": verdict in {"fully_clean", "risk_accepted"},
         "detail": detail,
-        "review_id": review_run.get("review_id", ""),
+        "review_id": review_run.review_id,
         "verdict": verdict,
         "unresolved_blockers": unresolved_blockers,
         "unresolved_required": unresolved_required,
@@ -1104,7 +1114,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
 
 def _local_pr_review_artifact_commit_only(
     root: Path,
-    review_run: dict[str, Any],
+    review_run: ReviewRun,
     stored_head_commit: str,
     current_head: str,
 ) -> bool:
@@ -1123,8 +1133,8 @@ def _local_pr_review_artifact_commit_only(
     return all(_is_current_local_pr_review_artifact_path(path, review_run) for path in changed_paths)
 
 
-def _is_current_local_pr_review_artifact_path(path: str, review_run: dict[str, Any]) -> bool:
-    review_id = str(review_run.get("review_id") or "").strip()
+def _is_current_local_pr_review_artifact_path(path: str, review_run: ReviewRun) -> bool:
+    review_id = review_run.review_id.strip()
     if not review_id:
         return False
     review_prefix = f".ai-sdlc/reviews/pr/{review_id}/"

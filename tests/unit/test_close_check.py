@@ -76,6 +76,29 @@ def test_local_pr_review_close_check_blocks_blocked_verdict(tmp_path: Path) -> N
     assert "unresolved_blockers=1" in summary["detail"]
 
 
+def test_local_pr_review_close_check_blocks_invalid_review_run_schema(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(tmp_path, "review-invalid-schema", "fully_clean")
+    review_run_path = (
+        tmp_path
+        / ".ai-sdlc"
+        / "reviews"
+        / "pr"
+        / "review-invalid-schema"
+        / "review-run.json"
+    )
+    review_run = json.loads(review_run_path.read_text(encoding="utf-8"))
+    review_run["schema_version"] = "0"
+    review_run_path.write_text(json.dumps(review_run), encoding="utf-8")
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert "invalid" in summary["detail"]
+    assert "schema_version" in summary["detail"]
+
+
 def test_local_pr_review_close_check_blocks_stale_closed_head(
     tmp_path: Path,
 ) -> None:
@@ -169,7 +192,9 @@ def _write_local_pr_review(
     review_run_path.write_text(
         json.dumps(
             {
+                "schema_version": "1",
                 "review_id": review_id,
+                "loop_id": f"loop-{review_id}",
                 "verdict": verdict,
                 "final_report_path": final_report.relative_to(root).as_posix(),
                 "unresolved_blockers": unresolved_blockers,
