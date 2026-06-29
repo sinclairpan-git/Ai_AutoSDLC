@@ -712,7 +712,16 @@ def rerun_pr_review(
             ),
         )
 
-    _reset_rerun_resolution_artifacts(root.resolve(), review_run.review_id)
+    try:
+        _reset_rerun_resolution_artifacts(root.resolve(), review_run.review_id)
+    except ResolutionFileError as exc:
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            provider_id=review_run.provider_id,
+            review_id=review_run.review_id,
+            blocker=str(exc),
+            next_action="Fix resolution.yaml syntax before rerunning PR review.",
+        )
     return start_pr_review(
         PRReviewStartOptions(
             root=root,

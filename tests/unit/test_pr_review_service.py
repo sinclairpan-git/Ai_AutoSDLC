@@ -958,6 +958,35 @@ def test_rerun_blocks_malformed_resolution_yaml(tmp_path) -> None:
     assert "Fix resolution.yaml syntax" in result.next_action
 
 
+def test_rerun_blocks_non_integer_resolution_round_before_reset(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-rerun-bad-round",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    fix = fix_pr_review(tmp_path)
+    resolution_path = Path(fix.resolution_path)
+    payload = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
+    payload["round_number"] = "one"
+    payload["finding_resolutions"][0]["status"] = "fixed"
+    payload["finding_resolutions"][0]["evidence_refs"] = ["uv run pytest"]
+    payload["finding_resolutions"][0]["operator"] = "dev-owner"
+    payload["finding_resolutions"][0]["resolved_at"] = "2026-06-29T00:00:00Z"
+    resolution_path.write_text(yaml.safe_dump(payload), encoding="utf-8")
+
+    result = rerun_pr_review(tmp_path, mock_fixture=MockReviewerFixture.CLEAN)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert "round_number must be an integer" in result.blocker
+    assert "Fix resolution.yaml syntax" in result.next_action
+
+
 def test_fix_blocks_non_integer_resolution_round_number(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
