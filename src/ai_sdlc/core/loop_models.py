@@ -5,7 +5,14 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from enum import StrEnum
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from ai_sdlc import __version__
 
@@ -132,18 +139,19 @@ class LoopPolicyProfile(LoopArtifactModel):
         "high_risk_secret_policy",
     )
     @classmethod
-    def _require_policy_values(cls, value: str) -> str:
-        allowed = {
-            "strict",
-            "require-no-blockers",
-            "fail-closed",
-            "warn",
-            "needs_user",
-            "allow-with-waiver",
-            "disclose",
-            "require_confirmation",
-            "forbid",
+    def _require_policy_values(cls, value: str, info: ValidationInfo) -> str:
+        allowed_by_field = {
+            "default_close_mode": {"strict", "require-no-blockers"},
+            "redaction_strictness": {"fail-closed", "warn"},
+            "allowed_omitted_file_policy": {"needs_user", "allow-with-waiver"},
+            "remote_model_policy": {"disclose", "require_confirmation", "forbid"},
+            "high_risk_secret_policy": {
+                "needs_user",
+                "allow-with-waiver",
+                "forbid",
+            },
         }
+        allowed = allowed_by_field[info.field_name]
         if value not in allowed:
             raise ValueError(f"unsupported policy value: {value}")
         return value

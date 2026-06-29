@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from ai_sdlc.core.loop_models import LoopPolicyProfile
 from ai_sdlc.core.loop_policy import (
     LOOP_POLICY_PATH,
@@ -135,3 +137,8 @@ def test_code_egress_policy_can_forbid_remote_model_services() -> None:
 
     assert resolution.status == ModelResolutionStatus.BLOCKED
     assert "forbids sending code" in resolution.blocker
+
+
+def test_remote_model_policy_rejects_unhandled_values() -> None:
+    with pytest.raises(ValueError, match="unsupported policy value"):
+        LoopPolicyProfile(remote_model_policy="strict")

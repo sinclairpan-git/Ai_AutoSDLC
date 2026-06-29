@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-29T18:12:44+00:00
-- Reason: After addressing provider resolution trust and policy max rounds review comments
+- Updated: 2026-06-29T18:27:26+00:00
+- Reason: After addressing policy value and provider blocked blocker review comments
 - Goal: Ship work item 189 local independent adversarial PR review loop through PR #104
-- State: Addressed latest Codex feedback: fix/close no longer trust provider-supplied finding resolution without user resolution.yaml records, and fix loop enforces effective max_rounds from project policy and CLI/function cap.
+- State: Addressed latest Codex feedback: LoopPolicyProfile validates policy values per field so unhandled remote_model_policy values fail closed, and provider blocked findings now surface blocker/next_action in start results.
 - Stage: execute
 - Work Item: 189-loop-engine-local-adversarial-pr-review
 - Branch: codex/189-loop-pr-review-batch1
@@ -11,18 +11,20 @@
 ## Changed Files
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
-- M src/ai_sdlc/core/pr_review_service.py
-- M tests/unit/test_pr_review_service.py
+- M src/ai_sdlc/core/loop_models.py
+- M src/ai_sdlc/core/pr_review_provider.py
+- M tests/unit/test_loop_policy.py
+- M tests/unit/test_pr_review_provider.py
 
 ## Key Decisions
-- Only user-authored resolution.yaml records may resolve BLOCKER/REQUIRED findings; missing records default to unresolved.
-- Fix loop uses the stricter of invocation max_rounds and loop-policy max_rounds.
+- remote_model_policy only accepts disclose, require_confirmation, or forbid because evaluate_code_egress_policy only implements those semantics.
+- ProviderRunResult for blocked findings must include findings.blocker so CLI/json users can act without opening artifacts.
 
 ## Commands / Tests
-- UV_CACHE_DIR=.uv-cache uv run pytest targeted provider-resolution/policy tests -q => 3 passed
-- UV_CACHE_DIR=.uv-cache uv run pytest tests/unit/test_pr_review_service.py tests/unit/test_close_check.py tests/unit/test_pr_review_provider.py -q => 137 passed
-- UV_CACHE_DIR=.uv-cache uv run pytest PR-review regression subset -q => 194 passed
-- UV_CACHE_DIR=.uv-cache uv run ruff check src/ai_sdlc/core/pr_review_service.py tests/unit/test_pr_review_service.py => passed
+- UV_CACHE_DIR=.uv-cache uv run pytest targeted policy/provider tests -q => 3 passed
+- UV_CACHE_DIR=.uv-cache uv run pytest affected unit set -q => 146 passed
+- UV_CACHE_DIR=.uv-cache uv run pytest extended PR-review regression subset -q => 203 passed
+- UV_CACHE_DIR=.uv-cache uv run ruff check affected files => passed
 - UV_CACHE_DIR=.uv-cache uv run ai-sdlc verify constraints => no BLOCKERs
 - git diff --check => passed
 
@@ -33,4 +35,4 @@
 - none
 
 ## Exact Next Steps
-- Commit and push provider-resolution/policy fixes, re-trigger Codex review, monitor CI/review, then mark PR ready and merge when gates pass.
+- Commit and push policy/provider blocked result fixes, re-trigger Codex review, monitor CI/review, then mark PR ready and merge when gates pass.

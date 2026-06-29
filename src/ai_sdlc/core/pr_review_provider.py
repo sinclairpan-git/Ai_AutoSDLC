@@ -684,12 +684,19 @@ def _validate_findings_output(
             invocation=invocation,
             findings=findings,
         )
+    provider_status = _provider_status(exit_code, findings.verdict)
     return ProviderRunResult(
-        status=_provider_status(exit_code, findings.verdict),
+        status=provider_status,
         exit_code=exit_code,
         invocation_path=str(invocation_path),
         findings_path=str(findings_path),
         schema_validation_path=str(schema_validation_path),
+        blocker=findings.blocker if provider_status == ProviderRunStatus.BLOCKED else "",
+        next_action=(
+            "Fix the blocked review provider and rerun review."
+            if provider_status == ProviderRunStatus.BLOCKED
+            else ""
+        ),
         invocation=invocation,
         findings=findings,
     )

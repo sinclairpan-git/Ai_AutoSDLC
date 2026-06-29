@@ -859,6 +859,8 @@ def test_mock_reviewer_supports_clean_changes_required_and_blocked(
     assert clean.status == ProviderRunStatus.SUCCESS
     assert changes.status == ProviderRunStatus.CHANGES_REQUIRED
     assert blocked.status == ProviderRunStatus.BLOCKED
+    assert "Mock reviewer blocked" in blocked.blocker
+    assert "blocked review provider" in blocked.next_action
     assert clean.invocation is not None
     assert clean.invocation.provider_mode == "mock"
     assert clean.invocation.command == "mock-reviewer"
