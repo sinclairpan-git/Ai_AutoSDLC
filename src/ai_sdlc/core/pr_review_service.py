@@ -463,6 +463,8 @@ def status_pr_review(root: Path) -> PRReviewStatusResult:
 def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
     """Generate a fix plan and resolution scaffold without modifying code."""
 
+    policy = load_loop_policy(root.resolve())
+    effective_max_rounds = min(max_rounds, policy.max_rounds)
     try:
         review_run, review_run_path = _load_current_review_run(root)
     except FileNotFoundError as exc:
@@ -507,13 +509,15 @@ def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
             blocker=str(exc),
             next_action="Fix resolution.yaml syntax before continuing PR review.",
         )
-    if existing_round >= max_rounds:
+    if existing_round >= effective_max_rounds:
         return PRReviewFixResult(
             status=PRReviewCommandStatus.NEEDS_USER,
             review_id=review_run.review_id,
             resolution_path=str(resolution_path),
             round_number=existing_round,
-            blocker=f"PR review fix loop reached max rounds ({max_rounds}).",
+            blocker=(
+                f"PR review fix loop reached max rounds ({effective_max_rounds})."
+            ),
             next_action="Inspect unresolved findings manually or increase --max-rounds.",
         )
 
@@ -523,7 +527,6 @@ def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
         finding
         for finding in findings.findings
         if finding.severity in {FindingSeverity.BLOCKER, FindingSeverity.REQUIRED}
-        and finding.resolution == FindingResolutionStatus.UNRESOLVED
         and resolution_statuses.get(finding.id, FindingResolutionStatus.UNRESOLVED)
         == FindingResolutionStatus.UNRESOLVED
     ]
@@ -531,7 +534,6 @@ def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
         finding
         for finding in findings.findings
         if finding.severity == FindingSeverity.ADVISORY
-        and finding.resolution == FindingResolutionStatus.UNRESOLVED
         and resolution_statuses.get(finding.id, FindingResolutionStatus.UNRESOLVED)
         == FindingResolutionStatus.UNRESOLVED
     ]
@@ -1587,7 +1589,10 @@ def _unresolved_counts(
         FindingSeverity.ADVISORY: 0,
     }
     for finding in findings.findings:
-        status = resolution_statuses.get(finding.id, finding.resolution)
+        status = resolution_statuses.get(
+            finding.id,
+            FindingResolutionStatus.UNRESOLVED,
+        )
         if status in {
             FindingResolutionStatus.FIXED,
             FindingResolutionStatus.WAIVED,

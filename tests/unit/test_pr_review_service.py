@@ -427,6 +427,57 @@ def test_fix_stops_when_max_rounds_reached(tmp_path) -> None:
     assert "max rounds" in result.blocker
 
 
+def test_fix_honors_policy_max_rounds(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    policy_path = tmp_path / ".ai-sdlc" / "project" / "config" / "loop-policy.yaml"
+    policy_path.parent.mkdir(parents=True)
+    policy_path.write_text("max_rounds: 1\n", encoding="utf-8")
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-policy-max-rounds",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+
+    first = fix_pr_review(tmp_path)
+    second = fix_pr_review(tmp_path)
+
+    assert first.status == PRReviewCommandStatus.READY
+    assert first.round_number == 1
+    assert second.status == PRReviewCommandStatus.NEEDS_USER
+    assert "max rounds (1)" in second.blocker
+
+
+def test_fix_does_not_trust_provider_supplied_resolution(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-provider-resolution",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    findings_path = Path(start.findings_path)
+    findings = json.loads(findings_path.read_text(encoding="utf-8"))
+    findings["findings"][0]["resolution"] = "fixed"
+    findings_path.write_text(json.dumps(findings), encoding="utf-8")
+
+    close = close_pr_review(tmp_path)
+    fix = fix_pr_review(tmp_path)
+
+    assert close.status == PRReviewCommandStatus.BLOCKED
+    assert "Unresolved REQUIRED" in close.blocker
+    assert fix.status == PRReviewCommandStatus.READY
+    assert fix.selected_findings_count == 1
+
+
 def test_fix_preserves_existing_resolved_resolution_records(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
