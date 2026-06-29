@@ -90,6 +90,41 @@ def test_local_agent_blocks_when_findings_output_is_missing(tmp_path) -> None:
     assert Path(result.invocation_path).is_file()
 
 
+def test_local_agent_does_not_reuse_stale_findings_output(tmp_path) -> None:
+    review_pack_path = _write_review_pack(tmp_path)
+    stale_findings = review_pack_path.with_name("findings.json")
+    stale_findings.write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "artifact_kind": "review-findings",
+                "review_id": "review-001",
+                "loop_id": "review-001-loop",
+                "review_pack_path": str(review_pack_path),
+                "provider_id": "local-agent",
+                "model_selector": "current",
+                "resolved_model": "gpt-5",
+                "verdict": "clean",
+            }
+        ),
+        encoding="utf-8",
+    )
+    script = tmp_path / "no_output.py"
+    script.write_text("import sys\nsys.exit(0)\n", encoding="utf-8")
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "did not write findings.json" in result.blocker
+    assert not stale_findings.exists()
+
+
 def test_local_agent_blocks_when_findings_schema_is_invalid(tmp_path) -> None:
     review_pack_path = _write_review_pack(tmp_path)
     script = tmp_path / "malformed.py"

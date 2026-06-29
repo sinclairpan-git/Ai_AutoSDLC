@@ -91,6 +91,7 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
     base_commit = git.resolve_revision(options.base_ref)
     head_commit = git.resolve_revision(options.head_ref)
     changed_files = list(git.changed_paths(options.base_ref, options.head_ref))
+    deleted_files = _git_deleted_files(root, options.base_ref, options.head_ref)
 
     model_resolution = resolve_model_for_review(
         policy,
@@ -120,6 +121,7 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
         code_egress=options.code_egress,
         code_egress_confirmed=options.code_egress_confirmed,
         max_file_bytes=options.max_file_bytes,
+        deleted_file_bytes=_git_file_blobs(root, options.base_ref, deleted_files),
     )
     redaction_report_path = store.write_json_artifact(
         review_dir / "redaction-report.json",
@@ -277,6 +279,58 @@ def _git_diff(root: Path, base_ref: str, head_ref: str, paths: list[str]) -> str
             f"git diff failed (exit {result.returncode}): {result.stderr.strip()}"
         )
     return result.stdout
+
+
+def _git_deleted_files(root: Path, base_ref: str, head_ref: str) -> list[str]:
+    cmd = ["git", "diff", "--name-status", f"{base_ref}..{head_ref}"]
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=30,
+        )
+    except FileNotFoundError as exc:
+        raise GitError("git is not installed or not on PATH") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise GitError("git diff timed out while detecting deleted files") from exc
+    if result.returncode != 0:
+        raise GitError(
+            f"git diff --name-status failed (exit {result.returncode}): "
+            f"{result.stderr.strip()}"
+        )
+
+    deleted: list[str] = []
+    for line in result.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) >= 2 and parts[0] == "D":
+            deleted.append(parts[1].replace("\\", "/").lstrip("/"))
+    return deleted
+
+
+def _git_file_blobs(root: Path, ref: str, paths: list[str]) -> dict[str, bytes]:
+    blobs: dict[str, bytes] = {}
+    for path in paths:
+        cmd = ["git", "show", f"{ref}:{path}"]
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=root,
+                capture_output=True,
+                check=False,
+                timeout=30,
+            )
+        except FileNotFoundError as exc:
+            raise GitError("git is not installed or not on PATH") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise GitError("git show timed out while reading deleted file") from exc
+        if result.returncode == 0:
+            blobs[path] = result.stdout
+    return blobs
 
 
 def _status_from_model_resolution(

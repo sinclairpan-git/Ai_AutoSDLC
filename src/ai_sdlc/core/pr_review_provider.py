@@ -100,6 +100,7 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
     invocation_path = review_dir / "reviewer-invocation.json"
     schema_validation_path = review_dir / "schema-validation.json"
     argv = _expand_command(options.command, review_pack, options.review_pack_path, findings_path)
+    _remove_previous_provider_outputs(findings_path, schema_validation_path)
 
     try:
         process = subprocess.run(
@@ -276,6 +277,14 @@ def _expand_command(
         "--allowlist",
         *review_pack.reviewer_allowlist,
     ]
+
+
+def _remove_previous_provider_outputs(*paths: Path) -> None:
+    for path in paths:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            continue
 
 
 def _load_review_pack(path: Path) -> ReviewPack:

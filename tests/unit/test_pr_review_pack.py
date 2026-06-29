@@ -170,6 +170,32 @@ def test_build_review_pack_omits_redacted_files_from_reviewer_allowlist(
     assert "settings.py" not in Path(result.diff_path).read_text(encoding="utf-8")
 
 
+def test_build_review_pack_includes_safe_deletion_hunks(tmp_path) -> None:
+    _init_repo_with_base_commit(tmp_path)
+    _commit_file(tmp_path, "src/old.py", "print('remove me')\n", "add old")
+    base_commit = _git(tmp_path, "rev-parse", "HEAD")
+    _git(tmp_path, "rm", "src/old.py")
+    _git(tmp_path, "commit", "-m", "remove old")
+
+    result = build_review_pack(
+        ReviewPackBuildOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            review_id="review-delete",
+            loop_id="loop-delete",
+            current_model="gpt-5",
+        )
+    )
+
+    assert result.status == ReviewPackBuildStatus.READY
+    assert result.review_pack is not None
+    assert result.review_pack.changed_files == ["src/old.py"]
+    assert result.review_pack.reviewer_allowlist == ["src/old.py"]
+    diff_text = Path(result.diff_path).read_text(encoding="utf-8")
+    assert "deleted file mode" in diff_text
+    assert "-print('remove me')" in diff_text
+
+
 def _init_repo_with_base_commit(path: Path) -> str:
     _git(path, "init")
     if _git(path, "symbolic-ref", "--short", "HEAD") != "main":

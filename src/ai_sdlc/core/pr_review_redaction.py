@@ -96,12 +96,22 @@ def analyze_redaction(
     code_egress: bool = False,
     code_egress_confirmed: bool = False,
     max_file_bytes: int = 1_000_000,
+    deleted_file_bytes: dict[str, bytes] | None = None,
 ) -> RedactionReport:
     """Analyze changed files and return a redaction report."""
 
     resolved_policy = policy or LoopPolicyProfile()
+    deleted_blobs = {
+        _normalize_repo_path(path): content
+        for path, content in (deleted_file_bytes or {}).items()
+    }
     decisions = [
-        _analyze_file(root, file_path, max_file_bytes=max_file_bytes)
+        _analyze_file(
+            root,
+            file_path,
+            max_file_bytes=max_file_bytes,
+            deleted_blob=deleted_blobs.get(_normalize_repo_path(file_path)),
+        )
         for file_path in changed_files
     ]
     included_files = [
@@ -158,6 +168,7 @@ def _analyze_file(
     file_path: str,
     *,
     max_file_bytes: int,
+    deleted_blob: bytes | None = None,
 ) -> RedactionFileDecision:
     normalized = _normalize_repo_path(file_path)
     absolute_path = (root / normalized).resolve()
@@ -176,6 +187,12 @@ def _analyze_file(
             high_risk=True,
         )
     if not absolute_path.exists():
+        if deleted_blob is not None:
+            return _analyze_deleted_blob(
+                normalized,
+                deleted_blob,
+                max_file_bytes=max_file_bytes,
+            )
         return RedactionFileDecision(
             path=normalized,
             action=RedactionAction.OMITTED,
@@ -224,6 +241,57 @@ def _analyze_file(
 
     return RedactionFileDecision(
         path=normalized,
+        action=RedactionAction.INCLUDED,
+        original_size=size,
+    )
+
+
+def _analyze_deleted_blob(
+    path: str,
+    raw: bytes,
+    *,
+    max_file_bytes: int,
+) -> RedactionFileDecision:
+    size = len(raw)
+    if size > max_file_bytes:
+        return RedactionFileDecision(
+            path=path,
+            action=RedactionAction.OMITTED,
+            reason=RedactionReason.LARGE,
+            original_size=size,
+            omitted_lines=len(raw.decode("utf-8", errors="replace").splitlines()),
+        )
+    if _is_binary(raw):
+        return RedactionFileDecision(
+            path=path,
+            action=RedactionAction.OMITTED,
+            reason=RedactionReason.BINARY,
+            original_size=size,
+        )
+
+    text = raw.decode("utf-8", errors="replace")
+    if "PRIVATE KEY-----" in text:
+        return RedactionFileDecision(
+            path=path,
+            action=RedactionAction.OMITTED,
+            reason=RedactionReason.PRIVATE_KEY,
+            high_risk=True,
+            original_size=size,
+            omitted_lines=len(text.splitlines()),
+        )
+    secret_hits = sum(len(pattern.findall(text)) for pattern in SECRET_PATTERNS)
+    if secret_hits:
+        return RedactionFileDecision(
+            path=path,
+            action=RedactionAction.REDACTED,
+            reason=RedactionReason.SECRET_PATTERN,
+            high_risk=True,
+            original_size=size,
+            redacted_occurrences=secret_hits,
+        )
+
+    return RedactionFileDecision(
+        path=path,
         action=RedactionAction.INCLUDED,
         original_size=size,
     )

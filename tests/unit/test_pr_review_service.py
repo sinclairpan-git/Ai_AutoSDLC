@@ -126,6 +126,24 @@ def test_doctor_blocks_unknown_base_ref_without_writing_artifacts(tmp_path) -> N
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
 
 
+def test_start_blocks_unknown_base_ref_without_traceback(tmp_path) -> None:
+    _init_repo(tmp_path)
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref="missing-base",
+            provider_id="mock-reviewer",
+            review_id="review-missing-base",
+        )
+    )
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.review_id == "review-missing-base"
+    assert "missing-base" in result.blocker
+    assert "base/head refs" in result.next_action
+
+
 def test_status_without_current_review_returns_next_action(tmp_path) -> None:
     (tmp_path / ".ai-sdlc").mkdir()
 

@@ -289,22 +289,33 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
     provider_options = _normalize_provider_options(options)
     review_id = _resolve_review_id(provider_options)
     loop_id = _resolve_loop_id(provider_options)
-    pack_result = build_review_pack(
-        ReviewPackBuildOptions(
-            root=root,
-            base_ref=provider_options.base_ref,
-            head_ref=provider_options.head_ref,
-            requested_provider=provider_options.provider_id,
-            requested_model=_requested_model(provider_options),
-            provider_default_model=provider_options.provider_default_model,
-            current_model=_current_model(provider_options),
-            provider_mode=_provider_mode(provider_options.provider_id),
-            code_egress=provider_options.code_egress,
-            code_egress_confirmed=provider_options.code_egress_confirmed,
+    try:
+        pack_result = build_review_pack(
+            ReviewPackBuildOptions(
+                root=root,
+                base_ref=provider_options.base_ref,
+                head_ref=provider_options.head_ref,
+                requested_provider=provider_options.provider_id,
+                requested_model=_requested_model(provider_options),
+                provider_default_model=provider_options.provider_default_model,
+                current_model=_current_model(provider_options),
+                provider_mode=_provider_mode(provider_options.provider_id),
+                code_egress=provider_options.code_egress,
+                code_egress_confirmed=provider_options.code_egress_confirmed,
+                review_id=review_id,
+                loop_id=loop_id,
+            )
+        )
+    except GitError as exc:
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            provider_id=provider_options.provider_id,
             review_id=review_id,
             loop_id=loop_id,
+            review_dir=str(LoopArtifactStore(root).review_run_dir(review_id)),
+            blocker=str(exc),
+            next_action="Check the base/head refs.",
         )
-    )
     if pack_result.status != ReviewPackBuildStatus.READY:
         return PRReviewStartResult(
             status=_status_from_pack_result(pack_result.status),
