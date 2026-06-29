@@ -103,6 +103,16 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
             blocker=allowlist_blocker,
             next_action="Regenerate a complete review pack before running local-agent.",
         )
+    head_blocker = _reviewed_head_launch_blocker(root, review_pack)
+    if head_blocker:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            blocker=head_blocker,
+            next_action=(
+                "Check out the reviewed head commit or rerun PR review for the "
+                "current worktree HEAD."
+            ),
+        )
     store = LoopArtifactStore(root)
     review_dir = store.create_review_run_dir(review_pack.review_id)
     findings_path = review_dir / "findings.json"
@@ -384,6 +394,36 @@ def _reviewer_allowlist_launch_blocker(review_pack: ReviewPack) -> str:
             + (f": {detail}" if detail else ".")
         )
     return ""
+
+
+def _reviewed_head_launch_blocker(root: Path, review_pack: ReviewPack) -> str:
+    current_head = _current_worktree_head(root)
+    if not current_head or current_head == review_pack.head_commit:
+        return ""
+    return (
+        "Local reviewer must run against review_pack.head_commit; current "
+        f"worktree HEAD is {current_head[:12]}, reviewed head is "
+        f"{review_pack.head_commit[:12]}."
+    )
+
+
+def _current_worktree_head(root: Path) -> str:
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=30,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return ""
+    if result.returncode != 0:
+        return ""
+    return result.stdout.strip()
 
 
 def _remove_previous_provider_outputs(*paths: Path) -> None:

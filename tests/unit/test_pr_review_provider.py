@@ -75,6 +75,31 @@ def test_local_agent_configured_command_writes_findings_and_invocation(
     assert invocation_payload["exit_code"] == 10
 
 
+def test_local_agent_blocks_when_reviewed_head_is_not_checked_out(tmp_path) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('reviewed')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "reviewed head")
+    reviewed_head = _git(tmp_path, "rev-parse", "HEAD")
+    _write_file(tmp_path, "src/app.py", "print('current')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "current head")
+    review_pack_path = _write_review_pack(tmp_path, head_commit=reviewed_head)
+    script = _write_reviewer_script(tmp_path, exit_code=0, verdict="clean")
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "current worktree HEAD" in result.blocker
+    assert result.invocation_path == ""
+
+
 def test_local_agent_blocks_when_findings_output_is_missing(tmp_path) -> None:
     review_pack_path = _write_review_pack(tmp_path)
     script = tmp_path / "no_output.py"
@@ -948,6 +973,7 @@ def _write_review_pack(
     reviewer_allowlist: list[str] | None = None,
     diff_coverage: dict[str, int | float | str] | None = None,
     policy_decisions: dict[str, str | bool | int | float] | None = None,
+    head_commit: str | None = None,
 ) -> Path:
     store = LoopArtifactStore(root)
     review_pack = ReviewPack(
@@ -957,7 +983,7 @@ def _write_review_pack(
         base_ref="main",
         head_ref="HEAD",
         base_commit="a" * 40,
-        head_commit="b" * 40,
+        head_commit=head_commit or _maybe_git_head(root) or "b" * 40,
         changed_files=changed_files or ["src/app.py"],
         diff_coverage=diff_coverage or {},
         policy_decisions=policy_decisions or {},
@@ -973,6 +999,13 @@ def _write_review_pack(
         store.review_run_dir(review_id) / "review-pack.json",
         review_pack,
     )
+
+
+def _maybe_git_head(path: Path) -> str:
+    try:
+        return _git(path, "rev-parse", "HEAD")
+    except AssertionError:
+        return ""
 
 
 def _init_git_repo(path: Path) -> None:

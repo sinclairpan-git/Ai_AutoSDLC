@@ -15,6 +15,7 @@ from ai_sdlc.core.pr_review_service import (
     CURRENT_REVIEW_PATH,
     PRReviewCommandStatus,
     PRReviewStartOptions,
+    PRReviewStartResult,
     close_pr_review,
     doctor_pr_review,
     fix_pr_review,
@@ -791,27 +792,36 @@ def test_close_blocks_tampered_reviewer_findings(tmp_path) -> None:
 
 
 def test_close_downgrades_incomplete_review_waiver_from_fully_clean(tmp_path) -> None:
-    base_commit = _init_repo(tmp_path)
-    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
-    start = start_pr_review(
-        PRReviewStartOptions(
-            root=tmp_path,
-            base_ref=base_commit,
-            provider_id="mock-reviewer",
-            review_id="review-incomplete-waiver",
-            mock_fixture=MockReviewerFixture.CLEAN,
-        )
+    start = _start_clean_review_with_omitted_file_waiver(
+        tmp_path,
+        review_id="review-incomplete-waiver",
+    )
+
+    result = close_pr_review(tmp_path)
+
+    assert start.omitted_files_count == 1
+    assert result.status == PRReviewCommandStatus.CLOSED
+    assert result.verdict == "risk_accepted"
+    assert result.unresolved_required == 0
+
+
+def test_close_blocks_tampered_review_pack_policy_decision(tmp_path) -> None:
+    start = _start_clean_review_with_omitted_file_waiver(
+        tmp_path,
+        review_id="review-tampered-pack-waiver",
     )
     pack_path = Path(start.review_pack_path)
     pack = json.loads(pack_path.read_text(encoding="utf-8"))
-    pack["policy_decisions"]["incomplete_review_waiver"] = True
+    assert pack["policy_decisions"]["incomplete_review_waiver"] is True
+    pack["policy_decisions"]["incomplete_review_waiver"] = False
     pack_path.write_text(json.dumps(pack), encoding="utf-8")
 
     result = close_pr_review(tmp_path)
 
-    assert result.status == PRReviewCommandStatus.CLOSED
-    assert result.verdict == "risk_accepted"
-    assert result.unresolved_required == 0
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.verdict == "blocked"
+    assert "review-pack.json changed" in result.blocker
+    assert "Rerun PR review" in result.next_action
 
 
 def test_close_blocks_when_provider_verdict_is_blocked(tmp_path) -> None:
@@ -1411,6 +1421,34 @@ def _refresh_current_findings_digest(root: Path) -> None:
         findings_path.read_bytes()
     ).hexdigest()
     review_run_path.write_text(json.dumps(review_run), encoding="utf-8")
+
+
+def _start_clean_review_with_omitted_file_waiver(
+    path: Path,
+    *,
+    review_id: str,
+) -> PRReviewStartResult:
+    _init_repo(path)
+    _write_loop_policy(path, "allowed_omitted_file_policy: allow-with-waiver\n")
+    _git(path, "add", ".ai-sdlc/project/config/loop-policy.yaml")
+    _git(path, "commit", "-m", "allow omitted file waiver")
+    base_commit = _git(path, "rev-parse", "HEAD")
+    _commit_file(path, "src/app.py", "print('hello')\n", "add app")
+    _commit_file(
+        path,
+        "dist/app.generated.ts",
+        "export const generated = true;\n",
+        "add generated bundle",
+    )
+    return start_pr_review(
+        PRReviewStartOptions(
+            root=path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id=review_id,
+            mock_fixture=MockReviewerFixture.CLEAN,
+        )
+    )
 
 
 def _write_clean_reviewer_script(path: Path) -> Path:

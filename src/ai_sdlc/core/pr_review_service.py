@@ -1073,6 +1073,16 @@ def _reviewer_outputs_tamper_blocker(
     review_run: ReviewRun,
     findings: ReviewFindings,
 ) -> str:
+    if not review_run.review_pack_digest.strip():
+        return "Current review-pack.json cannot be verified because its digest is missing."
+    review_pack_path = _resolve_repo_path(root, review_run.review_pack_path)
+    try:
+        actual_pack_digest = _file_sha256(review_pack_path)
+    except OSError as exc:
+        return f"Current review-pack.json cannot be verified: {exc}"
+    if actual_pack_digest != review_run.review_pack_digest:
+        return "Current review-pack.json changed after the reviewer run."
+
     if review_run.findings_digest.strip():
         findings_path = _resolve_repo_path(root, review_run.findings_path)
         try:
@@ -1477,6 +1487,9 @@ def _write_review_run(
         head_commit=review_pack.head_commit if review_pack else "",
         provider_command=options.provider_command,
         review_pack_path=_repo_relative_path(root, Path(pack_result.review_pack_path)),
+        review_pack_digest=_file_sha256(Path(pack_result.review_pack_path))
+        if pack_result.review_pack_path and Path(pack_result.review_pack_path).is_file()
+        else "",
         findings_path=_repo_relative_path(root, findings_path) if findings_path else "",
         findings_digest=_file_sha256(findings_path)
         if findings_path and findings_path.is_file()
