@@ -378,6 +378,73 @@
 - 当前批次 worktree disposition 状态：retained（主工作区继续承载当前仓库）
 - **是否继续下一批**：否；等待本批复验、提交、push、Codex re-review 与 PR checks 收口。
 
+### Batch 2026-06-29-010 | T010
+
+#### 2.53 准备
+
+- **任务来源**：PR #103 Codex review comment `discussion_r3489780945`
+- **目标**：修正 WI-189 active checkpoint 的阶段状态，避免未来恢复时从 `close` 阶段直接进入收口门禁。
+- **预读范围**：`.ai-sdlc/state/checkpoint.yml`、`src/ai_sdlc/core/reconcile.py`、`specs/189-loop-engine-local-adversarial-pr-review/tasks.md`
+- **激活的规则**：active checkpoint stage consistency；truth-only verification profile；program truth snapshot。
+- **验证画像**：`truth-only`
+- **改动范围**：`.ai-sdlc/state/checkpoint.yml`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`、`program-manifest.yaml`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/work-items/189-loop-engine-local-adversarial-pr-review/codex-handoff.md`
+
+#### 2.54 统一验证命令
+
+- `V1`（文档检查）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V2`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`
+- `V3`（恢复路径预演）
+  - 命令：`uv run ai-sdlc run --dry-run`
+  - 结果：预期未完全通过；dry-run 从 `execute` 开始并继续检查 close gate，最终因 `development-summary.md not found` 以 open gate 退出，未再出现“从 close 直接恢复”的错误路径。
+- `V4`（program truth snapshot 刷新）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过；写入 `program-manifest.yaml`，snapshot state 为 `migration_pending`。
+- `V5`（program truth snapshot 只读预检）
+  - 命令：`uv run ai-sdlc program truth sync --dry-run`
+  - 结果：通过；dry-run 输出 snapshot state 为 `migration_pending`。
+
+#### 2.55 任务记录
+
+##### Task review-remediation | 重置 WI-189 checkpoint 阶段
+
+- **改动范围**：`.ai-sdlc/state/checkpoint.yml`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`、`program-manifest.yaml`
+- **改动内容**：
+  - 将 WI-189 active checkpoint 的 `current_stage` 从 `close` 调整为 `execute`，与 artifact probe 对当前 spec/plan/tasks/execution-log 的建议阶段一致。
+  - 移除从旧工作项继承来的 `execute / close` completed stage 历史，只保留当前 PRD/plan/tasks/verification artifact 已完成对应的 `init / refine / design / decompose / verify`。
+  - 保留 `execute_progress.completed_batches: 0`，使未来实现授权后不会被误判为已执行或可 close。
+  - 最终日志稳定后刷新 `program-manifest.yaml` 的 persisted `truth_snapshot`。
+- **新增/调整的测试**：无产品代码测试；复用 dry-run、约束与 truth snapshot 验证。
+- **执行的命令**：见 V1 ~ V5。
+- **测试结果**：V1、V2、V3、V4、V5 均已执行；最终提交前将再执行一次 `program truth sync --execute --yes`，确保 persisted snapshot 对应稳定后的执行日志与 checkpoint。
+- **是否符合任务目标**：符合 checkpoint stage remediation 目标；恢复路径已从 close-only 改为 execute-first dry-run。
+
+#### 2.56 代码审查（摘要）
+
+- **审查来源**：PR #103 Codex review。
+- **发现**：checkpoint 已关联 WI-189，但 `current_stage: close` 与 `execute_progress.completed_batches: 0` 冲突，恢复时可能直接进入 close gate。
+- **处置**：将 current stage 重置为 `execute`，保留当前工作项自己的 verify completed-stage，并清理旧工作项的 execute/close completed-stage 历史。
+- **结论**：待 V1 ~ V5 通过后提交、push 并重新请求 Codex review。
+
+#### 2.57 任务/计划同步状态
+
+- `spec.md` 同步状态：已冻结，未修改。
+- `plan.md` 同步状态：已对账，未修改。
+- `tasks.md` 同步状态：已对账，未修改；仍为 machine-readable executable task blocks，全部实现任务保持 todo。
+- `task-execution-log.md` 同步状态：已记录 checkpoint stage remediation。
+- 关联 branch/worktree disposition 计划：PR #103 merge carrier，目标 disposition 为 merge 后删除远端分支。
+
+#### 2.58 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`见包含本行的本批最终提交 SHA（git log -1 --format=%H）`
+- 当前批次 branch disposition 状态：PR #103 merge carrier（待 checks/review 通过后合并）
+- 当前批次 worktree disposition 状态：retained（主工作区继续承载当前仓库）
+- **是否继续下一批**：否；等待本批复验、提交、push、Codex re-review 与 PR checks 收口。
+
 ### Batch 2026-06-29-008 | T008
 
 #### 2.41 准备
