@@ -1859,6 +1859,9 @@ specs:
   depends_on:
   - 073-frontend-p2-provider-style-solution-baseline
   - 143-frontend-mainline-browser-gate-real-probe-runtime-baseline
+- id: 189-loop-engine-local-adversarial-pr-review
+  path: specs/189-loop-engine-local-adversarial-pr-review
+  depends_on: []
 truth_snapshot:
   generated_at: '2026-06-02T04:02:26Z'
   generated_by: ai-sdlc program truth sync
