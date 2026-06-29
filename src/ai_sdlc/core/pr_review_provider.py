@@ -120,6 +120,25 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
     schema_validation_path = review_dir / "schema-validation.json"
     argv = _expand_command(options.command, review_pack, options.review_pack_path, findings_path)
     _remove_previous_provider_outputs(findings_path, schema_validation_path)
+    dirty_blocker = _preexisting_dirty_worktree_blocker(
+        root,
+        frozenset(
+            {
+                review_dir.resolve(),
+                (review_dir.parent / "current-review.json").resolve(),
+                *_provider_command_entry_paths(root, argv),
+            }
+        ),
+    )
+    if dirty_blocker:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            findings_path=str(findings_path),
+            blocker=dirty_blocker,
+            next_action=(
+                "Commit or discard unreviewed worktree changes, then rerun PR review."
+            ),
+        )
     mutable_provider_outputs = frozenset({findings_path.resolve()})
     before_snapshot = _worktree_snapshot(root, mutable_provider_outputs)
 
@@ -446,6 +465,96 @@ def _remove_previous_provider_outputs(*paths: Path) -> None:
             path.unlink()
         except FileNotFoundError:
             continue
+
+
+def _preexisting_dirty_worktree_blocker(
+    root: Path,
+    allowed_artifact_roots: frozenset[Path],
+) -> str:
+    dirty_paths = _dirty_worktree_paths(root, allowed_artifact_roots)
+    if not dirty_paths:
+        return ""
+    sample = ", ".join(dirty_paths[:5])
+    return (
+        "Local reviewer cannot run with pre-existing unreviewed worktree changes"
+        + (f": {sample}" if sample else ".")
+    )
+
+
+def _dirty_worktree_paths(
+    root: Path,
+    allowed_artifact_roots: frozenset[Path],
+) -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=30,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return []
+    if result.returncode != 0:
+        return []
+
+    dirty: list[str] = []
+    for _status_code, rel_path in _iter_porcelain_entries(result.stdout):
+        normalized = rel_path.replace("\\", "/")
+        if not normalized or _is_allowed_review_artifact(
+            root,
+            allowed_artifact_roots,
+            normalized,
+        ):
+            continue
+        dirty.append(normalized)
+    return sorted(dirty)
+
+
+def _provider_command_entry_paths(root: Path, argv: list[str]) -> list[Path]:
+    if not argv:
+        return []
+    candidates = [argv[0]]
+    if len(argv) > 1 and _looks_like_python_executable(argv[0]):
+        candidates.append(argv[1])
+
+    allowed: list[Path] = []
+    root = root.resolve()
+    for candidate in candidates:
+        path = Path(candidate)
+        if not path.is_absolute():
+            path = root / path
+        try:
+            resolved = path.resolve()
+            resolved.relative_to(root)
+        except (OSError, ValueError):
+            continue
+        if resolved.exists():
+            allowed.append(resolved)
+    return allowed
+
+
+def _looks_like_python_executable(command: str) -> bool:
+    name = Path(command).name.lower()
+    return name == "python" or name.startswith("python") or name.startswith("python3")
+
+
+def _is_allowed_review_artifact(
+    root: Path,
+    allowed_artifact_roots: frozenset[Path],
+    rel_path: str,
+) -> bool:
+    try:
+        path = (root / rel_path).resolve()
+    except OSError:
+        return False
+    return any(
+        path == allowed_root or allowed_root in path.parents
+        for allowed_root in allowed_artifact_roots
+    )
 
 
 def _worktree_mutation_blocker(

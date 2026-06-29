@@ -1351,6 +1351,9 @@ def test_rerun_preserves_code_egress_confirmation(tmp_path) -> None:
         ),
         encoding="utf-8",
     )
+    _git(tmp_path, "add", ".ai-sdlc/project/config/loop-policy.yaml")
+    _git(tmp_path, "commit", "-m", "set remote model policy")
+    base_commit = _git(tmp_path, "rev-parse", "HEAD")
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
     script = _write_clean_reviewer_script(tmp_path)
     start_pr_review(

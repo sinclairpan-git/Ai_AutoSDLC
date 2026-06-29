@@ -144,6 +144,29 @@ def test_local_agent_blocks_when_reviewed_head_is_not_checked_out(tmp_path) -> N
     assert result.invocation_path == ""
 
 
+def test_local_agent_blocks_preexisting_dirty_worktree(tmp_path) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('reviewed')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "reviewed head")
+    review_pack_path = _write_review_pack(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('unreviewed')\n")
+    script = _write_reviewer_script(tmp_path, exit_code=0, verdict="clean")
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "pre-existing unreviewed worktree changes" in result.blocker
+    assert "src/app.py" in result.blocker
+    assert result.invocation_path == ""
+
+
 def test_local_agent_blocks_when_findings_output_is_missing(tmp_path) -> None:
     review_pack_path = _write_review_pack(tmp_path)
     script = tmp_path / "no_output.py"
@@ -622,6 +645,8 @@ def test_local_agent_blocks_when_reviewer_mutates_dirty_path_with_space(
     _git(tmp_path, "add", "src/app.py")
     _git(tmp_path, "commit", "-m", "initial")
     _write_file(tmp_path, "file with space.txt", "before\n")
+    _git(tmp_path, "add", "file with space.txt")
+    _git(tmp_path, "commit", "-m", "add spaced file")
     review_pack_path = _write_review_pack(tmp_path)
     script = tmp_path / "space_path_mutating_reviewer.py"
     script.write_text(
