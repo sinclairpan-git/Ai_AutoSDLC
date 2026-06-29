@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -373,7 +374,7 @@ def _worktree_snapshot(root: Path, review_dir: Path) -> dict[str, str]:
         status_code = line[:2]
         path = root / normalized
         if status_code == "!!" and path.is_dir():
-            snapshot[normalized] = f"{status_code}:ignored-dir"
+            snapshot[normalized] = f"{status_code}:{_ignored_dir_digest(path)}"
             continue
         snapshot[normalized] = f"{status_code}:{_path_digest(path)}"
     return snapshot
@@ -442,6 +443,43 @@ def _path_digest(path: Path) -> str:
         return hashlib.sha256(path.read_bytes()).hexdigest()
     except OSError:
         return "unreadable"
+
+
+def _ignored_dir_digest(path: Path, *, max_entries: int = 4096) -> str:
+    if not path.exists():
+        return "missing"
+    digest = hashlib.sha256()
+    entries_seen = 0
+    pending = [path]
+    while pending and entries_seen < max_entries:
+        current = pending.pop(0)
+        try:
+            entries = sorted(os.scandir(current), key=lambda entry: entry.name)
+        except OSError:
+            digest.update(f"unreadable:{current}\0".encode())
+            continue
+        for entry in entries:
+            entries_seen += 1
+            child = Path(entry.path)
+            try:
+                relative = child.relative_to(path).as_posix()
+                stat = entry.stat(follow_symlinks=False)
+                is_dir = entry.is_dir(follow_symlinks=False)
+            except OSError:
+                digest.update(f"unreadable:{entry.name}\0".encode())
+                continue
+            kind = "D" if is_dir else "F"
+            digest.update(
+                f"{kind}:{relative}:{stat.st_size}:{stat.st_mtime_ns}\0".encode()
+            )
+            if is_dir:
+                pending.append(child)
+            if entries_seen >= max_entries:
+                digest.update(b"truncated")
+                break
+    if pending:
+        digest.update(b"truncated")
+    return digest.hexdigest()
 
 
 def _load_review_pack(path: Path) -> ReviewPack:

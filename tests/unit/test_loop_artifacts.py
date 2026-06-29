@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 
+import pytest
 import yaml
 
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
@@ -21,6 +22,16 @@ def test_artifact_store_creates_required_loop_and_review_directories(tmp_path) -
     assert review_dir == tmp_path / ".ai-sdlc" / "reviews" / "pr" / "review-001"
     assert loop_dir.is_dir()
     assert review_dir.is_dir()
+
+
+def test_artifact_store_rejects_unsafe_identifiers(tmp_path) -> None:
+    store = LoopArtifactStore(tmp_path)
+
+    for value in ("../escape", "/tmp/review", r"C:\tmp\review", "", "."):
+        with pytest.raises(ValueError, match="Unsafe artifact identifier"):
+            store.create_review_run_dir(value)
+        with pytest.raises(ValueError, match="Unsafe artifact identifier"):
+            store.create_loop_run_dir(value)
 
 
 def test_write_json_artifact_serializes_pydantic_model(tmp_path) -> None:

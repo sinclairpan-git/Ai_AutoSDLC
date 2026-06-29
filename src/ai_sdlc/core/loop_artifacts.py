@@ -26,12 +26,16 @@ class LoopArtifactStore:
     def loop_run_dir(self, loop_id: str, *, loop_type: str = "local-pr-review") -> Path:
         """Return the stable directory for one loop run."""
 
-        return self.root / AI_SDLC_DIR / "loops" / loop_type / loop_id
+        loop_type_dir = _artifact_child_dir(
+            self.root / AI_SDLC_DIR / "loops",
+            loop_type,
+        )
+        return _artifact_child_dir(loop_type_dir, loop_id)
 
     def review_run_dir(self, review_id: str) -> Path:
         """Return the stable directory for one local PR review run."""
 
-        return self.root / AI_SDLC_DIR / "reviews" / "pr" / review_id
+        return _artifact_child_dir(self.root / AI_SDLC_DIR / "reviews" / "pr", review_id)
 
     def create_loop_run_dir(
         self,
@@ -92,6 +96,26 @@ def _payload_to_data(payload: BaseModel | dict[str, Any]) -> dict[str, Any]:
     else:
         data = payload
     return dict(data)
+
+
+def _artifact_child_dir(base: Path, identifier: str) -> Path:
+    text = identifier.strip()
+    if (
+        not text
+        or text in {".", ".."}
+        or "/" in text
+        or "\\" in text
+        or ":" in text
+    ):
+        raise ValueError(f"Unsafe artifact identifier: {identifier!r}")
+    path = base / text
+    base_resolved = base.resolve(strict=False)
+    path_resolved = path.resolve(strict=False)
+    try:
+        path_resolved.relative_to(base_resolved)
+    except ValueError as exc:
+        raise ValueError(f"Unsafe artifact identifier: {identifier!r}") from exc
+    return path
 
 
 def _atomic_write_text(path: Path, content: str) -> Path:

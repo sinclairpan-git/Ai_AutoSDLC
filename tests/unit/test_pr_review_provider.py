@@ -503,6 +503,62 @@ def test_local_agent_snapshot_does_not_hash_ignored_directories(
     assert result.status == ProviderRunStatus.SUCCESS
 
 
+def test_local_agent_blocks_mutation_inside_ignored_directory(tmp_path) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, ".gitignore", "node_modules/\n")
+    _write_file(tmp_path, "src/app.py", "print('before')\n")
+    _write_file(tmp_path, "node_modules/pkg/index.js", "console.log('before')\n")
+    _git(tmp_path, "add", ".gitignore", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    review_pack_path = _write_review_pack(tmp_path)
+    script = tmp_path / "mutate_ignored_dir.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import argparse, json, pathlib",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--review-pack', required=True)",
+                "parser.add_argument('--output', required=True)",
+                "parser.add_argument('--model')",
+                "parser.add_argument('--resolved-model')",
+                "parser.add_argument('--allowlist', nargs='*', default=[])",
+                "args = parser.parse_args()",
+                "pathlib.Path('node_modules/pkg/index.js').write_text(",
+                "  \"console.log('after mutation with longer content')\\n\",",
+                "  encoding='utf-8'",
+                ")",
+                "pack = json.load(open(args.review_pack, encoding='utf-8'))",
+                "payload = {",
+                "  'schema_version': '1',",
+                "  'artifact_kind': 'review-findings',",
+                "  'review_id': pack['review_id'],",
+                "  'loop_id': pack['loop_id'],",
+                "  'review_pack_path': args.review_pack,",
+                "  'provider_id': 'local-agent',",
+                "  'model_selector': args.model,",
+                "  'resolved_model': args.resolved_model,",
+                "  'verdict': 'clean',",
+                "  'findings': []",
+                "}",
+                "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "modified files outside the review artifact directory" in result.blocker
+    assert "node_modules" in result.blocker
+
+
 def test_local_agent_blocks_when_reviewer_commits_worktree_mutation(tmp_path) -> None:
     _init_git_repo(tmp_path)
     _write_file(tmp_path, "src/app.py", "print('before')\n")
