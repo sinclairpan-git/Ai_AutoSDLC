@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -140,25 +141,25 @@ def _write_local_pr_review(
     final_report.write_text(f"# Final\n\nverdict: {verdict}\n", encoding="utf-8")
     review_run_path = review_dir / "review-run.json"
     review_run_path.write_text(
-        (
-            "{"
-            f"\"review_id\":\"{review_id}\","
-            f"\"verdict\":\"{verdict}\","
-            f"\"final_report_path\":\"{final_report}\","
-            f"\"unresolved_blockers\":{unresolved_blockers},"
-            f"\"unresolved_required\":{unresolved_required},"
-            f"\"head_commit\":\"{head_commit}\""
-            "}"
+        json.dumps(
+            {
+                "review_id": review_id,
+                "verdict": verdict,
+                "final_report_path": str(final_report),
+                "unresolved_blockers": unresolved_blockers,
+                "unresolved_required": unresolved_required,
+                "head_commit": head_commit,
+            }
         ),
         encoding="utf-8",
     )
     pointer = root / ".ai-sdlc" / "reviews" / "pr" / "current-review.json"
     pointer.write_text(
-        (
-            "{"
-            f"\"review_id\":\"{review_id}\","
-            f"\"review_run_path\":\"{review_run_path}\""
-            "}"
+        json.dumps(
+            {
+                "review_id": review_id,
+                "review_run_path": str(review_run_path),
+            }
         ),
         encoding="utf-8",
     )
