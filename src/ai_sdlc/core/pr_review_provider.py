@@ -359,7 +359,12 @@ def _worktree_snapshot(root: Path, review_dir: Path) -> dict[str, str]:
         normalized = rel_path.strip().replace("\\", "/")
         if not normalized or _is_allowed_review_artifact(root, review_dir, normalized):
             continue
-        snapshot[normalized] = f"{line[:2]}:{_path_digest(root / normalized)}"
+        status_code = line[:2]
+        path = root / normalized
+        if status_code == "!!" and path.is_dir():
+            snapshot[normalized] = f"{status_code}:ignored-dir"
+            continue
+        snapshot[normalized] = f"{status_code}:{_path_digest(path)}"
     return snapshot
 
 

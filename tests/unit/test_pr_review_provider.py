@@ -7,6 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+from ai_sdlc.core import pr_review_provider
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
 from ai_sdlc.core.pr_review_models import (
     ModelResolutionSource,
@@ -297,6 +298,38 @@ def test_local_agent_blocks_when_reviewer_mutates_ignored_file(tmp_path) -> None
     assert ".env" in result.blocker
 
 
+def test_local_agent_snapshot_does_not_hash_ignored_directories(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, ".gitignore", "node_modules/\n")
+    _write_file(tmp_path, "src/app.py", "print('before')\n")
+    _write_file(tmp_path, "node_modules/pkg/index.js", "console.log('ignored')\n")
+    _git(tmp_path, "add", ".gitignore", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    review_pack_path = _write_review_pack(tmp_path)
+    script = _write_reviewer_script(tmp_path, exit_code=0, verdict="clean")
+    original_path_digest = pr_review_provider._path_digest
+
+    def fail_for_ignored_dir(path: Path) -> str:
+        if path.is_dir() and path.name == "node_modules":
+            raise AssertionError("ignored directories must not be recursively hashed")
+        return original_path_digest(path)
+
+    monkeypatch.setattr(pr_review_provider, "_path_digest", fail_for_ignored_dir)
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.SUCCESS
+
+
 def test_local_agent_blocks_when_reviewer_commits_worktree_mutation(tmp_path) -> None:
     _init_git_repo(tmp_path)
     _write_file(tmp_path, "src/app.py", "print('before')\n")
@@ -459,8 +492,29 @@ def _git(path: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
-def _write_reviewer_script(tmp_path: Path, *, exit_code: int) -> Path:
+def _write_reviewer_script(
+    tmp_path: Path,
+    *,
+    exit_code: int,
+    verdict: str = "changes_required",
+) -> Path:
     script = tmp_path / "reviewer.py"
+    finding_lines = (
+        ["  'findings': []"]
+        if verdict == "clean"
+        else [
+            "  'findings': [{",
+            "    'id': 'LOCAL-001',",
+            "    'severity': 'REQUIRED',",
+            "    'file': 'src/app.py',",
+            "    'claim': 'Focused fixture finding.',",
+            "    'evidence': 'The local command fixture ran.',",
+            "    'risk': 'Fixture risk.',",
+            "    'suggested_fix': 'Fix the fixture finding.',",
+            "    'confidence': 0.8",
+            "  }]",
+        ]
+    )
     script.write_text(
         "\n".join(
             [
@@ -482,17 +536,8 @@ def _write_reviewer_script(tmp_path: Path, *, exit_code: int) -> Path:
                 "  'provider_id': 'local-agent',",
                 "  'model_selector': args.model,",
                 "  'resolved_model': args.resolved_model,",
-                "  'verdict': 'changes_required',",
-                "  'findings': [{",
-                "    'id': 'LOCAL-001',",
-                "    'severity': 'REQUIRED',",
-                "    'file': 'src/app.py',",
-                "    'claim': 'Focused fixture finding.',",
-                "    'evidence': 'The local command fixture ran.',",
-                "    'risk': 'Fixture risk.',",
-                "    'suggested_fix': 'Fix the fixture finding.',",
-                "    'confidence': 0.8",
-                "  }]",
+                f"  'verdict': '{verdict}',",
+                *finding_lines,
                 "}",
                 "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
                 f"sys.exit({exit_code})",

@@ -97,6 +97,7 @@ def analyze_redaction(
     code_egress: bool = False,
     code_egress_confirmed: bool = False,
     max_file_bytes: int = 1_000_000,
+    head_file_bytes: dict[str, bytes] | None = None,
     deleted_file_bytes: dict[str, bytes] | None = None,
 ) -> RedactionReport:
     """Analyze changed files and return a redaction report."""
@@ -106,11 +107,15 @@ def analyze_redaction(
         _normalize_repo_path(path): content
         for path, content in (deleted_file_bytes or {}).items()
     }
+    head_blobs = {
+        _normalize_repo_path(path): content for path, content in (head_file_bytes or {}).items()
+    }
     decisions = [
         _analyze_file(
             root,
             file_path,
             max_file_bytes=max_file_bytes,
+            head_blob=head_blobs.get(_normalize_repo_path(file_path)),
             deleted_blob=deleted_blobs.get(_normalize_repo_path(file_path)),
         )
         for file_path in changed_files
@@ -181,6 +186,7 @@ def _analyze_file(
     file_path: str,
     *,
     max_file_bytes: int,
+    head_blob: bytes | None = None,
     deleted_blob: bytes | None = None,
 ) -> RedactionFileDecision:
     normalized = _normalize_repo_path(file_path)
@@ -199,9 +205,15 @@ def _analyze_file(
             reason=RedactionReason.SECRET_PATH,
             high_risk=True,
         )
+    if head_blob is not None:
+        return _analyze_blob(
+            normalized,
+            head_blob,
+            max_file_bytes=max_file_bytes,
+        )
     if not absolute_path.exists():
         if deleted_blob is not None:
-            return _analyze_deleted_blob(
+            return _analyze_blob(
                 normalized,
                 deleted_blob,
                 max_file_bytes=max_file_bytes,
@@ -259,7 +271,7 @@ def _analyze_file(
     )
 
 
-def _analyze_deleted_blob(
+def _analyze_blob(
     path: str,
     raw: bytes,
     *,

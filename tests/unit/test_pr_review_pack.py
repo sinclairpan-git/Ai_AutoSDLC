@@ -170,6 +170,37 @@ def test_build_review_pack_omits_redacted_files_from_reviewer_allowlist(
     assert "settings.py" not in Path(result.diff_path).read_text(encoding="utf-8")
 
 
+def test_build_review_pack_redacts_reviewed_head_blob_not_dirty_worktree(
+    tmp_path,
+) -> None:
+    base_commit = _init_repo_with_base_commit(tmp_path)
+    _commit_file(
+        tmp_path,
+        "src/settings.py",
+        'token = "abcdefghijklmnop"\n',
+        "add secret settings",
+    )
+    _write_file(tmp_path, "src/settings.py", "token = 'safe'\n")
+
+    result = build_review_pack(
+        ReviewPackBuildOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            review_id="review-head-blob",
+            loop_id="loop-head-blob",
+            current_model="gpt-5",
+            code_egress=True,
+            code_egress_confirmed=True,
+        )
+    )
+
+    assert result.status == ReviewPackBuildStatus.READY
+    assert result.redacted_files_count == 1
+    assert result.review_pack is not None
+    assert result.review_pack.reviewer_allowlist == []
+    assert "settings.py" not in Path(result.diff_path).read_text(encoding="utf-8")
+
+
 def test_build_review_pack_includes_safe_deletion_hunks(tmp_path) -> None:
     _init_repo_with_base_commit(tmp_path)
     _commit_file(tmp_path, "src/old.py", "print('remove me')\n", "add old")
