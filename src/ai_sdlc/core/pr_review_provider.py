@@ -110,7 +110,8 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
     schema_validation_path = review_dir / "schema-validation.json"
     argv = _expand_command(options.command, review_pack, options.review_pack_path, findings_path)
     _remove_previous_provider_outputs(findings_path, schema_validation_path)
-    before_snapshot = _worktree_snapshot(root, review_dir)
+    mutable_provider_outputs = frozenset({findings_path.resolve()})
+    before_snapshot = _worktree_snapshot(root, mutable_provider_outputs)
 
     try:
         process = subprocess.run(
@@ -126,7 +127,7 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
         exit_code: int | None = process.returncode
         mutation_blocker = _worktree_mutation_blocker(
             root,
-            review_dir,
+            mutable_provider_outputs,
             before_snapshot,
         )
     except FileNotFoundError:
@@ -348,22 +349,22 @@ def _remove_previous_provider_outputs(*paths: Path) -> None:
 
 def _worktree_mutation_blocker(
     root: Path,
-    review_dir: Path,
+    mutable_provider_outputs: frozenset[Path],
     before: dict[str, str],
 ) -> str:
-    after = _worktree_snapshot(root, review_dir)
+    after = _worktree_snapshot(root, mutable_provider_outputs)
     if after == before:
         return ""
     changed = sorted(set(before) ^ set(after))
     changed.extend(sorted(path for path in before.keys() & after.keys() if before[path] != after[path]))
     sample = ", ".join(changed[:5])
     return (
-        "Reviewer command modified files outside the review artifact directory"
+        "Reviewer command modified files outside expected provider output artifacts"
         + (f": {sample}" if sample else ".")
     )
 
 
-def _worktree_snapshot(root: Path, review_dir: Path) -> dict[str, str]:
+def _worktree_snapshot(root: Path, mutable_provider_outputs: frozenset[Path]) -> dict[str, str]:
     try:
         result = subprocess.run(
             [
@@ -394,7 +395,9 @@ def _worktree_snapshot(root: Path, review_dir: Path) -> dict[str, str]:
         if " -> " in rel_path:
             rel_path = rel_path.split(" -> ", 1)[1]
         normalized = rel_path.strip().replace("\\", "/")
-        if not normalized or _is_allowed_review_artifact(root, review_dir, normalized):
+        if not normalized or _is_mutable_provider_output(
+            root, mutable_provider_outputs, normalized
+        ):
             continue
         status_code = line[:2]
         path = root / normalized
@@ -431,13 +434,14 @@ def _git_head_index_snapshot(root: Path) -> dict[str, str]:
     return snapshot
 
 
-def _is_allowed_review_artifact(root: Path, review_dir: Path, rel_path: str) -> bool:
+def _is_mutable_provider_output(
+    root: Path, mutable_provider_outputs: frozenset[Path], rel_path: str
+) -> bool:
     try:
         path = (root / rel_path).resolve()
-        path.relative_to(review_dir.resolve())
-    except ValueError:
+    except OSError:
         return False
-    return True
+    return path in mutable_provider_outputs
 
 
 def _path_digest(path: Path) -> str:

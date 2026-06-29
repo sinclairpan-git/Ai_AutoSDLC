@@ -167,6 +167,12 @@ def test_start_local_agent_without_command_returns_needs_user(tmp_path) -> None:
     assert "not configured" in result.blocker
     assert result.review_pack_path
 
+    close = close_pr_review(tmp_path)
+    assert close.status == PRReviewCommandStatus.NEEDS_USER
+    assert close.verdict == "blocked"
+    assert "not closeable" in close.blocker
+    assert close.final_report_path == ""
+
 
 def test_doctor_blocks_unknown_base_ref_without_writing_artifacts(tmp_path) -> None:
     _init_repo(tmp_path)

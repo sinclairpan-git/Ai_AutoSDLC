@@ -691,6 +691,9 @@ def close_pr_review(
 
     try:
         review_run, review_run_path = _load_current_review_run(root)
+        not_closeable = _not_closeable_review_result(review_run)
+        if not_closeable is not None:
+            return not_closeable
         findings = _load_findings(review_run)
         review_pack = _load_review_pack(review_run.review_pack_path)
     except FileNotFoundError as exc:
@@ -820,6 +823,27 @@ def close_pr_review(
         unresolved_advisory=unresolved[FindingSeverity.ADVISORY],
         blocker=blocker,
         next_action=next_action,
+    )
+
+
+def _not_closeable_review_result(review_run: ReviewRun) -> PRReviewCloseResult | None:
+    if review_run.status != LoopStatus.NEEDS_USER and review_run.findings_path.strip():
+        return None
+    command_status = _status_from_loop_status(review_run.status)
+    if command_status not in {PRReviewCommandStatus.NEEDS_USER, PRReviewCommandStatus.BLOCKED}:
+        command_status = PRReviewCommandStatus.BLOCKED
+    return PRReviewCloseResult(
+        status=command_status,
+        review_id=review_run.review_id,
+        verdict=ReviewVerdict.BLOCKED,
+        unresolved_blockers=review_run.unresolved_blockers,
+        unresolved_required=review_run.unresolved_required,
+        unresolved_advisory=review_run.unresolved_advisory,
+        blocker=(
+            "Current PR review is not closeable because the provider run status "
+            f"is {review_run.status}."
+        ),
+        next_action=review_run.next_action or "Resolve the provider run and rerun PR review.",
     )
 
 
@@ -1274,8 +1298,10 @@ def _load_current_review_run(root: Path) -> tuple[ReviewRun, Path]:
 
 
 def _load_findings(review_run: ReviewRun) -> ReviewFindings:
+    if not review_run.findings_path.strip():
+        raise FileNotFoundError("Current findings.json is missing.")
     path = Path(review_run.findings_path)
-    if not path.exists():
+    if not path.is_file():
         raise FileNotFoundError("Current findings.json is missing.")
     return ReviewFindings.model_validate(json.loads(path.read_text(encoding="utf-8")))
 
