@@ -98,15 +98,20 @@ def analyze_redaction(
     code_egress_confirmed: bool = False,
     max_file_bytes: int = 1_000_000,
     head_file_bytes: dict[str, bytes] | None = None,
+    base_file_bytes: dict[str, bytes] | None = None,
     deleted_file_bytes: dict[str, bytes] | None = None,
 ) -> RedactionReport:
     """Analyze changed files and return a redaction report."""
 
     resolved_policy = policy or LoopPolicyProfile()
-    deleted_blobs = {
+    base_blobs = {
+        _normalize_repo_path(path): content
+        for path, content in (base_file_bytes or {}).items()
+    }
+    base_blobs.update({
         _normalize_repo_path(path): content
         for path, content in (deleted_file_bytes or {}).items()
-    }
+    })
     head_blobs = {
         _normalize_repo_path(path): content for path, content in (head_file_bytes or {}).items()
     }
@@ -116,7 +121,7 @@ def analyze_redaction(
             file_path,
             max_file_bytes=max_file_bytes,
             head_blob=head_blobs.get(_normalize_repo_path(file_path)),
-            deleted_blob=deleted_blobs.get(_normalize_repo_path(file_path)),
+            base_blob=base_blobs.get(_normalize_repo_path(file_path)),
         )
         for file_path in changed_files
     ]
@@ -187,7 +192,7 @@ def _analyze_file(
     *,
     max_file_bytes: int,
     head_blob: bytes | None = None,
-    deleted_blob: bytes | None = None,
+    base_blob: bytes | None = None,
 ) -> RedactionFileDecision:
     normalized = _normalize_repo_path(file_path)
     absolute_path = (root / normalized).resolve()
@@ -206,16 +211,26 @@ def _analyze_file(
             high_risk=True,
         )
     if head_blob is not None:
-        return _analyze_blob(
+        head_decision = _analyze_blob(
             normalized,
             head_blob,
             max_file_bytes=max_file_bytes,
         )
+        if base_blob is None:
+            return head_decision
+        return _combine_blob_decisions(
+            head_decision,
+            _analyze_blob(
+                normalized,
+                base_blob,
+                max_file_bytes=max_file_bytes,
+            ),
+        )
     if not absolute_path.exists():
-        if deleted_blob is not None:
+        if base_blob is not None:
             return _analyze_blob(
                 normalized,
-                deleted_blob,
+                base_blob,
                 max_file_bytes=max_file_bytes,
             )
         return RedactionFileDecision(
@@ -320,6 +335,19 @@ def _analyze_blob(
         action=RedactionAction.INCLUDED,
         original_size=size,
     )
+
+
+def _combine_blob_decisions(
+    head_decision: RedactionFileDecision,
+    base_decision: RedactionFileDecision,
+) -> RedactionFileDecision:
+    for decision in (head_decision, base_decision):
+        if decision.action == RedactionAction.OMITTED:
+            return decision
+    for decision in (head_decision, base_decision):
+        if decision.action == RedactionAction.REDACTED:
+            return decision
+    return head_decision
 
 
 def _normalize_repo_path(path: str) -> str:

@@ -122,6 +122,7 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
         code_egress_confirmed=options.code_egress_confirmed,
         max_file_bytes=options.max_file_bytes,
         head_file_bytes=_git_file_blobs(root, head_commit, changed_files),
+        base_file_bytes=_git_file_blobs(root, base_commit, changed_files),
         deleted_file_bytes=_git_file_blobs(root, base_commit, deleted_files),
     )
     redaction_report_path = store.write_json_artifact(

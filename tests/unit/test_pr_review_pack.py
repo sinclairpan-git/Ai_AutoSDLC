@@ -199,6 +199,40 @@ def test_build_review_pack_redacts_reviewed_head_blob_not_dirty_worktree(
     assert result.diff_path == ""
 
 
+def test_build_review_pack_redacts_removed_base_side_secret(tmp_path) -> None:
+    _init_repo_with_base_commit(tmp_path)
+    _commit_file(
+        tmp_path,
+        "src/settings.py",
+        'token = "abcdefghijklmnop"\n',
+        "add secret settings",
+    )
+    base_commit = _git(tmp_path, "rev-parse", "HEAD")
+    _commit_file(
+        tmp_path,
+        "src/settings.py",
+        "token = 'safe'\n",
+        "remove secret settings",
+    )
+
+    result = build_review_pack(
+        ReviewPackBuildOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            review_id="review-base-secret",
+            loop_id="loop-base-secret",
+            current_model="gpt-5",
+            code_egress=True,
+            code_egress_confirmed=True,
+        )
+    )
+
+    assert result.status == ReviewPackBuildStatus.NEEDS_USER
+    assert result.redacted_files_count == 1
+    assert result.review_pack is None
+    assert result.diff_path == ""
+
+
 def test_build_review_pack_includes_safe_deletion_hunks(tmp_path) -> None:
     _init_repo_with_base_commit(tmp_path)
     _commit_file(tmp_path, "src/old.py", "print('remove me')\n", "add old")

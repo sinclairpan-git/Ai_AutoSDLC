@@ -692,7 +692,12 @@ def close_pr_review(
 def parse_provider_command(raw: str) -> list[str]:
     """Parse provider command text with shell-like quoting."""
 
-    return shlex.split(raw) if raw.strip() else []
+    if not raw.strip():
+        return []
+    parts = shlex.split(raw, posix=os.name != "nt")
+    if os.name == "nt":
+        return [_strip_wrapping_quotes(part) for part in parts]
+    return parts
 
 
 def detect_current_model() -> str:
@@ -727,7 +732,7 @@ def _preview(
         git = GitClient(root)
         git.resolve_revision(options.base_ref)
         git.resolve_revision(options.head_ref)
-        changed_files = list(git.changed_paths(options.base_ref, options.head_ref))
+        changed_files = list(_pr_changed_paths(root, options.base_ref, options.head_ref))
     except GitError as exc:
         detail = str(exc)
         checks.append(PRReviewCheck(name="git", status=PRReviewCommandStatus.BLOCKED, detail=detail))
@@ -943,6 +948,12 @@ def _pr_changed_paths(root: Path, base_ref: str, head_ref: str) -> tuple[str, ..
     git = GitClient(root)
     merge_base = git.merge_base(base_ref, head_ref)
     return git.changed_paths(merge_base, head_ref)
+
+
+def _strip_wrapping_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
 
 
 def _write_current_review(

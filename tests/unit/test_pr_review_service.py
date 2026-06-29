@@ -17,6 +17,7 @@ from ai_sdlc.core.pr_review_service import (
     close_pr_review,
     doctor_pr_review,
     fix_pr_review,
+    parse_provider_command,
     rerun_pr_review,
     start_pr_review,
     status_pr_review,
@@ -145,6 +146,32 @@ def test_doctor_blocks_unknown_base_ref_without_writing_artifacts(tmp_path) -> N
     assert result.status == PRReviewCommandStatus.BLOCKED
     assert "missing-base" in result.blocker
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
+
+
+def test_doctor_uses_merge_base_pr_scope(tmp_path) -> None:
+    _init_repo(tmp_path)
+    _git(tmp_path, "checkout", "-b", "feature")
+    _commit_file(tmp_path, "src/feature.py", "print('feature')\n", "add feature")
+    _git(tmp_path, "checkout", "main")
+    _commit_file(tmp_path, "src/base_only.py", "print('base')\n", "advance base")
+    _git(tmp_path, "checkout", "feature")
+
+    result = doctor_pr_review(
+        root=tmp_path,
+        base_ref="main",
+        provider_id="mock-reviewer",
+    )
+
+    assert result.status == PRReviewCommandStatus.READY
+    assert result.changed_files_count == 1
+
+
+def test_parse_provider_command_preserves_windows_backslashes(monkeypatch) -> None:
+    monkeypatch.setattr("ai_sdlc.core.pr_review_service.os.name", "nt")
+
+    result = parse_provider_command(r'C:\Tools\reviewer.exe --flag "two words"')
+
+    assert result == [r"C:\Tools\reviewer.exe", "--flag", "two words"]
 
 
 def test_start_blocks_unknown_base_ref_without_traceback(tmp_path) -> None:

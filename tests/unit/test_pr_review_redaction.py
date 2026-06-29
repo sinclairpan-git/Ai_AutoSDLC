@@ -53,6 +53,24 @@ def test_redaction_marks_common_secret_pattern_as_redacted(tmp_path) -> None:
     assert report.decisions[0].redacted_occurrences == 1
 
 
+def test_redaction_scans_base_blob_for_removed_secret_lines(tmp_path) -> None:
+    path = tmp_path / "src" / "settings.py"
+    path.parent.mkdir(parents=True)
+    path.write_text("token = 'safe'\n", encoding="utf-8")
+
+    report = analyze_redaction(
+        tmp_path,
+        ["src/settings.py"],
+        head_file_bytes={"src/settings.py": b"token = 'safe'\n"},
+        base_file_bytes={"src/settings.py": b'token = "abcdefghijklmnop"\n'},
+    )
+
+    assert report.redacted_files == ["src/settings.py"]
+    assert report.high_risk_secret_files == ["src/settings.py"]
+    assert report.decisions[0].action == RedactionAction.REDACTED
+    assert report.decisions[0].reason == RedactionReason.SECRET_PATTERN
+
+
 def test_redaction_omits_private_key_content(tmp_path) -> None:
     path = tmp_path / "src" / "fixture.txt"
     path.parent.mkdir(parents=True)
