@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from pathlib import Path
@@ -97,6 +98,47 @@ def test_local_pr_review_close_check_blocks_invalid_review_run_schema(
     assert summary["ok"] is False
     assert "invalid" in summary["detail"]
     assert "schema_version" in summary["detail"]
+
+
+def test_local_pr_review_close_check_blocks_missing_review_artifacts(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(tmp_path, "review-missing-artifact", "fully_clean")
+    (
+        tmp_path
+        / ".ai-sdlc"
+        / "reviews"
+        / "pr"
+        / "review-missing-artifact"
+        / "findings.json"
+    ).unlink()
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert "findings.json is missing" in summary["detail"]
+
+
+def test_local_pr_review_close_check_blocks_tampered_review_artifacts(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(tmp_path, "review-tampered-artifact", "fully_clean")
+    review_pack_path = (
+        tmp_path
+        / ".ai-sdlc"
+        / "reviews"
+        / "pr"
+        / "review-tampered-artifact"
+        / "review-pack.json"
+    )
+    review_pack = json.loads(review_pack_path.read_text(encoding="utf-8"))
+    review_pack["policy_decisions"]["incomplete_review_waiver"] = True
+    review_pack_path.write_text(json.dumps(review_pack), encoding="utf-8")
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert "review-pack.json changed" in summary["detail"]
 
 
 def test_local_pr_review_close_check_blocks_unclosed_clean_verdict(
@@ -240,13 +282,53 @@ def _write_local_pr_review(
     review_dir.mkdir(parents=True, exist_ok=True)
     final_report = review_dir / "final-report.md"
     final_report.write_text(f"# Final\n\nverdict: {verdict}\n", encoding="utf-8")
+    loop_id = f"loop-{review_id}"
+    review_pack_path = review_dir / "review-pack.json"
+    review_pack_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "artifact_kind": "review-pack",
+                "review_id": review_id,
+                "loop_id": loop_id,
+                "repo_root": str(root),
+                "base_ref": "main",
+                "head_ref": head_ref or "HEAD",
+                "base_commit": "0" * 40,
+                "head_commit": head_commit or "a" * 40,
+                "changed_files": ["src/app.py"],
+                "diff_path": (review_dir / "diff.patch").relative_to(root).as_posix(),
+                "policy_decisions": {"incomplete_review_waiver": False},
+                "model_selector": "current",
+            }
+        ),
+        encoding="utf-8",
+    )
+    findings_path = review_dir / "findings.json"
+    findings_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "artifact_kind": "review-findings",
+                "review_id": review_id,
+                "loop_id": loop_id,
+                "review_pack_path": review_pack_path.relative_to(root).as_posix(),
+                "provider_id": "mock-reviewer",
+                "model_selector": "fixture",
+                "resolved_model": "mock-reviewer",
+                "verdict": "clean",
+                "findings": [],
+            }
+        ),
+        encoding="utf-8",
+    )
     review_run_path = review_dir / "review-run.json"
     review_run_path.write_text(
         json.dumps(
             {
                 "schema_version": "1",
                 "review_id": review_id,
-                "loop_id": f"loop-{review_id}",
+                "loop_id": loop_id,
                 "status": status
                 or ("closed" if verdict in {"fully_clean", "risk_accepted"} else "blocked"),
                 "verdict": verdict,
@@ -255,6 +337,10 @@ def _write_local_pr_review(
                 "unresolved_required": unresolved_required,
                 "head_commit": head_commit,
                 "head_ref": head_ref,
+                "review_pack_path": review_pack_path.relative_to(root).as_posix(),
+                "review_pack_digest": _sha256(review_pack_path),
+                "findings_path": findings_path.relative_to(root).as_posix(),
+                "findings_digest": _sha256(findings_path),
             }
         ),
         encoding="utf-8",
@@ -270,6 +356,10 @@ def _write_local_pr_review(
         encoding="utf-8",
     )
     return final_report
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _init_git_repo(root: Path) -> None:

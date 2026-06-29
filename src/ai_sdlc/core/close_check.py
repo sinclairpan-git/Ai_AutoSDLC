@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -13,7 +14,7 @@ from pydantic import ValidationError
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
-from ai_sdlc.core.pr_review_models import ReviewRun
+from ai_sdlc.core.pr_review_models import ReviewFindings, ReviewPack, ReviewRun
 from ai_sdlc.core.pr_review_service import CURRENT_REVIEW_PATH
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
@@ -1093,6 +1094,16 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
             "review_id": review_run.review_id,
             "verdict": verdict,
         }
+    if verdict in {"fully_clean", "risk_accepted"}:
+        artifact_blocker = _local_pr_review_artifact_blocker(root, review_run)
+        if artifact_blocker:
+            return {
+                "name": "local_pr_review",
+                "ok": False,
+                "detail": artifact_blocker,
+                "review_id": review_run.review_id,
+                "verdict": verdict,
+            }
     if verdict in {"fully_clean", "risk_accepted"} and stored_head_commit:
         try:
             current_head = GitClient(root).resolve_revision(stored_head_ref or "HEAD")
@@ -1144,6 +1155,57 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
         "final_report_path": str(final_report_path) if final_report else "",
         "head_commit": stored_head_commit,
     }
+
+
+def _local_pr_review_artifact_blocker(root: Path, review_run: ReviewRun) -> str:
+    pack_blocker = _local_pr_review_artifact_digest_blocker(
+        root,
+        label="review-pack.json",
+        path_text=review_run.review_pack_path,
+        expected_digest=review_run.review_pack_digest,
+        model=ReviewPack,
+    )
+    if pack_blocker:
+        return pack_blocker
+    return _local_pr_review_artifact_digest_blocker(
+        root,
+        label="findings.json",
+        path_text=review_run.findings_path,
+        expected_digest=review_run.findings_digest,
+        model=ReviewFindings,
+    )
+
+
+def _local_pr_review_artifact_digest_blocker(
+    root: Path,
+    *,
+    label: str,
+    path_text: str,
+    expected_digest: str,
+    model: type[ReviewPack] | type[ReviewFindings],
+) -> str:
+    if not path_text.strip():
+        return f"local PR review {label} path is missing"
+    path = _resolve_repo_path(root, path_text)
+    if not path.is_file():
+        return f"local PR review {label} is missing"
+    if not expected_digest.strip():
+        return f"local PR review {label} digest is missing"
+    try:
+        actual_digest = _file_sha256(path)
+    except OSError as exc:
+        return f"local PR review {label} cannot be verified: {exc}"
+    if actual_digest != expected_digest:
+        return f"local PR review {label} changed after review close"
+    try:
+        model.model_validate(json.loads(path.read_text(encoding="utf-8")))
+    except (json.JSONDecodeError, ValidationError, ValueError) as exc:
+        return f"local PR review {label} is invalid: {exc}"
+    return ""
+
+
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _local_pr_review_artifact_commit_only(
