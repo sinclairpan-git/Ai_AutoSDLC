@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -47,25 +48,25 @@ def _seed_current_pr_review(root: Path) -> None:
     review_dir.mkdir(parents=True, exist_ok=True)
     review_run_path = review_dir / "review-run.json"
     review_run_path.write_text(
-        (
-            "{"
-            "\"review_id\":\"review-001\","
-            "\"verdict\":\"risk_accepted\","
-            "\"unresolved_blockers\":0,"
-            "\"unresolved_required\":1,"
-            "\"unresolved_advisory\":0,"
-            "\"next_action\":\"ai-sdlc pr-review close --require-no-blockers\""
-            "}"
+        json.dumps(
+            {
+                "review_id": "review-001",
+                "verdict": "risk_accepted",
+                "unresolved_blockers": 0,
+                "unresolved_required": 1,
+                "unresolved_advisory": 0,
+                "next_action": "ai-sdlc pr-review close --require-no-blockers",
+            }
         ),
         encoding="utf-8",
     )
     pointer = root / ".ai-sdlc" / "reviews" / "pr" / "current-review.json"
     pointer.write_text(
-        (
-            "{"
-            "\"review_id\":\"review-001\","
-            f"\"review_run_path\":\"{review_run_path}\""
-            "}"
+        json.dumps(
+            {
+                "review_id": "review-001",
+                "review_run_path": str(review_run_path),
+            }
         ),
         encoding="utf-8",
     )
