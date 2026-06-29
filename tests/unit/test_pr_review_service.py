@@ -333,6 +333,10 @@ def test_close_fully_clean_after_resolution_marks_required_fixed(tmp_path) -> No
     assert result.status == PRReviewCommandStatus.CLOSED
     assert result.verdict == "fully_clean"
     assert result.unresolved_required == 0
+    report = Path(result.final_report_path).read_text(encoding="utf-8")
+    assert "MOCK-001" in report
+    assert "fixed" in report
+    assert "tests passed" in report
 
 
 def test_close_treats_invalid_waiver_as_unresolved(tmp_path) -> None:
@@ -394,6 +398,29 @@ def test_close_final_report_discloses_valid_waiver_metadata(tmp_path) -> None:
     assert "qa-owner" in report
 
 
+def test_close_final_report_discloses_unresolved_advisory(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-advisory-report",
+            mock_fixture=MockReviewerFixture.CLEAN,
+        )
+    )
+    _append_advisory_finding(Path(start.findings_path))
+
+    result = close_pr_review(tmp_path)
+
+    report = Path(result.final_report_path).read_text(encoding="utf-8")
+    assert result.status == PRReviewCommandStatus.CLOSED
+    assert "ADV-001" in report
+    assert "unresolved" in report
+    assert "Low maintainability risk." in report
+
+
 def test_rerun_regenerates_review_for_same_scope_changes(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
@@ -448,6 +475,39 @@ def test_rerun_resets_previous_resolution_before_new_close(tmp_path) -> None:
     assert not resolution_path.exists()
     assert close.status == PRReviewCommandStatus.BLOCKED
     assert close.unresolved_required == 1
+
+
+def test_fix_round_limit_survives_rerun_resolution_reset(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-round-history",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    fix = fix_pr_review(tmp_path, max_rounds=1)
+    resolution_path = Path(fix.resolution_path)
+    resolution = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
+    resolution["finding_resolutions"][0]["status"] = "fixed"
+    resolution["finding_resolutions"][0]["evidence_refs"] = ["attempt 1"]
+    resolution_path.write_text(yaml.safe_dump(resolution), encoding="utf-8")
+    rerun = rerun_pr_review(
+        tmp_path,
+        mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+    )
+
+    result = fix_pr_review(tmp_path, max_rounds=1)
+
+    assert rerun.status == PRReviewCommandStatus.STARTED
+    assert not resolution_path.exists()
+    assert (resolution_path.with_name("resolution-history.yaml")).is_file()
+    assert result.status == PRReviewCommandStatus.NEEDS_USER
+    assert result.round_number == 1
+    assert "max rounds" in result.blocker
 
 
 def test_rerun_blocks_unresolved_required_findings_before_reset(tmp_path) -> None:

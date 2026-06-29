@@ -584,6 +584,18 @@ def rerun_pr_review(
 
 def _reset_rerun_resolution_artifacts(root: Path, review_id: str) -> None:
     review_dir = LoopArtifactStore(root).review_run_dir(review_id)
+    resolution_path = review_dir / "resolution.yaml"
+    round_number = _read_resolution_round(resolution_path)
+    if round_number > 0:
+        LoopArtifactStore(root).write_yaml_artifact(
+            review_dir / "resolution-history.yaml",
+            {
+                "schema_version": "1",
+                "artifact_kind": "review-resolution-history",
+                "review_id": review_id,
+                "round_number": round_number,
+            },
+        )
     for name in ("resolution.yaml", "fix-plan.md", "final-report.md"):
         try:
             (review_dir / name).unlink()
@@ -1088,6 +1100,13 @@ def _load_review_pack(path_text: str) -> ReviewPack:
 
 
 def _read_resolution_round(path: Path) -> int:
+    history_path = path.with_name("resolution-history.yaml")
+    history_round = _read_round_file(history_path)
+    current_round = _read_round_file(path)
+    return max(history_round, current_round)
+
+
+def _read_round_file(path: Path) -> int:
     if not path.exists():
         return 0
     payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
@@ -1225,8 +1244,8 @@ def _render_final_report(
     lines.extend(
         [
             "",
-            "## Accepted / Waived Findings",
-            *_render_accepted_finding_lines(
+            "## Finding Outcomes",
+            *_render_finding_outcome_lines(
                 findings=findings,
                 resolution_statuses=resolution_statuses,
                 resolution_records=resolution_records,
@@ -1237,7 +1256,7 @@ def _render_final_report(
     return "\n".join(lines)
 
 
-def _render_accepted_finding_lines(
+def _render_finding_outcome_lines(
     *,
     findings: ReviewFindings,
     resolution_statuses: dict[str, FindingResolutionStatus],
@@ -1248,13 +1267,8 @@ def _render_accepted_finding_lines(
     for finding in findings.findings:
         status = resolution_statuses.get(finding.id, finding.resolution)
         resolution = resolution_records.get(finding.id)
-        accepted_status = ""
-        if status in {
-            FindingResolutionStatus.WAIVED,
-            FindingResolutionStatus.NOT_APPLICABLE,
-        }:
-            accepted_status = str(status)
-        elif (
+        outcome = str(status)
+        if (
             verdict == ReviewVerdict.RISK_ACCEPTED
             and finding.severity == FindingSeverity.REQUIRED
             and status
@@ -1264,13 +1278,11 @@ def _render_accepted_finding_lines(
                 FindingResolutionStatus.NOT_APPLICABLE,
             }
         ):
-            accepted_status = "risk_accepted"
-        if not accepted_status:
-            continue
+            outcome = "risk_accepted"
         lines.extend(
             [
                 f"- {finding.id} [{finding.severity}] {finding.file}",
-                f"  - resolution: {accepted_status}",
+                f"  - resolution: {outcome}",
                 f"  - claim: {finding.claim}",
                 f"  - risk: {finding.risk}",
             ]
@@ -1279,6 +1291,7 @@ def _render_accepted_finding_lines(
             lines.extend(
                 [
                     f"  - reason: {resolution.reason or 'n/a'}",
+                    f"  - evidence_refs: {', '.join(resolution.evidence_refs) or 'n/a'}",
                     f"  - operator: {resolution.operator or 'n/a'}",
                     f"  - resolved_at: {resolution.resolved_at or 'n/a'}",
                 ]
