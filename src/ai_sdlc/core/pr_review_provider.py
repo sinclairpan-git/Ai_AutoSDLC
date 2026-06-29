@@ -1,0 +1,460 @@
+"""Provider runner contracts for local adversarial PR review."""
+
+from __future__ import annotations
+
+import json
+import subprocess
+from dataclasses import dataclass, field
+from enum import StrEnum
+from pathlib import Path
+
+from pydantic import BaseModel, ConfigDict
+
+from ai_sdlc.core.loop_artifacts import LoopArtifactStore
+from ai_sdlc.core.loop_models import LoopStatus, SchemaValidationStatus
+from ai_sdlc.core.pr_review_models import (
+    FindingSeverity,
+    ModelResolutionSource,
+    ProviderIsolationStatus,
+    ProviderMode,
+    ProviderRunnerInvocation,
+    ReviewFinding,
+    ReviewFindings,
+    ReviewPack,
+    ReviewVerdict,
+)
+from ai_sdlc.core.pr_review_schema import validate_artifact_file
+
+EXIT_SUCCESS = 0
+EXIT_CHANGES_REQUIRED = 10
+EXIT_BLOCKED = 20
+
+
+class ProviderRunStatus(StrEnum):
+    """Normalized provider run status."""
+
+    SUCCESS = "success"
+    CHANGES_REQUIRED = "changes_required"
+    BLOCKED = "blocked"
+    NEEDS_USER = "needs_user"
+
+
+class MockReviewerFixture(StrEnum):
+    """Deterministic mock reviewer output fixtures."""
+
+    CLEAN = "clean"
+    CHANGES_REQUIRED = "changes_required"
+    BLOCKED = "blocked"
+    MALFORMED = "malformed"
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderCommandOptions:
+    """Inputs for running a configured local review provider command."""
+
+    root: Path
+    review_pack_path: Path
+    command: list[str] = field(default_factory=list)
+    provider_id: str = "local-agent"
+    timeout_seconds: float = 60.0
+    isolation_status: ProviderIsolationStatus = ProviderIsolationStatus.ISOLATED_PROCESS
+
+
+class ProviderRunResult(BaseModel):
+    """Machine-readable result of a provider run."""
+
+    model_config = ConfigDict(extra="forbid", use_enum_values=True)
+
+    status: ProviderRunStatus
+    exit_code: int | None = None
+    invocation_path: str = ""
+    findings_path: str = ""
+    schema_validation_path: str = ""
+    blocker: str = ""
+    next_action: str = ""
+    invocation: ProviderRunnerInvocation | None = None
+    findings: ReviewFindings | None = None
+
+
+def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
+    """Run a configured local reviewer command and validate findings output."""
+
+    if not options.command:
+        return ProviderRunResult(
+            status=ProviderRunStatus.NEEDS_USER,
+            blocker=(
+                "local-agent provider is not configured with a local reviewer "
+                "command."
+            ),
+            next_action=(
+                "Configure a local reviewer command or run mock-reviewer for an "
+                "offline dry run."
+            ),
+        )
+
+    root = options.root.resolve()
+    review_pack = _load_review_pack(options.review_pack_path)
+    store = LoopArtifactStore(root)
+    review_dir = store.create_review_run_dir(review_pack.review_id)
+    findings_path = review_dir / "findings.json"
+    invocation_path = review_dir / "reviewer-invocation.json"
+    schema_validation_path = review_dir / "schema-validation.json"
+    argv = _expand_command(options.command, review_pack, options.review_pack_path, findings_path)
+
+    try:
+        process = subprocess.run(
+            argv,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=options.timeout_seconds,
+        )
+        exit_code: int | None = process.returncode
+    except FileNotFoundError:
+        exit_code = None
+        invocation = _write_invocation(
+            store=store,
+            path=invocation_path,
+            review_pack=review_pack,
+            provider_id=options.provider_id,
+            argv=argv,
+            input_path=options.review_pack_path,
+            output_path=findings_path,
+            cwd=root,
+            isolation_status=ProviderIsolationStatus.NOT_PROVEN,
+            exit_code=exit_code,
+            status=LoopStatus.BLOCKED,
+        )
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            invocation_path=str(invocation_path),
+            findings_path=str(findings_path),
+            blocker=f"Reviewer command not found: {argv[0]}",
+            next_action="Configure a valid local reviewer command.",
+            invocation=invocation,
+        )
+    except subprocess.TimeoutExpired:
+        exit_code = None
+        invocation = _write_invocation(
+            store=store,
+            path=invocation_path,
+            review_pack=review_pack,
+            provider_id=options.provider_id,
+            argv=argv,
+            input_path=options.review_pack_path,
+            output_path=findings_path,
+            cwd=root,
+            isolation_status=options.isolation_status,
+            exit_code=exit_code,
+            status=LoopStatus.BLOCKED,
+        )
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            invocation_path=str(invocation_path),
+            findings_path=str(findings_path),
+            blocker="Reviewer command timed out.",
+            next_action="Rerun with a healthy local reviewer command.",
+            invocation=invocation,
+        )
+
+    invocation = _write_invocation(
+        store=store,
+        path=invocation_path,
+        review_pack=review_pack,
+        provider_id=options.provider_id,
+        argv=argv,
+        input_path=options.review_pack_path,
+        output_path=findings_path,
+        cwd=root,
+        isolation_status=options.isolation_status,
+        exit_code=exit_code,
+        status=_loop_status_for_exit_code(exit_code),
+    )
+
+    if exit_code not in {EXIT_SUCCESS, EXIT_CHANGES_REQUIRED, EXIT_BLOCKED}:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            exit_code=exit_code,
+            invocation_path=str(invocation_path),
+            findings_path=str(findings_path),
+            blocker=f"Reviewer command failed with exit code {exit_code}.",
+            next_action="Fix the local reviewer command and rerun review.",
+            invocation=invocation,
+        )
+
+    return _validate_findings_output(
+        store=store,
+        findings_path=findings_path,
+        schema_validation_path=schema_validation_path,
+        invocation_path=invocation_path,
+        exit_code=exit_code,
+        invocation=invocation,
+    )
+
+
+def run_mock_reviewer(
+    *,
+    root: Path,
+    review_pack_path: Path,
+    fixture: MockReviewerFixture = MockReviewerFixture.CLEAN,
+) -> ProviderRunResult:
+    """Run deterministic mock reviewer fixtures without network or model access."""
+
+    resolved_root = root.resolve()
+    review_pack = _load_review_pack(review_pack_path)
+    store = LoopArtifactStore(resolved_root)
+    review_dir = store.create_review_run_dir(review_pack.review_id)
+    findings_path = review_dir / "findings.json"
+    invocation_path = review_dir / "reviewer-invocation.json"
+    schema_validation_path = review_dir / "schema-validation.json"
+
+    if fixture == MockReviewerFixture.MALFORMED:
+        findings_path.write_text("{not-json", encoding="utf-8")
+        exit_code = EXIT_SUCCESS
+    else:
+        findings = _mock_findings(review_pack, fixture, review_pack_path)
+        store.write_json_artifact(findings_path, findings)
+        exit_code = _exit_code_for_fixture(fixture)
+
+    invocation = ProviderRunnerInvocation(
+        provider_id="mock-reviewer",
+        provider_mode=ProviderMode.MOCK,
+        model_selector="fixture",
+        resolved_model="mock-reviewer",
+        model_resolution_source=ModelResolutionSource.MOCK_FIXTURE,
+        code_egress=False,
+        command="mock-reviewer",
+        argv=["mock-reviewer", "--fixture", fixture.value],
+        cwd=str(resolved_root),
+        input_path=str(review_pack_path),
+        output_path=str(findings_path),
+        allowlist=list(review_pack.reviewer_allowlist),
+        isolation_status=ProviderIsolationStatus.ISOLATED_PROCESS,
+        exit_code=exit_code,
+        status=_loop_status_for_exit_code(exit_code),
+    )
+    store.write_json_artifact(invocation_path, invocation)
+
+    return _validate_findings_output(
+        store=store,
+        findings_path=findings_path,
+        schema_validation_path=schema_validation_path,
+        invocation_path=invocation_path,
+        exit_code=exit_code,
+        invocation=invocation,
+    )
+
+
+def _expand_command(
+    command: list[str],
+    review_pack: ReviewPack,
+    review_pack_path: Path,
+    findings_path: Path,
+) -> list[str]:
+    context = {
+        "review_pack": str(review_pack_path),
+        "findings": str(findings_path),
+        "model": review_pack.resolved_model,
+        "model_selector": review_pack.model_selector,
+        "allowlist": ",".join(review_pack.reviewer_allowlist),
+    }
+    if any("{" in item and "}" in item for item in command):
+        return [item.format(**context) for item in command]
+    return [
+        *command,
+        "--review-pack",
+        str(review_pack_path),
+        "--output",
+        str(findings_path),
+        "--model",
+        review_pack.model_selector,
+        "--resolved-model",
+        review_pack.resolved_model,
+        "--allowlist",
+        *review_pack.reviewer_allowlist,
+    ]
+
+
+def _load_review_pack(path: Path) -> ReviewPack:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return ReviewPack.model_validate(payload)
+
+
+def _write_invocation(
+    *,
+    store: LoopArtifactStore,
+    path: Path,
+    review_pack: ReviewPack,
+    provider_id: str,
+    argv: list[str],
+    input_path: Path,
+    output_path: Path,
+    cwd: Path,
+    isolation_status: ProviderIsolationStatus,
+    exit_code: int | None,
+    status: LoopStatus,
+) -> ProviderRunnerInvocation:
+    source = review_pack.model_resolution_source
+    if source is None:
+        source = ModelResolutionSource.PROJECT_POLICY
+    invocation = ProviderRunnerInvocation(
+        provider_id=provider_id,
+        provider_mode=review_pack.provider_mode,
+        model_selector=review_pack.model_selector,
+        resolved_model=review_pack.resolved_model,
+        model_resolution_source=source,
+        code_egress=review_pack.code_egress,
+        command=argv[0],
+        argv=argv,
+        cwd=str(cwd),
+        input_path=str(input_path),
+        output_path=str(output_path),
+        allowlist=list(review_pack.reviewer_allowlist),
+        isolation_status=isolation_status,
+        exit_code=exit_code,
+        status=status,
+    )
+    store.write_json_artifact(path, invocation)
+    return invocation
+
+
+def _validate_findings_output(
+    *,
+    store: LoopArtifactStore,
+    findings_path: Path,
+    schema_validation_path: Path,
+    invocation_path: Path,
+    exit_code: int | None,
+    invocation: ProviderRunnerInvocation,
+) -> ProviderRunResult:
+    if not findings_path.exists():
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            exit_code=exit_code,
+            invocation_path=str(invocation_path),
+            findings_path=str(findings_path),
+            blocker="Reviewer command did not write findings.json.",
+            next_action="Fix the reviewer command output path and rerun review.",
+            invocation=invocation,
+        )
+
+    schema_report = validate_artifact_file(findings_path, ReviewFindings)
+    store.write_json_artifact(schema_validation_path, schema_report)
+    if schema_report.status != SchemaValidationStatus.VALID:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            exit_code=exit_code,
+            invocation_path=str(invocation_path),
+            findings_path=str(findings_path),
+            schema_validation_path=str(schema_validation_path),
+            blocker="Reviewer findings schema validation failed.",
+            next_action="Regenerate findings.json with the expected schema.",
+            invocation=invocation,
+        )
+
+    findings = ReviewFindings.model_validate(
+        json.loads(findings_path.read_text(encoding="utf-8"))
+    )
+    return ProviderRunResult(
+        status=_provider_status(exit_code, findings.verdict),
+        exit_code=exit_code,
+        invocation_path=str(invocation_path),
+        findings_path=str(findings_path),
+        schema_validation_path=str(schema_validation_path),
+        invocation=invocation,
+        findings=findings,
+    )
+
+
+def _provider_status(
+    exit_code: int | None,
+    verdict: ReviewVerdict,
+) -> ProviderRunStatus:
+    if exit_code == EXIT_BLOCKED or verdict == ReviewVerdict.BLOCKED:
+        return ProviderRunStatus.BLOCKED
+    if exit_code == EXIT_CHANGES_REQUIRED or verdict == ReviewVerdict.CHANGES_REQUIRED:
+        return ProviderRunStatus.CHANGES_REQUIRED
+    return ProviderRunStatus.SUCCESS
+
+
+def _loop_status_for_exit_code(exit_code: int | None) -> LoopStatus:
+    if exit_code == EXIT_SUCCESS:
+        return LoopStatus.PASSED
+    if exit_code == EXIT_CHANGES_REQUIRED:
+        return LoopStatus.NEEDS_FIX
+    return LoopStatus.BLOCKED
+
+
+def _mock_findings(
+    review_pack: ReviewPack,
+    fixture: MockReviewerFixture,
+    review_pack_path: Path,
+) -> ReviewFindings:
+    if fixture == MockReviewerFixture.CLEAN:
+        return ReviewFindings(
+            review_id=review_pack.review_id,
+            loop_id=review_pack.loop_id,
+            review_pack_path=str(review_pack_path),
+            provider_id="mock-reviewer",
+            model_selector="fixture",
+            resolved_model="mock-reviewer",
+            verdict=ReviewVerdict.CLEAN,
+        )
+    if fixture == MockReviewerFixture.BLOCKED:
+        return ReviewFindings(
+            review_id=review_pack.review_id,
+            loop_id=review_pack.loop_id,
+            review_pack_path=str(review_pack_path),
+            provider_id="mock-reviewer",
+            model_selector="fixture",
+            resolved_model="mock-reviewer",
+            verdict=ReviewVerdict.BLOCKED,
+            blocker="Mock reviewer blocked by fixture.",
+        )
+    return ReviewFindings(
+        review_id=review_pack.review_id,
+        loop_id=review_pack.loop_id,
+        review_pack_path=str(review_pack_path),
+        provider_id="mock-reviewer",
+        model_selector="fixture",
+        resolved_model="mock-reviewer",
+        verdict=ReviewVerdict.CHANGES_REQUIRED,
+        findings=[
+            ReviewFinding(
+                id="MOCK-001",
+                severity=FindingSeverity.REQUIRED,
+                file=review_pack.changed_files[0]
+                if review_pack.changed_files
+                else "review-pack.json",
+                claim="Mock reviewer fixture requires a change.",
+                evidence="Fixture output requested changes_required.",
+                risk="Deterministic fixture risk for integration tests.",
+                suggested_fix="Adjust the fixture expectation or test input.",
+                confidence=0.9,
+            )
+        ],
+    )
+
+
+def _exit_code_for_fixture(fixture: MockReviewerFixture) -> int:
+    if fixture == MockReviewerFixture.CHANGES_REQUIRED:
+        return EXIT_CHANGES_REQUIRED
+    if fixture == MockReviewerFixture.BLOCKED:
+        return EXIT_BLOCKED
+    return EXIT_SUCCESS
+
+
+__all__ = [
+    "EXIT_BLOCKED",
+    "EXIT_CHANGES_REQUIRED",
+    "EXIT_SUCCESS",
+    "MockReviewerFixture",
+    "ProviderCommandOptions",
+    "ProviderRunResult",
+    "ProviderRunStatus",
+    "run_mock_reviewer",
+    "run_provider_command",
+]

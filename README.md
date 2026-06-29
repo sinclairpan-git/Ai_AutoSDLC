@@ -36,6 +36,36 @@ Run the CLI from the source checkout with `uv run ai-sdlc ...`, or use `python -
 
 If the target machine does not already have Python 3.11, prefer the packaged installers so the runtime can be detected and provisioned automatically instead of asking the user to install Python by hand. The offline bundle can now carry a bundled `python-runtime/` payload for zero-preinstalled-Python installs on the target host.
 
+### Local PR Review Loop
+
+For source-checkout builds that include the local PR review loop, use the
+beginner path below from the repository root:
+
+1. Initialize the project once:
+
+   ```bash
+   ai-sdlc init .
+   ```
+
+2. Check readiness without writing review artifacts:
+
+   ```bash
+   ai-sdlc pr-review doctor --base main --provider local-agent --model current
+   ```
+
+3. Start the local review:
+
+   ```bash
+   ai-sdlc pr-review start --base main --provider local-agent --model current
+   ```
+
+The review agent runs from the local CLI/agent environment. The default
+`model current` selector uses the model already configured for that local
+environment; advanced users can choose another configured model explicitly. CI
+systems should consume the generated artifacts and deterministic counts, not
+send repository code to GPT, Claude, DeepSeek, GLM, Codex, or any other model
+service from the CI network.
+
 Online installer entrypoints:
 
 - macOS / Linux: `./packaging/install_online.sh --add-to-path`

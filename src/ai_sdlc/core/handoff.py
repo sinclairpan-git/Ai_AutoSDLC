@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,6 +18,7 @@ from ai_sdlc.context.state import (
     work_item_dir,
 )
 from ai_sdlc.core.config import YamlStoreError
+from ai_sdlc.core.pr_review_service import CURRENT_REVIEW_PATH
 from ai_sdlc.utils.helpers import now_iso
 
 HANDOFF_PATH = Path(".ai-sdlc") / "state" / "codex-handoff.md"
@@ -70,6 +72,7 @@ def update_handoff(
     stage = checkpoint.current_stage if checkpoint is not None else ""
     branch = _current_branch(root, checkpoint_branch=_checkpoint_branch(checkpoint))
     changed_files = _changed_files(root)
+    local_pr_review = _local_pr_review_handoff_lines(root)
 
     normalized_next_steps = _dedupe(next_steps or [])
     summary = _build_summary(goal=goal, state=state, next_steps=normalized_next_steps)
@@ -86,6 +89,7 @@ def update_handoff(
         commands=_dedupe(commands or []),
         blockers=_dedupe(blockers or []),
         next_steps=normalized_next_steps,
+        local_pr_review=local_pr_review,
     )
 
     canonical = root / HANDOFF_PATH
@@ -136,6 +140,7 @@ def check_handoff(
 
 
 def _refresh_resume_pack_summary(root: Path, summary: str) -> None:
+    pack = None
     try:
         pack = load_resume_pack(root)
     except (ResumePackError, YamlStoreError):
@@ -160,6 +165,7 @@ def _render_handoff(
     commands: list[str],
     blockers: list[str],
     next_steps: list[str],
+    local_pr_review: list[str],
 ) -> str:
     lines = [
         "# Continuity Handoff",
@@ -183,6 +189,9 @@ def _render_handoff(
         "",
         "## Blockers / Risks",
         *_bullet_lines(blockers),
+        "",
+        "## Local PR Review",
+        *_bullet_lines(local_pr_review),
         "",
         "## Exact Next Steps",
         *_bullet_lines(next_steps),
@@ -215,6 +224,37 @@ def _changed_files(root: Path) -> list[str]:
     except GitError as exc:
         return [f"unavailable: {exc}"]
     return _dedupe(raw.splitlines()) or ["none"]
+
+
+def _local_pr_review_handoff_lines(root: Path) -> list[str]:
+    pointer_path = root / CURRENT_REVIEW_PATH
+    if not pointer_path.exists():
+        return []
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+        review_run_path = Path(str(pointer.get("review_run_path", "")))
+        review_run = json.loads(review_run_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"unavailable: {exc}"]
+    review_id = str(review_run.get("review_id", "") or "")
+    verdict = str(review_run.get("verdict", "") or "none")
+    blockers = int(review_run.get("unresolved_blockers", 0) or 0)
+    required = int(review_run.get("unresolved_required", 0) or 0)
+    advisory = int(review_run.get("unresolved_advisory", 0) or 0)
+    next_action = str(review_run.get("next_action", "") or "")
+    if not next_action:
+        if blockers or required:
+            next_action = "ai-sdlc pr-review fix"
+        elif verdict in {"fully_clean", "risk_accepted"}:
+            next_action = "ai-sdlc pr-review status"
+        else:
+            next_action = "ai-sdlc pr-review close"
+    return [
+        f"review_id: {review_id}",
+        f"verdict: {verdict}",
+        f"unresolved: blockers={blockers}, required={required}, advisory={advisory}",
+        f"next command: {next_action}",
+    ]
 
 
 def _checkpoint_branch(checkpoint: object) -> str:

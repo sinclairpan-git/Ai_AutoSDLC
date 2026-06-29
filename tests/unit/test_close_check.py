@@ -15,6 +15,7 @@ from ai_sdlc.core.close_check import (
     CloseCheckResult,
     _build_program_truth_close_check_summary,
     _changed_paths_from_marker,
+    _local_pr_review_close_check_summary,
     format_branch_check_json,
     format_close_check_json,
     run_branch_check,
@@ -36,6 +37,80 @@ from ai_sdlc.models.work import (
 def _commit_all(root: Path, message: str) -> None:
     subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def test_local_pr_review_close_check_distinguishes_closed_verdicts(
+    tmp_path: Path,
+) -> None:
+    clean = _write_local_pr_review(tmp_path, "review-clean", "fully_clean")
+    clean_summary = _local_pr_review_close_check_summary(tmp_path)
+    assert clean_summary["ok"] is True
+    assert clean_summary["verdict"] == "fully_clean"
+    assert clean_summary["final_report_path"] == str(clean)
+
+    accepted = _write_local_pr_review(
+        tmp_path,
+        "review-risk",
+        "risk_accepted",
+        unresolved_required=1,
+    )
+    accepted_summary = _local_pr_review_close_check_summary(tmp_path)
+    assert accepted_summary["ok"] is True
+    assert accepted_summary["verdict"] == "risk_accepted"
+    assert accepted_summary["final_report_path"] == str(accepted)
+
+
+def test_local_pr_review_close_check_blocks_blocked_verdict(tmp_path: Path) -> None:
+    _write_local_pr_review(
+        tmp_path,
+        "review-blocked",
+        "blocked",
+        unresolved_blockers=1,
+    )
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert summary["verdict"] == "blocked"
+    assert "unresolved_blockers=1" in summary["detail"]
+
+
+def _write_local_pr_review(
+    root: Path,
+    review_id: str,
+    verdict: str,
+    *,
+    unresolved_blockers: int = 0,
+    unresolved_required: int = 0,
+) -> Path:
+    review_dir = root / ".ai-sdlc" / "reviews" / "pr" / review_id
+    review_dir.mkdir(parents=True, exist_ok=True)
+    final_report = review_dir / "final-report.md"
+    final_report.write_text(f"# Final\n\nverdict: {verdict}\n", encoding="utf-8")
+    review_run_path = review_dir / "review-run.json"
+    review_run_path.write_text(
+        (
+            "{"
+            f"\"review_id\":\"{review_id}\","
+            f"\"verdict\":\"{verdict}\","
+            f"\"final_report_path\":\"{final_report}\","
+            f"\"unresolved_blockers\":{unresolved_blockers},"
+            f"\"unresolved_required\":{unresolved_required}"
+            "}"
+        ),
+        encoding="utf-8",
+    )
+    pointer = root / ".ai-sdlc" / "reviews" / "pr" / "current-review.json"
+    pointer.write_text(
+        (
+            "{"
+            f"\"review_id\":\"{review_id}\","
+            f"\"review_run_path\":\"{review_run_path}\""
+            "}"
+        ),
+        encoding="utf-8",
+    )
+    return final_report
 
 
 def _write_manifest_yaml(root: Path, text: str) -> None:

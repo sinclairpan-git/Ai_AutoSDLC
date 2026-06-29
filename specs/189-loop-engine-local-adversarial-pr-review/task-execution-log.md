@@ -656,3 +656,433 @@
 - 当前批次 branch disposition 状态：PR #103 merge carrier（待 checks/review 通过后合并）
 - 当前批次 worktree disposition 状态：retained（主工作区继续承载当前仓库）
 - **是否继续下一批**：否；等待本批 truth sync、提交、push、Codex re-review 与 PR checks 收口。
+
+### Batch 2026-06-29-012 | T11-T12
+
+#### 2.65 准备
+
+- **任务来源**：用户确认继续下一步，进入 WI-189 P0 实现阶段。
+- **目标**：完成 Batch 1：core models、schema validation、artifact store。
+- **预读范围**：`spec.md`、`plan.md`、`tasks.md`、`src/ai_sdlc/core/config.py`、`src/ai_sdlc/models/program.py`、`src/ai_sdlc/core/p1_artifacts.py`、`tests/unit/test_p1_artifacts.py`。
+- **激活的规则**：本地实现不得调用 Codex 云端 PR review；CI 不得发起模型请求；本地独立 review agent 可调用用户当前模型或显式选择的模型；每个 batch 完成后更新 execution log 与 handoff。
+- **验证画像**：focused unit tests + ruff scoped check。
+- **改动范围**：
+  - `src/ai_sdlc/core/loop_models.py`
+  - `src/ai_sdlc/core/pr_review_models.py`
+  - `src/ai_sdlc/core/pr_review_schema.py`
+  - `src/ai_sdlc/core/loop_artifacts.py`
+  - `tests/unit/test_pr_review_models.py`
+  - `tests/unit/test_pr_review_schema.py`
+  - `tests/unit/test_loop_artifacts.py`
+  - `specs/189-loop-engine-local-adversarial-pr-review/tasks.md`
+  - `specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.66 统一验证命令
+
+- `V1`（Batch 1 focused tests）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py -q`
+  - 结果：通过，`23 passed`。
+- `V2`（Batch 1 scoped ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py`
+  - 结果：通过，`All checks passed!`。
+- `V3`（Batch 1 scoped mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py`
+  - 结果：通过，`Success: no issues found in 4 source files`。
+- `V4`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V5`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`
+
+#### 2.67 任务记录
+
+##### Task T11 | Define Loop and Review data models
+
+- **改动内容**：
+  - 新增 `LoopRun`、`LoopRound`、`LoopPolicyProfile`、`SchemaValidationReport`。
+  - 新增 `ReviewRun`、`ReviewPack`、`ReviewFinding`、`FindingResolution`、`ProviderRunnerInvocation`。
+  - 为长期 artifact 模型统一写入 `schema_version`、`artifact_kind`、`created_by`、`created_at`、`ai_sdlc_version`。
+  - 使用稳定 enum/受控集合表达 loop status、loop type、review verdict、finding severity、resolution、provider isolation 和 schema validation status。
+- **测试覆盖**：
+  - 元数据落盘字段。
+  - 非法 current round。
+  - review pack commit scope。
+  - finding severity / resolution enum。
+  - waiver reason/operator。
+  - safe-by-default policy。
+  - provider invocation isolation / exit code。
+
+##### Task T12 | Implement schema validation and artifact store
+
+- **改动内容**：
+  - 新增 schema validation helpers，返回结构化 `SchemaValidationReport`，覆盖 valid、invalid、incompatible schema 三类结果。
+  - 新增 artifact store，创建 `.ai-sdlc/loops/local-pr-review/<loop-id>/` 与 `.ai-sdlc/reviews/pr/<review-id>/`。
+  - 支持 JSON、YAML、Markdown artifact 原子写入；写入路径使用同目录临时文件和 replace。
+- **测试覆盖**：
+  - 缺失必填字段 fail-closed。
+  - 不兼容 schema version fail-closed。
+  - 非法 enum fail-closed。
+  - JSON/YAML/Markdown artifact 写入与读取。
+  - 目标目录布局符合 PRD。
+
+#### 2.68 代码审查（摘要）
+
+- **自检结论**：Batch 1 未实现 provider、review pack builder、CLI 或 cloud review 调用；仅建立后续批次依赖的数据合同与持久化边界。
+- **风险**：`LoopPolicyProfile` 当前为模型合同，真实配置读取与 policy 冲突裁决留给 T21；`ReviewPack` 当前为模型合同，真实 diff 生成留给 T23。
+- **处置**：在 `tasks.md` 中将 T11/T12 标记为 done，其余任务保持 todo。
+
+#### 2.69 任务/计划同步状态
+
+- `spec.md` 同步状态：已冻结，未修改。
+- `plan.md` 同步状态：已对账，未修改。
+- `tasks.md` 同步状态：T11/T12 已完成；T21-T63 仍为 todo。
+- `task-execution-log.md` 同步状态：已追加 Batch 1 实现记录。
+
+#### 2.70 归档后动作
+
+- **已完成 git 提交**：否，等待最终复验与用户确认提交。
+- 当前批次 branch disposition 状态：`codex/189-loop-pr-review-batch1`。
+- 当前批次 worktree disposition 状态：retained（主工作区继续承载当前仓库）。
+- **是否继续下一批**：否；Batch 1 完成后建议进入 Batch 2 的 T21/T22/T23。
+
+### Batch 2026-06-29-013 | Requirement correction
+
+#### 2.71 准备
+
+- **任务来源**：用户打断并澄清：本地独立 review agent 应调用用户配置的模型，默认直接调用用户当前模型，也允许显式选择模型。
+- **目标**：修正 WI-189 文档合同中关于 CI、模型调用、provider/model 的语义偏差。
+- **改动范围**：
+  - `specs/189-loop-engine-local-adversarial-pr-review/spec.md`
+  - `specs/189-loop-engine-local-adversarial-pr-review/plan.md`
+  - `specs/189-loop-engine-local-adversarial-pr-review/tasks.md`
+  - `src/ai_sdlc/core/loop_models.py`
+  - `tests/unit/test_pr_review_models.py`
+  - `specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.72 任务记录
+
+- **修正前问题**：
+  - 文档中 `codex-local` 容易被理解为唯一真实 provider。
+  - `external provider` / `外部模型` 容易被理解为默认禁止 GPT、Claude、DeepSeek、GLM 等模型。
+  - “CI 不调用模型”未明确区分本地开发机与 CI 流水线，容易误读成本地也不能调用模型。
+- **修正后合同**：
+  - `local-agent` 是 P0 通用 provider，负责在本地启动独立 reviewer 会话或进程。
+  - 默认 `model=current`，即沿用用户当前开发环境/当前 agent 已配置的模型。
+  - 用户可显式选择 GPT、Claude、DeepSeek、GLM 或其他模型。
+  - `codex-local` 仅可作为兼容 alias 或具体 adapter，不得作为唯一真实 provider。
+  - CI/CD 流水线不得发起模型请求；CI 只检查 artifact、commit hash、schema 和 unresolved counts。
+  - 代码外发到远程模型服务不是默认禁止项，但必须披露；企业 policy 可以禁止外发或要求确认。
+
+#### 2.73 统一验证命令
+
+- `V1`（Batch 1 focused tests）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py -q`
+  - 结果：通过，`23 passed`。
+- `V2`（Batch 1 scoped ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py`
+  - 结果：通过，`All checks passed!`。
+- `V3`（Batch 1 scoped mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py`
+  - 结果：通过，`Success: no issues found in 4 source files`。
+- `V4`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V5`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`
+
+#### 2.74 归档后动作
+
+- **已完成 git 提交**：否，等待最终复验与用户确认提交。
+- **是否继续下一批**：否；修正需求语义后再继续 Batch 2。
+
+### Batch 2026-06-29-014 | Adversarial review remediation
+
+#### 2.75 准备
+
+- **任务来源**：用户要求对 Batch 013 语义修订做一轮对抗评审，并确认修订。
+- **目标**：修复对抗评审发现的 model=current 解析合同不完整、resolved model 可空、CLI 输出验收弱于 PRD 三个问题。
+- **改动范围**：
+  - `specs/189-loop-engine-local-adversarial-pr-review/spec.md`
+  - `specs/189-loop-engine-local-adversarial-pr-review/plan.md`
+  - `specs/189-loop-engine-local-adversarial-pr-review/tasks.md`
+  - `src/ai_sdlc/core/pr_review_models.py`
+  - `tests/unit/test_pr_review_models.py`
+  - `specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.76 任务记录
+
+- 新增 `ModelResolution` 合同，记录 provider id、provider mode、model selector、resolved model、resolution source、status、code egress 和 blocker。
+- 明确 `model=current` 解析优先级：显式 CLI 非 current > project policy default model > provider config default model > 当前 agent/CLI 环境模型 > needs_user。
+- `ProviderRunnerInvocation` 强制记录非空 `resolved_model` 和 `model_resolution_source`。
+- `ReviewPack` / `ReviewRun` 增加 `model_resolution_status`、`model_resolution_source`、`provider_mode` 字段；resolved 状态必须有 resolved model 和 source。
+- T42 CLI 验收补齐 human 输出必须包含 provider、model selector、resolved model、code egress。
+
+#### 2.77 统一验证命令
+
+- `V1`（Batch 1 focused tests）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py -q`
+  - 结果：通过，`27 passed`。
+- `V2`（Batch 1 scoped ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py`
+  - 结果：通过，`All checks passed!`。
+- `V3`（Batch 1 scoped mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py`
+  - 结果：通过，`Success: no issues found in 4 source files`。
+- `V4`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V5`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`
+
+#### 2.78 归档后动作
+
+- **已完成 git 提交**：否，等待最终复验与用户确认提交。
+- **是否继续下一批**：否；修订和复验完成后再继续 Batch 2。
+
+### Batch 2026-06-29-015 | Batch 2 policy, redaction, review pack builder
+
+#### 2.79 准备
+
+- **任务来源**：继续 WI-189 P0 本地对抗 PR Review 实现，进入 Batch 2 的 T21/T22/T23。
+- **目标**：落地 policy profile 读取与模型解析、redaction/omission 预检、review pack builder。
+- **改动范围**：
+  - `src/ai_sdlc/core/loop_policy.py`
+  - `src/ai_sdlc/core/pr_review_redaction.py`
+  - `src/ai_sdlc/core/pr_review_pack.py`
+  - `tests/unit/test_loop_policy.py`
+  - `tests/unit/test_pr_review_redaction.py`
+  - `tests/unit/test_pr_review_pack.py`
+  - `specs/189-loop-engine-local-adversarial-pr-review/tasks.md`
+  - `specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.80 任务记录
+
+- T21：新增 `load_loop_policy`、`resolve_model_for_review`、`evaluate_code_egress_policy`，支持 `.ai-sdlc/project/config/loop-policy.yaml`、默认 `local-agent/current`、远程代码外发披露/确认/禁止策略，以及 `model=current` 解析优先级。
+- T22：新增 redaction/omission 预检，覆盖 `.env*`、私钥路径、私钥内容、常见 token/key/password 模式、binary、large、generated files，并生成 `redaction-report.json` 数据合同。
+- T23：新增 `build_review_pack`，基于真实 Git `base_ref..head_ref` 生成 `changed-files.txt`、`model-resolution.json`、`redaction-report.json`、`diff.patch`、`review-pack.json`；pack 记录 base/head ref 与 commit、diff coverage、policy decisions、provider mode、model selector、resolved model、model resolution source/status、code egress 和 reviewer allowlist。
+- 安全边界：当 `model=current` 无法解析、代码外发遇到高风险 secret 且未确认、diff 超限时统一进入 `needs_user`，不静默丢弃、不 fallback 到 Codex 云端 PR review。
+- 隔离边界：review pack builder 仅读取 Git diff 和项目 artifact，不读取或写入 implementation agent chat transcript。
+
+#### 2.81 统一验证命令
+
+- `V1`（Batch 2 focused tests）
+  - 命令：`uv run pytest tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py -q`
+  - 结果：通过，`20 passed`。
+- `V2`（Batch 1+2 focused tests）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py -q`
+  - 结果：通过，`47 passed`。
+- `V3`（Batch 1+2 scoped ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_redaction.py src/ai_sdlc/core/pr_review_pack.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py`
+  - 结果：通过，`All checks passed!`。
+- `V4`（Batch 1+2 scoped mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_redaction.py src/ai_sdlc/core/pr_review_pack.py`
+  - 结果：通过，`Success: no issues found in 7 source files`。
+- `V5`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V6`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+
+#### 2.82 归档后动作
+
+- **已完成 git 提交**：否，继续后续批次前暂不提交。
+- **是否继续下一批**：是；Batch 2 完成后进入 Batch 3 的 provider runner 与 mock reviewer。
+
+### Batch 2026-06-29-016 | Batch 3 provider runner and mock reviewer
+
+#### 2.83 准备
+
+- **任务来源**：继续 WI-189 P0 本地对抗 PR Review 实现，进入 Batch 3 的 T31/T32。
+- **目标**：落地 provider runner contract 与 mock reviewer。
+- **改动范围**：
+  - `src/ai_sdlc/core/pr_review_models.py`
+  - `src/ai_sdlc/core/pr_review_provider.py`
+  - `tests/unit/test_pr_review_models.py`
+  - `tests/unit/test_pr_review_provider.py`
+  - `specs/189-loop-engine-local-adversarial-pr-review/tasks.md`
+  - `specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.84 任务记录
+
+- T31：新增 `run_provider_command`，支持配置化本地 reviewer command；标准化退出码 `0/10/20/other`，写入 `reviewer-invocation.json`，记录 command、argv、cwd、input/output paths、provider mode、model selector、resolved model、model resolution source、code egress、allowlist、isolation status、exit status。
+- T31：新增 `ReviewFindings` artifact 合同，用于校验 `findings.json`；缺失输出、非 JSON/非法 schema、非标准退出码都会返回 `blocked`，不产生 pass verdict。
+- T31：`local-agent` 未配置 command 时返回 `needs_user` 和 plain-language next action，不 fallback 到 Codex 云端 PR review。
+- T32：新增 `run_mock_reviewer` 与 `MockReviewerFixture`，支持 `clean`、`changes_required`、`blocked`、`malformed` 四类确定性 fixture；mock reviewer 不访问网络、不调用真实模型，写入 mock invocation 和 findings。
+- 隔离边界：runner 只把 review pack path、output path、model selector、resolved model、allowlist 交给本地命令；implementation agent transcript 不进入 provider 输入。
+
+#### 2.85 统一验证命令
+
+- `V1`（Batch 3 focused tests）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_provider.py -q`
+  - 结果：通过，`25 passed`。
+- `V2`（Batch 1-3 focused tests）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py -q`
+  - 结果：通过，`57 passed`。
+- `V3`（Batch 1-3 scoped ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_redaction.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_provider.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py`
+  - 结果：通过，`All checks passed!`。
+- `V4`（Batch 1-3 scoped mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_redaction.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_provider.py`
+  - 结果：通过，`Success: no issues found in 8 source files`。
+
+#### 2.86 归档后动作
+
+- **已完成 git 提交**：否，继续后续批次前暂不提交。
+- **是否继续下一批**：是；Batch 3 完成后进入 Batch 4 的 PR Review service 与 CLI。
+
+### Batch 2026-06-29-017 | Batch 4 PR Review service and CLI
+
+#### 2.87 准备
+
+- **任务来源**：继续 WI-189 P0 本地对抗 PR Review 实现，进入 Batch 4 的 T41/T42。
+- **目标**：落地 PR Review service 与 `ai-sdlc pr-review` CLI 的 doctor/start/status surface。
+- **改动范围**：
+  - `src/ai_sdlc/core/pr_review_service.py`
+  - `src/ai_sdlc/cli/pr_review_cmd.py`
+  - `src/ai_sdlc/cli/main.py`
+  - `src/ai_sdlc/__main__.py`
+  - `src/ai_sdlc/core/pr_review_models.py`
+  - `src/ai_sdlc/core/pr_review_provider.py`
+  - `tests/unit/test_pr_review_service.py`
+  - `tests/integration/test_cli_pr_review.py`
+  - `tests/unit/test_command_names.py`
+  - `specs/189-loop-engine-local-adversarial-pr-review/tasks.md`
+  - `specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.88 任务记录
+
+- T41：新增 `doctor_pr_review`、`start_pr_review`、`status_pr_review` service；doctor 只读检查 init、Git base/head、provider/model、policy、redaction、artifact writability。
+- T41：`start --dry-run` 只做预览，不创建 `.ai-sdlc/reviews/pr/<review-id>/`，不运行 provider，不写 current pointer。
+- T41：非 dry-run start 生成 review pack、运行 provider、写 `review-run.json` 与 `.ai-sdlc/reviews/pr/current-review.json`；status 可从 current pointer 恢复 review run、findings verdict、unresolved counts 与 next action。
+- T41：所有失败路径返回 plain-language blocker / next action；local-agent 未配置 command 时为 `needs_user`，mock-reviewer 可执行离线 artifact flow。
+- T42：新增 `ai-sdlc pr-review doctor/start/status`，支持 human 与 `--json` 输出；human 输出包含 Result / Next / blocker / provider / model selector / resolved model / code egress。
+- T42：`pr-review fix/rerun/close` 已注册为真实 CLI 路径和 help surface，状态机完整语义留给 Batch 5。
+- T42：`python -m ai_sdlc --help` fallback 已包含 `pr-review`。
+
+#### 2.89 统一验证命令
+
+- `V1`（Batch 4 focused tests）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_command_names.py -q`
+  - 结果：通过，`11 passed`。
+- `V2`（Batch 1-4 focused tests）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_command_names.py -q`
+  - 结果：通过，`68 passed`。
+- `V3`（Batch 1-4 scoped ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_redaction.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/cli/main.py src/ai_sdlc/__main__.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_command_names.py`
+  - 结果：通过，`All checks passed!`。
+- `V4`（Batch 1-4 scoped mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_redaction.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 10 source files`。
+
+#### 2.90 归档后动作
+
+- **已完成 git 提交**：否，继续后续批次前暂不提交。
+- **是否继续下一批**：是；Batch 4 完成后进入 Batch 5 的 fix/rerun/close 语义。
+
+### Batch 2026-06-29-018 | Batch 5 fix/rerun/close semantics
+
+#### 2.91 准备
+
+- **任务来源**：继续 WI-189 P0 本地对抗 PR Review 实现，进入 Batch 5 的 T51/T52/T53。
+- **目标**：落地 fix-plan/resolution、rerun/scope drift、close verdict 语义。
+- **改动范围**：
+  - `src/ai_sdlc/core/pr_review_service.py`
+  - `src/ai_sdlc/cli/pr_review_cmd.py`
+  - `tests/unit/test_pr_review_service.py`
+  - `tests/integration/test_cli_pr_review.py`
+  - `specs/189-loop-engine-local-adversarial-pr-review/tasks.md`
+  - `specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.92 任务记录
+
+- T51：新增 `fix_pr_review`，只生成 `fix-plan.md` 和 `resolution.yaml`，不修改代码；默认只选择 unresolved `BLOCKER` / `REQUIRED`，`ADVISORY` 只披露为 skipped，不进入自动修复计划。
+- T51：`--max-rounds` 达到上限时返回 `needs_user`，提示人工检查或提高轮次。
+- T52：新增 `rerun_pr_review`，基于 current review 重新生成 review pack 和 provider output，不复用旧 diff；head commit 变化后 current review 指向新生成 artifact。
+- T52：新增 scope drift 检查；新增变更若不属于旧 changed files 或 finding 文件，则返回 `needs_user`，要求拆分或重新 start。
+- T53：新增 `close_pr_review`，默认 unresolved `BLOCKER` / `REQUIRED` 阻断；`--require-no-blockers` 仅在无 BLOCKER 且仍有 REQUIRED 时输出 `risk_accepted`，不标记 `fully_clean`。
+- T53：`final-report.md` 包含 verdict、base/head commit、unresolved counts、diff/redaction/omission coverage、verification evidence 和 next action。
+- CLI：`ai-sdlc pr-review fix/rerun/close` 已替换 Batch 4 stub，支持 human 与 `--json` 输出。
+
+#### 2.93 统一验证命令
+
+- `V1`（Batch 5 focused tests）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py -q`
+  - 结果：通过，`18 passed`。
+- `V2`（Batch 1-5 focused tests）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_command_names.py -q`
+  - 结果：通过，`76 passed`。
+- `V3`（Batch 1-5 scoped ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_redaction.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/cli/main.py src/ai_sdlc/__main__.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_command_names.py`
+  - 结果：通过，`All checks passed!`。
+- `V4`（Batch 1-5 scoped mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_redaction.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 10 source files`。
+
+#### 2.94 归档后动作
+
+- **已完成 git 提交**：否，继续最终批次前暂不提交。
+- **是否继续下一批**：是；Batch 5 完成后进入 Batch 6 的 close-check、handoff、verify、docs 对齐。
+
+### Batch 2026-06-29-019 | Batch 6 close-check, handoff, verify, docs close-out
+
+#### 2.95 准备
+
+- **任务来源**：继续 WI-189 P0 本地对抗 PR Review 实现，进入 Batch 6 的 T61/T62/T63。
+- **目标**：完成 close-check、handoff、verify constraints、README/PR checklist 文档 surface 和最终回归收口。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/close_check.py`、`src/ai_sdlc/core/handoff.py`、`src/ai_sdlc/core/verify_constraints.py`、`README.md`、`docs/pull-request-checklist.zh.md`、`tests/unit/test_close_check.py`、`tests/integration/test_cli_handoff.py`、`specs/189-loop-engine-local-adversarial-pr-review/tasks.md`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.96 任务记录
+
+- T61：close-check 新增 `local_pr_review` check；有 current review pointer 时读取 `review-run.json` 与 `final-report.md`，区分 `fully_clean`、`risk_accepted`、`blocked`，blocked 或未闭合 review 会阻断 close-check。
+- T61：handoff 新增 `Local PR Review` 区块，自动记录 current review id、verdict、unresolved blocker/required/advisory counts 和 beginner-facing next command。
+- T62：verify constraints 增加 WI-189 feature-contract surface，覆盖 PR review CLI、provider isolation、schema/policy artifacts、README 与 PR checklist 文档 surface。
+- T62：README 增加本地 PR review 三步路径：`ai-sdlc init .`、`ai-sdlc pr-review doctor`、`ai-sdlc pr-review start`；明确默认 `model current` 使用本地 CLI/agent 当前配置模型。
+- T62：`docs/pull-request-checklist.zh.md` 增加本地 PR review / CI 分工：模型调用由本地独立 review agent 发起，CI 读取 artifact/schema/counts/final report，CI 不得发起模型请求。
+- T63：最终 focused tests、ruff、mypy scoped、diff whitespace、verify constraints 均通过；未创建 release note，因为本工作项未绑定明确发布版本。
+
+#### 2.97 统一验证命令
+
+- `V1`（Batch 6 focused tests）
+  - 命令：`uv run pytest tests/unit/test_close_check.py::test_local_pr_review_close_check_distinguishes_closed_verdicts tests/unit/test_close_check.py::test_local_pr_review_close_check_blocks_blocked_verdict tests/integration/test_cli_handoff.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`186 passed`。
+- `V2`（最终 focused test bundle）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_command_names.py tests/unit/test_close_check.py::test_local_pr_review_close_check_distinguishes_closed_verdicts tests/unit/test_close_check.py::test_local_pr_review_close_check_blocks_blocked_verdict tests/integration/test_cli_handoff.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`262 passed`。
+- `V3`（最终 scoped ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_redaction.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/cli/main.py src/ai_sdlc/__main__.py src/ai_sdlc/core/close_check.py src/ai_sdlc/core/handoff.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_schema.py tests/unit/test_loop_artifacts.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_redaction.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_command_names.py tests/unit/test_close_check.py tests/integration/test_cli_handoff.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V4`（最终 scoped mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/loop_models.py src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_schema.py src/ai_sdlc/core/loop_artifacts.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_redaction.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/handoff.py`
+  - 结果：通过，`Success: no issues found in 11 source files`。
+- `V5`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V6`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+
+#### 2.98 代码审查（摘要）
+
+- **自检结论**：P0 本地对抗 PR Review 已覆盖 artifact model、policy/model resolution、redaction、review pack、provider runner/mock reviewer、doctor/start/status/fix/rerun/close CLI、close-check/handoff/docs/verify constraints surface。
+- **风险**：P0 的 local-agent 只定义可配置本地 command runner 合同，不内置特定厂商 launcher；组织需要通过 provider command 或后续 adapter 接入 GPT/Claude/DeepSeek/GLM 等本地可用模型入口。
+- **风险**：close-check 读取 current review pointer；如果同一工作区存在多个并行 review，P0 只以 current pointer 为准，远端 PR inline comments 与多 reviewer 投票仍为 P1/P2。
+
+#### 2.99 任务/计划同步状态
+
+- `spec.md` 同步状态：已冻结，未修改需求边界。
+- `plan.md` 同步状态：已冻结，未修改架构批次。
+- `tasks.md` 同步状态：T11-T63 已全部完成。
+- `task-execution-log.md` 同步状态：已记录 Batch 1-6 的命令、结果、风险与收口。
+
+#### 2.100 归档后动作
+
+- **已完成 git 提交**：否，等待用户确认提交范围后提交。
+- **提交哈希**：N/A
+- 当前批次 branch disposition 状态：`codex/189-loop-pr-review-batch1` 未提交。
+- 当前批次 worktree disposition 状态：dirty（包含本工作项实现文件、文档和测试；另有既有无关脏文件未处理）。
+- **是否继续下一批**：否；WI-189 P0 任务已实现并通过 focused verification。

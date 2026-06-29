@@ -12,6 +12,7 @@ import yaml
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
+from ai_sdlc.core.pr_review_service import CURRENT_REVIEW_PATH
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
     PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND,
@@ -975,6 +976,11 @@ def run_close_check(
             + " | ".join(doc_violations)
         )
 
+    local_pr_review = _local_pr_review_close_check_summary(root)
+    checks.append(local_pr_review)
+    if not local_pr_review["ok"]:
+        blockers.append(f"BLOCKER: {local_pr_review['detail']}")
+
     checks.append(
         {
             "name": "done_gate",
@@ -992,6 +998,70 @@ def run_close_check(
         wi_dir=wi_dir,
         error=None,
     )
+
+
+def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
+    pointer_path = root / CURRENT_REVIEW_PATH
+    if not pointer_path.exists():
+        return {
+            "name": "local_pr_review",
+            "ok": True,
+            "detail": "no local PR review current pointer; skipped",
+        }
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+        review_run_path = Path(str(pointer.get("review_run_path", "")))
+        review_run = json.loads(review_run_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": f"local PR review state cannot be read: {exc}",
+        }
+
+    verdict = str(review_run.get("verdict") or "")
+    final_report = str(review_run.get("final_report_path") or "")
+    unresolved_blockers = int(review_run.get("unresolved_blockers", 0) or 0)
+    unresolved_required = int(review_run.get("unresolved_required", 0) or 0)
+    if verdict == "blocked":
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": (
+                "local PR review blocked: "
+                f"unresolved_blockers={unresolved_blockers}, "
+                f"unresolved_required={unresolved_required}"
+            ),
+            "review_id": review_run.get("review_id", ""),
+            "verdict": verdict,
+        }
+    if verdict in {"fully_clean", "risk_accepted"} and not Path(final_report).is_file():
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": "local PR review final report is missing",
+            "review_id": review_run.get("review_id", ""),
+            "verdict": verdict,
+        }
+    if verdict == "risk_accepted":
+        detail = (
+            "local PR review risk_accepted; "
+            f"unresolved_required={unresolved_required}"
+        )
+    elif verdict == "fully_clean":
+        detail = "local PR review fully_clean"
+    else:
+        detail = f"local PR review not closed yet: verdict={verdict or 'none'}"
+    return {
+        "name": "local_pr_review",
+        "ok": verdict in {"fully_clean", "risk_accepted"},
+        "detail": detail,
+        "review_id": review_run.get("review_id", ""),
+        "verdict": verdict,
+        "unresolved_blockers": unresolved_blockers,
+        "unresolved_required": unresolved_required,
+        "final_report_path": final_report,
+    }
 
 
 def format_close_check_json(result: CloseCheckResult) -> str:
