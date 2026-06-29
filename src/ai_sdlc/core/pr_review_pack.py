@@ -125,6 +125,36 @@ def decide_incomplete_review_pack(
     )
 
 
+def analyze_pr_review_redaction(
+    root: Path,
+    *,
+    base_ref: str,
+    head_ref: str,
+    changed_files: list[str],
+    policy: LoopPolicyProfile,
+    code_egress: bool = False,
+    code_egress_confirmed: bool = False,
+    max_file_bytes: int = 1_000_000,
+) -> RedactionReport:
+    """Analyze PR-scope files using immutable git blobs, including deletions."""
+
+    git = GitClient(root)
+    base_commit = git.merge_base(base_ref, head_ref)
+    head_commit = git.resolve_revision(head_ref)
+    deleted_files = _git_deleted_files(root, base_ref, head_ref)
+    return analyze_redaction(
+        root,
+        changed_files,
+        policy=policy,
+        code_egress=code_egress,
+        code_egress_confirmed=code_egress_confirmed,
+        max_file_bytes=max_file_bytes,
+        head_file_bytes=_git_file_blobs(root, head_commit, changed_files),
+        base_file_bytes=_git_file_blobs(root, base_commit, changed_files),
+        deleted_file_bytes=_git_file_blobs(root, base_commit, deleted_files),
+    )
+
+
 def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
     """Build a bounded local PR review pack from Git state and policy."""
 
@@ -136,7 +166,6 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
     base_commit = git.merge_base(options.base_ref, options.head_ref)
     head_commit = git.resolve_revision(options.head_ref)
     changed_files = _git_changed_files(root, options.base_ref, options.head_ref)
-    deleted_files = _git_deleted_files(root, options.base_ref, options.head_ref)
 
     model_resolution = resolve_model_for_review(
         policy,
@@ -159,16 +188,15 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
         review_dir / "model-resolution.json",
         model_resolution,
     )
-    redaction_report = analyze_redaction(
+    redaction_report = analyze_pr_review_redaction(
         root,
-        changed_files,
+        base_ref=options.base_ref,
+        head_ref=options.head_ref,
+        changed_files=changed_files,
         policy=policy,
         code_egress=options.code_egress,
         code_egress_confirmed=options.code_egress_confirmed,
         max_file_bytes=options.max_file_bytes,
-        head_file_bytes=_git_file_blobs(root, head_commit, changed_files),
-        base_file_bytes=_git_file_blobs(root, base_commit, changed_files),
-        deleted_file_bytes=_git_file_blobs(root, base_commit, deleted_files),
     )
     redaction_report_path = store.write_json_artifact(
         review_dir / "redaction-report.json",
@@ -485,5 +513,7 @@ __all__ = [
     "ReviewPackBuildOptions",
     "ReviewPackBuildResult",
     "ReviewPackBuildStatus",
+    "analyze_pr_review_redaction",
     "build_review_pack",
+    "decide_incomplete_review_pack",
 ]

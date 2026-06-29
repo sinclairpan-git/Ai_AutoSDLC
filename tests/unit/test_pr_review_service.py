@@ -91,6 +91,30 @@ def test_start_dry_run_blocks_incomplete_redaction_pack(tmp_path) -> None:
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
 
 
+def test_start_dry_run_allows_safe_deletion_hunks(tmp_path) -> None:
+    _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/old.py", "print('remove me')\n", "add old")
+    base_commit = _git(tmp_path, "rev-parse", "HEAD")
+    _git(tmp_path, "rm", "src/old.py")
+    _git(tmp_path, "commit", "-m", "remove old")
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            dry_run=True,
+            review_id="review-dry-run-delete",
+        )
+    )
+
+    assert result.status == PRReviewCommandStatus.DRY_RUN
+    assert result.changed_files_count == 1
+    assert result.included_files_count == 1
+    assert result.omitted_files_count == 0
+    assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
+
+
 def test_start_mock_reviewer_writes_pack_findings_run_and_pointer(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")

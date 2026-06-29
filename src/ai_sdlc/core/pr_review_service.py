@@ -38,6 +38,7 @@ from ai_sdlc.core.pr_review_pack import (
     ReviewPackBuildOptions,
     ReviewPackBuildResult,
     ReviewPackBuildStatus,
+    analyze_pr_review_redaction,
     build_review_pack,
     decide_incomplete_review_pack,
 )
@@ -49,7 +50,7 @@ from ai_sdlc.core.pr_review_provider import (
     run_mock_reviewer,
     run_provider_command,
 )
-from ai_sdlc.core.pr_review_redaction import RedactionReport, analyze_redaction
+from ai_sdlc.core.pr_review_redaction import RedactionReport
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
 CURRENT_REVIEW_PATH = Path(AI_SDLC_DIR) / "reviews" / "pr" / "current-review.json"
@@ -1026,9 +1027,11 @@ def _preview(
         )
     )
 
-    redaction = analyze_redaction(
+    redaction = analyze_pr_review_redaction(
         root,
-        changed_files,
+        base_ref=options.base_ref,
+        head_ref=options.head_ref,
+        changed_files=changed_files,
         policy=policy,
         code_egress=provider_options.code_egress,
         code_egress_confirmed=provider_options.code_egress_confirmed,
