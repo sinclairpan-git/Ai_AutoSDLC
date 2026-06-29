@@ -491,6 +491,34 @@ def test_close_blocks_required_findings_then_allows_risk_accepted(
     assert "risk_accepted" in report
 
 
+def test_close_honors_policy_default_require_no_blockers(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    policy_path = tmp_path / ".ai-sdlc" / "project" / "config" / "loop-policy.yaml"
+    policy_path.parent.mkdir(parents=True)
+    policy_path.write_text(
+        "default_close_mode: require-no-blockers\n",
+        encoding="utf-8",
+    )
+    _git(tmp_path, "add", ".ai-sdlc/project/config/loop-policy.yaml")
+    _git(tmp_path, "commit", "-m", "set pr review close policy")
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-policy-close",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+
+    result = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.CLOSED
+    assert result.verdict == "risk_accepted"
+    assert result.unresolved_required == 1
+
+
 def test_close_blocks_when_provider_verdict_is_blocked(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
@@ -530,9 +558,36 @@ def test_close_blocks_when_head_moved_after_review(tmp_path) -> None:
 
     assert result.status == PRReviewCommandStatus.BLOCKED
     assert result.verdict == "blocked"
-    assert "Current HEAD does not match reviewed head_commit" in result.blocker
+    assert "reviewed head_ref does not match reviewed head_commit" in result.blocker
     assert "rerun" in result.next_action
     assert result.final_report_path == ""
+
+
+def test_close_uses_reviewed_head_ref_not_checked_out_head(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _git(tmp_path, "checkout", "-b", "feature")
+    _commit_file(tmp_path, "src/app.py", "print('feature')\n", "add app")
+    feature_head = _git(tmp_path, "rev-parse", "HEAD")
+    _git(tmp_path, "checkout", "main")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            head_ref="feature",
+            provider_id="mock-reviewer",
+            review_id="review-noncheckedout-head",
+            mock_fixture=MockReviewerFixture.CLEAN,
+        )
+    )
+
+    result = close_pr_review(tmp_path)
+
+    assert start.status == PRReviewCommandStatus.STARTED
+    assert json.loads(Path(start.review_pack_path).read_text(encoding="utf-8"))[
+        "head_commit"
+    ] == feature_head
+    assert result.status == PRReviewCommandStatus.CLOSED
+    assert result.verdict == "fully_clean"
 
 
 def test_close_blocks_when_worktree_dirty_after_review(tmp_path) -> None:

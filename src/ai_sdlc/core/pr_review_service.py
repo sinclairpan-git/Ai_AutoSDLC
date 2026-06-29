@@ -753,6 +753,10 @@ def close_pr_review(
 ) -> PRReviewCloseResult:
     """Close current review with fail-closed verdict semantics."""
 
+    policy = load_loop_policy(root.resolve())
+    effective_require_no_blockers = (
+        require_no_blockers or policy.default_close_mode == "require-no-blockers"
+    )
     try:
         review_run, review_run_path = _load_current_review_run(root)
         not_closeable = _not_closeable_review_result(review_run)
@@ -850,7 +854,10 @@ def close_pr_review(
         status = PRReviewCommandStatus.BLOCKED
         blocker = "Unresolved BLOCKER findings remain."
         next_action = "Fix blockers and rerun PR review before closing."
-    elif unresolved[FindingSeverity.REQUIRED] > 0 and not require_no_blockers:
+    elif (
+        unresolved[FindingSeverity.REQUIRED] > 0
+        and not effective_require_no_blockers
+    ):
         verdict = ReviewVerdict.BLOCKED
         status = PRReviewCommandStatus.BLOCKED
         blocker = "Unresolved REQUIRED findings remain."
@@ -925,13 +932,15 @@ def _not_closeable_review_result(review_run: ReviewRun) -> PRReviewCloseResult |
 
 def _reviewed_head_mismatch(root: Path, review_run: ReviewRun) -> str:
     try:
-        current_head = GitClient(root.resolve()).resolve_revision("HEAD")
+        current_reviewed_head = GitClient(root.resolve()).resolve_revision(
+            review_run.head_ref
+        )
     except GitError as exc:
-        return f"Unable to verify current HEAD before closing PR review: {exc}"
-    if current_head != review_run.head_commit:
+        return f"Unable to verify reviewed head before closing PR review: {exc}"
+    if current_reviewed_head != review_run.head_commit:
         return (
-            "Current HEAD does not match reviewed head_commit: "
-            f"{current_head} != {review_run.head_commit}."
+            "Current reviewed head_ref does not match reviewed head_commit: "
+            f"{current_reviewed_head} != {review_run.head_commit}."
         )
     return ""
 
