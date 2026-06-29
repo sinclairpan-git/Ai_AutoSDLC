@@ -196,6 +196,32 @@ def test_build_review_pack_includes_safe_deletion_hunks(tmp_path) -> None:
     assert "-print('remove me')" in diff_text
 
 
+def test_build_review_pack_uses_merge_base_scope(tmp_path) -> None:
+    _init_repo_with_base_commit(tmp_path)
+    _git(tmp_path, "checkout", "-b", "feature")
+    _commit_file(tmp_path, "src/feature.py", "print('feature')\n", "add feature")
+    _git(tmp_path, "checkout", "main")
+    _commit_file(tmp_path, "src/base_only.py", "print('base')\n", "advance base")
+    _git(tmp_path, "checkout", "feature")
+
+    result = build_review_pack(
+        ReviewPackBuildOptions(
+            root=tmp_path,
+            base_ref="main",
+            review_id="review-merge-base",
+            loop_id="loop-merge-base",
+            current_model="gpt-5",
+        )
+    )
+
+    assert result.status == ReviewPackBuildStatus.READY
+    assert result.review_pack is not None
+    assert result.review_pack.changed_files == ["src/feature.py"]
+    diff_text = Path(result.diff_path).read_text(encoding="utf-8")
+    assert "src/feature.py" in diff_text
+    assert "src/base_only.py" not in diff_text
+
+
 def _init_repo_with_base_commit(path: Path) -> str:
     _git(path, "init")
     if _git(path, "symbolic-ref", "--short", "HEAD") != "main":

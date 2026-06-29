@@ -298,6 +298,7 @@ class ReviewRun(LoopArtifactModel):
     head_ref: str = ""
     base_commit: str = ""
     head_commit: str = ""
+    provider_command: list[str] = Field(default_factory=list)
     review_pack_path: str = ""
     findings_path: str = ""
     resolution_path: str = ""

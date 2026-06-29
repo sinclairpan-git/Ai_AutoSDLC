@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import yaml
@@ -389,6 +390,30 @@ def test_rerun_blocks_unresolved_required_findings_before_reset(tmp_path) -> Non
     assert "1 REQUIRED" in result.blocker
 
 
+def test_rerun_reuses_persisted_local_provider_command(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    script = _write_clean_reviewer_script(tmp_path)
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="local-agent",
+            current_model="gpt-5",
+            provider_command=[sys.executable, str(script)],
+            review_id="review-rerun-command",
+        )
+    )
+    _commit_file(tmp_path, "src/app.py", "print('updated')\n", "update app")
+
+    result = rerun_pr_review(tmp_path)
+
+    review_run = json.loads(Path(result.review_run_path).read_text(encoding="utf-8"))
+    assert start.status == PRReviewCommandStatus.STARTED
+    assert result.status == PRReviewCommandStatus.STARTED
+    assert review_run["provider_command"] == [sys.executable, str(script)]
+
+
 def test_rerun_reports_scope_drift_for_unrelated_new_files(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
@@ -425,6 +450,40 @@ def _append_advisory_finding(findings_path: Path) -> None:
         }
     )
     findings_path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def _write_clean_reviewer_script(path: Path) -> Path:
+    script = path / "clean_reviewer.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import argparse, json",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--review-pack', required=True)",
+                "parser.add_argument('--output', required=True)",
+                "parser.add_argument('--model')",
+                "parser.add_argument('--resolved-model')",
+                "parser.add_argument('--allowlist', nargs='*', default=[])",
+                "args = parser.parse_args()",
+                "pack = json.load(open(args.review_pack, encoding='utf-8'))",
+                "payload = {",
+                "  'schema_version': '1',",
+                "  'artifact_kind': 'review-findings',",
+                "  'review_id': pack['review_id'],",
+                "  'loop_id': pack['loop_id'],",
+                "  'review_pack_path': args.review_pack,",
+                "  'provider_id': 'local-agent',",
+                "  'model_selector': args.model,",
+                "  'resolved_model': args.resolved_model,",
+                "  'verdict': 'clean',",
+                "  'findings': []",
+                "}",
+                "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return script
 
 
 def _init_repo(path: Path) -> str:

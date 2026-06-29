@@ -525,9 +525,7 @@ def rerun_pr_review(
         )
 
     try:
-        current_changed = set(
-            GitClient(root.resolve()).changed_paths(review_run.base_ref, review_run.head_ref)
-        )
+        current_changed = set(_pr_changed_paths(root.resolve(), review_run.base_ref, review_run.head_ref))
     except GitError as exc:
         return PRReviewStartResult(
             status=PRReviewCommandStatus.BLOCKED,
@@ -583,7 +581,7 @@ def rerun_pr_review(
             provider_id=review_run.provider_id,
             model_selector=review_run.model_selector,
             current_model=review_run.resolved_model,
-            provider_command=provider_command or [],
+            provider_command=provider_command or review_run.provider_command,
             code_egress=review_run.code_egress,
             review_id=review_run.review_id,
             loop_id=review_run.loop_id,
@@ -907,6 +905,7 @@ def _write_review_run(
         head_ref=options.head_ref,
         base_commit=review_pack.base_commit if review_pack else "",
         head_commit=review_pack.head_commit if review_pack else "",
+        provider_command=options.provider_command,
         review_pack_path=pack_result.review_pack_path,
         findings_path=provider_result.findings_path,
         verdict=findings.verdict if findings else None,
@@ -918,6 +917,12 @@ def _write_review_run(
     path = store.review_run_dir(review_id) / "review-run.json"
     store.write_json_artifact(path, review_run)
     return path
+
+
+def _pr_changed_paths(root: Path, base_ref: str, head_ref: str) -> tuple[str, ...]:
+    git = GitClient(root)
+    merge_base = git.merge_base(base_ref, head_ref)
+    return git.changed_paths(merge_base, head_ref)
 
 
 def _write_current_review(

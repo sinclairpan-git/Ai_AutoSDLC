@@ -88,9 +88,9 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
     review_dir = store.create_review_run_dir(options.review_id)
     git = GitClient(root)
     policy = load_loop_policy(root)
-    base_commit = git.resolve_revision(options.base_ref)
+    base_commit = git.merge_base(options.base_ref, options.head_ref)
     head_commit = git.resolve_revision(options.head_ref)
-    changed_files = list(git.changed_paths(options.base_ref, options.head_ref))
+    changed_files = _git_changed_files(root, options.base_ref, options.head_ref)
     deleted_files = _git_deleted_files(root, options.base_ref, options.head_ref)
 
     model_resolution = resolve_model_for_review(
@@ -121,7 +121,7 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
         code_egress=options.code_egress,
         code_egress_confirmed=options.code_egress_confirmed,
         max_file_bytes=options.max_file_bytes,
-        deleted_file_bytes=_git_file_blobs(root, options.base_ref, deleted_files),
+        deleted_file_bytes=_git_file_blobs(root, base_commit, deleted_files),
     )
     redaction_report_path = store.write_json_artifact(
         review_dir / "redaction-report.json",
@@ -257,10 +257,35 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
     )
 
 
+def _git_changed_files(root: Path, base_ref: str, head_ref: str) -> list[str]:
+    cmd = ["git", "diff", "--name-only", f"{base_ref}...{head_ref}"]
+    try:
+        result = subprocess.run(
+            cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=30,
+        )
+    except FileNotFoundError as exc:
+        raise GitError("git is not installed or not on PATH") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise GitError("git diff timed out while detecting changed files") from exc
+    if result.returncode != 0:
+        raise GitError(
+            f"git diff --name-only failed (exit {result.returncode}): "
+            f"{result.stderr.strip()}"
+        )
+    return [path for path in result.stdout.splitlines() if path.strip()]
+
+
 def _git_diff(root: Path, base_ref: str, head_ref: str, paths: list[str]) -> str:
     if not paths:
         return ""
-    cmd = ["git", "diff", f"{base_ref}..{head_ref}", "--", *paths]
+    cmd = ["git", "diff", f"{base_ref}...{head_ref}", "--", *paths]
     try:
         result = subprocess.run(
             cmd,
@@ -284,7 +309,7 @@ def _git_diff(root: Path, base_ref: str, head_ref: str, paths: list[str]) -> str
 
 
 def _git_deleted_files(root: Path, base_ref: str, head_ref: str) -> list[str]:
-    cmd = ["git", "diff", "--name-status", f"{base_ref}..{head_ref}"]
+    cmd = ["git", "diff", "--name-status", f"{base_ref}...{head_ref}"]
     try:
         result = subprocess.run(
             cmd,
