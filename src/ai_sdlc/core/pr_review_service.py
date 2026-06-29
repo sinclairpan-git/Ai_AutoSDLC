@@ -15,7 +15,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
-from ai_sdlc.core.loop_models import LoopStatus
+from ai_sdlc.core.loop_models import LoopPolicyProfile, LoopStatus
 from ai_sdlc.core.loop_policy import (
     ModelResolutionRequest,
     load_loop_policy,
@@ -91,7 +91,7 @@ class PRReviewStartOptions:
     root: Path
     base_ref: str
     head_ref: str = "HEAD"
-    provider_id: str = "local-agent"
+    provider_id: str = ""
     model_selector: str = "current"
     current_model: str = ""
     provider_default_model: str = ""
@@ -210,7 +210,7 @@ def doctor_pr_review(
     root: Path,
     base_ref: str,
     head_ref: str = "HEAD",
-    provider_id: str = "local-agent",
+    provider_id: str = "",
     model_selector: str = "current",
     current_model: str = "",
     provider_default_model: str = "",
@@ -237,7 +237,7 @@ def doctor_pr_review(
     )
     return PRReviewDoctorResult(
         status=status,
-        provider_id=provider_id,
+        provider_id=model_resolution.provider_id if model_resolution else provider_id,
         model_selector=model_resolution.model_selector if model_resolution else model_selector,
         resolved_model=model_resolution.resolved_model if model_resolution else "",
         code_egress=code_egress,
@@ -264,7 +264,9 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
         return PRReviewStartResult(
             status=status,
             dry_run=True,
-            provider_id=options.provider_id,
+            provider_id=model_resolution.provider_id
+            if model_resolution
+            else options.provider_id,
             review_id=_resolve_review_id(options),
             loop_id=_resolve_loop_id(options),
             review_dir=str(
@@ -288,7 +290,10 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
         )
 
     root = options.root.resolve()
-    provider_options = _normalize_provider_options(options)
+    policy = load_loop_policy(root)
+    provider_options = _normalize_provider_options(
+        _apply_policy_provider_default(options, policy)
+    )
     review_id = _resolve_review_id(provider_options)
     loop_id = _resolve_loop_id(provider_options)
     provider_blocker = _unsupported_provider_blocker(provider_options.provider_id)
@@ -456,12 +461,33 @@ def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
 
     try:
         review_run, review_run_path = _load_current_review_run(root)
-        findings = _load_findings(review_run)
     except FileNotFoundError as exc:
         return PRReviewFixResult(
             status=PRReviewCommandStatus.NO_REVIEW,
             blocker=str(exc),
             next_action="Run ai-sdlc pr-review start --base <branch>.",
+        )
+    except (json.JSONDecodeError, ValidationError, ValueError, OSError) as exc:
+        return PRReviewFixResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            blocker=f"Current PR review artifacts are malformed: {exc}",
+            next_action="Rerun ai-sdlc pr-review start.",
+        )
+    try:
+        findings = _load_findings(review_run)
+    except FileNotFoundError as exc:
+        return PRReviewFixResult(
+            status=PRReviewCommandStatus.NO_REVIEW,
+            review_id=review_run.review_id,
+            blocker=str(exc),
+            next_action="Run ai-sdlc pr-review start --base <branch>.",
+        )
+    except (json.JSONDecodeError, ValidationError, ValueError, OSError) as exc:
+        return PRReviewFixResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            blocker=f"Current findings.json is malformed: {exc}",
+            next_action="Rerun ai-sdlc pr-review start.",
         )
 
     store = LoopArtifactStore(root.resolve())
@@ -977,7 +1003,9 @@ def _preview(
     checks.append(PRReviewCheck(name="git", status=PRReviewCommandStatus.READY, detail=f"{len(changed_files)} changed file(s)."))
 
     policy = load_loop_policy(root)
-    provider_options = _normalize_provider_options(options)
+    provider_options = _normalize_provider_options(
+        _apply_policy_provider_default(options, policy)
+    )
     provider_blocker = _unsupported_provider_blocker(provider_options.provider_id)
     if provider_blocker:
         checks.append(
@@ -1149,6 +1177,31 @@ def _normalize_provider_options(options: PRReviewStartOptions) -> PRReviewStartO
             mock_fixture=options.mock_fixture,
         )
     return options
+
+
+def _apply_policy_provider_default(
+    options: PRReviewStartOptions,
+    policy: LoopPolicyProfile,
+) -> PRReviewStartOptions:
+    provider_id = options.provider_id.strip()
+    if provider_id:
+        return options
+    return PRReviewStartOptions(
+        root=options.root,
+        base_ref=options.base_ref,
+        head_ref=options.head_ref,
+        provider_id=policy.default_provider or "local-agent",
+        model_selector=options.model_selector,
+        current_model=options.current_model,
+        provider_default_model=options.provider_default_model,
+        provider_command=options.provider_command,
+        code_egress=options.code_egress,
+        code_egress_confirmed=options.code_egress_confirmed,
+        dry_run=options.dry_run,
+        review_id=options.review_id,
+        loop_id=options.loop_id,
+        mock_fixture=options.mock_fixture,
+    )
 
 
 def _unsupported_provider_blocker(provider_id: str) -> str:

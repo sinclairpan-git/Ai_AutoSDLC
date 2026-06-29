@@ -56,6 +56,37 @@ def test_pr_review_start_dry_run_json_is_read_only(tmp_path: Path) -> None:
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
 
 
+def test_pr_review_start_uses_policy_default_provider_when_option_omitted(
+    tmp_path: Path,
+) -> None:
+    base_commit = _init_repo(tmp_path)
+    policy_path = tmp_path / ".ai-sdlc" / "project" / "config" / "loop-policy.yaml"
+    policy_path.parent.mkdir(parents=True)
+    policy_path.write_text("default_provider: mock-reviewer\n", encoding="utf-8")
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    with patch("ai_sdlc.cli.pr_review_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(
+            app,
+            [
+                "pr-review",
+                "start",
+                "--base",
+                base_commit,
+                "--dry-run",
+                "--review-id",
+                "review-policy-default-cli",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "dry_run"
+    assert payload["provider_id"] == "mock-reviewer"
+    assert payload["resolved_model"] == "mock-reviewer"
+
+
 def test_pr_review_start_mock_and_status_json(tmp_path: Path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")

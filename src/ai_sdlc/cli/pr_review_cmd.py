@@ -39,9 +39,9 @@ def pr_review_doctor(
     ),
     head_ref: str = typer.Option("HEAD", "--head", help="Head branch or revision."),
     provider_id: str = typer.Option(
-        "local-agent",
+        "",
         "--provider",
-        help="Review provider: local-agent or mock-reviewer.",
+        help="Review provider: local-agent or mock-reviewer. Defaults to loop policy.",
     ),
     model_selector: str = typer.Option(
         "current",
@@ -98,9 +98,9 @@ def pr_review_start(
     ),
     head_ref: str = typer.Option("HEAD", "--head", help="Head branch or revision."),
     provider_id: str = typer.Option(
-        "local-agent",
+        "",
         "--provider",
-        help="Review provider: local-agent or mock-reviewer.",
+        help="Review provider: local-agent or mock-reviewer. Defaults to loop policy.",
     ),
     model_selector: str = typer.Option(
         "current",

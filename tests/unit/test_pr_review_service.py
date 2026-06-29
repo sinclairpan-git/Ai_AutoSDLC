@@ -87,6 +87,28 @@ def test_start_dry_run_rejects_unknown_provider(tmp_path) -> None:
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
 
 
+def test_start_dry_run_uses_policy_default_provider_when_omitted(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    policy_path = tmp_path / ".ai-sdlc" / "project" / "config" / "loop-policy.yaml"
+    policy_path.parent.mkdir(parents=True)
+    policy_path.write_text("default_provider: mock-reviewer\n", encoding="utf-8")
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            dry_run=True,
+            review_id="review-policy-default-provider",
+        )
+    )
+
+    assert result.status == PRReviewCommandStatus.DRY_RUN
+    assert result.provider_id == "mock-reviewer"
+    assert result.resolved_model == "mock-reviewer"
+    assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
+
+
 def test_start_rejects_unknown_provider_before_writing_artifacts(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
@@ -361,6 +383,27 @@ def test_fix_generates_plan_and_resolution_without_advisory_auto_plan(
     assert "ADV-001" not in Path(result.fix_plan_path).read_text(encoding="utf-8").split(
         "## Required Fixes", 1
     )[1].split("## Advisory", 1)[0]
+
+
+def test_fix_blocks_malformed_findings_json(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-malformed-findings",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    Path(start.findings_path).write_text("{", encoding="utf-8")
+
+    result = fix_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.review_id == "review-malformed-findings"
+    assert "findings.json is malformed" in result.blocker
 
 
 def test_fix_stops_when_max_rounds_reached(tmp_path) -> None:
