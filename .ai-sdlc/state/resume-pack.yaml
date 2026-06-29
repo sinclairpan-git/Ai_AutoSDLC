@@ -9,15 +9,16 @@ working_set_snapshot:
   plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
-  context_summary: 'Goal: Publish AI-SDLC v0.9.0 | State: PR #100 is open for release:
-    prepare v0.9.0 on branch codex/release-0.9.0. @codex review requested. Waiting
-    for GitHub checks and Codex review before merge, tag, release-build, and release-artifact
-    smoke. | Next: Monitor PR #100 checks and Codex review; fix any findings; merge
-    when clean; then tag and publish v0.9.0.'
-current_branch: codex/release-0.9.0
+  context_summary: 'Goal: Publish AI-SDLC v0.9.1 patch release | State: Prepared v0.9.1
+    release branch with version bump, current release docs/user guide/workflow defaults/constraint
+    constants aligned to v0.9.1, and new docs/releases/v0.9.1.md. Local validation
+    passed. | Next: Commit v0.9.1 release prep, push branch, open PR, request Codex
+    review, monitor checks, merge, tag v0.9.1, publish release assets, then run release
+    artifact smoke.'
+current_branch: feature/187-agentops-self-iteration-monitoring-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-06-25T09:36:13+00:00'
+timestamp: '2026-06-29T01:54:04+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-06-02T04:12:59+00:00'
 checkpoint_fingerprint: 36d43d40fc4dd1f4e72459e6809f5e49cd3a8cdb6d1c85990e8f2b471ac24f4f

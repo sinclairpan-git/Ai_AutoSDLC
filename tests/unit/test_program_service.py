@@ -1854,8 +1854,8 @@ def test_validate_manifest_warns_for_unmapped_truth_sources_in_v2(
         encoding="utf-8",
     )
     (tmp_path / "docs" / "releases").mkdir(parents=True)
-    (tmp_path / "docs" / "releases" / "v0.9.0.md").write_text(
-        "# v0.9.0\n", encoding="utf-8"
+    (tmp_path / "docs" / "releases" / "v0.9.1.md").write_text(
+        "# v0.9.1\n", encoding="utf-8"
     )
     (tmp_path / "docs" / "framework-defect-backlog.zh-CN.md").write_text(
         "# backlog\n\n后续治理\n",
@@ -1907,7 +1907,7 @@ def test_validate_manifest_warns_for_unmapped_truth_sources_in_v2(
         for warning in res.warnings
     )
     assert any(
-        "migration_pending: truth source unmapped for docs/releases/v0.9.0.md"
+        "migration_pending: truth source unmapped for docs/releases/v0.9.1.md"
         in warning
         for warning in res.warnings
     )
@@ -1947,8 +1947,8 @@ def test_build_truth_snapshot_includes_source_inventory_and_layer_counts(
         encoding="utf-8",
     )
     (tmp_path / "docs" / "releases").mkdir(parents=True)
-    (tmp_path / "docs" / "releases" / "v0.9.0.md").write_text(
-        "# v0.9.0\n", encoding="utf-8"
+    (tmp_path / "docs" / "releases" / "v0.9.1.md").write_text(
+        "# v0.9.1\n", encoding="utf-8"
     )
     (tmp_path / "docs" / "framework-defect-backlog.zh-CN.md").write_text(
         "# backlog\n\n后续治理\n",
@@ -1996,7 +1996,7 @@ source_registry:
   - path: "docs/superpowers/specs/2026-04-02-design.md"
     source_type: "design_doc"
     truth_layer: "design"
-  - path: "docs/releases/v0.9.0.md"
+  - path: "docs/releases/v0.9.1.md"
     source_type: "release_doc"
     truth_layer: "release"
   - path: "docs/framework-defect-backlog.zh-CN.md"
