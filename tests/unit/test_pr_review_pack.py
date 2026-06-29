@@ -162,12 +162,11 @@ def test_build_review_pack_omits_redacted_files_from_reviewer_allowlist(
         )
     )
 
-    assert result.status == ReviewPackBuildStatus.READY
-    assert result.review_pack is not None
-    assert result.review_pack.changed_files == ["src/app.py", "src/settings.py"]
-    assert result.review_pack.reviewer_allowlist == ["src/app.py"]
+    assert result.status == ReviewPackBuildStatus.NEEDS_USER
+    assert result.review_pack is None
+    assert "incomplete" in result.blocker
     assert result.redacted_files_count == 1
-    assert "settings.py" not in Path(result.diff_path).read_text(encoding="utf-8")
+    assert result.diff_path == ""
 
 
 def test_build_review_pack_redacts_reviewed_head_blob_not_dirty_worktree(
@@ -194,11 +193,10 @@ def test_build_review_pack_redacts_reviewed_head_blob_not_dirty_worktree(
         )
     )
 
-    assert result.status == ReviewPackBuildStatus.READY
+    assert result.status == ReviewPackBuildStatus.NEEDS_USER
     assert result.redacted_files_count == 1
-    assert result.review_pack is not None
-    assert result.review_pack.reviewer_allowlist == []
-    assert "settings.py" not in Path(result.diff_path).read_text(encoding="utf-8")
+    assert result.review_pack is None
+    assert result.diff_path == ""
 
 
 def test_build_review_pack_includes_safe_deletion_hunks(tmp_path) -> None:

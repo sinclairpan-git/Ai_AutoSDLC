@@ -81,11 +81,11 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 
 作为普通 AI-SDLC 用户，我希望在本地开发完成后，对当前分支相对 `main` 或指定 base 的 diff 启动独立 review agent，并默认使用我当前开发环境已配置的模型，以便在 CI 无法访问模型服务的情况下仍能获得对抗式代码审查。
 
-**独立测试**：在一个 fixture Git 仓库中创建 feature 分支和代码 diff，先执行 `ai-sdlc pr-review start --base main --provider local-agent --model current --dry-run` 断言只预览将生成的 artifact、provider、model selector 和命令且不写入 review run、不启动模型；再执行 `ai-sdlc pr-review start --base main --provider mock-reviewer` 断言生成 review pack、findings 和状态文件，且不调用云端 PR review 服务。
+**独立测试**：在一个 fixture Git 仓库中创建 feature 分支和代码 diff，先执行 `ai-sdlc pr-review start --base main --provider local-agent --model current --provider-command "my-local-reviewer" --dry-run` 断言只预览将生成的 artifact、provider、model selector 和命令且不写入 review run、不启动模型；再执行 `ai-sdlc pr-review start --base main --provider mock-reviewer` 断言生成 review pack、findings 和状态文件，且不调用云端 PR review 服务。
 
 **验收场景**：
 
-1. **Given** 当前仓库有 feature 分支相对 `main` 的 diff，**When** 用户执行 `ai-sdlc pr-review start --base main --provider local-agent --model current`，**Then** 系统必须生成一个本地 review run，并写入 `.ai-sdlc/reviews/pr/<review-id>/review-pack.json`。
+1. **Given** 当前仓库有 feature 分支相对 `main` 的 diff，**When** 用户执行 `ai-sdlc pr-review start --base main --provider local-agent --model current --provider-command "my-local-reviewer"`，**Then** 系统必须生成一个本地 review run，并写入 `.ai-sdlc/reviews/pr/<review-id>/review-pack.json`。
 2. **Given** CI 网络不可访问模型服务，**When** 用户在本地执行 PR review，**Then** review agent 默认调用用户当前开发环境已配置的模型，也可以按用户显式指定调用 GPT、Claude、DeepSeek、GLM 或其他模型；系统不得要求 CI 发起模型请求。
 3. **Given** review provider 为 `local-agent`，**When** 系统启动 review，**Then** 它必须使用独立 reviewer 会话或进程，不得复用当前实现 agent 上下文。
 
@@ -359,8 +359,8 @@ P0 必须支持以下布局：
 P0 命令：
 
 ```bash
-ai-sdlc pr-review start --base main --provider local-agent --model current
-ai-sdlc pr-review start --base main --provider local-agent --model claude
+ai-sdlc pr-review start --base main --provider local-agent --model current --provider-command "my-local-reviewer"
+ai-sdlc pr-review start --base main --provider local-agent --model claude --provider-command "my-local-reviewer"
 ai-sdlc pr-review start --base main --provider mock-reviewer --dry-run
 ai-sdlc pr-review doctor
 ai-sdlc pr-review status
@@ -375,7 +375,7 @@ P1 命令：
 ```bash
 ai-sdlc loop status
 ai-sdlc loop list
-ai-sdlc pr-review start --pr 123 --provider local-agent --model current
+ai-sdlc pr-review start --pr 123 --provider local-agent --model current --provider-command "my-local-reviewer"
 ai-sdlc pr-review close --strict
 ai-sdlc pr-review attest
 ```

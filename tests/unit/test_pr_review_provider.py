@@ -226,6 +226,50 @@ def test_local_agent_blocks_mismatched_exit_code_and_verdict(tmp_path) -> None:
     assert result.findings.verdict == "clean"
 
 
+def test_local_agent_blocks_findings_for_different_review_pack(tmp_path) -> None:
+    review_pack_path = _write_review_pack(tmp_path, review_id="review-current")
+    script = tmp_path / "stale_scope.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import argparse, json",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--review-pack', required=True)",
+                "parser.add_argument('--output', required=True)",
+                "parser.add_argument('--model')",
+                "parser.add_argument('--resolved-model')",
+                "parser.add_argument('--allowlist', nargs='*', default=[])",
+                "args = parser.parse_args()",
+                "payload = {",
+                "  'schema_version': '1',",
+                "  'artifact_kind': 'review-findings',",
+                "  'review_id': 'review-stale',",
+                "  'loop_id': 'review-stale-loop',",
+                "  'review_pack_path': args.review_pack,",
+                "  'provider_id': 'local-agent',",
+                "  'model_selector': 'current',",
+                "  'resolved_model': 'gpt-5',",
+                "  'verdict': 'clean',",
+                "  'findings': []",
+                "}",
+                "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "review_id does not match" in result.blocker
+
+
 def test_local_agent_blocks_when_reviewer_mutates_worktree(tmp_path) -> None:
     _init_git_repo(tmp_path)
     _write_file(tmp_path, "src/app.py", "print('before')\n")

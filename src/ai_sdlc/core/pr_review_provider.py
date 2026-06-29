@@ -210,6 +210,8 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
 
     return _validate_findings_output(
         store=store,
+        review_pack=review_pack,
+        review_pack_path=options.review_pack_path,
         findings_path=findings_path,
         schema_validation_path=schema_validation_path,
         invocation_path=invocation_path,
@@ -263,6 +265,8 @@ def run_mock_reviewer(
 
     return _validate_findings_output(
         store=store,
+        review_pack=review_pack,
+        review_pack_path=review_pack_path,
         findings_path=findings_path,
         schema_validation_path=schema_validation_path,
         invocation_path=invocation_path,
@@ -479,6 +483,8 @@ def _write_invocation(
 def _validate_findings_output(
     *,
     store: LoopArtifactStore,
+    review_pack: ReviewPack,
+    review_pack_path: Path,
     findings_path: Path,
     schema_validation_path: Path,
     invocation_path: Path,
@@ -513,6 +519,23 @@ def _validate_findings_output(
     findings = ReviewFindings.model_validate(
         json.loads(findings_path.read_text(encoding="utf-8"))
     )
+    scope_blocker = _findings_scope_blocker(
+        findings,
+        review_pack=review_pack,
+        review_pack_path=review_pack_path,
+    )
+    if scope_blocker:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            exit_code=exit_code,
+            invocation_path=str(invocation_path),
+            findings_path=str(findings_path),
+            schema_validation_path=str(schema_validation_path),
+            blocker=scope_blocker,
+            next_action="Regenerate findings.json for the current review pack.",
+            invocation=invocation,
+            findings=findings,
+        )
     verdict_blocker = _exit_code_verdict_blocker(exit_code, findings.verdict)
     if verdict_blocker:
         return ProviderRunResult(
@@ -537,6 +560,36 @@ def _validate_findings_output(
         invocation=invocation,
         findings=findings,
     )
+
+
+def _findings_scope_blocker(
+    findings: ReviewFindings,
+    *,
+    review_pack: ReviewPack,
+    review_pack_path: Path,
+) -> str:
+    if findings.review_id != review_pack.review_id:
+        return (
+            "Reviewer findings review_id does not match the current review pack: "
+            f"{findings.review_id} != {review_pack.review_id}."
+        )
+    if findings.loop_id != review_pack.loop_id:
+        return (
+            "Reviewer findings loop_id does not match the current review pack: "
+            f"{findings.loop_id} != {review_pack.loop_id}."
+        )
+    try:
+        actual_pack_path = Path(findings.review_pack_path).resolve()
+        expected_pack_path = review_pack_path.resolve()
+    except OSError:
+        actual_pack_path = Path(findings.review_pack_path)
+        expected_pack_path = review_pack_path
+    if actual_pack_path != expected_pack_path:
+        return (
+            "Reviewer findings review_pack_path does not match the current "
+            f"review pack: {findings.review_pack_path} != {review_pack_path}."
+        )
+    return ""
 
 
 def _exit_code_verdict_blocker(

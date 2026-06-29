@@ -50,21 +50,24 @@ beginner path below from the repository root:
 2. Check readiness without writing review artifacts:
 
    ```bash
-   ai-sdlc pr-review doctor --base main --provider local-agent --model current
+   ai-sdlc pr-review doctor --base main --provider local-agent --model current --provider-command "my-local-reviewer"
    ```
 
 3. Start the local review:
 
    ```bash
-   ai-sdlc pr-review start --base main --provider local-agent --model current
+   ai-sdlc pr-review start --base main --provider local-agent --model current --provider-command "my-local-reviewer"
    ```
 
-The review agent runs from the local CLI/agent environment. The default
-`model current` selector uses the model already configured for that local
-environment; advanced users can choose another configured model explicitly. CI
-systems should consume the generated artifacts and deterministic counts, not
-send repository code to GPT, Claude, DeepSeek, GLM, Codex, or any other model
-service from the CI network.
+The review agent runs from the local CLI/agent environment. The
+`--provider-command` program must write schema-valid `findings.json`; AI-SDLC
+automatically appends `--review-pack`, `--output`, `--model`,
+`--resolved-model`, and `--allowlist` arguments when no placeholders are used.
+The default `model current` selector uses the model already configured for that
+local environment; advanced users can choose another configured model
+explicitly. CI systems should consume the generated artifacts and deterministic
+counts, not send repository code to GPT, Claude, DeepSeek, GLM, Codex, or any
+other model service from the CI network.
 
 Online installer entrypoints:
 

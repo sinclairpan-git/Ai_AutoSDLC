@@ -246,7 +246,7 @@ ai-sdlc pr-review close
 
 ```text
 ai-sdlc pr-review doctor
-ai-sdlc pr-review start --provider local-agent --model current
+ai-sdlc pr-review start --provider local-agent --model current --provider-command "my-local-reviewer"
 ```
 
 若 policy profile 禁止代码外发到远程模型服务，而当前 provider/model 会外发代码，则启动必须被阻断，输出 plain-language blocker 和下一步命令。若 policy 允许，GPT、Claude、DeepSeek、GLM 等模型都可以由本地独立 agent runner 使用。

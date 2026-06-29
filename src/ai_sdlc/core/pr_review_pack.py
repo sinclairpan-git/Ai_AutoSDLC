@@ -164,6 +164,34 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
             redacted_files_count=len(redaction_report.redacted_files),
             model_resolution=model_resolution,
         )
+    if redaction_report.redacted_files or redaction_report.omitted_files:
+        incomplete_status = (
+            ReviewPackBuildStatus.BLOCKED
+            if policy.allowed_omitted_file_policy
+            in {"blocked", "forbid", "fail-closed", "strict"}
+            else ReviewPackBuildStatus.NEEDS_USER
+        )
+        return _build_result(
+            options=options,
+            review_dir=review_dir,
+            changed_files_path=changed_files_path,
+            redaction_report_path=redaction_report_path,
+            model_resolution_path=model_resolution_path,
+            status=incomplete_status,
+            blocker=(
+                "Review pack is incomplete because changed files were redacted "
+                "or omitted."
+            ),
+            next_action=(
+                "Review redaction-report.json, split unsupported files, or "
+                "explicitly allow omitted-file review risk by policy."
+            ),
+            changed_files_count=len(changed_files),
+            included_files_count=len(redaction_report.included_files),
+            omitted_files_count=len(redaction_report.omitted_files),
+            redacted_files_count=len(redaction_report.redacted_files),
+            model_resolution=model_resolution,
+        )
 
     included_files = list(redaction_report.included_files)
     diff = _git_diff(root, options.base_ref, options.head_ref, included_files)
