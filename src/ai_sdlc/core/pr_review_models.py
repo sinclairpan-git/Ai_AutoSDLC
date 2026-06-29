@@ -123,9 +123,11 @@ class FindingResolution(LoopArtifactModel):
     @model_validator(mode="after")
     def _waiver_requires_reason_and_operator(self) -> FindingResolution:
         if self.status == FindingResolutionStatus.WAIVED and (
-            not self.reason.strip() or not self.operator.strip()
+            not self.reason.strip()
+            or not self.operator.strip()
+            or not self.resolved_at.strip()
         ):
-            raise ValueError("waived findings require reason and operator")
+            raise ValueError("waived findings require reason, operator, and resolved_at")
         return self
 
 

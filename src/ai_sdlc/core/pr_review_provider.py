@@ -288,8 +288,8 @@ def _expand_command(
         "model_selector": review_pack.model_selector,
         "allowlist": ",".join(review_pack.reviewer_allowlist),
     }
-    if any("{" in item and "}" in item for item in command):
-        return [item.format(**context) for item in command]
+    if any(f"{{{name}}}" in item for item in command for name in context):
+        return [_replace_known_placeholders(item, context) for item in command]
     return [
         *command,
         "--review-pack",
@@ -303,6 +303,13 @@ def _expand_command(
         "--allowlist",
         *review_pack.reviewer_allowlist,
     ]
+
+
+def _replace_known_placeholders(item: str, context: dict[str, str]) -> str:
+    expanded = item
+    for name, value in context.items():
+        expanded = expanded.replace(f"{{{name}}}", value)
+    return expanded
 
 
 def _remove_previous_provider_outputs(*paths: Path) -> None:

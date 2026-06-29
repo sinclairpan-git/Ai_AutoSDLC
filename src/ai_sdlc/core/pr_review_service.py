@@ -645,6 +645,19 @@ def close_pr_review(
             next_action="Run ai-sdlc pr-review start --base <branch>.",
         )
 
+    head_mismatch = _reviewed_head_mismatch(root, review_run)
+    if head_mismatch:
+        return PRReviewCloseResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            verdict=ReviewVerdict.BLOCKED,
+            unresolved_blockers=review_run.unresolved_blockers,
+            unresolved_required=review_run.unresolved_required,
+            unresolved_advisory=review_run.unresolved_advisory,
+            blocker=head_mismatch,
+            next_action="Run ai-sdlc pr-review rerun before closing.",
+        )
+
     if findings.verdict == ReviewVerdict.BLOCKED:
         return PRReviewCloseResult(
             status=PRReviewCommandStatus.BLOCKED,
@@ -731,6 +744,19 @@ def close_pr_review(
         blocker=blocker,
         next_action=next_action,
     )
+
+
+def _reviewed_head_mismatch(root: Path, review_run: ReviewRun) -> str:
+    try:
+        current_head = GitClient(root.resolve()).resolve_revision("HEAD")
+    except GitError as exc:
+        return f"Unable to verify current HEAD before closing PR review: {exc}"
+    if current_head != review_run.head_commit:
+        return (
+            "Current HEAD does not match reviewed head_commit: "
+            f"{current_head} != {review_run.head_commit}."
+        )
+    return ""
 
 
 def parse_provider_command(raw: str) -> list[str]:

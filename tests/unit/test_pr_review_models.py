@@ -226,13 +226,21 @@ def test_review_findings_requires_blocker_for_blocked_verdict() -> None:
         )
 
 
-def test_waived_resolution_requires_reason_and_operator() -> None:
+def test_waived_resolution_requires_audit_metadata() -> None:
     with pytest.raises(ValidationError, match="waived findings require"):
         FindingResolution(
             finding_id="F-001",
             status=FindingResolutionStatus.WAIVED,
             reason="",
             operator="",
+        )
+    with pytest.raises(ValidationError, match="waived findings require"):
+        FindingResolution(
+            finding_id="F-001",
+            status=FindingResolutionStatus.WAIVED,
+            reason="Accepted release risk.",
+            operator="qa-owner",
+            resolved_at="",
         )
 
 

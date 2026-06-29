@@ -92,6 +92,22 @@ def test_local_agent_blocks_when_findings_output_is_missing(tmp_path) -> None:
     assert Path(result.invocation_path).is_file()
 
 
+def test_local_agent_allows_literal_braces_in_provider_command(tmp_path) -> None:
+    review_pack_path = _write_review_pack(tmp_path)
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, "-c", "print('{}')"],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "did not write findings.json" in result.blocker
+    assert Path(result.invocation_path).is_file()
+
+
 def test_local_agent_does_not_reuse_stale_findings_output(tmp_path) -> None:
     review_pack_path = _write_review_pack(tmp_path)
     stale_findings = review_pack_path.with_name("findings.json")
