@@ -145,14 +145,16 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
             model_resolution=model_resolution,
         )
 
-    if redaction_report.needs_user:
+    if redaction_report.blocked or redaction_report.needs_user:
         return _build_result(
             options=options,
             review_dir=review_dir,
             changed_files_path=changed_files_path,
             redaction_report_path=redaction_report_path,
             model_resolution_path=model_resolution_path,
-            status=ReviewPackBuildStatus.NEEDS_USER,
+            status=ReviewPackBuildStatus.BLOCKED
+            if redaction_report.blocked
+            else ReviewPackBuildStatus.NEEDS_USER,
             blocker=redaction_report.blocker,
             next_action=redaction_report.next_action,
             changed_files_count=len(changed_files),

@@ -75,6 +75,32 @@ def test_local_pr_review_close_check_blocks_blocked_verdict(tmp_path: Path) -> N
     assert "unresolved_blockers=1" in summary["detail"]
 
 
+def test_local_pr_review_close_check_blocks_stale_closed_head(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "README.md").write_text("# initial\n", encoding="utf-8")
+    _git(tmp_path, "add", "README.md")
+    _git(tmp_path, "commit", "-m", "initial")
+    reviewed_head = _git(tmp_path, "rev-parse", "HEAD")
+    _write_local_pr_review(
+        tmp_path,
+        "review-stale",
+        "fully_clean",
+        head_commit=reviewed_head,
+    )
+    (tmp_path / "README.md").write_text("# changed\n", encoding="utf-8")
+    _git(tmp_path, "add", "README.md")
+    _git(tmp_path, "commit", "-m", "change after review")
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert summary["verdict"] == "fully_clean"
+    assert "stale" in summary["detail"]
+    assert summary["head_commit"] == reviewed_head
+
+
 def _write_local_pr_review(
     root: Path,
     review_id: str,
@@ -82,6 +108,7 @@ def _write_local_pr_review(
     *,
     unresolved_blockers: int = 0,
     unresolved_required: int = 0,
+    head_commit: str = "",
 ) -> Path:
     review_dir = root / ".ai-sdlc" / "reviews" / "pr" / review_id
     review_dir.mkdir(parents=True, exist_ok=True)
@@ -95,7 +122,8 @@ def _write_local_pr_review(
             f"\"verdict\":\"{verdict}\","
             f"\"final_report_path\":\"{final_report}\","
             f"\"unresolved_blockers\":{unresolved_blockers},"
-            f"\"unresolved_required\":{unresolved_required}"
+            f"\"unresolved_required\":{unresolved_required},"
+            f"\"head_commit\":\"{head_commit}\""
             "}"
         ),
         encoding="utf-8",
@@ -111,6 +139,23 @@ def _write_local_pr_review(
         encoding="utf-8",
     )
     return final_report
+
+
+def _init_git_repo(root: Path) -> None:
+    _git(root, "init", "--initial-branch=main")
+    _git(root, "config", "user.email", "t@t.com")
+    _git(root, "config", "user.name", "T")
+
+
+def _git(root: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
 
 
 def _write_manifest_yaml(root: Path, text: str) -> None:

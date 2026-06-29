@@ -551,6 +551,7 @@ def rerun_pr_review(
             next_action="Split unrelated changes or start a fresh PR review.",
         )
 
+    _reset_rerun_resolution_artifacts(root.resolve(), review_run.review_id)
     return start_pr_review(
         PRReviewStartOptions(
             root=root,
@@ -566,6 +567,15 @@ def rerun_pr_review(
             mock_fixture=mock_fixture,
         )
     )
+
+
+def _reset_rerun_resolution_artifacts(root: Path, review_id: str) -> None:
+    review_dir = LoopArtifactStore(root).review_run_dir(review_id)
+    for name in ("resolution.yaml", "fix-plan.md", "final-report.md"):
+        try:
+            (review_dir / name).unlink()
+        except FileNotFoundError:
+            continue
 
 
 def close_pr_review(
@@ -739,17 +749,22 @@ def _preview(
         code_egress=provider_options.code_egress,
         code_egress_confirmed=provider_options.code_egress_confirmed,
     )
-    if redaction.needs_user:
+    if redaction.blocked or redaction.needs_user:
+        status = (
+            PRReviewCommandStatus.BLOCKED
+            if redaction.blocked
+            else PRReviewCommandStatus.NEEDS_USER
+        )
         checks.append(
             PRReviewCheck(
                 name="redaction",
-                status=PRReviewCommandStatus.NEEDS_USER,
+                status=status,
                 detail=redaction.blocker,
             )
         )
         return (
             checks,
-            PRReviewCommandStatus.NEEDS_USER,
+            status,
             redaction.blocker,
             redaction.next_action,
             model_resolution,

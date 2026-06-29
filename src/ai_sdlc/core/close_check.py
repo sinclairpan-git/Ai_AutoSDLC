@@ -1023,6 +1023,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
     final_report = str(review_run.get("final_report_path") or "")
     unresolved_blockers = int(review_run.get("unresolved_blockers", 0) or 0)
     unresolved_required = int(review_run.get("unresolved_required", 0) or 0)
+    stored_head_commit = str(review_run.get("head_commit") or "").strip()
     if verdict == "blocked":
         return {
             "name": "local_pr_review",
@@ -1043,6 +1044,32 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
             "review_id": review_run.get("review_id", ""),
             "verdict": verdict,
         }
+    if verdict in {"fully_clean", "risk_accepted"} and stored_head_commit:
+        try:
+            current_head = GitClient(root).resolve_revision("HEAD")
+        except GitError as exc:
+            return {
+                "name": "local_pr_review",
+                "ok": False,
+                "detail": f"local PR review head cannot be verified: {exc}",
+                "review_id": review_run.get("review_id", ""),
+                "verdict": verdict,
+                "head_commit": stored_head_commit,
+            }
+        if current_head != stored_head_commit:
+            return {
+                "name": "local_pr_review",
+                "ok": False,
+                "detail": (
+                    "local PR review is stale: "
+                    f"review_head={stored_head_commit[:12]}, "
+                    f"current_head={current_head[:12]}"
+                ),
+                "review_id": review_run.get("review_id", ""),
+                "verdict": verdict,
+                "head_commit": stored_head_commit,
+                "current_head": current_head,
+            }
     if verdict == "risk_accepted":
         detail = (
             "local PR review risk_accepted; "
@@ -1061,6 +1088,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
         "unresolved_blockers": unresolved_blockers,
         "unresolved_required": unresolved_required,
         "final_report_path": final_report,
+        "head_commit": stored_head_commit,
     }
 
 

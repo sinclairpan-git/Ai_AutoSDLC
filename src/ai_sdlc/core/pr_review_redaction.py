@@ -78,13 +78,14 @@ class RedactionReport(LoopArtifactModel):
     generated_files: list[str] = Field(default_factory=list)
     high_risk_secret_files: list[str] = Field(default_factory=list)
     needs_user: bool = False
+    blocked: bool = False
     blocker: str = ""
     next_action: str = ""
 
     @model_validator(mode="after")
     def _needs_user_requires_blocker(self) -> RedactionReport:
-        if self.needs_user and not self.blocker.strip():
-            raise ValueError("redaction report needs_user requires blocker")
+        if (self.needs_user or self.blocked) and not self.blocker.strip():
+            raise ValueError("redaction report needs_user/blocked requires blocker")
         return self
 
 
@@ -126,20 +127,31 @@ def analyze_redaction(
     high_risk_files = [item.path for item in decisions if item.high_risk]
 
     needs_user = False
+    blocked = False
     blocker = ""
     next_action = ""
-    if (
-        high_risk_files
-        and code_egress
-        and not code_egress_confirmed
-        and resolved_policy.high_risk_secret_policy == PolicyDecisionStatus.NEEDS_USER
-    ):
-        needs_user = True
-        blocker = (
-            "High-risk secrets were detected and the selected provider/model may "
-            "send code to a remote model service."
-        )
-        next_action = "Confirm code egress after reviewing redaction-report.json or choose a non-egress provider/model."
+    if high_risk_files and code_egress:
+        if resolved_policy.high_risk_secret_policy in {
+            PolicyDecisionStatus.BLOCKED,
+            "forbid",
+        }:
+            blocked = True
+            blocker = (
+                "Project policy forbids sending high-risk secrets to a remote "
+                "model service."
+            )
+            next_action = "Choose a non-egress provider/model or remove high-risk secrets."
+        elif (
+            not code_egress_confirmed
+            and resolved_policy.high_risk_secret_policy
+            == PolicyDecisionStatus.NEEDS_USER
+        ):
+            needs_user = True
+            blocker = (
+                "High-risk secrets were detected and the selected provider/model may "
+                "send code to a remote model service."
+            )
+            next_action = "Confirm code egress after reviewing redaction-report.json or choose a non-egress provider/model."
 
     return RedactionReport(
         decisions=decisions,
@@ -158,6 +170,7 @@ def analyze_redaction(
         ],
         high_risk_secret_files=high_risk_files,
         needs_user=needs_user,
+        blocked=blocked,
         blocker=blocker,
         next_action=next_action,
     )

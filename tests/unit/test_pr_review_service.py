@@ -291,6 +291,36 @@ def test_rerun_regenerates_review_for_same_scope_changes(tmp_path) -> None:
     assert new_head != old_head
 
 
+def test_rerun_resets_previous_resolution_before_new_close(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-reset-resolution",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    fix = fix_pr_review(tmp_path)
+    resolution_path = Path(fix.resolution_path)
+    resolution = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
+    resolution["finding_resolutions"][0]["status"] = "fixed"
+    resolution_path.write_text(yaml.safe_dump(resolution), encoding="utf-8")
+
+    result = rerun_pr_review(
+        tmp_path,
+        mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+    )
+    close = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.STARTED
+    assert not resolution_path.exists()
+    assert close.status == PRReviewCommandStatus.BLOCKED
+    assert close.unresolved_required == 1
+
+
 def test_rerun_reports_scope_drift_for_unrelated_new_files(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
