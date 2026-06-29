@@ -92,6 +92,32 @@ def test_local_agent_blocks_when_findings_output_is_missing(tmp_path) -> None:
     assert Path(result.invocation_path).is_file()
 
 
+def test_local_agent_refuses_incomplete_allowlist_before_launch(tmp_path) -> None:
+    review_pack_path = _write_review_pack(
+        tmp_path,
+        changed_files=["src/app.py", "src/secret.py"],
+        reviewer_allowlist=["src/app.py"],
+        diff_coverage={"redacted_files": 1, "omitted_files": 0},
+    )
+    script = tmp_path / "should_not_run.py"
+    script.write_text(
+        "from pathlib import Path\nPath('side-effect.txt').write_text('ran')\n",
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "allowlist is incomplete" in result.blocker
+    assert not (tmp_path / "side-effect.txt").exists()
+
+
 def test_local_agent_allows_literal_braces_in_provider_command(tmp_path) -> None:
     review_pack_path = _write_review_pack(tmp_path)
 
@@ -665,6 +691,9 @@ def _write_review_pack(
     model_selector: str = "current",
     resolved_model: str = "gpt-5",
     source: ModelResolutionSource = ModelResolutionSource.CURRENT_AGENT,
+    changed_files: list[str] | None = None,
+    reviewer_allowlist: list[str] | None = None,
+    diff_coverage: dict[str, int | float | str] | None = None,
 ) -> Path:
     store = LoopArtifactStore(root)
     review_pack = ReviewPack(
@@ -675,8 +704,9 @@ def _write_review_pack(
         head_ref="HEAD",
         base_commit="a" * 40,
         head_commit="b" * 40,
-        changed_files=["src/app.py"],
-        reviewer_allowlist=["src/app.py"],
+        changed_files=changed_files or ["src/app.py"],
+        diff_coverage=diff_coverage or {},
+        reviewer_allowlist=reviewer_allowlist or ["src/app.py"],
         model_selector=model_selector,
         resolved_model=resolved_model,
         model_resolution_status=ModelResolutionStatus.RESOLVED,

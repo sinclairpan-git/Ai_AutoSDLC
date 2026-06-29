@@ -394,7 +394,14 @@ def status_pr_review(root: Path) -> PRReviewStatusResult:
             status=PRReviewCommandStatus.NO_REVIEW,
             next_action="Run ai-sdlc pr-review start --base <branch>.",
         )
-    pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, ValueError) as exc:
+        return PRReviewStatusResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            blocker=f"Current review pointer is malformed: {exc}",
+            next_action="Rerun ai-sdlc pr-review start.",
+        )
     review_run_path = Path(str(pointer.get("review_run_path", "")))
     if not review_run_path.exists():
         return PRReviewStatusResult(
@@ -403,9 +410,18 @@ def status_pr_review(root: Path) -> PRReviewStatusResult:
             blocker="Current review pointer references a missing review-run.json.",
             next_action="Rerun ai-sdlc pr-review start.",
         )
-    review_run = ReviewRun.model_validate(
-        json.loads(review_run_path.read_text(encoding="utf-8"))
-    )
+    try:
+        review_run = ReviewRun.model_validate(
+            json.loads(review_run_path.read_text(encoding="utf-8"))
+        )
+    except (json.JSONDecodeError, ValidationError, ValueError) as exc:
+        return PRReviewStatusResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=str(pointer.get("review_id", "")),
+            review_run_path=str(review_run_path),
+            blocker=f"Current review-run.json is malformed: {exc}",
+            next_action="Rerun ai-sdlc pr-review start.",
+        )
     return PRReviewStatusResult(
         status=_status_from_loop_status(review_run.status),
         review_id=review_run.review_id,

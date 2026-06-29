@@ -96,6 +96,13 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
 
     root = options.root.resolve()
     review_pack = _load_review_pack(options.review_pack_path)
+    allowlist_blocker = _reviewer_allowlist_launch_blocker(review_pack)
+    if allowlist_blocker:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            blocker=allowlist_blocker,
+            next_action="Regenerate a complete review pack before running local-agent.",
+        )
     store = LoopArtifactStore(root)
     review_dir = store.create_review_run_dir(review_pack.review_id)
     findings_path = review_dir / "findings.json"
@@ -311,6 +318,24 @@ def _replace_known_placeholders(item: str, context: dict[str, str]) -> str:
     for name, value in context.items():
         expanded = expanded.replace(f"{{{name}}}", value)
     return expanded
+
+
+def _reviewer_allowlist_launch_blocker(review_pack: ReviewPack) -> str:
+    changed_files = {path.strip() for path in review_pack.changed_files if path.strip()}
+    allowlist = {
+        path.strip() for path in review_pack.reviewer_allowlist if path.strip()
+    }
+    redacted_count = int(review_pack.diff_coverage.get("redacted_files", 0) or 0)
+    omitted_count = int(review_pack.diff_coverage.get("omitted_files", 0) or 0)
+    missing = sorted(changed_files - allowlist)
+    if redacted_count > 0 or omitted_count > 0 or missing:
+        detail = ", ".join(missing[:5])
+        return (
+            "Local reviewer allowlist is incomplete; refusing to launch local-agent "
+            "because omitted or redacted files cannot be protected by advisory argv"
+            + (f": {detail}" if detail else ".")
+        )
+    return ""
 
 
 def _remove_previous_provider_outputs(*paths: Path) -> None:

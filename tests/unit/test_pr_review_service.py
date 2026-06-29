@@ -115,6 +115,40 @@ def test_status_recovers_current_review(tmp_path) -> None:
     assert "fix" in result.next_action
 
 
+def test_status_blocks_malformed_current_review_pointer(tmp_path) -> None:
+    _init_repo(tmp_path)
+    pointer_path = tmp_path / CURRENT_REVIEW_PATH
+    pointer_path.parent.mkdir(parents=True, exist_ok=True)
+    pointer_path.write_text("{", encoding="utf-8")
+
+    result = status_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert "pointer is malformed" in result.blocker
+    assert "pr-review start" in result.next_action
+
+
+def test_status_blocks_malformed_review_run(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-status-malformed-run",
+            mock_fixture=MockReviewerFixture.CLEAN,
+        )
+    )
+    Path(start.review_run_path).write_text("{", encoding="utf-8")
+
+    result = status_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.review_id == "review-status-malformed-run"
+    assert "review-run.json is malformed" in result.blocker
+
+
 def test_start_local_agent_without_command_returns_needs_user(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
