@@ -185,12 +185,17 @@ def pr_review_status(
 @pr_review_app.command(name="fix")
 def pr_review_fix(
     max_rounds: int = typer.Option(2, "--max-rounds", help="Maximum fix rounds."),
+    dry_run: bool = typer.Option(
+        False,
+        "--dry-run",
+        help="Preview fix plan metadata without writing fix artifacts.",
+    ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
     """Create a fix plan for unresolved BLOCKER/REQUIRED findings."""
 
     root = _project_root_or_exit(json_output=json_output)
-    result = fix_pr_review(root, max_rounds=max_rounds)
+    result = fix_pr_review(root, max_rounds=max_rounds, dry_run=dry_run)
     _emit_result(result.model_dump(mode="json"), json_output=json_output)
     raise typer.Exit(0 if result.status == PRReviewCommandStatus.READY else 1)
 

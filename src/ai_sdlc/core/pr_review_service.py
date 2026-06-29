@@ -179,6 +179,7 @@ class PRReviewFixResult(BaseModel):
     model_config = ConfigDict(extra="forbid", use_enum_values=True)
 
     status: PRReviewCommandStatus
+    dry_run: bool = False
     review_id: str = ""
     fix_plan_path: str = ""
     resolution_path: str = ""
@@ -460,7 +461,12 @@ def status_pr_review(root: Path) -> PRReviewStatusResult:
     )
 
 
-def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
+def fix_pr_review(
+    root: Path,
+    *,
+    max_rounds: int = 2,
+    dry_run: bool = False,
+) -> PRReviewFixResult:
     """Generate a fix plan and resolution scaffold without modifying code."""
 
     policy = load_loop_policy(root.resolve())
@@ -539,6 +545,18 @@ def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
     ]
     round_number = existing_round + 1
     fix_plan_path = review_dir / "fix-plan.md"
+    if dry_run:
+        return PRReviewFixResult(
+            status=PRReviewCommandStatus.READY,
+            dry_run=True,
+            review_id=review_run.review_id,
+            fix_plan_path=str(fix_plan_path),
+            resolution_path=str(resolution_path),
+            selected_findings_count=len(selected),
+            skipped_advisory_count=len(advisory),
+            round_number=round_number,
+            next_action="Dry run only; rerun without --dry-run to write fix artifacts.",
+        )
     store.write_markdown_artifact(
         fix_plan_path,
         _render_fix_plan(review_run, selected, advisory, round_number),
@@ -887,6 +905,10 @@ def close_pr_review(
         verdict = ReviewVerdict.RISK_ACCEPTED
         status = PRReviewCommandStatus.CLOSED
         next_action = "Risk accepted with unresolved REQUIRED findings disclosed."
+    elif _review_pack_has_incomplete_waiver(review_pack):
+        verdict = ReviewVerdict.RISK_ACCEPTED
+        status = PRReviewCommandStatus.CLOSED
+        next_action = "Risk accepted because the review pack used an incomplete-review waiver."
     else:
         verdict = ReviewVerdict.FULLY_CLEAN
         status = PRReviewCommandStatus.CLOSED
@@ -949,6 +971,10 @@ def _not_closeable_review_result(review_run: ReviewRun) -> PRReviewCloseResult |
         ),
         next_action=review_run.next_action or "Resolve the provider run and rerun PR review.",
     )
+
+
+def _review_pack_has_incomplete_waiver(review_pack: ReviewPack) -> bool:
+    return review_pack.policy_decisions.get("incomplete_review_waiver") is True
 
 
 def _reviewed_head_mismatch(root: Path, review_run: ReviewRun) -> str:

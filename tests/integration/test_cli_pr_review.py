@@ -199,6 +199,39 @@ def test_pr_review_fix_and_close_require_no_blockers_json(tmp_path: Path) -> Non
     assert Path(close_payload["final_report_path"]).is_file()
 
 
+def test_pr_review_fix_dry_run_json_does_not_write_artifacts(tmp_path: Path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    with patch("ai_sdlc.cli.pr_review_cmd.find_project_root", return_value=tmp_path):
+        start = runner.invoke(
+            app,
+            [
+                "pr-review",
+                "start",
+                "--base",
+                base_commit,
+                "--provider",
+                "mock-reviewer",
+                "--mock-fixture",
+                "changes_required",
+                "--review-id",
+                "review-fix-dry-run-cli",
+                "--json",
+            ],
+        )
+        fix = runner.invoke(app, ["pr-review", "fix", "--dry-run", "--json"])
+
+    assert start.exit_code == 10
+    payload = json.loads(fix.output)
+    assert fix.exit_code == 0
+    assert payload["status"] == "ready"
+    assert payload["dry_run"] is True
+    assert payload["selected_findings_count"] == 1
+    assert not Path(payload["fix_plan_path"]).exists()
+    assert not Path(payload["resolution_path"]).exists()
+
+
 def test_pr_review_rerun_json_regenerates_current_review(tmp_path: Path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")

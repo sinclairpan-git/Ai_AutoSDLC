@@ -386,6 +386,28 @@ def test_fix_generates_plan_and_resolution_without_advisory_auto_plan(
     )[1].split("## Advisory", 1)[0]
 
 
+def test_fix_dry_run_does_not_write_fix_artifacts(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-fix-dry-run",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+
+    result = fix_pr_review(tmp_path, dry_run=True)
+
+    assert result.status == PRReviewCommandStatus.READY
+    assert result.dry_run is True
+    assert result.selected_findings_count == 1
+    assert not Path(result.fix_plan_path).exists()
+    assert not Path(result.resolution_path).exists()
+
+
 def test_fix_blocks_malformed_findings_json(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
@@ -569,6 +591,30 @@ def test_close_honors_policy_default_require_no_blockers(tmp_path) -> None:
     assert result.status == PRReviewCommandStatus.CLOSED
     assert result.verdict == "risk_accepted"
     assert result.unresolved_required == 1
+
+
+def test_close_downgrades_incomplete_review_waiver_from_fully_clean(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-incomplete-waiver",
+            mock_fixture=MockReviewerFixture.CLEAN,
+        )
+    )
+    pack_path = Path(start.review_pack_path)
+    pack = json.loads(pack_path.read_text(encoding="utf-8"))
+    pack["policy_decisions"]["incomplete_review_waiver"] = True
+    pack_path.write_text(json.dumps(pack), encoding="utf-8")
+
+    result = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.CLOSED
+    assert result.verdict == "risk_accepted"
+    assert result.unresolved_required == 0
 
 
 def test_close_blocks_when_provider_verdict_is_blocked(tmp_path) -> None:
