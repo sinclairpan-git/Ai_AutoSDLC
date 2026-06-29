@@ -446,3 +446,74 @@
 - 当前批次 branch disposition 状态：PR #103 merge carrier（待 checks/review 通过后合并）
 - 当前批次 worktree disposition 状态：retained（主工作区继续承载当前仓库）
 - **是否继续下一批**：否；等待本批复验、提交、push、Codex re-review 与 PR checks 收口。
+
+### Batch 2026-06-29-009 | T009
+
+#### 2.47 准备
+
+- **任务来源**：PR #103 Codex review comments `discussion_r3489408141`、`discussion_r3489611933`、`discussion_r3489611940`
+- **目标**：补齐最新批次 close-check markers，并修正 PRD 中 dry-run 独立测试与 Loop Engine P0/P1 范围的两处冲突。
+- **预读范围**：`specs/189-loop-engine-local-adversarial-pr-review/spec.md`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`、`src/ai_sdlc/core/close_check.py`
+- **激活的规则**：truth-only verification profile；close-check latest batch markers；P0/P1 scope consistency；dry-run read-only contract。
+- **验证画像**：`truth-only`
+- **改动范围**：`specs/189-loop-engine-local-adversarial-pr-review/spec.md`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`、`program-manifest.yaml`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/work-items/189-loop-engine-local-adversarial-pr-review/codex-handoff.md`
+
+#### 2.48 统一验证命令
+
+- `V1`（文档检查）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V2`（executable task parser）
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.core.executable_task import parse_executable_tasks; r=parse_executable_tasks(Path('specs/189-loop-engine-local-adversarial-pr-review/tasks.md')); print('ok=', r.ok, 'tasks=', len(r.tasks)); [print(e.code, e.message) for e in r.errors]"`
+  - 结果：通过，`ok= True tasks= 15`。
+- `V3`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`
+- `V4`（program truth snapshot 刷新）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过；写入 `program-manifest.yaml`，snapshot state 为 `migration_pending`。
+- `V5`（program truth snapshot 只读预检）
+  - 命令：`uv run ai-sdlc program truth sync --dry-run`
+  - 结果：通过；dry-run 输出 snapshot state 为 `migration_pending`。
+
+#### 2.49 任务记录
+
+##### Task review-remediation | 修正 spec 冲突并补齐 close markers
+
+- **改动范围**：`specs/189-loop-engine-local-adversarial-pr-review/spec.md`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`、`program-manifest.yaml`
+- **改动内容**：
+  - 将用户故事 1 的独立测试拆成 dry-run 只读预览与 `mock-reviewer` 真实 artifact 生成两步，避免 `--dry-run` 被误解为会写 review run。
+  - 将 FR-189-001 明确为 P0 数据模型/schema 支持五类 loop，P0 可执行命令完整落地范围仍为 `local-pr-review`，其余 loop 专用命令保持 P1。
+  - 新增本批 latest batch markers：`验证画像`、`改动范围`、git 提交状态、提交哈希、branch/worktree disposition。
+  - 最终日志稳定后刷新 `program-manifest.yaml` 的 persisted `truth_snapshot`。
+- **新增/调整的测试**：无产品代码测试；复用 parser、约束与 truth snapshot 验证。
+- **执行的命令**：见 V1 ~ V5。
+- **测试结果**：V1、V2、V3、V4、V5 均已通过；最终提交前将再执行一次 `program truth sync --execute --yes`，确保 persisted snapshot 对应稳定后的执行日志与 handoff。
+- **是否符合任务目标**：符合 PR review remediation 目标。
+
+#### 2.50 代码审查（摘要）
+
+- **审查来源**：PR #103 Codex review。
+- **发现 1**：最新批次缺少 close-check 可识别的完整收口 markers。
+- **处置 1**：新增 Batch 009，并使用 close-check 正则要求的 `验证画像`、`改动范围`、`已完成 git 提交`、`提交哈希` marker。
+- **发现 2**：`spec.md` 的独立测试把 `--dry-run` 与 artifact 生成混在一起。
+- **处置 2**：拆分为 dry-run read-only preview 与 `mock-reviewer` artifact 生成测试。
+- **发现 3**：FR-189-001 看起来要求 P0 完整实现五类 loop，与 P0/P1 切分和任务拆解冲突。
+- **处置 3**：改为 P0 schema/data-model 支持五类 loop，P0 executable path 仅完整落地 `local-pr-review`。
+- **结论**：待 V1 ~ V5 通过后提交、push 并重新请求 Codex review。
+
+#### 2.51 任务/计划同步状态
+
+- `spec.md` 同步状态：已按 PR review 修正 P0/P1 范围与 dry-run 测试合同。
+- `plan.md` 同步状态：已对账，未修改。
+- `tasks.md` 同步状态：已对账，未修改；仍为 machine-readable executable task blocks。
+- `task-execution-log.md` 同步状态：已记录第四轮 PR review remediation。
+- 关联 branch/worktree disposition 计划：PR #103 merge carrier，目标 disposition 为 merge 后删除远端分支。
+
+#### 2.52 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`见包含本行的本批最终提交 SHA（git log -1 --format=%H）`
+- 当前批次 branch disposition 状态：PR #103 merge carrier（待 checks/review 通过后合并）
+- 当前批次 worktree disposition 状态：retained（主工作区继续承载当前仓库）
+- **是否继续下一批**：否；等待本批复验、提交、push、Codex re-review 与 PR checks 收口。

@@ -81,7 +81,7 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 
 作为普通 AI-SDLC 用户，我希望在本地开发完成后，对当前分支相对 `main` 或指定 base 的 diff 启动独立 review agent，以便在 CI 无法访问 GPT/Codex 的情况下仍能获得对抗式代码审查。
 
-**独立测试**：在一个 fixture Git 仓库中创建 feature 分支和代码 diff，执行 `ai-sdlc pr-review start --base main --provider codex-local --dry-run` 与模拟 provider 执行，断言生成 review pack、findings 和状态文件，且不调用云端 PR review 服务。
+**独立测试**：在一个 fixture Git 仓库中创建 feature 分支和代码 diff，先执行 `ai-sdlc pr-review start --base main --provider codex-local --dry-run` 断言只预览将生成的 artifact、provider 和命令且不写入 review run；再执行 `ai-sdlc pr-review start --base main --provider mock-reviewer` 断言生成 review pack、findings 和状态文件，且不调用云端 PR review 服务。
 
 **验收场景**：
 
@@ -189,7 +189,7 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 
 ### 6.1 Loop Engine 通用能力
 
-- **FR-189-001**：系统必须新增统一 Loop Engine 概念，支持 `requirement`、`design-contract`、`implementation`、`frontend-evidence`、`local-pr-review` 五类 loop。
+- **FR-189-001**：系统必须新增统一 Loop Engine 概念；P0 的数据模型、状态枚举和 artifact schema 必须能表达 `requirement`、`design-contract`、`implementation`、`frontend-evidence`、`local-pr-review` 五类 loop，P0 可执行命令只要求完整落地 `local-pr-review`，其余 loop 的专用命令和横向编排按 P1 范围处理。
 - **FR-189-002**：每个 loop run 必须有稳定 `loop_id`、`loop_type`、`status`、`created_at`、`updated_at`、`base_ref`、`head_ref`、`work_item_id`、`next_action`。
 - **FR-189-003**：每个 loop run 必须支持 round 概念，记录 round number、输入 artifact、输出 artifact、执行命令、结果和下一步。
 - **FR-189-004**：Loop 状态必须至少覆盖 `created`、`running`、`needs_fix`、`needs_review`、`needs_user`、`blocked`、`passed`、`closed`。
