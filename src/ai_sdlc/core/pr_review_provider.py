@@ -349,7 +349,7 @@ def _worktree_snapshot(root: Path, review_dir: Path) -> dict[str, str]:
     if result.returncode != 0:
         return {}
 
-    snapshot: dict[str, str] = {}
+    snapshot = _git_head_index_snapshot(root)
     for line in result.stdout.splitlines():
         if len(line) < 4:
             continue
@@ -360,6 +360,32 @@ def _worktree_snapshot(root: Path, review_dir: Path) -> dict[str, str]:
         if not normalized or _is_allowed_review_artifact(root, review_dir, normalized):
             continue
         snapshot[normalized] = f"{line[:2]}:{_path_digest(root / normalized)}"
+    return snapshot
+
+
+def _git_head_index_snapshot(root: Path) -> dict[str, str]:
+    snapshot: dict[str, str] = {}
+    for name, args in {
+        "HEAD": ["rev-parse", "HEAD"],
+        "INDEX": ["write-tree"],
+    }.items():
+        try:
+            result = subprocess.run(
+                ["git", *args],
+                cwd=root,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                check=False,
+                timeout=30,
+            )
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            continue
+        if result.returncode == 0:
+            snapshot[f"<git:{name}>"] = result.stdout.strip()
+        else:
+            snapshot[f"<git:{name}>"] = f"error:{result.stderr.strip()}"
     return snapshot
 
 

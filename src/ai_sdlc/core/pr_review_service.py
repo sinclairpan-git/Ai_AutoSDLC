@@ -227,13 +227,6 @@ def doctor_pr_review(
             dry_run=True,
         )
     )
-    command = provider_command or []
-    if status == PRReviewCommandStatus.READY and provider_id == "local-agent" and not command:
-        status = PRReviewCommandStatus.NEEDS_USER
-        blocker = "local-agent provider is not configured with a local reviewer command."
-        next_action = "Configure --provider-command or use --provider mock-reviewer."
-        checks.append(PRReviewCheck(name="provider", status=status, detail=blocker))
-
     return PRReviewDoctorResult(
         status=status,
         provider_id=provider_id,
@@ -550,9 +543,8 @@ def rerun_pr_review(
             next_action="Split unrelated changes or start a fresh PR review.",
         )
 
-    resolution_statuses = _load_resolution_statuses(
-        Path(review_run.review_pack_path).with_name("resolution.yaml")
-    )
+    resolution_path = Path(review_run.review_pack_path).with_name("resolution.yaml")
+    resolution_statuses = _load_resolution_statuses(resolution_path)
     unresolved = _unresolved_counts(findings, resolution_statuses)
     if (
         unresolved[FindingSeverity.BLOCKER] > 0
@@ -632,9 +624,9 @@ def close_pr_review(
             ),
         )
 
-    resolution_statuses = _load_resolution_statuses(
-        Path(review_run.review_pack_path).with_name("resolution.yaml")
-    )
+    resolution_path = Path(review_run.review_pack_path).with_name("resolution.yaml")
+    resolution_statuses = _load_resolution_statuses(resolution_path)
+    resolution_records = _load_resolution_records(resolution_path)
     unresolved = _unresolved_counts(findings, resolution_statuses)
     verdict: ReviewVerdict
     status: PRReviewCommandStatus
@@ -666,6 +658,9 @@ def close_pr_review(
         _render_final_report(
             review_run=review_run,
             review_pack=review_pack,
+            findings=findings,
+            resolution_statuses=resolution_statuses,
+            resolution_records=resolution_records,
             verdict=verdict,
             unresolved=unresolved,
             verification_evidence=verification_evidence or [],
@@ -774,6 +769,31 @@ def _preview(
             name="model",
             status=PRReviewCommandStatus.READY,
             detail=f"{model_resolution.model_selector} -> {model_resolution.resolved_model}",
+        )
+    )
+
+    if provider_options.provider_id == "local-agent" and not provider_options.provider_command:
+        detail = "local-agent provider is not configured with a local reviewer command."
+        checks.append(
+            PRReviewCheck(
+                name="provider",
+                status=PRReviewCommandStatus.NEEDS_USER,
+                detail=detail,
+            )
+        )
+        return (
+            checks,
+            PRReviewCommandStatus.NEEDS_USER,
+            detail,
+            "Configure --provider-command or use --provider mock-reviewer.",
+            model_resolution,
+            None,
+        )
+    checks.append(
+        PRReviewCheck(
+            name="provider",
+            status=PRReviewCommandStatus.READY,
+            detail="Provider configuration is ready.",
         )
     )
 
@@ -1086,6 +1106,24 @@ def _load_resolution_statuses(path: Path) -> dict[str, FindingResolutionStatus]:
     return statuses
 
 
+def _load_resolution_records(path: Path) -> dict[str, FindingResolution]:
+    if not path.exists():
+        return {}
+    payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(payload, dict):
+        return {}
+    records: dict[str, FindingResolution] = {}
+    for item in payload.get("finding_resolutions", []) or []:
+        if not isinstance(item, dict):
+            continue
+        try:
+            resolution = FindingResolution.model_validate(item)
+        except ValueError:
+            continue
+        records[resolution.finding_id] = resolution
+    return records
+
+
 def _unresolved_counts(
     findings: ReviewFindings,
     resolution_statuses: dict[str, FindingResolutionStatus],
@@ -1145,6 +1183,9 @@ def _render_final_report(
     *,
     review_run: ReviewRun,
     review_pack: ReviewPack,
+    findings: ReviewFindings,
+    resolution_statuses: dict[str, FindingResolutionStatus],
+    resolution_records: dict[str, FindingResolution],
     verdict: ReviewVerdict,
     unresolved: dict[FindingSeverity, int],
     verification_evidence: list[str],
@@ -1170,7 +1211,70 @@ def _render_final_report(
         "## Verification Evidence",
     ]
     lines.extend(f"- {item}" for item in evidence)
+    lines.extend(
+        [
+            "",
+            "## Accepted / Waived Findings",
+            *_render_accepted_finding_lines(
+                findings=findings,
+                resolution_statuses=resolution_statuses,
+                resolution_records=resolution_records,
+                verdict=verdict,
+            ),
+        ]
+    )
     return "\n".join(lines)
+
+
+def _render_accepted_finding_lines(
+    *,
+    findings: ReviewFindings,
+    resolution_statuses: dict[str, FindingResolutionStatus],
+    resolution_records: dict[str, FindingResolution],
+    verdict: ReviewVerdict,
+) -> list[str]:
+    lines: list[str] = []
+    for finding in findings.findings:
+        status = resolution_statuses.get(finding.id, finding.resolution)
+        resolution = resolution_records.get(finding.id)
+        accepted_status = ""
+        if status in {
+            FindingResolutionStatus.WAIVED,
+            FindingResolutionStatus.NOT_APPLICABLE,
+        }:
+            accepted_status = str(status)
+        elif (
+            verdict == ReviewVerdict.RISK_ACCEPTED
+            and finding.severity == FindingSeverity.REQUIRED
+            and status
+            not in {
+                FindingResolutionStatus.FIXED,
+                FindingResolutionStatus.WAIVED,
+                FindingResolutionStatus.NOT_APPLICABLE,
+            }
+        ):
+            accepted_status = "risk_accepted"
+        if not accepted_status:
+            continue
+        lines.extend(
+            [
+                f"- {finding.id} [{finding.severity}] {finding.file}",
+                f"  - resolution: {accepted_status}",
+                f"  - claim: {finding.claim}",
+                f"  - risk: {finding.risk}",
+            ]
+        )
+        if resolution is not None:
+            lines.extend(
+                [
+                    f"  - reason: {resolution.reason or 'n/a'}",
+                    f"  - operator: {resolution.operator or 'n/a'}",
+                    f"  - resolved_at: {resolution.resolved_at or 'n/a'}",
+                ]
+            )
+    if not lines:
+        return ["- None."]
+    return lines
 
 
 __all__ = [

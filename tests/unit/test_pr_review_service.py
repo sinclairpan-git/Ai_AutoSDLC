@@ -45,6 +45,26 @@ def test_start_dry_run_does_not_create_review_artifacts(tmp_path) -> None:
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
 
 
+def test_start_dry_run_blocks_unconfigured_local_agent(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="local-agent",
+            current_model="gpt-5",
+            dry_run=True,
+            review_id="review-local-dry-run",
+        )
+    )
+
+    assert result.status == PRReviewCommandStatus.NEEDS_USER
+    assert "provider is not configured" in result.blocker
+    assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
+
+
 def test_start_mock_reviewer_writes_pack_findings_run_and_pointer(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
@@ -235,9 +255,10 @@ def test_close_blocks_required_findings_then_allows_risk_accepted(
     assert accepted.status == PRReviewCommandStatus.CLOSED
     assert accepted.verdict == "risk_accepted"
     assert Path(accepted.final_report_path).is_file()
-    assert "uv run pytest" in Path(accepted.final_report_path).read_text(
-        encoding="utf-8"
-    )
+    report = Path(accepted.final_report_path).read_text(encoding="utf-8")
+    assert "uv run pytest" in report
+    assert "MOCK-001" in report
+    assert "risk_accepted" in report
 
 
 def test_close_blocks_when_provider_verdict_is_blocked(tmp_path) -> None:
@@ -312,6 +333,38 @@ def test_close_treats_invalid_waiver_as_unresolved(tmp_path) -> None:
     assert result.status == PRReviewCommandStatus.BLOCKED
     assert result.verdict == "blocked"
     assert result.unresolved_required == 1
+
+
+def test_close_final_report_discloses_valid_waiver_metadata(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-valid-waiver",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    fix = fix_pr_review(tmp_path)
+    resolution_path = Path(fix.resolution_path)
+    resolution = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
+    resolution["finding_resolutions"][0]["status"] = "waived"
+    resolution["finding_resolutions"][0]["reason"] = "Accepted for release scope."
+    resolution["finding_resolutions"][0]["operator"] = "qa-owner"
+    resolution["finding_resolutions"][0]["resolved_at"] = "2026-06-29T00:00:00Z"
+    resolution_path.write_text(yaml.safe_dump(resolution), encoding="utf-8")
+
+    result = close_pr_review(tmp_path)
+
+    report = Path(result.final_report_path).read_text(encoding="utf-8")
+    assert result.status == PRReviewCommandStatus.CLOSED
+    assert result.verdict == "fully_clean"
+    assert "MOCK-001" in report
+    assert "waived" in report
+    assert "Accepted for release scope." in report
+    assert "qa-owner" in report
 
 
 def test_rerun_regenerates_review_for_same_scope_changes(tmp_path) -> None:
