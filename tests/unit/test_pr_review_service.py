@@ -366,6 +366,29 @@ def test_close_treats_invalid_waiver_as_unresolved(tmp_path) -> None:
     assert result.unresolved_required == 1
 
 
+def test_close_blocks_malformed_resolution_yaml(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-malformed-close-resolution",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    fix = fix_pr_review(tmp_path)
+    Path(fix.resolution_path).write_text("finding_resolutions: [", encoding="utf-8")
+
+    result = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.verdict == "blocked"
+    assert "resolution.yaml is malformed" in result.blocker
+    assert "Fix resolution.yaml syntax" in result.next_action
+
+
 def test_close_final_report_discloses_valid_waiver_metadata(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
@@ -528,6 +551,28 @@ def test_rerun_blocks_unresolved_required_findings_before_reset(tmp_path) -> Non
     assert result.status == PRReviewCommandStatus.BLOCKED
     assert "Unresolved PR review findings remain" in result.blocker
     assert "1 REQUIRED" in result.blocker
+
+
+def test_rerun_blocks_malformed_resolution_yaml(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-malformed-rerun-resolution",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    fix = fix_pr_review(tmp_path)
+    Path(fix.resolution_path).write_text("finding_resolutions: [", encoding="utf-8")
+
+    result = rerun_pr_review(tmp_path, mock_fixture=MockReviewerFixture.CLEAN)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert "resolution.yaml is malformed" in result.blocker
+    assert "Fix resolution.yaml syntax" in result.next_action
 
 
 def test_rerun_reuses_persisted_local_provider_command(tmp_path) -> None:

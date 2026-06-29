@@ -589,7 +589,22 @@ def _findings_scope_blocker(
             "Reviewer findings review_pack_path does not match the current "
             f"review pack: {findings.review_pack_path} != {review_pack_path}."
         )
+    allowed_files = {
+        _normalize_review_path(path)
+        for path in (review_pack.reviewer_allowlist or review_pack.changed_files)
+    }
+    for finding in findings.findings:
+        finding_file = _normalize_review_path(finding.file)
+        if finding_file not in allowed_files:
+            return (
+                "Reviewer findings include a file outside the review allowlist: "
+                f"{finding.file}."
+            )
     return ""
+
+
+def _normalize_review_path(path: str) -> str:
+    return path.replace("\\", "/").lstrip("/")
 
 
 def _exit_code_verdict_blocker(

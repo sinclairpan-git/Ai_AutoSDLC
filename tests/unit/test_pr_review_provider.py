@@ -270,6 +270,62 @@ def test_local_agent_blocks_findings_for_different_review_pack(tmp_path) -> None
     assert "review_id does not match" in result.blocker
 
 
+def test_local_agent_blocks_findings_outside_review_allowlist(tmp_path) -> None:
+    review_pack_path = _write_review_pack(tmp_path, review_id="review-allowlist")
+    script = tmp_path / "outside_allowlist.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import argparse, json, sys",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--review-pack', required=True)",
+                "parser.add_argument('--output', required=True)",
+                "parser.add_argument('--model')",
+                "parser.add_argument('--resolved-model')",
+                "parser.add_argument('--allowlist', nargs='*', default=[])",
+                "args = parser.parse_args()",
+                "pack = json.load(open(args.review_pack, encoding='utf-8'))",
+                "payload = {",
+                "  'schema_version': '1',",
+                "  'artifact_kind': 'review-findings',",
+                "  'review_id': pack['review_id'],",
+                "  'loop_id': pack['loop_id'],",
+                "  'review_pack_path': args.review_pack,",
+                "  'provider_id': 'local-agent',",
+                "  'model_selector': 'current',",
+                "  'resolved_model': 'gpt-5',",
+                "  'verdict': 'changes_required',",
+                "  'findings': [{",
+                "    'id': 'LOCAL-OUT',",
+                "    'severity': 'REQUIRED',",
+                "    'file': 'src/other.py',",
+                "    'claim': 'Outside scope.',",
+                "    'evidence': 'Fixture emitted unrelated file.',",
+                "    'risk': 'Scope drift could be hidden.',",
+                "    'suggested_fix': 'Reject this finding.',",
+                "    'confidence': 0.8",
+                "  }]",
+                "}",
+                "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
+                "sys.exit(10)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "outside the review allowlist" in result.blocker
+    assert "src/other.py" in result.blocker
+
+
 def test_local_agent_blocks_when_reviewer_mutates_worktree(tmp_path) -> None:
     _init_git_repo(tmp_path)
     _write_file(tmp_path, "src/app.py", "print('before')\n")
