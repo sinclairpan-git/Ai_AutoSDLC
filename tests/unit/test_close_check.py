@@ -101,6 +101,30 @@ def test_local_pr_review_close_check_blocks_stale_closed_head(
     assert summary["head_commit"] == reviewed_head
 
 
+def test_local_pr_review_close_check_allows_committed_review_artifacts_after_review(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "README.md").write_text("# initial\n", encoding="utf-8")
+    _git(tmp_path, "add", "README.md")
+    _git(tmp_path, "commit", "-m", "initial")
+    reviewed_head = _git(tmp_path, "rev-parse", "HEAD")
+    _write_local_pr_review(
+        tmp_path,
+        "review-artifact-only",
+        "fully_clean",
+        head_commit=reviewed_head,
+    )
+    _git(tmp_path, "add", ".ai-sdlc")
+    _git(tmp_path, "commit", "-m", "record local pr review artifacts")
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is True
+    assert summary["verdict"] == "fully_clean"
+    assert summary["head_commit"] == reviewed_head
+
+
 def _write_local_pr_review(
     root: Path,
     review_id: str,

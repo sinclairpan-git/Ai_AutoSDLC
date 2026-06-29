@@ -1056,7 +1056,12 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
                 "verdict": verdict,
                 "head_commit": stored_head_commit,
             }
-        if current_head != stored_head_commit:
+        if current_head != stored_head_commit and not _local_pr_review_artifact_commit_only(
+            root,
+            review_run,
+            stored_head_commit,
+            current_head,
+        ):
             return {
                 "name": "local_pr_review",
                 "ok": False,
@@ -1090,6 +1095,35 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
         "final_report_path": final_report,
         "head_commit": stored_head_commit,
     }
+
+
+def _local_pr_review_artifact_commit_only(
+    root: Path,
+    review_run: dict[str, Any],
+    stored_head_commit: str,
+    current_head: str,
+) -> bool:
+    try:
+        changed = GitClient(root)._run(
+            "diff",
+            "--name-only",
+            f"{stored_head_commit}..{current_head}",
+        )
+    except GitError:
+        return False
+    changed_paths = [line.strip().replace("\\", "/") for line in changed.splitlines()]
+    changed_paths = [path for path in changed_paths if path]
+    if not changed_paths:
+        return False
+    return all(_is_current_local_pr_review_artifact_path(path, review_run) for path in changed_paths)
+
+
+def _is_current_local_pr_review_artifact_path(path: str, review_run: dict[str, Any]) -> bool:
+    review_id = str(review_run.get("review_id") or "").strip()
+    if not review_id:
+        return False
+    review_prefix = f".ai-sdlc/reviews/pr/{review_id}/"
+    return path == str(CURRENT_REVIEW_PATH).replace("\\", "/") or path.startswith(review_prefix)
 
 
 def format_close_check_json(result: CloseCheckResult) -> str:

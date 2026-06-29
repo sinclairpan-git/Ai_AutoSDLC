@@ -55,6 +55,7 @@ from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
 CURRENT_REVIEW_PATH = Path(AI_SDLC_DIR) / "reviews" / "pr" / "current-review.json"
 CURRENT_MODEL_ENV_KEYS = ("AI_SDLC_CURRENT_MODEL", "CODEX_MODEL", "OPENAI_MODEL")
+SUPPORTED_PROVIDER_IDS = frozenset({"local-agent", "mock-reviewer"})
 
 
 class ResolutionFileError(ValueError):
@@ -290,6 +291,17 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
     provider_options = _normalize_provider_options(options)
     review_id = _resolve_review_id(provider_options)
     loop_id = _resolve_loop_id(provider_options)
+    provider_blocker = _unsupported_provider_blocker(provider_options.provider_id)
+    if provider_blocker:
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.NEEDS_USER,
+            provider_id=provider_options.provider_id,
+            review_id=review_id,
+            loop_id=loop_id,
+            review_dir=str(LoopArtifactStore(root).review_run_dir(review_id)),
+            blocker=provider_blocker,
+            next_action="Choose local-agent or mock-reviewer.",
+        )
     try:
         pack_result = build_review_pack(
             ReviewPackBuildOptions(
@@ -966,6 +978,23 @@ def _preview(
 
     policy = load_loop_policy(root)
     provider_options = _normalize_provider_options(options)
+    provider_blocker = _unsupported_provider_blocker(provider_options.provider_id)
+    if provider_blocker:
+        checks.append(
+            PRReviewCheck(
+                name="provider",
+                status=PRReviewCommandStatus.NEEDS_USER,
+                detail=provider_blocker,
+            )
+        )
+        return (
+            checks,
+            PRReviewCommandStatus.NEEDS_USER,
+            provider_blocker,
+            "Choose local-agent or mock-reviewer.",
+            None,
+            None,
+        )
     model_resolution = resolve_model_for_review(
         policy,
         ModelResolutionRequest(
@@ -1120,6 +1149,12 @@ def _normalize_provider_options(options: PRReviewStartOptions) -> PRReviewStartO
             mock_fixture=options.mock_fixture,
         )
     return options
+
+
+def _unsupported_provider_blocker(provider_id: str) -> str:
+    if provider_id in SUPPORTED_PROVIDER_IDS:
+        return ""
+    return f"Unsupported PR review provider: {provider_id}"
 
 
 def _run_provider(

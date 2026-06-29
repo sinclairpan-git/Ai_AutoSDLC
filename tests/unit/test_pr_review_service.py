@@ -66,6 +66,46 @@ def test_start_dry_run_blocks_unconfigured_local_agent(tmp_path) -> None:
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
 
 
+def test_start_dry_run_rejects_unknown_provider(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="typo",
+            current_model="gpt-5",
+            dry_run=True,
+            review_id="review-unknown-provider-dry-run",
+        )
+    )
+
+    assert result.status == PRReviewCommandStatus.NEEDS_USER
+    assert "Unsupported PR review provider: typo" in result.blocker
+    assert [check.name for check in result.checks] == ["init", "git", "provider"]
+    assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
+
+
+def test_start_rejects_unknown_provider_before_writing_artifacts(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="typo",
+            current_model="gpt-5",
+            review_id="review-unknown-provider",
+        )
+    )
+
+    assert result.status == PRReviewCommandStatus.NEEDS_USER
+    assert "Unsupported PR review provider: typo" in result.blocker
+    assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
+
+
 def test_start_dry_run_blocks_incomplete_redaction_pack(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(
