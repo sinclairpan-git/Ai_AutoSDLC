@@ -310,3 +310,70 @@
 - **已完成 git 提交**：是
 - **提交哈希**：`834d2b38`（PR #103 初始 189 文档包提交；本批为该 PR 的 review remediation 补录）
 - **是否继续下一批**：否；等待 PR checks 与 Codex re-review 收口。
+
+### Batch 2026-06-29-007 | T007
+
+#### 2.35 准备
+
+- **任务来源**：PR #103 Codex review comments `discussion_r3489455006`、`discussion_r3489455009`
+- **目标**：修复 189 文档包的 checkpoint 绑定与 program truth snapshot，使后续实现授权时不会错误回落到 WI-187。
+- **预读范围**：`.ai-sdlc/state/checkpoint.yml`、`program-manifest.yaml`、`src/ai_sdlc/cli/program_cmd.py`、`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/workitem_traceability.py`
+- **激活的规则**：checkpoint active work item binding；program truth snapshot；branch/worktree disposition；truth-only verification profile。
+- **验证画像**：`truth-only`
+- **改动范围**：`.ai-sdlc/state/checkpoint.yml`、`program-manifest.yaml`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.36 统一验证命令
+
+- `V1`（文档检查）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V2`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 初次结果：未通过；checkpoint 绑定到 WI-189 后，暴露当前 PR branch 尚未写明 disposition，报告 `branch lifecycle unresolved`。
+  - 修复动作：本批补齐最新批次 branch/worktree disposition marker，并重新执行该命令。
+  - 复验结果：通过，`verify constraints: no BLOCKERs.`
+- `V3`（program truth snapshot 刷新）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过；写入 `program-manifest.yaml`，snapshot hash 为 `31d94763126df3be23778f03841bfdb993dd9a6b9ca2592790c08df90a2ee1e6`，snapshot state 为 `migration_pending`。
+- `V4`（program truth snapshot 只读预检）
+  - 命令：`uv run ai-sdlc program truth sync --dry-run`
+  - 结果：通过；dry-run 输出 snapshot state 为 `migration_pending`，确认 189 source inventory 已纳入 truth surface。
+
+#### 2.37 任务记录
+
+##### Task review-remediation | 修复 checkpoint 与 truth snapshot
+
+- **改动范围**：`.ai-sdlc/state/checkpoint.yml`、`program-manifest.yaml`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+- **改动内容**：
+  - 将 checkpoint 的 `feature.id`、`feature.spec_dir`、branch 字段和 `execute_progress` 指针从 WI-187 调整为 WI-189。
+  - 通过 `uv run ai-sdlc program truth sync --execute --yes` 刷新 persisted `truth_snapshot`，使 189 formal docs 进入 source inventory。
+  - 记录当前 PR branch 的 disposition：作为 PR #103 mainline merge carrier 保留，合并后由 GitHub/merge 操作删除远端分支；当前 worktree 保留为本仓库主工作区。
+- **新增/调整的测试**：无代码测试；本批为治理状态与 truth snapshot 修复。
+- **执行的命令**：见 V1 ~ V4。
+- **测试结果**：`git diff --check`、`uv run ai-sdlc verify constraints`、`program truth sync --execute --yes`、`program truth sync --dry-run` 均已完成；最终提交前将再执行一次 `program truth sync --execute --yes`，确保 persisted snapshot 对应稳定后的执行日志。
+- **是否符合任务目标**：符合 PR review remediation 目标。
+
+#### 2.38 代码审查（摘要）
+
+- **审查来源**：PR #103 Codex review。
+- **发现 1**：`.ai-sdlc/state/checkpoint.yml` 的 `linked_wi_id` 已指向 189，但 `feature.id` / `feature.spec_dir` / `execute_progress` 仍指向 187。
+- **处置 1**：已将 checkpoint 当前 work item 与执行指针统一到 189。
+- **发现 2**：`program-manifest.yaml` 新增 189 后未刷新 persisted `truth_snapshot`。
+- **处置 2**：已执行 `uv run ai-sdlc program truth sync --execute --yes` 并写入新 snapshot。
+- **结论**：可在完成 V2/V4 复验后重新提交并请求 Codex review。
+
+#### 2.39 任务/计划同步状态
+
+- `spec.md` 同步状态：已冻结，未修改。
+- `plan.md` 同步状态：已对账，未修改。
+- `tasks.md` 同步状态：已对账，未修改。
+- `task-execution-log.md` 同步状态：已记录第二轮 PR review remediation。
+- 关联 branch/worktree disposition 计划：PR #103 merge carrier，目标 disposition 为 merge 后删除远端分支。
+
+#### 2.40 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`66fabfe285e685222317df2c2f80f096b431632d`
+- 当前批次 branch disposition 状态：PR #103 merge carrier（待 checks/review 通过后合并）
+- 当前批次 worktree disposition 状态：retained（主工作区继续承载当前仓库）
+- **是否继续下一批**：否；等待本批复验、提交、push、Codex re-review 与 PR checks 收口。

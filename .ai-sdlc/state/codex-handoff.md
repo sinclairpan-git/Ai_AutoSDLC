@@ -1,34 +1,31 @@
 # Continuity Handoff
 
-- Updated: 2026-06-29T04:34:57+00:00
-- Reason: After plan/tasks adversarial review revision for WI-189
-- Goal: Finalize PRD-derived plan/tasks for WI-189 local adversarial PR review before implementation
-- State: PRD remains frozen; adversarial review of plan/tasks completed; plan.md and tasks.md patched for review-pack evidence refs, configured codex-local runner path, fix/rerun/close CLI exposure, doctor/dry-run read-only boundary, and release-note placeholder handling. No code implementation has started.
+- Updated: 2026-06-29T05:35:05+00:00
+- Reason: PR review remediation and pre-push checkpoint
+- Goal: Close PR #103 for WI-189 local adversarial PR review docs
+- State: PR #103 has remediation for Codex review comments: checkpoint now points to WI-189, program truth snapshot refreshed after Batch 007, local diff/constraints passed.
 - Stage: close
 - Work Item: 189-loop-engine-local-adversarial-pr-review
 - Branch: feature/189-loop-engine-local-adversarial-pr-review-docs
 
 ## Changed Files
-- M .ai-sdlc/project/config/project-state.yaml
 - M .ai-sdlc/state/checkpoint.yml
-- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
 - M program-manifest.yaml
-- A .ai-sdlc/work-items/189-loop-engine-local-adversarial-pr-review/codex-handoff.md
-- A specs/189-loop-engine-local-adversarial-pr-review/spec.md
-- A specs/189-loop-engine-local-adversarial-pr-review/plan.md
-- A specs/189-loop-engine-local-adversarial-pr-review/tasks.md
-- A specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md
-
-Note: pre-existing dirty `.ai-sdlc/state/resume-pack.yaml` and `.ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md` are intentionally excluded from this commit.
+- M specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md
 
 ## Key Decisions
-- Do not rewrite frozen spec.md; harden plan/tasks acceptance criteria so implementation agent must prove real P0 local review contracts, not only mock paths.
+- Keep PR branch as merge carrier until checks and Codex re-review pass; do not include pre-existing resume-pack.yaml or WI-187 handoff dirt.
 
 ## Commands / Tests
-- git diff --check: passed; uv run ai-sdlc verify constraints: passed with no BLOCKERs.
+- git diff --check: pass
+- uv run ai-sdlc verify constraints: pass
+- uv run ai-sdlc program truth sync --execute --yes: pass, snapshot state migration_pending
+- uv run ai-sdlc program truth sync --dry-run: pass
 
 ## Blockers / Risks
-- program truth sync previously hung; keep as tool-layer risk. Implementation still requires explicit user execute authorization.
+- none
 
 ## Exact Next Steps
-- If user authorizes implementation, start Batch 1 T11/T12 from tasks.md; otherwise review or commit the documentation package only.
+- Stage only WI-189 remediation files, commit/amend real hash, push, request Codex review, monitor PR #103 checks, then merge when clean.

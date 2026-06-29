@@ -2,11 +2,11 @@ pipeline_started_at: '2026-03-21T00:00:00'
 pipeline_last_updated: '2026-06-29T03:30:31+00:00'
 current_stage: close
 feature:
-  id: 187-agentops-self-iteration-monitoring
-  spec_dir: specs/187-agentops-self-iteration-monitoring
-  design_branch: design/187-agentops-self-iteration-monitoring-docs
-  feature_branch: feature/187-agentops-self-iteration-monitoring-dev
-  current_branch: feature/187-agentops-self-iteration-monitoring-docs
+  id: 189-loop-engine-local-adversarial-pr-review
+  spec_dir: specs/189-loop-engine-local-adversarial-pr-review
+  design_branch: design/189-loop-engine-local-adversarial-pr-review-docs
+  feature_branch: feature/189-loop-engine-local-adversarial-pr-review-dev
+  current_branch: feature/189-loop-engine-local-adversarial-pr-review-docs
   docs_baseline_ref: ''
   docs_baseline_at: ''
 multi_agent:
@@ -120,15 +120,15 @@ completed_stages:
   completed_at: '2026-06-02T04:12:59+00:00'
   artifacts: []
 execute_progress:
-  total_batches: 3
-  completed_batches: 3
-  current_batch: 3
-  last_committed_task: T31
-  tasks_file: specs/187-agentops-self-iteration-monitoring/tasks.md
-  execution_log: specs/187-agentops-self-iteration-monitoring/task-execution-log.md
-  last_log_at: '2026-05-27T08:56:48+00:00'
-  last_commit_at: '2026-05-27T08:56:48+00:00'
-  last_commit_hash: bed01cc
+  total_batches: 6
+  completed_batches: 0
+  current_batch: 1
+  last_committed_task: ''
+  tasks_file: specs/189-loop-engine-local-adversarial-pr-review/tasks.md
+  execution_log: specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md
+  last_log_at: '2026-06-29T05:18:24+00:00'
+  last_commit_at: '2026-06-29T05:14:19+00:00'
+  last_commit_hash: ed3209f
   halted: false
   error: ''
 ai_decisions_count: 0
