@@ -21,7 +21,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 1.1 Define Loop and Review data models
 
 - task_id: T11
-- status: todo
+- status: done
 - goal: 定义 Loop / Review 数据模型
 - priority: P0
 - scope:
@@ -41,7 +41,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 1.2 Implement schema validation and artifact store
 
 - task_id: T12
-- status: todo
+- status: done
 - goal: 实现 schema validation 与 artifact store
 - priority: P0
 - depends:
@@ -66,7 +66,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 2.1 Implement LoopPolicyProfile
 
 - task_id: T21
-- status: todo
+- status: done
 - goal: 实现 LoopPolicyProfile
 - priority: P0
 - depends:
@@ -75,7 +75,7 @@ Batch 6: close-check, handoff, verify, docs alignment
   - src/ai_sdlc/core/loop_policy.py
   - tests/unit/test_loop_policy.py
 - acceptance:
-  - 默认策略 safe-by-default：external provider 需确认，max rounds 默认 2，default close strict。
+  - 默认策略 safe-by-default：default provider 为 local-agent，default model 为 current，远程模型服务代码外发必须披露，是否需要确认由 policy 决定；max rounds 默认 2，default close strict。
   - 支持读取 .ai-sdlc/project/config/loop-policy.yaml。
   - policy 与命令参数冲突时 policy 优先，并返回 plain-language blocker。
 - verify:
@@ -87,7 +87,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 2.2 Implement redaction and omission preflight
 
 - task_id: T22
-- status: todo
+- status: done
 - goal: 实现 redaction / omission 预检
 - priority: P0
 - depends:
@@ -98,7 +98,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 - acceptance:
   - 检测 .env*、私钥、常见 token/key 模式、binary、large、generated files。
   - 生成 redaction-report.json 数据结构。
-  - high-risk secret + external provider 未确认时返回 needs_user。
+  - high-risk secret + 会外发代码的 provider/model 时返回 needs_user，除非 policy 和用户显式确认允许继续。
 - verify:
   - uv run pytest tests/unit/test_pr_review_redaction.py -q
 - notes:
@@ -108,7 +108,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 2.3 Implement review pack builder
 
 - task_id: T23
-- status: todo
+- status: done
 - goal: 实现 review pack builder
 - priority: P0
 - depends:
@@ -120,7 +120,7 @@ Batch 6: close-check, handoff, verify, docs alignment
   - tests/unit/test_pr_review_pack.py
 - acceptance:
   - 生成 review-pack.json、diff.patch、changed-files.txt、redaction-report.json。
-  - 记录 base/head ref、base/head commit、diff_summary、changed files、diff coverage、work_item_refs、test_results_refs、policy_refs、policy decisions、allowlist。
+  - 记录 base/head ref、base/head commit、diff_summary、changed files、diff coverage、work_item_refs、test_results_refs、policy_refs、policy decisions、provider mode、model selector、model resolution status/source、resolved model、code egress、allowlist。
   - 不读取或写入 implementation agent chat transcript。
   - diff 过大时进入 needs_user 或分片记录，不静默丢弃。
 - verify:
@@ -134,7 +134,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 3.1 Implement provider runner contract
 
 - task_id: T31
-- status: todo
+- status: done
 - goal: 实现 provider runner 合同
 - priority: P0
 - depends:
@@ -145,10 +145,12 @@ Batch 6: close-check, handoff, verify, docs alignment
   - tests/unit/test_pr_review_provider.py
 - acceptance:
   - 标准化退出码 0/10/20/other。
-  - 写入 reviewer-invocation.json，记录 command、argv、cwd、input/output paths、allowlist、隔离状态、exit status。
+  - 写入 reviewer-invocation.json，记录 command、argv、cwd、input/output paths、model selector、resolved model、code egress、allowlist、隔离状态、exit status。
   - 缺失 findings、非 JSON、schema validation 失败时 loop blocked。
-  - codex-local 已配置本地 fixture command 时可运行并生成合法 findings。
-  - codex-local 未配置时进入 needs_user，不得 fallback 到云端 PR review。
+  - local-agent 已配置本地 fixture command 时可运行并生成合法 findings。
+  - local-agent 默认使用 model=current，并支持显式 model selector；provider invocation 必须记录 provider mode、model selector、model resolution source、resolved model 和 code egress。
+  - model=current 必须按 CLI > policy > provider config > current agent/CLI 环境解析，无法解析时进入 needs_user。
+  - local-agent 未配置或 model=current 无法解析时进入 needs_user，不得 fallback 到云端 PR review。
 - verify:
   - uv run pytest tests/unit/test_pr_review_provider.py -q
 - notes:
@@ -158,7 +160,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 3.2 Implement mock reviewer
 
 - task_id: T32
-- status: todo
+- status: done
 - goal: 实现 mock-reviewer
 - priority: P0
 - depends:
@@ -182,7 +184,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 4.1 Implement PR Review service
 
 - task_id: T41
-- status: todo
+- status: done
 - goal: 实现 PR Review service
 - priority: P0
 - depends:
@@ -207,7 +209,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 4.2 Register ai-sdlc pr-review CLI
 
 - task_id: T42
-- status: todo
+- status: done
 - goal: 注册 ai-sdlc pr-review CLI
 - priority: P0
 - depends:
@@ -221,7 +223,7 @@ Batch 6: close-check, handoff, verify, docs alignment
   - tests/unit/test_command_names.py
 - acceptance:
   - ai-sdlc pr-review doctor/start/status 可用。
-  - human 输出包含 Result / Next / plain-language blocker / next command。
+  - human 输出包含 Result / Next / plain-language blocker / next command / provider / model selector / resolved model / code egress。
   - --json 输出稳定。
   - python -m ai_sdlc --help fallback 包含 pr-review。
   - pr-review fix/rerun/close 在 help 和真实 CLI 路径可见；具体状态机验收由 T51-T53 覆盖。
@@ -236,7 +238,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 5.1 Implement fix-plan and resolution flow
 
 - task_id: T51
-- status: todo
+- status: done
 - goal: 实现 fix-plan 与 resolution 流程
 - priority: P0
 - depends:
@@ -261,7 +263,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 5.2 Implement rerun and scope drift checks
 
 - task_id: T52
-- status: todo
+- status: done
 - goal: 实现 rerun 与 scope drift 检查
 - priority: P0
 - depends:
@@ -284,7 +286,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 5.3 Implement close verdict
 
 - task_id: T53
-- status: todo
+- status: done
 - goal: 实现 close verdict
 - priority: P0
 - depends:
@@ -310,7 +312,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 6.1 Integrate close-check and handoff
 
 - task_id: T61
-- status: todo
+- status: done
 - goal: 集成 close-check 与 handoff
 - priority: P0
 - depends:
@@ -334,7 +336,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 6.2 Align verify constraints and docs surface
 
 - task_id: T62
-- status: todo
+- status: done
 - goal: 对齐 verify constraints 与 docs/release surface
 - priority: P0
 - depends:
@@ -347,7 +349,7 @@ Batch 6: close-check, handoff, verify, docs alignment
   - tests/unit/test_verify_constraints.py
   - tests/integration/test_cli_verify_constraints.py
 - acceptance:
-  - verify constraints 覆盖云端 PR review 禁用、CI no-model、schema/policy 文档 surface。
+  - verify constraints 覆盖云端 PR review 禁用、CI 不发起模型请求、schema/policy 文档 surface。
   - README 给出小白 3 步路径：init、pr-review doctor、pr-review start。
   - 文档说明本地模型 review 与 CI 确定性检查分工。
   - release notes 不使用未定版本占位；若本工作项进入明确版本发布，再以实际版本号创建或更新对应 docs/releases/vX.Y.Z.md。
@@ -360,7 +362,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ### Task 6.3 Final regression and execution log close-out
 
 - task_id: T63
-- status: todo
+- status: done
 - goal: 最终回归与执行日志收口
 - priority: P0
 - depends:
@@ -384,7 +386,7 @@ Batch 6: close-check, handoff, verify, docs alignment
 ## 实现前硬性边界
 
 1. 不得调用 Codex 云端 PR review。
-2. 不得在 CI workflow 中加入 GPT/Codex 调用。
+2. 不得在 CI workflow 中加入 GPT、Claude、DeepSeek、GLM、Codex 或其他模型调用；模型调用只能由本地独立 review agent 发起。
 3. P0 不允许 reviewer 修改代码。
 4. P0 不实现远端 PR inline comments。
 5. 每个 batch 完成后必须更新 task-execution-log.md 和 handoff。

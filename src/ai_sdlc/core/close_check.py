@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass, field
@@ -9,9 +10,12 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from pydantic import ValidationError
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.plan_check import resolve_plan_path_from_wi, run_plan_check
+from ai_sdlc.core.pr_review_models import ReviewFindings, ReviewPack, ReviewRun
+from ai_sdlc.core.pr_review_service import CURRENT_REVIEW_PATH
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
     PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND,
@@ -975,6 +979,11 @@ def run_close_check(
             + " | ".join(doc_violations)
         )
 
+    local_pr_review = _local_pr_review_close_check_summary(root)
+    checks.append(local_pr_review)
+    if not local_pr_review["ok"]:
+        blockers.append(f"BLOCKER: {local_pr_review['detail']}")
+
     checks.append(
         {
             "name": "done_gate",
@@ -992,6 +1001,247 @@ def run_close_check(
         wi_dir=wi_dir,
         error=None,
     )
+
+
+def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
+    pointer_path = root / CURRENT_REVIEW_PATH
+    if not pointer_path.exists():
+        return {
+            "name": "local_pr_review",
+            "ok": True,
+            "detail": "no local PR review current pointer; skipped",
+        }
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+        review_run_path = _resolve_repo_path(
+            root,
+            str(pointer.get("review_run_path", "")),
+        )
+        review_run = ReviewRun.model_validate(
+            json.loads(review_run_path.read_text(encoding="utf-8"))
+        )
+    except (OSError, json.JSONDecodeError) as exc:
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": f"local PR review state cannot be read: {exc}",
+        }
+    except ValidationError as exc:
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": f"local PR review state is invalid: {exc}",
+        }
+
+    verdict = str(review_run.verdict or "")
+    final_report = str(review_run.final_report_path or "")
+    final_report_path = _resolve_repo_path(root, final_report) if final_report else Path()
+    unresolved_blockers = review_run.unresolved_blockers
+    unresolved_required = review_run.unresolved_required
+    stored_head_commit = review_run.head_commit.strip()
+    stored_head_ref = review_run.head_ref.strip()
+    stored_status = str(review_run.status or "").strip()
+    if verdict == "blocked":
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": (
+                "local PR review blocked: "
+                f"unresolved_blockers={unresolved_blockers}, "
+                f"unresolved_required={unresolved_required}"
+            ),
+            "review_id": review_run.review_id,
+            "verdict": verdict,
+        }
+    if verdict in {"fully_clean", "risk_accepted"} and stored_status != "closed":
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": f"local PR review is not closed: status={stored_status or 'none'}",
+            "review_id": review_run.review_id,
+            "verdict": verdict,
+            "status": stored_status,
+        }
+    if verdict in {"fully_clean", "risk_accepted"} and unresolved_blockers > 0:
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": (
+                "local PR review has unresolved blockers: "
+                f"unresolved_blockers={unresolved_blockers}"
+            ),
+            "review_id": review_run.review_id,
+            "verdict": verdict,
+            "unresolved_blockers": unresolved_blockers,
+        }
+    if verdict == "fully_clean" and unresolved_required > 0:
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": (
+                "local PR review fully_clean has unresolved required findings: "
+                f"unresolved_required={unresolved_required}"
+            ),
+            "review_id": review_run.review_id,
+            "verdict": verdict,
+            "unresolved_required": unresolved_required,
+        }
+    if verdict in {"fully_clean", "risk_accepted"} and not final_report_path.is_file():
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": "local PR review final report is missing",
+            "review_id": review_run.review_id,
+            "verdict": verdict,
+        }
+    if verdict in {"fully_clean", "risk_accepted"}:
+        artifact_blocker = _local_pr_review_artifact_blocker(root, review_run)
+        if artifact_blocker:
+            return {
+                "name": "local_pr_review",
+                "ok": False,
+                "detail": artifact_blocker,
+                "review_id": review_run.review_id,
+                "verdict": verdict,
+            }
+    if verdict in {"fully_clean", "risk_accepted"} and stored_head_commit:
+        try:
+            current_head = GitClient(root).resolve_revision(stored_head_ref or "HEAD")
+        except GitError as exc:
+            return {
+                "name": "local_pr_review",
+                "ok": False,
+                "detail": f"local PR review head cannot be verified: {exc}",
+                "review_id": review_run.review_id,
+                "verdict": verdict,
+                "head_commit": stored_head_commit,
+            }
+        if current_head != stored_head_commit and not _local_pr_review_artifact_commit_only(
+            root,
+            review_run,
+            stored_head_commit,
+            current_head,
+        ):
+            return {
+                "name": "local_pr_review",
+                "ok": False,
+                "detail": (
+                    "local PR review is stale: "
+                    f"review_head={stored_head_commit[:12]}, "
+                    f"current_head={current_head[:12]}"
+                ),
+                "review_id": review_run.review_id,
+                "verdict": verdict,
+                "head_commit": stored_head_commit,
+                "current_head": current_head,
+            }
+    if verdict == "risk_accepted":
+        detail = (
+            "local PR review risk_accepted; "
+            f"unresolved_required={unresolved_required}"
+        )
+    elif verdict == "fully_clean":
+        detail = "local PR review fully_clean"
+    else:
+        detail = f"local PR review not closed yet: verdict={verdict or 'none'}"
+    return {
+        "name": "local_pr_review",
+        "ok": verdict in {"fully_clean", "risk_accepted"},
+        "detail": detail,
+        "review_id": review_run.review_id,
+        "verdict": verdict,
+        "unresolved_blockers": unresolved_blockers,
+        "unresolved_required": unresolved_required,
+        "final_report_path": str(final_report_path) if final_report else "",
+        "head_commit": stored_head_commit,
+    }
+
+
+def _local_pr_review_artifact_blocker(root: Path, review_run: ReviewRun) -> str:
+    pack_blocker = _local_pr_review_artifact_digest_blocker(
+        root,
+        label="review-pack.json",
+        path_text=review_run.review_pack_path,
+        expected_digest=review_run.review_pack_digest,
+        model=ReviewPack,
+    )
+    if pack_blocker:
+        return pack_blocker
+    return _local_pr_review_artifact_digest_blocker(
+        root,
+        label="findings.json",
+        path_text=review_run.findings_path,
+        expected_digest=review_run.findings_digest,
+        model=ReviewFindings,
+    )
+
+
+def _local_pr_review_artifact_digest_blocker(
+    root: Path,
+    *,
+    label: str,
+    path_text: str,
+    expected_digest: str,
+    model: type[ReviewPack] | type[ReviewFindings],
+) -> str:
+    if not path_text.strip():
+        return f"local PR review {label} path is missing"
+    path = _resolve_repo_path(root, path_text)
+    if not path.is_file():
+        return f"local PR review {label} is missing"
+    if not expected_digest.strip():
+        return f"local PR review {label} digest is missing"
+    try:
+        actual_digest = _file_sha256(path)
+    except OSError as exc:
+        return f"local PR review {label} cannot be verified: {exc}"
+    if actual_digest != expected_digest:
+        return f"local PR review {label} changed after review close"
+    try:
+        model.model_validate(json.loads(path.read_text(encoding="utf-8")))
+    except (json.JSONDecodeError, ValidationError, ValueError) as exc:
+        return f"local PR review {label} is invalid: {exc}"
+    return ""
+
+
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _local_pr_review_artifact_commit_only(
+    root: Path,
+    review_run: ReviewRun,
+    stored_head_commit: str,
+    current_head: str,
+) -> bool:
+    try:
+        changed = GitClient(root)._run(
+            "diff",
+            "--name-only",
+            f"{stored_head_commit}..{current_head}",
+        )
+    except GitError:
+        return False
+    changed_paths = [line.strip().replace("\\", "/") for line in changed.splitlines()]
+    changed_paths = [path for path in changed_paths if path]
+    if not changed_paths:
+        return False
+    return all(_is_current_local_pr_review_artifact_path(path, review_run) for path in changed_paths)
+
+
+def _is_current_local_pr_review_artifact_path(path: str, review_run: ReviewRun) -> bool:
+    review_id = review_run.review_id.strip()
+    if not review_id:
+        return False
+    review_prefix = f".ai-sdlc/reviews/pr/{review_id}/"
+    return path == str(CURRENT_REVIEW_PATH).replace("\\", "/") or path.startswith(review_prefix)
+
+
+def _resolve_repo_path(root: Path, path_text: str) -> Path:
+    path = Path(path_text)
+    if path.is_absolute():
+        return path
+    return root / path
 
 
 def format_close_check_json(result: CloseCheckResult) -> str:

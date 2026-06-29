@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -15,6 +17,7 @@ from ai_sdlc.core.close_check import (
     CloseCheckResult,
     _build_program_truth_close_check_summary,
     _changed_paths_from_marker,
+    _local_pr_review_close_check_summary,
     format_branch_check_json,
     format_close_check_json,
     run_branch_check,
@@ -36,6 +39,344 @@ from ai_sdlc.models.work import (
 def _commit_all(root: Path, message: str) -> None:
     subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def test_local_pr_review_close_check_distinguishes_closed_verdicts(
+    tmp_path: Path,
+) -> None:
+    clean = _write_local_pr_review(tmp_path, "review-clean", "fully_clean")
+    clean_summary = _local_pr_review_close_check_summary(tmp_path)
+    assert clean_summary["ok"] is True
+    assert clean_summary["verdict"] == "fully_clean"
+    assert clean_summary["final_report_path"] == str(clean)
+
+    accepted = _write_local_pr_review(
+        tmp_path,
+        "review-risk",
+        "risk_accepted",
+        unresolved_required=1,
+    )
+    accepted_summary = _local_pr_review_close_check_summary(tmp_path)
+    assert accepted_summary["ok"] is True
+    assert accepted_summary["verdict"] == "risk_accepted"
+    assert accepted_summary["final_report_path"] == str(accepted)
+
+
+def test_local_pr_review_close_check_blocks_blocked_verdict(tmp_path: Path) -> None:
+    _write_local_pr_review(
+        tmp_path,
+        "review-blocked",
+        "blocked",
+        unresolved_blockers=1,
+    )
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert summary["verdict"] == "blocked"
+    assert "unresolved_blockers=1" in summary["detail"]
+
+
+def test_local_pr_review_close_check_blocks_invalid_review_run_schema(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(tmp_path, "review-invalid-schema", "fully_clean")
+    review_run_path = (
+        tmp_path
+        / ".ai-sdlc"
+        / "reviews"
+        / "pr"
+        / "review-invalid-schema"
+        / "review-run.json"
+    )
+    review_run = json.loads(review_run_path.read_text(encoding="utf-8"))
+    review_run["schema_version"] = "0"
+    review_run_path.write_text(json.dumps(review_run), encoding="utf-8")
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert "invalid" in summary["detail"]
+    assert "schema_version" in summary["detail"]
+
+
+def test_local_pr_review_close_check_blocks_missing_review_artifacts(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(tmp_path, "review-missing-artifact", "fully_clean")
+    (
+        tmp_path
+        / ".ai-sdlc"
+        / "reviews"
+        / "pr"
+        / "review-missing-artifact"
+        / "findings.json"
+    ).unlink()
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert "findings.json is missing" in summary["detail"]
+
+
+def test_local_pr_review_close_check_blocks_tampered_review_artifacts(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(tmp_path, "review-tampered-artifact", "fully_clean")
+    review_pack_path = (
+        tmp_path
+        / ".ai-sdlc"
+        / "reviews"
+        / "pr"
+        / "review-tampered-artifact"
+        / "review-pack.json"
+    )
+    review_pack = json.loads(review_pack_path.read_text(encoding="utf-8"))
+    review_pack["policy_decisions"]["incomplete_review_waiver"] = True
+    review_pack_path.write_text(json.dumps(review_pack), encoding="utf-8")
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert "review-pack.json changed" in summary["detail"]
+
+
+def test_local_pr_review_close_check_blocks_unclosed_clean_verdict(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(
+        tmp_path,
+        "review-unclosed-clean",
+        "fully_clean",
+        status="needs_fix",
+    )
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert summary["verdict"] == "fully_clean"
+    assert "not closed" in summary["detail"]
+
+
+def test_local_pr_review_close_check_blocks_unresolved_blockers_on_closed_verdict(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(
+        tmp_path,
+        "review-unresolved-blocker",
+        "risk_accepted",
+        unresolved_blockers=1,
+    )
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert summary["verdict"] == "risk_accepted"
+    assert "unresolved_blockers=1" in summary["detail"]
+
+
+def test_local_pr_review_close_check_blocks_fully_clean_required_findings(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(
+        tmp_path,
+        "review-required-clean",
+        "fully_clean",
+        unresolved_required=1,
+    )
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert summary["verdict"] == "fully_clean"
+    assert "unresolved_required=1" in summary["detail"]
+
+
+def test_local_pr_review_close_check_blocks_stale_closed_head(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "README.md").write_text("# initial\n", encoding="utf-8")
+    _git(tmp_path, "add", "README.md")
+    _git(tmp_path, "commit", "-m", "initial")
+    reviewed_head = _git(tmp_path, "rev-parse", "HEAD")
+    _write_local_pr_review(
+        tmp_path,
+        "review-stale",
+        "fully_clean",
+        head_commit=reviewed_head,
+    )
+    (tmp_path / "README.md").write_text("# changed\n", encoding="utf-8")
+    _git(tmp_path, "add", "README.md")
+    _git(tmp_path, "commit", "-m", "change after review")
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert summary["verdict"] == "fully_clean"
+    assert "stale" in summary["detail"]
+    assert summary["head_commit"] == reviewed_head
+
+
+def test_local_pr_review_close_check_allows_committed_review_artifacts_after_review(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "README.md").write_text("# initial\n", encoding="utf-8")
+    _git(tmp_path, "add", "README.md")
+    _git(tmp_path, "commit", "-m", "initial")
+    reviewed_head = _git(tmp_path, "rev-parse", "HEAD")
+    _write_local_pr_review(
+        tmp_path,
+        "review-artifact-only",
+        "fully_clean",
+        head_commit=reviewed_head,
+    )
+    _git(tmp_path, "add", ".ai-sdlc")
+    _git(tmp_path, "commit", "-m", "record local pr review artifacts")
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is True
+    assert summary["verdict"] == "fully_clean"
+    assert summary["head_commit"] == reviewed_head
+
+
+def test_local_pr_review_close_check_uses_reviewed_head_ref(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    (tmp_path / "README.md").write_text("# initial\n", encoding="utf-8")
+    _git(tmp_path, "add", "README.md")
+    _git(tmp_path, "commit", "-m", "initial")
+    _git(tmp_path, "checkout", "-b", "feature")
+    (tmp_path / "feature.txt").write_text("feature\n", encoding="utf-8")
+    _git(tmp_path, "add", "feature.txt")
+    _git(tmp_path, "commit", "-m", "feature work")
+    reviewed_head = _git(tmp_path, "rev-parse", "HEAD")
+    _git(tmp_path, "checkout", "main")
+    _write_local_pr_review(
+        tmp_path,
+        "review-feature-head",
+        "fully_clean",
+        head_commit=reviewed_head,
+        head_ref="feature",
+    )
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is True
+    assert summary["head_commit"] == reviewed_head
+
+
+def _write_local_pr_review(
+    root: Path,
+    review_id: str,
+    verdict: str,
+    *,
+    unresolved_blockers: int = 0,
+    unresolved_required: int = 0,
+    head_commit: str = "",
+    head_ref: str = "",
+    status: str = "",
+) -> Path:
+    review_dir = root / ".ai-sdlc" / "reviews" / "pr" / review_id
+    review_dir.mkdir(parents=True, exist_ok=True)
+    final_report = review_dir / "final-report.md"
+    final_report.write_text(f"# Final\n\nverdict: {verdict}\n", encoding="utf-8")
+    loop_id = f"loop-{review_id}"
+    review_pack_path = review_dir / "review-pack.json"
+    review_pack_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "artifact_kind": "review-pack",
+                "review_id": review_id,
+                "loop_id": loop_id,
+                "repo_root": str(root),
+                "base_ref": "main",
+                "head_ref": head_ref or "HEAD",
+                "base_commit": "0" * 40,
+                "head_commit": head_commit or "a" * 40,
+                "changed_files": ["src/app.py"],
+                "diff_path": (review_dir / "diff.patch").relative_to(root).as_posix(),
+                "policy_decisions": {"incomplete_review_waiver": False},
+                "model_selector": "current",
+            }
+        ),
+        encoding="utf-8",
+    )
+    findings_path = review_dir / "findings.json"
+    findings_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "artifact_kind": "review-findings",
+                "review_id": review_id,
+                "loop_id": loop_id,
+                "review_pack_path": review_pack_path.relative_to(root).as_posix(),
+                "provider_id": "mock-reviewer",
+                "model_selector": "fixture",
+                "resolved_model": "mock-reviewer",
+                "verdict": "clean",
+                "findings": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    review_run_path = review_dir / "review-run.json"
+    review_run_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "review_id": review_id,
+                "loop_id": loop_id,
+                "status": status
+                or ("closed" if verdict in {"fully_clean", "risk_accepted"} else "blocked"),
+                "verdict": verdict,
+                "final_report_path": final_report.relative_to(root).as_posix(),
+                "unresolved_blockers": unresolved_blockers,
+                "unresolved_required": unresolved_required,
+                "head_commit": head_commit,
+                "head_ref": head_ref,
+                "review_pack_path": review_pack_path.relative_to(root).as_posix(),
+                "review_pack_digest": _sha256(review_pack_path),
+                "findings_path": findings_path.relative_to(root).as_posix(),
+                "findings_digest": _sha256(findings_path),
+            }
+        ),
+        encoding="utf-8",
+    )
+    pointer = root / ".ai-sdlc" / "reviews" / "pr" / "current-review.json"
+    pointer.write_text(
+        json.dumps(
+            {
+                "review_id": review_id,
+                "review_run_path": review_run_path.relative_to(root).as_posix(),
+            }
+        ),
+        encoding="utf-8",
+    )
+    return final_report
+
+
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _init_git_repo(root: Path) -> None:
+    _git(root, "init", "--initial-branch=main")
+    _git(root, "config", "user.email", "t@t.com")
+    _git(root, "config", "user.name", "T")
+
+
+def _git(root: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=root,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return result.stdout.strip()
 
 
 def _write_manifest_yaml(root: Path, text: str) -> None:

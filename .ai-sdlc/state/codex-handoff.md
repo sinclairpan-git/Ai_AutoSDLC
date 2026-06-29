@@ -1,29 +1,34 @@
 # Continuity Handoff
 
-- Updated: 2026-06-29T07:56:54+00:00
-- Reason: PR #103 review remediation for Batch 011 append-only order
-- Goal: Close PR #103 for WI-189 local adversarial PR review docs
-- State: Batch 011 moved after Batch 010 so close-check reads the current_batch remediation as latest evidence; constraints pass.
+- Updated: 2026-06-29T20:30:02+00:00
+- Reason: After addressing Codex P2 porcelain path parsing mutation guard
+- Goal: Ship work item 189 local independent adversarial PR review loop through PR #104
+- State: Addressed latest Codex P2 feedback: provider worktree mutation snapshots now use git status --porcelain=v1 -z and parse NUL-terminated entries, preserving paths with spaces/special characters before hashing.
 - Stage: execute
 - Work Item: 189-loop-engine-local-adversarial-pr-review
-- Branch: feature/189-loop-engine-local-adversarial-pr-review-docs
+- Branch: codex/189-loop-pr-review-batch1
 
 ## Changed Files
-- M .ai-sdlc/state/checkpoint.yml
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/work-items/189-loop-engine-local-adversarial-pr-review/codex-handoff.md
-- M program-manifest.yaml
-- M specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
+- M src/ai_sdlc/core/pr_review_provider.py
+- M tests/unit/test_pr_review_provider.py
 
 ## Key Decisions
-- Latest remediation batch must be physically last because close_check selects the last textual Batch heading.
+- Provider mutation guard must use machine-readable NUL porcelain output rather than quoted text porcelain paths.
 
 ## Commands / Tests
-- git diff --check: pass
-- uv run ai-sdlc verify constraints: pass
+- uv run pytest targeted provider mutation tests -q => 4 passed
+- uv run pytest provider/pr-review related subset -q => 202 passed
+- uv run ruff check src/ai_sdlc/core/pr_review_provider.py tests/unit/test_pr_review_provider.py => passed
+- uv run ai-sdlc verify constraints => no BLOCKERs
+- git diff --check => passed
 
 ## Blockers / Risks
-- Need final Codex review on the current HEAD, required GitHub checks, and PR merge.
+- Unrelated dirty files remain .ai-sdlc/state/resume-pack.yaml and work item 187 handoff; do not stage them.
+
+## Local PR Review
+- none
 
 ## Exact Next Steps
-- Commit/push handoff correction if needed, request Codex review, monitor checks/review until merge.
+- Commit and push porcelain parsing fix, re-trigger Codex review, monitor CI/review, then mark PR ready and merge when gates pass.

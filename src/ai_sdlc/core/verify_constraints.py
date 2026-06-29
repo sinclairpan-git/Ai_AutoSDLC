@@ -787,6 +787,92 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
             ),
         ),
     ),
+    "189": (
+        FeatureContractSurface(
+            label="local PR review CLI",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "cli" / "pr_review_cmd.py",
+                    ),
+                    required_tokens=(
+                        "pr_review_doctor",
+                        "pr_review_start",
+                        "pr_review_status",
+                        "pr_review_fix",
+                        "pr_review_rerun",
+                        "pr_review_close",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="local PR review provider isolation",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "pr_review_provider.py",
+                    ),
+                    required_tokens=(
+                        "ProviderRunnerInvocation",
+                        "run_provider_command",
+                        "run_mock_reviewer",
+                        "code_egress",
+                        "allowlist",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="local PR review schema policy artifacts",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "pr_review_pack.py",
+                    ),
+                    required_tokens=(
+                        "review-pack.json",
+                        "redaction-report.json",
+                        "model-resolution.json",
+                        "diff.patch",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "loop_policy.py",
+                    ),
+                    required_tokens=(
+                        "loop-policy.yaml",
+                        "model=current",
+                        "code_egress",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="local PR review user docs",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(Path("README.md"),),
+                    required_tokens=(
+                        "ai-sdlc pr-review doctor",
+                        "ai-sdlc pr-review start",
+                        "model current",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("docs") / "pull-request-checklist.zh.md",
+                    ),
+                    required_tokens=(
+                        "本地 PR review",
+                        "CI",
+                        "不得发起模型请求",
+                    ),
+                ),
+            ),
+        ),
+    ),
 }
 
 
@@ -3149,9 +3235,12 @@ def _feature_contract_surfaces_for_checkpoint(
     checkpoint: Checkpoint | None,
 ) -> tuple[FeatureContractSurface, ...]:
     """Return the work-item-scoped feature-contract registry."""
-    if not _is_framework_003_feature_contract_work_item(checkpoint):
-        return ()
-    return FEATURE_CONTRACT_SURFACES["003"]
+    if _is_framework_003_feature_contract_work_item(checkpoint):
+        return FEATURE_CONTRACT_SURFACES["003"]
+    work_item_id = _effective_feature_contract_wi_id(checkpoint)
+    if _is_189_work_item(work_item_id):
+        return FEATURE_CONTRACT_SURFACES["189"]
+    return ()
 
 
 def _feature_contract_surface_present(
@@ -3229,6 +3318,11 @@ def _is_151_work_item(work_item_id: str) -> bool:
 def _is_153_work_item(work_item_id: str) -> bool:
     normalized = work_item_id.strip()
     return normalized == "153" or normalized.startswith("153-") or normalized.startswith("153/")
+
+
+def _is_189_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "189" or normalized.startswith("189-") or normalized.startswith("189/")
 
 
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:

@@ -37,6 +37,7 @@ def _emit_ascii_module_help() -> None:
         "  telemetry\n"
         "  provenance\n"
         "  trace\n"
+        "  pr-review\n"
         "  self-update\n"
     )
 
