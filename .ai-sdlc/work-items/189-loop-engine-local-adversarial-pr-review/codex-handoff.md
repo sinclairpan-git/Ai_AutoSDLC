@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-29T18:57:38+00:00
-- Reason: After addressing latest Codex P2 close-check review-run schema validation feedback
+- Updated: 2026-06-29T19:19:01+00:00
+- Reason: After addressing Codex P1 reviewer-output tamper and P2 malformed loop-policy feedback
 - Goal: Ship work item 189 local independent adversarial PR review loop through PR #104
-- State: Addressed latest Codex P2 feedback: workitem close-check now validates current PR review-run.json with ReviewRun schema before trusting verdict/count/final-report fields; unsupported schema_version fails closed.
+- State: Addressed latest Codex review feedback: review-run now records findings_digest and close validates findings.json before trusting reviewer outputs; malformed loop-policy.yaml now raises LoopPolicyError and PR-review doctor/start/fix/close return structured BLOCKED results.
 - Stage: execute
 - Work Item: 189-loop-engine-local-adversarial-pr-review
 - Branch: codex/189-loop-pr-review-batch1
@@ -11,17 +11,21 @@
 ## Changed Files
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
-- M src/ai_sdlc/core/close_check.py
-- M tests/unit/test_close_check.py
+- M src/ai_sdlc/core/loop_policy.py
+- M src/ai_sdlc/core/pr_review_models.py
+- M src/ai_sdlc/core/pr_review_service.py
+- M tests/unit/test_loop_policy.py
+- M tests/unit/test_pr_review_service.py
 
 ## Key Decisions
-- close-check must fail closed on malformed or incompatible local PR review artifacts instead of trusting raw JSON.
+- Reviewer output artifacts may remain generated local state, but close must verify findings.json against review-run digest before accepting verdict/counts.
+- Present but malformed loop-policy.yaml is fail-closed and surfaced as a structured command blocker, not silently defaulted and not a traceback.
 
 ## Commands / Tests
-- uv run pytest targeted local_pr_review close-check tests -q => 6 passed
-- uv run pytest tests/unit/test_close_check.py -q => 66 passed
-- uv run pytest tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_close_check.py -q => 125 passed
-- uv run ruff check src/ai_sdlc/core/close_check.py tests/unit/test_close_check.py => passed
+- uv run pytest targeted policy/tamper tests -q => 5 passed
+- uv run pytest tests/unit/test_loop_policy.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_close_check.py -q => 139 passed
+- uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_pack.py -q => 30 passed
+- uv run ruff check affected PR-review/policy files => passed
 - uv run ai-sdlc verify constraints => no BLOCKERs
 - git diff --check => passed
 
@@ -32,4 +36,4 @@
 - none
 
 ## Exact Next Steps
-- Commit and push schema validation fix, re-trigger Codex review, monitor CI/review, then mark PR ready and merge when gates pass.
+- Commit and push tamper/policy fixes, re-trigger Codex review, monitor CI/review, then mark PR ready and merge when gates pass.

@@ -323,6 +323,7 @@ class ReviewRun(LoopArtifactModel):
     provider_command: list[str] = Field(default_factory=list)
     review_pack_path: str = ""
     findings_path: str = ""
+    findings_digest: str = ""
     resolution_path: str = ""
     final_report_path: str = ""
     verdict: ReviewVerdict | None = None

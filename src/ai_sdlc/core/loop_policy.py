@@ -8,7 +8,7 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-from ai_sdlc.core.config import YamlStore
+from ai_sdlc.core.config import YamlStore, YamlStoreError
 from ai_sdlc.core.loop_models import LoopPolicyProfile
 from ai_sdlc.core.pr_review_models import (
     ModelResolution,
@@ -19,6 +19,10 @@ from ai_sdlc.core.pr_review_models import (
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
 LOOP_POLICY_PATH = Path(AI_SDLC_DIR) / "project" / "config" / "loop-policy.yaml"
+
+
+class LoopPolicyError(ValueError):
+    """Raised when a present loop-policy.yaml cannot be parsed safely."""
 
 
 class PolicyDecisionStatus(StrEnum):
@@ -57,7 +61,12 @@ def load_loop_policy(root: Path) -> LoopPolicyProfile:
     """Load project loop policy, returning safe defaults when absent."""
 
     path = root / LOOP_POLICY_PATH
-    return YamlStore.load(path, LoopPolicyProfile, default=LoopPolicyProfile())
+    try:
+        return YamlStore.load(path, LoopPolicyProfile, default=LoopPolicyProfile())
+    except YamlStoreError as exc:
+        raise LoopPolicyError(
+            f"Loop policy is malformed: {exc}. Fix {LOOP_POLICY_PATH.as_posix()}."
+        ) from exc
 
 
 def resolve_model_for_review(

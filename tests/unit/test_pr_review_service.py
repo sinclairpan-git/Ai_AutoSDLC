@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -107,6 +108,43 @@ def test_start_dry_run_uses_policy_default_provider_when_omitted(tmp_path) -> No
     assert result.provider_id == "mock-reviewer"
     assert result.resolved_model == "mock-reviewer"
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
+
+
+def test_doctor_blocks_malformed_loop_policy_without_traceback(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _write_loop_policy(tmp_path, "remote_model_policy: strict\n")
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    result = doctor_pr_review(
+        root=tmp_path,
+        base_ref=base_commit,
+        provider_id="mock-reviewer",
+    )
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert "Loop policy is malformed" in result.blocker
+    assert "loop-policy.yaml" in result.next_action
+    assert [check.name for check in result.checks] == ["init", "git", "policy"]
+
+
+def test_start_blocks_malformed_loop_policy_without_traceback(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _write_loop_policy(tmp_path, "remote_model_policy: strict\n")
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-malformed-policy",
+        )
+    )
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert "Loop policy is malformed" in result.blocker
+    assert "loop-policy.yaml" in result.next_action
+    assert not (tmp_path / ".ai-sdlc" / "reviews" / "pr").exists()
 
 
 def test_start_rejects_unknown_provider_before_writing_artifacts(tmp_path) -> None:
@@ -368,6 +406,7 @@ def test_fix_generates_plan_and_resolution_without_advisory_auto_plan(
         )
     )
     _append_advisory_finding(Path(start.findings_path))
+    _refresh_current_findings_digest(tmp_path)
 
     result = fix_pr_review(tmp_path, max_rounds=2)
 
@@ -490,6 +529,7 @@ def test_fix_does_not_trust_provider_supplied_resolution(tmp_path) -> None:
     findings = json.loads(findings_path.read_text(encoding="utf-8"))
     findings["findings"][0]["resolution"] = "fixed"
     findings_path.write_text(json.dumps(findings), encoding="utf-8")
+    _refresh_current_findings_digest(tmp_path)
 
     close = close_pr_review(tmp_path)
     fix = fix_pr_review(tmp_path)
@@ -591,6 +631,54 @@ def test_close_honors_policy_default_require_no_blockers(tmp_path) -> None:
     assert result.status == PRReviewCommandStatus.CLOSED
     assert result.verdict == "risk_accepted"
     assert result.unresolved_required == 1
+
+
+def test_close_blocks_malformed_loop_policy_without_traceback(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-close-malformed-policy",
+            mock_fixture=MockReviewerFixture.CLEAN,
+        )
+    )
+    _write_loop_policy(tmp_path, "remote_model_policy: strict\n")
+
+    result = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.verdict == "blocked"
+    assert "Loop policy is malformed" in result.blocker
+    assert "loop-policy.yaml" in result.next_action
+
+
+def test_close_blocks_tampered_reviewer_findings(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-tampered-findings",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    findings_path = Path(start.findings_path)
+    findings = json.loads(findings_path.read_text(encoding="utf-8"))
+    findings["verdict"] = "clean"
+    findings["findings"] = []
+    findings_path.write_text(json.dumps(findings), encoding="utf-8")
+
+    result = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.verdict == "blocked"
+    assert "findings.json changed" in result.blocker
+    assert "Rerun PR review" in result.next_action
 
 
 def test_close_downgrades_incomplete_review_waiver_from_fully_clean(tmp_path) -> None:
@@ -888,6 +976,7 @@ def test_close_final_report_discloses_unresolved_advisory(tmp_path) -> None:
         )
     )
     _append_advisory_finding(Path(start.findings_path))
+    _refresh_current_findings_digest(tmp_path)
 
     result = close_pr_review(tmp_path)
 
@@ -1203,6 +1292,18 @@ def _append_advisory_finding(findings_path: Path) -> None:
     findings_path.write_text(json.dumps(payload), encoding="utf-8")
 
 
+def _refresh_current_findings_digest(root: Path) -> None:
+    pointer_path = root / CURRENT_REVIEW_PATH
+    pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    review_run_path = root / pointer["review_run_path"]
+    review_run = json.loads(review_run_path.read_text(encoding="utf-8"))
+    findings_path = root / review_run["findings_path"]
+    review_run["findings_digest"] = hashlib.sha256(
+        findings_path.read_bytes()
+    ).hexdigest()
+    review_run_path.write_text(json.dumps(review_run), encoding="utf-8")
+
+
 def _write_clean_reviewer_script(path: Path) -> Path:
     script = path / "clean_reviewer.py"
     script.write_text(
@@ -1246,6 +1347,13 @@ def _init_repo(path: Path) -> str:
     _git(path, "config", "user.name", "Test User")
     _commit_file(path, "README.md", "# Test\n", "initial")
     return _git(path, "rev-parse", "HEAD")
+
+
+def _write_loop_policy(path: Path, content: str) -> Path:
+    policy_path = path / ".ai-sdlc" / "project" / "config" / "loop-policy.yaml"
+    policy_path.parent.mkdir(parents=True, exist_ok=True)
+    policy_path.write_text(content, encoding="utf-8")
+    return policy_path
 
 
 def _commit_file(path: Path, file_path: str, content: str, message: str) -> None:

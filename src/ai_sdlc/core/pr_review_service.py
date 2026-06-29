@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shlex
@@ -17,6 +18,7 @@ from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
 from ai_sdlc.core.loop_models import LoopPolicyProfile, LoopStatus
 from ai_sdlc.core.loop_policy import (
+    LoopPolicyError,
     ModelResolutionRequest,
     load_loop_policy,
     resolve_model_for_review,
@@ -206,6 +208,14 @@ class PRReviewCloseResult(BaseModel):
     next_action: str = ""
 
 
+def _policy_blocker(exc: LoopPolicyError) -> str:
+    return str(exc)
+
+
+def _policy_next_action() -> str:
+    return "Fix .ai-sdlc/project/config/loop-policy.yaml and rerun the PR review command."
+
+
 def doctor_pr_review(
     *,
     root: Path,
@@ -291,7 +301,18 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
         )
 
     root = options.root.resolve()
-    policy = load_loop_policy(root)
+    try:
+        policy = load_loop_policy(root)
+    except LoopPolicyError as exc:
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            provider_id=options.provider_id,
+            review_id=_resolve_review_id(options),
+            loop_id=_resolve_loop_id(options),
+            review_dir=str(LoopArtifactStore(root).review_run_dir(_resolve_review_id(options))),
+            blocker=_policy_blocker(exc),
+            next_action=_policy_next_action(),
+        )
     provider_options = _normalize_provider_options(
         _apply_policy_provider_default(options, policy)
     )
@@ -469,7 +490,14 @@ def fix_pr_review(
 ) -> PRReviewFixResult:
     """Generate a fix plan and resolution scaffold without modifying code."""
 
-    policy = load_loop_policy(root.resolve())
+    try:
+        policy = load_loop_policy(root.resolve())
+    except LoopPolicyError as exc:
+        return PRReviewFixResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            blocker=_policy_blocker(exc),
+            next_action=_policy_next_action(),
+        )
     effective_max_rounds = min(max_rounds, policy.max_rounds)
     try:
         review_run, review_run_path = _load_current_review_run(root)
@@ -789,7 +817,15 @@ def close_pr_review(
 ) -> PRReviewCloseResult:
     """Close current review with fail-closed verdict semantics."""
 
-    policy = load_loop_policy(root.resolve())
+    try:
+        policy = load_loop_policy(root.resolve())
+    except LoopPolicyError as exc:
+        return PRReviewCloseResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            verdict=ReviewVerdict.BLOCKED,
+            blocker=_policy_blocker(exc),
+            next_action=_policy_next_action(),
+        )
     effective_require_no_blockers = (
         require_no_blockers or policy.default_close_mode == "require-no-blockers"
     )
@@ -812,6 +848,19 @@ def close_pr_review(
             verdict=ReviewVerdict.BLOCKED,
             blocker=f"Current PR review artifacts are malformed: {exc}",
             next_action="Regenerate findings.json by rerunning PR review.",
+        )
+
+    tamper_blocker = _reviewer_outputs_tamper_blocker(root.resolve(), review_run, findings)
+    if tamper_blocker:
+        return PRReviewCloseResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            verdict=ReviewVerdict.BLOCKED,
+            unresolved_blockers=review_run.unresolved_blockers,
+            unresolved_required=review_run.unresolved_required,
+            unresolved_advisory=review_run.unresolved_advisory,
+            blocker=tamper_blocker,
+            next_action="Rerun PR review before closing.",
         )
 
     if review_run.status == LoopStatus.BLOCKED and not review_run.final_report_path.strip():
@@ -1006,6 +1055,34 @@ def _reviewed_worktree_dirty(root: Path, review_run: ReviewRun) -> str:
     return ""
 
 
+def _reviewer_outputs_tamper_blocker(
+    root: Path,
+    review_run: ReviewRun,
+    findings: ReviewFindings,
+) -> str:
+    if review_run.findings_digest.strip():
+        findings_path = _resolve_repo_path(root, review_run.findings_path)
+        try:
+            actual_digest = _file_sha256(findings_path)
+        except OSError as exc:
+            return f"Current findings.json cannot be verified: {exc}"
+        if actual_digest != review_run.findings_digest:
+            return "Current findings.json changed after the reviewer run."
+        return ""
+
+    if str(findings.verdict or "") != str(review_run.verdict or ""):
+        return "Current findings.json verdict no longer matches the reviewer run."
+    expected_counts = {
+        FindingSeverity.BLOCKER: review_run.unresolved_blockers,
+        FindingSeverity.REQUIRED: review_run.unresolved_required,
+        FindingSeverity.ADVISORY: review_run.unresolved_advisory,
+    }
+    for severity, expected in expected_counts.items():
+        if _count_findings(findings, severity) != expected:
+            return "Current findings.json counts no longer match the reviewer run."
+    return ""
+
+
 def _unreviewed_dirty_paths(root: Path, review_run: ReviewRun) -> list[str]:
     try:
         result = subprocess.run(
@@ -1094,7 +1171,18 @@ def _preview(
         return checks, PRReviewCommandStatus.BLOCKED, detail, "Check the base/head refs.", None, None
     checks.append(PRReviewCheck(name="git", status=PRReviewCommandStatus.READY, detail=f"{len(changed_files)} changed file(s)."))
 
-    policy = load_loop_policy(root)
+    try:
+        policy = load_loop_policy(root)
+    except LoopPolicyError as exc:
+        detail = _policy_blocker(exc)
+        checks.append(
+            PRReviewCheck(
+                name="policy",
+                status=PRReviewCommandStatus.BLOCKED,
+                detail=detail,
+            )
+        )
+        return checks, PRReviewCommandStatus.BLOCKED, detail, _policy_next_action(), None, None
     provider_options = _normalize_provider_options(
         _apply_policy_provider_default(options, policy)
     )
@@ -1340,6 +1428,9 @@ def _write_review_run(
     store = LoopArtifactStore(root)
     findings = provider_result.findings
     review_pack = pack_result.review_pack
+    findings_path = (
+        Path(provider_result.findings_path) if provider_result.findings_path else None
+    )
     review_run = ReviewRun(
         review_id=review_id,
         loop_id=loop_id,
@@ -1362,9 +1453,8 @@ def _write_review_run(
         head_commit=review_pack.head_commit if review_pack else "",
         provider_command=options.provider_command,
         review_pack_path=_repo_relative_path(root, Path(pack_result.review_pack_path)),
-        findings_path=_repo_relative_path(root, Path(provider_result.findings_path))
-        if provider_result.findings_path
-        else "",
+        findings_path=_repo_relative_path(root, findings_path) if findings_path else "",
+        findings_digest=_file_sha256(findings_path) if findings_path else "",
         verdict=findings.verdict if findings else None,
         unresolved_blockers=_count_findings(findings, FindingSeverity.BLOCKER),
         unresolved_required=_count_findings(findings, FindingSeverity.REQUIRED),
@@ -1374,6 +1464,10 @@ def _write_review_run(
     path = store.review_run_dir(review_id) / "review-run.json"
     store.write_json_artifact(path, review_run)
     return path
+
+
+def _file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _pr_changed_paths(root: Path, base_ref: str, head_ref: str) -> tuple[str, ...]:

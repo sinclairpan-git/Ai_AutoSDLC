@@ -7,6 +7,7 @@ import pytest
 from ai_sdlc.core.loop_models import LoopPolicyProfile
 from ai_sdlc.core.loop_policy import (
     LOOP_POLICY_PATH,
+    LoopPolicyError,
     ModelResolutionRequest,
     PolicyDecisionStatus,
     evaluate_code_egress_policy,
@@ -52,6 +53,15 @@ def test_load_loop_policy_reads_project_config_file(tmp_path) -> None:
     assert policy.default_model == "claude-sonnet-4"
     assert policy.remote_model_policy == "require_confirmation"
     assert policy.high_risk_secret_policy == "allow-with-waiver"
+
+
+def test_load_loop_policy_rejects_malformed_project_config(tmp_path) -> None:
+    path = tmp_path / LOOP_POLICY_PATH
+    path.parent.mkdir(parents=True)
+    path.write_text("remote_model_policy: strict\n", encoding="utf-8")
+
+    with pytest.raises(LoopPolicyError, match="Loop policy is malformed"):
+        load_loop_policy(tmp_path)
 
 
 def test_resolve_model_priority_uses_explicit_cli_then_policy_then_provider() -> None:
