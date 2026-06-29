@@ -1216,18 +1216,29 @@ def _preview(
         ),
     )
     if model_resolution.status != "resolved":
+        model_status = (
+            PRReviewCommandStatus.BLOCKED
+            if model_resolution.status == ModelResolutionStatus.BLOCKED
+            or str(model_resolution.status) == ModelResolutionStatus.BLOCKED.value
+            else PRReviewCommandStatus.NEEDS_USER
+        )
+        next_action = (
+            "Choose an allowed model or update loop-policy.yaml."
+            if model_status == PRReviewCommandStatus.BLOCKED
+            else "Choose or configure a local review model."
+        )
         checks.append(
             PRReviewCheck(
                 name="model",
-                status=PRReviewCommandStatus.NEEDS_USER,
+                status=model_status,
                 detail=model_resolution.blocker,
             )
         )
         return (
             checks,
-            PRReviewCommandStatus.NEEDS_USER,
+            model_status,
             model_resolution.blocker,
-            "Choose or configure a local review model.",
+            next_action,
             model_resolution,
             None,
         )

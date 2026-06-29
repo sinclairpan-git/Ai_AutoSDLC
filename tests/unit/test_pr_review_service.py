@@ -110,6 +110,67 @@ def test_start_dry_run_uses_policy_default_provider_when_omitted(tmp_path) -> No
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
 
 
+def test_start_dry_run_preserves_blocked_model_policy(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _write_loop_policy(
+        tmp_path,
+        "\n".join(
+            [
+                "default_model: gpt-5",
+                "remote_model_policy: forbid",
+            ]
+        ),
+    )
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="local-agent",
+            current_model="gpt-5",
+            code_egress=True,
+            dry_run=True,
+            review_id="review-policy-blocked-dry-run",
+        )
+    )
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert "forbids sending code" in result.blocker
+    assert result.next_action == "Choose an allowed model or update loop-policy.yaml."
+    assert [check.name for check in result.checks] == ["init", "git", "model"]
+    assert result.checks[-1].status == PRReviewCommandStatus.BLOCKED
+    assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
+
+
+def test_doctor_preserves_blocked_model_policy(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _write_loop_policy(
+        tmp_path,
+        "\n".join(
+            [
+                "default_model: gpt-5",
+                "remote_model_policy: forbid",
+            ]
+        ),
+    )
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    result = doctor_pr_review(
+        root=tmp_path,
+        base_ref=base_commit,
+        provider_id="local-agent",
+        current_model="gpt-5",
+        code_egress=True,
+    )
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert "forbids sending code" in result.blocker
+    assert result.next_action == "Choose an allowed model or update loop-policy.yaml."
+    assert [check.name for check in result.checks] == ["init", "git", "model"]
+    assert result.checks[-1].status == PRReviewCommandStatus.BLOCKED
+
+
 def test_doctor_blocks_malformed_loop_policy_without_traceback(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _write_loop_policy(tmp_path, "remote_model_policy: strict\n")

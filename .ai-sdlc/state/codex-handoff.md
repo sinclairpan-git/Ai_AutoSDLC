@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-29T19:33:37+00:00
-- Reason: After addressing Codex P2 missing findings digest guard
+- Updated: 2026-06-29T19:46:53+00:00
+- Reason: After addressing Codex P2 preview blocked model-policy status
 - Goal: Ship work item 189 local independent adversarial PR review loop through PR #104
-- State: Addressed latest Codex P2 feedback: _write_review_run now only hashes findings.json when the provider output file exists, preserving structured BLOCKED/NEEDS_USER results for misconfigured local-agent commands that omit findings output.
+- State: Addressed latest Codex P2 feedback: _preview now maps ModelResolutionStatus.BLOCKED to PRReviewCommandStatus.BLOCKED for doctor/start --dry-run instead of downgrading policy violations to NEEDS_USER.
 - Stage: execute
 - Work Item: 189-loop-engine-local-adversarial-pr-review
 - Branch: codex/189-loop-pr-review-batch1
@@ -15,12 +15,12 @@
 - M tests/unit/test_pr_review_service.py
 
 ## Key Decisions
-- findings_digest is an integrity check for existing reviewer outputs; missing provider output must not traceback while writing review-run state.
+- Preview commands must preserve model policy severity so automation sees fail-closed BLOCKED for forbidden code egress or disallowed models.
 
 ## Commands / Tests
-- uv run pytest targeted local-agent missing findings tests -q => 3 passed
-- uv run pytest policy/pr-review/close-check/model/pack subset -q => 170 passed
-- uv run ruff check affected PR-review/policy files => passed
+- uv run pytest targeted preview model-policy tests -q => 4 passed
+- uv run pytest policy/pr-review/close-check/model/pack subset -q => 172 passed
+- uv run ruff check src/ai_sdlc/core/pr_review_service.py tests/unit/test_pr_review_service.py => passed
 - uv run ai-sdlc verify constraints => no BLOCKERs
 - git diff --check => passed
 
@@ -31,4 +31,4 @@
 - none
 
 ## Exact Next Steps
-- Commit and push missing findings guard, re-trigger Codex review, monitor CI/review, then mark PR ready and merge when gates pass.
+- Commit and push preview status fix, re-trigger Codex review, monitor CI/review, then mark PR ready and merge when gates pass.
