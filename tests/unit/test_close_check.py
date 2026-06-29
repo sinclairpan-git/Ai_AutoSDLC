@@ -133,6 +133,23 @@ def test_local_pr_review_close_check_blocks_unresolved_blockers_on_closed_verdic
     assert "unresolved_blockers=1" in summary["detail"]
 
 
+def test_local_pr_review_close_check_blocks_fully_clean_required_findings(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(
+        tmp_path,
+        "review-required-clean",
+        "fully_clean",
+        unresolved_required=1,
+    )
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert summary["verdict"] == "fully_clean"
+    assert "unresolved_required=1" in summary["detail"]
+
+
 def test_local_pr_review_close_check_blocks_stale_closed_head(
     tmp_path: Path,
 ) -> None:

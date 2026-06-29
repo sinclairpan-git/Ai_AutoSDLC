@@ -831,7 +831,7 @@ def close_pr_review(
     )
     try:
         review_run, review_run_path = _load_current_review_run(root)
-        not_closeable = _not_closeable_review_result(review_run)
+        not_closeable = _not_closeable_review_result(root.resolve(), review_run)
         if not_closeable is not None:
             return not_closeable
         findings = _load_findings(root.resolve(), review_run)
@@ -1001,9 +1001,22 @@ def close_pr_review(
     )
 
 
-def _not_closeable_review_result(review_run: ReviewRun) -> PRReviewCloseResult | None:
+def _not_closeable_review_result(
+    root: Path,
+    review_run: ReviewRun,
+) -> PRReviewCloseResult | None:
+    if (
+        review_run.status == LoopStatus.BLOCKED
+        and review_run.findings_path.strip()
+        and not _resolve_repo_path(root, review_run.findings_path).is_file()
+    ):
+        return _blocked_not_closeable_review_result(review_run)
     if review_run.status != LoopStatus.NEEDS_USER and review_run.findings_path.strip():
         return None
+    return _blocked_not_closeable_review_result(review_run)
+
+
+def _blocked_not_closeable_review_result(review_run: ReviewRun) -> PRReviewCloseResult:
     command_status = _status_from_loop_status(review_run.status)
     if command_status not in {PRReviewCommandStatus.NEEDS_USER, PRReviewCommandStatus.BLOCKED}:
         command_status = PRReviewCommandStatus.BLOCKED

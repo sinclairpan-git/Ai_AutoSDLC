@@ -410,6 +410,29 @@ def test_start_blocks_local_agent_missing_findings_without_traceback(tmp_path) -
     assert review_run["findings_digest"] == ""
 
 
+def test_close_preserves_blocked_provider_state_when_findings_missing(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    script = _write_no_output_reviewer_script(tmp_path)
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="local-agent",
+            current_model="gpt-5",
+            provider_command=[sys.executable, str(script)],
+            review_id="review-missing-findings-close",
+        )
+    )
+
+    result = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.verdict == "blocked"
+    assert "provider run status is blocked" in result.blocker
+    assert "output path" in result.next_action
+
+
 def test_doctor_blocks_unknown_base_ref_without_writing_artifacts(tmp_path) -> None:
     _init_repo(tmp_path)
 

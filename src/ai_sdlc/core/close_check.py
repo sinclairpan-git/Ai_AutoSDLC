@@ -1073,6 +1073,18 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
             "verdict": verdict,
             "unresolved_blockers": unresolved_blockers,
         }
+    if verdict == "fully_clean" and unresolved_required > 0:
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": (
+                "local PR review fully_clean has unresolved required findings: "
+                f"unresolved_required={unresolved_required}"
+            ),
+            "review_id": review_run.review_id,
+            "verdict": verdict,
+            "unresolved_required": unresolved_required,
+        }
     if verdict in {"fully_clean", "risk_accepted"} and not final_report_path.is_file():
         return {
             "name": "local_pr_review",
