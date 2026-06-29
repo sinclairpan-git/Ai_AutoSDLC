@@ -1184,6 +1184,54 @@ def test_rerun_resets_previous_resolution_before_new_close(tmp_path) -> None:
     assert close.unresolved_required == 1
 
 
+def test_start_same_review_id_clears_stale_resolution_before_new_close(
+    tmp_path,
+) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-direct-reuse",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    fix = fix_pr_review(tmp_path)
+    resolution_path = Path(fix.resolution_path)
+    resolution = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
+    resolution["finding_resolutions"][0]["status"] = "fixed"
+    resolution["finding_resolutions"][0]["evidence_refs"] = ["tests passed"]
+    resolution["finding_resolutions"][0]["operator"] = "dev-owner"
+    resolution["finding_resolutions"][0]["resolved_at"] = "2026-06-29T00:00:00Z"
+    resolution_path.write_text(yaml.safe_dump(resolution), encoding="utf-8")
+    first_close = close_pr_review(tmp_path)
+    final_report_path = Path(first_close.final_report_path)
+    history_path = resolution_path.with_name("resolution-history.yaml")
+    history_path.write_text("round_number: 7\n", encoding="utf-8")
+
+    second_start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-direct-reuse",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    assert not final_report_path.exists()
+    assert not resolution_path.exists()
+    assert not history_path.exists()
+    second_close = close_pr_review(tmp_path)
+
+    assert first_close.status == PRReviewCommandStatus.CLOSED
+    assert second_start.status == PRReviewCommandStatus.STARTED
+    assert second_close.status == PRReviewCommandStatus.BLOCKED
+    assert second_close.unresolved_required == 1
+    assert Path(second_close.final_report_path) == final_report_path
+
+
 def test_fix_round_limit_survives_rerun_resolution_reset(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")

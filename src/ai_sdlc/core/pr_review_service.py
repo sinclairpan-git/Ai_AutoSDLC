@@ -105,6 +105,7 @@ class PRReviewStartOptions:
     review_id: str = ""
     loop_id: str = ""
     mock_fixture: MockReviewerFixture = MockReviewerFixture.CLEAN
+    preserve_resolution_history: bool = False
 
 
 class PRReviewStartResult(BaseModel):
@@ -358,6 +359,7 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
                 code_egress_confirmed=provider_options.code_egress_confirmed,
                 review_id=review_id,
                 loop_id=loop_id,
+                preserve_resolution_history=provider_options.preserve_resolution_history,
             )
         )
     except GitError as exc:
@@ -811,6 +813,7 @@ def rerun_pr_review(
             review_id=review_run.review_id,
             loop_id=review_run.loop_id,
             mock_fixture=mock_fixture,
+            preserve_resolution_history=True,
         )
     )
 
@@ -1416,6 +1419,7 @@ def _normalize_provider_options(options: PRReviewStartOptions) -> PRReviewStartO
             review_id=options.review_id,
             loop_id=options.loop_id,
             mock_fixture=options.mock_fixture,
+            preserve_resolution_history=options.preserve_resolution_history,
         )
     return options
 
@@ -1442,6 +1446,7 @@ def _apply_policy_provider_default(
         review_id=options.review_id,
         loop_id=options.loop_id,
         mock_fixture=options.mock_fixture,
+        preserve_resolution_history=options.preserve_resolution_history,
     )
 
 

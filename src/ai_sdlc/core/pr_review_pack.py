@@ -57,6 +57,7 @@ class ReviewPackBuildOptions:
     policy_refs: list[str] = field(default_factory=list)
     max_diff_bytes: int = 500_000
     max_file_bytes: int = 1_000_000
+    preserve_resolution_history: bool = False
 
 
 class ReviewPackBuildResult(BaseModel):
@@ -161,6 +162,10 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
     root = options.root.resolve()
     store = LoopArtifactStore(root)
     review_dir = store.create_review_run_dir(options.review_id)
+    _clear_stale_run_artifacts(
+        review_dir,
+        preserve_resolution_history=options.preserve_resolution_history,
+    )
     git = GitClient(root)
     policy = load_loop_policy(root)
     base_commit = git.merge_base(options.base_ref, options.head_ref)
@@ -461,6 +466,21 @@ def _status_from_model_resolution(
     if model_resolution.status == ModelResolutionStatus.BLOCKED:
         return ReviewPackBuildStatus.BLOCKED
     return ReviewPackBuildStatus.NEEDS_USER
+
+
+def _clear_stale_run_artifacts(
+    review_dir: Path,
+    *,
+    preserve_resolution_history: bool,
+) -> None:
+    artifact_names = ["resolution.yaml", "fix-plan.md", "final-report.md"]
+    if not preserve_resolution_history:
+        artifact_names.append("resolution-history.yaml")
+    for name in artifact_names:
+        try:
+            (review_dir / name).unlink()
+        except FileNotFoundError:
+            continue
 
 
 def _build_result(
