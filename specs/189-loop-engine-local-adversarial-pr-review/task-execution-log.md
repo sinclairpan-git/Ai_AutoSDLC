@@ -377,3 +377,72 @@
 - 当前批次 branch disposition 状态：PR #103 merge carrier（待 checks/review 通过后合并）
 - 当前批次 worktree disposition 状态：retained（主工作区继续承载当前仓库）
 - **是否继续下一批**：否；等待本批复验、提交、push、Codex re-review 与 PR checks 收口。
+
+### Batch 2026-06-29-008 | T008
+
+#### 2.41 准备
+
+- **任务来源**：PR #103 Codex review comments `discussion_r3489549011`、`discussion_r3489549013`
+- **目标**：将 `tasks.md` 转换为 executable-task parser 可解析格式，并在最终文档变更后刷新 persisted truth snapshot。
+- **预读范围**：`src/ai_sdlc/core/executable_task.py`、`tests/unit/test_executable_task.py`、`specs/188-vue3-public-primevue-default-provider-governance/tasks.md`、PR #103 Codex review comments
+- **激活的规则**：executable task parser contract；SC-014 task acceptance；truth-only verification profile；program truth snapshot。
+- **验证画像**：`truth-only`
+- **改动范围**：`specs/189-loop-engine-local-adversarial-pr-review/tasks.md`、`program-manifest.yaml`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/work-items/189-loop-engine-local-adversarial-pr-review/codex-handoff.md`
+
+#### 2.42 统一验证命令
+
+- `V1`（executable task parser）
+  - 命令：`uv run python -c "from pathlib import Path; from ai_sdlc.core.executable_task import parse_executable_tasks; r=parse_executable_tasks(Path('specs/189-loop-engine-local-adversarial-pr-review/tasks.md')); print('ok=', r.ok, 'tasks=', len(r.tasks)); [print(e.code, e.message) for e in r.errors]"`
+  - 结果：通过，`ok= True tasks= 15`。
+- `V2`（文档检查）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V3`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`
+- `V4`（program truth snapshot 刷新）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过；写入 `program-manifest.yaml`，snapshot state 为 `migration_pending`。
+- `V5`（program truth snapshot 只读预检）
+  - 命令：`uv run ai-sdlc program truth sync --dry-run`
+  - 结果：通过；dry-run 输出 snapshot state 为 `migration_pending`。
+
+#### 2.43 任务记录
+
+##### Task review-remediation | 转换 tasks.md 为机器可解析格式
+
+- **改动范围**：`specs/189-loop-engine-local-adversarial-pr-review/tasks.md`、`program-manifest.yaml`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+- **改动内容**：
+  - 将 15 个任务块统一转换为 `task_id`、`status`、`goal`、`priority`、`depends`、`scope`、`acceptance`、`verify`、`notes` 格式。
+  - 保留 P0 任务边界、依赖关系、验收标准、验证命令和实现前硬性边界。
+  - 在 `notes` 中加入“验收标准：见 acceptance 字段。”，兼容 SC-014 对中文验收标记的旧检查。
+  - 最终日志稳定后刷新 `program-manifest.yaml` 的 persisted `truth_snapshot`。
+- **新增/调整的测试**：新增 parser 级本地验证命令；未新增产品代码测试。
+- **执行的命令**：见 V1 ~ V5。
+- **测试结果**：V1、V2、V3、V4、V5 均已通过；最终提交前将再执行一次 `program truth sync --execute --yes`，确保 persisted snapshot 对应稳定后的执行日志。
+- **是否符合任务目标**：符合 PR review remediation 目标。
+
+#### 2.44 代码审查（摘要）
+
+- **审查来源**：PR #103 Codex review。
+- **发现 1**：`tasks.md` 标记为可执行任务分解，但任务块缺少 parser 要求字段。
+- **处置 1**：已转换为 executable-task parser 可解析格式，15 个任务解析通过。
+- **发现 2**：persisted truth snapshot 未覆盖最终文档状态。
+- **处置 2**：本批最终日志稳定后重新执行 `program truth sync --execute --yes` 并提交 manifest。
+- **结论**：可在 V4/V5 完成后重新提交并请求 Codex review。
+
+#### 2.45 任务/计划同步状态
+
+- `spec.md` 同步状态：已冻结，未修改。
+- `plan.md` 同步状态：已对账，未修改。
+- `tasks.md` 同步状态：已转换为 machine-readable executable task blocks。
+- `task-execution-log.md` 同步状态：已记录第三轮 PR review remediation。
+- 关联 branch/worktree disposition 计划：PR #103 merge carrier，目标 disposition 为 merge 后删除远端分支。
+
+#### 2.46 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`ee8ccc886aa594068c8ec3f37361692449f1770f`（本批修复基线提交；当前批次将作为后续 PR remediation commit 推送）
+- 当前批次 branch disposition 状态：PR #103 merge carrier（待 checks/review 通过后合并）
+- 当前批次 worktree disposition 状态：retained（主工作区继续承载当前仓库）
+- **是否继续下一批**：否；等待本批复验、提交、push、Codex re-review 与 PR checks 收口。

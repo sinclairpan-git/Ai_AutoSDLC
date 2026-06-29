@@ -1,31 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-06-29T05:35:05+00:00
-- Reason: PR review remediation and pre-push checkpoint
+- Updated: 2026-06-29T05:55:32+00:00
+- Reason: Third Codex review remediation before final truth snapshot
 - Goal: Close PR #103 for WI-189 local adversarial PR review docs
-- State: PR #103 has remediation for Codex review comments: checkpoint now points to WI-189, program truth snapshot refreshed after Batch 007, local diff/constraints passed.
+- State: Third Codex review found tasks.md not machine-readable and requested final truth snapshot refresh. tasks.md now parses as 15 executable tasks and verify constraints passes locally; Compatibility Gate still has Windows matrix pending.
 - Stage: close
 - Work Item: 189-loop-engine-local-adversarial-pr-review
 - Branch: feature/189-loop-engine-local-adversarial-pr-review-docs
 
 ## Changed Files
-- M .ai-sdlc/state/checkpoint.yml
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
-- M program-manifest.yaml
 - M specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md
+- M specs/189-loop-engine-local-adversarial-pr-review/tasks.md
 
 ## Key Decisions
-- Keep PR branch as merge carrier until checks and Codex re-review pass; do not include pre-existing resume-pack.yaml or WI-187 handoff dirt.
+- Keep changes scoped to WI-189 docs/governance state; leave pre-existing resume-pack.yaml and WI-187 handoff dirt untouched.
 
 ## Commands / Tests
+- uv run python parser check for specs/189.../tasks.md: ok=True tasks=15
 - git diff --check: pass
 - uv run ai-sdlc verify constraints: pass
-- uv run ai-sdlc program truth sync --execute --yes: pass, snapshot state migration_pending
-- uv run ai-sdlc program truth sync --dry-run: pass
 
 ## Blockers / Risks
 - none
 
 ## Exact Next Steps
-- Stage only WI-189 remediation files, commit/amend real hash, push, request Codex review, monitor PR #103 checks, then merge when clean.
+- Run program truth sync execute/dry-run after Batch 008 log is stable, commit, push, request Codex review, continue PR #103 heartbeat.
