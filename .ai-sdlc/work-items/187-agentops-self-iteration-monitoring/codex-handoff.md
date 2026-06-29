@@ -1,43 +1,24 @@
 # Continuity Handoff
 
-- Updated: 2026-06-29T01:55:28+00:00
-- Reason: Release prep validation completed
+- Updated: 2026-06-29T02:01:54+00:00
+- Reason: CI failure triage and local fix validation
 - Goal: Publish AI-SDLC v0.9.1 patch release
-- State: Prepared v0.9.1 release branch with version bump, current release docs/user guide/workflow defaults/constraint constants aligned to v0.9.1, and new docs/releases/v0.9.1.md. Local validation passed.
+- State: PR #102 opened for v0.9.1. CI exposed a Windows old-user upgrade workflow assertion bug: upgrades succeeded to 0.9.1, but the workflow still matched escaped 0.9.0 and did not trim version output. Fixed workflow and release constraint fixture/constants locally.
 - Stage: close
 - Work Item: 187-agentops-self-iteration-monitoring
 - Branch: codex/release-0.9.1
 
 ## Changed Files
-- M .ai-sdlc/state/resume-pack.yaml
-- M .github/workflows/release-artifact-smoke.yml
-- M .github/workflows/release-build.yml
 - M .github/workflows/windows-offline-smoke.yml
-- M .github/workflows/windows-update-prompt-e2e.yml
-- M .github/workflows/windows-user-guide-e2e.yml
-- M README.md
-- M USER_GUIDE.zh-CN.md
-- M docs/pull-request-checklist.zh.md
-- M "docs/\346\241\206\346\236\266\350\207\252\350\277\255\344\273\243\345\274\200\345\217\221\344\270\216\345\217\221\345\270\203\347\272\246\345\256\232.md"
-- M packaging/offline/README.md
-- M pyproject.toml
-- M src/ai_sdlc/__init__.py
 - M src/ai_sdlc/core/verify_constraints.py
-- M tests/integration/test_cli_self_update.py
-- M tests/integration/test_github_workflows.py
-- M tests/integration/test_offline_bundle_scripts.py
-- M tests/unit/test_program_service.py
-- M tests/unit/test_update_advisor.py
 - M tests/unit/test_verify_constraints.py
-- M uv.lock
-- ?? docs/releases/v0.9.1.md
 
 ## Key Decisions
-- Publish as patch version v0.9.1 because v0.9.0 already exists on GitHub and PR #101 merged Vue3 PrimeVue spec alignment after that published release.
+- Treat the failed 0.7.5/0.7.6 upgrade jobs as test harness false negatives, not installer regressions, because logs show ai-sdlc upgraded and printed 0.9.1 before the assertion failed.
 
 ## Commands / Tests
-- uv run pytest tests/unit/test_frontend_solution_confirmation_models.py tests/unit/test_program_service.py tests/integration/test_cli_program.py tests/unit/test_verify_constraints.py tests/unit/test_ide_adapter.py tests/integration/test_cli_init.py tests/integration/test_cli_verify_constraints.py -q: 845 passed
-- uv run pytest tests/integration/test_offline_bundle_scripts.py tests/integration/test_github_workflows.py tests/integration/test_cli_self_update.py tests/unit/test_update_advisor.py -q: 71 passed, 1 skipped
+- gh run logs for failed Upgrade 0.7.5/0.7.6 jobs: install_offline.ps1 -UpgradeExisting completed, ai-sdlc --version printed 0.9.1, assertion compared stale/untrimmed value.
+- uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py -q: 177 passed
 - uv run ruff check src tests: passed
 - git diff --check: passed
 - uv run ai-sdlc verify constraints: no BLOCKERs
@@ -46,4 +27,4 @@
 - none
 
 ## Exact Next Steps
-- Commit v0.9.1 release prep, push branch, open PR, request Codex review, monitor checks, merge, tag v0.9.1, publish release assets, then run release artifact smoke.
+- Commit and push the workflow assertion fix to PR #102, re-request Codex review if needed, and continue heartbeat monitoring until checks and review are clean.

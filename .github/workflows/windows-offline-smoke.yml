@@ -277,8 +277,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw "upgraded ai-sdlc --version failed with exit code $LASTEXITCODE"
           }
-          $upgradedVersion = Get-Content -LiteralPath (Join-Path $evidenceRoot "upgraded-version.txt") -Raw
-          if ($upgradedVersion -notmatch "0\.9\.0") {
+          $upgradedVersion = (Get-Content -LiteralPath (Join-Path $evidenceRoot "upgraded-version.txt") -Raw).Trim()
+          if ($upgradedVersion -notmatch "0\.9\.1") {
             throw "expected upgraded ai-sdlc version 0.9.1, got: $upgradedVersion"
           }
 

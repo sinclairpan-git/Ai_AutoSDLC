@@ -9,12 +9,13 @@ working_set_snapshot:
   plan_path: specs/187-agentops-self-iteration-monitoring/plan.md
   tasks_path: specs/187-agentops-self-iteration-monitoring/tasks.md
   active_files: []
-  context_summary: 'Goal: Publish AI-SDLC v0.9.1 patch release | State: Prepared v0.9.1
-    release branch with version bump, current release docs/user guide/workflow defaults/constraint
-    constants aligned to v0.9.1, and new docs/releases/v0.9.1.md. Local validation
-    passed. | Next: Commit v0.9.1 release prep, push branch, open PR, request Codex
-    review, monitor checks, merge, tag v0.9.1, publish release assets, then run release
-    artifact smoke.'
+  context_summary: 'Goal: Publish AI-SDLC v0.9.1 patch release | State: PR #102 opened
+    for v0.9.1. CI exposed a Windows old-user upgrade workflow assertion bug: upgrades
+    succeeded to 0.9.1, but the workflow still matched escaped 0.9.0 and did not trim
+    version output. Fixed workflow and release constraint fixture/constants locally.
+    | Next: Commit and push the workflow assertion fix to PR #102, re-request Codex
+    review if needed, and continue heartbeat monitoring until checks and review are
+    clean.'
 current_branch: feature/187-agentops-self-iteration-monitoring-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
