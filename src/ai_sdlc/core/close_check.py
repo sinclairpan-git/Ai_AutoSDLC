@@ -1039,6 +1039,7 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
     unresolved_required = review_run.unresolved_required
     stored_head_commit = review_run.head_commit.strip()
     stored_head_ref = review_run.head_ref.strip()
+    stored_status = str(review_run.status or "").strip()
     if verdict == "blocked":
         return {
             "name": "local_pr_review",
@@ -1050,6 +1051,27 @@ def _local_pr_review_close_check_summary(root: Path) -> dict[str, Any]:
             ),
             "review_id": review_run.review_id,
             "verdict": verdict,
+        }
+    if verdict in {"fully_clean", "risk_accepted"} and stored_status != "closed":
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": f"local PR review is not closed: status={stored_status or 'none'}",
+            "review_id": review_run.review_id,
+            "verdict": verdict,
+            "status": stored_status,
+        }
+    if verdict in {"fully_clean", "risk_accepted"} and unresolved_blockers > 0:
+        return {
+            "name": "local_pr_review",
+            "ok": False,
+            "detail": (
+                "local PR review has unresolved blockers: "
+                f"unresolved_blockers={unresolved_blockers}"
+            ),
+            "review_id": review_run.review_id,
+            "verdict": verdict,
+            "unresolved_blockers": unresolved_blockers,
         }
     if verdict in {"fully_clean", "risk_accepted"} and not final_report_path.is_file():
         return {

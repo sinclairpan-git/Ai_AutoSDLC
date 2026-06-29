@@ -99,6 +99,40 @@ def test_local_pr_review_close_check_blocks_invalid_review_run_schema(
     assert "schema_version" in summary["detail"]
 
 
+def test_local_pr_review_close_check_blocks_unclosed_clean_verdict(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(
+        tmp_path,
+        "review-unclosed-clean",
+        "fully_clean",
+        status="needs_fix",
+    )
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert summary["verdict"] == "fully_clean"
+    assert "not closed" in summary["detail"]
+
+
+def test_local_pr_review_close_check_blocks_unresolved_blockers_on_closed_verdict(
+    tmp_path: Path,
+) -> None:
+    _write_local_pr_review(
+        tmp_path,
+        "review-unresolved-blocker",
+        "risk_accepted",
+        unresolved_blockers=1,
+    )
+
+    summary = _local_pr_review_close_check_summary(tmp_path)
+
+    assert summary["ok"] is False
+    assert summary["verdict"] == "risk_accepted"
+    assert "unresolved_blockers=1" in summary["detail"]
+
+
 def test_local_pr_review_close_check_blocks_stale_closed_head(
     tmp_path: Path,
 ) -> None:
@@ -183,6 +217,7 @@ def _write_local_pr_review(
     unresolved_required: int = 0,
     head_commit: str = "",
     head_ref: str = "",
+    status: str = "",
 ) -> Path:
     review_dir = root / ".ai-sdlc" / "reviews" / "pr" / review_id
     review_dir.mkdir(parents=True, exist_ok=True)
@@ -195,6 +230,8 @@ def _write_local_pr_review(
                 "schema_version": "1",
                 "review_id": review_id,
                 "loop_id": f"loop-{review_id}",
+                "status": status
+                or ("closed" if verdict in {"fully_clean", "risk_accepted"} else "blocked"),
                 "verdict": verdict,
                 "final_report_path": final_report.relative_to(root).as_posix(),
                 "unresolved_blockers": unresolved_blockers,
