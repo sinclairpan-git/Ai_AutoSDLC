@@ -52,6 +52,10 @@ def test_build_review_pack_writes_required_artifacts(tmp_path) -> None:
     changed_files = Path(result.changed_files_path).read_text(encoding="utf-8")
     assert review_payload["base_commit"] == base_commit
     assert review_payload["head_commit"] == _git(tmp_path, "rev-parse", "HEAD")
+    assert review_payload["diff_path"].endswith(
+        ".ai-sdlc/reviews/pr/review-001/diff.patch"
+    )
+    assert not Path(review_payload["diff_path"]).is_absolute()
     assert review_payload["work_item_refs"] == ["specs/189/tasks.md"]
     assert review_payload["test_results_refs"] == ["pytest.log"]
     assert review_payload["policy_refs"] == [

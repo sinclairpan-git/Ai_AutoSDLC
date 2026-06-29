@@ -700,6 +700,19 @@ def rerun_pr_review(
             blocker=f"Current PR review artifacts are malformed: {exc}",
             next_action="Rerun ai-sdlc pr-review start.",
         )
+    tamper_blocker = _reviewer_outputs_tamper_blocker(
+        root.resolve(),
+        review_run,
+        findings,
+    )
+    if tamper_blocker:
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            provider_id=review_run.provider_id,
+            review_id=review_run.review_id,
+            blocker=tamper_blocker,
+            next_action="Rerun PR review before resetting resolution artifacts.",
+        )
 
     try:
         current_changed = set(_pr_changed_paths(root.resolve(), review_run.base_ref, review_run.head_ref))

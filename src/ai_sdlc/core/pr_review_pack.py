@@ -295,6 +295,7 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
             f"{len(redaction_report.redacted_files)} redacted, "
             f"{len(redaction_report.omitted_files)} omitted."
         ),
+        diff_path=_repo_relative(root, diff_path),
         diff_coverage={
             "changed_files": len(changed_files),
             "included_files": len(redaction_report.included_files),

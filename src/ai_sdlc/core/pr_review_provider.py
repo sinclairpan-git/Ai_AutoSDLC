@@ -344,9 +344,12 @@ def _expand_command(
     review_pack_path: Path,
     findings_path: Path,
 ) -> list[str]:
+    diff_path = _review_pack_diff_path(review_pack)
     context = {
         "review_pack": str(review_pack_path),
         "findings": str(findings_path),
+        "diff": diff_path,
+        "diff_path": diff_path,
         "model": review_pack.resolved_model,
         "model_selector": review_pack.model_selector,
         "allowlist": ",".join(review_pack.reviewer_allowlist),
@@ -366,6 +369,17 @@ def _expand_command(
         "--allowlist",
         *review_pack.reviewer_allowlist,
     ]
+
+
+def _review_pack_diff_path(review_pack: ReviewPack) -> str:
+    diff_path = review_pack.diff_path.strip()
+    if not diff_path:
+        return ""
+    path = Path(diff_path)
+    if path.is_absolute():
+        return str(path)
+    repo_root = Path(review_pack.repo_root)
+    return str(repo_root / path)
 
 
 def _replace_known_placeholders(item: str, context: dict[str, str]) -> str:

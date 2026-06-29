@@ -79,6 +79,7 @@ def test_review_pack_requires_commit_scope_and_stable_metadata() -> None:
         base_commit="a" * 40,
         head_commit="b" * 40,
         changed_files=["src/app.py"],
+        diff_path="/repo/.ai-sdlc/reviews/pr/review-001/diff.patch",
         diff_coverage={"changed_files": 1, "included_files": 1},
         policy_decisions={"model": "current", "remote_model_policy": "disclose"},
         model_selector="current",
@@ -95,6 +96,7 @@ def test_review_pack_requires_commit_scope_and_stable_metadata() -> None:
     assert payload["schema_version"] == LOOP_SCHEMA_VERSION
     assert payload["review_id"] == "review-001"
     assert payload["changed_files"] == ["src/app.py"]
+    assert payload["diff_path"].endswith("/diff.patch")
     assert payload["policy_decisions"] == {
         "model": "current",
         "remote_model_policy": "disclose",

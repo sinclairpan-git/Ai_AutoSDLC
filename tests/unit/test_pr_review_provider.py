@@ -75,6 +75,50 @@ def test_local_agent_configured_command_writes_findings_and_invocation(
     assert invocation_payload["exit_code"] == 10
 
 
+def test_local_agent_expands_diff_path_placeholder(tmp_path) -> None:
+    review_pack_path = _write_review_pack(tmp_path)
+    script = tmp_path / "diff_placeholder_reviewer.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import json, pathlib, sys",
+                "review_pack_path, output_path, diff_path = sys.argv[1:4]",
+                "pack = json.load(open(review_pack_path, encoding='utf-8'))",
+                "assert pathlib.Path(diff_path).is_file()",
+                "assert pathlib.Path(diff_path).name == 'diff.patch'",
+                "payload = {",
+                "  'schema_version': '1',",
+                "  'artifact_kind': 'review-findings',",
+                "  'review_id': pack['review_id'],",
+                "  'loop_id': pack['loop_id'],",
+                "  'review_pack_path': review_pack_path,",
+                "  'provider_id': 'local-agent',",
+                "  'model_selector': 'current',",
+                "  'resolved_model': 'gpt-5',",
+                "  'verdict': 'clean',",
+                "  'findings': []",
+                "}",
+                "json.dump(payload, open(output_path, 'w', encoding='utf-8'))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script), "{review_pack}", "{findings}", "{diff_path}"],
+        )
+    )
+
+    invocation_payload = json.loads(
+        Path(result.invocation_path).read_text(encoding="utf-8")
+    )
+    assert result.status == ProviderRunStatus.SUCCESS
+    assert invocation_payload["argv"][-1].endswith("diff.patch")
+
+
 def test_local_agent_blocks_when_reviewed_head_is_not_checked_out(tmp_path) -> None:
     _init_git_repo(tmp_path)
     _write_file(tmp_path, "src/app.py", "print('reviewed')\n")
@@ -976,6 +1020,11 @@ def _write_review_pack(
     head_commit: str | None = None,
 ) -> Path:
     store = LoopArtifactStore(root)
+    review_dir = store.create_review_run_dir(review_id)
+    diff_path = store.write_markdown_artifact(
+        review_dir / "diff.patch",
+        "diff --git a/src/app.py b/src/app.py\n",
+    )
     review_pack = ReviewPack(
         review_id=review_id,
         loop_id=f"{review_id}-loop",
@@ -985,6 +1034,7 @@ def _write_review_pack(
         base_commit="a" * 40,
         head_commit=head_commit or _maybe_git_head(root) or "b" * 40,
         changed_files=changed_files or ["src/app.py"],
+        diff_path=str(diff_path),
         diff_coverage=diff_coverage or {},
         policy_decisions=policy_decisions or {},
         reviewer_allowlist=reviewer_allowlist or ["src/app.py"],
@@ -996,7 +1046,7 @@ def _write_review_pack(
         code_egress=False,
     )
     return store.write_json_artifact(
-        store.review_run_dir(review_id) / "review-pack.json",
+        review_dir / "review-pack.json",
         review_pack,
     )
 

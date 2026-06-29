@@ -1220,6 +1220,31 @@ def test_rerun_blocks_unresolved_required_findings_before_reset(tmp_path) -> Non
     assert "1 REQUIRED" in result.blocker
 
 
+def test_rerun_blocks_tampered_findings_before_reset(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-rerun-tampered-findings",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    findings_path = Path(start.findings_path)
+    findings = json.loads(findings_path.read_text(encoding="utf-8"))
+    findings["verdict"] = "clean"
+    findings["findings"] = []
+    findings_path.write_text(json.dumps(findings), encoding="utf-8")
+
+    result = rerun_pr_review(tmp_path, mock_fixture=MockReviewerFixture.CLEAN)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert "findings.json changed" in result.blocker
+    assert "Rerun PR review" in result.next_action
+
+
 def test_rerun_blocks_malformed_review_pack(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")

@@ -223,6 +223,7 @@ class ReviewPack(LoopArtifactModel):
     head_commit: str
     changed_files: list[str] = Field(default_factory=list)
     diff_summary: str = ""
+    diff_path: str = ""
     diff_coverage: dict[str, int | float | str] = Field(default_factory=dict)
     work_item_refs: list[str] = Field(default_factory=list)
     test_results_refs: list[str] = Field(default_factory=list)
