@@ -121,13 +121,27 @@ class FindingResolution(LoopArtifactModel):
     resolved_at: str = ""
 
     @model_validator(mode="after")
-    def _waiver_requires_reason_and_operator(self) -> FindingResolution:
+    def _resolved_status_requires_audit_metadata(self) -> FindingResolution:
+        if self.status == FindingResolutionStatus.FIXED and (
+            not any(ref.strip() for ref in self.evidence_refs)
+            or not self.operator.strip()
+            or not self.resolved_at.strip()
+        ):
+            raise ValueError("fixed findings require evidence_refs, operator, and resolved_at")
         if self.status == FindingResolutionStatus.WAIVED and (
             not self.reason.strip()
             or not self.operator.strip()
             or not self.resolved_at.strip()
         ):
             raise ValueError("waived findings require reason, operator, and resolved_at")
+        if self.status == FindingResolutionStatus.NOT_APPLICABLE and (
+            not self.reason.strip()
+            or not self.operator.strip()
+            or not self.resolved_at.strip()
+        ):
+            raise ValueError(
+                "not_applicable findings require reason, operator, and resolved_at"
+            )
         return self
 
 
@@ -188,6 +202,11 @@ class ReviewFindings(LoopArtifactModel):
             raise ValueError("changes_required findings require at least one finding")
         if self.verdict == ReviewVerdict.BLOCKED and not self.blocker.strip():
             raise ValueError("blocked findings require blocker")
+        if self.verdict == ReviewVerdict.CLEAN and any(
+            finding.severity in {FindingSeverity.BLOCKER, FindingSeverity.REQUIRED}
+            for finding in self.findings
+        ):
+            raise ValueError("clean findings cannot include blocker or required findings")
         return self
 
 

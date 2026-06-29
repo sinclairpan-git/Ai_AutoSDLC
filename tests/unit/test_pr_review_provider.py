@@ -242,6 +242,63 @@ def test_local_agent_blocks_mismatched_exit_code_and_verdict(tmp_path) -> None:
     assert result.findings.verdict == "clean"
 
 
+def test_local_agent_blocks_clean_verdict_with_required_findings(tmp_path) -> None:
+    review_pack_path = _write_review_pack(tmp_path)
+    script = tmp_path / "clean_with_required.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import argparse, json, sys",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--review-pack', required=True)",
+                "parser.add_argument('--output', required=True)",
+                "parser.add_argument('--model')",
+                "parser.add_argument('--resolved-model')",
+                "parser.add_argument('--allowlist', nargs='*', default=[])",
+                "args = parser.parse_args()",
+                "pack = json.load(open(args.review_pack, encoding='utf-8'))",
+                "payload = {",
+                "  'schema_version': '1',",
+                "  'artifact_kind': 'review-findings',",
+                "  'review_id': pack['review_id'],",
+                "  'loop_id': pack['loop_id'],",
+                "  'review_pack_path': args.review_pack,",
+                "  'provider_id': 'local-agent',",
+                "  'model_selector': 'current',",
+                "  'resolved_model': 'gpt-5',",
+                "  'verdict': 'clean',",
+                "  'findings': [{",
+                "    'id': 'LOCAL-001',",
+                "    'severity': 'REQUIRED',",
+                "    'file': 'src/app.py',",
+                "    'claim': 'Required issue.',",
+                "    'evidence': 'The provider reported a required issue.',",
+                "    'risk': 'The gate could close incorrectly.',",
+                "    'suggested_fix': 'Return changes_required instead.',",
+                "    'confidence': 0.8",
+                "  }]",
+                "}",
+                "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
+                "sys.exit(0)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert result.exit_code == 0
+    assert "schema validation failed" in result.blocker
+    assert result.findings is None
+
+
 def test_local_agent_blocks_findings_for_different_review_pack(tmp_path) -> None:
     review_pack_path = _write_review_pack(tmp_path, review_id="review-current")
     script = tmp_path / "stale_scope.py"

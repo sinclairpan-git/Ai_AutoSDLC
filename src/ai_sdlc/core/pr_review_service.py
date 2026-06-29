@@ -10,7 +10,7 @@ from enum import StrEnum
 from pathlib import Path
 
 import yaml  # type: ignore[import-untyped]
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
@@ -643,6 +643,13 @@ def close_pr_review(
             status=PRReviewCommandStatus.NO_REVIEW,
             blocker=str(exc),
             next_action="Run ai-sdlc pr-review start --base <branch>.",
+        )
+    except (json.JSONDecodeError, ValidationError, ValueError) as exc:
+        return PRReviewCloseResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            verdict=ReviewVerdict.BLOCKED,
+            blocker=f"Current PR review artifacts are malformed: {exc}",
+            next_action="Regenerate findings.json by rerunning PR review.",
         )
 
     head_mismatch = _reviewed_head_mismatch(root, review_run)

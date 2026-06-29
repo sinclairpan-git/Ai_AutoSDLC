@@ -349,6 +349,8 @@ def test_close_fully_clean_after_resolution_marks_required_fixed(tmp_path) -> No
     resolution = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
     resolution["finding_resolutions"][0]["status"] = "fixed"
     resolution["finding_resolutions"][0]["evidence_refs"] = ["tests passed"]
+    resolution["finding_resolutions"][0]["operator"] = "dev-owner"
+    resolution["finding_resolutions"][0]["resolved_at"] = "2026-06-29T00:00:00Z"
     resolution_path.write_text(yaml.safe_dump(resolution), encoding="utf-8")
 
     result = close_pr_review(tmp_path)
@@ -360,6 +362,29 @@ def test_close_fully_clean_after_resolution_marks_required_fixed(tmp_path) -> No
     assert "MOCK-001" in report
     assert "fixed" in report
     assert "tests passed" in report
+
+
+def test_close_blocks_malformed_findings_artifact(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-malformed-findings-close",
+            mock_fixture=MockReviewerFixture.CLEAN,
+        )
+    )
+    Path(start.findings_path).write_text("{", encoding="utf-8")
+
+    result = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.verdict == "blocked"
+    assert "artifacts are malformed" in result.blocker
+    assert "rerunning PR review" in result.next_action
+    assert result.final_report_path == ""
 
 
 def test_close_treats_invalid_waiver_as_unresolved(tmp_path) -> None:
@@ -510,6 +535,9 @@ def test_rerun_resets_previous_resolution_before_new_close(tmp_path) -> None:
     resolution_path = Path(fix.resolution_path)
     resolution = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
     resolution["finding_resolutions"][0]["status"] = "fixed"
+    resolution["finding_resolutions"][0]["evidence_refs"] = ["tests passed"]
+    resolution["finding_resolutions"][0]["operator"] = "dev-owner"
+    resolution["finding_resolutions"][0]["resolved_at"] = "2026-06-29T00:00:00Z"
     resolution_path.write_text(yaml.safe_dump(resolution), encoding="utf-8")
 
     result = rerun_pr_review(
@@ -541,6 +569,8 @@ def test_fix_round_limit_survives_rerun_resolution_reset(tmp_path) -> None:
     resolution = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
     resolution["finding_resolutions"][0]["status"] = "fixed"
     resolution["finding_resolutions"][0]["evidence_refs"] = ["attempt 1"]
+    resolution["finding_resolutions"][0]["operator"] = "dev-owner"
+    resolution["finding_resolutions"][0]["resolved_at"] = "2026-06-29T00:00:00Z"
     resolution_path.write_text(yaml.safe_dump(resolution), encoding="utf-8")
     rerun = rerun_pr_review(
         tmp_path,

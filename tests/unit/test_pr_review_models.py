@@ -226,6 +226,39 @@ def test_review_findings_requires_blocker_for_blocked_verdict() -> None:
         )
 
 
+def test_review_findings_rejects_clean_verdict_with_required_findings() -> None:
+    with pytest.raises(ValidationError, match="clean findings cannot include"):
+        ReviewFindings(
+            review_id="review-001",
+            loop_id="loop-001",
+            review_pack_path="/repo/review-pack.json",
+            provider_id="mock-reviewer",
+            model_selector="fixture",
+            resolved_model="mock-reviewer",
+            verdict=ReviewVerdict.CLEAN,
+            findings=[
+                ReviewFinding(
+                    id="F-001",
+                    severity=FindingSeverity.REQUIRED,
+                    file="src/app.py",
+                    claim="Missing test.",
+                    evidence="No test covers the changed behavior.",
+                    risk="Regression may ship.",
+                    suggested_fix="Add a focused test.",
+                    confidence=0.8,
+                )
+            ],
+        )
+
+
+def test_fixed_resolution_requires_audit_metadata() -> None:
+    with pytest.raises(ValidationError, match="fixed findings require"):
+        FindingResolution(
+            finding_id="F-001",
+            status=FindingResolutionStatus.FIXED,
+        )
+
+
 def test_waived_resolution_requires_audit_metadata() -> None:
     with pytest.raises(ValidationError, match="waived findings require"):
         FindingResolution(
