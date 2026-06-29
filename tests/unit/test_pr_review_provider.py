@@ -177,6 +177,54 @@ def test_local_agent_blocks_unexpected_exit_code(tmp_path) -> None:
     assert "exit code 2" in result.blocker
 
 
+def test_local_agent_blocks_mismatched_exit_code_and_verdict(tmp_path) -> None:
+    review_pack_path = _write_review_pack(tmp_path)
+    script = tmp_path / "mismatched.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import argparse, json, sys",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--review-pack', required=True)",
+                "parser.add_argument('--output', required=True)",
+                "parser.add_argument('--model')",
+                "parser.add_argument('--resolved-model')",
+                "parser.add_argument('--allowlist', nargs='*', default=[])",
+                "args = parser.parse_args()",
+                "pack = json.load(open(args.review_pack, encoding='utf-8'))",
+                "payload = {",
+                "  'schema_version': '1',",
+                "  'artifact_kind': 'review-findings',",
+                "  'review_id': pack['review_id'],",
+                "  'loop_id': pack['loop_id'],",
+                "  'review_pack_path': args.review_pack,",
+                "  'provider_id': 'local-agent',",
+                "  'model_selector': 'current',",
+                "  'resolved_model': 'gpt-5',",
+                "  'verdict': 'clean'",
+                "}",
+                "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
+                "sys.exit(10)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert result.exit_code == 10
+    assert "exit code does not match findings.verdict" in result.blocker
+    assert result.findings is not None
+    assert result.findings.verdict == "clean"
+
+
 def test_local_agent_blocks_when_reviewer_mutates_worktree(tmp_path) -> None:
     _init_git_repo(tmp_path)
     _write_file(tmp_path, "src/app.py", "print('before')\n")

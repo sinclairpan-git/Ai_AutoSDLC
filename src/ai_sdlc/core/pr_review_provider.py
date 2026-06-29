@@ -508,6 +508,21 @@ def _validate_findings_output(
     findings = ReviewFindings.model_validate(
         json.loads(findings_path.read_text(encoding="utf-8"))
     )
+    verdict_blocker = _exit_code_verdict_blocker(exit_code, findings.verdict)
+    if verdict_blocker:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            exit_code=exit_code,
+            invocation_path=str(invocation_path),
+            findings_path=str(findings_path),
+            schema_validation_path=str(schema_validation_path),
+            blocker=verdict_blocker,
+            next_action=(
+                "Fix the reviewer command so its exit code matches findings.verdict."
+            ),
+            invocation=invocation,
+            findings=findings,
+        )
     return ProviderRunResult(
         status=_provider_status(exit_code, findings.verdict),
         exit_code=exit_code,
@@ -516,6 +531,25 @@ def _validate_findings_output(
         schema_validation_path=str(schema_validation_path),
         invocation=invocation,
         findings=findings,
+    )
+
+
+def _exit_code_verdict_blocker(
+    exit_code: int | None,
+    verdict: ReviewVerdict,
+) -> str:
+    if exit_code is None:
+        return ""
+    expected = {
+        EXIT_SUCCESS: ReviewVerdict.CLEAN,
+        EXIT_CHANGES_REQUIRED: ReviewVerdict.CHANGES_REQUIRED,
+        EXIT_BLOCKED: ReviewVerdict.BLOCKED,
+    }.get(exit_code)
+    if expected is None or verdict == expected:
+        return ""
+    return (
+        "Reviewer command exit code does not match findings.verdict: "
+        f"exit_code={exit_code}, verdict={verdict}, expected_verdict={expected}."
     )
 
 
