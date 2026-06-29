@@ -155,6 +155,11 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
         )
     except subprocess.TimeoutExpired:
         exit_code = None
+        mutation_blocker = _worktree_mutation_blocker(
+            root,
+            mutable_provider_outputs,
+            before_snapshot,
+        )
         invocation = _write_invocation(
             store=store,
             path=invocation_path,
@@ -172,8 +177,12 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
             status=ProviderRunStatus.BLOCKED,
             invocation_path=str(invocation_path),
             findings_path=str(findings_path),
-            blocker="Reviewer command timed out.",
-            next_action="Rerun with a healthy local reviewer command.",
+            blocker=mutation_blocker or "Reviewer command timed out.",
+            next_action=(
+                "Restore the worktree, then rerun with a read-only reviewer command."
+                if mutation_blocker
+                else "Rerun with a healthy local reviewer command."
+            ),
             invocation=invocation,
         )
 

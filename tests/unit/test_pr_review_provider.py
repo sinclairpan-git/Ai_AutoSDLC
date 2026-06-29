@@ -469,6 +469,39 @@ def test_local_agent_blocks_when_reviewer_mutates_worktree(tmp_path) -> None:
     assert "src/app.py" in result.blocker
 
 
+def test_local_agent_reports_worktree_mutation_when_reviewer_times_out(tmp_path) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('before')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    review_pack_path = _write_review_pack(tmp_path)
+    script = tmp_path / "timeout_mutating_reviewer.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import pathlib, time",
+                "pathlib.Path('src/app.py').write_text(\"print('after')\\n\", encoding='utf-8')",
+                "time.sleep(5)",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+            timeout_seconds=0.2,
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "modified files outside expected provider output artifacts" in result.blocker
+    assert "src/app.py" in result.blocker
+    assert "Restore the worktree" in result.next_action
+
+
 def test_local_agent_blocks_when_reviewer_mutates_ignored_file(tmp_path) -> None:
     _init_git_repo(tmp_path)
     _write_file(tmp_path, ".gitignore", ".env\n")
