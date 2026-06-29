@@ -116,6 +116,17 @@ def test_pr_review_start_without_base_uses_default_branch(tmp_path: Path) -> Non
     assert pack["base_ref"] == "master"
 
 
+def test_pr_review_doctor_json_reports_missing_project() -> None:
+    with patch("ai_sdlc.cli.pr_review_cmd.find_project_root", return_value=None):
+        result = runner.invoke(app, ["pr-review", "doctor", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["status"] == "blocked"
+    assert ".ai-sdlc is missing" in payload["blocker"]
+    assert "ai-sdlc init" in payload["next_action"]
+
+
 def test_pr_review_fix_and_close_require_no_blockers_json(tmp_path: Path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")

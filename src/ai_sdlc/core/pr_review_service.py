@@ -597,6 +597,7 @@ def rerun_pr_review(
             current_model=review_run.resolved_model,
             provider_command=provider_command or review_run.provider_command,
             code_egress=review_run.code_egress,
+            code_egress_confirmed=review_run.code_egress_confirmed,
             review_id=review_run.review_id,
             loop_id=review_run.loop_id,
             mock_fixture=mock_fixture,
@@ -969,6 +970,7 @@ def _write_review_run(
         if review_pack
         else None,
         code_egress=options.code_egress,
+        code_egress_confirmed=options.code_egress_confirmed,
         base_ref=options.base_ref,
         head_ref=options.head_ref,
         base_commit=review_pack.base_commit if review_pack else "",
@@ -1143,7 +1145,14 @@ def _read_round_file(path: Path) -> int:
     payload = _load_resolution_payload(path)
     if not isinstance(payload, dict):
         return 0
-    return int(payload.get("round_number", 0) or 0)
+    value = payload.get("round_number", 0) or 0
+    if isinstance(value, bool):
+        raise ResolutionFileError(f"{path.name} round_number must be an integer.")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    raise ResolutionFileError(f"{path.name} round_number must be an integer.")
 
 
 def _load_resolution_statuses(path: Path) -> dict[str, FindingResolutionStatus]:

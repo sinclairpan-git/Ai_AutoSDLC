@@ -72,8 +72,8 @@ def pr_review_doctor(
 ) -> None:
     """Check local PR review readiness without writing review artifacts."""
 
-    root = _project_root_or_exit()
-    resolved_base = _resolve_base_ref(root, base_ref)
+    root = _project_root_or_exit(json_output=json_output)
+    resolved_base = _resolve_base_ref(root, base_ref, json_output=json_output)
     result = doctor_pr_review(
         root=root,
         base_ref=resolved_base,
@@ -142,8 +142,8 @@ def pr_review_start(
 ) -> None:
     """Start or preview a local adversarial PR review."""
 
-    root = _project_root_or_exit()
-    resolved_base = _resolve_base_ref(root, base_ref)
+    root = _project_root_or_exit(json_output=json_output)
+    resolved_base = _resolve_base_ref(root, base_ref, json_output=json_output)
     result = start_pr_review(
         PRReviewStartOptions(
             root=root,
@@ -176,7 +176,7 @@ def pr_review_status(
 ) -> None:
     """Show the current local PR review state."""
 
-    root = _project_root_or_exit()
+    root = _project_root_or_exit(json_output=json_output)
     result = status_pr_review(root)
     _emit_result(result.model_dump(mode="json"), json_output=json_output)
     raise typer.Exit(0 if result.status != PRReviewCommandStatus.BLOCKED else 1)
@@ -189,7 +189,7 @@ def pr_review_fix(
 ) -> None:
     """Create a fix plan for unresolved BLOCKER/REQUIRED findings."""
 
-    root = _project_root_or_exit()
+    root = _project_root_or_exit(json_output=json_output)
     result = fix_pr_review(root, max_rounds=max_rounds)
     _emit_result(result.model_dump(mode="json"), json_output=json_output)
     raise typer.Exit(0 if result.status == PRReviewCommandStatus.READY else 1)
@@ -211,7 +211,7 @@ def pr_review_rerun(
 ) -> None:
     """Regenerate review pack and rerun the local review provider."""
 
-    root = _project_root_or_exit()
+    root = _project_root_or_exit(json_output=json_output)
     result = rerun_pr_review(
         root,
         provider_command=parse_provider_command(provider_command),
@@ -241,7 +241,7 @@ def pr_review_close(
 ) -> None:
     """Close the local PR review with a final verdict."""
 
-    root = _project_root_or_exit()
+    root = _project_root_or_exit(json_output=json_output)
     result = close_pr_review(
         root,
         require_no_blockers=require_no_blockers,
@@ -251,24 +251,40 @@ def pr_review_close(
     raise typer.Exit(0 if result.status == PRReviewCommandStatus.CLOSED else 1)
 
 
-def _project_root_or_exit() -> Path:
+def _project_root_or_exit(*, json_output: bool = False) -> Path:
     root = find_project_root()
     if root is None:
-        console.print("Result: blocked")
-        console.print("Next: run ai-sdlc init .")
+        _emit_result(
+            {
+                "status": PRReviewCommandStatus.BLOCKED,
+                "blocker": "Project is not initialized; .ai-sdlc is missing.",
+                "next_action": "run ai-sdlc init .",
+            },
+            json_output=json_output,
+        )
         raise typer.Exit(1)
     return root
 
 
-def _resolve_base_ref(root: Path, base_ref: str | None) -> str:
+def _resolve_base_ref(
+    root: Path,
+    base_ref: str | None,
+    *,
+    json_output: bool = False,
+) -> str:
     if base_ref and base_ref.strip():
         return base_ref.strip()
     try:
         return GitClient(root).default_branch_name()
     except GitError as exc:
-        console.print("Result: blocked")
-        console.print(f"Blocker: {exc}")
-        console.print("Next: pass --base <branch> explicitly.")
+        _emit_result(
+            {
+                "status": PRReviewCommandStatus.BLOCKED,
+                "blocker": str(exc),
+                "next_action": "pass --base <branch> explicitly.",
+            },
+            json_output=json_output,
+        )
         raise typer.Exit(1) from exc
 
 

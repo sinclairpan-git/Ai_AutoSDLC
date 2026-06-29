@@ -294,6 +294,7 @@ class ReviewRun(LoopArtifactModel):
     model_resolution_status: ModelResolutionStatus = ModelResolutionStatus.NEEDS_USER
     model_resolution_source: ModelResolutionSource | None = None
     code_egress: bool = False
+    code_egress_confirmed: bool = False
     base_ref: str = ""
     head_ref: str = ""
     base_commit: str = ""

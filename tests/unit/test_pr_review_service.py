@@ -575,6 +575,63 @@ def test_rerun_blocks_malformed_resolution_yaml(tmp_path) -> None:
     assert "Fix resolution.yaml syntax" in result.next_action
 
 
+def test_fix_blocks_non_integer_resolution_round_number(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-bad-round",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    fix = fix_pr_review(tmp_path)
+    Path(fix.resolution_path).write_text("round_number: one\n", encoding="utf-8")
+
+    result = fix_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.NEEDS_USER
+    assert "round_number must be an integer" in result.blocker
+
+
+def test_rerun_preserves_code_egress_confirmation(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    policy_path = tmp_path / ".ai-sdlc" / "project" / "config" / "loop-policy.yaml"
+    policy_path.parent.mkdir(parents=True)
+    policy_path.write_text(
+        "\n".join(
+            [
+                "default_model: gpt-5",
+                "remote_model_policy: require_confirmation",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    script = _write_clean_reviewer_script(tmp_path)
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="local-agent",
+            provider_command=[sys.executable, str(script)],
+            code_egress=True,
+            code_egress_confirmed=True,
+            review_id="review-egress-rerun",
+        )
+    )
+    _commit_file(tmp_path, "src/app.py", "print('updated')\n", "update app")
+
+    result = rerun_pr_review(tmp_path)
+
+    review_run = json.loads(Path(result.review_run_path).read_text(encoding="utf-8"))
+    assert result.status == PRReviewCommandStatus.STARTED
+    assert review_run["code_egress"] is True
+    assert review_run["code_egress_confirmed"] is True
+
+
 def test_rerun_reuses_persisted_local_provider_command(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
