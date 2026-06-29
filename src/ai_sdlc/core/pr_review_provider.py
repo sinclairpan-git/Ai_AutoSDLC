@@ -329,7 +329,13 @@ def _worktree_mutation_blocker(
 def _worktree_snapshot(root: Path, review_dir: Path) -> dict[str, str]:
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=all"],
+            [
+                "git",
+                "status",
+                "--porcelain",
+                "--untracked-files=all",
+                "--ignored=matching",
+            ],
             cwd=root,
             capture_output=True,
             text=True,
@@ -370,7 +376,26 @@ def _path_digest(path: Path) -> str:
     if not path.exists():
         return "missing"
     if path.is_dir():
-        return "dir"
+        digest = hashlib.sha256()
+        try:
+            children = sorted(path.rglob("*"))
+        except OSError:
+            return "unreadable-dir"
+        for child in children:
+            try:
+                relative = child.relative_to(path).as_posix()
+            except ValueError:
+                continue
+            if child.is_dir():
+                digest.update(f"D:{relative}\0".encode())
+                continue
+            digest.update(f"F:{relative}\0".encode())
+            try:
+                digest.update(child.read_bytes())
+            except OSError:
+                digest.update(b"unreadable")
+            digest.update(b"\0")
+        return digest.hexdigest()
     try:
         return hashlib.sha256(path.read_bytes()).hexdigest()
     except OSError:

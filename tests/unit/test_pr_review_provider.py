@@ -198,6 +198,57 @@ def test_local_agent_blocks_when_reviewer_mutates_worktree(tmp_path) -> None:
     assert "src/app.py" in result.blocker
 
 
+def test_local_agent_blocks_when_reviewer_mutates_ignored_file(tmp_path) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, ".gitignore", ".env\n")
+    _write_file(tmp_path, "src/app.py", "print('before')\n")
+    _git(tmp_path, "add", ".gitignore", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    review_pack_path = _write_review_pack(tmp_path)
+    script = tmp_path / "ignored_mutating_reviewer.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import argparse, json",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--review-pack', required=True)",
+                "parser.add_argument('--output', required=True)",
+                "parser.add_argument('--model')",
+                "parser.add_argument('--resolved-model')",
+                "parser.add_argument('--allowlist', nargs='*', default=[])",
+                "args = parser.parse_args()",
+                "pack = json.load(open(args.review_pack, encoding='utf-8'))",
+                "open('.env', 'w', encoding='utf-8').write('TOKEN=secret\\n')",
+                "payload = {",
+                "  'schema_version': '1',",
+                "  'artifact_kind': 'review-findings',",
+                "  'review_id': pack['review_id'],",
+                "  'loop_id': pack['loop_id'],",
+                "  'review_pack_path': args.review_pack,",
+                "  'provider_id': 'local-agent',",
+                "  'model_selector': 'current',",
+                "  'resolved_model': 'gpt-5',",
+                "  'verdict': 'clean'",
+                "}",
+                "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "modified files outside the review artifact directory" in result.blocker
+    assert ".env" in result.blocker
+
+
 def test_mock_reviewer_supports_clean_changes_required_and_blocked(
     tmp_path,
 ) -> None:

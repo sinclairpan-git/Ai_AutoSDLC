@@ -21,6 +21,7 @@ from ai_sdlc.core.loop_policy import (
     resolve_model_for_review,
 )
 from ai_sdlc.core.pr_review_models import (
+    FindingResolution,
     FindingResolutionStatus,
     FindingSeverity,
     ModelResolution,
@@ -551,6 +552,28 @@ def rerun_pr_review(
             next_action="Split unrelated changes or start a fresh PR review.",
         )
 
+    resolution_statuses = _load_resolution_statuses(
+        Path(review_run.review_pack_path).with_name("resolution.yaml")
+    )
+    unresolved = _unresolved_counts(findings, resolution_statuses)
+    if (
+        unresolved[FindingSeverity.BLOCKER] > 0
+        or unresolved[FindingSeverity.REQUIRED] > 0
+    ):
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            provider_id=review_run.provider_id,
+            review_id=review_run.review_id,
+            blocker=(
+                "Unresolved PR review findings remain before rerun: "
+                f"{unresolved[FindingSeverity.BLOCKER]} BLOCKER, "
+                f"{unresolved[FindingSeverity.REQUIRED]} REQUIRED."
+            ),
+            next_action=(
+                "Run ai-sdlc pr-review fix, update resolution.yaml, then rerun."
+            ),
+        )
+
     _reset_rerun_resolution_artifacts(root.resolve(), review_run.review_id)
     return start_pr_review(
         PRReviewStartOptions(
@@ -1048,11 +1071,11 @@ def _load_resolution_statuses(path: Path) -> dict[str, FindingResolutionStatus]:
         if not isinstance(item, dict):
             continue
         finding_id = str(item.get("finding_id", "")).strip()
-        status = str(item.get("status", "")).strip()
         if not finding_id:
             continue
         try:
-            statuses[finding_id] = FindingResolutionStatus(status)
+            resolution = FindingResolution.model_validate(item)
+            statuses[finding_id] = resolution.status
         except ValueError:
             statuses[finding_id] = FindingResolutionStatus.UNRESOLVED
     return statuses
