@@ -169,6 +169,47 @@ def test_build_review_pack_omits_redacted_files_from_reviewer_allowlist(
     assert result.diff_path == ""
 
 
+def test_build_review_pack_allows_omitted_files_with_policy_waiver(tmp_path) -> None:
+    base_commit = _init_repo_with_base_commit(tmp_path)
+    policy_path = tmp_path / ".ai-sdlc" / "project" / "config" / "loop-policy.yaml"
+    policy_path.parent.mkdir(parents=True)
+    policy_path.write_text(
+        "allowed_omitted_file_policy: allow-with-waiver\n",
+        encoding="utf-8",
+    )
+    _commit_file(tmp_path, "src/app.py", "print('safe')\n", "add app")
+    _commit_file(
+        tmp_path,
+        "dist/app.generated.ts",
+        "export const generated = true;\n",
+        "add generated bundle",
+    )
+
+    result = build_review_pack(
+        ReviewPackBuildOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            review_id="review-omitted-waiver",
+            loop_id="loop-omitted-waiver",
+            current_model="gpt-5",
+        )
+    )
+
+    assert result.status == ReviewPackBuildStatus.READY
+    assert result.omitted_files_count == 1
+    assert result.redacted_files_count == 0
+    assert result.review_pack is not None
+    assert result.review_pack.reviewer_allowlist == ["src/app.py"]
+    assert result.review_pack.policy_decisions["incomplete_review_waiver"] is True
+    assert (
+        result.review_pack.policy_decisions["allowed_omitted_file_policy"]
+        == "allow-with-waiver"
+    )
+    diff_text = Path(result.diff_path).read_text(encoding="utf-8")
+    assert "src/app.py" in diff_text
+    assert "dist/app.generated.ts" not in diff_text
+
+
 def test_build_review_pack_redacts_reviewed_head_blob_not_dirty_worktree(
     tmp_path,
 ) -> None:

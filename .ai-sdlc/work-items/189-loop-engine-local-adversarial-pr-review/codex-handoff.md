@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-29T14:43:09+00:00
-- Reason: After addressing Codex review comments from 2026-06-29T14:31:07Z
+- Updated: 2026-06-29T14:57:30+00:00
+- Reason: After addressing Codex review comments from 2026-06-29T14:47:46Z
 - Goal: Ship work item 189 local independent adversarial PR review loop through PR #104
-- State: Implemented latest Codex review fixes: close now fails closed before reading findings for needs_user or missing findings review-runs; local-agent mutation guard only permits the expected findings output and blocks review-pack artifact tampering.
+- State: Implemented latest Codex review fixes: shared incomplete review-pack policy is used by preview and real pack generation; allow-with-waiver now permits omitted-only packs while redacted files still fail closed/needs user; provider launch honors explicit omitted-file waiver.
 - Stage: execute
 - Work Item: 189-loop-engine-local-adversarial-pr-review
 - Branch: codex/189-loop-pr-review-batch1
@@ -11,19 +11,21 @@
 ## Changed Files
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
+- M src/ai_sdlc/core/pr_review_pack.py
 - M src/ai_sdlc/core/pr_review_provider.py
 - M src/ai_sdlc/core/pr_review_service.py
+- M tests/unit/test_pr_review_pack.py
 - M tests/unit/test_pr_review_provider.py
 - M tests/unit/test_pr_review_service.py
 
 ## Key Decisions
-- Keep product requirement as local independent review agent using the user-configured model; use GitHub Codex review bot only for this repository PR gate.
+- allow-with-waiver applies only to omitted files without redacted files; redacted secret-pattern coverage is not treated as ordinary omitted-file risk.
 
 ## Commands / Tests
-- uv run pytest tests/unit/test_pr_review_provider.py tests/unit/test_pr_review_service.py -q => 54 passed
-- uv run ruff check targeted provider/service files => passed
-- uv run mypy targeted provider/service files => passed
-- uv run pytest pr-review regression suite => 171 passed
+- uv run pytest tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py tests/unit/test_pr_review_service.py -q => 66 passed
+- uv run pytest pr-review regression suite => 174 passed
+- uv run ruff check targeted files => passed
+- uv run mypy targeted files => passed
 - uv run ai-sdlc verify constraints => no BLOCKERs
 - git diff --check => passed
 
@@ -34,4 +36,4 @@
 - none
 
 ## Exact Next Steps
-- Stage only pr_review provider/service files and tests, commit, push branch codex/189-loop-pr-review-batch1, request Codex review again, then monitor PR #104 checks/review.
+- Stage only current pr-review policy fix files and work item 189 handoffs, commit, push, request Codex review again, then monitor PR #104 checks/review.

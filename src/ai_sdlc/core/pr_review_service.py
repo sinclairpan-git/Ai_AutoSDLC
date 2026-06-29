@@ -39,6 +39,7 @@ from ai_sdlc.core.pr_review_pack import (
     ReviewPackBuildResult,
     ReviewPackBuildStatus,
     build_review_pack,
+    decide_incomplete_review_pack,
 )
 from ai_sdlc.core.pr_review_provider import (
     MockReviewerFixture,
@@ -1050,6 +1051,28 @@ def _preview(
             status,
             redaction.blocker,
             redaction.next_action,
+            model_resolution,
+            redaction,
+        )
+    incomplete_decision = decide_incomplete_review_pack(policy, redaction)
+    if incomplete_decision.status is not None:
+        status = (
+            PRReviewCommandStatus.BLOCKED
+            if incomplete_decision.status == ReviewPackBuildStatus.BLOCKED
+            else PRReviewCommandStatus.NEEDS_USER
+        )
+        checks.append(
+            PRReviewCheck(
+                name="redaction",
+                status=status,
+                detail=incomplete_decision.blocker,
+            )
+        )
+        return (
+            checks,
+            status,
+            incomplete_decision.blocker,
+            incomplete_decision.next_action,
             model_resolution,
             redaction,
         )

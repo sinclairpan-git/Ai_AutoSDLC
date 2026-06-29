@@ -329,6 +329,9 @@ def _reviewer_allowlist_launch_blocker(review_pack: ReviewPack) -> str:
     redacted_count = int(review_pack.diff_coverage.get("redacted_files", 0) or 0)
     omitted_count = int(review_pack.diff_coverage.get("omitted_files", 0) or 0)
     missing = sorted(changed_files - allowlist)
+    waiver_allowed = review_pack.policy_decisions.get("incomplete_review_waiver") is True
+    if waiver_allowed and redacted_count == 0 and omitted_count > 0 and len(missing) <= omitted_count:
+        return ""
     if redacted_count > 0 or omitted_count > 0 or missing:
         detail = ", ".join(missing[:5])
         return (

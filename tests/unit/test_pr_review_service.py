@@ -66,6 +66,31 @@ def test_start_dry_run_blocks_unconfigured_local_agent(tmp_path) -> None:
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
 
 
+def test_start_dry_run_blocks_incomplete_redaction_pack(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(
+        tmp_path,
+        "dist/app.generated.ts",
+        "export const generated = true;\n",
+        "add generated bundle",
+    )
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            dry_run=True,
+            review_id="review-dry-run-omitted",
+        )
+    )
+
+    assert result.status == PRReviewCommandStatus.NEEDS_USER
+    assert result.omitted_files_count == 1
+    assert "incomplete" in result.blocker
+    assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
+
+
 def test_start_mock_reviewer_writes_pack_findings_run_and_pointer(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")

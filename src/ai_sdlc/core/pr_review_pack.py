@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
+from ai_sdlc.core.loop_models import LoopPolicyProfile
 from ai_sdlc.core.loop_policy import (
     ModelResolutionRequest,
     load_loop_policy,
@@ -22,7 +23,9 @@ from ai_sdlc.core.pr_review_models import (
     ProviderMode,
     ReviewPack,
 )
-from ai_sdlc.core.pr_review_redaction import analyze_redaction
+from ai_sdlc.core.pr_review_redaction import RedactionReport, analyze_redaction
+
+STRICT_OMITTED_FILE_POLICIES = {"blocked", "forbid", "fail-closed", "strict"}
 
 
 class ReviewPackBuildStatus(StrEnum):
@@ -78,6 +81,48 @@ class ReviewPackBuildResult(BaseModel):
     redacted_files_count: int = 0
     review_pack: ReviewPack | None = None
     model_resolution: ModelResolution | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class IncompleteReviewPackDecision:
+    """Policy decision for redacted or omitted review-pack inputs."""
+
+    status: ReviewPackBuildStatus | None = None
+    blocker: str = ""
+    next_action: str = ""
+    waiver_allowed: bool = False
+
+
+def decide_incomplete_review_pack(
+    policy: LoopPolicyProfile, redaction_report: RedactionReport
+) -> IncompleteReviewPackDecision:
+    """Return fail-closed behavior for incomplete review-pack coverage."""
+
+    has_redacted = bool(redaction_report.redacted_files)
+    has_omitted = bool(redaction_report.omitted_files)
+    if not has_redacted and not has_omitted:
+        return IncompleteReviewPackDecision()
+    if (
+        has_omitted
+        and not has_redacted
+        and policy.allowed_omitted_file_policy == "allow-with-waiver"
+    ):
+        return IncompleteReviewPackDecision(waiver_allowed=True)
+    incomplete_status = (
+        ReviewPackBuildStatus.BLOCKED
+        if policy.allowed_omitted_file_policy in STRICT_OMITTED_FILE_POLICIES
+        else ReviewPackBuildStatus.NEEDS_USER
+    )
+    return IncompleteReviewPackDecision(
+        status=incomplete_status,
+        blocker=(
+            "Review pack is incomplete because changed files were redacted or omitted."
+        ),
+        next_action=(
+            "Review redaction-report.json, split unsupported files, or explicitly "
+            "allow omitted-file review risk by policy."
+        ),
+    )
 
 
 def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
@@ -165,28 +210,17 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
             redacted_files_count=len(redaction_report.redacted_files),
             model_resolution=model_resolution,
         )
-    if redaction_report.redacted_files or redaction_report.omitted_files:
-        incomplete_status = (
-            ReviewPackBuildStatus.BLOCKED
-            if policy.allowed_omitted_file_policy
-            in {"blocked", "forbid", "fail-closed", "strict"}
-            else ReviewPackBuildStatus.NEEDS_USER
-        )
+    incomplete_decision = decide_incomplete_review_pack(policy, redaction_report)
+    if incomplete_decision.status is not None:
         return _build_result(
             options=options,
             review_dir=review_dir,
             changed_files_path=changed_files_path,
             redaction_report_path=redaction_report_path,
             model_resolution_path=model_resolution_path,
-            status=incomplete_status,
-            blocker=(
-                "Review pack is incomplete because changed files were redacted "
-                "or omitted."
-            ),
-            next_action=(
-                "Review redaction-report.json, split unsupported files, or "
-                "explicitly allow omitted-file review risk by policy."
-            ),
+            status=incomplete_decision.status,
+            blocker=incomplete_decision.blocker,
+            next_action=incomplete_decision.next_action,
             changed_files_count=len(changed_files),
             included_files_count=len(redaction_report.included_files),
             omitted_files_count=len(redaction_report.omitted_files),
@@ -252,6 +286,8 @@ def build_review_pack(options: ReviewPackBuildOptions) -> ReviewPackBuildResult:
             "model_resolution_status": str(model_resolution.status),
             "remote_model_policy": policy.remote_model_policy,
             "high_risk_secret_policy": policy.high_risk_secret_policy,
+            "allowed_omitted_file_policy": policy.allowed_omitted_file_policy,
+            "incomplete_review_waiver": incomplete_decision.waiver_allowed,
             "default_close_mode": policy.default_close_mode,
             "code_egress": options.code_egress,
         },

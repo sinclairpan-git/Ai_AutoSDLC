@@ -118,6 +118,29 @@ def test_local_agent_refuses_incomplete_allowlist_before_launch(tmp_path) -> Non
     assert not (tmp_path / "side-effect.txt").exists()
 
 
+def test_local_agent_allows_explicit_omitted_file_policy_waiver(tmp_path) -> None:
+    review_pack_path = _write_review_pack(
+        tmp_path,
+        changed_files=["src/app.py", "dist/app.generated.ts"],
+        reviewer_allowlist=["src/app.py"],
+        diff_coverage={"redacted_files": 0, "omitted_files": 1},
+        policy_decisions={"incomplete_review_waiver": True},
+    )
+    script = _write_reviewer_script(tmp_path, exit_code=0, verdict="clean")
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.SUCCESS
+    assert result.findings is not None
+    assert result.findings.verdict == "clean"
+
+
 def test_local_agent_allows_literal_braces_in_provider_command(tmp_path) -> None:
     review_pack_path = _write_review_pack(tmp_path)
 
@@ -745,6 +768,7 @@ def _write_review_pack(
     changed_files: list[str] | None = None,
     reviewer_allowlist: list[str] | None = None,
     diff_coverage: dict[str, int | float | str] | None = None,
+    policy_decisions: dict[str, str | bool | int | float] | None = None,
 ) -> Path:
     store = LoopArtifactStore(root)
     review_pack = ReviewPack(
@@ -757,6 +781,7 @@ def _write_review_pack(
         head_commit="b" * 40,
         changed_files=changed_files or ["src/app.py"],
         diff_coverage=diff_coverage or {},
+        policy_decisions=policy_decisions or {},
         reviewer_allowlist=reviewer_allowlist or ["src/app.py"],
         model_selector=model_selector,
         resolved_model=resolved_model,
