@@ -9,8 +9,10 @@
 - Branch: feature/189-loop-engine-local-adversarial-pr-review-docs
 
 ## Changed Files
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
+- M .ai-sdlc/state/checkpoint.yml
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/work-items/189-loop-engine-local-adversarial-pr-review/codex-handoff.md
+- M program-manifest.yaml
 - M specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md
 
 ## Key Decisions
@@ -21,7 +23,7 @@
 - uv run ai-sdlc verify constraints: pass
 
 ## Blockers / Risks
-- Need truth sync, commit/push, re-request Codex review, and resume checks heartbeat.
+- Need final Codex review on the current HEAD, required GitHub checks, and PR merge.
 
 ## Exact Next Steps
-- Run program truth sync, commit/push, request Codex review, monitor checks/review until merge.
+- Commit/push handoff correction if needed, request Codex review, monitor checks/review until merge.
