@@ -545,6 +545,61 @@ def test_local_agent_blocks_when_reviewer_mutates_worktree(tmp_path) -> None:
     assert "src/app.py" in result.blocker
 
 
+def test_local_agent_blocks_when_reviewer_mutates_dirty_path_with_space(
+    tmp_path,
+) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('before')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    _write_file(tmp_path, "file with space.txt", "before\n")
+    review_pack_path = _write_review_pack(tmp_path)
+    script = tmp_path / "space_path_mutating_reviewer.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import argparse, json",
+                "from pathlib import Path",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--review-pack', required=True)",
+                "parser.add_argument('--output', required=True)",
+                "parser.add_argument('--model')",
+                "parser.add_argument('--resolved-model')",
+                "parser.add_argument('--allowlist', nargs='*', default=[])",
+                "args = parser.parse_args()",
+                "pack = json.load(open(args.review_pack, encoding='utf-8'))",
+                "Path('file with space.txt').write_text('after\\n', encoding='utf-8')",
+                "payload = {",
+                "  'schema_version': '1',",
+                "  'artifact_kind': 'review-findings',",
+                "  'review_id': pack['review_id'],",
+                "  'loop_id': pack['loop_id'],",
+                "  'review_pack_path': args.review_pack,",
+                "  'provider_id': 'local-agent',",
+                "  'model_selector': 'current',",
+                "  'resolved_model': 'gpt-5',",
+                "  'verdict': 'clean',",
+                "  'findings': []",
+                "}",
+                "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "modified files outside expected provider output artifacts" in result.blocker
+    assert "file with space.txt" in result.blocker
+
+
 def test_local_agent_reports_worktree_mutation_when_reviewer_times_out(tmp_path) -> None:
     _init_git_repo(tmp_path)
     _write_file(tmp_path, "src/app.py", "print('before')\n")

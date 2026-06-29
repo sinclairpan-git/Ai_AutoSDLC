@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-06-29T20:14:14+00:00
-- Reason: After addressing Codex P2 missing findings close state and fully_clean required-count gate
+- Updated: 2026-06-29T20:30:02+00:00
+- Reason: After addressing Codex P2 porcelain path parsing mutation guard
 - Goal: Ship work item 189 local independent adversarial PR review loop through PR #104
-- State: Addressed latest Codex P2 feedback: close_pr_review now preserves blocked provider state when findings.json is missing, and close-check rejects fully_clean review-runs with unresolved_required > 0.
+- State: Addressed latest Codex P2 feedback: provider worktree mutation snapshots now use git status --porcelain=v1 -z and parse NUL-terminated entries, preserving paths with spaces/special characters before hashing.
 - Stage: execute
 - Work Item: 189-loop-engine-local-adversarial-pr-review
 - Branch: codex/189-loop-pr-review-batch1
@@ -11,18 +11,16 @@
 ## Changed Files
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
-- M src/ai_sdlc/core/close_check.py
-- M src/ai_sdlc/core/pr_review_service.py
-- M tests/unit/test_close_check.py
-- M tests/unit/test_pr_review_service.py
+- M src/ai_sdlc/core/pr_review_provider.py
+- M tests/unit/test_pr_review_provider.py
 
 ## Key Decisions
-- Missing findings for a blocked provider run remains a blocked current review, not NO_REVIEW; fully_clean must have zero unresolved blockers and zero unresolved required findings.
+- Provider mutation guard must use machine-readable NUL porcelain output rather than quoted text porcelain paths.
 
 ## Commands / Tests
-- uv run pytest targeted missing findings / close-check required tests -q => 6 passed
-- uv run pytest policy/pr-review/close-check/model/pack subset -q => 176 passed
-- uv run ruff check close/pr-review affected files => passed
+- uv run pytest targeted provider mutation tests -q => 4 passed
+- uv run pytest provider/pr-review related subset -q => 202 passed
+- uv run ruff check src/ai_sdlc/core/pr_review_provider.py tests/unit/test_pr_review_provider.py => passed
 - uv run ai-sdlc verify constraints => no BLOCKERs
 - git diff --check => passed
 
@@ -33,4 +31,4 @@
 - none
 
 ## Exact Next Steps
-- Commit and push missing-findings/fully-clean gates, re-trigger Codex review, monitor CI/review, then mark PR ready and merge when gates pass.
+- Commit and push porcelain parsing fix, re-trigger Codex review, monitor CI/review, then mark PR ready and merge when gates pass.

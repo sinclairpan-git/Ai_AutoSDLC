@@ -417,7 +417,8 @@ def _worktree_snapshot(root: Path, mutable_provider_outputs: frozenset[Path]) ->
             [
                 "git",
                 "status",
-                "--porcelain",
+                "--porcelain=v1",
+                "-z",
                 "--untracked-files=all",
                 "--ignored=matching",
             ],
@@ -435,24 +436,35 @@ def _worktree_snapshot(root: Path, mutable_provider_outputs: frozenset[Path]) ->
         return {}
 
     snapshot = _git_head_index_snapshot(root)
-    for line in result.stdout.splitlines():
-        if len(line) < 4:
-            continue
-        rel_path = line[3:]
-        if " -> " in rel_path:
-            rel_path = rel_path.split(" -> ", 1)[1]
-        normalized = rel_path.strip().replace("\\", "/")
+    for status_code, rel_path in _iter_porcelain_entries(result.stdout):
+        normalized = rel_path.replace("\\", "/")
         if not normalized or _is_mutable_provider_output(
             root, mutable_provider_outputs, normalized
         ):
             continue
-        status_code = line[:2]
         path = root / normalized
         if status_code == "!!" and path.is_dir():
             snapshot[normalized] = f"{status_code}:{_ignored_dir_digest(path)}"
             continue
         snapshot[normalized] = f"{status_code}:{_path_digest(path)}"
     return snapshot
+
+
+def _iter_porcelain_entries(output: str) -> list[tuple[str, str]]:
+    entries: list[tuple[str, str]] = []
+    parts = output.split("\0")
+    index = 0
+    while index < len(parts):
+        item = parts[index]
+        index += 1
+        if not item or len(item) < 4:
+            continue
+        status_code = item[:2]
+        rel_path = item[3:]
+        entries.append((status_code, rel_path))
+        if "R" in status_code or "C" in status_code:
+            index += 1
+    return entries
 
 
 def _git_head_index_snapshot(root: Path) -> dict[str, str]:
