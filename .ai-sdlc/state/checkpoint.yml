@@ -38,7 +38,7 @@ completed_stages:
 execute_progress:
   total_batches: 6
   completed_batches: 0
-  current_batch: 1
+  current_batch: 0
   last_committed_task: ''
   tasks_file: specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   execution_log: specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md
