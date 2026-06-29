@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import shlex
 import subprocess
 from dataclasses import dataclass, field
@@ -264,6 +265,19 @@ def doctor_pr_review(
 
 def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
     """Start or dry-run a local PR review."""
+
+    review_id_blocker = _unsafe_explicit_review_id_blocker(options.review_id)
+    if review_id_blocker:
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.NEEDS_USER,
+            dry_run=options.dry_run,
+            provider_id=options.provider_id,
+            review_id=options.review_id.strip(),
+            blocker=review_id_blocker,
+            next_action=(
+                "Use letters, numbers, dots, underscores, or hyphens in --review-id."
+            ),
+        )
 
     if options.dry_run:
         checks, status, blocker, next_action, model_resolution, redaction = _preview(
@@ -1561,6 +1575,19 @@ def _resolve_review_id(options: PRReviewStartOptions) -> str:
     except GitError:
         head = "unknown"
     return f"review-{head}"
+
+
+def _unsafe_explicit_review_id_blocker(review_id: str) -> str:
+    if not review_id:
+        return ""
+    text = review_id.strip()
+    if (
+        not text
+        or text in {".", ".."}
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", text) is None
+    ):
+        return f"Unsafe PR review id: {review_id!r}"
+    return ""
 
 
 def _resolve_loop_id(options: PRReviewStartOptions) -> str:

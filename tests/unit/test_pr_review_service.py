@@ -89,6 +89,25 @@ def test_start_dry_run_rejects_unknown_provider(tmp_path) -> None:
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
 
 
+def test_start_rejects_unsafe_review_id_without_traceback(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="../outside",
+        )
+    )
+
+    assert result.status == PRReviewCommandStatus.NEEDS_USER
+    assert "Unsafe PR review id" in result.blocker
+    assert "review-id" in result.next_action
+    assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
+
+
 def test_start_dry_run_uses_policy_default_provider_when_omitted(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     policy_path = tmp_path / ".ai-sdlc" / "project" / "config" / "loop-policy.yaml"
