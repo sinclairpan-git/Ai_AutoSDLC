@@ -810,6 +810,49 @@ def test_local_agent_snapshot_does_not_hash_ignored_directories(
     assert result.status == ProviderRunStatus.SUCCESS
 
 
+def test_local_agent_blocks_when_snapshot_capture_fails_after_reviewer(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('before')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    review_pack_path = _write_review_pack(tmp_path)
+    script = _write_reviewer_script(tmp_path, exit_code=0, verdict="clean")
+    original_run = pr_review_provider.subprocess.run
+    snapshot_calls = 0
+
+    def fail_second_snapshot(args, *pargs, **kwargs):
+        nonlocal snapshot_calls
+        argv = list(args)
+        if (
+            len(argv) >= 2
+            and argv[0] == "git"
+            and argv[1] == "status"
+            and "--ignored=matching" in argv
+        ):
+            snapshot_calls += 1
+            if snapshot_calls == 2:
+                raise subprocess.TimeoutExpired(argv, kwargs.get("timeout") or 30)
+        return original_run(args, *pargs, **kwargs)
+
+    monkeypatch.setattr(pr_review_provider.subprocess, "run", fail_second_snapshot)
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "Unable to verify reviewer worktree isolation" in result.blocker
+    assert "git status timed out" in result.blocker
+    assert "Fix git status access" in result.next_action
+
+
 def test_ignored_dir_digest_ignores_directory_metadata_churn(tmp_path) -> None:
     ignored_dir = tmp_path / "node_modules"
     package_dir = ignored_dir / "pkg"
@@ -1044,6 +1087,11 @@ def _write_review_pack(
     policy_decisions: dict[str, str | bool | int | float] | None = None,
     head_commit: str | None = None,
 ) -> Path:
+    if not (root / ".git").exists():
+        _init_git_repo(root)
+        _write_file(root, "src/app.py", "print('base')\n")
+        _git(root, "add", "src/app.py")
+        _git(root, "commit", "-m", "initial")
     store = LoopArtifactStore(root)
     review_dir = store.create_review_run_dir(review_id)
     diff_path = store.write_markdown_artifact(

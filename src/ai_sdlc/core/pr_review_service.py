@@ -461,6 +461,12 @@ def status_pr_review(root: Path) -> PRReviewStatusResult:
             blocker=f"Current review pointer is malformed: {exc}",
             next_action="Rerun ai-sdlc pr-review start.",
         )
+    if not isinstance(pointer, dict):
+        return PRReviewStatusResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            blocker="Current review pointer is malformed: root must be an object.",
+            next_action="Rerun ai-sdlc pr-review start.",
+        )
     review_run_path = _resolve_repo_path(root.resolve(), str(pointer.get("review_run_path", "")))
     if not review_run_path.exists():
         return PRReviewStatusResult(
@@ -1673,6 +1679,8 @@ def _load_current_review_run(root: Path) -> tuple[ReviewRun, Path]:
     if not pointer_path.exists():
         raise FileNotFoundError("Current PR review pointer is missing.")
     pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    if not isinstance(pointer, dict):
+        raise ValueError("Current review pointer is malformed: root must be an object.")
     review_run_path = _resolve_repo_path(resolved_root, str(pointer.get("review_run_path", "")))
     if not review_run_path.exists():
         raise FileNotFoundError("Current review-run.json is missing.")

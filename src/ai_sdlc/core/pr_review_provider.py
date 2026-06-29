@@ -41,6 +41,10 @@ class ProviderRunStatus(StrEnum):
     NEEDS_USER = "needs_user"
 
 
+class WorktreeSnapshotError(RuntimeError):
+    """Raised when reviewer isolation cannot capture Git worktree state."""
+
+
 class MockReviewerFixture(StrEnum):
     """Deterministic mock reviewer output fixtures."""
 
@@ -140,7 +144,15 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
             ),
         )
     mutable_provider_outputs = frozenset({findings_path.resolve()})
-    before_snapshot = _worktree_snapshot(root, mutable_provider_outputs)
+    try:
+        before_snapshot = _worktree_snapshot(root, mutable_provider_outputs)
+    except WorktreeSnapshotError as exc:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            findings_path=str(findings_path),
+            blocker=_snapshot_failure_blocker(exc),
+            next_action="Fix git status access, then rerun local PR review.",
+        )
 
     try:
         process = subprocess.run(
@@ -211,7 +223,7 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
                 or f"Reviewer command could not be started: {argv[0]}: {exc}"
             ),
             next_action=(
-                "Restore the worktree, then rerun with a read-only reviewer command."
+                _next_action_for_mutation_blocker(mutation_blocker)
                 if mutation_blocker
                 else "Configure an executable local reviewer command and rerun review."
             ),
@@ -243,7 +255,7 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
             findings_path=str(findings_path),
             blocker=mutation_blocker or "Reviewer command timed out.",
             next_action=(
-                "Restore the worktree, then rerun with a read-only reviewer command."
+                _next_action_for_mutation_blocker(mutation_blocker)
                 if mutation_blocker
                 else "Rerun with a healthy local reviewer command."
             ),
@@ -273,9 +285,7 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
             invocation_path=str(invocation_path),
             findings_path=str(findings_path),
             blocker=mutation_blocker,
-            next_action=(
-                "Restore the worktree, then rerun with a read-only reviewer command."
-            ),
+            next_action=_next_action_for_mutation_blocker(mutation_blocker),
             invocation=invocation,
         )
 
@@ -562,7 +572,10 @@ def _worktree_mutation_blocker(
     mutable_provider_outputs: frozenset[Path],
     before: dict[str, str],
 ) -> str:
-    after = _worktree_snapshot(root, mutable_provider_outputs)
+    try:
+        after = _worktree_snapshot(root, mutable_provider_outputs)
+    except WorktreeSnapshotError as exc:
+        return _snapshot_failure_blocker(exc)
     if after == before:
         return ""
     changed = sorted(set(before) ^ set(after))
@@ -593,10 +606,15 @@ def _worktree_snapshot(root: Path, mutable_provider_outputs: frozenset[Path]) ->
             check=False,
             timeout=30,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return {}
+    except FileNotFoundError as exc:
+        raise WorktreeSnapshotError("git status is unavailable.") from exc
+    except subprocess.TimeoutExpired as exc:
+        raise WorktreeSnapshotError("git status timed out.") from exc
     if result.returncode != 0:
-        return {}
+        detail = result.stderr.strip() or result.stdout.strip()
+        if not detail:
+            detail = f"exit code {result.returncode}"
+        raise WorktreeSnapshotError(f"git status failed: {detail}")
 
     snapshot = _git_head_index_snapshot(root)
     for status_code, rel_path in _iter_porcelain_entries(result.stdout):
@@ -611,6 +629,16 @@ def _worktree_snapshot(root: Path, mutable_provider_outputs: frozenset[Path]) ->
             continue
         snapshot[normalized] = f"{status_code}:{_path_digest(path)}"
     return snapshot
+
+
+def _snapshot_failure_blocker(exc: WorktreeSnapshotError) -> str:
+    return f"Unable to verify reviewer worktree isolation: {exc}"
+
+
+def _next_action_for_mutation_blocker(blocker: str) -> str:
+    if blocker.startswith("Unable to verify reviewer worktree isolation:"):
+        return "Fix git status access, then rerun local PR review."
+    return "Restore the worktree, then rerun with a read-only reviewer command."
 
 
 def _iter_porcelain_entries(output: str) -> list[tuple[str, str]]:
