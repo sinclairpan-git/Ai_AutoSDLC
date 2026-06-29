@@ -1210,6 +1210,38 @@ def test_rerun_resets_previous_resolution_before_new_close(tmp_path) -> None:
     assert close.unresolved_required == 1
 
 
+def test_rerun_preserves_resolution_when_new_provider_run_blocks(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-preserve-on-rerun-failure",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    fix = fix_pr_review(tmp_path)
+    resolution_path = Path(fix.resolution_path)
+    fix_plan_path = Path(fix.fix_plan_path)
+    resolution = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
+    resolution["finding_resolutions"][0]["status"] = "fixed"
+    resolution["finding_resolutions"][0]["evidence_refs"] = ["tests passed"]
+    resolution["finding_resolutions"][0]["operator"] = "dev-owner"
+    resolution["finding_resolutions"][0]["resolved_at"] = "2026-06-29T00:00:00Z"
+    resolution_path.write_text(yaml.safe_dump(resolution), encoding="utf-8")
+
+    result = rerun_pr_review(tmp_path, mock_fixture=MockReviewerFixture.MALFORMED)
+    preserved = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert "schema validation failed" in result.blocker
+    assert fix_plan_path.exists()
+    assert preserved["finding_resolutions"][0]["status"] == "fixed"
+    assert preserved["finding_resolutions"][0]["evidence_refs"] == ["tests passed"]
+
+
 def test_start_same_review_id_clears_stale_resolution_before_new_close(
     tmp_path,
 ) -> None:

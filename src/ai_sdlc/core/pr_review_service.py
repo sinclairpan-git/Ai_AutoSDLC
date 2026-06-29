@@ -105,6 +105,7 @@ class PRReviewStartOptions:
     review_id: str = ""
     loop_id: str = ""
     mock_fixture: MockReviewerFixture = MockReviewerFixture.CLEAN
+    clear_stale_artifacts: bool = True
     preserve_resolution_history: bool = False
 
 
@@ -359,6 +360,7 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
                 code_egress_confirmed=provider_options.code_egress_confirmed,
                 review_id=review_id,
                 loop_id=loop_id,
+                clear_stale_artifacts=provider_options.clear_stale_artifacts,
                 preserve_resolution_history=provider_options.preserve_resolution_history,
             )
         )
@@ -796,7 +798,7 @@ def rerun_pr_review(
         )
 
     try:
-        _reset_rerun_resolution_artifacts(root.resolve(), review_run.review_id)
+        _read_resolution_round(resolution_path)
     except ResolutionFileError as exc:
         return PRReviewStartResult(
             status=PRReviewCommandStatus.BLOCKED,
@@ -805,7 +807,7 @@ def rerun_pr_review(
             blocker=str(exc),
             next_action="Fix resolution.yaml syntax before rerunning PR review.",
         )
-    return start_pr_review(
+    result = start_pr_review(
         PRReviewStartOptions(
             root=root,
             base_ref=review_run.base_ref,
@@ -819,9 +821,22 @@ def rerun_pr_review(
             review_id=review_run.review_id,
             loop_id=review_run.loop_id,
             mock_fixture=mock_fixture,
+            clear_stale_artifacts=False,
             preserve_resolution_history=True,
         )
     )
+    if result.status == PRReviewCommandStatus.STARTED:
+        try:
+            _reset_rerun_resolution_artifacts(root.resolve(), review_run.review_id)
+        except ResolutionFileError as exc:
+            return PRReviewStartResult(
+                status=PRReviewCommandStatus.BLOCKED,
+                provider_id=review_run.provider_id,
+                review_id=review_run.review_id,
+                blocker=str(exc),
+                next_action="Fix resolution.yaml syntax before rerunning PR review.",
+            )
+    return result
 
 
 def _reset_rerun_resolution_artifacts(root: Path, review_id: str) -> None:
@@ -1425,6 +1440,7 @@ def _normalize_provider_options(options: PRReviewStartOptions) -> PRReviewStartO
             review_id=options.review_id,
             loop_id=options.loop_id,
             mock_fixture=options.mock_fixture,
+            clear_stale_artifacts=options.clear_stale_artifacts,
             preserve_resolution_history=options.preserve_resolution_history,
         )
     return options
@@ -1452,6 +1468,7 @@ def _apply_policy_provider_default(
         review_id=options.review_id,
         loop_id=options.loop_id,
         mock_fixture=options.mock_fixture,
+        clear_stale_artifacts=options.clear_stale_artifacts,
         preserve_resolution_history=options.preserve_resolution_history,
     )
 
