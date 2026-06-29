@@ -613,6 +613,32 @@ def test_close_blocks_malformed_findings_artifact(tmp_path) -> None:
     assert result.final_report_path == ""
 
 
+def test_close_blocks_provider_blocked_run_even_with_valid_findings(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-provider-blocked-close",
+            mock_fixture=MockReviewerFixture.CLEAN,
+        )
+    )
+    review_run_path = Path(start.review_run_path)
+    review_run = json.loads(review_run_path.read_text(encoding="utf-8"))
+    review_run["status"] = "blocked"
+    review_run["next_action"] = "Fix provider validation."
+    review_run_path.write_text(json.dumps(review_run), encoding="utf-8")
+
+    result = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.verdict == "blocked"
+    assert "provider run is blocked" in result.blocker
+    assert result.final_report_path == ""
+
+
 def test_close_treats_invalid_waiver_as_unresolved(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
@@ -831,6 +857,27 @@ def test_rerun_blocks_unresolved_required_findings_before_reset(tmp_path) -> Non
     assert result.status == PRReviewCommandStatus.BLOCKED
     assert "Unresolved PR review findings remain" in result.blocker
     assert "1 REQUIRED" in result.blocker
+
+
+def test_rerun_blocks_malformed_review_pack(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-malformed-rerun-pack",
+            mock_fixture=MockReviewerFixture.CLEAN,
+        )
+    )
+    Path(start.review_pack_path).write_text("{", encoding="utf-8")
+
+    result = rerun_pr_review(tmp_path, mock_fixture=MockReviewerFixture.CLEAN)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.review_id == "review-malformed-rerun-pack"
+    assert "artifacts are malformed" in result.blocker
 
 
 def test_rerun_blocks_malformed_resolution_yaml(tmp_path) -> None:

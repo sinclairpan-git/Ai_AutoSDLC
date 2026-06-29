@@ -615,14 +615,38 @@ def rerun_pr_review(
 
     try:
         review_run, _ = _load_current_review_run(root)
-        old_pack = _load_review_pack(review_run.review_pack_path)
-        findings = _load_findings(review_run)
     except FileNotFoundError as exc:
         return PRReviewStartResult(
             status=PRReviewCommandStatus.NO_REVIEW,
             provider_id="",
             blocker=str(exc),
             next_action="Run ai-sdlc pr-review start --base <branch>.",
+        )
+    except (json.JSONDecodeError, ValidationError, ValueError, OSError) as exc:
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            provider_id="",
+            blocker=f"Current PR review artifacts are malformed: {exc}",
+            next_action="Rerun ai-sdlc pr-review start.",
+        )
+    try:
+        old_pack = _load_review_pack(review_run.review_pack_path)
+        findings = _load_findings(review_run)
+    except FileNotFoundError as exc:
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.NO_REVIEW,
+            provider_id=review_run.provider_id,
+            review_id=review_run.review_id,
+            blocker=str(exc),
+            next_action="Run ai-sdlc pr-review start --base <branch>.",
+        )
+    except (json.JSONDecodeError, ValidationError, ValueError, OSError) as exc:
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            provider_id=review_run.provider_id,
+            review_id=review_run.review_id,
+            blocker=f"Current PR review artifacts are malformed: {exc}",
+            next_action="Rerun ai-sdlc pr-review start.",
         )
 
     try:
@@ -742,12 +766,24 @@ def close_pr_review(
             blocker=str(exc),
             next_action="Run ai-sdlc pr-review start --base <branch>.",
         )
-    except (json.JSONDecodeError, ValidationError, ValueError) as exc:
+    except (json.JSONDecodeError, ValidationError, ValueError, OSError) as exc:
         return PRReviewCloseResult(
             status=PRReviewCommandStatus.BLOCKED,
             verdict=ReviewVerdict.BLOCKED,
             blocker=f"Current PR review artifacts are malformed: {exc}",
             next_action="Regenerate findings.json by rerunning PR review.",
+        )
+
+    if review_run.status == LoopStatus.BLOCKED and not review_run.final_report_path.strip():
+        return PRReviewCloseResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            verdict=ReviewVerdict.BLOCKED,
+            unresolved_blockers=review_run.unresolved_blockers,
+            unresolved_required=review_run.unresolved_required,
+            unresolved_advisory=review_run.unresolved_advisory,
+            blocker=findings.blocker or "Current PR review provider run is blocked.",
+            next_action="Fix the blocked review provider and rerun PR review before closing.",
         )
 
     head_mismatch = _reviewed_head_mismatch(root, review_run)
