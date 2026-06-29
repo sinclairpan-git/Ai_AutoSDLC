@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -630,6 +631,19 @@ def test_local_agent_snapshot_does_not_hash_ignored_directories(
     )
 
     assert result.status == ProviderRunStatus.SUCCESS
+
+
+def test_ignored_dir_digest_ignores_directory_metadata_churn(tmp_path) -> None:
+    ignored_dir = tmp_path / "node_modules"
+    package_dir = ignored_dir / "pkg"
+    package_dir.mkdir(parents=True)
+    (package_dir / "index.js").write_text("console.log('ignored')\n", encoding="utf-8")
+
+    before = pr_review_provider._ignored_dir_digest(ignored_dir)
+    os.utime(package_dir, (1_700_000_000, 1_700_000_000))
+    after = pr_review_provider._ignored_dir_digest(ignored_dir)
+
+    assert after == before
 
 
 def test_local_agent_blocks_mutation_inside_ignored_directory(tmp_path) -> None:

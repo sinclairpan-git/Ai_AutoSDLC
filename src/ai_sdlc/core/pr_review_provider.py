@@ -509,10 +509,10 @@ def _ignored_dir_digest(path: Path, *, max_entries: int = 4096) -> str:
             except OSError:
                 digest.update(f"unreadable:{entry.name}\0".encode())
                 continue
-            kind = "D" if is_dir else "F"
-            digest.update(
-                f"{kind}:{relative}:{stat.st_size}:{stat.st_mtime_ns}\0".encode()
-            )
+            if is_dir:
+                digest.update(f"D:{relative}\0".encode())
+            else:
+                digest.update(f"F:{relative}:{stat.st_size}:{stat.st_mtime_ns}\0".encode())
             if is_dir:
                 pending.append(child)
             if entries_seen >= max_entries:
