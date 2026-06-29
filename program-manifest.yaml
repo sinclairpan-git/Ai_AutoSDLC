@@ -1863,10 +1863,10 @@ specs:
   path: specs/189-loop-engine-local-adversarial-pr-review
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-06-29T07:57:52Z'
+  generated_at: '2026-06-29T08:00:32Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: b7b5d451
+  repo_revision: d5a974c2
   authoring_hash: 6afb7615b65879e5dcce306a50b3435fe0ba91507334f49328625b6bc7417260
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1906,7 +1906,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: bb1a96307f540d67dcb9ccb06e03e5ef522ae9acfd1e9a2b5f5816aed8658072
-  snapshot_hash: 23f7969c33a36145cee1df70e073a106a657a7a3a8f747d013cfeda86b7e3ea5
+  snapshot_hash: 3f8ad408b8107310abc6713c4630abba371339cdfac493b3063e0d2b60b1314f
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
