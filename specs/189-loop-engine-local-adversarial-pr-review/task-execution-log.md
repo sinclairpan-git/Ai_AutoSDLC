@@ -253,3 +253,60 @@
 - `V3`（关键修订面检查）
   - 命令：`rg -n 'diff_summary|work_item_refs|test_results_refs|policy_refs|start --dry-run|已配置本地|未定版本|<next>' specs/189-loop-engine-local-adversarial-pr-review/plan.md specs/189-loop-engine-local-adversarial-pr-review/tasks.md specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
   - 结果：`plan.md` / `tasks.md` 已命中新增合同字段、`codex-local` 已配置路径、dry-run 只读边界和 release note 占位处理；未命中字面 `<next>`。
+
+### Batch 2026-06-29-006 | T006
+
+#### 2.29 准备
+
+- **任务来源**：PR #103 Codex review comment `discussion_r3489408141`
+- **目标**：补齐最新执行批次的 close-check 解析字段，使 189 文档包具备 docs-only close-out evidence。
+- **预读范围**：`task-execution-log.md`、`src/ai_sdlc/core/close_check.py`、PR #103 Codex review comment
+- **激活的规则**：close-check execution log fields；docs-only evidence truthfulness；git close-out markers。
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.30 统一验证命令
+
+- `V1`（文档检查）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V2`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`
+- `V3`（work item close-check 复现）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/189-loop-engine-local-adversarial-pr-review`
+  - 结果：本地执行 30 秒无输出，被人工中断；PR Codex review 已复现 close-check blocker，原因是最新批次缺少 `验证画像`、`改动范围`、git close-out markers。本批按该 blocker 补齐字段。
+
+#### 2.31 任务记录
+
+##### Task review-remediation | 补齐 close-check evidence markers
+
+- **改动范围**：`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+- **改动内容**：
+  - 追加最新 docs-only remediation 批次，补齐 `验证画像`、`改动范围`、已提交状态和提交哈希字段。
+  - 保留历史批次，不回写伪造旧批次；本批只作为 PR review 后的 canonical evidence close-out。
+  - 不修改冻结 PRD，不进入代码实现，不改变 `plan.md` / `tasks.md` 任务边界。
+- **新增/调整的测试**：无代码测试；本批为文档证据补录。
+- **执行的命令**：见 V1 ~ V3。
+- **测试结果**：`git diff --check` 与 `uv run ai-sdlc verify constraints` 通过；`workitem close-check` 当前存在本地无输出工具层风险。
+- **是否符合任务目标**：符合 PR review remediation 目标。
+
+#### 2.32 代码审查（摘要）
+
+- **审查来源**：PR #103 Codex review。
+- **发现**：最新批次缺少 close-check markers，可能导致 work item 不能 clean close。
+- **处置**：已补录 Batch 006，明确 docs-only verification profile、changed paths 和 git close-out markers。
+- **结论**：可重新提交并请求 Codex review。
+
+#### 2.33 任务/计划同步状态
+
+- `spec.md` 同步状态：已冻结，未修改。
+- `plan.md` 同步状态：已对账，未修改。
+- `tasks.md` 同步状态：已对账，未修改。
+- `task-execution-log.md` 同步状态：已补齐 PR review remediation close-out evidence。
+
+#### 2.34 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`834d2b38`（PR #103 初始 189 文档包提交；本批为该 PR 的 review remediation 补录）
+- **是否继续下一批**：否；等待 PR checks 与 Codex re-review 收口。
