@@ -8,6 +8,7 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.pr_review_provider import MockReviewerFixture, ProviderRunStatus
 from ai_sdlc.core.pr_review_service import (
     PRReviewCommandStatus,
@@ -31,7 +32,11 @@ console = Console()
 
 @pr_review_app.command(name="doctor")
 def pr_review_doctor(
-    base_ref: str = typer.Option("main", "--base", help="Base branch or revision."),
+    base_ref: str | None = typer.Option(
+        None,
+        "--base",
+        help="Base branch or revision. Defaults to the repository default branch.",
+    ),
     head_ref: str = typer.Option("HEAD", "--head", help="Head branch or revision."),
     provider_id: str = typer.Option(
         "local-agent",
@@ -68,9 +73,10 @@ def pr_review_doctor(
     """Check local PR review readiness without writing review artifacts."""
 
     root = _project_root_or_exit()
+    resolved_base = _resolve_base_ref(root, base_ref)
     result = doctor_pr_review(
         root=root,
-        base_ref=base_ref,
+        base_ref=resolved_base,
         head_ref=head_ref,
         provider_id=provider_id,
         model_selector=model_selector,
@@ -85,7 +91,11 @@ def pr_review_doctor(
 
 @pr_review_app.command(name="start")
 def pr_review_start(
-    base_ref: str = typer.Option("main", "--base", help="Base branch or revision."),
+    base_ref: str | None = typer.Option(
+        None,
+        "--base",
+        help="Base branch or revision. Defaults to the repository default branch.",
+    ),
     head_ref: str = typer.Option("HEAD", "--head", help="Head branch or revision."),
     provider_id: str = typer.Option(
         "local-agent",
@@ -133,10 +143,11 @@ def pr_review_start(
     """Start or preview a local adversarial PR review."""
 
     root = _project_root_or_exit()
+    resolved_base = _resolve_base_ref(root, base_ref)
     result = start_pr_review(
         PRReviewStartOptions(
             root=root,
-            base_ref=base_ref,
+            base_ref=resolved_base,
             head_ref=head_ref,
             provider_id=provider_id,
             model_selector=model_selector,
@@ -247,6 +258,18 @@ def _project_root_or_exit() -> Path:
         console.print("Next: run ai-sdlc init .")
         raise typer.Exit(1)
     return root
+
+
+def _resolve_base_ref(root: Path, base_ref: str | None) -> str:
+    if base_ref and base_ref.strip():
+        return base_ref.strip()
+    try:
+        return GitClient(root).default_branch_name()
+    except GitError as exc:
+        console.print("Result: blocked")
+        console.print(f"Blocker: {exc}")
+        console.print("Next: pass --base <branch> explicitly.")
+        raise typer.Exit(1) from exc
 
 
 def _emit_result(payload: dict[str, object], *, json_output: bool) -> None:

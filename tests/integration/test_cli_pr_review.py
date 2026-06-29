@@ -91,6 +91,31 @@ def test_pr_review_start_mock_and_status_json(tmp_path: Path) -> None:
     assert status_payload["verdict"] == "clean"
 
 
+def test_pr_review_start_without_base_uses_default_branch(tmp_path: Path) -> None:
+    _init_repo(tmp_path, branch="master")
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    with patch("ai_sdlc.cli.pr_review_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(
+            app,
+            [
+                "pr-review",
+                "start",
+                "--provider",
+                "mock-reviewer",
+                "--review-id",
+                "review-auto-base",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "started"
+    pack = json.loads(Path(payload["review_pack_path"]).read_text(encoding="utf-8"))
+    assert pack["base_ref"] == "master"
+
+
 def test_pr_review_fix_and_close_require_no_blockers_json(tmp_path: Path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
@@ -181,11 +206,9 @@ def test_python_module_help_fallback_lists_pr_review() -> None:
     assert "pr-review" in result.stdout
 
 
-def _init_repo(path: Path) -> str:
+def _init_repo(path: Path, *, branch: str = "main") -> str:
     (path / ".ai-sdlc").mkdir()
-    _git(path, "init")
-    if _git(path, "symbolic-ref", "--short", "HEAD") != "main":
-        _git(path, "checkout", "-b", "main")
+    _git(path, "init", f"--initial-branch={branch}")
     _git(path, "config", "user.email", "test@example.com")
     _git(path, "config", "user.name", "Test User")
     _commit_file(path, "README.md", "# Test\n", "initial")

@@ -597,6 +597,20 @@ def close_pr_review(
             next_action="Run ai-sdlc pr-review start --base <branch>.",
         )
 
+    if findings.verdict == ReviewVerdict.BLOCKED:
+        return PRReviewCloseResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            verdict=ReviewVerdict.BLOCKED,
+            unresolved_blockers=review_run.unresolved_blockers,
+            unresolved_required=review_run.unresolved_required,
+            unresolved_advisory=review_run.unresolved_advisory,
+            blocker=findings.blocker or "PR review provider is blocked.",
+            next_action=(
+                "Fix the blocked review provider and rerun PR review before closing."
+            ),
+        )
+
     resolution_statuses = _load_resolution_statuses(
         Path(review_run.review_pack_path).with_name("resolution.yaml")
     )

@@ -239,6 +239,27 @@ def test_close_blocks_required_findings_then_allows_risk_accepted(
     )
 
 
+def test_close_blocks_when_provider_verdict_is_blocked(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-provider-blocked",
+            mock_fixture=MockReviewerFixture.BLOCKED,
+        )
+    )
+
+    result = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.verdict == "blocked"
+    assert "Mock reviewer blocked" in result.blocker
+    assert result.final_report_path == ""
+
+
 def test_close_fully_clean_after_resolution_marks_required_fixed(tmp_path) -> None:
     base_commit = _init_repo(tmp_path)
     _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")

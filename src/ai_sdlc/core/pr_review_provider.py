@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 from dataclasses import dataclass, field
@@ -101,6 +102,7 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
     schema_validation_path = review_dir / "schema-validation.json"
     argv = _expand_command(options.command, review_pack, options.review_pack_path, findings_path)
     _remove_previous_provider_outputs(findings_path, schema_validation_path)
+    before_snapshot = _worktree_snapshot(root, review_dir)
 
     try:
         process = subprocess.run(
@@ -114,6 +116,11 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
             timeout=options.timeout_seconds,
         )
         exit_code: int | None = process.returncode
+        mutation_blocker = _worktree_mutation_blocker(
+            root,
+            review_dir,
+            before_snapshot,
+        )
     except FileNotFoundError:
         exit_code = None
         invocation = _write_invocation(
@@ -172,8 +179,23 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
         cwd=root,
         isolation_status=options.isolation_status,
         exit_code=exit_code,
-        status=_loop_status_for_exit_code(exit_code),
+        status=LoopStatus.BLOCKED
+        if mutation_blocker
+        else _loop_status_for_exit_code(exit_code),
     )
+
+    if mutation_blocker:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            exit_code=exit_code,
+            invocation_path=str(invocation_path),
+            findings_path=str(findings_path),
+            blocker=mutation_blocker,
+            next_action=(
+                "Restore the worktree, then rerun with a read-only reviewer command."
+            ),
+            invocation=invocation,
+        )
 
     if exit_code not in {EXIT_SUCCESS, EXIT_CHANGES_REQUIRED, EXIT_BLOCKED}:
         return ProviderRunResult(
@@ -285,6 +307,74 @@ def _remove_previous_provider_outputs(*paths: Path) -> None:
             path.unlink()
         except FileNotFoundError:
             continue
+
+
+def _worktree_mutation_blocker(
+    root: Path,
+    review_dir: Path,
+    before: dict[str, str],
+) -> str:
+    after = _worktree_snapshot(root, review_dir)
+    if after == before:
+        return ""
+    changed = sorted(set(before) ^ set(after))
+    changed.extend(sorted(path for path in before.keys() & after.keys() if before[path] != after[path]))
+    sample = ", ".join(changed[:5])
+    return (
+        "Reviewer command modified files outside the review artifact directory"
+        + (f": {sample}" if sample else ".")
+    )
+
+
+def _worktree_snapshot(root: Path, review_dir: Path) -> dict[str, str]:
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=30,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return {}
+    if result.returncode != 0:
+        return {}
+
+    snapshot: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        if len(line) < 4:
+            continue
+        rel_path = line[3:]
+        if " -> " in rel_path:
+            rel_path = rel_path.split(" -> ", 1)[1]
+        normalized = rel_path.strip().replace("\\", "/")
+        if not normalized or _is_allowed_review_artifact(root, review_dir, normalized):
+            continue
+        snapshot[normalized] = f"{line[:2]}:{_path_digest(root / normalized)}"
+    return snapshot
+
+
+def _is_allowed_review_artifact(root: Path, review_dir: Path, rel_path: str) -> bool:
+    try:
+        path = (root / rel_path).resolve()
+        path.relative_to(review_dir.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+def _path_digest(path: Path) -> str:
+    if not path.exists():
+        return "missing"
+    if path.is_dir():
+        return "dir"
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return "unreadable"
 
 
 def _load_review_pack(path: Path) -> ReviewPack:

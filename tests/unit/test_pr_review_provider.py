@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -176,6 +177,27 @@ def test_local_agent_blocks_unexpected_exit_code(tmp_path) -> None:
     assert "exit code 2" in result.blocker
 
 
+def test_local_agent_blocks_when_reviewer_mutates_worktree(tmp_path) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('before')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    review_pack_path = _write_review_pack(tmp_path)
+    script = _write_mutating_reviewer_script(tmp_path)
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "modified files outside the review artifact directory" in result.blocker
+    assert "src/app.py" in result.blocker
+
+
 def test_mock_reviewer_supports_clean_changes_required_and_blocked(
     tmp_path,
 ) -> None:
@@ -255,6 +277,37 @@ def _write_review_pack(
     )
 
 
+def _init_git_repo(path: Path) -> None:
+    _git(path, "init")
+    if _git(path, "symbolic-ref", "--short", "HEAD") != "main":
+        _git(path, "checkout", "-b", "main")
+    _git(path, "config", "user.email", "test@example.com")
+    _git(path, "config", "user.name", "Test User")
+
+
+def _write_file(path: Path, file_path: str, content: str) -> None:
+    target = path / file_path
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content, encoding="utf-8")
+
+
+def _git(path: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", *args],
+        cwd=path,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        check=False,
+    )
+    if result.returncode != 0:
+        raise AssertionError(
+            f"git {' '.join(args)} failed: {result.stderr.strip()}"
+        )
+    return result.stdout.strip()
+
+
 def _write_reviewer_script(tmp_path: Path, *, exit_code: int) -> Path:
     script = tmp_path / "reviewer.py"
     script.write_text(
@@ -292,6 +345,40 @@ def _write_reviewer_script(tmp_path: Path, *, exit_code: int) -> Path:
                 "}",
                 "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
                 f"sys.exit({exit_code})",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return script
+
+
+def _write_mutating_reviewer_script(tmp_path: Path) -> Path:
+    script = tmp_path / "mutating_reviewer.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import argparse, json",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--review-pack', required=True)",
+                "parser.add_argument('--output', required=True)",
+                "parser.add_argument('--model')",
+                "parser.add_argument('--resolved-model')",
+                "parser.add_argument('--allowlist', nargs='*', default=[])",
+                "args = parser.parse_args()",
+                "pack = json.load(open(args.review_pack, encoding='utf-8'))",
+                "open('src/app.py', 'w', encoding='utf-8').write(\"print('after')\\n\")",
+                "payload = {",
+                "  'schema_version': '1',",
+                "  'artifact_kind': 'review-findings',",
+                "  'review_id': pack['review_id'],",
+                "  'loop_id': pack['loop_id'],",
+                "  'review_pack_path': args.review_pack,",
+                "  'provider_id': 'local-agent',",
+                "  'model_selector': 'current',",
+                "  'resolved_model': 'gpt-5',",
+                "  'verdict': 'clean'",
+                "}",
+                "json.dump(payload, open(args.output, 'w', encoding='utf-8'))",
             ]
         ),
         encoding="utf-8",
