@@ -207,6 +207,16 @@ class ReviewFindings(LoopArtifactModel):
             for finding in self.findings
         ):
             raise ValueError("clean findings cannot include blocker or required findings")
+        finding_ids = [finding.id for finding in self.findings]
+        duplicate_ids = sorted(
+            finding_id
+            for finding_id in set(finding_ids)
+            if finding_ids.count(finding_id) > 1
+        )
+        if duplicate_ids:
+            raise ValueError(
+                "duplicate review finding ids: " + ", ".join(duplicate_ids)
+            )
         return self
 
 

@@ -202,6 +202,34 @@ def test_review_findings_records_provider_verdict_and_findings() -> None:
     assert payload["findings"][0]["severity"] == "REQUIRED"
 
 
+def test_review_findings_rejects_duplicate_finding_ids() -> None:
+    finding = ReviewFinding(
+        id="F-001",
+        severity=FindingSeverity.REQUIRED,
+        file="src/app.py",
+        claim="Missing test.",
+        evidence="The changed behavior has no focused test.",
+        risk="Regression may ship.",
+        suggested_fix="Add a focused regression test.",
+        confidence=0.8,
+    )
+
+    with pytest.raises(ValidationError, match="duplicate review finding ids"):
+        ReviewFindings(
+            review_id="review-001",
+            loop_id="loop-001",
+            review_pack_path="/repo/review-pack.json",
+            provider_id="mock-reviewer",
+            model_selector="fixture",
+            resolved_model="mock-reviewer",
+            verdict=ReviewVerdict.CHANGES_REQUIRED,
+            findings=[
+                finding,
+                finding.model_copy(update={"file": "src/other.py"}),
+            ],
+        )
+
+
 def test_review_findings_requires_finding_for_changes_required() -> None:
     with pytest.raises(ValidationError, match="require at least one finding"):
         ReviewFindings(
