@@ -611,6 +611,9 @@
 - `V4`（program truth snapshot 刷新）
   - 命令：`uv run ai-sdlc program truth sync --execute --yes`
   - 结果：通过；写入 `program-manifest.yaml`，用于确保 persisted snapshot 覆盖最终 checkpoint/log/handoff 状态。
+- `V5`（program truth snapshot 只读预检）
+  - 命令：`uv run ai-sdlc program truth sync --dry-run`
+  - 结果：通过；dry-run 输出 snapshot state 为 `migration_pending`，未写入文件。
 
 #### 2.61 任务记录
 
@@ -625,8 +628,8 @@
   - 最终日志稳定后刷新 `program-manifest.yaml` 的 persisted `truth_snapshot`。
   - removed comment reason: `specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md` moves Batch 2026-06-29-011 headings and evidence (`### Batch 2026-06-29-011 | T011`, `#### 2.59 准备`, `#### 2.60 统一验证命令`, `#### 2.61 任务记录`, `##### Task review-remediation | 重置 execute current_batch`, `#### 2.62 代码审查（摘要）`, `#### 2.63 任务/计划同步状态`, `#### 2.64 归档后动作`) from before Batch 008 to the append-only end; content is preserved, not deleted.
 - **新增/调整的测试**：无产品代码测试；复用 dry-run、约束与 truth snapshot 验证。
-- **执行的命令**：见 V1 ~ V4。
-- **测试结果**：V1、V2、V3、V4 已执行并符合预期。
+- **执行的命令**：见 V1 ~ V5。
+- **测试结果**：V1、V2、V3、V4、V5 已执行并符合预期。
 - **是否符合任务目标**：符合；未来真实执行会从 batch index 0 开始，不会跳过 Batch 1 核心模型/Schema 任务。
 
 #### 2.62 代码审查（摘要）
@@ -636,7 +639,7 @@
 - **处置 1**：将 `current_batch` 重置为 `0`。
 - **发现 2**：checkpoint/log 最终修复后 persisted truth snapshot 需要刷新。
 - **处置 2**：在本批日志稳定后执行 `program truth sync --execute --yes` 并提交 `program-manifest.yaml`。
-- **结论**：待 V4 与最终复验通过后提交、push 并重新请求 Codex review。
+- **结论**：待最终复验通过后提交、push 并重新请求 Codex review。
 
 #### 2.63 任务/计划同步状态
 
