@@ -1454,7 +1454,9 @@ def _write_review_run(
         provider_command=options.provider_command,
         review_pack_path=_repo_relative_path(root, Path(pack_result.review_pack_path)),
         findings_path=_repo_relative_path(root, findings_path) if findings_path else "",
-        findings_digest=_file_sha256(findings_path) if findings_path else "",
+        findings_digest=_file_sha256(findings_path)
+        if findings_path and findings_path.is_file()
+        else "",
         verdict=findings.verdict if findings else None,
         unresolved_blockers=_count_findings(findings, FindingSeverity.BLOCKER),
         unresolved_required=_count_findings(findings, FindingSeverity.REQUIRED),

@@ -324,6 +324,31 @@ def test_start_local_agent_without_command_returns_needs_user(tmp_path) -> None:
     assert close.final_report_path == ""
 
 
+def test_start_blocks_local_agent_missing_findings_without_traceback(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    script = _write_no_output_reviewer_script(tmp_path)
+
+    result = start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="local-agent",
+            current_model="gpt-5",
+            provider_command=[sys.executable, str(script)],
+            review_id="review-missing-findings",
+        )
+    )
+
+    review_run = json.loads(Path(result.review_run_path).read_text(encoding="utf-8"))
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.provider_status == ProviderRunStatus.BLOCKED
+    assert "did not write findings.json" in result.blocker
+    assert result.findings_path
+    assert not Path(result.findings_path).exists()
+    assert review_run["findings_digest"] == ""
+
+
 def test_doctor_blocks_unknown_base_ref_without_writing_artifacts(tmp_path) -> None:
     _init_repo(tmp_path)
 
@@ -1335,6 +1360,12 @@ def _write_clean_reviewer_script(path: Path) -> Path:
         ),
         encoding="utf-8",
     )
+    return script
+
+
+def _write_no_output_reviewer_script(path: Path) -> Path:
+    script = path / "no_output_reviewer.py"
+    script.write_text("raise SystemExit(0)\n", encoding="utf-8")
     return script
 
 
