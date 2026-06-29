@@ -254,6 +254,37 @@ def test_fix_stops_when_max_rounds_reached(tmp_path) -> None:
     assert "max rounds" in result.blocker
 
 
+def test_fix_preserves_existing_resolved_resolution_records(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-preserve-resolution",
+            mock_fixture=MockReviewerFixture.CHANGES_REQUIRED,
+        )
+    )
+    first = fix_pr_review(tmp_path, max_rounds=3)
+    resolution_path = Path(first.resolution_path)
+    resolution = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
+    resolution["finding_resolutions"][0]["status"] = "fixed"
+    resolution["finding_resolutions"][0]["evidence_refs"] = ["pytest passed"]
+    resolution["finding_resolutions"][0]["operator"] = "dev-owner"
+    resolution["finding_resolutions"][0]["resolved_at"] = "2026-06-29T00:00:00Z"
+    resolution_path.write_text(yaml.safe_dump(resolution), encoding="utf-8")
+
+    second = fix_pr_review(tmp_path, max_rounds=3)
+
+    updated = yaml.safe_load(resolution_path.read_text(encoding="utf-8"))
+    assert second.status == PRReviewCommandStatus.READY
+    assert second.selected_findings_count == 0
+    assert updated["finding_resolutions"][0]["status"] == "fixed"
+    assert updated["finding_resolutions"][0]["evidence_refs"] == ["pytest passed"]
+    assert updated["finding_resolutions"][0]["operator"] == "dev-owner"
+
+
 def test_close_blocks_required_findings_then_allows_risk_accepted(
     tmp_path,
 ) -> None:
@@ -329,6 +360,29 @@ def test_close_blocks_when_head_moved_after_review(tmp_path) -> None:
     assert result.verdict == "blocked"
     assert "Current HEAD does not match reviewed head_commit" in result.blocker
     assert "rerun" in result.next_action
+    assert result.final_report_path == ""
+
+
+def test_close_blocks_when_worktree_dirty_after_review(tmp_path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+    start_pr_review(
+        PRReviewStartOptions(
+            root=tmp_path,
+            base_ref=base_commit,
+            provider_id="mock-reviewer",
+            review_id="review-dirty-worktree",
+            mock_fixture=MockReviewerFixture.CLEAN,
+        )
+    )
+    (tmp_path / "src/app.py").write_text("print('dirty')\n", encoding="utf-8")
+
+    result = close_pr_review(tmp_path)
+
+    assert result.status == PRReviewCommandStatus.BLOCKED
+    assert result.verdict == "blocked"
+    assert "uncommitted changes" in result.blocker
+    assert "rerun PR review" in result.next_action
     assert result.final_report_path == ""
 
 

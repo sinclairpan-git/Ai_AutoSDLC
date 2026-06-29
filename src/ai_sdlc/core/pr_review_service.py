@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import shlex
+import subprocess
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
@@ -456,17 +457,23 @@ def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
             next_action="Inspect unresolved findings manually or increase --max-rounds.",
         )
 
+    resolution_statuses = _load_resolution_statuses(resolution_path)
+    resolution_records = _load_resolution_records(resolution_path)
     selected = [
         finding
         for finding in findings.findings
         if finding.severity in {FindingSeverity.BLOCKER, FindingSeverity.REQUIRED}
         and finding.resolution == FindingResolutionStatus.UNRESOLVED
+        and resolution_statuses.get(finding.id, FindingResolutionStatus.UNRESOLVED)
+        == FindingResolutionStatus.UNRESOLVED
     ]
     advisory = [
         finding
         for finding in findings.findings
         if finding.severity == FindingSeverity.ADVISORY
         and finding.resolution == FindingResolutionStatus.UNRESOLVED
+        and resolution_statuses.get(finding.id, FindingResolutionStatus.UNRESOLVED)
+        == FindingResolutionStatus.UNRESOLVED
     ]
     round_number = existing_round + 1
     fix_plan_path = review_dir / "fix-plan.md"
@@ -482,15 +489,12 @@ def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
             "review_id": review_run.review_id,
             "loop_id": review_run.loop_id,
             "round_number": round_number,
-            "finding_resolutions": [
-                {
-                    "finding_id": finding.id,
-                    "status": FindingResolutionStatus.UNRESOLVED.value,
-                    "reason": "",
-                    "evidence_refs": [],
-                }
-                for finding in selected
-            ],
+            "finding_resolutions": _next_resolution_records(
+                findings=findings,
+                selected=selected,
+                resolution_statuses=resolution_statuses,
+                resolution_records=resolution_records,
+            ),
         },
     )
     review_run.next_action = (
@@ -508,6 +512,41 @@ def fix_pr_review(root: Path, *, max_rounds: int = 2) -> PRReviewFixResult:
         round_number=round_number,
         next_action=review_run.next_action,
     )
+
+
+def _next_resolution_records(
+    *,
+    findings: ReviewFindings,
+    selected: list[ReviewFinding],
+    resolution_statuses: dict[str, FindingResolutionStatus],
+    resolution_records: dict[str, FindingResolution],
+) -> list[dict[str, object]]:
+    current_ids = {finding.id for finding in findings.findings}
+    preserved = [
+        record.model_dump(mode="json")
+        for finding in findings.findings
+        if finding.id in current_ids
+        and resolution_statuses.get(finding.id)
+        in {
+            FindingResolutionStatus.FIXED,
+            FindingResolutionStatus.WAIVED,
+            FindingResolutionStatus.NOT_APPLICABLE,
+        }
+        for record in [resolution_records.get(finding.id)]
+        if record is not None
+    ]
+    generated = [
+        {
+            "finding_id": finding.id,
+            "status": FindingResolutionStatus.UNRESOLVED.value,
+            "reason": "",
+            "evidence_refs": [],
+            "operator": "",
+            "resolved_at": "",
+        }
+        for finding in selected
+    ]
+    return [*preserved, *generated]
 
 
 def rerun_pr_review(
@@ -665,6 +704,21 @@ def close_pr_review(
             next_action="Run ai-sdlc pr-review rerun before closing.",
         )
 
+    dirty_blocker = _reviewed_worktree_dirty(root, review_run)
+    if dirty_blocker:
+        return PRReviewCloseResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            verdict=ReviewVerdict.BLOCKED,
+            unresolved_blockers=review_run.unresolved_blockers,
+            unresolved_required=review_run.unresolved_required,
+            unresolved_advisory=review_run.unresolved_advisory,
+            blocker=dirty_blocker,
+            next_action=(
+                "Commit or discard unreviewed worktree changes, then rerun PR review."
+            ),
+        )
+
     if findings.verdict == ReviewVerdict.BLOCKED:
         return PRReviewCloseResult(
             status=PRReviewCommandStatus.BLOCKED,
@@ -764,6 +818,58 @@ def _reviewed_head_mismatch(root: Path, review_run: ReviewRun) -> str:
             f"{current_head} != {review_run.head_commit}."
         )
     return ""
+
+
+def _reviewed_worktree_dirty(root: Path, review_run: ReviewRun) -> str:
+    try:
+        dirty_paths = _unreviewed_dirty_paths(root.resolve(), review_run)
+    except GitError as exc:
+        return f"Unable to verify clean worktree before closing PR review: {exc}"
+    if dirty_paths:
+        sample = ", ".join(dirty_paths[:5])
+        return (
+            "Current worktree has uncommitted changes that were not reviewed"
+            + (f": {sample}" if sample else ".")
+        )
+    return ""
+
+
+def _unreviewed_dirty_paths(root: Path, review_run: ReviewRun) -> list[str]:
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=all"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=30,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        raise GitError(str(exc)) from exc
+    if result.returncode != 0:
+        raise GitError(result.stderr.strip() or "git status failed")
+
+    dirty: list[str] = []
+    for line in result.stdout.splitlines():
+        if len(line) < 4:
+            continue
+        rel_path = line[3:]
+        if " -> " in rel_path:
+            rel_path = rel_path.split(" -> ", 1)[1]
+        normalized = rel_path.strip().replace("\\", "/")
+        if not normalized or _is_current_review_artifact_path(normalized, review_run):
+            continue
+        dirty.append(normalized)
+    return dirty
+
+
+def _is_current_review_artifact_path(path: str, review_run: ReviewRun) -> bool:
+    review_prefix = f"{AI_SDLC_DIR}/reviews/pr/{review_run.review_id}/"
+    return path == str(CURRENT_REVIEW_PATH).replace("\\", "/") or path.startswith(
+        review_prefix
+    )
 
 
 def parse_provider_command(raw: str) -> list[str]:
