@@ -602,9 +602,21 @@ def _validate_findings_output(
             invocation=invocation,
         )
 
-    findings = ReviewFindings.model_validate(
-        json.loads(findings_path.read_text(encoding="utf-8"))
-    )
+    try:
+        findings_payload = json.loads(findings_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            exit_code=exit_code,
+            invocation_path=str(invocation_path),
+            findings_path=str(findings_path),
+            schema_validation_path=str(schema_validation_path),
+            blocker=f"Reviewer findings must be strict JSON: {exc}",
+            next_action="Regenerate findings.json as JSON, not YAML or loose syntax.",
+            invocation=invocation,
+        )
+
+    findings = ReviewFindings.model_validate(findings_payload)
     scope_blocker = _findings_scope_blocker(
         findings,
         review_pack=review_pack,

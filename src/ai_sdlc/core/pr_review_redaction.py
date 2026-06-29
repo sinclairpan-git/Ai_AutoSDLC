@@ -154,7 +154,7 @@ def analyze_redaction(
         elif (
             not code_egress_confirmed
             and resolved_policy.high_risk_secret_policy
-            == PolicyDecisionStatus.NEEDS_USER
+            in {PolicyDecisionStatus.NEEDS_USER, "allow-with-waiver"}
         ):
             needs_user = True
             blocker = (

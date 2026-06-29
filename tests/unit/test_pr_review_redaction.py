@@ -148,6 +148,29 @@ def test_high_risk_secret_can_continue_after_explicit_confirmation(tmp_path) -> 
     assert report.redacted_files == ["src/settings.py"]
 
 
+def test_high_risk_allow_with_waiver_still_requires_egress_confirmation(
+    tmp_path,
+) -> None:
+    path = tmp_path / ".env"
+    path.write_text("TOKEN=abcdefghijklmnop\n", encoding="utf-8")
+
+    report = analyze_redaction(
+        tmp_path,
+        [".env"],
+        policy=LoopPolicyProfile(
+            high_risk_secret_policy="allow-with-waiver",
+            allowed_omitted_file_policy="allow-with-waiver",
+        ),
+        code_egress=True,
+        code_egress_confirmed=False,
+    )
+
+    assert report.needs_user is True
+    assert report.blocked is False
+    assert report.high_risk_secret_files == [".env"]
+    assert "High-risk secrets" in report.blocker
+
+
 def test_high_risk_secret_forbid_policy_blocks_code_egress(tmp_path) -> None:
     path = tmp_path / "src" / "settings.py"
     path.parent.mkdir(parents=True)

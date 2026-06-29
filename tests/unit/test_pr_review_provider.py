@@ -225,6 +225,53 @@ def test_local_agent_blocks_when_findings_schema_is_invalid(tmp_path) -> None:
     assert Path(result.schema_validation_path).is_file()
 
 
+def test_local_agent_blocks_non_json_findings_even_when_yaml_schema_is_valid(
+    tmp_path,
+) -> None:
+    review_pack_path = _write_review_pack(tmp_path)
+    script = tmp_path / "yaml_findings.py"
+    script.write_text(
+        "\n".join(
+            [
+                "import argparse, json",
+                "parser = argparse.ArgumentParser()",
+                "parser.add_argument('--review-pack')",
+                "parser.add_argument('--output')",
+                "parser.add_argument('--model')",
+                "parser.add_argument('--resolved-model')",
+                "parser.add_argument('--allowlist', nargs='*')",
+                "args = parser.parse_args()",
+                "pack = json.load(open(args.review_pack, encoding='utf-8'))",
+                "open(args.output, 'w', encoding='utf-8').write(",
+                "  \"schema_version: '1'\\n\"",
+                "  \"artifact_kind: review-findings\\n\"",
+                "  f\"review_id: {pack['review_id']}\\n\"",
+                "  f\"loop_id: {pack['loop_id']}\\n\"",
+                "  f\"review_pack_path: '{args.review_pack}'\\n\"",
+                "  \"provider_id: local-agent\\n\"",
+                "  \"model_selector: current\\n\"",
+                "  \"resolved_model: gpt-5\\n\"",
+                "  \"verdict: clean\\n\"",
+                "  \"findings: []\\n\"",
+                ")",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "strict JSON" in result.blocker
+    assert Path(result.schema_validation_path).is_file()
+
+
 def test_local_agent_blocks_unexpected_exit_code(tmp_path) -> None:
     review_pack_path = _write_review_pack(tmp_path)
     script = tmp_path / "failure.py"
