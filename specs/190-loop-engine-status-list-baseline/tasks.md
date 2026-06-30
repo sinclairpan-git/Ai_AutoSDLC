@@ -120,7 +120,7 @@ Batch 4: docs, verification, and closeout evidence
 ### Task 3.2 Update command discovery
 
 - task_id: T32
-- status: todo
+- status: done
 - goal: 更新 command discovery，确保 loop status/list 被框架发现
 - priority: P0
 - depends:

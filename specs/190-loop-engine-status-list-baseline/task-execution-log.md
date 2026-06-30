@@ -2,7 +2,7 @@
 
 **功能编号**：`190-loop-engine-status-list-baseline`
 **创建日期**：2026-06-29
-**状态**：Batch 3 T31 CLI registration completed，等待 command discovery
+**状态**：Batch 3 CLI registration and discovery completed，等待 docs/constraints closeout
 
 ## 1. 归档规则
 
@@ -251,3 +251,53 @@
 
 - T31 已完成并通过 focused verification。
 - 下一步进入 T32：更新 command discovery 测试，确认 `ai-sdlc loop status/list` 被框架自动发现。
+
+### Batch 2026-06-30-005 | T32 command discovery
+
+#### 5.1 批次范围
+
+- 覆盖任务：`T32`
+- 覆盖阶段：ai-sdlc loop CLI registration
+- 预读范围：`command_names.py`、`test_command_names.py`、Typer app 注册结果
+- 激活规则：确认框架自动发现 `ai-sdlc loop status/list`，不修改 CLI 行为
+
+#### 5.2 改动范围
+
+- 更新 `tests/unit/test_command_names.py`
+- 更新 `specs/190-loop-engine-status-list-baseline/tasks.md`
+- 更新 `specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 5.3 改动内容
+
+- 在 command discovery 测试中新增 `ai-sdlc loop status` 断言。
+- 在 command discovery 测试中新增 `ai-sdlc loop list` 断言。
+- 通过当前 Typer app 验证 `collect_flat_command_strings()` 已能自动发现新增 loop 子命令。
+
+#### 5.4 执行的命令
+
+- `uv run python -c "from ai_sdlc.cli.command_names import collect_flat_command_strings; print('\\n'.join(c for c in collect_flat_command_strings() if 'loop' in c))"`
+  - 结果：输出 `ai-sdlc loop list`、`ai-sdlc loop status`。
+- `uv run pytest tests/unit/test_command_names.py tests/integration/test_cli_loop.py -q`
+  - 结果：通过，`7 passed in 0.90s`。
+- `uv run ruff check tests/unit/test_command_names.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+
+#### 5.5 验证结果
+
+- command discovery 已覆盖 `ai-sdlc loop status`。
+- command discovery 已覆盖 `ai-sdlc loop list`。
+- loop CLI 集成测试仍通过，新增 discovery 断言未影响命令行为。
+
+#### 5.6 对齐结论
+
+- 宪章/规格对齐：T32 只固化命令发现，不引入模型调用、不触发 adapter 写入、不扩展远端能力。
+- 代码质量：`command_names.py` 本身无需修改，保持从 Typer app 自动派生命令路径。
+- 测试质量：新增断言能防止后续 CLI 注册退化导致 loop 命令从发现面消失。
+- 风险：无新增运行时风险。
+
+#### 5.7 批次结论
+
+- T32 已完成并通过 focused verification。
+- 下一步进入 T41：更新用户文档和约束验证面，说明 `loop status/list` 的只读边界。
