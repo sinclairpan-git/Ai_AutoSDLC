@@ -212,13 +212,15 @@ def list_loops(
             next_action="Run ai-sdlc pr-review start --base <branch>.",
         )
 
+    loops: list[LoopSummary] = []
+    artifact_errors: list[LoopArtifactError] = []
     current_pointer_path = resolved_root / CURRENT_REVIEW_PATH
-    current_review_run_path = _read_current_review_run_path(
+    current_review_run_path, current_pointer_error = _read_current_review_run_path(
         resolved_root,
         current_pointer_path,
     )
-    loops: list[LoopSummary] = []
-    artifact_errors: list[LoopArtifactError] = []
+    if current_pointer_error is not None:
+        artifact_errors.append(current_pointer_error)
 
     for review_run_path in review_run_paths:
         try:
@@ -335,17 +337,42 @@ def _blocked_result(*, result: str, blocker: str) -> LoopStatusResult:
     )
 
 
-def _read_current_review_run_path(root: Path, pointer_path: Path) -> Path | None:
+def _read_current_review_run_path(
+    root: Path,
+    pointer_path: Path,
+) -> tuple[Path | None, LoopArtifactError | None]:
+    if not pointer_path.exists():
+        return None, None
     try:
         pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return None
+    except (json.JSONDecodeError, OSError) as exc:
+        return None, _current_pointer_error(root, pointer_path, str(exc))
     if not isinstance(pointer, dict):
-        return None
+        return None, _current_pointer_error(
+            root,
+            pointer_path,
+            "root must be an object.",
+        )
     path_text = pointer.get("review_run_path")
     if not isinstance(path_text, str) or not path_text.strip():
-        return None
-    return _resolve_repo_path(root, path_text)
+        return None, _current_pointer_error(
+            root,
+            pointer_path,
+            "review_run_path must be a non-empty string.",
+        )
+    return _resolve_repo_path(root, path_text), None
+
+
+def _current_pointer_error(
+    root: Path,
+    pointer_path: Path,
+    error: str,
+) -> LoopArtifactError:
+    return LoopArtifactError(
+        kind="current-review-pointer",
+        path=_repo_relative_path(root, pointer_path),
+        error=error,
+    )
 
 
 def _artifact_ref(root: Path, kind: str, path: Path) -> LoopArtifactRef:
