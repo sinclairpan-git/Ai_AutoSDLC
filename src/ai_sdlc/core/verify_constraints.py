@@ -873,6 +873,69 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
             ),
         ),
     ),
+    "190": (
+        FeatureContractSurface(
+            label="loop status/list core readers",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "loop_status.py",
+                    ),
+                    required_tokens=(
+                        "get_loop_status",
+                        "list_loops",
+                        "current-review.json",
+                        "review-run.json",
+                        "malformed_count",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="loop status/list CLI",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "cli" / "loop_cmd.py",
+                    ),
+                    required_tokens=(
+                        "loop_status",
+                        "loop_list",
+                        "get_loop_status",
+                        "list_loops",
+                        "json_output",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="loop status/list read-only user docs",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(Path("README.md"),),
+                    required_tokens=(
+                        "ai-sdlc loop status",
+                        "ai-sdlc loop list",
+                        "read-only artifact index",
+                        "do not call GPT",
+                        "Claude, DeepSeek",
+                        "GLM, Codex",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("docs") / "pull-request-checklist.zh.md",
+                    ),
+                    required_tokens=(
+                        "Loop status/list",
+                        "只读读取",
+                        "不得发起模型请求",
+                        "不能替代本地对抗 review agent",
+                    ),
+                ),
+            ),
+        ),
+    ),
 }
 
 
@@ -3240,6 +3303,8 @@ def _feature_contract_surfaces_for_checkpoint(
     work_item_id = _effective_feature_contract_wi_id(checkpoint)
     if _is_189_work_item(work_item_id):
         return FEATURE_CONTRACT_SURFACES["189"]
+    if _is_190_work_item(work_item_id):
+        return FEATURE_CONTRACT_SURFACES["190"]
     return ()
 
 
@@ -3323,6 +3388,11 @@ def _is_153_work_item(work_item_id: str) -> bool:
 def _is_189_work_item(work_item_id: str) -> bool:
     normalized = work_item_id.strip()
     return normalized == "189" or normalized.startswith("189-") or normalized.startswith("189/")
+
+
+def _is_190_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "190" or normalized.startswith("190-") or normalized.startswith("190/")
 
 
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:

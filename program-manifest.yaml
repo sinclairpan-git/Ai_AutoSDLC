@@ -1862,12 +1862,15 @@ specs:
 - id: 189-loop-engine-local-adversarial-pr-review
   path: specs/189-loop-engine-local-adversarial-pr-review
   depends_on: []
+- id: 190-loop-engine-status-list-baseline
+  path: specs/190-loop-engine-status-list-baseline
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-06-30T01:24:23Z'
+  generated_at: '2026-06-30T05:23:22Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 0f19fe9a75436f32b7b5d9120e44e4f8ea1d7e66
-  authoring_hash: 6afb7615b65879e5dcce306a50b3435fe0ba91507334f49328625b6bc7417260
+  repo_revision: 08dff826
+  authoring_hash: 92db24f84ec2592010f061267c9a23840b5a62c485a59b75c8d707eabf679e07
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1906,14 +1909,12 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: f0d357338a2bcdfbd47f9121b7c33637ce411cf310065776b7779a8b88826957
+  snapshot_hash: b25ad73e603afddb2a033021ab91b91cdad266cf760884500988ea4af5e01e6c
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
-    audit_state: blocked
-    blocking_refs:
-    - frontend_inheritance:generation
-    - frontend_inheritance:quality
+    audit_state: ready
+    blocking_refs: []
     stale_reason: ''
   - capability_id: agent-adapter-verified-host-ingress
     closure_state: closed
@@ -1923,30 +1924,30 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: incomplete
-    total_sources: 1001
-    mapped_sources: 973
+    total_sources: 1006
+    mapped_sources: 978
     unmapped_sources: 28
-    missing_sources: 4
-    phase_signal_count: 3286
-    deferred_signal_count: 6025
-    non_goal_signal_count: 332
+    missing_sources: 5
+    phase_signal_count: 3319
+    deferred_signal_count: 6068
+    non_goal_signal_count: 334
     layer_totals:
       blueprint: 1
-      spec: 190
-      plan: 190
-      tasks: 190
-      execution: 190
-      close: 190
+      spec: 191
+      plan: 191
+      tasks: 191
+      execution: 191
+      close: 191
       requirements: 2
       defect: 3
       design: 8
       release: 37
     layer_materialized:
       blueprint: 1
-      spec: 190
-      plan: 190
-      tasks: 190
-      execution: 190
+      spec: 191
+      plan: 191
+      tasks: 191
+      execution: 191
       close: 186
       requirements: 2
       defect: 3
@@ -10509,6 +10510,51 @@ truth_snapshot:
       mapped: true
       exists: false
       mapping_ref: 189-loop-engine-local-adversarial-pr-review
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/190-loop-engine-status-list-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 190-loop-engine-status-list-baseline
+      phase_signal_count: 4
+      deferred_signal_count: 5
+      non_goal_signal_count: 1
+    - path: specs/190-loop-engine-status-list-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 190-loop-engine-status-list-baseline
+      phase_signal_count: 1
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/190-loop-engine-status-list-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 190-loop-engine-status-list-baseline
+      phase_signal_count: 2
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/190-loop-engine-status-list-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 190-loop-engine-status-list-baseline
+      phase_signal_count: 26
+      deferred_signal_count: 34
+      non_goal_signal_count: 1
+    - path: specs/190-loop-engine-status-list-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 190-loop-engine-status-list-baseline
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0

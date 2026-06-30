@@ -22,6 +22,7 @@ from ai_sdlc.cli.doctor_cmd import doctor_command
 from ai_sdlc.cli.enterprise_cmd import enterprise_app
 from ai_sdlc.cli.handoff_cmd import handoff_app
 from ai_sdlc.cli.host_runtime_cmd import host_runtime_app
+from ai_sdlc.cli.loop_cmd import loop_app
 from ai_sdlc.cli.pr_review_cmd import pr_review_app
 from ai_sdlc.cli.program_cmd import program_app
 from ai_sdlc.cli.provenance_cmd import provenance_app
@@ -41,6 +42,23 @@ app = typer.Typer(
 )
 
 _hook_console = Console()
+_READ_ONLY_SUBCOMMANDS = (
+    "adapter",
+    "init",
+    "doctor",
+    "enterprise",
+    "agentops",
+    "handoff",
+    "host-runtime",
+    "status",
+    "scan",
+    "verify",
+    "provenance",
+    "loop",
+    "pr-review",
+    "self-update",
+)
+_UPDATE_NOTICE_BYPASS_SUBCOMMANDS = ("loop", "self-update")
 
 
 def _version_callback(value: bool) -> None:
@@ -65,7 +83,7 @@ def _global_before_command(
     if ctx.invoked_subcommand is None:
         return
     if (
-        ctx.invoked_subcommand != "self-update"
+        ctx.invoked_subcommand not in _UPDATE_NOTICE_BYPASS_SUBCOMMANDS
         and "--json" not in sys.argv
         and "--help" not in sys.argv
         and "-h" not in sys.argv
@@ -74,21 +92,7 @@ def _global_before_command(
     ):
         maybe_render_update_notice()
     # Read-only and analysis surfaces must not trigger adapter writes.
-    if ctx.invoked_subcommand in (
-        "adapter",
-        "init",
-        "doctor",
-        "enterprise",
-        "agentops",
-        "handoff",
-        "host-runtime",
-        "status",
-        "scan",
-        "verify",
-        "provenance",
-        "pr-review",
-        "self-update",
-    ):
+    if ctx.invoked_subcommand in _READ_ONLY_SUBCOMMANDS:
         return
     run_ide_adapter_if_initialized(console=_hook_console)
 
@@ -117,6 +121,7 @@ app.add_typer(verify_app, name="verify")
 app.add_typer(telemetry_app, name="telemetry")
 app.add_typer(provenance_app, name="provenance")
 app.add_typer(trace_app, name="trace")
+app.add_typer(loop_app, name="loop")
 app.add_typer(pr_review_app, name="pr-review")
 app.add_typer(self_update_app, name="self-update")
 

@@ -1,12 +1,12 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-06-29T06:48:30+00:00'
+pipeline_last_updated: '2026-06-30T02:40:48+00:00'
 current_stage: execute
 feature:
-  id: 189-loop-engine-local-adversarial-pr-review
-  spec_dir: specs/189-loop-engine-local-adversarial-pr-review
-  design_branch: design/189-loop-engine-local-adversarial-pr-review-docs
-  feature_branch: feature/189-loop-engine-local-adversarial-pr-review-dev
-  current_branch: feature/189-loop-engine-local-adversarial-pr-review-docs
+  id: 190-loop-engine-status-list-baseline
+  spec_dir: specs/190-loop-engine-status-list-baseline
+  design_branch: design/190-loop-engine-status-list-baseline-docs
+  feature_branch: feature/190-loop-engine-status-list-baseline-dev
+  current_branch: feature/190-loop-engine-status-list-baseline-docs
   docs_baseline_ref: ''
   docs_baseline_at: ''
 multi_agent:
@@ -16,39 +16,28 @@ multi_agent:
 prd_source: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
 completed_stages:
 - stage: init
-  completed_at: '2026-05-27T08:56:29+00:00'
+  completed_at: '2026-06-30T02:40:48+00:00'
   artifacts: []
 - stage: refine
-  completed_at: '2026-05-27T08:56:29+00:00'
+  completed_at: '2026-06-30T02:40:48+00:00'
   artifacts:
   - spec.md
 - stage: design
-  completed_at: '2026-05-27T08:56:29+00:00'
+  completed_at: '2026-06-30T02:40:48+00:00'
   artifacts:
   - plan.md
 - stage: decompose
-  completed_at: '2026-05-27T08:56:29+00:00'
+  completed_at: '2026-06-30T02:40:48+00:00'
   artifacts:
   - tasks.md
 - stage: verify
-  completed_at: '2026-06-29T06:48:30+00:00'
+  completed_at: '2026-06-30T02:40:48+00:00'
   artifacts:
   - task-execution-log.md
   - tasks.md
-execute_progress:
-  total_batches: 6
-  completed_batches: 0
-  current_batch: 0
-  last_committed_task: ''
-  tasks_file: specs/189-loop-engine-local-adversarial-pr-review/tasks.md
-  execution_log: specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md
-  last_log_at: '2026-06-29T05:18:24+00:00'
-  last_commit_at: '2026-06-29T05:14:19+00:00'
-  last_commit_hash: ed3209f
-  halted: false
-  error: ''
+execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 189-loop-engine-local-adversarial-pr-review
-linked_plan_uri: specs/189-loop-engine-local-adversarial-pr-review/plan.md
-last_synced_at: '2026-06-29T06:48:30+00:00'
+linked_wi_id: 190-loop-engine-status-list-baseline
+linked_plan_uri: specs/190-loop-engine-status-list-baseline/plan.md
+last_synced_at: '2026-06-30T02:34:01+00:00'
