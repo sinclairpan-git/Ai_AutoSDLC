@@ -840,3 +840,60 @@
 - **已完成 git 提交**：是（Codex remediation round 7 commit 后复核）
 - **提交哈希**：待 Codex remediation round 7 commit 生成
 - **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。
+
+### Batch 2026-06-30-015 | Codex review remediation round 8
+
+#### 15.1 批次范围
+
+- 覆盖任务：PR #106 Codex review P2 feedback on stale `updated_at` list ordering
+- 覆盖阶段：post-review remediation
+- 预读范围：PR #106 latest Codex inline review comment、`list_loops` sorting logic、loop status unit tests
+- 激活规则：修复 list ordering 的实际活跃度信号，不改 ReviewRun 写入模型
+
+#### 15.2 branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：merge-pending
+- 当前批次 branch disposition 状态：merge-pending
+- 当前批次 worktree disposition 状态：active
+
+#### 15.3 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/core/loop_status.py`、`tests/unit/test_loop_status.py`、`specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 15.4 改动内容
+
+- 修复 Codex P2：`loop list` 不再只按可能陈旧的 `ReviewRun.updated_at` 排序。
+- `list_loops` 现在按 `review-run.json` artifact mtime 作为主排序键，`updated_at` 和 `loop_id` 作为稳定 tie-breaker。
+- 新增 unit test 覆盖旧 `updated_at` 但 mtime 最新的 review-run 会排在前面。
+
+#### 15.5 统一验证命令
+
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_command_names.py tests/integration/test_cli_self_update.py -q`
+  - 结果：通过，`50 passed, 1 skipped in 10.41s`。
+- `uv run ruff check src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/main.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/integration/test_cli_self_update.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+
+#### 15.6 代码审查（摘要）
+
+- 宪章/规格对齐：`loop list` 继续读取本地 artifacts，同时用文件系统 mtime 反映最近实际写入/活跃度。
+- 代码质量：排序主键与 fallback tie-breaker 分离，避免依赖服务层是否刷新 `updated_at`。
+- 测试质量：覆盖 stale `updated_at` 下的 mtime-first 行为。
+- 结论：允许同步 program truth、提交第八轮 Codex remediation 并重新请求 Codex review/checks。
+
+#### 15.7 任务/计划同步状态
+
+- `tasks.md` 同步状态：无需改变，T11-T42 仍为 `done`。
+- `plan.md` 同步状态：无需改变，修复属于 `loop list` 排序准确性补齐。
+- `task-execution-log.md` 同步状态：已追加第八轮 PR review remediation 记录。
+
+#### 15.8 当前结论
+
+- PR #106 最新 Codex P2 已修复。
+- **已完成 git 提交**：是（Codex remediation round 8 commit 后复核）
+- **提交哈希**：待 Codex remediation round 8 commit 生成
+- **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。

@@ -217,7 +217,7 @@ def list_loops(
             next_action="Use loop_type=local-pr-review.",
         )
 
-    loops: list[LoopSummary] = []
+    loop_entries: list[tuple[LoopSummary, float]] = []
     artifact_errors: list[LoopArtifactError] = []
     current_pointer_path = resolved_root / CURRENT_REVIEW_PATH
     current_review_run_path, current_pointer_error = _read_current_review_run_path(
@@ -270,18 +270,24 @@ def list_loops(
             continue
 
         is_current = _same_path(review_run_path, current_review_run_path)
-        loops.append(
-            _summary_from_review_run(
-                resolved_root,
-                review_run,
-                review_run_path,
-                current_pointer_path=current_pointer_path if is_current else None,
-                is_current=is_current,
+        summary = _summary_from_review_run(
+            resolved_root,
+            review_run,
+            review_run_path,
+            current_pointer_path=current_pointer_path if is_current else None,
+            is_current=is_current,
+        )
+        loop_entries.append(
+            (
+                summary,
+                _artifact_mtime(review_run_path),
             )
         )
 
-    loops.sort(key=lambda item: item.loop_id)
-    loops.sort(key=lambda item: item.updated_at, reverse=True)
+    loop_entries.sort(key=lambda item: item[0].loop_id)
+    loop_entries.sort(key=lambda item: item[0].updated_at, reverse=True)
+    loop_entries.sort(key=lambda item: item[1], reverse=True)
+    loops = [summary for summary, _mtime in loop_entries]
     current_loop = next((loop for loop in loops if loop.is_current), None)
     current_review = (
         current_loop.local_pr_review
@@ -440,6 +446,13 @@ def _resolve_repo_path(root: Path, path_text: str) -> Path:
     if path.is_absolute():
         return path
     return root / path
+
+
+def _artifact_mtime(path: Path) -> float:
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
 
 
 def _repo_relative_path(root: Path, path: Path) -> str:

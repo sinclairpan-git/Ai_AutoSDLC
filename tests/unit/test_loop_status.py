@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
@@ -164,6 +165,33 @@ def test_list_loops_reads_sorted_local_pr_review_runs_and_marks_current(
     non_current_artifacts = {artifact.kind for artifact in result.items[0].artifacts}
     assert "current-review-pointer" in current_artifacts
     assert "current-review-pointer" not in non_current_artifacts
+
+
+def test_list_loops_orders_by_review_run_artifact_mtime(
+    tmp_path: Path,
+) -> None:
+    older_path = _write_review_run(
+        tmp_path,
+        review_id="review-001",
+        loop_id="loop-review-001",
+        updated_at="2026-06-29T01:00:00Z",
+    )
+    newer_path = _write_review_run(
+        tmp_path,
+        review_id="review-002",
+        loop_id="loop-review-002",
+        updated_at="2026-06-30T01:00:00Z",
+    )
+    os.utime(newer_path, (100.0, 100.0))
+    os.utime(older_path, (200.0, 200.0))
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert [loop.loop_id for loop in result.items] == [
+        "loop-review-001",
+        "loop-review-002",
+    ]
 
 
 def test_list_loops_skips_malformed_review_run_and_reports_error(
