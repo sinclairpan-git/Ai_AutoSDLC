@@ -360,7 +360,25 @@ def list_loops(
             ),
         )
 
-    list_guidance = _inspect_current_loop_guidance(current_loop)
+    current_pointer_errors = [
+        error
+        for error in artifact_errors
+        if error.kind in {"current-review-pointer", "current-review-target"}
+    ]
+    if current_loop is None and current_pointer_errors:
+        pointer_blocker = (
+            "Current review pointer is malformed or references missing artifacts."
+        )
+        list_guidance = _blocked_guidance(
+            pointer_blocker,
+            evidence=[error.path for error in current_pointer_errors if error.path],
+        )
+        list_next_action = "Inspect or remove malformed current-review.json artifacts."
+        list_blocker = pointer_blocker
+    else:
+        list_guidance = _inspect_current_loop_guidance(current_loop)
+        list_next_action = "Run ai-sdlc loop status for the current loop."
+        list_blocker = ""
     return LoopListResult(
         status=LoopStatusCommandStatus.READY,
         result="Local PR review loops found.",
@@ -369,7 +387,8 @@ def list_loops(
         items=loops,
         malformed_count=len(artifact_errors),
         artifact_errors=artifact_errors,
-        next_action="Run ai-sdlc loop status for the current loop.",
+        blocker=list_blocker,
+        next_action=list_next_action,
         next_guidance=list_guidance,
     )
 
@@ -542,7 +561,11 @@ def _guidance_for_review_run(
 ) -> LoopNextActionGuidance:
     evidence = [_repo_relative_path(root, review_run_path)]
     findings_path = _artifact_path_if_present(root, review_run.findings_path)
-    resolution_path = _artifact_path_if_present(root, review_run.resolution_path)
+    resolution_path = _resolution_path_for_review_run(
+        root,
+        review_run,
+        review_run_path,
+    )
     final_report_path = _artifact_path_if_present(root, review_run.final_report_path)
     if not is_current:
         if final_report_path:
@@ -687,6 +710,19 @@ def _artifact_path_if_present(root: Path, path_text: str) -> str:
     if not path_text.strip():
         return ""
     return _repo_relative_path(root, _resolve_repo_path(root, path_text))
+
+
+def _resolution_path_for_review_run(
+    root: Path,
+    review_run: ReviewRun,
+    review_run_path: Path,
+) -> str:
+    if review_run.resolution_path.strip():
+        return _artifact_path_if_present(root, review_run.resolution_path)
+    if review_run.review_pack_path.strip():
+        review_pack_path = _resolve_repo_path(root, review_run.review_pack_path)
+        return _repo_relative_path(root, review_pack_path.with_name("resolution.yaml"))
+    return _repo_relative_path(root, review_run_path.with_name("resolution.yaml"))
 
 
 def _command_from_next_action(next_action: str) -> str:

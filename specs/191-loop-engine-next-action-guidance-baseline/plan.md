@@ -164,6 +164,7 @@ ai-sdlc loop status
 | needs_fix guidance | unit test 覆盖 fresh fix / post-fix rerun | human output assertion |
 | passed/closed guidance | unit test | final report path fixture |
 | blocked/needs_user guidance | unit test | malformed pointer fixture |
+| list current pointer repair guidance | unit test | `loop list --json` integration |
 | list item guidance | unit test 覆盖 current actionable / non-current inspect-only | `loop list --json` integration |
 | read-only boundary | before/after snapshot test | provider runner patch 未调用 |
 | docs constraints | verify constraints unit test | `uv run ai-sdlc verify constraints` |

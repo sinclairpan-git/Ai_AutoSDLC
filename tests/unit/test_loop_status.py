@@ -62,7 +62,6 @@ def test_get_loop_status_guides_post_fix_review_to_rerun(tmp_path: Path) -> None
             "Fix BLOCKER/REQUIRED findings, update resolution.yaml, then run "
             "ai-sdlc pr-review rerun."
         ),
-        resolution_path=".ai-sdlc/reviews/pr/review-001/resolution.yaml",
     )
     _write_current_pointer(tmp_path, review_run_path)
 
@@ -299,6 +298,15 @@ def test_list_loops_reports_malformed_current_pointer(
     assert len(result.artifact_errors) == 1
     assert result.artifact_errors[0].kind == "current-review-pointer"
     assert result.artifact_errors[0].path == ".ai-sdlc/reviews/pr/current-review.json"
+    assert result.blocker == (
+        "Current review pointer is malformed or references missing artifacts."
+    )
+    assert result.next_action == (
+        "Inspect or remove malformed current-review.json artifacts."
+    )
+    assert result.next_guidance.safety == "blocked"
+    assert result.next_guidance.command == "ai-sdlc pr-review start --base <branch>"
+    assert ".ai-sdlc/reviews/pr/current-review.json" in result.next_guidance.evidence
 
 
 def test_list_loops_reports_missing_current_pointer_target(
@@ -319,6 +327,10 @@ def test_list_loops_reports_missing_current_pointer_target(
     assert result.artifact_errors[0].kind == "current-review-target"
     assert result.artifact_errors[0].path == (
         ".ai-sdlc/reviews/pr/missing/review-run.json"
+    )
+    assert result.next_guidance.safety == "blocked"
+    assert ".ai-sdlc/reviews/pr/missing/review-run.json" in (
+        result.next_guidance.evidence
     )
 
 
@@ -343,6 +355,7 @@ def test_list_loops_reports_parent_segment_current_pointer(
     assert result.malformed_count == 1
     assert result.artifact_errors[0].kind == "current-review-pointer"
     assert "parent directory" in result.artifact_errors[0].error
+    assert result.next_guidance.safety == "blocked"
 
 
 def test_list_loops_blocks_malformed_current_pointer_without_history(
