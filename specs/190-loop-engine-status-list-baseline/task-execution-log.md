@@ -2,7 +2,7 @@
 
 **功能编号**：`190-loop-engine-status-list-baseline`
 **创建日期**：2026-06-29
-**状态**：Batch 4 T41 docs/constraints alignment completed，等待 final closeout
+**状态**：Batch 4 final regression completed，等待 PR review/merge closeout
 
 ## 1. 归档规则
 
@@ -363,3 +363,69 @@
 
 - T41 已完成并通过 focused verification 与全局约束验证。
 - 下一步进入 T42：最终回归、任务状态同步、close-check 和 work item close evidence。
+
+### Batch 2026-06-30-007 | T42 final regression and close evidence
+
+#### 7.1 批次范围
+
+- 覆盖任务：`T42`
+- 覆盖阶段：docs, verification, and closeout evidence
+- 预读范围：`tasks.md`、`task-execution-log.md`、T21-T41 变更文件、当前 work item guard
+- 激活规则：所有 P0/P1 任务状态与 fresh verification evidence 必须同步
+
+#### 7.2 branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：merge-pending
+- 当前批次 branch disposition 状态：merge-pending
+- 当前批次 worktree disposition 状态：active
+
+#### 7.3 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`specs/190-loop-engine-status-list-baseline/tasks.md`、`specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+- 更新 `specs/190-loop-engine-status-list-baseline/tasks.md`
+- 更新 `specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 7.4 统一验证命令
+
+- `uv run ai-sdlc workitem guard --wi specs/190-loop-engine-status-list-baseline --json`
+  - 结果：通过，`ALLOW_CODE_WITH_TASK T42`。
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_command_names.py -q`
+  - 结果：通过，`17 passed in 1.07s`。
+- `uv run pytest tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`137 passed in 10.48s`。
+- `uv run ruff check src tests`
+  - 结果：通过，`All checks passed!`。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `git diff --check`
+  - 结果：通过。
+
+#### 7.5 close-check 预检
+
+- `uv run ai-sdlc workitem close-check --wi specs/190-loop-engine-status-list-baseline`
+  - 结果：初次预检发现最新 batch 缺少 closeout 固定字段、verification profile、git markers，且 program truth snapshot stale。
+  - 处理：已在本批补齐 closeout 固定字段，并执行 `uv run ai-sdlc program truth sync --execute --yes`。
+  - 复跑结果：tasks、execution log fields、verification profile、branch lifecycle、program truth、docs consistency 均通过；仅剩 `git_closure` 因 T42 closeout 文件尚未提交而阻塞。
+
+#### 7.6 代码审查（摘要）
+
+- 宪章/规格对齐：`loop status/list` 已保持只读 artifact index，不调用模型、不启动 provider、不修复代码、不读取远端 PR diff。
+- 代码质量：core reader、CLI、人类输出、JSON 输出、command discovery 和文档约束已分层落地。
+- 测试质量：focused regression、verify constraints 单测、ruff 和全局 constraints 均已通过。
+- 结论：允许进入 program truth sync、T42 closeout commit 和最终 clean close-check。
+
+#### 7.7 任务/计划同步状态
+
+- `tasks.md` 同步状态：T11、T21、T22、T31、T32、T41、T42 均已标记为 `done`。
+- `plan.md` 同步状态：无需修改，T42 未改变实施计划边界。
+- `task-execution-log.md` 同步状态：已追加 T21-T42 每批执行证据和当前 closeout 记录。
+
+#### 7.8 当前结论
+
+- T21-T42 任务已全部标记为 `done`。
+- T42 focused regression 已通过。
+- 下一步执行全量 ruff、全局约束和 close-check；若 close-check 因本文件新增 close-check 结果记录产生漂移，将补写结果后重跑。
+- **已完成 git 提交**：是（T42 closeout commit 后复核）
+- **提交哈希**：待 T42 closeout commit 生成
+- **是否继续下一批**：否；WI-190 已进入最终 closeout。

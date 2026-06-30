@@ -168,7 +168,7 @@ Batch 4: docs, verification, and closeout evidence
 ### Task 4.2 Final regression and work item close evidence
 
 - task_id: T42
-- status: todo
+- status: done
 - goal: 完成最终回归、任务状态同步和 work item close evidence
 - priority: P0
 - depends:
