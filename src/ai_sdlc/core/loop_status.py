@@ -217,15 +217,6 @@ def list_loops(
             next_action="Use loop_type=local-pr-review.",
         )
 
-    review_root = resolved_root / AI_SDLC_DIR / "reviews" / "pr"
-    review_run_paths = sorted(review_root.glob("*/review-run.json"))
-    if not review_run_paths:
-        return LoopListResult(
-            status=LoopStatusCommandStatus.NO_CURRENT,
-            result="No local PR review loops found.",
-            next_action="Run ai-sdlc pr-review start --base <branch>.",
-        )
-
     loops: list[LoopSummary] = []
     artifact_errors: list[LoopArtifactError] = []
     current_pointer_path = resolved_root / CURRENT_REVIEW_PATH
@@ -244,6 +235,24 @@ def list_loops(
             )
         )
         current_review_run_path = None
+
+    review_root = resolved_root / AI_SDLC_DIR / "reviews" / "pr"
+    review_run_paths = sorted(review_root.glob("*/review-run.json"))
+    if not review_run_paths:
+        if artifact_errors:
+            return LoopListResult(
+                status=LoopStatusCommandStatus.BLOCKED,
+                result="No readable local PR review loops found.",
+                malformed_count=len(artifact_errors),
+                artifact_errors=artifact_errors,
+                blocker="Current review pointer is malformed or references missing artifacts.",
+                next_action="Inspect or remove malformed current-review.json artifacts.",
+            )
+        return LoopListResult(
+            status=LoopStatusCommandStatus.NO_CURRENT,
+            result="No local PR review loops found.",
+            next_action="Run ai-sdlc pr-review start --base <branch>.",
+        )
 
     for review_run_path in review_run_paths:
         try:

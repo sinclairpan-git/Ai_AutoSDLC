@@ -1866,10 +1866,10 @@ specs:
   path: specs/190-loop-engine-status-list-baseline
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-06-30T04:53:48Z'
+  generated_at: '2026-06-30T05:07:53Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: f51b902a
+  repo_revision: ab53727a
   authoring_hash: 92db24f84ec2592010f061267c9a23840b5a62c485a59b75c8d707eabf679e07
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1909,7 +1909,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: dfe6c903a955cbdd6829f65673a5d2217ec7b9a0f7b6cde6a4f858960c21ea8d
+  snapshot_hash: c6cb0ed9a9022164a4fc14b36080a811c7e079a195257eb19589d8cdb22502b5
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1928,8 +1928,8 @@ truth_snapshot:
     mapped_sources: 978
     unmapped_sources: 28
     missing_sources: 5
-    phase_signal_count: 3313
-    deferred_signal_count: 6062
+    phase_signal_count: 3316
+    deferred_signal_count: 6065
     non_goal_signal_count: 334
     layer_totals:
       blueprint: 1
@@ -10546,8 +10546,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 190-loop-engine-status-list-baseline
-      phase_signal_count: 20
-      deferred_signal_count: 28
+      phase_signal_count: 23
+      deferred_signal_count: 31
       non_goal_signal_count: 1
     - path: specs/190-loop-engine-status-list-baseline/development-summary.md
       source_type: development_summary

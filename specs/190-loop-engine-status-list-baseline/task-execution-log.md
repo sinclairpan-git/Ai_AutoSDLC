@@ -782,3 +782,61 @@
 - **已完成 git 提交**：是（Codex remediation round 6 commit 后复核）
 - **提交哈希**：待 Codex remediation round 6 commit 生成
 - **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。
+
+### Batch 2026-06-30-014 | Codex review remediation round 7
+
+#### 14.1 批次范围
+
+- 覆盖任务：PR #106 Codex review P2 feedback on current pointer errors with empty history
+- 覆盖阶段：post-review remediation
+- 预读范围：PR #106 latest Codex inline review comment、`list_loops` no-history branch、loop list tests
+- 激活规则：修复 no-history 分支隐藏 current pointer 错误，不改变无 pointer/无历史时的 `no_current` 行为
+
+#### 14.2 branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：merge-pending
+- 当前批次 branch disposition 状态：merge-pending
+- 当前批次 worktree disposition 状态：active
+
+#### 14.3 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/core/loop_status.py`、`tests/unit/test_loop_status.py`、`tests/integration/test_cli_loop.py`、`specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 14.4 改动内容
+
+- 修复 Codex P2：当没有任何 `*/review-run.json` 但 current pointer malformed 或 target missing 时，`loop list` 不再提前返回 `no_current`。
+- `list_loops` 现在先读取 current pointer 诊断；如果无历史但存在 pointer 错误，则返回 blocked，并携带 `artifact_errors[]` 与 `malformed_count`。
+- 保留无 pointer/无历史的原行为：仍返回 `no_current` 与 start review 的 next action。
+- 新增 unit tests 覆盖 malformed pointer / missing target 在空历史下的 blocked 输出，新增 CLI JSON integration test 覆盖空历史 pointer error。
+
+#### 14.5 统一验证命令
+
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_command_names.py tests/integration/test_cli_self_update.py -q`
+  - 结果：通过，`49 passed, 1 skipped in 10.03s`。
+- `uv run ruff check src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/main.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/integration/test_cli_self_update.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+
+#### 14.6 代码审查（摘要）
+
+- 宪章/规格对齐：`loop list` 不隐藏当前指针错误；无历史且无错误时仍按无当前 loop 处理。
+- 代码质量：将 current pointer 诊断前置到 no-history 判断之前，避免分支短路掩盖错误。
+- 测试质量：覆盖 no-history 下 malformed pointer、missing target 和 CLI JSON blocked 输出。
+- 结论：允许同步 program truth、提交第七轮 Codex remediation 并重新请求 Codex review/checks。
+
+#### 14.7 任务/计划同步状态
+
+- `tasks.md` 同步状态：无需改变，T11-T42 仍为 `done`。
+- `plan.md` 同步状态：无需改变，修复属于 `loop list` 只读诊断契约补齐。
+- `task-execution-log.md` 同步状态：已追加第七轮 PR review remediation 记录。
+
+#### 14.8 当前结论
+
+- PR #106 最新 Codex P2 已修复。
+- **已完成 git 提交**：是（Codex remediation round 7 commit 后复核）
+- **提交哈希**：待 Codex remediation round 7 commit 生成
+- **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。

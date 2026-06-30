@@ -182,6 +182,23 @@ def test_loop_list_json_reports_missing_current_pointer_target(
     )
 
 
+def test_loop_list_json_reports_current_pointer_error_without_runs(
+    tmp_path: Path,
+) -> None:
+    pointer_path = tmp_path / CURRENT_REVIEW_PATH
+    pointer_path.parent.mkdir(parents=True, exist_ok=True)
+    pointer_path.write_text("{not-json", encoding="utf-8")
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["loop", "list", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["status"] == "blocked"
+    assert payload["malformed_count"] == 1
+    assert payload["artifact_errors"][0]["kind"] == "current-review-pointer"
+
+
 def test_loop_status_json_reports_missing_project() -> None:
     with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=None):
         result = runner.invoke(app, ["loop", "status", "--json"])

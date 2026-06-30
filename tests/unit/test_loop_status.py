@@ -249,6 +249,37 @@ def test_list_loops_reports_parent_segment_current_pointer(
     assert "parent directory" in result.artifact_errors[0].error
 
 
+def test_list_loops_blocks_malformed_current_pointer_without_history(
+    tmp_path: Path,
+) -> None:
+    pointer_path = tmp_path / CURRENT_REVIEW_PATH
+    pointer_path.parent.mkdir(parents=True, exist_ok=True)
+    pointer_path.write_text("{not-json", encoding="utf-8")
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.BLOCKED
+    assert result.malformed_count == 1
+    assert result.artifact_errors[0].kind == "current-review-pointer"
+    assert "current-review.json" in result.artifact_errors[0].path
+
+
+def test_list_loops_blocks_missing_current_pointer_target_without_history(
+    tmp_path: Path,
+) -> None:
+    missing_path = (
+        tmp_path / ".ai-sdlc" / "reviews" / "pr" / "missing" / "review-run.json"
+    )
+    _write_current_pointer(tmp_path, missing_path)
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.BLOCKED
+    assert result.malformed_count == 1
+    assert result.artifact_errors[0].kind == "current-review-target"
+    assert "missing/review-run.json" in result.artifact_errors[0].path
+
+
 def test_list_loops_reports_no_local_pr_review_runs(tmp_path: Path) -> None:
     (tmp_path / ".ai-sdlc").mkdir()
 
