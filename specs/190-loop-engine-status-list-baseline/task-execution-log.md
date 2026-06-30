@@ -2,7 +2,7 @@
 
 **功能编号**：`190-loop-engine-status-list-baseline`
 **创建日期**：2026-06-29
-**状态**：Batch 3 CLI registration and discovery completed，等待 docs/constraints closeout
+**状态**：Batch 4 T41 docs/constraints alignment completed，等待 final closeout
 
 ## 1. 归档规则
 
@@ -301,3 +301,65 @@
 
 - T32 已完成并通过 focused verification。
 - 下一步进入 T41：更新用户文档和约束验证面，说明 `loop status/list` 的只读边界。
+
+### Batch 2026-06-30-006 | T41 docs and constraints alignment
+
+#### 6.1 批次范围
+
+- 覆盖任务：`T41`
+- 覆盖阶段：docs, verification, and closeout evidence
+- 预读范围：`README.md`、`docs/pull-request-checklist.zh.md`、`verify_constraints.py`、`test_verify_constraints.py`
+- 激活规则：用户文档和约束验证必须共同声明 `loop status/list` 的只读边界
+
+#### 6.2 branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：merge-pending
+- 当前批次 branch disposition 状态：merge-pending
+- 当前批次 worktree disposition 状态：active
+
+#### 6.3 改动范围
+
+- 更新 `README.md`
+- 更新 `docs/pull-request-checklist.zh.md`
+- 更新 `src/ai_sdlc/core/verify_constraints.py`
+- 更新 `tests/unit/test_verify_constraints.py`
+- 更新 `specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 6.4 改动内容
+
+- README 的 local PR review 章节新增 `ai-sdlc loop status` 和 `ai-sdlc loop list` 的只读查询入口。
+- README 明确 `loop status/list` 只读取本地 current pointer 与 `review-run.json`，不调用模型、不启动 provider、不生成 review artifacts、不修复代码、不读取远端 PR diff。
+- PR checklist 新增 Loop status/list 自检项，要求不得发起模型请求、不得替代本地对抗 review agent 或最终人工判断。
+- verify constraints 新增 WI-190 feature contract surfaces，覆盖 core reader、CLI 和 read-only user docs。
+- verify constraints 单测新增 WI-190 registry 命中与文档 token 覆盖断言。
+- 初次 `uv run ai-sdlc verify constraints` 发现 README 长 token 跨行导致 user docs surface 未匹配，并发现当前 WI 分支 disposition 未记录；已拆分短 token 并在本批记录 merge-pending disposition。
+
+#### 6.5 执行的命令
+
+- `uv run pytest tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`137 passed in 10.84s`。
+- `uv run ruff check src/ai_sdlc/core/verify_constraints.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `uv run ai-sdlc verify constraints`
+  - 结果：初次发现 user docs token 跨行和 branch lifecycle disposition 未记录；修正后通过，`verify constraints: no BLOCKERs.`。
+- `git diff --check`
+  - 结果：通过。
+
+#### 6.6 验证结果
+
+- README 已包含 `ai-sdlc loop status` / `ai-sdlc loop list` 和 read-only/no-model/no-provider/no-fix/no-remote-PR 边界。
+- PR checklist 已包含 Loop status/list 的只读 artifact 索引边界和不得发起模型请求要求。
+- verify constraints 的 WI-190 feature contract surfaces 能覆盖 core reader、CLI 和用户文档。
+- 当前分支 disposition 已记录为 `merge-pending`，避免把已决策的 PR 合并路径误判为未决分支漂移。
+
+#### 6.7 对齐结论
+
+- 宪章/规格对齐：T41 没有扩展运行时行为，只增强用户文档和约束验证。
+- 代码质量：新增约束复用既有 `FeatureContractSurface` 机制，没有引入独立检查分支。
+- 测试质量：`test_verify_constraints.py` 全量单测通过，并且 `uv run ai-sdlc verify constraints` 在当前 active WI 上通过。
+- 风险：`merge-pending` 是当前 PR 合并计划状态；T42 closeout 需要继续记录最终 PR/branch disposition。
+
+#### 6.8 批次结论
+
+- T41 已完成并通过 focused verification 与全局约束验证。
+- 下一步进入 T42：最终回归、任务状态同步、close-check 和 work item close evidence。

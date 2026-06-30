@@ -142,7 +142,7 @@ Batch 4: docs, verification, and closeout evidence
 ### Task 4.1 Align docs and verify constraints
 
 - task_id: T41
-- status: todo
+- status: done
 - goal: 对齐用户文档和 verify constraints，说明 loop status/list 的只读边界
 - priority: P1
 - depends:

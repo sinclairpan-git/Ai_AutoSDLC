@@ -135,6 +135,43 @@ def test_feature_contract_runtime_objects_canonicalize_evidence_sets() -> None:
     assert surface.evidence_entries == (evidence,)
 
 
+def test_190_feature_contract_surfaces_cover_loop_status_list_read_only_docs() -> None:
+    checkpoint = Checkpoint(
+        current_stage="execute",
+        feature=FeatureInfo(
+            id="190-loop-engine-status-list-baseline",
+            spec_dir="specs/190-loop-engine-status-list-baseline",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="f",
+        ),
+    )
+
+    surfaces = verify_constraints_module._feature_contract_surfaces_for_checkpoint(
+        checkpoint
+    )
+
+    assert surfaces == verify_constraints_module.FEATURE_CONTRACT_SURFACES["190"]
+    labels = {surface.label for surface in surfaces}
+    assert "loop status/list core readers" in labels
+    assert "loop status/list CLI" in labels
+    assert "loop status/list read-only user docs" in labels
+    docs_surface = next(
+        surface
+        for surface in surfaces
+        if surface.label == "loop status/list read-only user docs"
+    )
+    doc_tokens = {
+        token
+        for evidence in docs_surface.evidence_entries
+        for token in evidence.required_tokens
+    }
+    assert "ai-sdlc loop status" in doc_tokens
+    assert "ai-sdlc loop list" in doc_tokens
+    assert "不得发起模型请求" in doc_tokens
+    assert "不能替代本地对抗 review agent" in doc_tokens
+
+
 def test_verify_constraint_report_runtime_objects_canonicalize_lists() -> None:
     constraint_report = ConstraintReport(
         root=".",

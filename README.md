@@ -59,6 +59,13 @@ beginner path below from the repository root:
    ai-sdlc pr-review start --base main --provider local-agent --model current --provider-command "my-local-reviewer"
    ```
 
+4. Inspect the persisted Loop Engine state without starting a reviewer:
+
+   ```bash
+   ai-sdlc loop status
+   ai-sdlc loop list
+   ```
+
 The review agent runs from the local CLI/agent environment. The
 `--provider-command` program must write schema-valid `findings.json`; AI-SDLC
 automatically appends `--review-pack`, `--output`, `--model`,
@@ -68,6 +75,15 @@ local environment; advanced users can choose another configured model
 explicitly. CI systems should consume the generated artifacts and deterministic
 counts, not send repository code to GPT, Claude, DeepSeek, GLM, Codex, or any
 other model service from the CI network.
+
+`ai-sdlc loop status` and `ai-sdlc loop list` are read-only artifact index
+commands. They read `.ai-sdlc/reviews/pr/current-review.json` and local
+`review-run.json` files, then summarize current status, historical runs,
+unresolved counts, and artifact paths. They do not call GPT, Claude, DeepSeek,
+GLM, Codex, or any other model service; they do not start a provider, generate
+review packs, generate findings, fix code, close a review, or read remote PR
+diffs. Their JSON output is useful as local/CI status evidence, but it is not a
+replacement for the local adversarial review agent or for final human review.
 
 Online installer entrypoints:
 
