@@ -2,7 +2,7 @@
 
 **功能编号**：`190-loop-engine-status-list-baseline`
 **创建日期**：2026-06-29
-**状态**：Batch 2 read-only status/list service completed，等待 CLI registration
+**状态**：Batch 3 T31 CLI registration completed，等待 command discovery
 
 ## 1. 归档规则
 
@@ -195,3 +195,59 @@
 
 - T22 已完成并通过 focused verification。
 - 下一步进入 T31：注册 `ai-sdlc loop status/list` CLI，并提供 human/json 输出。
+
+### Batch 2026-06-30-004 | T31 loop status/list CLI
+
+#### 4.1 批次范围
+
+- 覆盖任务：`T31`
+- 覆盖阶段：ai-sdlc loop CLI registration
+- 预读范围：`main.py`、`__main__.py`、`pr_review_cmd.py`、`test_cli_pr_review.py`、`test_cli_module_invocation.py`
+- 激活规则：CLI 只读输出本地 Loop artifact truth；不得触发 adapter 写入、模型调用或 provider runner
+
+#### 4.2 改动范围
+
+- 新增 `src/ai_sdlc/cli/loop_cmd.py`
+- 更新 `src/ai_sdlc/cli/main.py`
+- 更新 `src/ai_sdlc/__main__.py`
+- 新增 `tests/integration/test_cli_loop.py`
+- 更新 `specs/190-loop-engine-status-list-baseline/tasks.md`
+- 更新 `specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 4.3 改动内容
+
+- 注册 `ai-sdlc loop status` 和 `ai-sdlc loop list`。
+- 支持 `--json` 输出，直接序列化 `LoopStatusResult` / `LoopListResult`。
+- 支持 human 输出，包含 `Result`、`Next`、blocker、loop type、loop id、review id、status、base/head、provider/model、code egress、artifact paths。
+- 将 `loop` 加入 CLI read-only bypass，避免查询命令触发 IDE adapter 写入。
+- 将 `loop` 加入 `python -m ai_sdlc --help` fallback 命令列表。
+- 集成测试覆盖 help、status JSON、status human、list JSON + malformed artifact、missing project JSON、module fallback help。
+
+#### 4.4 执行的命令
+
+- `uv run pytest tests/integration/test_cli_loop.py tests/unit/test_loop_status.py -q`
+  - 结果：通过，`16 passed in 0.91s`。
+- `uv run ruff check src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/cli/main.py src/ai_sdlc/__main__.py src/ai_sdlc/core/loop_status.py tests/integration/test_cli_loop.py tests/unit/test_loop_status.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+
+#### 4.5 验证结果
+
+- `ai-sdlc loop status --json` 能返回 current local PR review summary。
+- `ai-sdlc loop status` human 输出包含用户可读的当前 loop、review 与 artifact 信息。
+- `ai-sdlc loop list --json` 能返回历史 runs、current 标记、malformed artifact 摘要。
+- missing project 时 JSON 输出结构化 blocker，退出码为 1。
+- `python -m ai_sdlc --help` fallback 已包含 `loop`。
+
+#### 4.6 对齐结论
+
+- 宪章/规格对齐：CLI 只读取 T21/T22 core reader 结果，不调用模型、不调用 Codex 云端 review、不写 `.ai-sdlc/` artifact。
+- 代码质量：CLI human/json 输出与 `pr-review` 命令风格一致，且注册为 read-only bypass。
+- 测试质量：T31 focused integration 覆盖核心命令面；T32 还需补 command discovery 专项断言。
+- 风险：human 输出格式是首版简洁文本，后续可按用户反馈优化，但不影响 JSON 合约。
+
+#### 4.7 批次结论
+
+- T31 已完成并通过 focused verification。
+- 下一步进入 T32：更新 command discovery 测试，确认 `ai-sdlc loop status/list` 被框架自动发现。

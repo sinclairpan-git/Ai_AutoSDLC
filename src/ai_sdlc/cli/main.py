@@ -22,6 +22,7 @@ from ai_sdlc.cli.doctor_cmd import doctor_command
 from ai_sdlc.cli.enterprise_cmd import enterprise_app
 from ai_sdlc.cli.handoff_cmd import handoff_app
 from ai_sdlc.cli.host_runtime_cmd import host_runtime_app
+from ai_sdlc.cli.loop_cmd import loop_app
 from ai_sdlc.cli.pr_review_cmd import pr_review_app
 from ai_sdlc.cli.program_cmd import program_app
 from ai_sdlc.cli.provenance_cmd import provenance_app
@@ -86,6 +87,7 @@ def _global_before_command(
         "scan",
         "verify",
         "provenance",
+        "loop",
         "pr-review",
         "self-update",
     ):
@@ -117,6 +119,7 @@ app.add_typer(verify_app, name="verify")
 app.add_typer(telemetry_app, name="telemetry")
 app.add_typer(provenance_app, name="provenance")
 app.add_typer(trace_app, name="trace")
+app.add_typer(loop_app, name="loop")
 app.add_typer(pr_review_app, name="pr-review")
 app.add_typer(self_update_app, name="self-update")
 

@@ -95,7 +95,7 @@ Batch 4: docs, verification, and closeout evidence
 ### Task 3.1 Register ai-sdlc loop status/list
 
 - task_id: T31
-- status: todo
+- status: done
 - goal: 注册 ai-sdlc loop status/list CLI，并提供 human/json 输出
 - priority: P0
 - depends:
