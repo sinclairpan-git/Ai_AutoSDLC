@@ -513,7 +513,7 @@
 #### 2.52 归档后动作
 
 - **已完成 git 提交**：是
-- **提交哈希**：`9457683197d43d72ec8b22c6af9ac6618b756b16`（PR #105 close-out commit；本行由后续 hash-record remediation 提交补录）
+- **提交哈希**：`见包含本行的本批最终提交 SHA（git log -1 --format=%H）`
 - 当前批次 branch disposition 状态：PR #103 merge carrier（待 checks/review 通过后合并）
 - 当前批次 worktree disposition 状态：retained（主工作区继续承载当前仓库）
 - **是否继续下一批**：否；等待本批复验、提交、push、Codex re-review 与 PR checks 收口。
@@ -1134,7 +1134,7 @@
 #### 2.106 归档后动作
 
 - **已完成 git 提交**：是
-- **提交哈希**：`见包含本行的本批最终提交 SHA（git log -1 --format=%H）`
+- **提交哈希**：`db79b7e70f4a67ee74355281aa93620417007744`
 - 当前批次 branch disposition 状态：`codex/189-loop-pr-review-batch1` 已合并并删除远端分支；本地 scratch 分支仅保留历史。
 - 当前批次 worktree disposition 状态：`main` 已快进到 PR #104 merge commit；当前 close-out 修订将在 `codex/189-closeout-truth-sync` 分支单独提交。
 - **是否继续下一批**：否；WI-189 已完成，close-check 通过后方可进入 WI-190。
