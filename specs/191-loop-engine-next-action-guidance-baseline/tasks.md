@@ -86,7 +86,8 @@ Batch 4: docs, constraints, and closeout evidence
   - src/ai_sdlc/core/loop_status.py
   - tests/unit/test_loop_status.py
 - acceptance:
-  - needs_fix 推荐 ai-sdlc pr-review fix，requires_model=false，writes_artifacts=true，writes_code=false
+  - fresh needs_fix 推荐 ai-sdlc pr-review fix，requires_model=false，writes_artifacts=true，writes_code=false
+  - post-fix needs_fix 若 next_action 已指向 ai-sdlc pr-review rerun，必须推荐 rerun，requires_model=true
   - passed 推荐 ai-sdlc pr-review close，requires_model=false，writes_artifacts=true，writes_code=false
   - needs_review 或需要复审时推荐 ai-sdlc pr-review rerun，并标明后续命令可能调用本地独立 review agent
   - blocked/needs_user 优先展示 blocker 和人工处理动作，不建议 close

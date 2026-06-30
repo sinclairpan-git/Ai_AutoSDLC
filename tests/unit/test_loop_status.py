@@ -55,6 +55,33 @@ def test_get_loop_status_reads_current_local_pr_review_summary(tmp_path: Path) -
     assert ".ai-sdlc/reviews/pr/review-001/review-run.json" in artifact_paths
 
 
+def test_get_loop_status_guides_post_fix_review_to_rerun(tmp_path: Path) -> None:
+    review_run_path = _write_review_run(
+        tmp_path,
+        next_action=(
+            "Fix BLOCKER/REQUIRED findings, update resolution.yaml, then run "
+            "ai-sdlc pr-review rerun."
+        ),
+        resolution_path=".ai-sdlc/reviews/pr/review-001/resolution.yaml",
+    )
+    _write_current_pointer(tmp_path, review_run_path)
+
+    result = get_loop_status(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.current_loop is not None
+    assert result.current_loop.status == "needs_fix"
+    assert result.next_guidance.command == "ai-sdlc pr-review rerun"
+    assert result.next_guidance.requires_model is True
+    assert result.next_guidance.writes_artifacts is True
+    assert result.next_guidance.writes_code is False
+    assert result.next_guidance.safety == "may_call_local_review_agent"
+    assert ".ai-sdlc/reviews/pr/review-001/resolution.yaml" in (
+        result.next_guidance.evidence
+    )
+    assert result.current_loop.next_guidance.command == "ai-sdlc pr-review rerun"
+
+
 def test_get_loop_status_reports_no_current_loop(tmp_path: Path) -> None:
     (tmp_path / ".ai-sdlc").mkdir()
 
@@ -380,6 +407,7 @@ def _write_review_run(
     verdict: ReviewVerdict | None = ReviewVerdict.CHANGES_REQUIRED,
     unresolved_blockers: int = 1,
     next_action: str = "Run ai-sdlc pr-review fix.",
+    resolution_path: str = "",
 ) -> Path:
     store = LoopArtifactStore(root)
     review_dir = store.create_review_run_dir(review_id)
@@ -387,6 +415,8 @@ def _write_review_run(
     findings_path = review_dir / "findings.json"
     review_pack_path.write_text("{}\n", encoding="utf-8")
     findings_path.write_text("{}\n", encoding="utf-8")
+    if resolution_path:
+        (root / resolution_path).write_text("{}\n", encoding="utf-8")
     review_run = ReviewRun(
         review_id=review_id,
         loop_id=loop_id,
@@ -403,6 +433,7 @@ def _write_review_run(
         head_commit="b" * 40,
         review_pack_path=f".ai-sdlc/reviews/pr/{review_id}/review-pack.json",
         findings_path=f".ai-sdlc/reviews/pr/{review_id}/findings.json",
+        resolution_path=resolution_path,
         verdict=verdict,
         unresolved_blockers=unresolved_blockers,
         next_action=next_action,

@@ -226,3 +226,65 @@
 - **已完成 git 提交**：是（Codex remediation commit 后复核）
 - **提交哈希**：待 Codex remediation commit 生成
 - **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。
+
+## Batch 2026-06-30-006 | Codex post-fix rerun guidance remediation
+
+### 1. 批次范围
+
+- 覆盖任务：PR #107 第二轮 Codex review P2 feedback on post-fix `needs_fix` guidance。
+- 覆盖阶段：post-review remediation。
+- 预读范围：PR #107 inline comment `discussion_r3497055655`、`fix_pr_review` 写入的 persisted `next_action`、`loop_status` guidance 推导逻辑。
+- 激活规则：当前 review 已生成 fix plan / resolution scaffold 后，即使 `ReviewRun.status` 仍为 `needs_fix`，也必须尊重持久化 `next_action` 并推荐 `ai-sdlc pr-review rerun`。
+
+### 2. branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：`merge-pending`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`active`
+
+### 3. 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/core/loop_status.py`、`tests/unit/test_loop_status.py`、`tests/integration/test_cli_loop.py`、`specs/191-loop-engine-next-action-guidance-baseline/spec.md`、`specs/191-loop-engine-next-action-guidance-baseline/plan.md`、`specs/191-loop-engine-next-action-guidance-baseline/tasks.md`、`specs/191-loop-engine-next-action-guidance-baseline/task-execution-log.md`
+
+### 4. 改动内容
+
+- 在 current `needs_fix` guidance 中优先识别 persisted `next_action` 是否已指向 `ai-sdlc pr-review rerun`。
+- 对 post-fix `needs_fix` 输出 `ai-sdlc pr-review rerun`，并标记后续命令 `requires_model=true`、`safety=may_call_local_review_agent`。
+- 保留 fresh `needs_fix` 的 `ai-sdlc pr-review fix` guidance。
+- 更新 unit/integration tests，覆盖 post-fix `needs_fix` 的 JSON guidance。
+- 更新 formal docs，明确 `needs_fix` guidance 分为 fresh fix 与 post-fix rerun 两态。
+
+### 5. 统一验证命令
+
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py -q`
+  - 结果：通过，`33 passed in 1.10s`。
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`171 passed in 10.29s`。
+- `uv run ruff check src tests`
+  - 结果：通过，`All checks passed!`。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `git diff --check`
+  - 结果：通过。
+
+### 6. 代码审查（摘要）
+
+- 宪章/规格对齐：修复后 guidance 尊重 local PR review 的持久化状态，不再把 post-fix 状态误导回 fix plan 生成步骤。
+- 代码质量：在 core guidance 层识别 `next_action` 中的 rerun 命令，避免 CLI 层解析业务状态。
+- 测试质量：unit 覆盖 core guidance；integration 覆盖 CLI JSON 输出和 evidence。
+- 结论：第二轮 Codex P2 已修复，可同步 truth、提交 remediation commit 并重新请求 Codex review。
+
+### 7. 任务/计划同步状态
+
+- `tasks.md` 同步状态：已补充 post-fix `needs_fix` rerun acceptance。
+- `plan.md` 同步状态：已补充 fresh fix / post-fix rerun 验证策略。
+- `spec.md` 同步状态：已补充 FR/SC 与用户故事验收，防止后续实现回退。
+- `task-execution-log.md` 同步状态：已追加本轮 Codex remediation 记录。
+
+### 8. 当前结论
+
+- PR #107 第二轮 Codex P2 已修复。
+- **已完成 git 提交**：是（Codex remediation commit 后复核）
+- **提交哈希**：待 Codex remediation commit 生成
+- **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。

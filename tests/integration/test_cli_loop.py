@@ -56,6 +56,31 @@ def test_loop_status_json_reads_current_review(tmp_path: Path) -> None:
     )
 
 
+def test_loop_status_json_guides_post_fix_review_to_rerun(tmp_path: Path) -> None:
+    review_run_path = _write_review_run(
+        tmp_path,
+        next_action=(
+            "Fix BLOCKER/REQUIRED findings, update resolution.yaml, then run "
+            "ai-sdlc pr-review rerun."
+        ),
+        resolution_path=".ai-sdlc/reviews/pr/review-001/resolution.yaml",
+    )
+    _write_current_pointer(tmp_path, review_run_path)
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["loop", "status", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["current_loop"]["status"] == "needs_fix"
+    assert payload["next_guidance"]["command"] == "ai-sdlc pr-review rerun"
+    assert payload["next_guidance"]["requires_model"] is True
+    assert payload["next_guidance"]["safety"] == "may_call_local_review_agent"
+    assert ".ai-sdlc/reviews/pr/review-001/resolution.yaml" in (
+        payload["next_guidance"]["evidence"]
+    )
+
+
 def test_loop_status_human_includes_review_and_artifacts(tmp_path: Path) -> None:
     review_run_path = _write_review_run(tmp_path)
     _write_current_pointer(tmp_path, review_run_path)
@@ -286,6 +311,8 @@ def _write_review_run(
     review_id: str = "review-001",
     loop_id: str = "loop-review-001",
     updated_at: str = "2026-06-30T00:00:00Z",
+    next_action: str = "Run ai-sdlc pr-review fix.",
+    resolution_path: str = "",
 ) -> Path:
     store = LoopArtifactStore(root)
     review_dir = store.create_review_run_dir(review_id)
@@ -293,6 +320,8 @@ def _write_review_run(
     findings_path = review_dir / "findings.json"
     review_pack_path.write_text("{}\n", encoding="utf-8")
     findings_path.write_text("{}\n", encoding="utf-8")
+    if resolution_path:
+        (root / resolution_path).write_text("{}\n", encoding="utf-8")
     review_run = ReviewRun(
         review_id=review_id,
         loop_id=loop_id,
@@ -309,9 +338,10 @@ def _write_review_run(
         head_commit="b" * 40,
         review_pack_path=f".ai-sdlc/reviews/pr/{review_id}/review-pack.json",
         findings_path=f".ai-sdlc/reviews/pr/{review_id}/findings.json",
+        resolution_path=resolution_path,
         verdict=ReviewVerdict.CHANGES_REQUIRED,
         unresolved_blockers=1,
-        next_action="Run ai-sdlc pr-review fix.",
+        next_action=next_action,
         updated_at=updated_at,
     )
     return store.write_json_artifact(review_dir / "review-run.json", review_run)

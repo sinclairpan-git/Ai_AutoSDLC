@@ -542,6 +542,7 @@ def _guidance_for_review_run(
 ) -> LoopNextActionGuidance:
     evidence = [_repo_relative_path(root, review_run_path)]
     findings_path = _artifact_path_if_present(root, review_run.findings_path)
+    resolution_path = _artifact_path_if_present(root, review_run.resolution_path)
     final_report_path = _artifact_path_if_present(root, review_run.final_report_path)
     if not is_current:
         if final_report_path:
@@ -564,6 +565,25 @@ def _guidance_for_review_run(
     if review_run.status == LoopStatus.NEEDS_FIX:
         if findings_path:
             evidence.append(findings_path)
+        if _next_action_mentions_command(
+            review_run.next_action,
+            "ai-sdlc pr-review rerun",
+        ):
+            if resolution_path:
+                evidence.append(resolution_path)
+            return LoopNextActionGuidance(
+                command="ai-sdlc pr-review rerun",
+                reason=(
+                    "The fix plan and resolution scaffold have been prepared; "
+                    "update resolution.yaml if needed, then rerun the local "
+                    "independent review agent."
+                ),
+                requires_model=True,
+                writes_artifacts=True,
+                writes_code=False,
+                safety=LoopNextActionSafety.MAY_CALL_LOCAL_REVIEW_AGENT,
+                evidence=evidence,
+            )
         return LoopNextActionGuidance(
             command="ai-sdlc pr-review fix",
             reason=(
@@ -680,6 +700,10 @@ def _command_from_next_action(next_action: str) -> str:
     if text.startswith("ai-sdlc "):
         return text
     return ""
+
+
+def _next_action_mentions_command(next_action: str, command: str) -> bool:
+    return command.lower() in next_action.lower()
 
 
 def _read_current_review_run_path(

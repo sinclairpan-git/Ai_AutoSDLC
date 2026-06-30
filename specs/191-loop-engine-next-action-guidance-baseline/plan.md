@@ -93,7 +93,7 @@ next_guidance
 
 **目标**：新增 guidance 数据模型和推导函数。  
 **产物**：`src/ai_sdlc/core/loop_status.py`、`tests/unit/test_loop_status.py`。  
-**验证方式**：unit tests 覆盖 no current、needs_fix、passed、blocked/needs_user、closed、list item。  
+**验证方式**：unit tests 覆盖 no current、fresh needs_fix、post-fix needs_fix、passed、blocked/needs_user、closed、list item。
 **回退方式**：移除 additive `next_guidance` 字段和新增测试。
 
 ### Phase 2：CLI human/json 输出
@@ -161,7 +161,7 @@ ai-sdlc loop status
 | 关键路径 | 主验证方式 | 次验证方式 |
 |----------|------------|------------|
 | no current guidance | unit test | CLI JSON integration |
-| needs_fix guidance | unit test | human output assertion |
+| needs_fix guidance | unit test 覆盖 fresh fix / post-fix rerun | human output assertion |
 | passed/closed guidance | unit test | final report path fixture |
 | blocked/needs_user guidance | unit test | malformed pointer fixture |
 | list item guidance | unit test 覆盖 current actionable / non-current inspect-only | `loop list --json` integration |
