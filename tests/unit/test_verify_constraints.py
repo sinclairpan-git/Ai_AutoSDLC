@@ -172,6 +172,43 @@ def test_190_feature_contract_surfaces_cover_loop_status_list_read_only_docs() -
     assert "不能替代本地对抗 review agent" in doc_tokens
 
 
+def test_191_feature_contract_surfaces_cover_loop_next_guidance_docs() -> None:
+    checkpoint = Checkpoint(
+        current_stage="execute",
+        feature=FeatureInfo(
+            id="191-loop-engine-next-action-guidance-baseline",
+            spec_dir="specs/191-loop-engine-next-action-guidance-baseline",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="f",
+        ),
+    )
+
+    surfaces = verify_constraints_module._feature_contract_surfaces_for_checkpoint(
+        checkpoint
+    )
+
+    assert surfaces == verify_constraints_module.FEATURE_CONTRACT_SURFACES["191"]
+    labels = {surface.label for surface in surfaces}
+    assert "loop next guidance core readers" in labels
+    assert "loop next guidance CLI" in labels
+    assert "loop next guidance read-only user docs" in labels
+    docs_surface = next(
+        surface
+        for surface in surfaces
+        if surface.label == "loop next guidance read-only user docs"
+    )
+    doc_tokens = {
+        token
+        for evidence in docs_surface.evidence_entries
+        for token in evidence.required_tokens
+    }
+    assert "next guidance" in doc_tokens
+    assert "does not execute" in doc_tokens
+    assert "Next Action Guidance" in doc_tokens
+    assert "只读推导" in doc_tokens
+
+
 def test_verify_constraint_report_runtime_objects_canonicalize_lists() -> None:
     constraint_report = ConstraintReport(
         root=".",

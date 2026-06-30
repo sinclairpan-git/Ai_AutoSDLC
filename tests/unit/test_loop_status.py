@@ -37,6 +37,12 @@ def test_get_loop_status_reads_current_local_pr_review_summary(tmp_path: Path) -
     assert result.current_loop.status == "needs_fix"
     assert result.current_loop.next_action == "Run ai-sdlc pr-review fix."
     assert result.next_action == "Run ai-sdlc pr-review fix."
+    assert result.next_guidance.command == "ai-sdlc pr-review fix"
+    assert result.next_guidance.requires_model is False
+    assert result.next_guidance.writes_artifacts is True
+    assert result.next_guidance.writes_code is False
+    assert result.current_loop.next_guidance.command == "ai-sdlc pr-review fix"
+    assert result.current_loop.next_guidance.safety == "writes_review_artifacts"
     assert result.current_loop.local_pr_review is not None
     local = result.current_loop.local_pr_review
     assert local.review_id == "review-001"
@@ -49,6 +55,32 @@ def test_get_loop_status_reads_current_local_pr_review_summary(tmp_path: Path) -
     assert ".ai-sdlc/reviews/pr/review-001/review-run.json" in artifact_paths
 
 
+def test_get_loop_status_guides_post_fix_review_to_rerun(tmp_path: Path) -> None:
+    review_run_path = _write_review_run(
+        tmp_path,
+        next_action=(
+            "Fix BLOCKER/REQUIRED findings, update resolution.yaml, then run "
+            "ai-sdlc pr-review rerun."
+        ),
+    )
+    _write_current_pointer(tmp_path, review_run_path)
+
+    result = get_loop_status(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.current_loop is not None
+    assert result.current_loop.status == "needs_fix"
+    assert result.next_guidance.command == "ai-sdlc pr-review rerun"
+    assert result.next_guidance.requires_model is True
+    assert result.next_guidance.writes_artifacts is True
+    assert result.next_guidance.writes_code is False
+    assert result.next_guidance.safety == "may_call_local_review_agent"
+    assert ".ai-sdlc/reviews/pr/review-001/resolution.yaml" in (
+        result.next_guidance.evidence
+    )
+    assert result.current_loop.next_guidance.command == "ai-sdlc pr-review rerun"
+
+
 def test_get_loop_status_reports_no_current_loop(tmp_path: Path) -> None:
     (tmp_path / ".ai-sdlc").mkdir()
 
@@ -57,6 +89,10 @@ def test_get_loop_status_reports_no_current_loop(tmp_path: Path) -> None:
     assert result.status == LoopStatusCommandStatus.NO_CURRENT
     assert result.current_loop is None
     assert result.next_action == "Run ai-sdlc pr-review start --base <branch>."
+    assert result.next_guidance.command == "ai-sdlc pr-review doctor --base <branch>"
+    assert result.next_guidance.requires_model is False
+    assert result.next_guidance.writes_artifacts is False
+    assert "ai-sdlc pr-review start --base <branch>" in result.next_guidance.alternatives
 
 
 def test_get_loop_status_blocks_uninitialized_project(tmp_path: Path) -> None:
@@ -65,6 +101,28 @@ def test_get_loop_status_blocks_uninitialized_project(tmp_path: Path) -> None:
     assert result.status == LoopStatusCommandStatus.BLOCKED
     assert ".ai-sdlc is missing" in result.blocker
     assert result.next_action == "Run ai-sdlc init ."
+    assert result.next_guidance.command == "ai-sdlc init ."
+    assert result.next_guidance.writes_artifacts is True
+
+
+def test_get_loop_status_guides_passed_review_to_close(tmp_path: Path) -> None:
+    review_run_path = _write_review_run(
+        tmp_path,
+        status=LoopStatus.PASSED,
+        verdict=ReviewVerdict.CLEAN,
+        unresolved_blockers=0,
+        next_action="Run ai-sdlc pr-review close.",
+    )
+    _write_current_pointer(tmp_path, review_run_path)
+
+    result = get_loop_status(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.next_guidance.command == "ai-sdlc pr-review close"
+    assert result.next_guidance.requires_model is False
+    assert result.next_guidance.writes_artifacts is True
+    assert result.next_guidance.writes_code is False
+    assert result.next_guidance.safety == "writes_review_artifacts"
 
 
 def test_get_loop_status_blocks_malformed_pointer_without_traceback(
@@ -79,6 +137,8 @@ def test_get_loop_status_blocks_malformed_pointer_without_traceback(
     assert result.status == LoopStatusCommandStatus.BLOCKED
     assert "pointer is malformed" in result.blocker
     assert result.next_action == "Rerun ai-sdlc pr-review start."
+    assert result.next_guidance.safety == "blocked"
+    assert result.next_guidance.requires_model is True
 
 
 def test_get_loop_status_blocks_absolute_pointer_path(
@@ -155,16 +215,45 @@ def test_list_loops_reads_sorted_local_pr_review_runs_and_marks_current(
     assert result.malformed_count == 0
     assert result.current_loop_id == "loop-review-001"
     assert result.current_review_id == "review-001"
+    assert result.next_guidance.command == "ai-sdlc loop status"
     assert [loop.loop_id for loop in result.items] == [
         "loop-review-002",
         "loop-review-001",
     ]
+    assert [loop.next_guidance.command for loop in result.items] == [
+        "ai-sdlc loop list --json",
+        "ai-sdlc pr-review fix",
+    ]
+    assert result.items[0].next_guidance.writes_artifacts is False
+    assert "non-current review run" in result.items[0].next_guidance.reason
     assert result.items[0].is_current is False
     assert result.items[1].is_current is True
     current_artifacts = {artifact.kind for artifact in result.items[1].artifacts}
     non_current_artifacts = {artifact.kind for artifact in result.items[0].artifacts}
     assert "current-review-pointer" in current_artifacts
     assert "current-review-pointer" not in non_current_artifacts
+
+
+def test_list_loops_guides_no_current_pointer_with_history_to_doctor(
+    tmp_path: Path,
+) -> None:
+    _write_review_run(tmp_path)
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.current_loop_id == ""
+    assert result.blocker == ""
+    assert result.next_action == "Run ai-sdlc pr-review start --base <branch>."
+    assert result.next_guidance.command == "ai-sdlc pr-review doctor --base <branch>"
+    assert result.next_guidance.requires_model is False
+    assert result.next_guidance.writes_artifacts is False
+    assert "ai-sdlc pr-review start --base <branch>" in (
+        result.next_guidance.alternatives
+    )
+    assert [loop.next_guidance.command for loop in result.items] == [
+        "ai-sdlc loop list --json"
+    ]
 
 
 def test_list_loops_orders_by_review_run_artifact_mtime(
@@ -231,6 +320,15 @@ def test_list_loops_reports_malformed_current_pointer(
     assert len(result.artifact_errors) == 1
     assert result.artifact_errors[0].kind == "current-review-pointer"
     assert result.artifact_errors[0].path == ".ai-sdlc/reviews/pr/current-review.json"
+    assert result.blocker == (
+        "Current review pointer is malformed or references missing artifacts."
+    )
+    assert result.next_action == (
+        "Inspect or remove malformed current-review.json artifacts."
+    )
+    assert result.next_guidance.safety == "blocked"
+    assert result.next_guidance.command == "ai-sdlc pr-review start --base <branch>"
+    assert ".ai-sdlc/reviews/pr/current-review.json" in result.next_guidance.evidence
 
 
 def test_list_loops_reports_missing_current_pointer_target(
@@ -251,6 +349,36 @@ def test_list_loops_reports_missing_current_pointer_target(
     assert result.artifact_errors[0].kind == "current-review-target"
     assert result.artifact_errors[0].path == (
         ".ai-sdlc/reviews/pr/missing/review-run.json"
+    )
+    assert result.next_guidance.safety == "blocked"
+    assert ".ai-sdlc/reviews/pr/missing/review-run.json" in (
+        result.next_guidance.evidence
+    )
+
+
+def test_list_loops_reports_malformed_current_review_run_as_blocked_guidance(
+    tmp_path: Path,
+) -> None:
+    _write_review_run(tmp_path)
+    bad_dir = LoopArtifactStore(tmp_path).review_run_dir("review-bad-current")
+    bad_dir.mkdir(parents=True)
+    bad_path = bad_dir / "review-run.json"
+    bad_path.write_text("{not-json", encoding="utf-8")
+    _write_current_pointer(tmp_path, bad_path)
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert [loop.loop_id for loop in result.items] == ["loop-review-001"]
+    assert result.current_loop_id == ""
+    assert result.malformed_count == 1
+    assert result.artifact_errors[0].kind == "review-run"
+    assert result.artifact_errors[0].path == (
+        ".ai-sdlc/reviews/pr/review-bad-current/review-run.json"
+    )
+    assert result.next_guidance.safety == "blocked"
+    assert ".ai-sdlc/reviews/pr/review-bad-current/review-run.json" in (
+        result.next_guidance.evidence
     )
 
 
@@ -275,6 +403,7 @@ def test_list_loops_reports_parent_segment_current_pointer(
     assert result.malformed_count == 1
     assert result.artifact_errors[0].kind == "current-review-pointer"
     assert "parent directory" in result.artifact_errors[0].error
+    assert result.next_guidance.safety == "blocked"
 
 
 def test_list_loops_blocks_malformed_current_pointer_without_history(
@@ -316,6 +445,7 @@ def test_list_loops_reports_no_local_pr_review_runs(tmp_path: Path) -> None:
     assert result.status == LoopStatusCommandStatus.NO_CURRENT
     assert result.items == []
     assert result.next_action == "Run ai-sdlc pr-review start --base <branch>."
+    assert result.next_guidance.command == "ai-sdlc pr-review doctor --base <branch>"
 
 
 def test_list_loops_does_not_write_artifacts(tmp_path: Path) -> None:
@@ -334,6 +464,11 @@ def _write_review_run(
     review_id: str = "review-001",
     loop_id: str = "loop-review-001",
     updated_at: str = "2026-06-30T00:00:00Z",
+    status: LoopStatus = LoopStatus.NEEDS_FIX,
+    verdict: ReviewVerdict | None = ReviewVerdict.CHANGES_REQUIRED,
+    unresolved_blockers: int = 1,
+    next_action: str = "Run ai-sdlc pr-review fix.",
+    resolution_path: str = "",
 ) -> Path:
     store = LoopArtifactStore(root)
     review_dir = store.create_review_run_dir(review_id)
@@ -341,10 +476,12 @@ def _write_review_run(
     findings_path = review_dir / "findings.json"
     review_pack_path.write_text("{}\n", encoding="utf-8")
     findings_path.write_text("{}\n", encoding="utf-8")
+    if resolution_path:
+        (root / resolution_path).write_text("{}\n", encoding="utf-8")
     review_run = ReviewRun(
         review_id=review_id,
         loop_id=loop_id,
-        status=LoopStatus.NEEDS_FIX,
+        status=status,
         provider_id="mock-reviewer",
         provider_mode=ProviderMode.MOCK,
         model_selector="fixture",
@@ -357,9 +494,10 @@ def _write_review_run(
         head_commit="b" * 40,
         review_pack_path=f".ai-sdlc/reviews/pr/{review_id}/review-pack.json",
         findings_path=f".ai-sdlc/reviews/pr/{review_id}/findings.json",
-        verdict=ReviewVerdict.CHANGES_REQUIRED,
-        unresolved_blockers=1,
-        next_action="Run ai-sdlc pr-review fix.",
+        resolution_path=resolution_path,
+        verdict=verdict,
+        unresolved_blockers=unresolved_blockers,
+        next_action=next_action,
         updated_at=updated_at,
     )
     return store.write_json_artifact(review_dir / "review-run.json", review_run)
