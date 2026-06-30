@@ -1,34 +1,35 @@
 # Continuity Handoff
 
-- Updated: 2026-06-29T20:30:02+00:00
-- Reason: After addressing Codex P2 porcelain path parsing mutation guard
-- Goal: Ship work item 189 local independent adversarial PR review loop through PR #104
-- State: Addressed latest Codex P2 feedback: provider worktree mutation snapshots now use git status --porcelain=v1 -z and parse NUL-terminated entries, preserving paths with spaces/special characters before hashing.
+- Updated: 2026-06-30T19:08:14+00:00
+- Reason: after twenty-first-round Codex review fix and validation
+- Goal: Complete WI-189 Loop Engineering local adversarial PR review delivery and merge PR #108
+- State: Codex review on ece257e0 reported P2 patch filter could emit mixed included/omitted blocks. _filter_patch_diff now only emits patch blocks when all current_paths are included, dropping mixed allowlisted/omitted blocks. Pack pytest passed with 24 tests; pack ruff passed; pack mypy passed; focused PR review suite passed with 392 tests; truth sync wrote hash c5e99272087a2ada603e32e0b6d4064d76affd911f9a6a8cc1eaf7a2b000b51b; verify constraints passed.
 - Stage: execute
 - Work Item: 189-loop-engine-local-adversarial-pr-review
-- Branch: codex/189-loop-pr-review-batch1
+- Branch: codex/189-loop-engine-complete-pr-review
 
 ## Changed Files
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/187-agentops-self-iteration-monitoring/codex-handoff.md
-- M src/ai_sdlc/core/pr_review_provider.py
-- M tests/unit/test_pr_review_provider.py
+- M program-manifest.yaml
+- M specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md
+- M src/ai_sdlc/core/pr_review_pack.py
+- M tests/unit/test_pr_review_pack.py
 
 ## Key Decisions
-- Provider mutation guard must use machine-readable NUL porcelain output rather than quoted text porcelain paths.
+- Patch source filtered diffs must require all paths in a block to be allowlisted before emitting the block.
 
 ## Commands / Tests
-- uv run pytest targeted provider mutation tests -q => 4 passed
-- uv run pytest provider/pr-review related subset -q => 202 passed
-- uv run ruff check src/ai_sdlc/core/pr_review_provider.py tests/unit/test_pr_review_provider.py => passed
-- uv run ai-sdlc verify constraints => no BLOCKERs
-- git diff --check => passed
+- uv run pytest tests/unit/test_pr_review_pack.py -q => 24 passed
+- uv run ruff check src/ai_sdlc/core/pr_review_pack.py tests/unit/test_pr_review_pack.py => PASS
+- uv run mypy src/ai_sdlc/core/pr_review_pack.py => PASS
+- uv run pytest focused PR review suite => 392 passed
+- uv run ai-sdlc program truth sync --execute --yes => hash c5e99272087a2ada603e32e0b6d4064d76affd911f9a6a8cc1eaf7a2b000b51b
+- uv run ai-sdlc verify constraints => PASS
 
 ## Blockers / Risks
-- Unrelated dirty files remain .ai-sdlc/state/resume-pack.yaml and work item 187 handoff; do not stage them.
+- Need amend commit, rerun close-check, force-push PR #108, request Codex review again, then monitor checks/review until merge.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit and push porcelain parsing fix, re-trigger Codex review, monitor CI/review, then mark PR ready and merge when gates pass.
+- Stage twenty-first-round fix and docs, amend, run close-check, force-push, request @codex review, monitor CI and Codex review.

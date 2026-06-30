@@ -15,6 +15,7 @@ from pydantic import BaseModel, ConfigDict
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
 from ai_sdlc.core.loop_models import LoopStatus, SchemaValidationStatus
 from ai_sdlc.core.pr_review_models import (
+    DiffSourceKind,
     FindingSeverity,
     ModelResolutionSource,
     ProviderIsolationStatus,
@@ -117,6 +118,16 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
                 "current worktree HEAD."
             ),
         )
+    source_blocker = _reviewed_diff_source_launch_blocker(root, review_pack)
+    if source_blocker:
+        return ProviderRunResult(
+            status=ProviderRunStatus.BLOCKED,
+            blocker=source_blocker,
+            next_action=(
+                "Restore the reviewed patch file or regenerate the review pack "
+                "from the current diff source."
+            ),
+        )
     store = LoopArtifactStore(root)
     review_dir = store.create_review_run_dir(review_pack.review_id)
     findings_path = review_dir / "findings.json"
@@ -133,6 +144,8 @@ def run_provider_command(options: ProviderCommandOptions) -> ProviderRunResult:
                 *_provider_command_entry_paths(root, argv),
             }
         ),
+        _reviewed_dirty_paths_for_launch(root, review_pack),
+        DiffSourceKind(review_pack.diff_source.source_kind),
     )
     if dirty_blocker:
         return ProviderRunResult(
@@ -469,6 +482,75 @@ def _current_worktree_head(root: Path) -> str:
     return result.stdout.strip()
 
 
+def _reviewed_diff_source_launch_blocker(root: Path, review_pack: ReviewPack) -> str:
+    source_kind = DiffSourceKind(review_pack.diff_source.source_kind)
+    if source_kind in {DiffSourceKind.LOCAL_STAGED, DiffSourceKind.LOCAL_UNSTAGED}:
+        return _reviewed_worktree_diff_launch_blocker(root, source_kind, review_pack)
+    if source_kind != DiffSourceKind.PATCH:
+        return ""
+    patch_file = review_pack.diff_source.patch_file.strip()
+    expected_hash = review_pack.diff_source.patch_hash.strip()
+    if not patch_file:
+        return "Reviewed patch diff source is missing patch_file; regenerate review pack."
+    if not expected_hash:
+        return "Reviewed patch diff source hash is missing; regenerate review pack."
+    patch_path = _resolve_patch_source_path(root, patch_file)
+    if patch_path is None or not patch_path.is_file():
+        return f"Reviewed patch file is not accessible: {patch_file}"
+    try:
+        actual_hash = hashlib.sha256(patch_path.read_bytes()).hexdigest()
+    except OSError as exc:
+        return f"Reviewed patch file is not readable: {patch_file}: {exc}"
+    if actual_hash != expected_hash:
+        return (
+            "Current patch file hash does not match reviewed diff source hash: "
+            f"{actual_hash} != {expected_hash}."
+        )
+    return ""
+
+
+def _reviewed_worktree_diff_launch_blocker(
+    root: Path,
+    source_kind: DiffSourceKind,
+    review_pack: ReviewPack,
+) -> str:
+    expected_hash = review_pack.diff_source.patch_hash.strip()
+    if not expected_hash:
+        return (
+            "Reviewed worktree diff source hash is missing; regenerate review pack."
+        )
+    diff_args = (
+        ["git", "diff", "--cached"]
+        if source_kind == DiffSourceKind.LOCAL_STAGED
+        else ["git", "diff"]
+    )
+    try:
+        result = subprocess.run(
+            diff_args,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            check=False,
+            timeout=30,
+        )
+    except FileNotFoundError:
+        return "git is unavailable; cannot verify reviewed worktree diff source."
+    except subprocess.TimeoutExpired:
+        return "git diff timed out while verifying reviewed worktree diff source."
+    if result.returncode != 0:
+        detail = result.stderr.strip() or f"exit code {result.returncode}"
+        return f"git diff failed while verifying reviewed worktree diff source: {detail}"
+    actual_hash = hashlib.sha256(result.stdout.encode("utf-8")).hexdigest()
+    if actual_hash != expected_hash:
+        return (
+            "Current worktree diff hash does not match reviewed diff source hash: "
+            f"{actual_hash} != {expected_hash}."
+        )
+    return ""
+
+
 def _remove_previous_provider_outputs(*paths: Path) -> None:
     for path in paths:
         try:
@@ -480,8 +562,15 @@ def _remove_previous_provider_outputs(*paths: Path) -> None:
 def _preexisting_dirty_worktree_blocker(
     root: Path,
     allowed_artifact_roots: frozenset[Path],
+    allowed_dirty_paths: frozenset[str] = frozenset(),
+    allowed_dirty_source_kind: DiffSourceKind | None = None,
 ) -> str:
-    dirty_paths = _dirty_worktree_paths(root, allowed_artifact_roots)
+    dirty_paths = _dirty_worktree_paths(
+        root,
+        allowed_artifact_roots,
+        allowed_dirty_paths,
+        allowed_dirty_source_kind,
+    )
     if not dirty_paths:
         return ""
     sample = ", ".join(dirty_paths[:5])
@@ -494,6 +583,8 @@ def _preexisting_dirty_worktree_blocker(
 def _dirty_worktree_paths(
     root: Path,
     allowed_artifact_roots: frozenset[Path],
+    allowed_dirty_paths: frozenset[str] = frozenset(),
+    allowed_dirty_source_kind: DiffSourceKind | None = None,
 ) -> list[str]:
     try:
         result = subprocess.run(
@@ -512,16 +603,87 @@ def _dirty_worktree_paths(
         return []
 
     dirty: list[str] = []
-    for _status_code, rel_path in _iter_porcelain_entries(result.stdout):
+    for status_code, rel_path in _iter_porcelain_entries(result.stdout):
         normalized = rel_path.replace("\\", "/")
-        if not normalized or _is_allowed_review_artifact(
-            root,
-            allowed_artifact_roots,
-            normalized,
+        if (
+            not normalized
+            or _is_reviewed_dirty_status_for_launch(
+                allowed_dirty_source_kind,
+                status_xy=status_code,
+                path=normalized,
+                allowed_dirty_paths=allowed_dirty_paths,
+            )
+            or _is_allowed_review_artifact(
+                root,
+                allowed_artifact_roots,
+                normalized,
+            )
         ):
             continue
         dirty.append(normalized)
     return sorted(dirty)
+
+
+def _reviewed_dirty_paths_for_launch(
+    root: Path,
+    review_pack: ReviewPack,
+) -> frozenset[str]:
+    source_kind = DiffSourceKind(review_pack.diff_source.source_kind)
+    if source_kind == DiffSourceKind.PATCH:
+        patch_path = _repo_relative_patch_source_path(
+            root,
+            review_pack.diff_source.patch_file,
+        )
+        return frozenset({patch_path}) if patch_path else frozenset()
+    if source_kind not in {
+        DiffSourceKind.LOCAL_STAGED,
+        DiffSourceKind.LOCAL_UNSTAGED,
+    }:
+        return frozenset()
+    return frozenset(
+        path.strip().replace("\\", "/")
+        for path in review_pack.changed_files
+        if path.strip()
+    )
+
+
+def _is_reviewed_dirty_status_for_launch(
+    source_kind: DiffSourceKind | None,
+    *,
+    status_xy: str,
+    path: str,
+    allowed_dirty_paths: frozenset[str],
+) -> bool:
+    if path not in allowed_dirty_paths or source_kind is None or "U" in status_xy:
+        return False
+    index_status = status_xy[0] if len(status_xy) > 0 else " "
+    worktree_status = status_xy[1] if len(status_xy) > 1 else " "
+    if source_kind == DiffSourceKind.LOCAL_STAGED:
+        return index_status not in {" ", "?"} and worktree_status == " "
+    if source_kind == DiffSourceKind.LOCAL_UNSTAGED:
+        return index_status == " " and worktree_status not in {" ", "?"}
+    return source_kind == DiffSourceKind.PATCH
+
+
+def _resolve_patch_source_path(root: Path, patch_file: str) -> Path | None:
+    patch_file = patch_file.strip()
+    if not patch_file:
+        return None
+    try:
+        path = Path(patch_file)
+        return path.resolve() if path.is_absolute() else (root / path).resolve()
+    except OSError:
+        return None
+
+
+def _repo_relative_patch_source_path(root: Path, patch_file: str) -> str:
+    patch_path = _resolve_patch_source_path(root, patch_file)
+    if patch_path is None:
+        return ""
+    try:
+        return patch_path.relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return ""
 
 
 def _provider_command_entry_paths(root: Path, argv: list[str]) -> list[Path]:

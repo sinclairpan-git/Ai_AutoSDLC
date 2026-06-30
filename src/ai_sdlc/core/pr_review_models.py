@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ai_sdlc.core.loop_models import (
     LoopArtifactModel,
@@ -75,6 +75,117 @@ class ModelResolutionSource(StrEnum):
     MOCK_FIXTURE = "mock_fixture"
 
 
+class DiffSourceKind(StrEnum):
+    """Supported review input source kinds."""
+
+    LOCAL_GIT_RANGE = "local-git-range"
+    LOCAL_STAGED = "local-staged"
+    LOCAL_UNSTAGED = "local-unstaged"
+    PATCH = "patch"
+    SCM_PR = "scm-pr"
+    CUSTOM = "custom"
+
+
+class SourceAccessStatus(StrEnum):
+    """Whether a review source could be resolved safely."""
+
+    RESOLVED = "resolved"
+    NEEDS_USER = "needs_user"
+    BLOCKED = "blocked"
+
+
+class DiffSourceDescriptor(BaseModel):
+    """Embedded descriptor for the exact review input source."""
+
+    model_config = ConfigDict(extra="forbid", use_enum_values=True)
+
+    source_kind: DiffSourceKind = DiffSourceKind.LOCAL_GIT_RANGE
+    adapter_id: str = "local-git-range"
+    source_id: str = ""
+    repo_root: str = ""
+    base_ref: str = ""
+    head_ref: str = ""
+    base_commit: str = ""
+    head_commit: str = ""
+    patch_file: str = ""
+    patch_hash: str = ""
+    scm_host_type: str = ""
+    access_status: SourceAccessStatus = SourceAccessStatus.RESOLVED
+    source_metadata: dict[str, str | bool | int | float] = Field(default_factory=dict)
+
+    @field_validator("adapter_id")
+    @classmethod
+    def _require_adapter_id(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("source adapter_id is required")
+        return value
+
+
+class SourceAdapterResolution(LoopArtifactModel):
+    """Persisted source adapter resolution artifact."""
+
+    artifact_kind: str = "source-resolution"
+    source_kind: DiffSourceKind = DiffSourceKind.LOCAL_GIT_RANGE
+    adapter_id: str = "local-git-range"
+    source_id: str = ""
+    repo_root: str = ""
+    base_ref: str = ""
+    head_ref: str = ""
+    base_commit: str = ""
+    head_commit: str = ""
+    patch_file: str = ""
+    patch_hash: str = ""
+    scm_host_type: str = ""
+    access_status: SourceAccessStatus = SourceAccessStatus.NEEDS_USER
+    requires_user_choice: bool = False
+    unavailable_reason: str = ""
+    blocker: str = ""
+    next_command: str = ""
+    source_metadata: dict[str, str | bool | int | float] = Field(default_factory=dict)
+
+    @field_validator("adapter_id")
+    @classmethod
+    def _require_source_resolution_adapter(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("source adapter_id is required")
+        return value
+
+    @model_validator(mode="after")
+    def _source_resolution_status_requires_context(self) -> SourceAdapterResolution:
+        if self.access_status == SourceAccessStatus.RESOLVED:
+            if not self.repo_root.strip():
+                raise ValueError("resolved source requires repo_root")
+            if self.source_kind == DiffSourceKind.LOCAL_GIT_RANGE and (
+                not self.base_ref.strip()
+                or not self.head_ref.strip()
+                or not self.base_commit.strip()
+                or not self.head_commit.strip()
+            ):
+                raise ValueError("resolved local-git-range source requires refs and commits")
+        elif not (self.blocker.strip() or self.unavailable_reason.strip()):
+            raise ValueError("unresolved source requires blocker or unavailable_reason")
+        return self
+
+    def to_descriptor(self) -> DiffSourceDescriptor:
+        """Return the embeddable source descriptor for review-pack.json."""
+
+        return DiffSourceDescriptor(
+            source_kind=self.source_kind,
+            adapter_id=self.adapter_id,
+            source_id=self.source_id,
+            repo_root=self.repo_root,
+            base_ref=self.base_ref,
+            head_ref=self.head_ref,
+            base_commit=self.base_commit,
+            head_commit=self.head_commit,
+            patch_file=self.patch_file,
+            patch_hash=self.patch_hash,
+            scm_host_type=self.scm_host_type,
+            access_status=self.access_status,
+            source_metadata=dict(self.source_metadata),
+        )
+
+
 class ModelResolution(LoopArtifactModel):
     """Resolved model contract for a local review provider run."""
 
@@ -86,6 +197,7 @@ class ModelResolution(LoopArtifactModel):
     resolution_source: ModelResolutionSource | None = None
     status: ModelResolutionStatus = ModelResolutionStatus.NEEDS_USER
     code_egress: bool = False
+    unavailable_reason: str = ""
     blocker: str = ""
 
     @field_validator("provider_id", "model_selector")
@@ -104,8 +216,11 @@ class ModelResolution(LoopArtifactModel):
                 raise ValueError(
                     "resolved model resolution requires resolution_source"
                 )
-        if self.status != ModelResolutionStatus.RESOLVED and not self.blocker.strip():
-            raise ValueError("unresolved model resolution requires blocker")
+        if self.status != ModelResolutionStatus.RESOLVED:
+            if not self.blocker.strip():
+                raise ValueError("unresolved model resolution requires blocker")
+            if not self.unavailable_reason.strip():
+                self.unavailable_reason = self.blocker
         return self
 
 
@@ -226,6 +341,10 @@ class ReviewPack(LoopArtifactModel):
     artifact_kind: str = "review-pack"
     review_id: str
     loop_id: str
+    diff_source: DiffSourceDescriptor = Field(default_factory=DiffSourceDescriptor)
+    source_adapter: str = "local-git-range"
+    source_access_status: SourceAccessStatus = SourceAccessStatus.RESOLVED
+    source_resolution_path: str = ""
     repo_root: str
     base_ref: str
     head_ref: str
@@ -244,6 +363,7 @@ class ReviewPack(LoopArtifactModel):
     resolved_model: str = ""
     model_resolution_status: ModelResolutionStatus = ModelResolutionStatus.NEEDS_USER
     model_resolution_source: ModelResolutionSource | None = None
+    model_unavailable_reason: str = ""
     provider_mode: ProviderMode = ProviderMode.LOCAL_AGENT
     code_egress: bool = False
     redaction_report_path: str = ""
@@ -254,6 +374,7 @@ class ReviewPack(LoopArtifactModel):
         required = {
             "review_id": self.review_id,
             "loop_id": self.loop_id,
+            "source_adapter": self.source_adapter,
             "repo_root": self.repo_root,
             "base_ref": self.base_ref,
             "head_ref": self.head_ref,
@@ -270,6 +391,8 @@ class ReviewPack(LoopArtifactModel):
             raise ValueError(
                 "resolved review pack model state requires resolved_model and source"
             )
+        if self.source_access_status != SourceAccessStatus.RESOLVED:
+            raise ValueError("review pack requires a resolved diff source")
         return self
 
 
@@ -327,6 +450,10 @@ class ReviewRun(LoopArtifactModel):
     model_resolution_source: ModelResolutionSource | None = None
     code_egress: bool = False
     code_egress_confirmed: bool = False
+    diff_source: DiffSourceDescriptor = Field(default_factory=DiffSourceDescriptor)
+    source_adapter: str = "local-git-range"
+    source_access_status: SourceAccessStatus = SourceAccessStatus.RESOLVED
+    source_resolution_path: str = ""
     base_ref: str = ""
     head_ref: str = ""
     base_commit: str = ""
@@ -338,6 +465,7 @@ class ReviewRun(LoopArtifactModel):
     findings_digest: str = ""
     resolution_path: str = ""
     final_report_path: str = ""
+    final_report_digest: str = ""
     verdict: ReviewVerdict | None = None
     unresolved_blockers: int = 0
     unresolved_required: int = 0
@@ -367,19 +495,89 @@ class ReviewRun(LoopArtifactModel):
         return self
 
 
+class ReviewAttestation(LoopArtifactModel):
+    """CI-readable proof that a local review artifact covers one head commit."""
+
+    artifact_kind: str = "review-attestation"
+    review_id: str
+    loop_id: str
+    head_commit: str
+    diff_source: DiffSourceDescriptor = Field(default_factory=DiffSourceDescriptor)
+    diff_source_hash: str = ""
+    verdict: ReviewVerdict
+    unresolved_blockers: int = 0
+    unresolved_required: int = 0
+    unresolved_advisory: int = 0
+    generated_at: str = Field(default_factory=utc_now_iso)
+    review_run_path: str
+    review_pack_path: str
+    findings_path: str = ""
+    final_report_path: str
+    ci_may_call_model: bool = False
+
+    @field_validator(
+        "review_id",
+        "loop_id",
+        "head_commit",
+        "review_run_path",
+        "review_pack_path",
+        "final_report_path",
+    )
+    @classmethod
+    def _require_attestation_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("attestation field is required")
+        return value
+
+    @field_validator(
+        "unresolved_blockers",
+        "unresolved_required",
+        "unresolved_advisory",
+    )
+    @classmethod
+    def _attestation_counts_cannot_be_negative(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("attestation unresolved counts cannot be negative")
+        return value
+
+    @model_validator(mode="after")
+    def _attestation_is_ci_read_only(self) -> ReviewAttestation:
+        if self.ci_may_call_model:
+            raise ValueError("review attestation cannot authorize CI model calls")
+        if self.diff_source.patch_hash and not self.diff_source_hash:
+            self.diff_source_hash = self.diff_source.patch_hash
+        if (
+            self.diff_source_hash
+            and self.diff_source.patch_hash
+            and self.diff_source_hash != self.diff_source.patch_hash
+        ):
+            raise ValueError("review attestation diff_source_hash does not match diff_source")
+        if (
+            DiffSourceKind(self.diff_source.source_kind) != DiffSourceKind.LOCAL_GIT_RANGE
+            and not self.diff_source_hash.strip()
+        ):
+            raise ValueError("non-git-range review attestation requires diff_source_hash")
+        return self
+
+
 __all__ = [
     "FindingResolution",
     "FindingResolutionStatus",
     "FindingSeverity",
+    "DiffSourceDescriptor",
+    "DiffSourceKind",
     "ModelResolution",
     "ModelResolutionSource",
     "ModelResolutionStatus",
     "ProviderIsolationStatus",
     "ProviderMode",
     "ProviderRunnerInvocation",
+    "ReviewAttestation",
     "ReviewFinding",
     "ReviewFindings",
     "ReviewPack",
     "ReviewRun",
     "ReviewVerdict",
+    "SourceAccessStatus",
+    "SourceAdapterResolution",
 ]

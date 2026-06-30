@@ -7,6 +7,7 @@ import json
 import os
 import re
 import shlex
+import shutil
 import subprocess
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -17,7 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
-from ai_sdlc.core.loop_models import LoopPolicyProfile, LoopStatus
+from ai_sdlc.core.loop_models import LoopPolicyProfile, LoopStatus, utc_now_iso
 from ai_sdlc.core.loop_policy import (
     LoopPolicyError,
     ModelResolutionRequest,
@@ -25,17 +26,21 @@ from ai_sdlc.core.loop_policy import (
     resolve_model_for_review,
 )
 from ai_sdlc.core.pr_review_models import (
+    DiffSourceKind,
     FindingResolution,
     FindingResolutionStatus,
     FindingSeverity,
     ModelResolution,
     ModelResolutionStatus,
     ProviderMode,
+    ReviewAttestation,
     ReviewFinding,
     ReviewFindings,
     ReviewPack,
     ReviewRun,
     ReviewVerdict,
+    SourceAccessStatus,
+    SourceAdapterResolution,
 )
 from ai_sdlc.core.pr_review_pack import (
     ReviewPackBuildOptions,
@@ -44,6 +49,7 @@ from ai_sdlc.core.pr_review_pack import (
     analyze_pr_review_redaction,
     build_review_pack,
     decide_incomplete_review_pack,
+    resolve_review_input_for_source,
 )
 from ai_sdlc.core.pr_review_provider import (
     MockReviewerFixture,
@@ -53,7 +59,11 @@ from ai_sdlc.core.pr_review_provider import (
     run_mock_reviewer,
     run_provider_command,
 )
-from ai_sdlc.core.pr_review_redaction import RedactionReport
+from ai_sdlc.core.pr_review_redaction import RedactionReport, analyze_redaction
+from ai_sdlc.core.pr_review_source import (
+    DiffSourceResolutionOptions,
+    resolve_diff_source,
+)
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
 CURRENT_REVIEW_PATH = Path(AI_SDLC_DIR) / "reviews" / "pr" / "current-review.json"
@@ -92,8 +102,12 @@ class PRReviewStartOptions:
     """Inputs for starting or previewing a local PR review."""
 
     root: Path
-    base_ref: str
+    base_ref: str = ""
     head_ref: str = "HEAD"
+    diff_source: str = "local-git-range"
+    patch_file: str = ""
+    source_id: str = ""
+    source_provider: str = ""
     provider_id: str = ""
     model_selector: str = "current"
     current_model: str = ""
@@ -126,6 +140,10 @@ class PRReviewStartResult(BaseModel):
     current_review_path: str = ""
     model_selector: str = "current"
     resolved_model: str = ""
+    diff_source: dict[str, object] = Field(default_factory=dict)
+    source_adapter: str = ""
+    source_access_status: str = ""
+    source_resolution_path: str = ""
     code_egress: bool = False
     changed_files_count: int = 0
     included_files_count: int = 0
@@ -149,6 +167,9 @@ class PRReviewDoctorResult(BaseModel):
     provider_id: str
     model_selector: str = "current"
     resolved_model: str = ""
+    diff_source: dict[str, object] = Field(default_factory=dict)
+    source_adapter: str = ""
+    source_access_status: str = ""
     code_egress: bool = False
     changed_files_count: int = 0
     included_files_count: int = 0
@@ -211,6 +232,25 @@ class PRReviewCloseResult(BaseModel):
     next_action: str = ""
 
 
+class PRReviewAttestResult(BaseModel):
+    """Result for writing a CI-readable local review attestation."""
+
+    model_config = ConfigDict(extra="forbid", use_enum_values=True)
+
+    status: PRReviewCommandStatus
+    review_id: str = ""
+    loop_id: str = ""
+    attestation_path: str = ""
+    head_commit: str = ""
+    diff_source_hash: str = ""
+    verdict: ReviewVerdict | None = None
+    unresolved_blockers: int = 0
+    unresolved_required: int = 0
+    unresolved_advisory: int = 0
+    blocker: str = ""
+    next_action: str = ""
+
+
 def _policy_blocker(exc: LoopPolicyError) -> str:
     return str(exc)
 
@@ -224,6 +264,10 @@ def doctor_pr_review(
     root: Path,
     base_ref: str,
     head_ref: str = "HEAD",
+    diff_source: str = "local-git-range",
+    patch_file: str = "",
+    source_id: str = "",
+    source_provider: str = "",
     provider_id: str = "",
     model_selector: str = "current",
     current_model: str = "",
@@ -234,11 +278,23 @@ def doctor_pr_review(
 ) -> PRReviewDoctorResult:
     """Read-only readiness checks for local PR review."""
 
-    checks, status, blocker, next_action, model_resolution, redaction = _preview(
+    (
+        checks,
+        status,
+        blocker,
+        next_action,
+        model_resolution,
+        redaction,
+        source_resolution,
+    ) = _preview(
         PRReviewStartOptions(
             root=root,
             base_ref=base_ref,
             head_ref=head_ref,
+            diff_source=diff_source,
+            patch_file=patch_file,
+            source_id=source_id,
+            source_provider=source_provider,
             provider_id=provider_id,
             model_selector=model_selector,
             current_model=current_model,
@@ -254,6 +310,13 @@ def doctor_pr_review(
         provider_id=model_resolution.provider_id if model_resolution else provider_id,
         model_selector=model_resolution.model_selector if model_resolution else model_selector,
         resolved_model=model_resolution.resolved_model if model_resolution else "",
+        diff_source=source_resolution.to_descriptor().model_dump(mode="json")
+        if source_resolution
+        else {},
+        source_adapter=source_resolution.adapter_id if source_resolution else "",
+        source_access_status=str(source_resolution.access_status)
+        if source_resolution
+        else "",
         code_egress=code_egress,
         changed_files_count=redaction.changed_files_count if redaction else 0,
         included_files_count=len(redaction.included_files) if redaction else 0,
@@ -267,6 +330,21 @@ def doctor_pr_review(
 
 def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
     """Start or dry-run a local PR review."""
+
+    root = options.root.resolve()
+    if not options.dry_run:
+        try:
+            _remove_latest_attestation(_latest_attestation_path(root))
+        except OSError as exc:
+            return PRReviewStartResult(
+                status=PRReviewCommandStatus.BLOCKED,
+                provider_id=options.provider_id,
+                review_id=options.review_id.strip(),
+                blocker=f"Unable to clear stale review attestation: {exc}",
+                next_action=(
+                    "Remove latest-attestation.json and rerun pr-review start."
+                ),
+            )
 
     review_id_blocker = _unsafe_explicit_review_id_blocker(options.review_id)
     if review_id_blocker:
@@ -282,9 +360,15 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
         )
 
     if options.dry_run:
-        checks, status, blocker, next_action, model_resolution, redaction = _preview(
-            options
-        )
+        (
+            checks,
+            status,
+            blocker,
+            next_action,
+            model_resolution,
+            redaction,
+            source_resolution,
+        ) = _preview(options)
         if status == PRReviewCommandStatus.READY:
             status = PRReviewCommandStatus.DRY_RUN
             next_action = "Run ai-sdlc pr-review start without --dry-run."
@@ -305,6 +389,13 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
             if model_resolution
             else options.model_selector,
             resolved_model=model_resolution.resolved_model if model_resolution else "",
+            diff_source=source_resolution.to_descriptor().model_dump(mode="json")
+            if source_resolution
+            else {},
+            source_adapter=source_resolution.adapter_id if source_resolution else "",
+            source_access_status=str(source_resolution.access_status)
+            if source_resolution
+            else "",
             code_egress=options.code_egress,
             changed_files_count=redaction.changed_files_count if redaction else 0,
             included_files_count=len(redaction.included_files) if redaction else 0,
@@ -316,7 +407,6 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
             model_resolution=model_resolution,
         )
 
-    root = options.root.resolve()
     try:
         policy = load_loop_policy(root)
     except LoopPolicyError as exc:
@@ -351,6 +441,10 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
                 root=root,
                 base_ref=provider_options.base_ref,
                 head_ref=provider_options.head_ref,
+                diff_source=provider_options.diff_source,
+                patch_file=provider_options.patch_file,
+                source_id=provider_options.source_id,
+                source_provider=provider_options.source_provider,
                 requested_provider=provider_options.provider_id,
                 requested_model=_requested_model(provider_options),
                 provider_default_model=provider_options.provider_default_model,
@@ -382,11 +476,21 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
             loop_id=loop_id,
             review_dir=pack_result.review_dir,
             review_pack_path=pack_result.review_pack_path,
+            source_resolution_path=pack_result.source_resolution_path,
             model_selector=pack_result.model_resolution.model_selector
             if pack_result.model_resolution
             else provider_options.model_selector,
             resolved_model=pack_result.model_resolution.resolved_model
             if pack_result.model_resolution
+            else "",
+            diff_source=pack_result.source_resolution.to_descriptor().model_dump(mode="json")
+            if pack_result.source_resolution
+            else {},
+            source_adapter=pack_result.source_resolution.adapter_id
+            if pack_result.source_resolution
+            else "",
+            source_access_status=str(pack_result.source_resolution.access_status)
+            if pack_result.source_resolution
             else "",
             code_egress=provider_options.code_egress,
             changed_files_count=pack_result.changed_files_count,
@@ -421,6 +525,7 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
         loop_id=loop_id,
         review_dir=pack_result.review_dir,
         review_pack_path=str(_resolve_repo_path(root, pack_result.review_pack_path)),
+        source_resolution_path=pack_result.source_resolution_path,
         findings_path=str(_resolve_repo_path(root, provider_result.findings_path))
         if provider_result.findings_path
         else "",
@@ -430,6 +535,15 @@ def start_pr_review(options: PRReviewStartOptions) -> PRReviewStartResult:
         if pack_result.review_pack
         else provider_options.model_selector,
         resolved_model=pack_result.review_pack.resolved_model
+        if pack_result.review_pack
+        else "",
+        diff_source=pack_result.review_pack.diff_source.model_dump(mode="json")
+        if pack_result.review_pack
+        else {},
+        source_adapter=pack_result.review_pack.source_adapter
+        if pack_result.review_pack
+        else "",
+        source_access_status=str(pack_result.review_pack.source_access_status)
         if pack_result.review_pack
         else "",
         code_egress=provider_options.code_egress,
@@ -739,14 +853,16 @@ def rerun_pr_review(
         )
 
     try:
-        current_changed = set(_pr_changed_paths(root.resolve(), review_run.base_ref, review_run.head_ref))
+        current_changed = set(
+            _current_changed_paths_for_review_run(root.resolve(), review_run)
+        )
     except GitError as exc:
         return PRReviewStartResult(
             status=PRReviewCommandStatus.BLOCKED,
             provider_id=review_run.provider_id,
             review_id=review_run.review_id,
             blocker=str(exc),
-            next_action="Fix Git refs before rerunning PR review.",
+            next_action="Fix the saved diff source before rerunning PR review.",
         )
 
     finding_files = {finding.file for finding in findings.findings}
@@ -798,7 +914,7 @@ def rerun_pr_review(
         )
 
     try:
-        _read_resolution_round(resolution_path)
+        resolution_round = _read_resolution_round(resolution_path)
     except ResolutionFileError as exc:
         return PRReviewStartResult(
             status=PRReviewCommandStatus.BLOCKED,
@@ -807,11 +923,29 @@ def rerun_pr_review(
             blocker=str(exc),
             next_action="Fix resolution.yaml syntax before rerunning PR review.",
         )
+    try:
+        previous_findings_path = _snapshot_previous_findings(
+            root.resolve(),
+            review_run,
+            round_number=resolution_round,
+        )
+    except OSError as exc:
+        return PRReviewStartResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            provider_id=review_run.provider_id,
+            review_id=review_run.review_id,
+            blocker=f"Unable to preserve previous findings before rerun: {exc}",
+            next_action="Inspect findings.json before rerunning PR review.",
+        )
     result = start_pr_review(
         PRReviewStartOptions(
             root=root,
             base_ref=review_run.base_ref,
-            head_ref=review_run.head_ref,
+            head_ref=_resolvable_head_ref_for_diff_source(review_run),
+            diff_source=review_run.diff_source.source_kind,
+            patch_file=review_run.diff_source.patch_file,
+            source_id=review_run.diff_source.source_id,
+            source_provider=review_run.diff_source.scm_host_type,
             provider_id=review_run.provider_id,
             model_selector=review_run.model_selector,
             current_model=review_run.resolved_model,
@@ -827,6 +961,22 @@ def rerun_pr_review(
     )
     if result.status == PRReviewCommandStatus.STARTED:
         try:
+            _write_finding_history(
+                root.resolve(),
+                review_run=review_run,
+                previous_findings=findings,
+                previous_findings_path=previous_findings_path,
+                current_findings_path=result.findings_path,
+            )
+        except (json.JSONDecodeError, ValidationError, ValueError, OSError) as exc:
+            return PRReviewStartResult(
+                status=PRReviewCommandStatus.BLOCKED,
+                provider_id=review_run.provider_id,
+                review_id=review_run.review_id,
+                blocker=f"Unable to write finding-history.json: {exc}",
+                next_action="Inspect current findings.json before continuing PR review.",
+            )
+        try:
             _reset_rerun_resolution_artifacts(root.resolve(), review_run.review_id)
         except ResolutionFileError as exc:
             return PRReviewStartResult(
@@ -837,6 +987,78 @@ def rerun_pr_review(
                 next_action="Fix resolution.yaml syntax before rerunning PR review.",
             )
     return result
+
+
+def _write_finding_history(
+    root: Path,
+    *,
+    review_run: ReviewRun,
+    previous_findings: ReviewFindings,
+    previous_findings_path: str,
+    current_findings_path: str,
+) -> Path:
+    current_path = Path(current_findings_path)
+    if not current_path.is_absolute():
+        current_path = root / current_path
+    current_findings = ReviewFindings.model_validate(
+        json.loads(current_path.read_text(encoding="utf-8"))
+    )
+    previous_by_signature = {
+        _finding_signature(finding): finding for finding in previous_findings.findings
+    }
+    current_by_signature = {
+        _finding_signature(finding): finding for finding in current_findings.findings
+    }
+    mappings = [
+        {
+            "signature": signature,
+            "previous_finding_id": previous_by_signature[signature].id,
+            "current_finding_id": current_by_signature[signature].id,
+            "file": current_by_signature[signature].file,
+            "severity": current_by_signature[signature].severity,
+        }
+        for signature in sorted(previous_by_signature.keys() & current_by_signature.keys())
+    ]
+    path = LoopArtifactStore(root).review_run_dir(review_run.review_id) / "finding-history.json"
+    return LoopArtifactStore(root).write_json_artifact(
+        path,
+        {
+            "schema_version": "1",
+            "artifact_kind": "review-finding-history",
+            "review_id": review_run.review_id,
+            "loop_id": review_run.loop_id,
+            "generated_at": utc_now_iso(),
+            "previous_findings_path": previous_findings_path,
+            "current_findings_path": _repo_relative_path(root, current_path),
+            "mappings": mappings,
+        },
+    )
+
+
+def _snapshot_previous_findings(
+    root: Path,
+    review_run: ReviewRun,
+    *,
+    round_number: int,
+) -> str:
+    source = _resolve_repo_path(root, review_run.findings_path)
+    destination = (
+        LoopArtifactStore(root).review_run_dir(review_run.review_id)
+        / f"previous-findings-round-{round_number + 1}.json"
+    )
+    shutil.copyfile(source, destination)
+    return _repo_relative_path(root, destination)
+
+
+def _finding_signature(finding: ReviewFinding) -> str:
+    parts = [
+        str(finding.severity),
+        finding.file,
+        str(finding.line or ""),
+        finding.claim.strip(),
+        finding.risk.strip(),
+    ]
+    return hashlib.sha256("\0".join(parts).encode("utf-8")).hexdigest()
 
 
 def _reset_rerun_resolution_artifacts(root: Path, review_id: str) -> None:
@@ -868,8 +1090,18 @@ def close_pr_review(
 ) -> PRReviewCloseResult:
     """Close current review with fail-closed verdict semantics."""
 
+    resolved_root = root.resolve()
     try:
-        policy = load_loop_policy(root.resolve())
+        _remove_latest_attestation(_latest_attestation_path(resolved_root))
+    except OSError as exc:
+        return PRReviewCloseResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            verdict=ReviewVerdict.BLOCKED,
+            blocker=f"Unable to clear stale review attestation: {exc}",
+            next_action="Remove latest-attestation.json and rerun pr-review close.",
+        )
+    try:
+        policy = load_loop_policy(resolved_root)
     except LoopPolicyError as exc:
         return PRReviewCloseResult(
             status=PRReviewCommandStatus.BLOCKED,
@@ -937,6 +1169,19 @@ def close_pr_review(
             unresolved_advisory=review_run.unresolved_advisory,
             blocker=head_mismatch,
             next_action="Run ai-sdlc pr-review rerun before closing.",
+        )
+
+    diff_source_mismatch = _reviewed_diff_source_mismatch(root, review_run)
+    if diff_source_mismatch:
+        return PRReviewCloseResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            verdict=ReviewVerdict.BLOCKED,
+            unresolved_blockers=review_run.unresolved_blockers,
+            unresolved_required=review_run.unresolved_required,
+            unresolved_advisory=review_run.unresolved_advisory,
+            blocker=diff_source_mismatch,
+            next_action="Rerun PR review for the current diff source before closing.",
         )
 
     dirty_blocker = _reviewed_worktree_dirty(root, review_run)
@@ -1032,6 +1277,7 @@ def close_pr_review(
     )
     review_run.verdict = verdict
     review_run.final_report_path = _repo_relative_path(root.resolve(), final_report_path)
+    review_run.final_report_digest = _file_sha256(final_report_path)
     review_run.unresolved_blockers = unresolved[FindingSeverity.BLOCKER]
     review_run.unresolved_required = unresolved[FindingSeverity.REQUIRED]
     review_run.unresolved_advisory = unresolved[FindingSeverity.ADVISORY]
@@ -1050,6 +1296,179 @@ def close_pr_review(
         blocker=blocker,
         next_action=next_action,
     )
+
+
+def attest_pr_review(root: Path) -> PRReviewAttestResult:
+    """Write a CI-readable attestation for the current closed local review."""
+
+    resolved_root = root.resolve()
+    attestation_path = _latest_attestation_path(resolved_root)
+    try:
+        _remove_latest_attestation(attestation_path)
+    except OSError as exc:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            blocker=f"Unable to clear stale review attestation: {exc}",
+            next_action="Remove latest-attestation.json and rerun pr-review attest.",
+        )
+    try:
+        review_run, review_run_path = _load_current_review_run(resolved_root)
+    except FileNotFoundError as exc:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.NO_REVIEW,
+            blocker=str(exc),
+            next_action="Run ai-sdlc pr-review start --base <branch>.",
+        )
+    except (json.JSONDecodeError, ValidationError, ValueError, OSError) as exc:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            blocker=f"Current PR review artifacts are malformed: {exc}",
+            next_action="Rerun ai-sdlc pr-review start.",
+        )
+
+    if review_run.status != LoopStatus.CLOSED:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            loop_id=review_run.loop_id,
+            blocker="Local PR review must be closed before attestation.",
+            next_action="Run ai-sdlc pr-review close after resolving findings.",
+        )
+    if review_run.unresolved_blockers > 0:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            loop_id=review_run.loop_id,
+            unresolved_blockers=review_run.unresolved_blockers,
+            blocker="Unresolved BLOCKER findings cannot be attested.",
+            next_action="Fix blocker findings and rerun local PR review.",
+        )
+    if review_run.verdict is None:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            loop_id=review_run.loop_id,
+            blocker="Closed review is missing a verdict.",
+            next_action="Rerun ai-sdlc pr-review close.",
+        )
+    final_report_path = _resolve_repo_path(resolved_root, review_run.final_report_path)
+    if not review_run.final_report_path.strip() or not final_report_path.is_file():
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            loop_id=review_run.loop_id,
+            blocker="Final report is missing; attestation would be unverifiable.",
+            next_action="Rerun ai-sdlc pr-review close.",
+        )
+    final_report_blocker = _final_report_tamper_blocker(final_report_path, review_run)
+    if final_report_blocker:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            loop_id=review_run.loop_id,
+            blocker=final_report_blocker,
+            next_action="Rerun ai-sdlc pr-review close.",
+        )
+    try:
+        findings = _load_findings(resolved_root, review_run)
+    except (FileNotFoundError, json.JSONDecodeError, ValidationError, ValueError, OSError) as exc:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            loop_id=review_run.loop_id,
+            blocker=f"Current PR review findings are not attestable: {exc}",
+            next_action="Rerun local PR review before writing review attestation.",
+        )
+    tamper_blocker = _reviewer_outputs_tamper_blocker(
+        resolved_root,
+        review_run,
+        findings,
+    )
+    if tamper_blocker:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            loop_id=review_run.loop_id,
+            blocker=tamper_blocker,
+            next_action="Rerun local PR review before writing review attestation.",
+        )
+    try:
+        current_head = _resolved_reviewed_head_commit(resolved_root, review_run)
+    except GitError as exc:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            loop_id=review_run.loop_id,
+            blocker=f"Unable to verify reviewed head for attestation: {exc}",
+            next_action="Fix Git state before writing review attestation.",
+        )
+    if review_run.head_commit and review_run.head_commit != current_head:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            loop_id=review_run.loop_id,
+            head_commit=review_run.head_commit,
+            blocker=(
+                "Reviewed head ref no longer matches the reviewed head commit; "
+                "attestation would be stale."
+            ),
+            next_action="Rerun local PR review for the current commit.",
+        )
+    diff_source_mismatch = _reviewed_diff_source_mismatch(resolved_root, review_run)
+    if diff_source_mismatch:
+        return PRReviewAttestResult(
+            status=PRReviewCommandStatus.BLOCKED,
+            review_id=review_run.review_id,
+            loop_id=review_run.loop_id,
+            head_commit=review_run.head_commit,
+            diff_source_hash=review_run.diff_source.patch_hash,
+            blocker=diff_source_mismatch,
+            next_action="Rerun local PR review for the current diff source.",
+        )
+
+    store = LoopArtifactStore(resolved_root)
+    attestation = ReviewAttestation(
+        review_id=review_run.review_id,
+        loop_id=review_run.loop_id,
+        head_commit=review_run.head_commit,
+        diff_source=review_run.diff_source,
+        diff_source_hash=review_run.diff_source.patch_hash,
+        verdict=review_run.verdict,
+        unresolved_blockers=review_run.unresolved_blockers,
+        unresolved_required=review_run.unresolved_required,
+        unresolved_advisory=review_run.unresolved_advisory,
+        review_run_path=_repo_relative_path(resolved_root, review_run_path),
+        review_pack_path=review_run.review_pack_path,
+        findings_path=review_run.findings_path,
+        final_report_path=review_run.final_report_path,
+    )
+    store.write_json_artifact(attestation_path, attestation)
+    return PRReviewAttestResult(
+        status=PRReviewCommandStatus.READY,
+        review_id=review_run.review_id,
+        loop_id=review_run.loop_id,
+        attestation_path=str(attestation_path),
+        head_commit=review_run.head_commit,
+        diff_source_hash=review_run.diff_source.patch_hash,
+        verdict=review_run.verdict,
+        unresolved_blockers=review_run.unresolved_blockers,
+        unresolved_required=review_run.unresolved_required,
+        unresolved_advisory=review_run.unresolved_advisory,
+        next_action=(
+            "CI may read latest-attestation.json; CI must not call any model."
+        ),
+    )
+
+
+def _latest_attestation_path(root: Path) -> Path:
+    return root / AI_SDLC_DIR / "reviews" / "pr" / "latest-attestation.json"
+
+
+def _remove_latest_attestation(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return
 
 
 def _not_closeable_review_result(
@@ -1092,9 +1511,7 @@ def _review_pack_has_incomplete_waiver(review_pack: ReviewPack) -> bool:
 
 def _reviewed_head_mismatch(root: Path, review_run: ReviewRun) -> str:
     try:
-        current_reviewed_head = GitClient(root.resolve()).resolve_revision(
-            review_run.head_ref
-        )
+        current_reviewed_head = _resolved_reviewed_head_commit(root.resolve(), review_run)
     except GitError as exc:
         return f"Unable to verify reviewed head before closing PR review: {exc}"
     if current_reviewed_head != review_run.head_commit:
@@ -1103,6 +1520,90 @@ def _reviewed_head_mismatch(root: Path, review_run: ReviewRun) -> str:
             f"{current_reviewed_head} != {review_run.head_commit}."
         )
     return ""
+
+
+def _resolved_reviewed_head_commit(root: Path, review_run: ReviewRun) -> str:
+    source_kind = DiffSourceKind(review_run.diff_source.source_kind)
+    ref = (
+        "HEAD"
+        if source_kind
+        in {DiffSourceKind.LOCAL_STAGED, DiffSourceKind.LOCAL_UNSTAGED}
+        else review_run.head_ref
+    )
+    return GitClient(root.resolve()).resolve_revision(ref)
+
+
+def _resolvable_head_ref_for_diff_source(review_run: ReviewRun) -> str:
+    source_kind = DiffSourceKind(review_run.diff_source.source_kind)
+    if source_kind in {DiffSourceKind.LOCAL_STAGED, DiffSourceKind.LOCAL_UNSTAGED}:
+        return "HEAD"
+    return review_run.head_ref
+
+
+def _reviewed_diff_source_mismatch(root: Path, review_run: ReviewRun) -> str:
+    source_kind = DiffSourceKind(review_run.diff_source.source_kind)
+    source_resolution = resolve_diff_source(
+        DiffSourceResolutionOptions(
+            root=root.resolve(),
+            source_kind=review_run.diff_source.source_kind,
+            base_ref=review_run.base_ref,
+            head_ref=_resolvable_head_ref_for_diff_source(review_run),
+            patch_file=review_run.diff_source.patch_file,
+            source_id=review_run.diff_source.source_id,
+            source_provider=review_run.diff_source.scm_host_type,
+        )
+    )
+    if source_resolution.access_status != SourceAccessStatus.RESOLVED:
+        detail = source_resolution.blocker or source_resolution.unavailable_reason
+        return f"Reviewed diff source is no longer available: {detail}"
+    if source_kind == DiffSourceKind.LOCAL_GIT_RANGE:
+        if source_resolution.base_commit != review_run.base_commit:
+            return (
+                "Current base commit does not match reviewed base commit: "
+                f"{source_resolution.base_commit} != {review_run.base_commit}."
+            )
+        if source_resolution.head_commit != review_run.head_commit:
+            return (
+                "Current head commit does not match reviewed head commit: "
+                f"{source_resolution.head_commit} != {review_run.head_commit}."
+            )
+        return ""
+    expected_hash = review_run.diff_source.patch_hash.strip()
+    if not expected_hash:
+        return "Reviewed diff source hash is missing; rerun PR review."
+    current_hash = source_resolution.patch_hash.strip()
+    if not current_hash:
+        return "Current diff source hash is unavailable; rerun PR review."
+    if current_hash != expected_hash:
+        return (
+            "Current diff source hash does not match reviewed diff source hash: "
+            f"{current_hash} != {expected_hash}."
+        )
+    return ""
+
+
+def _current_changed_paths_for_review_run(
+    root: Path,
+    review_run: ReviewRun,
+) -> list[str]:
+    source_kind = DiffSourceKind(review_run.diff_source.source_kind)
+    if source_kind == DiffSourceKind.LOCAL_GIT_RANGE:
+        return list(_pr_changed_paths(root, review_run.base_ref, review_run.head_ref))
+    source_resolution = resolve_diff_source(
+        DiffSourceResolutionOptions(
+            root=root,
+            source_kind=review_run.diff_source.source_kind,
+            base_ref=review_run.base_ref,
+            head_ref=_resolvable_head_ref_for_diff_source(review_run),
+            patch_file=review_run.diff_source.patch_file,
+            source_id=review_run.diff_source.source_id,
+            source_provider=review_run.diff_source.scm_host_type,
+        )
+    )
+    if source_resolution.access_status != SourceAccessStatus.RESOLVED:
+        detail = source_resolution.blocker or source_resolution.unavailable_reason
+        raise GitError(detail or "Saved diff source is unavailable.")
+    return list(resolve_review_input_for_source(root, source_resolution).changed_files)
 
 
 def _reviewed_worktree_dirty(root: Path, review_run: ReviewRun) -> str:
@@ -1157,10 +1658,25 @@ def _reviewer_outputs_tamper_blocker(
     return ""
 
 
+def _final_report_tamper_blocker(
+    final_report_path: Path,
+    review_run: ReviewRun,
+) -> str:
+    if not review_run.final_report_digest.strip():
+        return "Final report digest is missing; attestation would be unverifiable."
+    try:
+        actual_digest = _file_sha256(final_report_path)
+    except OSError as exc:
+        return f"Final report cannot be verified: {exc}"
+    if actual_digest != review_run.final_report_digest:
+        return "Final report changed after PR review close."
+    return ""
+
+
 def _unreviewed_dirty_paths(root: Path, review_run: ReviewRun) -> list[str]:
     try:
         result = subprocess.run(
-            ["git", "status", "--porcelain", "--untracked-files=all"],
+            ["git", "status", "--porcelain=v1", "-z", "--untracked-files=all"],
             cwd=root,
             capture_output=True,
             text=True,
@@ -1174,18 +1690,107 @@ def _unreviewed_dirty_paths(root: Path, review_run: ReviewRun) -> list[str]:
     if result.returncode != 0:
         raise GitError(result.stderr.strip() or "git status failed")
 
+    source_kind = DiffSourceKind(review_run.diff_source.source_kind)
+    allowed_dirty = _reviewed_dirty_paths_for_review_run(root, review_run)
     dirty: list[str] = []
-    for line in result.stdout.splitlines():
-        if len(line) < 4:
-            continue
-        rel_path = line[3:]
-        if " -> " in rel_path:
-            rel_path = rel_path.split(" -> ", 1)[1]
-        normalized = rel_path.strip().replace("\\", "/")
-        if not normalized or _is_current_review_artifact_path(normalized, review_run):
+    for status_xy, rel_path in _iter_porcelain_entries(result.stdout):
+        normalized = rel_path.replace("\\", "/")
+        if (
+            not normalized
+            or _is_reviewed_dirty_status(
+                source_kind,
+                status_xy=status_xy,
+                path=normalized,
+                allowed_dirty=allowed_dirty,
+            )
+            or _is_current_review_artifact_path(normalized, review_run)
+        ):
             continue
         dirty.append(normalized)
     return dirty
+
+
+def _iter_porcelain_entries(output: str) -> list[tuple[str, str]]:
+    entries: list[tuple[str, str]] = []
+    parts = output.split("\0")
+    index = 0
+    while index < len(parts):
+        item = parts[index]
+        index += 1
+        if not item or len(item) < 4:
+            continue
+        status_code = item[:2]
+        rel_path = item[3:]
+        entries.append((status_code, rel_path))
+        if "R" in status_code or "C" in status_code:
+            index += 1
+    return entries
+
+
+def _reviewed_dirty_paths_for_review_run(
+    root: Path,
+    review_run: ReviewRun,
+) -> frozenset[str]:
+    source_kind = DiffSourceKind(review_run.diff_source.source_kind)
+    if source_kind == DiffSourceKind.PATCH:
+        patch_path = _repo_relative_patch_source_path(
+            root,
+            review_run.diff_source.patch_file,
+        )
+        return frozenset({patch_path}) if patch_path else frozenset()
+    if source_kind not in {
+        DiffSourceKind.LOCAL_STAGED,
+        DiffSourceKind.LOCAL_UNSTAGED,
+    }:
+        return frozenset()
+    try:
+        review_pack = _load_review_pack(root, review_run.review_pack_path)
+    except (FileNotFoundError, json.JSONDecodeError, ValidationError, ValueError, OSError):
+        return frozenset()
+    return frozenset(
+        path.strip().replace("\\", "/")
+        for path in review_pack.changed_files
+        if path.strip()
+    )
+
+
+def _is_reviewed_dirty_status(
+    source_kind: DiffSourceKind,
+    *,
+    status_xy: str,
+    path: str,
+    allowed_dirty: frozenset[str],
+) -> bool:
+    if path not in allowed_dirty or "U" in status_xy:
+        return False
+    index_status = status_xy[0] if len(status_xy) > 0 else " "
+    worktree_status = status_xy[1] if len(status_xy) > 1 else " "
+    if source_kind == DiffSourceKind.LOCAL_STAGED:
+        return index_status not in {" ", "?"} and worktree_status == " "
+    if source_kind == DiffSourceKind.LOCAL_UNSTAGED:
+        return index_status == " " and worktree_status not in {" ", "?"}
+    return source_kind == DiffSourceKind.PATCH
+
+
+def _resolve_patch_source_path(root: Path, patch_file: str) -> Path | None:
+    patch_file = patch_file.strip()
+    if not patch_file:
+        return None
+    try:
+        path = Path(patch_file)
+        return path.resolve() if path.is_absolute() else (root / path).resolve()
+    except OSError:
+        return None
+
+
+def _repo_relative_patch_source_path(root: Path, patch_file: str) -> str:
+    patch_path = _resolve_patch_source_path(root, patch_file)
+    if patch_path is None:
+        return ""
+    try:
+        return patch_path.relative_to(root.resolve()).as_posix()
+    except ValueError:
+        return ""
 
 
 def _is_current_review_artifact_path(path: str, review_run: ReviewRun) -> bool:
@@ -1225,25 +1830,68 @@ def _preview(
     str,
     ModelResolution | None,
     RedactionReport | None,
+    SourceAdapterResolution | None,
 ]:
     root = options.root.resolve()
     checks: list[PRReviewCheck] = []
     if not (root / AI_SDLC_DIR).is_dir():
         detail = "Project is not initialized; .ai-sdlc is missing."
         checks.append(PRReviewCheck(name="init", status=PRReviewCommandStatus.BLOCKED, detail=detail))
-        return checks, PRReviewCommandStatus.BLOCKED, detail, "Run ai-sdlc init .", None, None
+        return checks, PRReviewCommandStatus.BLOCKED, detail, "Run ai-sdlc init .", None, None, None
     checks.append(PRReviewCheck(name="init", status=PRReviewCommandStatus.READY, detail=".ai-sdlc exists."))
 
+    source_resolution = resolve_diff_source(
+        DiffSourceResolutionOptions(
+            root=root,
+            source_kind=options.diff_source,
+            base_ref=options.base_ref,
+            head_ref=options.head_ref,
+            patch_file=options.patch_file,
+            source_id=options.source_id,
+            source_provider=options.source_provider,
+        )
+    )
+    if source_resolution.access_status != SourceAccessStatus.RESOLVED:
+        status = (
+            PRReviewCommandStatus.BLOCKED
+            if source_resolution.access_status == SourceAccessStatus.BLOCKED
+            else PRReviewCommandStatus.NEEDS_USER
+        )
+        detail = source_resolution.blocker or source_resolution.unavailable_reason
+        checks.append(PRReviewCheck(name="diff_source", status=status, detail=detail))
+        return (
+            checks,
+            status,
+            detail,
+            source_resolution.next_command,
+            None,
+            None,
+            source_resolution,
+        )
     try:
-        git = GitClient(root)
-        git.resolve_revision(options.base_ref)
-        git.resolve_revision(options.head_ref)
-        changed_files = list(_pr_changed_paths(root, options.base_ref, options.head_ref))
+        review_input = resolve_review_input_for_source(root, source_resolution)
+        changed_files = list(review_input.changed_files)
     except GitError as exc:
         detail = str(exc)
-        checks.append(PRReviewCheck(name="git", status=PRReviewCommandStatus.BLOCKED, detail=detail))
-        return checks, PRReviewCommandStatus.BLOCKED, detail, "Check the base/head refs.", None, None
-    checks.append(PRReviewCheck(name="git", status=PRReviewCommandStatus.READY, detail=f"{len(changed_files)} changed file(s)."))
+        checks.append(PRReviewCheck(name="diff_source", status=PRReviewCommandStatus.BLOCKED, detail=detail))
+        return (
+            checks,
+            PRReviewCommandStatus.BLOCKED,
+            detail,
+            "Check the selected diff source and rerun pr-review doctor.",
+            None,
+            None,
+            source_resolution,
+        )
+    checks.append(
+        PRReviewCheck(
+            name="diff_source",
+            status=PRReviewCommandStatus.READY,
+            detail=(
+                f"{source_resolution.adapter_id}: {len(changed_files)} changed file(s)."
+            ),
+        )
+    )
 
     try:
         policy = load_loop_policy(root)
@@ -1256,7 +1904,7 @@ def _preview(
                 detail=detail,
             )
         )
-        return checks, PRReviewCommandStatus.BLOCKED, detail, _policy_next_action(), None, None
+        return checks, PRReviewCommandStatus.BLOCKED, detail, _policy_next_action(), None, None, source_resolution
     provider_options = _normalize_provider_options(
         _apply_policy_provider_default(options, policy)
     )
@@ -1276,6 +1924,7 @@ def _preview(
             "Choose local-agent or mock-reviewer.",
             None,
             None,
+            source_resolution,
         )
     model_resolution = resolve_model_for_review(
         policy,
@@ -1315,6 +1964,7 @@ def _preview(
             next_action,
             model_resolution,
             None,
+            source_resolution,
         )
     checks.append(
         PRReviewCheck(
@@ -1340,6 +1990,7 @@ def _preview(
             "Configure --provider-command or use --provider mock-reviewer.",
             model_resolution,
             None,
+            source_resolution,
         )
     checks.append(
         PRReviewCheck(
@@ -1349,15 +2000,26 @@ def _preview(
         )
     )
 
-    redaction = analyze_pr_review_redaction(
-        root,
-        base_ref=options.base_ref,
-        head_ref=options.head_ref,
-        changed_files=changed_files,
-        policy=policy,
-        code_egress=provider_options.code_egress,
-        code_egress_confirmed=provider_options.code_egress_confirmed,
-    )
+    if review_input.uses_git_range:
+        redaction = analyze_pr_review_redaction(
+            root,
+            base_ref=source_resolution.base_ref,
+            head_ref=source_resolution.head_ref,
+            changed_files=changed_files,
+            policy=policy,
+            code_egress=provider_options.code_egress,
+            code_egress_confirmed=provider_options.code_egress_confirmed,
+        )
+    else:
+        redaction = analyze_redaction(
+            root,
+            changed_files,
+            policy=policy,
+            code_egress=provider_options.code_egress,
+            code_egress_confirmed=provider_options.code_egress_confirmed,
+            head_file_bytes=review_input.source_file_bytes,
+            base_file_bytes=review_input.base_file_bytes,
+        )
     if redaction.blocked or redaction.needs_user:
         status = (
             PRReviewCommandStatus.BLOCKED
@@ -1378,6 +2040,7 @@ def _preview(
             redaction.next_action,
             model_resolution,
             redaction,
+            source_resolution,
         )
     incomplete_decision = decide_incomplete_review_pack(policy, redaction)
     if incomplete_decision.status is not None:
@@ -1400,6 +2063,7 @@ def _preview(
             incomplete_decision.next_action,
             model_resolution,
             redaction,
+            source_resolution,
         )
     checks.append(
         PRReviewCheck(
@@ -1417,10 +2081,10 @@ def _preview(
     if not os.access(review_root.parent if review_root.parent.exists() else root / AI_SDLC_DIR, os.W_OK):
         detail = f"Review artifact directory is not writable: {review_root.parent}"
         checks.append(PRReviewCheck(name="artifacts", status=PRReviewCommandStatus.BLOCKED, detail=detail))
-        return checks, PRReviewCommandStatus.BLOCKED, detail, "Fix artifact directory permissions.", model_resolution, redaction
+        return checks, PRReviewCommandStatus.BLOCKED, detail, "Fix artifact directory permissions.", model_resolution, redaction, source_resolution
     checks.append(PRReviewCheck(name="artifacts", status=PRReviewCommandStatus.READY, detail="Review artifact path is writable."))
 
-    return checks, PRReviewCommandStatus.READY, "", "Start local PR review.", model_resolution, redaction
+    return checks, PRReviewCommandStatus.READY, "", "Start local PR review.", model_resolution, redaction, source_resolution
 
 
 def _normalize_provider_options(options: PRReviewStartOptions) -> PRReviewStartOptions:
@@ -1429,9 +2093,13 @@ def _normalize_provider_options(options: PRReviewStartOptions) -> PRReviewStartO
             root=options.root,
             base_ref=options.base_ref,
             head_ref=options.head_ref,
-            provider_id=options.provider_id,
-            model_selector="mock-reviewer",
-            current_model="mock-reviewer",
+        provider_id=options.provider_id,
+        model_selector="mock-reviewer",
+        diff_source=options.diff_source,
+        patch_file=options.patch_file,
+        source_id=options.source_id,
+        source_provider=options.source_provider,
+        current_model="mock-reviewer",
             provider_default_model="mock-reviewer",
             provider_command=options.provider_command,
             code_egress=False,
@@ -1459,6 +2127,10 @@ def _apply_policy_provider_default(
         head_ref=options.head_ref,
         provider_id=policy.default_provider or "local-agent",
         model_selector=options.model_selector,
+        diff_source=options.diff_source,
+        patch_file=options.patch_file,
+        source_id=options.source_id,
+        source_provider=options.source_provider,
         current_model=options.current_model,
         provider_default_model=options.provider_default_model,
         provider_command=options.provider_command,
@@ -1517,6 +2189,8 @@ def _write_review_run(
     store = LoopArtifactStore(root)
     findings = provider_result.findings
     review_pack = pack_result.review_pack
+    if review_pack is None:
+        raise ValueError("ready provider run requires review_pack")
     findings_path = (
         Path(provider_result.findings_path) if provider_result.findings_path else None
     )
@@ -1526,20 +2200,20 @@ def _write_review_run(
         status=_loop_status_from_provider(provider_result.status),
         provider_id=options.provider_id,
         provider_mode=_provider_mode(options.provider_id),
-        model_selector=review_pack.model_selector if review_pack else options.model_selector,
-        resolved_model=review_pack.resolved_model if review_pack else "",
-        model_resolution_status=review_pack.model_resolution_status
-        if review_pack
-        else ModelResolutionStatus.NEEDS_USER,
-        model_resolution_source=review_pack.model_resolution_source
-        if review_pack
-        else None,
+        model_selector=review_pack.model_selector,
+        resolved_model=review_pack.resolved_model,
+        model_resolution_status=review_pack.model_resolution_status,
+        model_resolution_source=review_pack.model_resolution_source,
         code_egress=options.code_egress,
         code_egress_confirmed=options.code_egress_confirmed,
-        base_ref=options.base_ref,
-        head_ref=options.head_ref,
-        base_commit=review_pack.base_commit if review_pack else "",
-        head_commit=review_pack.head_commit if review_pack else "",
+        diff_source=review_pack.diff_source,
+        source_adapter=review_pack.source_adapter,
+        source_access_status=review_pack.source_access_status,
+        source_resolution_path=review_pack.source_resolution_path,
+        base_ref=review_pack.base_ref,
+        head_ref=review_pack.head_ref,
+        base_commit=review_pack.base_commit,
+        head_commit=review_pack.head_commit,
         provider_command=options.provider_command,
         review_pack_path=_repo_relative_path(root, Path(pack_result.review_pack_path)),
         review_pack_digest=_file_sha256(Path(pack_result.review_pack_path))
@@ -1961,6 +2635,7 @@ def _render_finding_outcome_lines(
 __all__ = [
     "CURRENT_REVIEW_PATH",
     "PRReviewCheck",
+    "PRReviewAttestResult",
     "PRReviewCommandStatus",
     "PRReviewCloseResult",
     "PRReviewDoctorResult",
@@ -1969,6 +2644,7 @@ __all__ = [
     "PRReviewStartResult",
     "PRReviewStatusResult",
     "close_pr_review",
+    "attest_pr_review",
     "detect_current_model",
     "doctor_pr_review",
     "fix_pr_review",

@@ -1138,3 +1138,707 @@
 - 当前批次 branch disposition 状态：`codex/189-loop-pr-review-batch1` 已合并并删除远端分支；本地 scratch 分支仅保留历史。
 - 当前批次 worktree disposition 状态：`main` 已快进到 PR #104 merge commit；当前 close-out 修订将在 `codex/189-closeout-truth-sync` 分支单独提交。
 - **是否继续下一批**：否；WI-189 已完成，close-check 通过后方可进入 WI-190。
+
+### Batch 2026-06-30-021 | 用户澄清后的 source/model/UX 需求修订
+
+#### 2.107 准备
+
+- **任务来源**：用户打断继续开发，要求先把 review 相关澄清修订到需求文档中。
+- **目标**：修订 WI-189 的 PRD/计划/任务拆分，明确本地 review 不能硬编码 GitHub PR，模型默认使用当前会话/当前 CLI agent 已连接模型，显式模型不可用必须 fail-closed，并补齐小白/专业双层 UX 要求。
+- **验证画像**：`docs-only`
+- **改动范围**：`specs/189-loop-engine-local-adversarial-pr-review/spec.md`、`specs/189-loop-engine-local-adversarial-pr-review/plan.md`、`specs/189-loop-engine-local-adversarial-pr-review/tasks.md`、`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`
+
+#### 2.108 任务记录
+
+- `spec.md`：追加 2026-06-30 澄清状态、DiffSource/SourceAdapterResolution、模型 current-first / explicit fail-closed、双层 UX、Round 3 用户澄清评审记录和 Codex 开发 agent 执行提示。
+- `plan.md`：将 Review Pack Builder 扩展为 Diff Source Adapter + Review Pack Builder；新增 `source-resolution.json` 合同；修订 model resolution 规则、doctor/start UX、验证矩阵和开放决策。
+- `tasks.md`：保留 T11-T63 历史完成基线，新增 Batch 7 的 T71-T74 pending 任务，明确旧模型优先级已被 T72 覆盖，后续开发前必须先按 Batch 7 补齐。
+- 本批不修改产品实现代码，不提交，不继续开发。
+
+#### 2.109 统一验证命令
+
+- `V1`（需求文档旧假设 grep）
+  - 命令：`Select-String -Path "specs/189-loop-engine-local-adversarial-pr-review/spec.md","specs/189-loop-engine-local-adversarial-pr-review/plan.md","specs/189-loop-engine-local-adversarial-pr-review/tasks.md" -Pattern "CLI > policy|远端 PR comment|Git 读取|默认使用当前已配置模型|所有 P0|等待按 `tasks.md` 执行|可执行任务分解已冻结"`
+  - 结果：通过，无残留匹配。
+- `V2`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V3`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`
+
+#### 2.110 归档后动作
+
+- **已完成 git 提交**：否，用户本轮要求先修订需求文档，尚未要求提交。
+- 当前批次 worktree disposition 状态：dirty（仅 WI-189 需求/计划/任务/执行记录文档修订，外加 handoff 更新）。
+- **是否继续下一批**：等待用户确认；若继续实现，下一步应从 Batch 7 的 T71/T72 开始，而不是继续旧 T11-T63 已完成路径。
+
+### Batch 2026-06-30-022 | Batch 7 source/model/UX 适配实现
+
+#### 2.111 准备
+
+- **任务来源**：用户要求按新修订需求比对已实现功能差异，并继续落地全部优先级需求。
+- **目标**：补齐 Batch 7 T71-T74，使本地 PR review 不硬编码 GitHub/远端 PR，不把模型限制误解为禁止调用大模型，并让本地独立 review agent 默认使用当前会话/当前 CLI agent 已连接模型，显式模型不可用时 fail-closed。
+- **验证画像**：`focused-implementation`
+- **改动范围**：PR review source/model/service/CLI/constraints/docs/tests 相关文件。
+
+#### 2.112 差异结论
+
+- 已实现基线 T11-T63 覆盖本地对抗 PR review 主流程，但缺少 `DiffSourceDescriptor` / `SourceAdapterResolution` / `source-resolution.json` 合同。
+- review pack 原先以本地 Git base/head 为核心入口，未把本地仓、公司内网仓、patch、GitHub/GitLab/Gitee/self-hosted SCM 统一抽象为 source adapter。
+- 模型解析旧逻辑存在 policy/provider default 优先级，和“默认当前会话/当前 CLI agent 已连接模型，显式模型不可用不得静默 fallback”的澄清要求不完全一致。
+- doctor/start CLI 和 verify/docs surface 未充分暴露 source adapter、source access status、model unavailable reason 等小白可理解、专业可审计字段。
+
+#### 2.113 任务记录
+
+- `T71`：新增 `pr_review_source.py`，定义 DiffSource 解析选项与 source adapter 解析；`pr_review_models.py` 增加 `DiffSourceDescriptor`、`SourceAdapterResolution`、`SourceAccessStatus` 等模型；`build_review_pack` 写入 `source-resolution.json` 并在 `review-pack.json` 中记录 source 字段。
+- `T72`：修订 `resolve_model_for_review` 为 current-first local agent contract；显式指定非 current 模型时只允许已连接候选模型，无法验证时返回 `blocked/needs_user` 和 `unavailable_reason`，不 fallback。
+- `T73`：扩展 `doctor/start` service 和 CLI 参数，支持 `--diff-source`、`--patch-file`、`--source-id`、`--source-provider`；human/json 输出包含 diff source、source adapter、source access status、source resolution artifact path。
+- `T74`：更新 README、中文 PR checklist、verify constraints registry 与对应测试，覆盖 DiffSource、非 GitHub 硬编码、CI 不发起模型请求、显式模型不可用不得静默 fallback 等边界。
+- `tasks.md`：Batch 7 T71-T74 已从 `pending` 同步为 `done`。
+
+#### 2.114 统一验证命令
+
+- `V1`（scoped ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py`
+  - 结果：通过，`All checks passed!`。
+- `V2`（focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+- `V3`（Batch 7 focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py -q`
+  - 结果：通过，`125 passed`。
+- `V4`（verify constraints tests）
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`184 passed`。
+- `V5`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V6`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+
+#### 2.115 代码审查（摘要）
+
+- **自检结论**：Batch 7 P0 已落地，核心状态机不依赖 GitHub PR id；本地 review agent 可默认当前模型或显式模型，显式模型不可用时 fail-closed；CI 仍只作为确定性检查/产物消费面，不发起模型请求。
+- **风险**：P0 只实现 `local-git-range` 的真实 source adapter；patch/staged/unstaged/SCM PR/MR 已保留合同和 fail-closed 行为，真实 SCM provider adapter 属于后续 P1。
+- **风险**：可用模型探测仍依赖当前 CLI/env/policy 可见候选；不同厂商 GPT/Claude/DeepSeek/GLM 的深度健康检查需要后续 provider adapter 扩展。
+
+#### 2.116 归档后动作
+
+- **已完成 git 提交**：否，本批尚未收到提交指令。
+- 当前批次 worktree disposition 状态：dirty（包含 Batch 7 实现、测试、文档、handoff 和 resume-pack 更新）。
+- **是否继续下一批**：否；按当前 `tasks.md`，WI-189 T11-T74 全部完成并通过 focused verification 与框架约束检查。
+
+### Batch 2026-06-30-023 | P1/P2 全优先级收口实现
+
+#### 2.117 准备
+
+- **任务来源**：用户目标要求完成全部优先级需求落地，不能只停留在 Batch 7 P0。
+- **目标**：补齐冻结 PRD 中 P1/P2 明确留下的可执行差异：patch/staged/unstaged DiffSource、local review attestation、finding history mapping、P2 企业增强 fail-closed 边界。
+- **验证画像**：`focused-implementation`
+- **改动范围**：PR review source/pack/service/model/CLI、README、PR checklist、verify constraints、Batch 8/9 tasks、focused tests。
+
+#### 2.118 差异结论
+
+- `loop status/list` 已由既有 `loop_status.py` / `loop_cmd.py` 和测试覆盖，无需重复实现。
+- P1 缺口为：patch source 仍是 P0 合同未真实 pack；local staged/unstaged 仍 fail-closed；没有 `pr-review attest`；rerun 后没有 finding-history 映射 artifact。
+- P2 缺口为：多 reviewer、组织 waiver、artifact 签名、远端 PR inline comments 不能在没有企业身份、SCM 写权限、签名密钥时伪造成已实现，需要进入可审计 fail-closed 边界和 verify constraints。
+
+#### 2.119 任务记录
+
+- `T81`：`pr_review_source.py` 支持 `patch`、`local-staged`、`local-unstaged` 真实 source resolution；`pr_review_pack.py` 可基于 patch 文件、staged diff、unstaged diff 生成 changed-files、diff.patch、review-pack 和 redaction report。
+- `T82`：新增 `ReviewAttestation` 模型、`attest_pr_review` service 和 `ai-sdlc pr-review attest` CLI；closed review 可写入 `.ai-sdlc/reviews/pr/latest-attestation.json`，CI 只读消费且不得调模型。
+- `T83`：`rerun_pr_review` 成功后写入 `finding-history.json`，用 severity/file/line/claim/risk signature 记录 previous/current finding 映射，不修改 reviewer 原始 findings。
+- `T84`：README、中文 PR checklist、verify constraints 和测试覆盖 patch/staged/unstaged、attestation、finding-history。
+- `T91`：plan/tasks/verify constraints 明确 P2 多 reviewer、组织 waiver、artifact 签名、远端 PR inline comments 必须通过 adapter/policy/企业身份/密钥/SCM 权限进入；无配置时 fail-closed，不伪造成功。
+- `tasks.md`：Batch 8 T81-T84 与 Batch 9 T91 已从 `pending` 同步为 `done`。
+
+#### 2.120 统一验证命令
+
+- `V1`（focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V2`（P1/P2 focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：首次发现 1 个测试输入问题：`local-unstaged` 测试使用 untracked 文件而不是 tracked unstaged diff；修正后通过，`311 passed`。
+- `V3`（focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 5 source files`。
+
+#### 2.121 代码审查（摘要）
+
+- **自检结论**：P1 的本地 source adapter、attestation、finding history 已落地；P2 企业增强已进入 fail-closed 合同和门禁，不再作为未声明风险悬空。
+- **风险**：真实远端 SCM PR/MR diff 拉取、inline comments 写回、多 reviewer 编排、组织 waiver 审批和 artifact 加密签名仍需要企业凭据/密钥/SCM API adapter；当前实现不会伪造成功，而是通过 P2 fail-closed 边界约束后续接入。
+
+#### 2.122 归档后动作
+
+- **已完成 git 提交**：否，本批尚未收到提交指令。
+- 当前批次 worktree disposition 状态：dirty（包含 Batch 7/8/9 实现、测试、文档、handoff 和 resume-pack 更新）。
+- **是否继续下一批**：否；按当前 `tasks.md`，WI-189 T11-T84、T91 全部完成。
+
+### Batch 2026-06-30-024 | Active checkpoint and framework gate close-out
+
+#### 2.123 准备
+
+- **任务来源**：用户要求按照新修订需求比对已实现功能差异，并继续落地全部优先级需求。
+- **目标**：将 active checkpoint 从上一工作项 WI-191 校正为 WI-189，按当前框架约束重新验收 Batch 7/8/9，并进入本仓库 PR protocol。
+- **验证画像**：`code-change`
+- **改动范围**：`.ai-sdlc/state/checkpoint.yml`、`program-manifest.yaml`、WI-189 tasks / execution log / handoff，以及 Batch 7/8/9 已实现代码与测试。
+- 关联 branch/worktree disposition 计划：`codex/189-loop-engine-complete-pr-review` 作为本轮 PR merge carrier；历史 `codex/189-loop-pr-review-batch1` / `codex/189-closeout-truth-sync` 保留为 archived local scratch，不再承载 mainline truth。
+
+#### 2.124 差异结论
+
+- P0 已覆盖：本地独立 review agent、DiffSource 非 GitHub 硬编码、current-first 模型解析、显式模型不可用 fail-closed、小白/专业双层 CLI 输出、CI 不发起模型请求。
+- P1 已覆盖：patch / local-staged / local-unstaged 真实 adapter、`pr-review attest`、`finding-history.json`。
+- P2 已覆盖为可审计 fail-closed 边界：多 reviewer、组织 waiver、artifact signing、远端 inline comment 必须依赖企业 identity / policy / SCM adapter / signing key；未配置时不得伪造成功。
+- 重新绑定 WI-189 后，框架约束新增暴露治理缺口：Batch 7/8/9 任务块需补充 gate 可识别的 `验收标准` 标记，历史 WI-189 分支 disposition 需在最新批次中说明。
+
+#### 2.125 任务记录
+
+- `.ai-sdlc/state/checkpoint.yml`：active feature 从 WI-191 校正为 `189-loop-engine-local-adversarial-pr-review`，当前分支为 `codex/189-loop-engine-complete-pr-review`。
+- `tasks.md`：Batch 7/8/9 每个任务块补充 `验收标准：见 acceptance 字段。`，不改变已冻结验收内容。
+- `task-execution-log.md`：记录 active checkpoint 复验、历史分支 disposition 与最终 mainline readiness。
+- `pr_review_source.py`：保留 `local-staged` / `local-unstaged` 明文 source kind token，使 active WI-189 约束可以检测本地 worktree source adapter surface。
+
+#### 2.126 统一验证命令
+
+- `V1`（active WI-189 框架约束初次复验）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 初次结果：未通过；暴露 `tasks.md missing task-level acceptance` 与历史 WI-189 branch lifecycle disposition 缺口。
+  - 修复动作：补充 Batch 7/8/9 `验收标准` 标记，并在本最新批次记录当前 PR carrier 与历史 archived branch disposition。
+- `V2`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无 whitespace error。
+- `V3`（focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V4`（focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+- `V5`（focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`323 passed`。
+- `V6`（active WI-189 框架约束复验）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `V7`（program truth snapshot sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过并写入 `program-manifest.yaml`；truth snapshot state 为 `migration_pending`，snapshot hash 为 `88680558bf5c40c301cf595c8b1295845a22aa7c68eed8fbb45cda05377f6e7d`。
+- `V8`（work item close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/189-loop-engine-local-adversarial-pr-review`
+  - 结果：通过，所有 checks PASS，`done_gate` 为 `ready for completion`。
+
+#### 2.127 代码审查（摘要）
+
+- **自检结论**：本轮没有发现新的产品能力差异；剩余处理均为框架治理状态、任务格式和 mainline readiness 收口。
+- **风险**：真实企业 SCM 写回、多 reviewer 编排、组织 waiver 审批、artifact 加密签名仍必须等待企业配置/凭据/密钥，当前实现以 fail-closed 合同保护质量边界。
+
+#### 2.128 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`8a22f3d03c0417d8d831ea984b9a8b8dbb24784d`
+- 当前批次 branch disposition 状态：PR merge carrier；historical branches archived。
+- 当前批次 worktree disposition 状态：retained（主工作区继续承载当前 PR 分支）。
+- **是否继续下一批**：否；本批完成后进入 PR、Codex review、checks、merge heartbeat。
+
+### Batch 2026-06-30-025 | Codex review feedback fixes for PR #108
+
+#### 2.129 准备
+
+- **任务来源**：GitHub Codex review for PR #108 returned three actionable comments.
+- **目标**：修复 non-git-range DiffSource 的 redaction / preview / local-agent dirty-worktree 一致性问题，并继续同一 PR heartbeat。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/pr_review_pack.py`、`src/ai_sdlc/core/pr_review_service.py`、`src/ai_sdlc/core/pr_review_provider.py`、`tests/unit/test_pr_review_pack.py`、`tests/unit/test_pr_review_service.py`、`tests/unit/test_pr_review_provider.py`、本执行日志、handoff、`program-manifest.yaml`。
+- 关联 branch/worktree disposition 计划：`codex/189-loop-engine-complete-pr-review` 继续作为 PR #108 merge carrier；历史 `codex/189-loop-pr-review-batch1` / `codex/189-closeout-truth-sync` 保留为 archived local scratch，不再承载 mainline truth。
+
+#### 2.130 任务记录
+
+- Codex P1 `Redact patch/index bytes instead of worktree files`：`ResolvedReviewInput` 增加 source-derived file bytes；patch / staged / unstaged redaction 均基于实际 diff section bytes，不再回读 worktree 文件。
+- Codex P2 `Use source-specific diff discovery in preview`：`pr-review doctor` / `start --dry-run` 复用 pack builder 的 source-specific input resolver，避免对 `patch-file` / `INDEX` / `WORKTREE` synthetic refs 执行 git merge-base。
+- Codex P2 `Allow reviewed worktree changes before resolving them`：local-agent provider guard 对 `local-staged` / `local-unstaged` 只放行 `review_pack.changed_files` 中已被本次 review pack 覆盖的 dirty path，其他 dirty path 仍 fail-closed。
+- 新增单测覆盖 patch-only secret redaction、patch dry-run preview、local-staged reviewed dirty path launch。
+- Codex 第二轮 P2 `Use closeable refs for worktree sources`：close 阶段对 `local-staged` / `local-unstaged` 使用真实 `HEAD` 校验 reviewed head，并允许 review pack 覆盖的 dirty path。
+- Codex 第二轮 P2 `Make rerun scope checks source-aware`：rerun scope drift 对非 `local-git-range` source 重新 resolve DiffSource，再用 source resolver 计算当前 changed files。
+- Codex 第二轮 P2 `Verify the reviewed head ref for attestation`：attestation 校验 reviewed head ref / reviewed head commit，不再错误依赖当前 checkout `HEAD`。
+- 新增单测覆盖 local-staged close、patch rerun、非当前 checkout head attestation。
+- Codex 第三轮 P1 `Revalidate worktree diffs before closing`：close 对 `patch` / `local-staged` / `local-unstaged` 重新 resolve 当前 DiffSource，并比较 `patch_hash`；同一路径 restage 或 patch 文件变化必须 rerun；dirty allowlist 进一步按 Git status index/worktree 两列区分，避免 staged review 后同路径未暂存字节被误放行。
+- Codex 第三轮 P2 `Bind attestations to the reviewed diff source`：`ReviewAttestation` 增加 `diff_source` 与 `diff_source_hash`，非 `local-git-range` attestation 必须绑定 diff-source hash；`attest` 写入前重新校验当前 diff-source hash，hash 变化时 fail-closed。
+- 新增单测覆盖 changed local-staged hash、reviewed staged path 上的未暂存改动、patch source hash changed after close，以及 CLI attestation 中的 diff source 绑定。
+- Codex 第四轮 P1 `Handle unified patch blobs before redaction`：patch parser 支持无 `diff --git` header 的普通 unified diff section，`_diff_file_blobs` 不再丢弃 `---` / `+++` 开头的 patch-only bytes，避免 redaction 回退 worktree 漏掉 patch 中新增 secret。
+- Codex 第四轮 P2 `Check dirty status before allowing reviewed paths`：local-agent provider launch guard 使用 status-sensitive reviewed dirty allow check；`local-staged` 只放行纯 staged 状态，`local-unstaged` 只放行纯 unstaged 状态，同路径额外未审字节会在模型调用前 fail-closed。
+- 新增单测覆盖普通 unified patch secret redaction、local-agent 启动前阻断 reviewed staged path 上的额外 unstaged edit。
+- Codex 第五轮 P2 `Do not resolve patch reviews with an empty head`：patch DiffSource 在 `--head` 不可解析或 Git HEAD 不存在时返回 BLOCKED `git_head_unavailable`，不再生成 `head_commit=""` 的 RESOLVED source 并让 pack validator 抛 uncaught error。
+- Codex 第五轮 P2 `Strip timestamps from unified patch paths`：`_normalize_patch_path` 去除 unified diff `---` / `+++` header 中 tab-separated timestamp，保证 changed_files / allowlist 使用真实 repo path。
+- 新增单测覆盖 patch source bad head fail-closed、带 timestamp 的 unified patch path 归一。
+- Codex 第六轮 P1 `Block attestation on tampered review artifacts`：`attest_pr_review` 在写 `latest-attestation.json` 前加载 findings 并复用 `_reviewer_outputs_tamper_blocker`，review-pack/findings digest 被篡改或缺失时 fail-closed。
+- Codex 第六轮 P2 `Preserve paths with spaces in patch headers`：`diff --git` header 使用 `_diff_git_paths` 解析 `a/... b/...` 边界，不再用 whitespace split 误拆含空格路径。
+- 新增单测覆盖 closed review 后篡改 review-pack 阻断 attestation、patch path with spaces 保留真实路径。
+- Codex 第七轮 P2 `Preserve the previous findings artifact before rerun`：rerun 在覆盖 `findings.json` 前复制旧 findings 到 `previous-findings-round-N.json`，`finding-history.json` 指向旧快照而不是被覆盖后的当前 findings。
+- Codex 第七轮 P2 `Invalidate stale latest attestations on blocked attempts`：`attest_pr_review` 进入时先删除 stale `latest-attestation.json`，任何后续 fail-closed 路径都不会保留旧成功凭证供 CI 误读。
+- 新增/扩展单测覆盖 finding history previous/current paths 分离、tampered review-pack 后 stale latest attestation 被移除。
+
+#### 2.131 统一验证命令
+
+- `V1`（targeted ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py`
+  - 结果：通过，`All checks passed!`。
+- `V2`（targeted mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py`
+  - 结果：通过，`Success: no issues found in 3 source files`。
+- `V3`（targeted pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py -q`
+  - 结果：首次发现 preview redaction 仍误用 synthetic refs；修复后通过，`114 passed`。
+- `V3b`（second-round targeted pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py -q`
+  - 结果：通过，`71 passed`。
+- `V4`（focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V5`（focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 7 source files`。
+- `V6`（focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：第六轮 Codex review 修复后通过，`368 passed`。
+- `V6a`（third-round targeted ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py`
+  - 结果：通过，`All checks passed!`。
+- `V6b`（third-round typed surface mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_service.py`
+  - 结果：通过，`Success: no issues found in 2 source files`。
+- `V6c`（third-round targeted pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_service.py tests/integration/test_cli_pr_review.py -q`
+  - 结果：通过，`113 passed`。
+- `V6d`（fourth-round targeted ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_provider.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py`
+  - 结果：通过，`All checks passed!`。
+- `V6e`（fourth-round typed surface mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_provider.py`
+  - 结果：通过，`Success: no issues found in 2 source files`。
+- `V6f`（fourth-round targeted pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_provider.py -q`
+  - 结果：通过，`47 passed`。
+- `V6g`（fifth-round targeted ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/pr_review_pack.py tests/unit/test_pr_review_source.py tests/unit/test_pr_review_pack.py`
+  - 结果：通过，`All checks passed!`。
+- `V6h`（fifth-round typed surface mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/pr_review_pack.py`
+  - 结果：通过，`Success: no issues found in 2 source files`。
+- `V6i`（fifth-round targeted pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_source.py tests/unit/test_pr_review_pack.py -q`
+  - 结果：通过，`24 passed`。
+- `V6j`（sixth-round targeted ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py`
+  - 结果：通过，`All checks passed!`。
+- `V6k`（sixth-round typed surface mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py`
+  - 结果：通过，`Success: no issues found in 2 source files`。
+- `V6l`（sixth-round targeted pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py -q`
+  - 结果：通过，`92 passed`。
+- `V6m`（seventh-round targeted ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_service.py tests/unit/test_pr_review_service.py`
+  - 结果：通过，`All checks passed!`。
+- `V6n`（seventh-round typed surface mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_service.py`
+  - 结果：通过，`Success: no issues found in 1 source file`。
+- `V6o`（seventh-round targeted pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py -q`
+  - 结果：通过，`75 passed`。
+- `V7`（框架约束）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `V8`（program truth snapshot sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：第三轮 Codex review 修复后通过并写入 `program-manifest.yaml`；truth snapshot state 为 `migration_pending`，snapshot hash 以最终 `program-manifest.yaml` 为准。
+- `V9`（work item close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/189-loop-engine-local-adversarial-pr-review`
+  - 结果：通过，所有 checks PASS，`done_gate` 为 `ready for completion`。
+
+#### 2.132 代码审查（摘要）
+
+- 已处理 Codex review thread `PRRT_kwDORujSxs6NQPUE`：source-specific redaction bytes。
+- 已处理 Codex review thread `PRRT_kwDORujSxs6NQPUH`：preview source-specific changed-file discovery。
+- 已处理 Codex review thread `PRRT_kwDORujSxs6NQPUL`：local-agent reviewed dirty path launch guard。
+- 已处理 Codex review thread `PRRT_kwDORujSxs6NQlYA`：worktree source close uses real commit ref.
+- 已处理 Codex review thread `PRRT_kwDORujSxs6NQlYF`：rerun scope checks are source-aware.
+- 已处理 Codex review thread `PRRT_kwDORujSxs6NQlYJ`：attestation validates reviewed head ref instead of checkout HEAD.
+- 已处理 Codex 第三轮 comment `Revalidate worktree diffs before closing`：close revalidates worktree diff source hash and status columns.
+- 已处理 Codex 第三轮 comment `Bind attestations to the reviewed diff source`：attestation binds and verifies diff-source hash.
+- 已处理 Codex 第四轮 comment `Handle unified patch blobs before redaction`：unified patch sections without `diff --git` feed source bytes into redaction.
+- 已处理 Codex 第四轮 comment `Check dirty status before allowing reviewed paths`：local-agent launch guard uses status-sensitive reviewed dirty checks.
+- 已处理 Codex 第五轮 comment `Do not resolve patch reviews with an empty head`：patch source requires resolvable reviewed head.
+- 已处理 Codex 第五轮 comment `Strip timestamps from unified patch paths`：unified patch path normalizer strips tab-separated timestamps.
+- 已处理 Codex 第六轮 comment `Block attestation on tampered review artifacts`：attest reuses review artifact tamper checks.
+- 已处理 Codex 第六轮 comment `Preserve paths with spaces in patch headers`：diff --git patch header parser preserves paths with spaces.
+- 已处理 Codex 第七轮 comment `Preserve the previous findings artifact before rerun`：rerun snapshots previous findings before overwriting current output.
+- 已处理 Codex 第七轮 comment `Invalidate stale latest attestations on blocked attempts`：attest clears stale latest attestation before validation.
+- 需要在推送后重新请求 Codex review，确认 comments outdated 或无新增 actionable feedback。
+
+#### 2.133 任务/计划同步状态
+
+- `tasks.md` 同步状态：WI-189 T11-T84、T91 仍全部完成；本批为 PR review feedback 修复，不新增需求任务。
+- `plan.md` 同步状态：DiffSource、model/current-first、CI artifact-only、P2 fail-closed 合同不变。
+- `program-manifest.yaml` 同步状态：已刷新 persisted truth snapshot，snapshot hash 以最终 `program-manifest.yaml` 为准。
+
+#### 2.134 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`4a8b4ed36b2a8345ad98701daff961fb0633c02e`
+- 当前批次 branch disposition 状态：PR merge carrier；historical branches archived。
+- 当前批次 worktree disposition 状态：retained（主工作区继续承载当前 PR 分支）。
+- **是否继续下一批**：否；本批完成后继续 PR #108 Codex re-review、checks heartbeat 和 merge。
+
+#### 2.135 第八轮 Codex review 修复
+
+- Codex 第八轮 P2 `Allow patch files as reviewed launch inputs`：`local-agent` 启动前对 patch source 的 `diff_source.patch_file` 执行 hash 复核，hash 匹配时允许该 patch 文件作为已审输入保留在 dirty worktree 中；hash 不匹配或文件不可读时 fail-closed。
+- Codex 第八轮 P2 `Allow the reviewed patch file during close`：`close_pr_review` 在已完成 diff source hash 复核后，允许同一个 repo 内 patch 文件通过 dirty 检查，避免未跟踪或已修改的 `change.patch` 阻断有效 patch review 关闭。
+- 新增单测覆盖 local-agent 允许 repo 内未跟踪 patch 输入、local-agent 启动前阻断变更后的 patch hash、close 允许已审 patch 输入文件。
+
+#### 2.136 第八轮验证命令
+
+- `V6p`（eighth-round minimal pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_provider.py::test_local_agent_allows_reviewed_patch_file_dirty_input tests/unit/test_pr_review_provider.py::test_local_agent_blocks_changed_patch_file_before_launch tests/unit/test_pr_review_service.py::test_close_allows_reviewed_patch_file_dirty_input -q`
+  - 结果：通过，`3 passed`。
+- `V6q`（eighth-round focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V6r`（eighth-round focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 7 source files`。
+- `V6s`（eighth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`371 passed`。
+- `V6t`（whitespace check）
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+
+#### 2.137 第九轮 Codex review 修复
+
+- Codex 第九轮 P1 `Clear stale attestation before rerunning reviews`：`start_pr_review` 在新的非 dry-run review pack READY 后、provider 启动前删除 `latest-attestation.json`，覆盖 rerun 与 replacement start，避免旧 closed review 的成功 attestation 被 CI 误读。
+- Codex 第九轮 P2 `Verify local git-range base commit before closing`：`_reviewed_diff_source_mismatch` 不再对 `local-git-range` 直接放行；close/attest 会重新解析当前 `base_ref/head_ref`，同时比较 reviewed `base_commit/head_commit`，base ref rewrite 或 merge-base drift 均 fail-closed。
+- 新增单测覆盖 replacement start 清 stale attestation、rerun 清 stale attestation、close 阻断 git-range base drift、attest 阻断 close 后 base drift。
+
+#### 2.138 第九轮验证命令
+
+- `V6u`（ninth-round minimal pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py::test_close_blocks_when_local_git_range_base_moved_after_review tests/unit/test_pr_review_service.py::test_start_replacement_review_clears_latest_attestation tests/unit/test_pr_review_service.py::test_attest_blocks_changed_local_git_range_base_after_close tests/unit/test_pr_review_service.py::test_rerun_clears_latest_attestation -q`
+  - 结果：通过，`4 passed`。
+- `V6v`（ninth-round service pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py -q`
+  - 结果：通过，`80 passed`。
+- `V6w`（ninth-round focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V6x`（ninth-round focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 7 source files`。
+- `V6y`（ninth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`375 passed`。
+
+#### 2.139 第十轮 Codex review 修复
+
+- Codex 第十轮 P1 `Clear stale attestations before pack blockers return`：`start_pr_review` 对所有非 dry-run start 在最前面删除 `latest-attestation.json`，即使 replacement review 因 source/model/redaction blocker 未进入 provider，也不会保留旧成功凭证。
+- Codex 第十轮 P2 `Use real blobs for staged redaction`：`local-staged` redaction 从 Git index 读取真实 staged blob，`local-unstaged` redaction 从 worktree 读取真实文件 bytes，不再用 diff 文本代替源码内容，二进制文件会进入 binary/omitted 决策。
+- 新增单测覆盖 blocked replacement start 清 stale attestation、staged binary blob omitted、unstaged binary blob omitted。
+
+#### 2.140 第十轮验证命令
+
+- `V6z`（tenth-round minimal pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py::test_blocked_replacement_review_clears_latest_attestation tests/unit/test_pr_review_pack.py::test_build_review_pack_omits_staged_binary_blob tests/unit/test_pr_review_pack.py::test_build_review_pack_omits_unstaged_binary_blob -q`
+  - 结果：通过，`3 passed`。
+- `V6aa`（tenth-round pack/service pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py -q`
+  - 结果：通过，`100 passed`。
+- `V6ab`（tenth-round focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V6ac`（tenth-round focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 7 source files`。
+- `V6ad`（tenth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`378 passed`。
+
+#### 2.141 第十一轮 Codex review 修复
+
+- Codex 第十一轮 P1 `Scan base blobs for worktree diff sources`：`ResolvedReviewInput` 增加 `base_file_bytes`；`local-staged` redaction 同时扫描 HEAD base blob 与 index head blob，`local-unstaged` redaction 同时扫描 index base blob 与 worktree head blob。
+- 删除/替换旧版本 secret 时，即使新版本内容安全，base-side removed lines 仍会进入 redaction gate；`diff.patch` 不会在未记录高风险的情况下携带旧 token/private key。
+- 新增单测覆盖 staged base-side secret redaction、unstaged base-side secret redaction，并保留第十轮二进制 blob 回归。
+
+#### 2.142 第十一轮验证命令
+
+- `V6ae`（eleventh-round minimal pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_pack.py::test_build_review_pack_omits_staged_binary_blob tests/unit/test_pr_review_pack.py::test_build_review_pack_redacts_staged_base_side_secret tests/unit/test_pr_review_pack.py::test_build_review_pack_omits_unstaged_binary_blob tests/unit/test_pr_review_pack.py::test_build_review_pack_redacts_unstaged_base_side_secret -q`
+  - 结果：通过，`4 passed`。
+- `V6af`（eleventh-round pack pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_pack.py -q`
+  - 结果：通过，`21 passed`。
+- `V6ag`（eleventh-round focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V6ah`（eleventh-round focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 7 source files`。
+- `V6ai`（eleventh-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`380 passed`。
+
+#### 2.143 第十二轮 Codex review 修复
+
+- Codex 第十二轮 P2 `Pass base blobs during preview redaction`：doctor/dry-run preview 的非 git-range redaction 也传入 `review_input.base_file_bytes`，与真实 `build_review_pack` 行为一致，避免 local-staged/local-unstaged preview 与 start 对 base-only 内容分类不一致。
+- Codex 第十二轮 P2 `Verify final report contents before attesting`：`ReviewRun` 增加 `final_report_digest`；`close_pr_review` 写入 final report 后记录 digest；`attest_pr_review` 在生成 `latest-attestation.json` 前复核 digest，final report 被篡改或 digest 缺失时 fail-closed。
+- 新增单测覆盖 dry-run preview 对 staged base-side secret 的 redaction、close 后篡改 final-report 阻断 attestation。
+
+#### 2.144 第十二轮验证命令
+
+- `V6aj`（twelfth-round minimal pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py::test_start_dry_run_redacts_local_staged_base_side_secret tests/unit/test_pr_review_service.py::test_attest_blocks_tampered_final_report_after_close -q`
+  - 结果：通过，`2 passed`。
+- `V6ak`（twelfth-round service pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py -q`
+  - 结果：通过，`83 passed`。
+- `V6al`（twelfth-round focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V6am`（twelfth-round focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 7 source files`。
+- `V6an`（twelfth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`382 passed`。
+
+#### 2.145 第十三轮 Codex review 修复
+
+- Codex 第十三轮 P1 `Clear stale attestations when closing changes state`：`close_pr_review` 开始时删除 `latest-attestation.json`，无论本次 close 最终 CLOSED 还是 BLOCKED，只要 close 可能重写 final report / verdict / unresolved counts，旧 attestation 都会失效。
+- 新增单测覆盖已成功 attest 后再次 close 会清理旧 `latest-attestation.json`，要求后续重新 `pr-review attest`。
+
+#### 2.146 第十三轮验证命令
+
+- `V6ao`（thirteenth-round minimal pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py::test_close_clears_existing_latest_attestation -q`
+  - 结果：通过，`1 passed`。
+- `V6ap`（thirteenth-round service pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py -q`
+  - 结果：通过，`84 passed`。
+- `V6aq`（thirteenth-round focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V6ar`（thirteenth-round focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 7 source files`。
+- `V6as`（thirteenth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`383 passed`。
+
+#### 2.147 第十四轮 Codex review 修复
+
+- Codex 第十四轮 P2 `Parse porcelain paths before matching reviewed dirty files`：`close_pr_review` 的 dirty worktree 检查改用 `git status --porcelain=v1 -z --untracked-files=all`，并用 NUL porcelain parser 读取 path，避免含空格路径被 Git quote 后无法匹配 reviewed dirty allowlist。
+- 去除 dirty path normalization 中的 `.strip()`，避免合法前后空格路径被改写。
+- 新增单测覆盖 local-staged reviewed path with space、patch source patch file path with space 在 close 阶段不被误判为 unreviewed dirty change。
+
+#### 2.148 第十四轮验证命令
+
+- `V6at`（fourteenth-round minimal pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py::test_close_allows_reviewed_local_staged_path_with_space tests/unit/test_pr_review_service.py::test_close_allows_reviewed_patch_file_path_with_space -q`
+  - 结果：通过，`2 passed`。
+- `V6au`（fourteenth-round service pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py -q`
+  - 结果：通过，`86 passed`。
+- `V6av`（fourteenth-round focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V6aw`（fourteenth-round focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_models.py src/ai_sdlc/core/pr_review_source.py src/ai_sdlc/core/loop_policy.py src/ai_sdlc/core/pr_review_pack.py src/ai_sdlc/core/pr_review_service.py src/ai_sdlc/core/pr_review_provider.py src/ai_sdlc/cli/pr_review_cmd.py`
+  - 结果：通过，`Success: no issues found in 7 source files`。
+- `V6ax`（fourteenth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`385 passed`。
+
+#### 2.149 第十五轮 Windows CI 修复
+
+- GitHub Compatibility Gate 的 Windows Python 3.11 / 3.12 矩阵均失败在
+  `tests/unit/test_pr_review_provider.py::test_local_agent_allows_reviewed_patch_file_dirty_input`。
+- 根因：测试 fixture 以文本模式写入 `change.patch` 后仍用 LF 内存字符串计算
+  `patch_hash`；Windows 落盘时文本换行可能为 CRLF，而真实 `patch` diff source
+  在 `resolve_diff_source` 中按 `read_bytes()` 记录 hash，导致 fixture 与真实
+  review pack 生成逻辑不一致。
+- 修复：patch source provider fixture 改为按落盘后的 `change.patch` bytes 计算
+  `patch_hash`，保持 provider 的 byte-level 篡改检测不放宽。
+
+#### 2.150 第十五轮验证命令
+
+- `V6ay`（fifteenth-round provider pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_provider.py -q`
+  - 结果：通过，`34 passed`。
+- `V6az`（fifteenth-round provider ruff）
+  - 命令：`uv run ruff check tests/unit/test_pr_review_provider.py src/ai_sdlc/core/pr_review_provider.py`
+  - 结果：通过，`All checks passed!`。
+- `V6ba`（fifteenth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`385 passed`。
+- `V6bb`（fifteenth-round workitem close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/189-loop-engine-local-adversarial-pr-review`
+  - 结果：通过，`done_gate PASS ready for completion`。
+
+#### 2.151 第十六轮 Codex review 修复
+
+- Codex 第十六轮 P2 `Resolve worktree sources against the current HEAD`：
+  `local-staged` / `local-unstaged` 的 diff 始终来自当前 index/worktree，
+  不应使用用户传入的非当前 `--head` 作为 attribution commit。
+- 修复：worktree diff source resolution 固定解析当前 `HEAD`，no-change 和
+  error surface 也展示 `HEAD`，避免用户传入 `--head origin/main` 或旧 commit 时
+  review pack 记录未被实际 review 的 head commit，并在后续 local-agent launch /
+  close / attest 阶段误判 stale。
+- 新增单测覆盖 local-staged、local-unstaged 传入旧 head ref 时，`base_commit` /
+  `head_commit` 仍绑定当前 checkout `HEAD`。
+
+#### 2.152 第十六轮验证命令
+
+- `V6bc`（sixteenth-round source pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_source.py -q`
+  - 结果：通过，`10 passed`。
+- `V6bd`（sixteenth-round source ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_source.py tests/unit/test_pr_review_source.py`
+  - 结果：通过，`All checks passed!`。
+- `V6be`（sixteenth-round source mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_source.py`
+  - 结果：通过，`Success: no issues found in 1 source file`。
+- `V6bf`（sixteenth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`387 passed`。
+
+#### 2.153 第十七轮 Codex review 修复
+
+- Codex 第十七轮 P2 `Reject parent-directory paths in patch sources`：
+  patch diff headers 中的 `../`、绝对路径或 Windows drive 路径不能进入
+  `changed_files` / `reviewer_allowlist`，否则本地 reviewer allowlist 可能授权
+  repo 外路径。
+- 修复：patch path normalizer 对绝对路径、Windows drive 路径、`.` / `..` 逃逸做
+  fail-closed；`build_review_pack` 捕获 review input 解析阶段的 `GitError` 并返回
+  `BLOCKED`，不写出 review pack。
+- 新增单测覆盖 `diff --git a/../secrets.txt b/../secrets.txt` 会被阻断，且
+  blocker 明确包含 `Patch path escapes repository`。
+
+#### 2.154 第十七轮验证命令
+
+- `V6bg`（seventeenth-round pack pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_pack.py -q`
+  - 结果：通过，`22 passed`。
+- `V6bh`（seventeenth-round pack ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_pack.py tests/unit/test_pr_review_pack.py`
+  - 结果：通过，`All checks passed!`。
+- `V6bi`（seventeenth-round pack mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_pack.py`
+  - 结果：通过，`Success: no issues found in 1 source file`。
+- `V6bj`（seventeenth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`388 passed`。
+
+#### 2.155 第十八轮 Codex review 修复
+
+- Codex 第十八轮 P2 `Avoid fabricating paths from ambiguous diff headers`：
+  `diff --git a/foo b/bar b/foo b/bar` 这类路径本身包含 ` b/` 的 header 不能用
+  `rsplit(" b/")` 推断左右路径，否则会伪造不存在的 allowlist 路径。
+- 修复：`diff --git` header 中 ` b/` delimiter 不唯一时，不从该行推断路径，
+  改由后续 `---` / `+++` 文件头提供真实路径。
+- 新增单测覆盖 `foo b/bar` 这类路径只进入真实 `changed_files` /
+  `reviewer_allowlist`，不会生成 `foo b/bar b/foo` 或 `bar`。
+
+#### 2.156 第十八轮验证命令
+
+- `V6bk`（eighteenth-round pack pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_pack.py -q`
+  - 结果：通过，`23 passed`。
+- `V6bl`（eighteenth-round pack ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_pack.py tests/unit/test_pr_review_pack.py`
+  - 结果：通过，`All checks passed!`。
+- `V6bm`（eighteenth-round pack mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_pack.py`
+  - 结果：通过，`Success: no issues found in 1 source file`。
+- `V6bn`（eighteenth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`389 passed`。
+
+#### 2.157 第十九轮 Codex review 修复
+
+- Codex 第十九轮 P2 `Handle attestation unlink failures in start`：
+  `pr-review start` / rerun 在清理 `.ai-sdlc/reviews/pr/latest-attestation.json`
+  时如果遇到目录、权限拒绝或 Windows 文件锁，不能让 `OSError` 冒泡导致 CLI
+  traceback；应像 close / attest 一样 fail-closed，避免 stale attestation 被继续复用。
+- 修复：`start_pr_review` 在非 dry-run 清理 stale attestation 时捕获 `OSError`，
+  返回结构化 `PRReviewStartResult(status=BLOCKED)`，并给出删除
+  `latest-attestation.json` 后重试的下一步。
+- 新增单测用 `latest-attestation.json` 目录模拟 unlink 失败，验证 start 返回
+  BLOCKED 而不是崩溃。
+
+#### 2.158 第十九轮验证命令
+
+- `V6bo`（nineteenth-round service pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_service.py -q`
+  - 结果：通过，`87 passed`。
+- `V6bp`（nineteenth-round service ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_service.py tests/unit/test_pr_review_service.py`
+  - 结果：通过，`All checks passed!`。
+- `V6bq`（nineteenth-round service mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_service.py`
+  - 结果：通过，`Success: no issues found in 1 source file`。
+- `V6br`（nineteenth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`390 passed`。
+
+#### 2.159 第二十轮 Codex review 修复
+
+- Codex 第二十轮 P2 `Revalidate worktree diffs before launching local-agent`：
+  `local-staged` / `local-unstaged` review pack 在 provider launch 前需要重新计算
+  当前 index/worktree diff hash；否则同一路径在 pack 生成后被修改，local-agent
+  会先调用模型，直到 close/attest 才发现 stale diff。
+- 修复：`run_provider_command` 的 diff source launch blocker 对
+  `local-staged` / `local-unstaged` 读取当前 `git diff --cached` / `git diff`，
+  与 `diff_source.patch_hash` 比对，不一致时在模型调用前 BLOCKED。
+- 新增 provider 单测覆盖 reviewed staged diff 被改动后，local-agent 不会启动，
+  并保留 reviewed staged dirty path 的正常通过 fixture。
+
+#### 2.160 第二十轮验证命令
+
+- `V6bs`（twentieth-round provider pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_provider.py -q`
+  - 结果：通过，`35 passed`。
+- `V6bt`（twentieth-round provider ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_provider.py tests/unit/test_pr_review_provider.py`
+  - 结果：通过，`All checks passed!`。
+- `V6bu`（twentieth-round provider mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_provider.py`
+  - 结果：通过，`Success: no issues found in 1 source file`。
+- `V6bv`（twentieth-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`391 passed`。
+
+#### 2.161 第二十一轮 Codex review 修复
+
+- Codex 第二十一轮 P2 `Require all patch paths to stay allowlisted`：
+  patch source 的 rename/copy block 可能同时包含 included path 与 omitted path；
+  `_filter_patch_diff` 不能因为任一路径 allowlisted 就输出整个 block，否则会把
+  omitted 侧内容泄漏进 `diff.patch`。
+- 修复：patch block 输出条件改为 `current_paths <= included`，只有 block 中所有
+  路径都在 allowlist 时才输出；mixed included/omitted block 整体丢弃。
+- 新增单测覆盖 `src/app.py -> dist/app.generated.ts` 且
+  `allowed_omitted_file_policy: allow-with-waiver` 时，生成的 `diff.patch` 不包含
+  omitted/generated 侧路径或内容。
+
+#### 2.162 第二十一轮验证命令
+
+- `V6bw`（twenty-first-round pack pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_pack.py -q`
+  - 结果：通过，`24 passed`。
+- `V6bx`（twenty-first-round pack ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/pr_review_pack.py tests/unit/test_pr_review_pack.py`
+  - 结果：通过，`All checks passed!`。
+- `V6by`（twenty-first-round pack mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/pr_review_pack.py`
+  - 结果：通过，`Success: no issues found in 1 source file`。
+- `V6bz`（twenty-first-round focused pytest）
+  - 命令：`uv run pytest tests/unit/test_pr_review_models.py tests/unit/test_pr_review_source.py tests/unit/test_loop_policy.py tests/unit/test_pr_review_pack.py tests/unit/test_pr_review_service.py tests/unit/test_pr_review_provider.py tests/integration/test_cli_pr_review.py tests/unit/test_verify_constraints.py tests/integration/test_cli_verify_constraints.py -q`
+  - 结果：通过，`392 passed`。

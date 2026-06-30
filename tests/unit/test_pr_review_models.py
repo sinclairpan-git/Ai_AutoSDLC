@@ -16,6 +16,8 @@ from ai_sdlc.core.loop_models import (
     SchemaValidationStatus,
 )
 from ai_sdlc.core.pr_review_models import (
+    DiffSourceDescriptor,
+    DiffSourceKind,
     FindingResolution,
     FindingResolutionStatus,
     FindingSeverity,
@@ -25,11 +27,14 @@ from ai_sdlc.core.pr_review_models import (
     ProviderIsolationStatus,
     ProviderMode,
     ProviderRunnerInvocation,
+    ReviewAttestation,
     ReviewFinding,
     ReviewFindings,
     ReviewPack,
     ReviewRun,
     ReviewVerdict,
+    SourceAccessStatus,
+    SourceAdapterResolution,
 )
 
 
@@ -73,6 +78,20 @@ def test_review_pack_requires_commit_scope_and_stable_metadata() -> None:
     review_pack = ReviewPack(
         review_id="review-001",
         loop_id="loop-001",
+        diff_source=DiffSourceDescriptor(
+            source_kind=DiffSourceKind.LOCAL_GIT_RANGE,
+            adapter_id="local-git-range",
+            source_id="main...HEAD",
+            repo_root="/repo",
+            base_ref="main",
+            head_ref="HEAD",
+            base_commit="a" * 40,
+            head_commit="b" * 40,
+            access_status=SourceAccessStatus.RESOLVED,
+        ),
+        source_adapter="local-git-range",
+        source_access_status=SourceAccessStatus.RESOLVED,
+        source_resolution_path="/repo/.ai-sdlc/reviews/pr/review-001/source-resolution.json",
         repo_root="/repo",
         base_ref="main",
         head_ref="HEAD",
@@ -95,6 +114,9 @@ def test_review_pack_requires_commit_scope_and_stable_metadata() -> None:
     assert payload["artifact_kind"] == "review-pack"
     assert payload["schema_version"] == LOOP_SCHEMA_VERSION
     assert payload["review_id"] == "review-001"
+    assert payload["diff_source"]["source_kind"] == "local-git-range"
+    assert payload["source_adapter"] == "local-git-range"
+    assert payload["source_access_status"] == "resolved"
     assert payload["changed_files"] == ["src/app.py"]
     assert payload["diff_path"].endswith("/diff.patch")
     assert payload["policy_decisions"] == {
@@ -134,6 +156,87 @@ def test_review_pack_resolved_model_state_requires_resolved_model_and_source() -
             head_commit="b" * 40,
             model_resolution_status=ModelResolutionStatus.RESOLVED,
             resolved_model="",
+        )
+
+
+def test_source_resolution_requires_blocker_when_unresolved() -> None:
+    with pytest.raises(ValidationError, match="unresolved source requires"):
+        SourceAdapterResolution(
+            source_kind=DiffSourceKind.PATCH,
+            adapter_id="patch",
+            repo_root="/repo",
+            access_status=SourceAccessStatus.NEEDS_USER,
+        )
+
+
+def test_source_resolution_embeds_descriptor() -> None:
+    resolution = SourceAdapterResolution(
+        source_kind=DiffSourceKind.LOCAL_GIT_RANGE,
+        adapter_id="local-git-range",
+        source_id="main...HEAD",
+        repo_root="/repo",
+        base_ref="main",
+        head_ref="HEAD",
+        base_commit="a" * 40,
+        head_commit="b" * 40,
+        access_status=SourceAccessStatus.RESOLVED,
+    )
+
+    descriptor = resolution.to_descriptor().model_dump(mode="json")
+
+    assert resolution.artifact_kind == "source-resolution"
+    assert descriptor["source_kind"] == "local-git-range"
+    assert descriptor["adapter_id"] == "local-git-range"
+    assert descriptor["base_commit"] == "a" * 40
+
+
+def test_review_attestation_is_ci_read_only() -> None:
+    attestation = ReviewAttestation(
+        review_id="review-001",
+        loop_id="loop-001",
+        head_commit="b" * 40,
+        verdict=ReviewVerdict.FULLY_CLEAN,
+        review_run_path=".ai-sdlc/reviews/pr/review-001/review-run.json",
+        review_pack_path=".ai-sdlc/reviews/pr/review-001/review-pack.json",
+        final_report_path=".ai-sdlc/reviews/pr/review-001/final-report.md",
+    )
+
+    payload = attestation.model_dump(mode="json")
+
+    assert payload["artifact_kind"] == "review-attestation"
+    assert payload["ci_may_call_model"] is False
+    assert payload["diff_source"]["source_kind"] == "local-git-range"
+    assert payload["verdict"] == "fully_clean"
+
+
+def test_review_attestation_requires_non_git_range_diff_source_hash() -> None:
+    with pytest.raises(
+        ValidationError,
+        match="non-git-range review attestation requires diff_source_hash",
+    ):
+        ReviewAttestation(
+            review_id="review-001",
+            loop_id="loop-001",
+            head_commit="b" * 40,
+            diff_source=DiffSourceDescriptor(source_kind=DiffSourceKind.LOCAL_STAGED),
+            verdict=ReviewVerdict.FULLY_CLEAN,
+            review_run_path=".ai-sdlc/reviews/pr/review-001/review-run.json",
+            review_pack_path=".ai-sdlc/reviews/pr/review-001/review-pack.json",
+            final_report_path=".ai-sdlc/reviews/pr/review-001/final-report.md",
+        )
+
+
+def test_review_attestation_rejects_ci_model_calls() -> None:
+    with pytest.raises(ValidationError, match="cannot authorize CI model calls"):
+        ReviewAttestation(
+            review_id="review-001",
+            loop_id="loop-001",
+            head_commit="b" * 40,
+            verdict=ReviewVerdict.FULLY_CLEAN,
+            review_run_path=".ai-sdlc/reviews/pr/review-001/review-run.json",
+            review_pack_path=".ai-sdlc/reviews/pr/review-001/review-pack.json",
+            final_report_path=".ai-sdlc/reviews/pr/review-001/final-report.md",
+            ci_may_call_model=True,
         )
 
 

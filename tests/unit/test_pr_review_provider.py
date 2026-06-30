@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -11,6 +12,8 @@ from pathlib import Path
 from ai_sdlc.core import pr_review_provider
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
 from ai_sdlc.core.pr_review_models import (
+    DiffSourceDescriptor,
+    DiffSourceKind,
     ModelResolutionSource,
     ModelResolutionStatus,
     ProviderMode,
@@ -164,6 +167,195 @@ def test_local_agent_blocks_preexisting_dirty_worktree(tmp_path) -> None:
     assert result.status == ProviderRunStatus.BLOCKED
     assert "pre-existing unreviewed worktree changes" in result.blocker
     assert "src/app.py" in result.blocker
+    assert result.invocation_path == ""
+
+
+def test_local_agent_allows_reviewed_local_staged_dirty_paths(tmp_path) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('base')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    _write_file(tmp_path, "src/app.py", "print('staged')\n")
+    _git(tmp_path, "add", "src/app.py")
+    reviewed_hash = hashlib.sha256(
+        _git_raw(tmp_path, "diff", "--cached").encode("utf-8")
+    ).hexdigest()
+    review_pack_path = _write_review_pack(
+        tmp_path,
+        diff_source_kind=DiffSourceKind.LOCAL_STAGED,
+        base_ref="HEAD",
+        head_ref="INDEX",
+        changed_files=["src/app.py"],
+        reviewer_allowlist=["src/app.py"],
+        patch_hash=reviewed_hash,
+    )
+    script = _write_reviewer_script(tmp_path, exit_code=0, verdict="clean")
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.SUCCESS
+    assert Path(result.invocation_path).is_file()
+
+
+def test_local_agent_blocks_unstaged_edit_on_reviewed_local_staged_path(
+    tmp_path,
+) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('base')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    _write_file(tmp_path, "src/app.py", "print('staged')\n")
+    _git(tmp_path, "add", "src/app.py")
+    reviewed_hash = hashlib.sha256(
+        _git_raw(tmp_path, "diff", "--cached").encode("utf-8")
+    ).hexdigest()
+    review_pack_path = _write_review_pack(
+        tmp_path,
+        diff_source_kind=DiffSourceKind.LOCAL_STAGED,
+        base_ref="HEAD",
+        head_ref="INDEX",
+        changed_files=["src/app.py"],
+        reviewer_allowlist=["src/app.py"],
+        patch_hash=reviewed_hash,
+    )
+    _write_file(tmp_path, "src/app.py", "print('unstaged')\n")
+    script = _write_reviewer_script(tmp_path, exit_code=0, verdict="clean")
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "pre-existing unreviewed worktree changes" in result.blocker
+    assert "src/app.py" in result.blocker
+    assert result.invocation_path == ""
+
+
+def test_local_agent_allows_reviewed_patch_file_dirty_input(tmp_path) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('base')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    patch_text = (
+        "diff --git a/src/app.py b/src/app.py\n"
+        "--- a/src/app.py\n"
+        "+++ b/src/app.py\n"
+        "@@ -1 +1 @@\n"
+        "-print('base')\n"
+        "+print('from patch')\n"
+    )
+    _write_file(tmp_path, "change.patch", patch_text)
+    patch_hash = hashlib.sha256((tmp_path / "change.patch").read_bytes()).hexdigest()
+    review_pack_path = _write_review_pack(
+        tmp_path,
+        diff_source_kind=DiffSourceKind.PATCH,
+        base_ref="patch-file",
+        head_ref="HEAD",
+        changed_files=["src/app.py"],
+        reviewer_allowlist=["src/app.py"],
+        patch_file="change.patch",
+        patch_hash=patch_hash,
+    )
+    script = _write_reviewer_script(tmp_path, exit_code=0, verdict="clean")
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.SUCCESS
+    assert Path(result.invocation_path).is_file()
+
+
+def test_local_agent_blocks_changed_patch_file_before_launch(tmp_path) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('base')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    patch_text = (
+        "diff --git a/src/app.py b/src/app.py\n"
+        "--- a/src/app.py\n"
+        "+++ b/src/app.py\n"
+        "@@ -1 +1 @@\n"
+        "-print('base')\n"
+        "+print('from patch')\n"
+    )
+    _write_file(tmp_path, "change.patch", patch_text)
+    patch_hash = hashlib.sha256((tmp_path / "change.patch").read_bytes()).hexdigest()
+    review_pack_path = _write_review_pack(
+        tmp_path,
+        diff_source_kind=DiffSourceKind.PATCH,
+        base_ref="patch-file",
+        head_ref="HEAD",
+        changed_files=["src/app.py"],
+        reviewer_allowlist=["src/app.py"],
+        patch_file="change.patch",
+        patch_hash=patch_hash,
+    )
+    _write_file(tmp_path, "change.patch", patch_text + "+print('changed')\n")
+    script = _write_reviewer_script(tmp_path, exit_code=0, verdict="clean")
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "patch file hash does not match" in result.blocker
+    assert result.invocation_path == ""
+
+
+def test_local_agent_blocks_changed_local_staged_diff_before_launch(
+    tmp_path,
+) -> None:
+    _init_git_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('base')\n")
+    _git(tmp_path, "add", "src/app.py")
+    _git(tmp_path, "commit", "-m", "initial")
+    _write_file(tmp_path, "src/app.py", "print('reviewed staged')\n")
+    _git(tmp_path, "add", "src/app.py")
+    reviewed_hash = hashlib.sha256(
+        _git_raw(tmp_path, "diff", "--cached").encode("utf-8")
+    ).hexdigest()
+    review_pack_path = _write_review_pack(
+        tmp_path,
+        diff_source_kind=DiffSourceKind.LOCAL_STAGED,
+        base_ref="HEAD",
+        head_ref="INDEX",
+        changed_files=["src/app.py"],
+        reviewer_allowlist=["src/app.py"],
+        patch_hash=reviewed_hash,
+    )
+    _write_file(tmp_path, "src/app.py", "print('changed staged')\n")
+    _git(tmp_path, "add", "src/app.py")
+    script = _write_reviewer_script(tmp_path, exit_code=0, verdict="clean")
+
+    result = run_provider_command(
+        ProviderCommandOptions(
+            root=tmp_path,
+            review_pack_path=review_pack_path,
+            command=[sys.executable, str(script)],
+        )
+    )
+
+    assert result.status == ProviderRunStatus.BLOCKED
+    assert "worktree diff hash does not match" in result.blocker
     assert result.invocation_path == ""
 
 
@@ -1078,6 +1270,9 @@ def _write_review_pack(
     root: Path,
     *,
     review_id: str = "review-001",
+    diff_source_kind: DiffSourceKind = DiffSourceKind.LOCAL_GIT_RANGE,
+    base_ref: str = "main",
+    head_ref: str = "HEAD",
     model_selector: str = "current",
     resolved_model: str = "gpt-5",
     source: ModelResolutionSource = ModelResolutionSource.CURRENT_AGENT,
@@ -1086,6 +1281,8 @@ def _write_review_pack(
     diff_coverage: dict[str, int | float | str] | None = None,
     policy_decisions: dict[str, str | bool | int | float] | None = None,
     head_commit: str | None = None,
+    patch_file: str = "",
+    patch_hash: str = "",
 ) -> Path:
     if not (root / ".git").exists():
         _init_git_repo(root)
@@ -1101,9 +1298,18 @@ def _write_review_pack(
     review_pack = ReviewPack(
         review_id=review_id,
         loop_id=f"{review_id}-loop",
+        diff_source=DiffSourceDescriptor(
+            source_kind=diff_source_kind,
+            adapter_id=diff_source_kind.value,
+            base_ref=base_ref,
+            head_ref=head_ref,
+            patch_file=patch_file,
+            patch_hash=patch_hash,
+        ),
+        source_adapter=diff_source_kind.value,
         repo_root=str(root),
-        base_ref="main",
-        head_ref="HEAD",
+        base_ref=base_ref,
+        head_ref=head_ref,
         base_commit="a" * 40,
         head_commit=head_commit or _maybe_git_head(root) or "b" * 40,
         changed_files=changed_files or ["src/app.py"],
@@ -1146,6 +1352,10 @@ def _write_file(path: Path, file_path: str, content: str) -> None:
 
 
 def _git(path: Path, *args: str) -> str:
+    return _git_raw(path, *args).strip()
+
+
+def _git_raw(path: Path, *args: str) -> str:
     result = subprocess.run(
         ["git", *args],
         cwd=path,
@@ -1159,7 +1369,7 @@ def _git(path: Path, *args: str) -> str:
         raise AssertionError(
             f"git {' '.join(args)} failed: {result.stderr.strip()}"
         )
-    return result.stdout.strip()
+    return result.stdout
 
 
 def _write_reviewer_script(

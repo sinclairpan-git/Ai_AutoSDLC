@@ -25,6 +25,7 @@ def test_pr_review_help_lists_p0_commands() -> None:
     assert "fix" in result.output
     assert "rerun" in result.output
     assert "close" in result.output
+    assert "attest" in result.output
 
 
 def test_pr_review_start_dry_run_json_is_read_only(tmp_path: Path) -> None:
@@ -53,6 +54,9 @@ def test_pr_review_start_dry_run_json_is_read_only(tmp_path: Path) -> None:
     assert payload["status"] == "dry_run"
     assert payload["provider_id"] == "mock-reviewer"
     assert payload["resolved_model"] == "mock-reviewer"
+    assert payload["source_adapter"] == "local-git-range"
+    assert payload["source_access_status"] == "resolved"
+    assert payload["diff_source"]["source_kind"] == "local-git-range"
     assert not (tmp_path / ".ai-sdlc" / "reviews").exists()
 
 
@@ -145,6 +149,78 @@ def test_pr_review_start_without_base_uses_default_branch(tmp_path: Path) -> Non
     assert payload["status"] == "started"
     pack = json.loads(Path(payload["review_pack_path"]).read_text(encoding="utf-8"))
     assert pack["base_ref"] == "master"
+    assert pack["source_adapter"] == "local-git-range"
+
+
+def test_pr_review_start_patch_source_missing_reports_source_blocker(
+    tmp_path: Path,
+) -> None:
+    _init_repo(tmp_path)
+
+    with patch("ai_sdlc.cli.pr_review_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(
+            app,
+            [
+                "pr-review",
+                "start",
+                "--diff-source",
+                "patch",
+                "--patch-file",
+                "missing.patch",
+                "--provider",
+                "mock-reviewer",
+                "--dry-run",
+                "--review-id",
+                "review-missing-patch-cli",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["status"] == "blocked"
+    assert payload["source_adapter"] == "patch"
+    assert payload["source_access_status"] == "blocked"
+    assert "missing.patch" in payload["blocker"]
+
+
+def test_pr_review_start_patch_source_runs_mock_reviewer(tmp_path: Path) -> None:
+    _init_repo(tmp_path)
+    _write_file(tmp_path, "src/app.py", "print('from patch')\n")
+    (tmp_path / "change.patch").write_text(
+        "diff --git a/src/app.py b/src/app.py\n"
+        "--- a/src/app.py\n"
+        "+++ b/src/app.py\n"
+        "@@ -0,0 +1 @@\n"
+        "+print('from patch')\n",
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.cli.pr_review_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(
+            app,
+            [
+                "pr-review",
+                "start",
+                "--diff-source",
+                "patch",
+                "--patch-file",
+                "change.patch",
+                "--provider",
+                "mock-reviewer",
+                "--review-id",
+                "review-patch-cli",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "started"
+    assert payload["source_adapter"] == "patch"
+    pack = json.loads(Path(payload["review_pack_path"]).read_text(encoding="utf-8"))
+    assert pack["diff_source"]["source_kind"] == "patch"
+    assert pack["changed_files"] == ["src/app.py"]
 
 
 def test_pr_review_doctor_json_reports_missing_project() -> None:
@@ -197,6 +273,43 @@ def test_pr_review_fix_and_close_require_no_blockers_json(tmp_path: Path) -> Non
     assert close_payload["status"] == "closed"
     assert close_payload["verdict"] == "risk_accepted"
     assert Path(close_payload["final_report_path"]).is_file()
+
+
+def test_pr_review_attest_json_writes_latest_attestation(tmp_path: Path) -> None:
+    base_commit = _init_repo(tmp_path)
+    _commit_file(tmp_path, "src/app.py", "print('hello')\n", "add app")
+
+    with patch("ai_sdlc.cli.pr_review_cmd.find_project_root", return_value=tmp_path):
+        start = runner.invoke(
+            app,
+            [
+                "pr-review",
+                "start",
+                "--base",
+                base_commit,
+                "--provider",
+                "mock-reviewer",
+                "--review-id",
+                "review-attest-cli",
+                "--json",
+            ],
+        )
+        close = runner.invoke(app, ["pr-review", "close", "--json"])
+        attest = runner.invoke(app, ["pr-review", "attest", "--json"])
+
+    assert start.exit_code == 0
+    assert close.exit_code == 0
+    payload = json.loads(attest.output)
+    assert attest.exit_code == 0
+    assert payload["status"] == "ready"
+    assert payload["review_id"] == "review-attest-cli"
+    assert "must not call any model" in payload["next_action"]
+    attestation = json.loads(
+        Path(payload["attestation_path"]).read_text(encoding="utf-8")
+    )
+    assert attestation["review_id"] == "review-attest-cli"
+    assert attestation["diff_source"]["source_kind"] == "local-git-range"
+    assert attestation["ci_may_call_model"] is False
 
 
 def test_pr_review_fix_dry_run_json_does_not_write_artifacts(tmp_path: Path) -> None:
@@ -291,11 +404,15 @@ def _init_repo(path: Path, *, branch: str = "main") -> str:
 
 
 def _commit_file(path: Path, file_path: str, content: str, message: str) -> None:
+    _write_file(path, file_path, content)
+    _git(path, "add", file_path)
+    _git(path, "commit", "-m", message)
+
+
+def _write_file(path: Path, file_path: str, content: str) -> None:
     target = path / file_path
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(content, encoding="utf-8")
-    _git(path, "add", file_path)
-    _git(path, "commit", "-m", message)
 
 
 def _git(path: Path, *args: str) -> str:

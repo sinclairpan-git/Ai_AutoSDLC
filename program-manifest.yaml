@@ -1869,10 +1869,10 @@ specs:
   path: specs/191-loop-engine-next-action-guidance-baseline
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-06-30T09:01:03Z'
+  generated_at: '2026-06-30T19:06:55Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: c6051011
+  repo_revision: ece257e0
   authoring_hash: a2d0e43f1a3a4b2c655d0924d85b57ff8e763b784d75efddd3d841b5b95a087b
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1912,7 +1912,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 4914c8d621fe0b2877ea392697c697474bf5404b290dcab47f281864d1d935aa
+  snapshot_hash: c5e99272087a2ada603e32e0b6d4064d76affd911f9a6a8cc1eaf7a2b000b51b
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1931,8 +1931,8 @@ truth_snapshot:
     mapped_sources: 983
     unmapped_sources: 28
     missing_sources: 6
-    phase_signal_count: 3341
-    deferred_signal_count: 6109
+    phase_signal_count: 3409
+    deferred_signal_count: 6193
     non_goal_signal_count: 336
     layer_totals:
       blueprint: 1
@@ -10478,7 +10478,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 189-loop-engine-local-adversarial-pr-review
       phase_signal_count: 17
-      deferred_signal_count: 18
+      deferred_signal_count: 23
       non_goal_signal_count: 1
     - path: specs/189-loop-engine-local-adversarial-pr-review/plan.md
       source_type: plan_doc
@@ -10486,8 +10486,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 189-loop-engine-local-adversarial-pr-review
-      phase_signal_count: 5
-      deferred_signal_count: 5
+      phase_signal_count: 8
+      deferred_signal_count: 10
       non_goal_signal_count: 0
     - path: specs/189-loop-engine-local-adversarial-pr-review/tasks.md
       source_type: tasks_doc
@@ -10495,8 +10495,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 189-loop-engine-local-adversarial-pr-review
-      phase_signal_count: 0
-      deferred_signal_count: 3
+      phase_signal_count: 15
+      deferred_signal_count: 19
       non_goal_signal_count: 0
     - path: specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md
       source_type: execution_log
@@ -10504,8 +10504,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 189-loop-engine-local-adversarial-pr-review
-      phase_signal_count: 12
-      deferred_signal_count: 28
+      phase_signal_count: 62
+      deferred_signal_count: 86
       non_goal_signal_count: 1
     - path: specs/189-loop-engine-local-adversarial-pr-review/development-summary.md
       source_type: development_summary
