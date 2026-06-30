@@ -1086,3 +1086,55 @@
 - 当前批次 branch disposition 状态：`codex/189-loop-pr-review-batch1` 未提交。
 - 当前批次 worktree disposition 状态：dirty（包含本工作项实现文件、文档和测试；另有既有无关脏文件未处理）。
 - **是否继续下一批**：否；WI-189 P0 任务已实现并通过 focused verification。
+
+### Batch 2026-06-29-020 | PR #104 mainline close-out
+
+#### 2.101 准备
+
+- **任务来源**：PR #104 合并后 close-check 收口复验。
+- **目标**：将 WI-189 的最终 git closure 与 program truth snapshot 同步到 formal execution log。
+- **激活的规则**：truth-only verification profile；program truth snapshot；close-check git closure。
+- **验证画像**：`truth-only`
+- **改动范围**：`specs/189-loop-engine-local-adversarial-pr-review/task-execution-log.md`、`program-manifest.yaml`
+
+#### 2.102 统一验证命令
+
+- `V1`（program truth snapshot dry-run）
+  - 命令：`uv run ai-sdlc program truth sync --dry-run`
+  - 结果：通过；输出 `truth snapshot state: migration_pending`，确认本批需要刷新 persisted truth snapshot，未发现阻止 close-out 的新增 WI-189 blocker。
+- `V2`（program truth snapshot execute）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过；已写入 `program-manifest.yaml` 并刷新 persisted truth snapshot。
+- `V3`（框架约束检查）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `V4`（WI close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/189-loop-engine-local-adversarial-pr-review`
+  - 结果：通过；`tasks_completion`、`git_closure`、`program_truth`、`local_pr_review`、`done_gate` 均为 PASS。
+
+#### 2.103 任务记录
+
+- T61-T63 已通过 PR #104 mainline 合并进入 `main`。
+- PR #104 squash merge commit 为 `d4630a47773569286ed72483755792260cbe68da`。
+- 本批不新增产品代码，仅补齐 close-check 所需 git closure 与 truth freshness 证据。
+- 后续真实新需求应使用 `Next WI Seq = 190` 新建或选择工作项，不复用 WI-189 execute 分支。
+
+#### 2.104 代码审查（摘要）
+
+- PR #104 已完成 GitHub Codex review heartbeat；最终触发后无新增 review comment。
+- GitHub required checks 已全部成功。
+- 本批为 truth-only close-out，不改变 PR review runtime 行为。
+
+#### 2.105 任务/计划同步状态
+
+- `tasks.md` 同步状态：T11-T63 已完成并通过 PR #104 合并。
+- `task-execution-log.md` 同步状态：追加 mainline close-out 记录。
+- `program-manifest.yaml` 同步状态：已刷新 persisted truth snapshot。
+
+#### 2.106 归档后动作
+
+- **已完成 git 提交**：是
+- **提交哈希**：`db79b7e70f4a67ee74355281aa93620417007744`
+- 当前批次 branch disposition 状态：`codex/189-loop-pr-review-batch1` 已合并并删除远端分支；本地 scratch 分支仅保留历史。
+- 当前批次 worktree disposition 状态：`main` 已快进到 PR #104 merge commit；当前 close-out 修订将在 `codex/189-closeout-truth-sync` 分支单独提交。
+- **是否继续下一批**：否；WI-189 已完成，close-check 通过后方可进入 WI-190。
