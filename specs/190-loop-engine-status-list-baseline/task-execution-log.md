@@ -462,6 +462,8 @@
   - 结果：通过，`17 passed in 1.02s`。
 - `uv run ruff check src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py`
   - 结果：通过，`All checks passed!`。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
 - `git diff --check`
   - 结果：通过。
 
