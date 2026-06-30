@@ -405,7 +405,12 @@ def _summary_from_review_run(
         is_current=is_current,
         updated_at=review_run.updated_at,
         next_action=review_run.next_action,
-        next_guidance=_guidance_for_review_run(root, review_run, review_run_path),
+        next_guidance=_guidance_for_review_run(
+            root,
+            review_run,
+            review_run_path,
+            is_current=is_current,
+        ),
         artifacts=artifacts,
         local_pr_review=LocalPRReviewSummary(
             review_id=review_run.review_id,
@@ -532,10 +537,29 @@ def _guidance_for_review_run(
     root: Path,
     review_run: ReviewRun,
     review_run_path: Path,
+    *,
+    is_current: bool,
 ) -> LoopNextActionGuidance:
     evidence = [_repo_relative_path(root, review_run_path)]
     findings_path = _artifact_path_if_present(root, review_run.findings_path)
     final_report_path = _artifact_path_if_present(root, review_run.final_report_path)
+    if not is_current:
+        if final_report_path:
+            evidence.append(final_report_path)
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop list --json",
+            reason=(
+                "This is a historical, non-current review run. PR review "
+                "fix/rerun/close commands operate on current-review.json, so "
+                "inspect this item instead of running a current-review command."
+            ),
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.SAFE_READ_ONLY,
+            evidence=evidence,
+            alternatives=["Inspect the historical review-run.json artifact."],
+        )
 
     if review_run.status == LoopStatus.NEEDS_FIX:
         if findings_path:

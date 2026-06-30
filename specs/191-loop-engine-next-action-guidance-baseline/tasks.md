@@ -91,7 +91,8 @@ Batch 4: docs, constraints, and closeout evidence
   - needs_review 或需要复审时推荐 ai-sdlc pr-review rerun，并标明后续命令可能调用本地独立 review agent
   - blocked/needs_user 优先展示 blocker 和人工处理动作，不建议 close
   - closed 标记 no action 或 inspect final report
-  - loop list 的每个合法 item 都有与自身状态匹配的 guidance
+  - loop list 的 current item 有与自身状态匹配的 actionable guidance
+  - loop list 的非 current item 只给 inspect-only guidance，不得推荐 pr-review fix/rerun/close
 - verify:
   - uv run pytest tests/unit/test_loop_status.py -q
 - notes:
@@ -114,7 +115,7 @@ Batch 4: docs, constraints, and closeout evidence
   - tests/integration/test_cli_loop.py
 - acceptance:
   - loop status human 输出包含 Next command、Why、Model call、Writes artifacts、Writes code、Evidence
-  - loop list human 输出为每个合法 loop item 展示 guidance
+  - loop list human 输出为每个合法 loop item 展示 guidance，非 current item 只显示 inspect-only guidance
   - blocked/no_current human 输出也展示 guidance，不输出 Python traceback
   - JSON 输出只新增字段，不混入 Rich 文本
 - verify:

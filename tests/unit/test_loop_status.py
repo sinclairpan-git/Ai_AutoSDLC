@@ -195,9 +195,11 @@ def test_list_loops_reads_sorted_local_pr_review_runs_and_marks_current(
         "loop-review-001",
     ]
     assert [loop.next_guidance.command for loop in result.items] == [
-        "ai-sdlc pr-review fix",
+        "ai-sdlc loop list --json",
         "ai-sdlc pr-review fix",
     ]
+    assert result.items[0].next_guidance.writes_artifacts is False
+    assert "non-current review run" in result.items[0].next_guidance.reason
     assert result.items[0].is_current is False
     assert result.items[1].is_current is True
     current_artifacts = {artifact.kind for artifact in result.items[1].artifacts}

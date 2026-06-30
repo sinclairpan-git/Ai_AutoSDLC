@@ -141,7 +141,7 @@ ai-sdlc loop list --json
 
 预期：
 
-1. 每个合法 item 展示独立 guidance。
+1. 每个合法 item 展示独立 guidance；current item 可以显示 PR-review follow-up，非 current item 只显示 inspect-only guidance。
 2. malformed artifact 仍通过 `artifact_errors` 暴露，并提供顶层 guidance。
 3. list 仍不写入 `.ai-sdlc/`。
 
@@ -164,7 +164,7 @@ ai-sdlc loop status
 | needs_fix guidance | unit test | human output assertion |
 | passed/closed guidance | unit test | final report path fixture |
 | blocked/needs_user guidance | unit test | malformed pointer fixture |
-| list item guidance | unit test | `loop list --json` integration |
+| list item guidance | unit test 覆盖 current actionable / non-current inspect-only | `loop list --json` integration |
 | read-only boundary | before/after snapshot test | provider runner patch 未调用 |
 | docs constraints | verify constraints unit test | `uv run ai-sdlc verify constraints` |
 

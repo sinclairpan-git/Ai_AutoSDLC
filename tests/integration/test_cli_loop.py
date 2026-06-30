@@ -89,7 +89,8 @@ def test_loop_list_human_includes_each_loop_next_action(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "Loop 1" in result.output
     assert "Loop next: Run ai-sdlc pr-review fix." in result.output
-    assert "Next command: ai-sdlc pr-review fix" in result.output
+    assert "Next command: ai-sdlc loop list --json" in result.output
+    assert "non-current review run" in result.output
 
 
 def test_loop_status_human_skips_update_notice(
@@ -160,9 +161,9 @@ def test_loop_list_json_reads_runs_and_reports_malformed(
         "loop-review-002",
         "loop-review-001",
     ]
-    assert payload["items"][0]["next_guidance"]["command"] == (
-        "ai-sdlc pr-review fix"
-    )
+    assert payload["items"][0]["next_guidance"]["command"] == "ai-sdlc loop list --json"
+    assert payload["items"][0]["next_guidance"]["writes_artifacts"] is False
+    assert "non-current review run" in payload["items"][0]["next_guidance"]["reason"]
     assert payload["items"][0]["is_current"] is False
     assert payload["items"][1]["is_current"] is True
     assert payload["artifact_errors"][0]["path"] == (

@@ -167,3 +167,62 @@
 - **已完成 git 提交**：是（本批提交后复核）
 - **提交哈希**：待本批提交后生成
 - **是否继续下一批**：否；提交后执行 close-check、推送分支、打开 PR 并请求 Codex review。
+
+## Batch 2026-06-30-005 | Codex review remediation
+
+### 1. 批次范围
+
+- 覆盖任务：PR #107 Codex review P2 feedback on non-current `loop list` item guidance。
+- 覆盖阶段：post-review remediation。
+- 预读范围：PR #107 inline comment `discussion_r3496953102`、`list_loops` current pointer behavior、loop list tests。
+- 激活规则：`pr-review fix/rerun/close` 只作用于 current review pointer；非 current 历史 item 不得给可执行 PR-review command。
+
+### 2. branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：`merge-pending`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`active`
+
+### 3. 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/core/loop_status.py`、`tests/unit/test_loop_status.py`、`tests/integration/test_cli_loop.py`、`specs/191-loop-engine-next-action-guidance-baseline/spec.md`、`specs/191-loop-engine-next-action-guidance-baseline/plan.md`、`specs/191-loop-engine-next-action-guidance-baseline/tasks.md`、`specs/191-loop-engine-next-action-guidance-baseline/task-execution-log.md`
+
+### 4. 改动内容
+
+- 将非 current `loop list` item 的 guidance 改为 inspect-only：`ai-sdlc loop list --json`，不写 artifact、不调用模型、不修改代码。
+- 保留 current item 的 actionable guidance；只有 current review 才推荐 `ai-sdlc pr-review fix/rerun/close`。
+- 更新 formal docs，明确非 current 历史 item 不得推荐作用于 current pointer 的 PR-review 命令。
+- 更新 unit/integration tests，覆盖 non-current inspect-only guidance。
+
+### 5. 统一验证命令
+
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`169 passed in 10.87s`。
+- `uv run ruff check src tests`
+  - 结果：通过，`All checks passed!`。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `git diff --check`
+  - 结果：通过。
+
+### 6. 代码审查（摘要）
+
+- 宪章/规格对齐：修复后 `loop list` 仍是只读索引；非 current item 不再暗示可直接修复/复审/关闭历史 run。
+- 代码质量：用 `is_current` 在 summary 构造点分流，避免 CLI 层猜测 current pointer 语义。
+- 测试质量：unit 覆盖 list 中 current/non-current item 的不同 guidance；integration 覆盖 human 和 JSON 输出。
+- 结论：Codex P2 已修复，可同步 truth、提交 remediation commit 并重新请求 Codex review。
+
+### 7. 任务/计划同步状态
+
+- `tasks.md` 同步状态：已补充非 current item inspect-only acceptance。
+- `plan.md` 同步状态：已补充 list item current actionable / non-current inspect-only 验证策略。
+- `spec.md` 同步状态：已补充 FR/SC 与用户故事，防止后续实现回退。
+- `task-execution-log.md` 同步状态：已追加本轮 Codex remediation 记录。
+
+### 8. 当前结论
+
+- PR #107 Codex P2 已修复。
+- **已完成 git 提交**：是（Codex remediation commit 后复核）
+- **提交哈希**：待 Codex remediation commit 生成
+- **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。
