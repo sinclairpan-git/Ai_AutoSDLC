@@ -186,6 +186,27 @@ def test_list_loops_reports_malformed_current_pointer(
     assert result.artifact_errors[0].path == ".ai-sdlc/reviews/pr/current-review.json"
 
 
+def test_list_loops_reports_missing_current_pointer_target(
+    tmp_path: Path,
+) -> None:
+    _write_review_run(tmp_path)
+    missing_path = (
+        tmp_path / ".ai-sdlc" / "reviews" / "pr" / "missing" / "review-run.json"
+    )
+    _write_current_pointer(tmp_path, missing_path)
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.current_loop_id == ""
+    assert result.malformed_count == 1
+    assert len(result.artifact_errors) == 1
+    assert result.artifact_errors[0].kind == "current-review-target"
+    assert result.artifact_errors[0].path == (
+        ".ai-sdlc/reviews/pr/missing/review-run.json"
+    )
+
+
 def test_list_loops_reports_no_local_pr_review_runs(tmp_path: Path) -> None:
     (tmp_path / ".ai-sdlc").mkdir()
 

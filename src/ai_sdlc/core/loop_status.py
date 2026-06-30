@@ -221,6 +221,15 @@ def list_loops(
     )
     if current_pointer_error is not None:
         artifact_errors.append(current_pointer_error)
+    if current_review_run_path is not None and not current_review_run_path.is_file():
+        artifact_errors.append(
+            LoopArtifactError(
+                kind="current-review-target",
+                path=_repo_relative_path(resolved_root, current_review_run_path),
+                error="referenced by current-review pointer but file is missing.",
+            )
+        )
+        current_review_run_path = None
 
     for review_run_path in review_run_paths:
         try:

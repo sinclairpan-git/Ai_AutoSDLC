@@ -666,3 +666,61 @@
 - **已完成 git 提交**：是（Codex remediation round 4 commit 后复核）
 - **提交哈希**：待 Codex remediation round 4 commit 生成
 - **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。
+
+### Batch 2026-06-30-012 | Codex review remediation round 5
+
+#### 12.1 批次范围
+
+- 覆盖任务：PR #106 Codex review P2 feedback on missing current pointer target
+- 覆盖阶段：post-review remediation
+- 预读范围：PR #106 latest Codex inline review comment、`loop_status.py` list reader、unit loop status tests、CLI loop JSON tests
+- 激活规则：修复 missing current pointer target 可见性，不改变 `loop list` 可读 artifact 降级策略
+
+#### 12.2 branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：merge-pending
+- 当前批次 branch disposition 状态：merge-pending
+- 当前批次 worktree disposition 状态：active
+
+#### 12.3 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/core/loop_status.py`、`tests/unit/test_loop_status.py`、`tests/integration/test_cli_loop.py`、`specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 12.4 改动内容
+
+- 修复 Codex P2：`current-review.json` 指向缺失的 `review-run.json` 时，`loop list` 不再静默丢失该诊断。
+- `list_loops` 现在把缺失 target 作为 `artifact_errors[]` 的 `current-review-target` 返回，并计入 `malformed_count`。
+- 保持降级行为：其他可读 loop 仍正常列出，`current_loop_id/current_review_id` 为空并携带 missing target error。
+- 新增 core unit test 与 CLI JSON integration test，覆盖 missing current pointer target 对用户/自动化可见。
+
+#### 12.5 统一验证命令
+
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_command_names.py tests/integration/test_cli_self_update.py -q`
+  - 结果：通过，`43 passed, 1 skipped in 11.47s`。
+- `uv run ruff check src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/main.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/integration/test_cli_self_update.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+
+#### 12.6 代码审查（摘要）
+
+- 宪章/规格对齐：`loop list` 继续只读展示本地 artifact index，同时把 current pointer 语义错误结构化暴露。
+- 代码质量：malformed pointer 与 missing target 分别用 `current-review-pointer` / `current-review-target` 表达，避免错误语义混淆。
+- 测试质量：unit 与 CLI JSON 双层覆盖 missing target 的结构化输出。
+- 结论：允许同步 program truth、提交第五轮 Codex remediation 并重新请求 Codex review/checks。
+
+#### 12.7 任务/计划同步状态
+
+- `tasks.md` 同步状态：无需改变，T11-T42 仍为 `done`。
+- `plan.md` 同步状态：无需改变，修复属于已冻结 `loop list` 只读诊断契约的补齐。
+- `task-execution-log.md` 同步状态：已追加第五轮 PR review remediation 记录。
+
+#### 12.8 当前结论
+
+- PR #106 最新 Codex P2 已修复。
+- **已完成 git 提交**：是（Codex remediation round 5 commit 后复核）
+- **提交哈希**：待 Codex remediation round 5 commit 生成
+- **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。
