@@ -51,7 +51,7 @@ Batch 4: docs, verification, and closeout evidence
 ### Task 2.1 Add Loop status summary models and current status reader
 
 - task_id: T21
-- status: todo
+- status: done
 - goal: 新增 Loop status 只读 summary models，并能读取当前 local PR review run
 - priority: P0
 - depends:

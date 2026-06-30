@@ -2,7 +2,7 @@
 
 **功能编号**：`190-loop-engine-status-list-baseline`
 **创建日期**：2026-06-29
-**状态**：Batch 1 formal baseline completed，等待实现批次
+**状态**：Batch 2 T21 current status reader completed，等待 T22 list reader
 
 ## 1. 归档规则
 
@@ -91,3 +91,55 @@
 
 - T11 formal baseline 已完成，并已通过 `git diff --check`、`verify constraints` 与 WI-190 task guard。
 - 下一步必须先提交本批 formal docs，使 `HEAD` 能被 execute authorization 识别；提交后进入 T21：实现 `src/ai_sdlc/core/loop_status.py` 的只读 summary models 和 current status reader。
+
+### Batch 2026-06-30-002 | T21 current status reader
+
+#### 2.1 批次范围
+
+- 覆盖任务：`T21`
+- 覆盖阶段：read-only loop status/list service
+- 预读范围：`tasks.md`、`task-execution-log.md`、既有 `LoopArtifactStore`、`LoopStatus`、`ReviewRun` 模型
+- 激活规则：只读读取当前 local PR review artifact，不注册 CLI，不调用模型，不写 `.ai-sdlc/`
+
+#### 2.2 改动范围
+
+- 新增 `src/ai_sdlc/core/loop_status.py`
+- 新增 `tests/unit/test_loop_status.py`
+- 更新 `specs/190-loop-engine-status-list-baseline/tasks.md`
+- 更新 `specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 2.3 改动内容
+
+- 新增 `LoopStatusCommandStatus`、`LoopArtifactRef`、`LocalPRReviewSummary`、`LoopSummary`、`LoopStatusResult`。
+- 新增 `get_loop_status(root)`，只读取 `.ai-sdlc/reviews/pr/current-review.json` 和对应 `review-run.json`。
+- 对未初始化项目、无 current pointer、pointer JSON 损坏、pointer 非对象、review-run 缺失、review-run schema/JSON 损坏返回结构化 `status/result/blocker/next_action`。
+- 将 local PR review 的 `review_id`、verdict、unresolved counts、base/head、provider/model、code egress、artifact paths 汇总到只读输出。
+- 单元测试覆盖 happy path、no current、未初始化、malformed pointer、missing review-run、读取过程不写入 artifact。
+
+#### 2.4 执行的命令
+
+- `uv run pytest tests/unit/test_loop_status.py -q`
+  - 结果：通过，`6 passed in 0.12s`。
+- `uv run ruff check src/ai_sdlc/core/loop_status.py tests/unit/test_loop_status.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+
+#### 2.5 验证结果
+
+- T21 current status reader 的 focused unit tests 已通过。
+- T21 新增代码通过 ruff 检查。
+- 当前 diff 无 trailing whitespace 或 patch 格式问题。
+- `get_loop_status(root)` 未接入 CLI，符合 T21 范围边界；CLI 注册留给 T31。
+
+#### 2.6 对齐结论
+
+- 宪章/规格对齐：本批只消费本地 artifact，不触发 provider/model，不生成 review pack/findings/resolution/final report。
+- 代码质量：输出模型集中在 core 层，供后续 CLI human/json 输出复用。
+- 测试质量：覆盖主要异常路径和只读性，下一批 T22 需要补充 list reader 的排序、current 标记和 malformed artifact 容错。
+- 风险：当前仅支持 current status；历史列表能力尚未实现，`ai-sdlc loop list` 仍需 T22/T31。
+
+#### 2.7 批次结论
+
+- T21 已完成并通过 focused verification。
+- 下一步进入 T22：在同一 core 模块新增 `list_loops(root, loop_type=local-pr-review)`，稳定列出本地 review runs 并容忍单个 malformed artifact。
