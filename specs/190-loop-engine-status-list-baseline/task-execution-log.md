@@ -429,3 +429,58 @@
 - **已完成 git 提交**：是（T42 closeout commit 后复核）
 - **提交哈希**：待 T42 closeout commit 生成
 - **是否继续下一批**：否；WI-190 已进入最终 closeout。
+
+### Batch 2026-06-30-008 | Codex review remediation
+
+#### 8.1 批次范围
+
+- 覆盖任务：PR #106 Codex review P2 feedback
+- 覆盖阶段：post-close review remediation
+- 预读范围：PR #106 inline review comments、`spec.md` JSON/human 输出契约、`loop_status.py`、`loop_cmd.py`、loop CLI tests
+- 激活规则：修复 review 发现，不扩大 `loop status/list` 只读边界
+
+#### 8.2 branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：merge-pending
+- 当前批次 branch disposition 状态：merge-pending
+- 当前批次 worktree disposition 状态：active
+
+#### 8.3 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/core/loop_status.py`、`src/ai_sdlc/cli/loop_cmd.py`、`tests/unit/test_loop_status.py`、`tests/integration/test_cli_loop.py`、`specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 8.4 改动内容
+
+- 修复 Codex P2：`loop list --json` 现在按 PRD 输出稳定 `items[]`，并包含顶层 `current_loop_id` / `current_review_id`。
+- 修复 Codex P2：human `loop status/list` 摘要现在展示 `unresolved_blockers`、`unresolved_required`、`unresolved_advisory`。
+- 更新 core/unit/integration tests，覆盖 `items[]`、current ids 和 human unresolved counts。
+
+#### 8.5 统一验证命令
+
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_command_names.py -q`
+  - 结果：通过，`17 passed in 1.02s`。
+- `uv run ruff check src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+
+#### 8.6 代码审查（摘要）
+
+- 宪章/规格对齐：修复严格对齐 WI-190 PRD 的 JSON `items[]`/current ids 和 human unresolved counts。
+- 代码质量：保持 core model 为单一 JSON truth，CLI 仅渲染 core 输出。
+- 测试质量：新增/调整断言覆盖 Codex review 指出的两个 P2 退化点。
+- 结论：允许同步 program truth、提交修复并重新请求 Codex review。
+
+#### 8.7 任务/计划同步状态
+
+- `tasks.md` 同步状态：无需改变，T11-T42 仍为 `done`。
+- `plan.md` 同步状态：无需改变，修复属于已冻结输出契约的实现补齐。
+- `task-execution-log.md` 同步状态：已追加 PR review remediation 记录。
+
+#### 8.8 当前结论
+
+- PR #106 Codex review 两个 P2 均已修复。
+- **已完成 git 提交**：是（review remediation commit 后复核）
+- **提交哈希**：待 review remediation commit 生成
+- **是否继续下一批**：否；提交后重新请求 Codex review 并继续 heartbeat。

@@ -88,12 +88,12 @@ def _emit_list_result(result: LoopListResult, *, json_output: bool) -> None:
         _emit_payload(payload, json_output=True)
         return
     _emit_header(payload)
-    console.print(f"Loops: {len(result.loops)}")
+    console.print(f"Loops: {len(result.items)}")
     if result.malformed_count:
         console.print(f"Malformed artifacts: {result.malformed_count}")
         for artifact_error in result.artifact_errors:
             console.print(f"- {artifact_error.path}: {artifact_error.error}")
-    for index, loop in enumerate(result.loops, start=1):
+    for index, loop in enumerate(result.items, start=1):
         console.print(f"\nLoop {index}")
         _emit_loop_summary(loop)
 
@@ -124,6 +124,12 @@ def _emit_loop_summary(loop: LoopSummary) -> None:
         console.print(f"Review ID: {local.review_id}")
         if local.verdict:
             console.print(f"Verdict: {local.verdict}")
+        console.print(
+            "Unresolved: "
+            f"blockers={local.unresolved_blockers}, "
+            f"required={local.unresolved_required}, "
+            f"advisory={local.unresolved_advisory}"
+        )
         console.print(f"Base: {local.base_ref} @ {local.base_commit}")
         console.print(f"Head: {local.head_ref} @ {local.head_commit}")
         console.print(f"Provider: {local.provider_id}")

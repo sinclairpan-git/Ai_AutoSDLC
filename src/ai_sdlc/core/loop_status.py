@@ -97,7 +97,9 @@ class LoopListResult(BaseModel):
 
     status: LoopStatusCommandStatus
     result: str = ""
-    loops: list[LoopSummary] = Field(default_factory=list)
+    current_loop_id: str = ""
+    current_review_id: str = ""
+    items: list[LoopSummary] = Field(default_factory=list)
     malformed_count: int = 0
     artifact_errors: list[LoopArtifactError] = Field(default_factory=list)
     blocker: str = ""
@@ -246,6 +248,12 @@ def list_loops(
 
     loops.sort(key=lambda item: item.loop_id)
     loops.sort(key=lambda item: item.updated_at, reverse=True)
+    current_loop = next((loop for loop in loops if loop.is_current), None)
+    current_review = (
+        current_loop.local_pr_review
+        if current_loop is not None and current_loop.local_pr_review is not None
+        else None
+    )
     if not loops:
         return LoopListResult(
             status=LoopStatusCommandStatus.BLOCKED,
@@ -259,7 +267,9 @@ def list_loops(
     return LoopListResult(
         status=LoopStatusCommandStatus.READY,
         result="Local PR review loops found.",
-        loops=loops,
+        current_loop_id=current_loop.loop_id if current_loop is not None else "",
+        current_review_id=current_review.review_id if current_review is not None else "",
+        items=loops,
         malformed_count=len(artifact_errors),
         artifact_errors=artifact_errors,
         next_action="Run ai-sdlc loop status for the current loop.",

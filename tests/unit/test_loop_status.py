@@ -133,14 +133,16 @@ def test_list_loops_reads_sorted_local_pr_review_runs_and_marks_current(
     assert result.status == LoopStatusCommandStatus.READY
     assert result.result == "Local PR review loops found."
     assert result.malformed_count == 0
-    assert [loop.loop_id for loop in result.loops] == [
+    assert result.current_loop_id == "loop-review-001"
+    assert result.current_review_id == "review-001"
+    assert [loop.loop_id for loop in result.items] == [
         "loop-review-002",
         "loop-review-001",
     ]
-    assert result.loops[0].is_current is False
-    assert result.loops[1].is_current is True
-    current_artifacts = {artifact.kind for artifact in result.loops[1].artifacts}
-    non_current_artifacts = {artifact.kind for artifact in result.loops[0].artifacts}
+    assert result.items[0].is_current is False
+    assert result.items[1].is_current is True
+    current_artifacts = {artifact.kind for artifact in result.items[1].artifacts}
+    non_current_artifacts = {artifact.kind for artifact in result.items[0].artifacts}
     assert "current-review-pointer" in current_artifacts
     assert "current-review-pointer" not in non_current_artifacts
 
@@ -157,7 +159,7 @@ def test_list_loops_skips_malformed_review_run_and_reports_error(
     result = list_loops(tmp_path)
 
     assert result.status == LoopStatusCommandStatus.READY
-    assert [loop.loop_id for loop in result.loops] == ["loop-review-001"]
+    assert [loop.loop_id for loop in result.items] == ["loop-review-001"]
     assert result.malformed_count == 1
     assert len(result.artifact_errors) == 1
     assert result.artifact_errors[0].kind == "review-run"
@@ -172,7 +174,7 @@ def test_list_loops_reports_no_local_pr_review_runs(tmp_path: Path) -> None:
     result = list_loops(tmp_path)
 
     assert result.status == LoopStatusCommandStatus.NO_CURRENT
-    assert result.loops == []
+    assert result.items == []
     assert result.next_action == "Run ai-sdlc pr-review start --base <branch>."
 
 

@@ -62,6 +62,7 @@ def test_loop_status_human_includes_review_and_artifacts(tmp_path: Path) -> None
     assert "Next: Run ai-sdlc pr-review fix." in result.output
     assert "Loop type: local-pr-review" in result.output
     assert "Review ID: review-001" in result.output
+    assert "Unresolved: blockers=1, required=0, advisory=0" in result.output
     assert "Artifacts:" in result.output
     assert ".ai-sdlc/reviews/pr/review-001/review-run.json" in result.output
 
@@ -92,13 +93,15 @@ def test_loop_list_json_reads_runs_and_reports_malformed(
     assert result.exit_code == 0
     payload = json.loads(result.output)
     assert payload["status"] == "ready"
+    assert payload["current_loop_id"] == "loop-review-001"
+    assert payload["current_review_id"] == "review-001"
     assert payload["malformed_count"] == 1
-    assert [loop["loop_id"] for loop in payload["loops"]] == [
+    assert [loop["loop_id"] for loop in payload["items"]] == [
         "loop-review-002",
         "loop-review-001",
     ]
-    assert payload["loops"][0]["is_current"] is False
-    assert payload["loops"][1]["is_current"] is True
+    assert payload["items"][0]["is_current"] is False
+    assert payload["items"][1]["is_current"] is True
     assert payload["artifact_errors"][0]["path"] == (
         ".ai-sdlc/reviews/pr/review-bad/review-run.json"
     )
