@@ -66,7 +66,7 @@ Batch 4: docs, constraints, and closeout evidence
   - 新增 LoopNextActionGuidance 或等价 Pydantic model
   - LoopStatusResult、LoopListResult、LoopSummary 均能输出 next_guidance
   - 现有 next_action 字段仍保留且语义不变
-  - no current、uninitialized、malformed pointer、missing review-run 均有结构化 guidance
+  - no current、uninitialized、malformed pointer、missing review-run 均有结构化 guidance；有历史 run 但无 current pointer 的 loop list 顶层也使用 no-current guidance
   - guidance 推导不写入 .ai-sdlc/
 - verify:
   - uv run pytest tests/unit/test_loop_status.py -q
@@ -94,6 +94,7 @@ Batch 4: docs, constraints, and closeout evidence
   - closed 标记 no action 或 inspect final report
   - loop list 的 current item 有与自身状态匹配的 actionable guidance
   - loop list 的非 current item 只给 inspect-only guidance，不得推荐 pr-review fix/rerun/close
+  - loop list 有历史 run 但没有 current pointer 时，顶层 guidance 必须推荐 doctor/start 路径，历史 item 仍为 inspect-only
   - loop list 遇到 malformed current pointer、missing current target 或 malformed current target review-run 但存在历史 run 时，顶层 guidance 必须是 blocked repair guidance
 - verify:
   - uv run pytest tests/unit/test_loop_status.py -q

@@ -195,6 +195,33 @@ def test_loop_list_json_reads_runs_and_reports_malformed(
     )
 
 
+def test_loop_list_json_guides_no_current_pointer_with_history_to_doctor(
+    tmp_path: Path,
+) -> None:
+    _write_review_run(tmp_path)
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["loop", "list", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "ready"
+    assert payload["current_loop_id"] == ""
+    assert payload["blocker"] == ""
+    assert payload["next_action"] == "Run ai-sdlc pr-review start --base <branch>."
+    assert payload["next_guidance"]["command"] == (
+        "ai-sdlc pr-review doctor --base <branch>"
+    )
+    assert payload["next_guidance"]["requires_model"] is False
+    assert payload["next_guidance"]["writes_artifacts"] is False
+    assert "ai-sdlc pr-review start --base <branch>" in (
+        payload["next_guidance"]["alternatives"]
+    )
+    assert payload["items"][0]["next_guidance"]["command"] == (
+        "ai-sdlc loop list --json"
+    )
+
+
 def test_loop_list_json_reports_malformed_current_pointer(
     tmp_path: Path,
 ) -> None:

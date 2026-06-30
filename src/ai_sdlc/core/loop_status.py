@@ -385,6 +385,10 @@ def list_loops(
         )
         list_next_action = "Inspect or remove malformed current-review.json artifacts."
         list_blocker = pointer_blocker
+    elif current_loop is None:
+        list_guidance = _no_current_review_guidance()
+        list_next_action = "Run ai-sdlc pr-review start --base <branch>."
+        list_blocker = ""
     else:
         list_guidance = _inspect_current_loop_guidance(current_loop)
         list_next_action = "Run ai-sdlc loop status for the current loop."

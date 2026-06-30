@@ -160,7 +160,7 @@ ai-sdlc loop status
 
 | 关键路径 | 主验证方式 | 次验证方式 |
 |----------|------------|------------|
-| no current guidance | unit test | CLI JSON integration |
+| no current guidance | unit test 覆盖 status 和有历史 run 的 list 顶层 guidance | CLI JSON integration |
 | needs_fix guidance | unit test 覆盖 fresh fix / post-fix rerun | human output assertion |
 | passed/closed guidance | unit test | final report path fixture |
 | blocked/needs_user guidance | unit test | malformed pointer fixture |

@@ -234,6 +234,28 @@ def test_list_loops_reads_sorted_local_pr_review_runs_and_marks_current(
     assert "current-review-pointer" not in non_current_artifacts
 
 
+def test_list_loops_guides_no_current_pointer_with_history_to_doctor(
+    tmp_path: Path,
+) -> None:
+    _write_review_run(tmp_path)
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.current_loop_id == ""
+    assert result.blocker == ""
+    assert result.next_action == "Run ai-sdlc pr-review start --base <branch>."
+    assert result.next_guidance.command == "ai-sdlc pr-review doctor --base <branch>"
+    assert result.next_guidance.requires_model is False
+    assert result.next_guidance.writes_artifacts is False
+    assert "ai-sdlc pr-review start --base <branch>" in (
+        result.next_guidance.alternatives
+    )
+    assert [loop.next_guidance.command for loop in result.items] == [
+        "ai-sdlc loop list --json"
+    ]
+
+
 def test_list_loops_orders_by_review_run_artifact_mtime(
     tmp_path: Path,
 ) -> None:

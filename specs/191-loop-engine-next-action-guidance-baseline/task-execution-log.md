@@ -410,3 +410,66 @@
 - **已完成 git 提交**：是（Codex remediation commit 后复核）
 - **提交哈希**：待 Codex remediation commit 生成
 - **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。
+
+## Batch 2026-06-30-009 | Codex no-current list guidance remediation
+
+### 1. 批次范围
+
+- 覆盖任务：PR #107 第五轮 Codex review P2 feedback on no-current `loop list` top-level guidance。
+- 覆盖阶段：post-review remediation。
+- 预读范围：PR #107 inline comment `discussion_r3497410440`、`list_loops` no current pointer branch、no-current guidance tests。
+- 激活规则：当 `.ai-sdlc/reviews/pr/current-review.json` 缺失但存在历史 `review-run.json` 时，`loop list --json` 顶层 guidance 仍必须走 no-current doctor/start 路径；历史 item 继续保持 inspect-only。
+
+### 2. branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：`merge-pending`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`active`
+
+### 3. 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/core/loop_status.py`、`tests/unit/test_loop_status.py`、`tests/integration/test_cli_loop.py`、`specs/191-loop-engine-next-action-guidance-baseline/spec.md`、`specs/191-loop-engine-next-action-guidance-baseline/plan.md`、`specs/191-loop-engine-next-action-guidance-baseline/tasks.md`、`specs/191-loop-engine-next-action-guidance-baseline/task-execution-log.md`
+
+### 4. 改动内容
+
+- 在 `list_loops` 中区分三类顶层状态：current pointer 损坏时 blocked repair guidance；无 current pointer 时 no-current doctor/start guidance；存在 current loop 时 inspect current loop guidance。
+- 新增 unit test，覆盖存在历史 run 但无 current pointer 时的顶层 no-current guidance 与历史 item inspect-only guidance。
+- 新增 CLI JSON integration test，覆盖外部消费者看到的 `next_action`、`next_guidance.command`、`alternatives` 和 item guidance。
+- 更新 formal docs，明确 no-current guidance 不只适用于 `loop status`，也适用于有历史 run 的 `loop list` 顶层输出。
+
+### 5. 统一验证命令
+
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py -q`
+  - 结果：通过，`37 passed in 1.18s`。
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`175 passed in 11.00s`。
+- `uv run ruff check src tests`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过，snapshot `87315d34b27cf8decbf0b0ccd9de049788c06e7353733fe5f09374d01a87bb0f`，写入 `program-manifest.yaml`。
+
+### 6. 代码审查（摘要）
+
+- 宪章/规格对齐：修复后用户在历史列表里也会得到可落地的 no-current doctor/start 路径，而不是被引导到另一个只读 status 命令。
+- 代码质量：分支只在顶层 guidance 选择处收敛，不改变历史 item 的安全 inspect-only 行为。
+- 测试质量：unit 覆盖 core result；integration 覆盖 CLI JSON 字段。
+- 结论：第五轮 Codex P2 已修复，可提交 remediation commit 并重新请求 Codex review。
+
+### 7. 任务/计划同步状态
+
+- `tasks.md` 同步状态：已补充 no-current list-with-history acceptance。
+- `plan.md` 同步状态：已补充 no-current guidance 验证矩阵。
+- `spec.md` 同步状态：已补充 FR/SC 与边界情况。
+- `task-execution-log.md` 同步状态：已追加本轮 Codex remediation 记录。
+
+### 8. 当前结论
+
+- PR #107 第五轮 Codex P2 已修复。
+- **已完成 git 提交**：是（Codex remediation commit 后复核）
+- **提交哈希**：c6051011
+- **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。
