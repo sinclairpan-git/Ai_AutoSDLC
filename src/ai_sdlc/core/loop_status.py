@@ -80,6 +80,30 @@ class LoopStatusResult(BaseModel):
     next_action: str = ""
 
 
+class LoopArtifactError(BaseModel):
+    """Non-fatal artifact read error surfaced by list operations."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str
+    path: str
+    error: str
+
+
+class LoopListResult(BaseModel):
+    """Result returned by the read-only loop list reader."""
+
+    model_config = ConfigDict(extra="forbid", use_enum_values=True)
+
+    status: LoopStatusCommandStatus
+    result: str = ""
+    loops: list[LoopSummary] = Field(default_factory=list)
+    malformed_count: int = 0
+    artifact_errors: list[LoopArtifactError] = Field(default_factory=list)
+    blocker: str = ""
+    next_action: str = ""
+
+
 def get_loop_status(root: Path) -> LoopStatusResult:
     """Return the current Loop Engine status without writing artifacts."""
 
@@ -138,7 +162,8 @@ def get_loop_status(root: Path) -> LoopStatusResult:
         resolved_root,
         review_run,
         review_run_path,
-        pointer_path,
+        current_pointer_path=pointer_path,
+        is_current=True,
     )
     return LoopStatusResult(
         status=LoopStatusCommandStatus.READY,
@@ -148,16 +173,113 @@ def get_loop_status(root: Path) -> LoopStatusResult:
     )
 
 
+def list_loops(
+    root: Path,
+    *,
+    loop_type: LoopType | str = LoopType.LOCAL_PR_REVIEW,
+) -> LoopListResult:
+    """List local Loop Engine runs without writing artifacts."""
+
+    resolved_root = root.resolve()
+    ai_sdlc_dir = resolved_root / AI_SDLC_DIR
+    if not ai_sdlc_dir.is_dir():
+        return LoopListResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Project is not initialized.",
+            blocker="Project is not initialized; .ai-sdlc is missing.",
+            next_action="Run ai-sdlc init .",
+        )
+
+    normalized_loop_type = (
+        loop_type.value if isinstance(loop_type, LoopType) else str(loop_type)
+    )
+    if normalized_loop_type != LoopType.LOCAL_PR_REVIEW.value:
+        return LoopListResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Unsupported loop type.",
+            blocker=f"Unsupported loop type for list: {normalized_loop_type}",
+            next_action="Use loop_type=local-pr-review.",
+        )
+
+    review_root = resolved_root / AI_SDLC_DIR / "reviews" / "pr"
+    review_run_paths = sorted(review_root.glob("*/review-run.json"))
+    if not review_run_paths:
+        return LoopListResult(
+            status=LoopStatusCommandStatus.NO_CURRENT,
+            result="No local PR review loops found.",
+            next_action="Run ai-sdlc pr-review start --base <branch>.",
+        )
+
+    current_pointer_path = resolved_root / CURRENT_REVIEW_PATH
+    current_review_run_path = _read_current_review_run_path(
+        resolved_root,
+        current_pointer_path,
+    )
+    loops: list[LoopSummary] = []
+    artifact_errors: list[LoopArtifactError] = []
+
+    for review_run_path in review_run_paths:
+        try:
+            review_run = ReviewRun.model_validate(
+                json.loads(review_run_path.read_text(encoding="utf-8"))
+            )
+        except (json.JSONDecodeError, OSError, ValidationError, ValueError) as exc:
+            artifact_errors.append(
+                LoopArtifactError(
+                    kind="review-run",
+                    path=_repo_relative_path(resolved_root, review_run_path),
+                    error=str(exc),
+                )
+            )
+            continue
+
+        is_current = _same_path(review_run_path, current_review_run_path)
+        loops.append(
+            _summary_from_review_run(
+                resolved_root,
+                review_run,
+                review_run_path,
+                current_pointer_path=current_pointer_path if is_current else None,
+                is_current=is_current,
+            )
+        )
+
+    loops.sort(key=lambda item: item.loop_id)
+    loops.sort(key=lambda item: item.updated_at, reverse=True)
+    if not loops:
+        return LoopListResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="No readable local PR review loops found.",
+            malformed_count=len(artifact_errors),
+            artifact_errors=artifact_errors,
+            blocker="All discovered local PR review loop artifacts are malformed.",
+            next_action="Inspect or remove malformed review-run.json artifacts.",
+        )
+
+    return LoopListResult(
+        status=LoopStatusCommandStatus.READY,
+        result="Local PR review loops found.",
+        loops=loops,
+        malformed_count=len(artifact_errors),
+        artifact_errors=artifact_errors,
+        next_action="Run ai-sdlc loop status for the current loop.",
+    )
+
+
 def _summary_from_review_run(
     root: Path,
     review_run: ReviewRun,
     review_run_path: Path,
-    pointer_path: Path,
+    *,
+    current_pointer_path: Path | None = None,
+    is_current: bool = False,
 ) -> LoopSummary:
-    artifacts = [
-        _artifact_ref(root, "current-review-pointer", pointer_path),
-        _artifact_ref(root, "review-run", review_run_path),
-    ]
+    artifacts = [_artifact_ref(root, "review-run", review_run_path)]
+    if is_current and current_pointer_path is not None:
+        artifacts.insert(
+            0,
+            _artifact_ref(root, "current-review-pointer", current_pointer_path),
+        )
     optional_artifacts = (
         ("review-pack", review_run.review_pack_path),
         ("findings", review_run.findings_path),
@@ -172,7 +294,7 @@ def _summary_from_review_run(
         loop_id=review_run.loop_id,
         loop_type=review_run.loop_type,
         status=review_run.status,
-        is_current=True,
+        is_current=is_current,
         updated_at=review_run.updated_at,
         next_action=review_run.next_action,
         artifacts=artifacts,
@@ -203,6 +325,19 @@ def _blocked_result(*, result: str, blocker: str) -> LoopStatusResult:
     )
 
 
+def _read_current_review_run_path(root: Path, pointer_path: Path) -> Path | None:
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(pointer, dict):
+        return None
+    path_text = pointer.get("review_run_path")
+    if not isinstance(path_text, str) or not path_text.strip():
+        return None
+    return _resolve_repo_path(root, path_text)
+
+
 def _artifact_ref(root: Path, kind: str, path: Path) -> LoopArtifactRef:
     return LoopArtifactRef(
         kind=kind,
@@ -225,12 +360,21 @@ def _repo_relative_path(root: Path, path: Path) -> str:
         return str(path)
 
 
+def _same_path(left: Path, right: Path | None) -> bool:
+    if right is None:
+        return False
+    return left.resolve(strict=False) == right.resolve(strict=False)
+
+
 __all__ = [
     "CURRENT_REVIEW_PATH",
+    "LoopArtifactError",
     "LocalPRReviewSummary",
     "LoopArtifactRef",
+    "LoopListResult",
     "LoopStatusCommandStatus",
     "LoopStatusResult",
     "LoopSummary",
     "get_loop_status",
+    "list_loops",
 ]

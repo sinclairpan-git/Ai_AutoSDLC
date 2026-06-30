@@ -11,6 +11,7 @@ from ai_sdlc.core.loop_status import (
     CURRENT_REVIEW_PATH,
     LoopStatusCommandStatus,
     get_loop_status,
+    list_loops,
 )
 from ai_sdlc.core.pr_review_models import (
     ModelResolutionSource,
@@ -110,16 +111,97 @@ def test_get_loop_status_does_not_write_artifacts(tmp_path: Path) -> None:
     assert _snapshot_files(tmp_path / ".ai-sdlc") == before
 
 
-def _write_review_run(root: Path) -> Path:
+def test_list_loops_reads_sorted_local_pr_review_runs_and_marks_current(
+    tmp_path: Path,
+) -> None:
+    older_path = _write_review_run(
+        tmp_path,
+        review_id="review-001",
+        loop_id="loop-review-001",
+        updated_at="2026-06-29T01:00:00Z",
+    )
+    _write_review_run(
+        tmp_path,
+        review_id="review-002",
+        loop_id="loop-review-002",
+        updated_at="2026-06-30T01:00:00Z",
+    )
+    _write_current_pointer(tmp_path, older_path)
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.result == "Local PR review loops found."
+    assert result.malformed_count == 0
+    assert [loop.loop_id for loop in result.loops] == [
+        "loop-review-002",
+        "loop-review-001",
+    ]
+    assert result.loops[0].is_current is False
+    assert result.loops[1].is_current is True
+    current_artifacts = {artifact.kind for artifact in result.loops[1].artifacts}
+    non_current_artifacts = {artifact.kind for artifact in result.loops[0].artifacts}
+    assert "current-review-pointer" in current_artifacts
+    assert "current-review-pointer" not in non_current_artifacts
+
+
+def test_list_loops_skips_malformed_review_run_and_reports_error(
+    tmp_path: Path,
+) -> None:
+    _write_review_run(tmp_path)
+    bad_dir = LoopArtifactStore(tmp_path).review_run_dir("review-bad")
+    bad_dir.mkdir(parents=True)
+    bad_path = bad_dir / "review-run.json"
+    bad_path.write_text("{not-json", encoding="utf-8")
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert [loop.loop_id for loop in result.loops] == ["loop-review-001"]
+    assert result.malformed_count == 1
+    assert len(result.artifact_errors) == 1
+    assert result.artifact_errors[0].kind == "review-run"
+    assert result.artifact_errors[0].path == (
+        ".ai-sdlc/reviews/pr/review-bad/review-run.json"
+    )
+
+
+def test_list_loops_reports_no_local_pr_review_runs(tmp_path: Path) -> None:
+    (tmp_path / ".ai-sdlc").mkdir()
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.NO_CURRENT
+    assert result.loops == []
+    assert result.next_action == "Run ai-sdlc pr-review start --base <branch>."
+
+
+def test_list_loops_does_not_write_artifacts(tmp_path: Path) -> None:
+    _write_review_run(tmp_path)
+    before = _snapshot_files(tmp_path / ".ai-sdlc")
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert _snapshot_files(tmp_path / ".ai-sdlc") == before
+
+
+def _write_review_run(
+    root: Path,
+    *,
+    review_id: str = "review-001",
+    loop_id: str = "loop-review-001",
+    updated_at: str = "2026-06-30T00:00:00Z",
+) -> Path:
     store = LoopArtifactStore(root)
-    review_dir = store.create_review_run_dir("review-001")
+    review_dir = store.create_review_run_dir(review_id)
     review_pack_path = review_dir / "review-pack.json"
     findings_path = review_dir / "findings.json"
     review_pack_path.write_text("{}\n", encoding="utf-8")
     findings_path.write_text("{}\n", encoding="utf-8")
     review_run = ReviewRun(
-        review_id="review-001",
-        loop_id="loop-review-001",
+        review_id=review_id,
+        loop_id=loop_id,
         status=LoopStatus.NEEDS_FIX,
         provider_id="mock-reviewer",
         provider_mode=ProviderMode.MOCK,
@@ -131,11 +213,12 @@ def _write_review_run(root: Path) -> Path:
         head_ref="HEAD",
         base_commit="a" * 40,
         head_commit="b" * 40,
-        review_pack_path=".ai-sdlc/reviews/pr/review-001/review-pack.json",
-        findings_path=".ai-sdlc/reviews/pr/review-001/findings.json",
+        review_pack_path=f".ai-sdlc/reviews/pr/{review_id}/review-pack.json",
+        findings_path=f".ai-sdlc/reviews/pr/{review_id}/findings.json",
         verdict=ReviewVerdict.CHANGES_REQUIRED,
         unresolved_blockers=1,
         next_action="Run ai-sdlc pr-review fix.",
+        updated_at=updated_at,
     )
     return store.write_json_artifact(review_dir / "review-run.json", review_run)
 

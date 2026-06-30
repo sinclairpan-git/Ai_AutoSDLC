@@ -72,7 +72,7 @@ Batch 4: docs, verification, and closeout evidence
 ### Task 2.2 Add Loop list reader for local PR review runs
 
 - task_id: T22
-- status: todo
+- status: done
 - goal: 新增 local PR review loop list reader，稳定列出历史 review runs
 - priority: P0
 - depends:

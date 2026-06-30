@@ -2,7 +2,7 @@
 
 **功能编号**：`190-loop-engine-status-list-baseline`
 **创建日期**：2026-06-29
-**状态**：Batch 2 T21 current status reader completed，等待 T22 list reader
+**状态**：Batch 2 read-only status/list service completed，等待 CLI registration
 
 ## 1. 归档规则
 
@@ -143,3 +143,55 @@
 
 - T21 已完成并通过 focused verification。
 - 下一步进入 T22：在同一 core 模块新增 `list_loops(root, loop_type=local-pr-review)`，稳定列出本地 review runs 并容忍单个 malformed artifact。
+
+### Batch 2026-06-30-003 | T22 local PR review list reader
+
+#### 3.1 批次范围
+
+- 覆盖任务：`T22`
+- 覆盖阶段：read-only loop status/list service
+- 预读范围：`loop_status.py`、`test_loop_status.py`、`LoopType`、`ReviewRun`、`LoopArtifactStore`
+- 激活规则：只读扫描本地 local PR review artifacts；单个 malformed run 不阻断其他合法 run
+
+#### 3.2 改动范围
+
+- 更新 `src/ai_sdlc/core/loop_status.py`
+- 更新 `tests/unit/test_loop_status.py`
+- 更新 `specs/190-loop-engine-status-list-baseline/tasks.md`
+- 更新 `specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 3.3 改动内容
+
+- 新增 `LoopArtifactError` 和 `LoopListResult`，用于表达 list reader 的非致命 artifact 读取错误。
+- 新增 `list_loops(root, loop_type=local-pr-review)`，扫描 `.ai-sdlc/reviews/pr/*/review-run.json` 并复用 `LoopSummary` 输出。
+- 输出按 `updated_at` 倒序、同时间 `loop_id` 升序稳定排序。
+- 读取 `.ai-sdlc/reviews/pr/current-review.json` 标记 current run；pointer 损坏时不阻断历史列表。
+- 对单个 malformed `review-run.json` 记录 `artifact_errors` 和 `malformed_count`，继续返回其他合法 runs。
+- 保留只读边界：不创建目录，不写 pointer，不生成 review pack/findings/resolution/final report。
+
+#### 3.4 执行的命令
+
+- `uv run pytest tests/unit/test_loop_status.py -q`
+  - 结果：通过，`10 passed in 0.13s`。
+- `uv run ruff check src/ai_sdlc/core/loop_status.py tests/unit/test_loop_status.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+
+#### 3.5 验证结果
+
+- list reader 覆盖了多 run 排序、current 标记、malformed artifact 容错、无 run、只读性。
+- T21 status reader 的既有 6 个用例仍通过，T22 后该测试文件共 10 个用例通过。
+- 当前实现尚未注册 CLI；`ai-sdlc loop status/list` 命令面留给 T31。
+
+#### 3.6 对齐结论
+
+- 宪章/规格对齐：T22 只读取本地 artifact，不调用模型，不触发本地 review agent，不访问远端 PR。
+- 代码质量：`get_loop_status` 与 `list_loops` 共用 summary 构造，减少后续 CLI human/json 输出分叉。
+- 测试质量：异常路径覆盖到单 artifact 损坏但不覆盖 unsupported loop type CLI 展示；后续 T31 通过 CLI 测试补齐。
+- 风险：list reader 当前仅支持 `local-pr-review`，其他 loop type 会返回结构化 unsupported blocker，符合本版 PRD 范围。
+
+#### 3.7 批次结论
+
+- T22 已完成并通过 focused verification。
+- 下一步进入 T31：注册 `ai-sdlc loop status/list` CLI，并提供 human/json 输出。
