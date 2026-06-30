@@ -23,6 +23,33 @@ class LoopStatusCommandStatus(StrEnum):
     BLOCKED = "blocked"
 
 
+class LoopNextActionSafety(StrEnum):
+    """Controlled safety labels for follow-up guidance."""
+
+    SAFE_READ_ONLY = "safe_read_only"
+    WRITES_PROJECT_ARTIFACTS = "writes_project_artifacts"
+    WRITES_REVIEW_ARTIFACTS = "writes_review_artifacts"
+    MAY_CALL_LOCAL_REVIEW_AGENT = "may_call_local_review_agent"
+    NEEDS_USER = "needs_user"
+    BLOCKED = "blocked"
+    NO_ACTION = "no_action"
+
+
+class LoopNextActionGuidance(BaseModel):
+    """Structured, read-only explanation of the recommended follow-up action."""
+
+    model_config = ConfigDict(extra="forbid", use_enum_values=True)
+
+    command: str = ""
+    reason: str = ""
+    requires_model: bool = False
+    writes_artifacts: bool = False
+    writes_code: bool = False
+    safety: LoopNextActionSafety = LoopNextActionSafety.SAFE_READ_ONLY
+    evidence: list[str] = Field(default_factory=list)
+    alternatives: list[str] = Field(default_factory=list)
+
+
 class LoopArtifactRef(BaseModel):
     """Stable reference to a persisted loop artifact."""
 
@@ -64,6 +91,9 @@ class LoopSummary(BaseModel):
     is_current: bool = False
     updated_at: str = ""
     next_action: str = ""
+    next_guidance: LoopNextActionGuidance = Field(
+        default_factory=LoopNextActionGuidance
+    )
     artifacts: list[LoopArtifactRef] = Field(default_factory=list)
     local_pr_review: LocalPRReviewSummary | None = None
 
@@ -78,6 +108,9 @@ class LoopStatusResult(BaseModel):
     current_loop: LoopSummary | None = None
     blocker: str = ""
     next_action: str = ""
+    next_guidance: LoopNextActionGuidance = Field(
+        default_factory=LoopNextActionGuidance
+    )
 
 
 class LoopArtifactError(BaseModel):
@@ -104,6 +137,9 @@ class LoopListResult(BaseModel):
     artifact_errors: list[LoopArtifactError] = Field(default_factory=list)
     blocker: str = ""
     next_action: str = ""
+    next_guidance: LoopNextActionGuidance = Field(
+        default_factory=LoopNextActionGuidance
+    )
 
 
 def get_loop_status(root: Path) -> LoopStatusResult:
@@ -117,6 +153,7 @@ def get_loop_status(root: Path) -> LoopStatusResult:
             result="Project is not initialized.",
             blocker="Project is not initialized; .ai-sdlc is missing.",
             next_action="Run ai-sdlc init .",
+            next_guidance=_init_guidance(),
         )
 
     pointer_path = resolved_root / CURRENT_REVIEW_PATH
@@ -125,6 +162,7 @@ def get_loop_status(root: Path) -> LoopStatusResult:
             status=LoopStatusCommandStatus.NO_CURRENT,
             result="No current loop.",
             next_action="Run ai-sdlc pr-review start --base <branch>.",
+            next_guidance=_no_current_review_guidance(),
         )
 
     try:
@@ -186,6 +224,7 @@ def get_loop_status(root: Path) -> LoopStatusResult:
         result="Current loop found.",
         current_loop=current_loop,
         next_action=current_loop.next_action,
+        next_guidance=current_loop.next_guidance,
     )
 
 
@@ -204,6 +243,7 @@ def list_loops(
             result="Project is not initialized.",
             blocker="Project is not initialized; .ai-sdlc is missing.",
             next_action="Run ai-sdlc init .",
+            next_guidance=_init_guidance(),
         )
 
     normalized_loop_type = (
@@ -215,6 +255,11 @@ def list_loops(
             result="Unsupported loop type.",
             blocker=f"Unsupported loop type for list: {normalized_loop_type}",
             next_action="Use loop_type=local-pr-review.",
+            next_guidance=_manual_guidance(
+                command="ai-sdlc loop list --type local-pr-review",
+                reason="This Loop list baseline only supports local PR review runs.",
+                evidence=[],
+            ),
         )
 
     loop_entries: list[tuple[LoopSummary, float]] = []
@@ -247,11 +292,18 @@ def list_loops(
                 artifact_errors=artifact_errors,
                 blocker="Current review pointer is malformed or references missing artifacts.",
                 next_action="Inspect or remove malformed current-review.json artifacts.",
+                next_guidance=_blocked_guidance(
+                    "Current review pointer is malformed or references missing artifacts.",
+                    evidence=[
+                        error.path for error in artifact_errors if error.path.strip()
+                    ],
+                ),
             )
         return LoopListResult(
             status=LoopStatusCommandStatus.NO_CURRENT,
             result="No local PR review loops found.",
             next_action="Run ai-sdlc pr-review start --base <branch>.",
+            next_guidance=_no_current_review_guidance(),
         )
 
     for review_run_path in review_run_paths:
@@ -302,8 +354,13 @@ def list_loops(
             artifact_errors=artifact_errors,
             blocker="All discovered local PR review loop artifacts are malformed.",
             next_action="Inspect or remove malformed review-run.json artifacts.",
+            next_guidance=_blocked_guidance(
+                "All discovered local PR review loop artifacts are malformed.",
+                evidence=[error.path for error in artifact_errors if error.path.strip()],
+            ),
         )
 
+    list_guidance = _inspect_current_loop_guidance(current_loop)
     return LoopListResult(
         status=LoopStatusCommandStatus.READY,
         result="Local PR review loops found.",
@@ -313,6 +370,7 @@ def list_loops(
         malformed_count=len(artifact_errors),
         artifact_errors=artifact_errors,
         next_action="Run ai-sdlc loop status for the current loop.",
+        next_guidance=list_guidance,
     )
 
 
@@ -347,6 +405,7 @@ def _summary_from_review_run(
         is_current=is_current,
         updated_at=review_run.updated_at,
         next_action=review_run.next_action,
+        next_guidance=_guidance_for_review_run(root, review_run, review_run_path),
         artifacts=artifacts,
         local_pr_review=LocalPRReviewSummary(
             review_id=review_run.review_id,
@@ -372,7 +431,231 @@ def _blocked_result(*, result: str, blocker: str) -> LoopStatusResult:
         result=result,
         blocker=blocker,
         next_action="Rerun ai-sdlc pr-review start.",
+        next_guidance=_blocked_guidance(blocker),
     )
+
+
+def _init_guidance() -> LoopNextActionGuidance:
+    return LoopNextActionGuidance(
+        command="ai-sdlc init .",
+        reason="Project initialization is required before Loop Engine artifacts can be read.",
+        requires_model=False,
+        writes_artifacts=True,
+        writes_code=False,
+        safety=LoopNextActionSafety.WRITES_PROJECT_ARTIFACTS,
+        evidence=[AI_SDLC_DIR],
+    )
+
+
+def _no_current_review_guidance() -> LoopNextActionGuidance:
+    return LoopNextActionGuidance(
+        command="ai-sdlc pr-review doctor --base <branch>",
+        reason=(
+            "No current local PR review run exists; run readiness checks before "
+            "starting a review."
+        ),
+        requires_model=False,
+        writes_artifacts=False,
+        writes_code=False,
+        safety=LoopNextActionSafety.SAFE_READ_ONLY,
+        evidence=[str(CURRENT_REVIEW_PATH).replace("\\", "/")],
+        alternatives=["ai-sdlc pr-review start --base <branch>"],
+    )
+
+
+def _manual_guidance(
+    *,
+    command: str = "",
+    reason: str,
+    evidence: list[str] | None = None,
+    alternatives: list[str] | None = None,
+) -> LoopNextActionGuidance:
+    return LoopNextActionGuidance(
+        command=command,
+        reason=reason,
+        requires_model=False,
+        writes_artifacts=False,
+        writes_code=False,
+        safety=LoopNextActionSafety.NEEDS_USER,
+        evidence=evidence or [],
+        alternatives=alternatives or [],
+    )
+
+
+def _blocked_guidance(
+    reason: str,
+    *,
+    evidence: list[str] | None = None,
+) -> LoopNextActionGuidance:
+    return LoopNextActionGuidance(
+        command="ai-sdlc pr-review start --base <branch>",
+        reason=reason,
+        requires_model=True,
+        writes_artifacts=True,
+        writes_code=False,
+        safety=LoopNextActionSafety.BLOCKED,
+        evidence=evidence or [str(CURRENT_REVIEW_PATH).replace("\\", "/")],
+        alternatives=["Inspect the malformed local PR review artifact."],
+    )
+
+
+def _inspect_current_loop_guidance(
+    current_loop: LoopSummary | None,
+) -> LoopNextActionGuidance:
+    if current_loop is None:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop status",
+            reason="No current loop is marked; inspect status before choosing a follow-up.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.SAFE_READ_ONLY,
+            evidence=[str(CURRENT_REVIEW_PATH).replace("\\", "/")],
+        )
+    return LoopNextActionGuidance(
+        command="ai-sdlc loop status",
+        reason="Inspect the current loop before running its follow-up PR review command.",
+        requires_model=False,
+        writes_artifacts=False,
+        writes_code=False,
+        safety=LoopNextActionSafety.SAFE_READ_ONLY,
+        evidence=[current_loop.loop_id],
+        alternatives=[
+            current_loop.next_guidance.command
+            for current_loop in [current_loop]
+            if current_loop.next_guidance.command
+        ],
+    )
+
+
+def _guidance_for_review_run(
+    root: Path,
+    review_run: ReviewRun,
+    review_run_path: Path,
+) -> LoopNextActionGuidance:
+    evidence = [_repo_relative_path(root, review_run_path)]
+    findings_path = _artifact_path_if_present(root, review_run.findings_path)
+    final_report_path = _artifact_path_if_present(root, review_run.final_report_path)
+
+    if review_run.status == LoopStatus.NEEDS_FIX:
+        if findings_path:
+            evidence.append(findings_path)
+        return LoopNextActionGuidance(
+            command="ai-sdlc pr-review fix",
+            reason=(
+                "The local PR review has unresolved blocker or required findings; "
+                "generate a bounded fix plan and resolution scaffold."
+            ),
+            requires_model=False,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.WRITES_REVIEW_ARTIFACTS,
+            evidence=evidence,
+        )
+    if review_run.status == LoopStatus.PASSED:
+        if final_report_path:
+            evidence.append(final_report_path)
+        return LoopNextActionGuidance(
+            command="ai-sdlc pr-review close",
+            reason="The review passed; close it by writing the final review report.",
+            requires_model=False,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.WRITES_REVIEW_ARTIFACTS,
+            evidence=evidence,
+        )
+    if review_run.status == LoopStatus.NEEDS_REVIEW:
+        return LoopNextActionGuidance(
+            command="ai-sdlc pr-review rerun",
+            reason=(
+                "The review needs another reviewer pass; rerun the local independent "
+                "review agent against the current diff."
+            ),
+            requires_model=True,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.MAY_CALL_LOCAL_REVIEW_AGENT,
+            evidence=evidence,
+        )
+    if review_run.status == LoopStatus.NEEDS_USER:
+        return LoopNextActionGuidance(
+            command=_command_from_next_action(review_run.next_action),
+            reason=review_run.next_action
+            or "The local PR review needs a user decision before it can continue.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.NEEDS_USER,
+            evidence=evidence,
+        )
+    if review_run.status == LoopStatus.BLOCKED:
+        return LoopNextActionGuidance(
+            command=_command_from_next_action(review_run.next_action),
+            reason=review_run.next_action
+            or "The local PR review is blocked; resolve the blocker before continuing.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.BLOCKED,
+            evidence=evidence,
+        )
+    if review_run.status == LoopStatus.CLOSED:
+        if final_report_path:
+            evidence.append(final_report_path)
+        return LoopNextActionGuidance(
+            command="",
+            reason="The local PR review is already closed; no follow-up command is required.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.NO_ACTION,
+            evidence=evidence,
+            alternatives=["Inspect the final report artifact."],
+        )
+    if review_run.status in {LoopStatus.CREATED, LoopStatus.RUNNING}:
+        return LoopNextActionGuidance(
+            command="ai-sdlc pr-review status",
+            reason="The review run has not reached an actionable terminal state yet.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.SAFE_READ_ONLY,
+            evidence=evidence,
+            alternatives=[
+                command
+                for command in [_command_from_next_action(review_run.next_action)]
+                if command
+            ],
+        )
+
+    return LoopNextActionGuidance(
+        command=_command_from_next_action(review_run.next_action),
+        reason=review_run.next_action or "Inspect the current local PR review state.",
+        requires_model=False,
+        writes_artifacts=False,
+        writes_code=False,
+        safety=LoopNextActionSafety.SAFE_READ_ONLY,
+        evidence=evidence,
+    )
+
+
+def _artifact_path_if_present(root: Path, path_text: str) -> str:
+    if not path_text.strip():
+        return ""
+    return _repo_relative_path(root, _resolve_repo_path(root, path_text))
+
+
+def _command_from_next_action(next_action: str) -> str:
+    text = next_action.strip()
+    if not text:
+        return ""
+    if text.lower().startswith("run "):
+        text = text[4:].strip()
+    if text.endswith("."):
+        text = text[:-1].strip()
+    if text.startswith("ai-sdlc "):
+        return text
+    return ""
 
 
 def _read_current_review_run_path(
@@ -474,6 +757,8 @@ __all__ = [
     "LocalPRReviewSummary",
     "LoopArtifactRef",
     "LoopListResult",
+    "LoopNextActionGuidance",
+    "LoopNextActionSafety",
     "LoopStatusCommandStatus",
     "LoopStatusResult",
     "LoopSummary",

@@ -48,6 +48,12 @@ def test_loop_status_json_reads_current_review(tmp_path: Path) -> None:
     assert payload["current_loop"]["status"] == "needs_fix"
     assert payload["current_loop"]["is_current"] is True
     assert payload["current_loop"]["local_pr_review"]["review_id"] == "review-001"
+    assert payload["next_guidance"]["command"] == "ai-sdlc pr-review fix"
+    assert payload["next_guidance"]["requires_model"] is False
+    assert payload["next_guidance"]["writes_artifacts"] is True
+    assert payload["current_loop"]["next_guidance"]["command"] == (
+        "ai-sdlc pr-review fix"
+    )
 
 
 def test_loop_status_human_includes_review_and_artifacts(tmp_path: Path) -> None:
@@ -63,6 +69,12 @@ def test_loop_status_human_includes_review_and_artifacts(tmp_path: Path) -> None
     assert "Loop type: local-pr-review" in result.output
     assert "Review ID: review-001" in result.output
     assert "Loop next: Run ai-sdlc pr-review fix." in result.output
+    assert "Next command: ai-sdlc pr-review fix" in result.output
+    assert "Why:" in result.output
+    assert "Model call: no" in result.output
+    assert "Writes artifacts: yes" in result.output
+    assert "Writes code: no" in result.output
+    assert "Evidence:" in result.output
     assert "Unresolved: blockers=1, required=0, advisory=0" in result.output
     assert "Artifacts:" in result.output
     assert ".ai-sdlc/reviews/pr/review-001/review-run.json" in result.output
@@ -77,6 +89,7 @@ def test_loop_list_human_includes_each_loop_next_action(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "Loop 1" in result.output
     assert "Loop next: Run ai-sdlc pr-review fix." in result.output
+    assert "Next command: ai-sdlc pr-review fix" in result.output
 
 
 def test_loop_status_human_skips_update_notice(
@@ -95,6 +108,22 @@ def test_loop_status_human_skips_update_notice(
 
     assert result.exit_code == 0
     assert calls == []
+
+
+def test_loop_status_guidance_does_not_call_provider(tmp_path: Path) -> None:
+    review_run_path = _write_review_run(tmp_path)
+    _write_current_pointer(tmp_path, review_run_path)
+
+    with (
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+        patch(
+            "ai_sdlc.core.pr_review_provider.run_provider_command"
+        ) as provider_runner,
+    ):
+        result = runner.invoke(app, ["loop", "status", "--json"])
+
+    assert result.exit_code == 0
+    provider_runner.assert_not_called()
 
 
 def test_loop_list_json_reads_runs_and_reports_malformed(
@@ -126,10 +155,14 @@ def test_loop_list_json_reads_runs_and_reports_malformed(
     assert payload["current_loop_id"] == "loop-review-001"
     assert payload["current_review_id"] == "review-001"
     assert payload["malformed_count"] == 1
+    assert payload["next_guidance"]["command"] == "ai-sdlc loop status"
     assert [loop["loop_id"] for loop in payload["items"]] == [
         "loop-review-002",
         "loop-review-001",
     ]
+    assert payload["items"][0]["next_guidance"]["command"] == (
+        "ai-sdlc pr-review fix"
+    )
     assert payload["items"][0]["is_current"] is False
     assert payload["items"][1]["is_current"] is True
     assert payload["artifact_errors"][0]["path"] == (

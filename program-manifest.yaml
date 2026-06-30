@@ -1865,12 +1865,15 @@ specs:
 - id: 190-loop-engine-status-list-baseline
   path: specs/190-loop-engine-status-list-baseline
   depends_on: []
+- id: 191-loop-engine-next-action-guidance-baseline
+  path: specs/191-loop-engine-next-action-guidance-baseline
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-06-30T05:23:22Z'
+  generated_at: '2026-06-30T07:25:09Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 08dff826
-  authoring_hash: 92db24f84ec2592010f061267c9a23840b5a62c485a59b75c8d707eabf679e07
+  repo_revision: 6ddbd1d4
+  authoring_hash: a2d0e43f1a3a4b2c655d0924d85b57ff8e763b784d75efddd3d841b5b95a087b
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1909,7 +1912,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: b25ad73e603afddb2a033021ab91b91cdad266cf760884500988ea4af5e01e6c
+  snapshot_hash: f876183913109aeb953a80c6940a8423c49f940baa6f9d187aa27ddc30c5faeb
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1924,30 +1927,30 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: incomplete
-    total_sources: 1006
-    mapped_sources: 978
+    total_sources: 1011
+    mapped_sources: 983
     unmapped_sources: 28
-    missing_sources: 5
-    phase_signal_count: 3319
-    deferred_signal_count: 6068
-    non_goal_signal_count: 334
+    missing_sources: 6
+    phase_signal_count: 3325
+    deferred_signal_count: 6089
+    non_goal_signal_count: 336
     layer_totals:
       blueprint: 1
-      spec: 191
-      plan: 191
-      tasks: 191
-      execution: 191
-      close: 191
+      spec: 192
+      plan: 192
+      tasks: 192
+      execution: 192
+      close: 192
       requirements: 2
       defect: 3
       design: 8
       release: 37
     layer_materialized:
       blueprint: 1
-      spec: 191
-      plan: 191
-      tasks: 191
-      execution: 191
+      spec: 192
+      plan: 192
+      tasks: 192
+      execution: 192
       close: 186
       requirements: 2
       defect: 3
@@ -10555,6 +10558,51 @@ truth_snapshot:
       mapped: true
       exists: false
       mapping_ref: 190-loop-engine-status-list-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/191-loop-engine-next-action-guidance-baseline/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 191-loop-engine-next-action-guidance-baseline
+      phase_signal_count: 2
+      deferred_signal_count: 6
+      non_goal_signal_count: 2
+    - path: specs/191-loop-engine-next-action-guidance-baseline/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 191-loop-engine-next-action-guidance-baseline
+      phase_signal_count: 2
+      deferred_signal_count: 5
+      non_goal_signal_count: 0
+    - path: specs/191-loop-engine-next-action-guidance-baseline/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 191-loop-engine-next-action-guidance-baseline
+      phase_signal_count: 2
+      deferred_signal_count: 6
+      non_goal_signal_count: 0
+    - path: specs/191-loop-engine-next-action-guidance-baseline/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 191-loop-engine-next-action-guidance-baseline
+      phase_signal_count: 0
+      deferred_signal_count: 4
+      non_goal_signal_count: 0
+    - path: specs/191-loop-engine-next-action-guidance-baseline/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 191-loop-engine-next-action-guidance-baseline
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0

@@ -85,6 +85,11 @@ review packs, generate findings, fix code, close a review, or read remote PR
 diffs. Their JSON output is useful as local/CI status evidence, but it is not a
 replacement for the local adversarial review agent or for final human review.
 
+The same commands also print next guidance. This guidance explains the
+recommended follow-up command, why it is recommended, whether that follow-up may
+write review artifacts, and whether the follow-up may call the local independent
+review agent that uses the user's configured model. The guidance itself does not execute the follow-up command, does not call any model, and does not replace the local independent review agent or a human decision.
+
 Online installer entrypoints:
 
 - macOS / Linux: `./packaging/install_online.sh --add-to-path`

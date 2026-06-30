@@ -936,6 +936,67 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
             ),
         ),
     ),
+    "191": (
+        FeatureContractSurface(
+            label="loop next guidance core readers",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "loop_status.py",
+                    ),
+                    required_tokens=(
+                        "LoopNextActionGuidance",
+                        "next_guidance",
+                        "requires_model",
+                        "writes_artifacts",
+                        "writes_code",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="loop next guidance CLI",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "cli" / "loop_cmd.py",
+                    ),
+                    required_tokens=(
+                        "Next command",
+                        "Model call",
+                        "Writes artifacts",
+                        "Writes code",
+                        "_emit_guidance",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="loop next guidance read-only user docs",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(Path("README.md"),),
+                    required_tokens=(
+                        "next guidance",
+                        "does not execute",
+                        "does not call any model",
+                        "local independent review agent",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("docs") / "pull-request-checklist.zh.md",
+                    ),
+                    required_tokens=(
+                        "Next Action Guidance",
+                        "只读推导",
+                        "不得执行下一步命令",
+                        "不得发起模型请求",
+                    ),
+                ),
+            ),
+        ),
+    ),
 }
 
 
@@ -3305,6 +3366,8 @@ def _feature_contract_surfaces_for_checkpoint(
         return FEATURE_CONTRACT_SURFACES["189"]
     if _is_190_work_item(work_item_id):
         return FEATURE_CONTRACT_SURFACES["190"]
+    if _is_191_work_item(work_item_id):
+        return FEATURE_CONTRACT_SURFACES["191"]
     return ()
 
 
@@ -3393,6 +3456,11 @@ def _is_189_work_item(work_item_id: str) -> bool:
 def _is_190_work_item(work_item_id: str) -> bool:
     normalized = work_item_id.strip()
     return normalized == "190" or normalized.startswith("190-") or normalized.startswith("190/")
+
+
+def _is_191_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "191" or normalized.startswith("191-") or normalized.startswith("191/")
 
 
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:
