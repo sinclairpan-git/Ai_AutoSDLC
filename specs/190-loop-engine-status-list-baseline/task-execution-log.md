@@ -545,3 +545,66 @@
 - **已完成 git 提交**：是（second review remediation commit 后复核）
 - **提交哈希**：待 second review remediation commit 生成
 - **是否继续下一批**：否；提交后重新请求 Codex review 并继续 heartbeat。
+
+### Batch 2026-06-30-010 | CI remediation for update notice boundary
+
+#### 10.1 批次范围
+
+- 覆盖任务：PR #106 GitHub Actions failure remediation
+- 覆盖阶段：post-review CI heartbeat
+- 预读范围：GitHub Actions Cross Platform Validation failure logs、`main.py` global hook、self-update/status tests、loop CLI tests
+- 激活规则：只修复本次 CI 失败，不扩大 WI-190 `loop status/list` 功能边界
+
+#### 10.2 branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：merge-pending
+- 当前批次 branch disposition 状态：merge-pending
+- 当前批次 worktree disposition 状态：active
+
+#### 10.3 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/cli/main.py`、`specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 10.4 失败根因与改动内容
+
+- GitHub Actions Cross Platform Validation 失败根因：第二轮 remediation 把 update notice bypass 误扩大到所有 read-only subcommands，导致既有契约 `ai-sdlc status` 不再展示 `AI-SDLC Update`。
+- 修复：拆分 adapter read-only bypass 与 update notice bypass；adapter 仍跳过全部 read-only/analysis surfaces，update notice 仅跳过 `loop` 和 `self-update`。
+- 保留 WI-190 修复目标：`loop status/list` human read-only 路径仍不触发 update notice cache 写路径。
+
+#### 10.5 统一验证命令
+
+- `python /Users/sinclairpan/.codex/plugins/cache/openai-curated-remote/github/0.1.5/skills/gh-fix-ci/scripts/inspect_pr_checks.py --repo . --pr 106 --json --max-lines 160 --context 30`
+  - 结果：定位到 Cross Platform Validation 中 `tests/integration/test_cli_self_update.py::test_noninteractive_cli_prints_ai_conversation_update_prompt` 断言 `AI-SDLC Update` 缺失。
+- `uv run pytest tests/integration/test_cli_self_update.py::test_noninteractive_cli_prints_ai_conversation_update_prompt tests/integration/test_cli_self_update.py::test_interactive_cli_prompts_for_update_on_each_command tests/integration/test_cli_self_update.py::test_interactive_cli_confirmation_runs_self_update_and_stops_command -q`
+  - 结果：通过，`3 passed in 6.33s`。
+- `uv run pytest tests/integration/test_cli_loop.py tests/unit/test_loop_status.py tests/unit/test_command_names.py -q`
+  - 结果：通过，`19 passed in 1.08s`。
+- `uv run pytest tests/integration/test_cli_self_update.py tests/integration/test_cli_loop.py tests/unit/test_loop_status.py tests/unit/test_command_names.py -q`
+  - 结果：通过，`39 passed, 1 skipped in 10.20s`。
+- `uv run ruff check src/ai_sdlc/cli/main.py tests/integration/test_cli_loop.py tests/integration/test_cli_self_update.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+
+#### 10.6 代码审查（摘要）
+
+- 宪章/规格对齐：`loop` 的本地只读边界与全局 `status` 升级提示契约同时保留。
+- 代码质量：用两个显式集合表达不同副作用边界，避免把 adapter 写入边界与 update notice 边界混为一类。
+- 测试质量：覆盖失败的 self-update/status 用例和 loop no-update-notice 回归。
+- 结论：允许同步 program truth、提交 CI 修复并重新请求 Codex review/checks。
+
+#### 10.7 任务/计划同步状态
+
+- `tasks.md` 同步状态：无需改变，T11-T42 仍为 `done`。
+- `plan.md` 同步状态：无需改变，修复属于全局 hook 副作用边界的 CI remediation。
+- `task-execution-log.md` 同步状态：已追加 CI remediation 记录。
+
+#### 10.8 当前结论
+
+- PR #106 Cross Platform Validation 失败根因已修复。
+- **已完成 git 提交**：是（CI remediation commit 后复核）
+- **提交哈希**：待 CI remediation commit 生成
+- **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。

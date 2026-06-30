@@ -58,6 +58,7 @@ _READ_ONLY_SUBCOMMANDS = (
     "pr-review",
     "self-update",
 )
+_UPDATE_NOTICE_BYPASS_SUBCOMMANDS = ("loop", "self-update")
 
 
 def _version_callback(value: bool) -> None:
@@ -82,7 +83,7 @@ def _global_before_command(
     if ctx.invoked_subcommand is None:
         return
     if (
-        ctx.invoked_subcommand not in _READ_ONLY_SUBCOMMANDS
+        ctx.invoked_subcommand not in _UPDATE_NOTICE_BYPASS_SUBCOMMANDS
         and "--json" not in sys.argv
         and "--help" not in sys.argv
         and "-h" not in sys.argv
