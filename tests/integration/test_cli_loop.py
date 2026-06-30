@@ -62,9 +62,39 @@ def test_loop_status_human_includes_review_and_artifacts(tmp_path: Path) -> None
     assert "Next: Run ai-sdlc pr-review fix." in result.output
     assert "Loop type: local-pr-review" in result.output
     assert "Review ID: review-001" in result.output
+    assert "Loop next: Run ai-sdlc pr-review fix." in result.output
     assert "Unresolved: blockers=1, required=0, advisory=0" in result.output
     assert "Artifacts:" in result.output
     assert ".ai-sdlc/reviews/pr/review-001/review-run.json" in result.output
+
+
+def test_loop_list_human_includes_each_loop_next_action(tmp_path: Path) -> None:
+    _write_review_run(tmp_path)
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["loop", "list"])
+
+    assert result.exit_code == 0
+    assert "Loop 1" in result.output
+    assert "Loop next: Run ai-sdlc pr-review fix." in result.output
+
+
+def test_loop_status_human_skips_update_notice(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    (tmp_path / ".ai-sdlc").mkdir()
+    calls: list[bool] = []
+    monkeypatch.setattr(
+        "ai_sdlc.cli.main.maybe_render_update_notice",
+        lambda: calls.append(True),
+    )
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["loop", "status"])
+
+    assert result.exit_code == 0
+    assert calls == []
 
 
 def test_loop_list_json_reads_runs_and_reports_malformed(

@@ -486,3 +486,62 @@
 - **已完成 git 提交**：是（review remediation commit 后复核）
 - **提交哈希**：待 review remediation commit 生成
 - **是否继续下一批**：否；提交后重新请求 Codex review 并继续 heartbeat。
+
+### Batch 2026-06-30-009 | Codex review remediation round 2
+
+#### 9.1 批次范围
+
+- 覆盖任务：PR #106 Codex review 第二轮 P2 feedback
+- 覆盖阶段：post-close review remediation
+- 预读范围：PR #106 inline review comments、`main.py` 全局 hook、`loop_cmd.py` human rendering、loop CLI tests
+- 激活规则：修复 review 发现，保持 `loop status/list` 为本地只读状态读取命令
+
+#### 9.2 branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：merge-pending
+- 当前批次 branch disposition 状态：merge-pending
+- 当前批次 worktree disposition 状态：active
+
+#### 9.3 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/cli/main.py`、`src/ai_sdlc/cli/loop_cmd.py`、`tests/integration/test_cli_loop.py`、`specs/190-loop-engine-status-list-baseline/task-execution-log.md`、`program-manifest.yaml`
+
+#### 9.4 改动内容
+
+- 修复 Codex P2：`loop status/list` human read-only 路径不再触发 `maybe_render_update_notice()`，避免读命令刷新或写入 update cache。
+- 修复 Codex P2：human `loop status/list` 每个 loop 摘要现在展示该 loop 持久化的 `next_action`，避免只显示列表级 `Next`。
+- 更新 integration tests，覆盖 human loop next rendering 和 update notice 跳过行为。
+
+#### 9.5 统一验证命令
+
+- `uv run pytest tests/integration/test_cli_loop.py tests/unit/test_loop_status.py tests/unit/test_command_names.py -q`
+  - 结果：通过，`19 passed in 0.92s`。
+- `uv run ruff check src/ai_sdlc/cli/main.py src/ai_sdlc/cli/loop_cmd.py tests/integration/test_cli_loop.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过并写入 `program-manifest.yaml`，snapshot hash `431ca8c407d1f2e4f1038f5edb4df28c9c6d082612c0d378e311e97943be51cb`。
+
+#### 9.6 代码审查（摘要）
+
+- 宪章/规格对齐：`loop status/list` 继续保持本地 artifact 读取，不调用模型、不修复代码、不触发 adapter 或 update cache 写路径。
+- 代码质量：复用统一 read-only 子命令集合，避免 update notice 和 adapter bypass 的只读命令清单漂移。
+- 测试质量：新增 focused regression 覆盖第二轮 review 的两个 P2 退化点。
+- 结论：允许提交第二轮修复、重新请求 Codex review 并继续 PR heartbeat。
+
+#### 9.7 任务/计划同步状态
+
+- `tasks.md` 同步状态：无需改变，T11-T42 仍为 `done`。
+- `plan.md` 同步状态：无需改变，修复属于已冻结输出契约和只读边界的实现补齐。
+- `task-execution-log.md` 同步状态：已追加第二轮 PR review remediation 记录。
+
+#### 9.8 当前结论
+
+- PR #106 Codex review 第二轮两个 P2 均已修复。
+- **已完成 git 提交**：是（second review remediation commit 后复核）
+- **提交哈希**：待 second review remediation commit 生成
+- **是否继续下一批**：否；提交后重新请求 Codex review 并继续 heartbeat。

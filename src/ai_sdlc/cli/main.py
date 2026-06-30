@@ -42,6 +42,22 @@ app = typer.Typer(
 )
 
 _hook_console = Console()
+_READ_ONLY_SUBCOMMANDS = (
+    "adapter",
+    "init",
+    "doctor",
+    "enterprise",
+    "agentops",
+    "handoff",
+    "host-runtime",
+    "status",
+    "scan",
+    "verify",
+    "provenance",
+    "loop",
+    "pr-review",
+    "self-update",
+)
 
 
 def _version_callback(value: bool) -> None:
@@ -66,7 +82,7 @@ def _global_before_command(
     if ctx.invoked_subcommand is None:
         return
     if (
-        ctx.invoked_subcommand != "self-update"
+        ctx.invoked_subcommand not in _READ_ONLY_SUBCOMMANDS
         and "--json" not in sys.argv
         and "--help" not in sys.argv
         and "-h" not in sys.argv
@@ -75,22 +91,7 @@ def _global_before_command(
     ):
         maybe_render_update_notice()
     # Read-only and analysis surfaces must not trigger adapter writes.
-    if ctx.invoked_subcommand in (
-        "adapter",
-        "init",
-        "doctor",
-        "enterprise",
-        "agentops",
-        "handoff",
-        "host-runtime",
-        "status",
-        "scan",
-        "verify",
-        "provenance",
-        "loop",
-        "pr-review",
-        "self-update",
-    ):
+    if ctx.invoked_subcommand in _READ_ONLY_SUBCOMMANDS:
         return
     run_ide_adapter_if_initialized(console=_hook_console)
 

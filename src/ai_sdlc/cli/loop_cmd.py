@@ -117,6 +117,8 @@ def _emit_loop_summary(loop: LoopSummary) -> None:
     console.print(f"Loop ID: {loop.loop_id}")
     console.print(f"Status: {loop.status}")
     console.print(f"Current: {str(loop.is_current).lower()}")
+    if loop.next_action:
+        console.print(f"Loop next: {loop.next_action}")
     if loop.updated_at:
         console.print(f"Updated: {loop.updated_at}")
     if loop.local_pr_review is not None:
