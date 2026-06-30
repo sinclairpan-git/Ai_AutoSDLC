@@ -193,6 +193,28 @@ def test_loop_status_json_reports_missing_project() -> None:
     assert "ai-sdlc init" in payload["next_action"]
 
 
+def test_loop_status_json_blocks_absolute_current_pointer_path(
+    tmp_path: Path,
+) -> None:
+    pointer_path = tmp_path / CURRENT_REVIEW_PATH
+    LoopArtifactStore(tmp_path).write_json_artifact(
+        pointer_path,
+        {
+            "review_id": "review-001",
+            "loop_id": "loop-review-001",
+            "review_run_path": str(tmp_path.parent / "outside-review-run.json"),
+        },
+    )
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["loop", "status", "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["status"] == "blocked"
+    assert "project-relative" in payload["blocker"]
+
+
 def test_python_module_help_fallback_lists_loop() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "ai_sdlc", "--help"],

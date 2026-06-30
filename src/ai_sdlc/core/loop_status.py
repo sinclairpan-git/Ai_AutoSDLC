@@ -140,10 +140,24 @@ def get_loop_status(root: Path) -> LoopStatusResult:
             blocker="Current review pointer is malformed: root must be an object.",
         )
 
-    review_run_path = _resolve_repo_path(
+    path_text = pointer.get("review_run_path")
+    if not isinstance(path_text, str) or not path_text.strip():
+        return _blocked_result(
+            result="Current loop pointer is malformed.",
+            blocker=(
+                "Current review pointer is malformed: "
+                "review_run_path must be a non-empty string."
+            ),
+        )
+    review_run_path, path_error = _resolve_current_review_run_path(
         resolved_root,
-        str(pointer.get("review_run_path", "")),
+        path_text,
     )
+    if path_error:
+        return _blocked_result(
+            result="Current loop pointer is malformed.",
+            blocker=f"Current review pointer is malformed: {path_error}",
+        )
     if not review_run_path.is_file():
         return _blocked_result(
             result="Current loop artifact is missing.",
@@ -369,7 +383,27 @@ def _read_current_review_run_path(
             pointer_path,
             "review_run_path must be a non-empty string.",
         )
-    return _resolve_repo_path(root, path_text), None
+    review_run_path, path_error = _resolve_current_review_run_path(root, path_text)
+    if path_error:
+        return None, _current_pointer_error(root, pointer_path, path_error)
+    return review_run_path, None
+
+
+def _resolve_current_review_run_path(
+    root: Path,
+    path_text: str,
+) -> tuple[Path, str]:
+    path = Path(path_text)
+    if path.is_absolute():
+        return root, "review_run_path must be project-relative."
+    if ".." in path.parts:
+        return root, "review_run_path must not contain parent directory segments."
+    candidate = (root / path).resolve(strict=False)
+    try:
+        candidate.relative_to(root.resolve(strict=False))
+    except ValueError:
+        return root, "review_run_path must stay within the project root."
+    return candidate, ""
 
 
 def _current_pointer_error(

@@ -724,3 +724,61 @@
 - **已完成 git 提交**：是（Codex remediation round 5 commit 后复核）
 - **提交哈希**：待 Codex remediation round 5 commit 生成
 - **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。
+
+### Batch 2026-06-30-013 | Codex review remediation round 6
+
+#### 13.1 批次范围
+
+- 覆盖任务：PR #106 Codex review P2 feedback on out-of-repo current pointer paths
+- 覆盖阶段：post-review remediation
+- 预读范围：PR #106 latest Codex inline review comment、current pointer path resolver、loop status/list tests
+- 激活规则：修复 current pointer 路径越界风险，不改变正常 repo-relative pointer 行为
+
+#### 13.2 branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：merge-pending
+- 当前批次 branch disposition 状态：merge-pending
+- 当前批次 worktree disposition 状态：active
+
+#### 13.3 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/core/loop_status.py`、`tests/unit/test_loop_status.py`、`tests/integration/test_cli_loop.py`、`specs/190-loop-engine-status-list-baseline/task-execution-log.md`
+
+#### 13.4 改动内容
+
+- 修复 Codex P2：`current-review.json` 中的 `review_run_path` 不再允许绝对路径或 `..` 父目录段。
+- `loop status` 遇到越界 pointer 时返回 blocked，不读取仓库外文件。
+- `loop list` 遇到越界 pointer 时继续列出可读 loops，并以 `current-review-pointer` artifact error 暴露错误。
+- 新增 unit/integration tests 覆盖 absolute pointer path 与 `../` pointer path。
+
+#### 13.5 统一验证命令
+
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_command_names.py tests/integration/test_cli_self_update.py -q`
+  - 结果：通过，`46 passed, 1 skipped in 10.31s`。
+- `uv run ruff check src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/main.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/integration/test_cli_self_update.py`
+  - 结果：通过，`All checks passed!`。
+- `git diff --check`
+  - 结果：通过。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+
+#### 13.6 代码审查（摘要）
+
+- 宪章/规格对齐：current pointer 只解析本项目内 repo-relative artifact path，保持 Loop Engine 本地 artifact 边界。
+- 代码质量：新增专用 current pointer resolver，避免复用宽松 artifact path resolver 读取仓库外内容。
+- 测试质量：unit 覆盖 status/list 两条路径，integration 覆盖 CLI JSON blocked 输出。
+- 结论：允许同步 program truth、提交第六轮 Codex remediation 并重新请求 Codex review/checks。
+
+#### 13.7 任务/计划同步状态
+
+- `tasks.md` 同步状态：无需改变，T11-T42 仍为 `done`。
+- `plan.md` 同步状态：无需改变，修复属于 current pointer 安全边界补齐。
+- `task-execution-log.md` 同步状态：已追加第六轮 PR review remediation 记录。
+
+#### 13.8 当前结论
+
+- PR #106 最新 Codex P2 已修复。
+- **已完成 git 提交**：是（Codex remediation round 6 commit 后复核）
+- **提交哈希**：待 Codex remediation round 6 commit 生成
+- **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。

@@ -80,6 +80,25 @@ def test_get_loop_status_blocks_malformed_pointer_without_traceback(
     assert result.next_action == "Rerun ai-sdlc pr-review start."
 
 
+def test_get_loop_status_blocks_absolute_pointer_path(
+    tmp_path: Path,
+) -> None:
+    pointer_path = tmp_path / CURRENT_REVIEW_PATH
+    LoopArtifactStore(tmp_path).write_json_artifact(
+        pointer_path,
+        {
+            "review_id": "review-001",
+            "loop_id": "loop-review-001",
+            "review_run_path": str(tmp_path.parent / "outside-review-run.json"),
+        },
+    )
+
+    result = get_loop_status(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.BLOCKED
+    assert "project-relative" in result.blocker
+
+
 def test_get_loop_status_blocks_missing_review_run(tmp_path: Path) -> None:
     pointer_path = tmp_path / CURRENT_REVIEW_PATH
     pointer_path.parent.mkdir(parents=True)
@@ -205,6 +224,29 @@ def test_list_loops_reports_missing_current_pointer_target(
     assert result.artifact_errors[0].path == (
         ".ai-sdlc/reviews/pr/missing/review-run.json"
     )
+
+
+def test_list_loops_reports_parent_segment_current_pointer(
+    tmp_path: Path,
+) -> None:
+    _write_review_run(tmp_path)
+    pointer_path = tmp_path / CURRENT_REVIEW_PATH
+    LoopArtifactStore(tmp_path).write_json_artifact(
+        pointer_path,
+        {
+            "review_id": "review-001",
+            "loop_id": "loop-review-001",
+            "review_run_path": "../outside/review-run.json",
+        },
+    )
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.current_loop_id == ""
+    assert result.malformed_count == 1
+    assert result.artifact_errors[0].kind == "current-review-pointer"
+    assert "parent directory" in result.artifact_errors[0].error
 
 
 def test_list_loops_reports_no_local_pr_review_runs(tmp_path: Path) -> None:
