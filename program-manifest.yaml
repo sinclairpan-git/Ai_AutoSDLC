@@ -1869,10 +1869,10 @@ specs:
   path: specs/191-loop-engine-next-action-guidance-baseline
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-06-30T08:26:10Z'
+  generated_at: '2026-06-30T08:40:18Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 18d74b8c
+  repo_revision: 8dbd3401
   authoring_hash: a2d0e43f1a3a4b2c655d0924d85b57ff8e763b784d75efddd3d841b5b95a087b
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1912,7 +1912,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 96b49cdcbbaf8c8af6382e63f716261030b71a0c4e3cf90e74c0d469462749ca
+  snapshot_hash: 5e0a9f7b7c2e691ca144ef29e47ff0bb855c46ff50f79d56d04811e8b5cc8670
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1931,8 +1931,8 @@ truth_snapshot:
     mapped_sources: 983
     unmapped_sources: 28
     missing_sources: 6
-    phase_signal_count: 3335
-    deferred_signal_count: 6103
+    phase_signal_count: 3338
+    deferred_signal_count: 6106
     non_goal_signal_count: 336
     layer_totals:
       blueprint: 1
@@ -10594,8 +10594,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 191-loop-engine-next-action-guidance-baseline
-      phase_signal_count: 10
-      deferred_signal_count: 17
+      phase_signal_count: 13
+      deferred_signal_count: 20
       non_goal_signal_count: 0
     - path: specs/191-loop-engine-next-action-guidance-baseline/development-summary.md
       source_type: development_summary

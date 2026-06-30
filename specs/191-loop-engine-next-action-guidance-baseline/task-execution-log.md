@@ -350,3 +350,63 @@
 - **已完成 git 提交**：是（Codex remediation commit 后复核）
 - **提交哈希**：待 Codex remediation commit 生成
 - **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。
+
+## Batch 2026-06-30-008 | Codex malformed current target remediation
+
+### 1. 批次范围
+
+- 覆盖任务：PR #107 第四轮 Codex review P2 feedback on malformed current review-run target guidance。
+- 覆盖阶段：post-review remediation。
+- 预读范围：PR #107 inline comment `discussion_r3497326653`、`list_loops` current pointer target parse error handling、malformed review-run tests。
+- 激活规则：current pointer 指向的 review-run 若存在但 malformed，语义上仍是 current blocker；即使还有其他历史 run 可读，顶层 guidance 也不得退回 inspect-only。
+
+### 2. branch/worktree disposition
+
+- 关联 branch/worktree disposition 计划：`merge-pending`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`active`
+
+### 3. 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/core/loop_status.py`、`tests/unit/test_loop_status.py`、`tests/integration/test_cli_loop.py`、`specs/191-loop-engine-next-action-guidance-baseline/spec.md`、`specs/191-loop-engine-next-action-guidance-baseline/tasks.md`、`specs/191-loop-engine-next-action-guidance-baseline/task-execution-log.md`
+
+### 4. 改动内容
+
+- 将 `artifact_errors` 中 path 等于 current pointer 目标的 malformed `review-run` 错误纳入 current blocker guidance。
+- 保持 `loop list` status 为 ready，继续显示可读历史 run；但顶层 blocker/next guidance 指向 current artifact 修复。
+- 更新 unit/integration tests，覆盖 current pointer 指向 malformed review-run 且存在可读历史 run 的场景。
+- 更新 formal docs，明确 malformed current target review-run 与 malformed pointer/missing target 同属 blocked top-level guidance。
+
+### 5. 统一验证命令
+
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py -q`
+  - 结果：通过，`35 passed in 1.17s`。
+- `uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`173 passed in 10.50s`。
+- `uv run ruff check src tests`
+  - 结果：通过，`All checks passed!`。
+- `uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `git diff --check`
+  - 结果：通过。
+
+### 6. 代码审查（摘要）
+
+- 宪章/规格对齐：修复后 `loop list` 不会把当前 review-run 损坏误报为普通无 current 状态。
+- 代码质量：复用 artifact error path 与 current pointer target path 比对，避免新增 artifact kind 破坏兼容输出。
+- 测试质量：unit 覆盖 core list result；integration 覆盖 JSON guidance/evidence。
+- 结论：第四轮 Codex P2 已修复，可同步 truth、提交 remediation commit 并重新请求 Codex review。
+
+### 7. 任务/计划同步状态
+
+- `tasks.md` 同步状态：已补充 malformed current target review-run acceptance。
+- `spec.md` 同步状态：已补充 FR 与边界情况。
+- `task-execution-log.md` 同步状态：已追加本轮 Codex remediation 记录。
+
+### 8. 当前结论
+
+- PR #107 第四轮 Codex P2 已修复。
+- **已完成 git 提交**：是（Codex remediation commit 后复核）
+- **提交哈希**：待 Codex remediation commit 生成
+- **是否继续下一批**：否；提交后重新请求 Codex review/checks 并继续 heartbeat。

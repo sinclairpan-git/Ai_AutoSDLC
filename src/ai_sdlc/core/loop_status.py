@@ -360,10 +360,20 @@ def list_loops(
             ),
         )
 
+    current_review_run_path_text = (
+        _repo_relative_path(resolved_root, current_review_run_path)
+        if current_review_run_path is not None
+        else ""
+    )
     current_pointer_errors = [
         error
         for error in artifact_errors
         if error.kind in {"current-review-pointer", "current-review-target"}
+        or (
+            error.kind == "review-run"
+            and current_review_run_path_text
+            and error.path == current_review_run_path_text
+        )
     ]
     if current_loop is None and current_pointer_errors:
         pointer_blocker = (

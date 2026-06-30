@@ -257,6 +257,34 @@ def test_loop_list_json_reports_missing_current_pointer_target(
     )
 
 
+def test_loop_list_json_reports_malformed_current_review_run_guidance(
+    tmp_path: Path,
+) -> None:
+    _write_review_run(tmp_path)
+    bad_dir = LoopArtifactStore(tmp_path).review_run_dir("review-bad-current")
+    bad_dir.mkdir(parents=True)
+    bad_path = bad_dir / "review-run.json"
+    bad_path.write_text("{not-json", encoding="utf-8")
+    _write_current_pointer(tmp_path, bad_path)
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["loop", "list", "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "ready"
+    assert payload["current_loop_id"] == ""
+    assert payload["malformed_count"] == 1
+    assert payload["artifact_errors"][0]["kind"] == "review-run"
+    assert payload["artifact_errors"][0]["path"] == (
+        ".ai-sdlc/reviews/pr/review-bad-current/review-run.json"
+    )
+    assert payload["next_guidance"]["safety"] == "blocked"
+    assert ".ai-sdlc/reviews/pr/review-bad-current/review-run.json" in (
+        payload["next_guidance"]["evidence"]
+    )
+
+
 def test_loop_list_json_reports_current_pointer_error_without_runs(
     tmp_path: Path,
 ) -> None:

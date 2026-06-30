@@ -334,6 +334,32 @@ def test_list_loops_reports_missing_current_pointer_target(
     )
 
 
+def test_list_loops_reports_malformed_current_review_run_as_blocked_guidance(
+    tmp_path: Path,
+) -> None:
+    _write_review_run(tmp_path)
+    bad_dir = LoopArtifactStore(tmp_path).review_run_dir("review-bad-current")
+    bad_dir.mkdir(parents=True)
+    bad_path = bad_dir / "review-run.json"
+    bad_path.write_text("{not-json", encoding="utf-8")
+    _write_current_pointer(tmp_path, bad_path)
+
+    result = list_loops(tmp_path)
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert [loop.loop_id for loop in result.items] == ["loop-review-001"]
+    assert result.current_loop_id == ""
+    assert result.malformed_count == 1
+    assert result.artifact_errors[0].kind == "review-run"
+    assert result.artifact_errors[0].path == (
+        ".ai-sdlc/reviews/pr/review-bad-current/review-run.json"
+    )
+    assert result.next_guidance.safety == "blocked"
+    assert ".ai-sdlc/reviews/pr/review-bad-current/review-run.json" in (
+        result.next_guidance.evidence
+    )
+
+
 def test_list_loops_reports_parent_segment_current_pointer(
     tmp_path: Path,
 ) -> None:

@@ -94,7 +94,7 @@ Batch 4: docs, constraints, and closeout evidence
   - closed 标记 no action 或 inspect final report
   - loop list 的 current item 有与自身状态匹配的 actionable guidance
   - loop list 的非 current item 只给 inspect-only guidance，不得推荐 pr-review fix/rerun/close
-  - loop list 遇到 malformed current pointer 但存在历史 run 时，顶层 guidance 必须是 blocked repair guidance
+  - loop list 遇到 malformed current pointer、missing current target 或 malformed current target review-run 但存在历史 run 时，顶层 guidance 必须是 blocked repair guidance
 - verify:
   - uv run pytest tests/unit/test_loop_status.py -q
 - notes:
