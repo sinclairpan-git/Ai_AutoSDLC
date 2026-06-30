@@ -13,6 +13,7 @@ from ai_sdlc.core.pr_review_provider import MockReviewerFixture, ProviderRunStat
 from ai_sdlc.core.pr_review_service import (
     PRReviewCommandStatus,
     PRReviewStartOptions,
+    attest_pr_review,
     close_pr_review,
     doctor_pr_review,
     fix_pr_review,
@@ -38,6 +39,18 @@ def pr_review_doctor(
         help="Base branch or revision. Defaults to the repository default branch.",
     ),
     head_ref: str = typer.Option("HEAD", "--head", help="Head branch or revision."),
+    diff_source: str = typer.Option(
+        "local-git-range",
+        "--diff-source",
+        help="Review input source: local-git-range, patch, local-staged, local-unstaged, or scm-pr.",
+    ),
+    patch_file: str = typer.Option("", "--patch-file", help="Patch file for patch diff source."),
+    source_id: str = typer.Option("", "--source-id", help="External source id such as PR/MR id."),
+    source_provider: str = typer.Option(
+        "",
+        "--source-provider",
+        help="External source provider such as github, gitlab, gitee, or custom.",
+    ),
     provider_id: str = typer.Option(
         "",
         "--provider",
@@ -73,11 +86,20 @@ def pr_review_doctor(
     """Check local PR review readiness without writing review artifacts."""
 
     root = _project_root_or_exit(json_output=json_output)
-    resolved_base = _resolve_base_ref(root, base_ref, json_output=json_output)
+    resolved_base = _resolve_base_ref(
+        root,
+        base_ref,
+        diff_source=diff_source,
+        json_output=json_output,
+    )
     result = doctor_pr_review(
         root=root,
         base_ref=resolved_base,
         head_ref=head_ref,
+        diff_source=diff_source,
+        patch_file=patch_file,
+        source_id=source_id,
+        source_provider=source_provider,
         provider_id=provider_id,
         model_selector=model_selector,
         current_model=current_model,
@@ -97,6 +119,18 @@ def pr_review_start(
         help="Base branch or revision. Defaults to the repository default branch.",
     ),
     head_ref: str = typer.Option("HEAD", "--head", help="Head branch or revision."),
+    diff_source: str = typer.Option(
+        "local-git-range",
+        "--diff-source",
+        help="Review input source: local-git-range, patch, local-staged, local-unstaged, or scm-pr.",
+    ),
+    patch_file: str = typer.Option("", "--patch-file", help="Patch file for patch diff source."),
+    source_id: str = typer.Option("", "--source-id", help="External source id such as PR/MR id."),
+    source_provider: str = typer.Option(
+        "",
+        "--source-provider",
+        help="External source provider such as github, gitlab, gitee, or custom.",
+    ),
     provider_id: str = typer.Option(
         "",
         "--provider",
@@ -143,12 +177,21 @@ def pr_review_start(
     """Start or preview a local adversarial PR review."""
 
     root = _project_root_or_exit(json_output=json_output)
-    resolved_base = _resolve_base_ref(root, base_ref, json_output=json_output)
+    resolved_base = _resolve_base_ref(
+        root,
+        base_ref,
+        diff_source=diff_source,
+        json_output=json_output,
+    )
     result = start_pr_review(
         PRReviewStartOptions(
             root=root,
             base_ref=resolved_base,
             head_ref=head_ref,
+            diff_source=diff_source,
+            patch_file=patch_file,
+            source_id=source_id,
+            source_provider=source_provider,
             provider_id=provider_id,
             model_selector=model_selector,
             current_model=current_model,
@@ -256,6 +299,18 @@ def pr_review_close(
     raise typer.Exit(0 if result.status == PRReviewCommandStatus.CLOSED else 1)
 
 
+@pr_review_app.command(name="attest")
+def pr_review_attest(
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Write a CI-readable attestation for the current closed local review."""
+
+    root = _project_root_or_exit(json_output=json_output)
+    result = attest_pr_review(root)
+    _emit_result(result.model_dump(mode="json"), json_output=json_output)
+    raise typer.Exit(0 if result.status == PRReviewCommandStatus.READY else 1)
+
+
 def _project_root_or_exit(*, json_output: bool = False) -> Path:
     root = find_project_root()
     if root is None:
@@ -275,10 +330,13 @@ def _resolve_base_ref(
     root: Path,
     base_ref: str | None,
     *,
+    diff_source: str = "local-git-range",
     json_output: bool = False,
 ) -> str:
     if base_ref and base_ref.strip():
         return base_ref.strip()
+    if diff_source.strip() != "local-git-range":
+        return ""
     try:
         return GitClient(root).default_branch_name()
     except GitError as exc:
@@ -301,11 +359,24 @@ def _emit_result(payload: dict[str, object], *, json_output: bool) -> None:
     if payload.get("blocker"):
         console.print(f"Blocker: {payload['blocker']}")
     console.print(f"Next: {payload.get('next_action') or '-'}")
-    for key in ("provider_id", "model_selector", "resolved_model", "code_egress"):
+    for key in (
+        "source_adapter",
+        "source_access_status",
+        "provider_id",
+        "model_selector",
+        "resolved_model",
+        "code_egress",
+    ):
         if key in payload:
             console.print(f"{key}: {payload.get(key)}")
+    if isinstance(payload.get("diff_source"), dict):
+        source = payload["diff_source"]
+        if isinstance(source, dict) and source.get("source_kind"):
+            console.print(f"diff_source: {source.get('source_kind')}")
     if payload.get("review_pack_path"):
         console.print(f"review_pack: {payload['review_pack_path']}")
+    if payload.get("source_resolution_path"):
+        console.print(f"source_resolution: {payload['source_resolution_path']}")
     if payload.get("findings_path"):
         console.print(f"findings: {payload['findings_path']}")
 

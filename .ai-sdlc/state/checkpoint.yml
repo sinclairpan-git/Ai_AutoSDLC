@@ -1,12 +1,12 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-06-30T07:00:09+00:00'
+pipeline_last_updated: '2026-06-30T11:03:13+00:00'
 current_stage: execute
 feature:
-  id: 191-loop-engine-next-action-guidance-baseline
-  spec_dir: specs/191-loop-engine-next-action-guidance-baseline
-  design_branch: feature/191-loop-engine-next-action-guidance-baseline-docs
-  feature_branch: feature/191-loop-engine-next-action-guidance-baseline-dev
-  current_branch: feature/191-loop-engine-next-action-guidance-baseline-docs
+  id: 189-loop-engine-local-adversarial-pr-review
+  spec_dir: specs/189-loop-engine-local-adversarial-pr-review
+  design_branch: codex/189-loop-engine-complete-pr-review
+  feature_branch: codex/189-loop-engine-complete-pr-review
+  current_branch: codex/189-loop-engine-complete-pr-review
   docs_baseline_ref: ''
   docs_baseline_at: ''
 multi_agent:
@@ -38,6 +38,6 @@ completed_stages:
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 191-loop-engine-next-action-guidance-baseline
-linked_plan_uri: specs/191-loop-engine-next-action-guidance-baseline/plan.md
-last_synced_at: '2026-06-30T07:00:09+00:00'
+linked_wi_id: 189-loop-engine-local-adversarial-pr-review
+linked_plan_uri: specs/189-loop-engine-local-adversarial-pr-review/plan.md
+last_synced_at: '2026-06-30T10:59:22+00:00'

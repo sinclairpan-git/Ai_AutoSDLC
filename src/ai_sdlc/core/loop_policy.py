@@ -73,14 +73,29 @@ def resolve_model_for_review(
     policy: LoopPolicyProfile,
     request: ModelResolutionRequest | None = None,
 ) -> ModelResolution:
-    """Resolve provider/model according to the P0 priority contract."""
+    """Resolve provider/model according to the current-first local agent contract."""
 
     resolved_request = request or ModelResolutionRequest()
     provider_id = (resolved_request.requested_provider or policy.default_provider).strip()
     if not provider_id:
         provider_id = "local-agent"
 
-    selector, resolved_model, source = _resolve_model_value(policy, resolved_request)
+    selector, resolved_model, source, status, unavailable_reason = _resolve_model_value(
+        policy, resolved_request
+    )
+    if status != ModelResolutionStatus.RESOLVED:
+        return ModelResolution(
+            provider_id=provider_id,
+            provider_mode=resolved_request.provider_mode,
+            model_selector=selector or "current",
+            resolved_model="",
+            resolution_source=source,
+            status=status,
+            code_egress=resolved_request.code_egress,
+            unavailable_reason=unavailable_reason,
+            blocker=unavailable_reason,
+        )
+
     allowed_decision = _enforce_allowed_model_selectors(policy, selector, resolved_model)
     if allowed_decision.status == PolicyDecisionStatus.BLOCKED:
         return ModelResolution(
@@ -88,20 +103,11 @@ def resolve_model_for_review(
             provider_mode=resolved_request.provider_mode,
             model_selector=selector or "current",
             resolved_model="",
+            resolution_source=source,
             status=ModelResolutionStatus.BLOCKED,
             code_egress=resolved_request.code_egress,
+            unavailable_reason=allowed_decision.blocker,
             blocker=allowed_decision.blocker,
-        )
-
-    if not resolved_model:
-        return ModelResolution(
-            provider_id=provider_id,
-            provider_mode=resolved_request.provider_mode,
-            model_selector=selector or "current",
-            resolved_model="",
-            status=ModelResolutionStatus.NEEDS_USER,
-            code_egress=resolved_request.code_egress,
-            blocker="Unable to resolve model=current. Configure a default model or pass --model.",
         )
 
     egress_decision = evaluate_code_egress_policy(
@@ -123,6 +129,7 @@ def resolve_model_for_review(
             resolution_source=source,
             status=status,
             code_egress=resolved_request.code_egress,
+            unavailable_reason=egress_decision.blocker,
             blocker=egress_decision.blocker,
         )
 
@@ -173,24 +180,63 @@ def evaluate_code_egress_policy(
 def _resolve_model_value(
     policy: LoopPolicyProfile,
     request: ModelResolutionRequest,
-) -> tuple[str, str, ModelResolutionSource | None]:
+) -> tuple[
+    str,
+    str,
+    ModelResolutionSource | None,
+    ModelResolutionStatus,
+    str,
+]:
     requested = (request.requested_model or "").strip()
     if requested and requested != "current":
-        return requested, requested, ModelResolutionSource.EXPLICIT_CLI
-
-    policy_default = (policy.default_model or "").strip()
-    if policy_default and policy_default != "current":
-        return policy_default, policy_default, ModelResolutionSource.PROJECT_POLICY
-
-    provider_default = request.provider_default_model.strip()
-    if provider_default:
-        return "current", provider_default, ModelResolutionSource.PROVIDER_CONFIG
+        connected_models = _connected_model_candidates(policy, request)
+        if requested in connected_models:
+            return (
+                requested,
+                requested,
+                ModelResolutionSource.EXPLICIT_CLI,
+                ModelResolutionStatus.RESOLVED,
+                "",
+            )
+        return (
+            requested,
+            "",
+            ModelResolutionSource.EXPLICIT_CLI,
+            ModelResolutionStatus.BLOCKED,
+            f"Explicit model service is unavailable or not connected: {requested}",
+        )
 
     current_model = request.current_model.strip()
     if current_model:
-        return "current", current_model, ModelResolutionSource.CURRENT_AGENT
+        return (
+            "current",
+            current_model,
+            ModelResolutionSource.CURRENT_AGENT,
+            ModelResolutionStatus.RESOLVED,
+            "",
+        )
 
-    return requested or policy_default or "current", "", None
+    candidates = sorted(_connected_model_candidates(policy, request))
+    hint = f" Candidate configured models: {', '.join(candidates)}." if candidates else ""
+    return (
+        "current",
+        "",
+        None,
+        ModelResolutionStatus.NEEDS_USER,
+        "Unable to resolve the current session/current CLI agent model." + hint,
+    )
+
+
+def _connected_model_candidates(
+    policy: LoopPolicyProfile,
+    request: ModelResolutionRequest,
+) -> set[str]:
+    candidates: set[str] = set()
+    for value in (request.current_model, request.provider_default_model, policy.default_model):
+        text = value.strip()
+        if text and text != "current":
+            candidates.add(text)
+    return candidates
 
 
 def _enforce_allowed_model_selectors(

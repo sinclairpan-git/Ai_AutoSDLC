@@ -64,38 +64,56 @@ def test_load_loop_policy_rejects_malformed_project_config(tmp_path) -> None:
         load_loop_policy(tmp_path)
 
 
-def test_resolve_model_priority_uses_explicit_cli_then_policy_then_provider() -> None:
+def test_resolve_model_defaults_to_current_before_policy_or_provider() -> None:
     policy = LoopPolicyProfile(default_model="claude-sonnet-4")
 
+    current = resolve_model_for_review(
+        policy,
+        ModelResolutionRequest(
+            provider_default_model="deepseek-r1",
+            current_model="glm-4.5",
+        ),
+    )
     explicit = resolve_model_for_review(
         policy,
         ModelResolutionRequest(
             requested_model="gpt-5",
-            provider_default_model="deepseek-r1",
-            current_model="glm-4.5",
-        ),
-    )
-    policy_default = resolve_model_for_review(
-        policy,
-        ModelResolutionRequest(
-            provider_default_model="deepseek-r1",
-            current_model="glm-4.5",
-        ),
-    )
-    provider_default = resolve_model_for_review(
-        LoopPolicyProfile(default_model="current"),
-        ModelResolutionRequest(
-            provider_default_model="deepseek-r1",
-            current_model="glm-4.5",
+            current_model="gpt-5",
         ),
     )
 
+    assert current.resolved_model == "glm-4.5"
+    assert current.resolution_source == ModelResolutionSource.CURRENT_AGENT
     assert explicit.resolved_model == "gpt-5"
     assert explicit.resolution_source == ModelResolutionSource.EXPLICIT_CLI
-    assert policy_default.resolved_model == "claude-sonnet-4"
-    assert policy_default.resolution_source == ModelResolutionSource.PROJECT_POLICY
-    assert provider_default.resolved_model == "deepseek-r1"
-    assert provider_default.resolution_source == ModelResolutionSource.PROVIDER_CONFIG
+
+
+def test_resolve_model_allows_explicit_model_when_provider_config_connects_it() -> None:
+    resolution = resolve_model_for_review(
+        LoopPolicyProfile(default_model="claude-sonnet-4"),
+        ModelResolutionRequest(
+            requested_model="deepseek-r1",
+            provider_default_model="deepseek-r1",
+        ),
+    )
+
+    assert resolution.status == ModelResolutionStatus.RESOLVED
+    assert resolution.resolved_model == "deepseek-r1"
+    assert resolution.resolution_source == ModelResolutionSource.EXPLICIT_CLI
+
+
+def test_resolve_model_rejects_explicit_model_when_not_connected() -> None:
+    resolution = resolve_model_for_review(
+        LoopPolicyProfile(default_model="claude-sonnet-4"),
+        ModelResolutionRequest(
+            requested_model="deepseek-r1",
+            current_model="gpt-5",
+        ),
+    )
+
+    assert resolution.status == ModelResolutionStatus.BLOCKED
+    assert "unavailable or not connected" in resolution.unavailable_reason
+    assert resolution.resolved_model == ""
 
 
 def test_resolve_model_current_falls_back_to_current_agent() -> None:
@@ -115,7 +133,7 @@ def test_resolve_model_returns_needs_user_when_current_cannot_be_resolved() -> N
 
     assert resolution.status == ModelResolutionStatus.NEEDS_USER
     assert resolution.resolved_model == ""
-    assert "Unable to resolve model=current" in resolution.blocker
+    assert "Unable to resolve the current session/current CLI agent model" in resolution.blocker
 
 
 def test_allowed_model_selectors_block_disallowed_cli_model() -> None:
@@ -142,7 +160,7 @@ def test_code_egress_policy_requires_confirmation_when_configured() -> None:
 def test_code_egress_policy_can_forbid_remote_model_services() -> None:
     resolution = resolve_model_for_review(
         LoopPolicyProfile(default_model="gpt-5", remote_model_policy="forbid"),
-        ModelResolutionRequest(code_egress=True),
+        ModelResolutionRequest(current_model="gpt-5", code_egress=True),
     )
 
     assert resolution.status == ModelResolutionStatus.BLOCKED

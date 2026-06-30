@@ -802,6 +802,7 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
                         "pr_review_fix",
                         "pr_review_rerun",
                         "pr_review_close",
+                        "pr_review_attest",
                     ),
                 ),
             ),
@@ -819,6 +820,7 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
                         "run_mock_reviewer",
                         "code_egress",
                         "allowlist",
+                        "_is_reviewed_dirty_status_for_launch",
                     ),
                 ),
             ),
@@ -834,7 +836,11 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
                         "review-pack.json",
                         "redaction-report.json",
                         "model-resolution.json",
+                        "source-resolution.json",
                         "diff.patch",
+                        "_diff_git_paths",
+                        "_diff_file_blobs",
+                        "_normalize_patch_path",
                     ),
                 ),
                 FeatureContractEvidence(
@@ -843,8 +849,80 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
                     ),
                     required_tokens=(
                         "loop-policy.yaml",
-                        "model=current",
+                        "current session/current CLI agent",
+                        "Explicit model service is unavailable",
                         "code_egress",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="local PR review source adapter and model fallback boundary",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "pr_review_models.py",
+                    ),
+                    required_tokens=(
+                        "DiffSourceDescriptor",
+                        "SourceAdapterResolution",
+                        "source_access_status",
+                        "model_unavailable_reason",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "pr_review_source.py",
+                    ),
+                    required_tokens=(
+                        "local-git-range",
+                        "local-staged",
+                        "local-unstaged",
+                        "Start local PR review from patch file",
+                        "patch_file_not_found",
+                        "git_head_unavailable",
+                        "SCM PR/MR diff source adapter is not implemented in P0",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "loop_policy.py",
+                    ),
+                    required_tokens=(
+                        "current-first local agent contract",
+                        "Explicit model service is unavailable or not connected",
+                        "provider_default_model",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="local PR review attestation and finding history",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "pr_review_models.py",
+                    ),
+                    required_tokens=(
+                        "ReviewAttestation",
+                        "ci_may_call_model",
+                        "diff_source_hash",
+                        "review-attestation",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "pr_review_service.py",
+                    ),
+                    required_tokens=(
+                        "latest-attestation.json",
+                        "_reviewed_diff_source_mismatch",
+                        "_reviewer_outputs_tamper_blocker",
+                        "_remove_latest_attestation",
+                        "CI must not call any model",
+                        "finding-history.json",
+                        "review-finding-history",
+                        "_snapshot_previous_findings",
                     ),
                 ),
             ),
@@ -857,7 +935,10 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
                     required_tokens=(
                         "ai-sdlc pr-review doctor",
                         "ai-sdlc pr-review start",
+                        "ai-sdlc pr-review attest",
                         "model current",
+                        "DiffSource",
+                        "local-staged",
                     ),
                 ),
                 FeatureContractEvidence(
@@ -868,6 +949,39 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
                         "本地 PR review",
                         "CI",
                         "不得发起模型请求",
+                        "DiffSource",
+                        "latest-attestation.json",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="local PR review P2 enterprise fail-closed boundaries",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("specs")
+                        / "189-loop-engine-local-adversarial-pr-review"
+                        / "plan.md",
+                    ),
+                    required_tokens=(
+                        "多 reviewer",
+                        "artifact 签名",
+                        "远端 PR inline comments",
+                        "fail-closed",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("specs")
+                        / "189-loop-engine-local-adversarial-pr-review"
+                        / "tasks.md",
+                    ),
+                    required_tokens=(
+                        "T91",
+                        "不得在无企业身份",
+                        "GitHub/GitLab/Gitee/self-hosted SCM",
+                        "fail-closed",
                     ),
                 ),
             ),

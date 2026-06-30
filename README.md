@@ -72,9 +72,21 @@ automatically appends `--review-pack`, `--output`, `--model`,
 `--resolved-model`, and `--allowlist` arguments when no placeholders are used.
 The default `model current` selector uses the model already configured for that
 local environment; advanced users can choose another configured model
-explicitly. CI systems should consume the generated artifacts and deterministic
-counts, not send repository code to GPT, Claude, DeepSeek, GLM, Codex, or any
-other model service from the CI network.
+explicitly. If an explicitly selected model is not connected or available,
+AI-SDLC reports that model as unavailable instead of silently falling back.
+
+Review input is represented as a `DiffSource`, not as a hard-coded GitHub PR.
+Use `--diff-source local-git-range --base <ref>` for a local checkout,
+`--diff-source patch --patch-file ./change.patch` for a local patch file,
+`--diff-source local-staged` for staged changes, or
+`--diff-source local-unstaged` for unstaged changes. GitHub/GitLab/Gitee,
+self-hosted SCM, and company intranet SCM hosts must enter through source
+adapters such as `--diff-source scm-pr --source-provider <host> --source-id <id>`
+as those adapters are added. After a review is closed, `ai-sdlc pr-review attest`
+writes `.ai-sdlc/reviews/pr/latest-attestation.json` for CI to read. CI systems
+should consume that attestation, generated artifacts, and deterministic counts,
+not send repository code to GPT, Claude, DeepSeek, GLM, Codex, or any other
+model service from the CI network.
 
 `ai-sdlc loop status` and `ai-sdlc loop list` are read-only artifact index
 commands. They read `.ai-sdlc/reviews/pr/current-review.json` and local

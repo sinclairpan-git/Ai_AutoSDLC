@@ -2,9 +2,9 @@
 
 **功能编号**：`189-loop-engine-local-adversarial-pr-review`  
 **创建日期**：2026-06-29  
-**状态**：已冻结（2026-06-29），已完成两轮对抗评审并经用户确认冻结  
+**状态**：已冻结（2026-06-29）；2026-06-30 根据用户澄清完成需求修订，新增 diff source 适配、模型解析、小白/专业双层 UX 约束
 **目标读者**：Codex 开发 agent、AI-SDLC 框架维护者、质量负责人  
-**实现入口约束**：本 PRD 已冻结；必须以本 PRD 为需求真值补齐并遵守 `plan.md` 与 `tasks.md`，不得绕过任务分解直接进入无边界实现。
+**实现入口约束**：本 PRD 已冻结并经 2026-06-30 澄清修订；必须以本 PRD 为需求真值补齐并遵守 `plan.md` 与 `tasks.md`，不得绕过需求文档和任务分解直接进入无边界实现。
 
 ## 1. 背景
 
@@ -52,12 +52,14 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 2. 本地对抗 PR review loop 的 CLI、review pack、独立 agent 调用合同、findings/resolution/final-report。
 3. 与现有 work item、handoff、verify、close-check 的最小集成。
 
+本地对抗 PR review 的输入来源必须被建模为可替换的 `DiffSource`，而不是把 review 等同于 GitHub PR。P0 可以优先支持本地 checkout 的 `base..HEAD`，但需求真值必须允许后续接入本地 staged/unstaged diff、patch 文件、公司内网 SCM、GitHub/GitLab/Gitee 或 self-hosted SCM adapter。远端 PR/MR 只是 `DiffSource` 的一种 adapter，不是核心状态机或 review pack 合同的前提。
+
 ### 3.2 明确不覆盖
 
 1. 不使用 Codex 云端 PR review 服务。
 2. 不要求 CI/CD 流水线调用 GPT、Claude、DeepSeek、GLM、Codex 或其他模型；模型调用发生在用户本地开发环境启动的独立 review agent 中。
-3. 不要求普通用户必须创建远端 GitHub PR；本地 diff pseudo PR 必须可用。
-4. 不在 P0 中实现 GitHub/GitLab inline comment 同步。
+3. 不要求普通用户必须创建远端 GitHub PR；本地 diff pseudo PR 必须可用，且后续远端 diff 读取不得写死为 GitHub。
+4. 不在 P0 中实现 GitHub/GitLab/Gitee/self-hosted SCM inline comment 同步。
 5. 不在 P0 中实现多 reviewer 投票、artifact 签名、组织级策略中心。
 6. 不把 AI review 作为测试或人工确认的替代品。
 7. 不允许 review agent 修改代码；修复必须由 implementation agent 或用户执行。
@@ -74,20 +76,26 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 8. **默认 fail-closed**：当 reviewer 隔离性、review pack 完整性、敏感信息处理或 findings schema 无法证明时，PR review loop 必须进入 `blocked` 或 `needs_user`，不得给出通过结论。
 9. **小白友好**：普通用户必须能通过少量命令看懂当前结果、下一步和失败原因；CLI 不得把 provider、base branch、redaction 或 artifact schema 问题暴露成只有框架维护者才能理解的错误。
 10. **企业可治理**：所有长期落盘 artifact 必须有 schema version、policy profile 和稳定兼容策略，避免大型组织多仓接入后因格式漂移无法审计或升级。
+11. **输入源可适配**：所有 review、requirement、design、implementation、frontend loop 都必须把外部系统差异收敛到 adapter 合同，不得在核心逻辑中硬编码 GitHub、某个公司内网、某个本地目录布局或某个前端运行方式。
+12. **模型解析可验证**：模型选择默认优先使用当前会话/当前 CLI agent 已连接模型；用户显式指定其他已连接模型服务时必须验证可用性。模型不可用、未连接、鉴权缺失、网络不可达、超时、rate limit 或输出 schema 不合法时必须 fail-closed，并明确指出不可用的模型和原因，不得静默 fallback。
+13. **双层用户体验**：每个能力都必须同时服务技术小白和专业工程师。小白路径给出少量可复制命令和 plain-language blocker；专业路径提供 `--json`、显式 source/provider/model/policy/范围参数和可审计 artifact。
+14. **场景多样性**：AI-SDLC 用户可能只会 vibe coding，也可能是专业前后端、测试、架构或企业平台团队；需求、命令、文档和错误信息必须避免假设用户熟悉 Git、PR、provider、模型服务或内部 artifact。
 
 ## 5. 用户场景与验收
 
 ### 用户故事 1 - 本地独立 PR review（优先级：P0）
 
-作为普通 AI-SDLC 用户，我希望在本地开发完成后，对当前分支相对 `main` 或指定 base 的 diff 启动独立 review agent，并默认使用我当前开发环境已配置的模型，以便在 CI 无法访问模型服务的情况下仍能获得对抗式代码审查。
+作为普通 AI-SDLC 用户，我希望在本地开发完成后，AI-SDLC 能从适合我代码仓的 diff source 生成 review pack，并启动独立 review agent；默认使用我当前会话/当前开发环境已连接的模型，也允许我显式指定其他已连接模型服务，以便在本地仓、公司内网仓或 GitHub/GitLab/Gitee/self-hosted SCM 场景中都能获得对抗式代码审查。
 
-**独立测试**：在一个 fixture Git 仓库中创建 feature 分支和代码 diff，先执行 `ai-sdlc pr-review start --base main --provider local-agent --model current --provider-command "my-local-reviewer" --dry-run` 断言只预览将生成的 artifact、provider、model selector 和命令且不写入 review run、不启动模型；再执行 `ai-sdlc pr-review start --base main --provider mock-reviewer` 断言生成 review pack、findings 和状态文件，且不调用云端 PR review 服务。
+**独立测试**：在 fixture Git 仓库中创建 feature 分支、staged/unstaged diff 和 patch file 三类输入，先执行 `ai-sdlc pr-review start --base main --provider local-agent --model current --provider-command "my-local-reviewer" --dry-run` 断言只预览将生成的 artifact、diff source、provider、model selector 和命令且不写入 review run、不启动模型；再执行 `ai-sdlc pr-review start --base main --provider mock-reviewer` 断言生成 review pack、findings 和状态文件，且不调用云端 PR review 服务。后续 SCM adapter 测试必须使用 provider fixture，不得要求真实 GitHub 网络。
 
 **验收场景**：
 
 1. **Given** 当前仓库有 feature 分支相对 `main` 的 diff，**When** 用户执行 `ai-sdlc pr-review start --base main --provider local-agent --model current --provider-command "my-local-reviewer"`，**Then** 系统必须生成一个本地 review run，并写入 `.ai-sdlc/reviews/pr/<review-id>/review-pack.json`。
-2. **Given** CI 网络不可访问模型服务，**When** 用户在本地执行 PR review，**Then** review agent 默认调用用户当前开发环境已配置的模型，也可以按用户显式指定调用 GPT、Claude、DeepSeek、GLM 或其他模型；系统不得要求 CI 发起模型请求。
-3. **Given** review provider 为 `local-agent`，**When** 系统启动 review，**Then** 它必须使用独立 reviewer 会话或进程，不得复用当前实现 agent 上下文。
+2. **Given** 用户代码仓来自公司内网、本地目录、GitHub、GitLab、Gitee 或 self-hosted SCM，**When** 用户启动 PR review，**Then** 核心 review 逻辑必须通过 `DiffSource` 读取输入，不得要求所有用户都创建 GitHub PR。
+3. **Given** CI 网络不可访问模型服务，**When** 用户在本地执行 PR review，**Then** review agent 默认调用用户当前会话/当前开发环境已连接的模型，也可以按用户显式指定调用 GPT、Claude、DeepSeek、GLM 或其他已连接模型；系统不得要求 CI 发起模型请求。
+4. **Given** 用户显式指定的模型服务不可用，**When** 系统启动 review，**Then** loop 必须进入 `blocked` 或 `needs_user`，输出模型不可用原因和下一步配置/重试命令，不得静默 fallback 到其他模型。
+5. **Given** review provider 为 `local-agent`，**When** 系统启动 review，**Then** 它必须使用独立 reviewer 会话或进程，不得复用当前实现 agent 上下文。
 
 ### 用户故事 2 - 结构化 findings 与有界修复闭环（优先级：P0）
 
@@ -165,17 +173,18 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 
 作为不熟悉 Git、provider 和 AI-SDLC 内部概念的普通用户，我希望 `pr-review` 能先检查环境并给出可执行下一步，以便我不需要理解所有 artifact 和 provider 细节也能安全启动本地 review。
 
-**独立测试**：构造未初始化项目、非 Git 仓库、无 base branch、无 provider 配置、存在 high-risk secret 的 fixture，分别执行 `ai-sdlc pr-review doctor` 与 `ai-sdlc pr-review start`，断言输出包含“当前结果 / Result”和“下一步 / Next”，且给出唯一或有限个可执行命令。
+**独立测试**：构造未初始化项目、非 Git 仓库、无 base branch、无 provider 配置、当前模型不可解析、显式模型不可用、存在 high-risk secret 的 fixture，分别执行 `ai-sdlc pr-review doctor` 与 `ai-sdlc pr-review start`，断言输出包含“当前结果 / Result”和“下一步 / Next”，且给出唯一或有限个可执行命令。
 
 **验收场景**：
 
 1. **Given** 项目尚未初始化，**When** 用户执行 `ai-sdlc pr-review start`，**Then** 系统必须提示先运行 `ai-sdlc init .`，不得输出 Python traceback。
 2. **Given** base branch 不明确，**When** 用户执行 `ai-sdlc pr-review start`，**Then** 系统必须展示检测到的候选 base 和推荐命令，而不是要求用户理解 `merge-base`。
-3. **Given** `local-agent` 尚未配置且无法解析当前模型，**When** 用户执行 `pr-review start`，**Then** 系统必须给出 provider/model 配置指引和可用的 `mock-reviewer --dry-run` 预演命令。
+3. **Given** `local-agent` 尚未配置、当前模型无法解析或用户指定模型不可用，**When** 用户执行 `pr-review start`，**Then** 系统必须给出 provider/model 配置指引和可用的 `mock-reviewer --dry-run` 预演命令。
+4. **Given** 用户不理解 Git/PR 概念，**When** `doctor` 能检测到唯一安全 diff source，**Then** 输出必须给出推荐命令；如果存在多个候选 source，必须解释差异并要求用户选择，不得暴露内部 adapter 异常。
 
 ### 用户故事 9 - 大型组织可治理地推广 Loop Engine（优先级：P0）
 
-作为在多个大型公司落地 AI-Native 闭环实践的架构负责人，我希望 Loop Engine 的 artifact、policy 和 provider runner 都有稳定合同，以便多个仓库、多个团队和多个版本之间能审计、迁移和逐步升级。
+作为在多个大型公司落地 AI-Native 闭环实践的架构负责人，我希望 Loop Engine 的 artifact、policy、diff source adapter、model resolution 和 provider runner 都有稳定合同，以便多个仓库、多个团队、多个 SCM、多个模型服务和多个版本之间能审计、迁移和逐步升级。
 
 **独立测试**：构造不同 schema version、不同 policy profile、不同 provider runner 的 artifact fixture，执行 status/validate/close 检查，断言兼容版本可读、未知必填字段 fail-closed、policy profile 能影响 close 和 provider 外发策略。
 
@@ -201,12 +210,14 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 - **FR-189-010**：系统必须提供 artifact schema validation；未知必填字段、缺失必填字段或不兼容 schema version 必须 fail-closed。
 - **FR-189-011**：系统必须支持项目级 loop policy profile，P0 至少覆盖 provider 外发策略、max rounds、default close mode、redaction strictness 和 allowed omitted file policy。
 - **FR-189-012**：当 policy profile 与命令参数冲突时，policy profile 必须优先，并在 CLI 输出中说明被阻断的原因。
+- **FR-189-013**：Loop Engine 的外部输入必须通过 adapter 合同进入核心状态机；review diff source、需求来源、设计合同来源、前端证据来源都不得在核心模型中硬编码为某个 SaaS、SCM 或本地目录布局。
+- **FR-189-014**：所有 loop 的 human 输出必须同时满足小白用户和专业用户：默认输出给出 plain-language Result/Next 和可复制命令；`--json` 输出保留完整结构化原因、adapter、policy、model、artifact 和 blocker 字段。
 
 ### 6.2 Local Adversarial PR Review CLI
 
 - **FR-189-020**：系统必须新增 `ai-sdlc pr-review` 命令组。
-- **FR-189-021**：`ai-sdlc pr-review start --base <ref> --provider <provider>` 必须能基于当前 checkout 生成本地 PR review run。
-- **FR-189-022**：`ai-sdlc pr-review start --pr <id>` 必须作为 P1 能力读取远端 PR diff；P0 必须优先支持本地 `base..HEAD` diff。
+- **FR-189-021**：`ai-sdlc pr-review start --base <ref> --provider <provider>` 必须能基于当前 checkout 的 `local-git-range` diff source 生成本地 PR review run。
+- **FR-189-022**：远端 PR/MR diff 读取必须作为 P1 `DiffSource`/SCM adapter 能力实现，不得写死为 GitHub；GitHub、GitLab、Gitee、公司内网、自托管 SCM 或 patch 文件都必须通过同一 source descriptor 进入 review pack。
 - **FR-189-023**：`ai-sdlc pr-review status` 必须只读展示当前 review run 状态。
 - **FR-189-024**：`ai-sdlc pr-review fix --max-rounds <n>` 必须根据 unresolved `BLOCKER`/`REQUIRED` findings 生成修复计划；实际代码修改可由当前 implementation agent 执行。
 - **FR-189-025**：`ai-sdlc pr-review rerun` 必须重新生成 review pack，并启动新的独立 review agent 或清空上下文的 reviewer。
@@ -220,10 +231,14 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 - **FR-189-033**：`ai-sdlc pr-review start` 不带 `--provider` 时必须使用项目 policy 或用户当前开发环境配置的默认本地 agent provider；不带 `--model` 时默认使用 `current`，即当前 agent/CLI 环境正在使用的模型。若无法解析默认 provider 或当前模型，必须给出配置指引和 `mock-reviewer --dry-run` 预演命令。
 - **FR-189-034**：所有 `pr-review` 命令的人类输出必须包含“当前结果 / Result”和“下一步 / Next”；失败时必须包含 plain-language blocker 和建议命令。
 - **FR-189-035**：CLI 必须提供 `--json` 输出，供高级用户和自动化读取；human 输出不得只暴露 JSON。
+- **FR-189-036**：`pr-review doctor/start --dry-run` 必须报告 diff source 解析结果，包括 source kind、resolved base/head 或 patch path、是否需要用户选择、是否受 policy 阻断，以及小白可复制的下一步命令。
+- **FR-189-037**：当 diff source 不唯一、不可访问、需要公司内网凭据、缺少 SCM adapter、patch 文件不存在或远端服务不可达时，系统必须进入 `needs_user` 或 `blocked`，并明确指出不可用的 source 与修复方式。
+- **FR-189-038**：专业用户必须能显式指定 diff source，例如本地 base/head、staged/unstaged、patch file 或 SCM adapter 参数；小白用户在未指定时由 doctor/start 做安全检测和推荐。
+- **FR-189-039**：Review pack 与 final report 必须记录 diff source descriptor，避免审计者只能看到 GitHub PR id 或本地分支名而无法还原输入来源。
 
 ### 6.3 Review Agent 独立性与 provider 合同
 
-- **FR-189-040**：系统必须支持 `local-agent` provider，用于在本地启动独立 reviewer 会话或进程；该 provider 默认使用 `--model current`，并支持显式选择 GPT、Claude、DeepSeek、GLM 或用户配置的其他模型。
+- **FR-189-040**：系统必须支持 `local-agent` provider，用于在本地启动独立 reviewer 会话或进程；默认模型选择为当前会话/当前 CLI agent 已连接模型，用户可显式指定 GPT、Claude、DeepSeek、GLM 或其他已连接模型服务。
 - **FR-189-041**：P0 可提供 `mock-reviewer` provider 作为测试和离线验证用 provider。
 - **FR-189-042**：Review Agent 必须只接收 review pack 和必要文件读取权限，不能接收实现 agent 的聊天 transcript。
 - **FR-189-043**：Review Agent 默认只读；任何文件写入能力必须在 P0 禁止。
@@ -231,7 +246,9 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 - **FR-189-045**：Provider 配置必须显式披露代码是否会发送到远程模型服务，且支持项目 policy 禁用代码外发或要求用户确认；不得把“远程模型服务”误解为禁止使用 GPT、Claude、DeepSeek、GLM 等模型。
 - **FR-189-046**：系统必须记录 provider id、provider mode、model selector、resolved model、模型调用是否由本地 agent runner 发起、是否外发代码、redaction 状态。
 - **FR-189-047**：`local-agent` provider 必须通过可配置的本地 reviewer 命令或等价本地 agent 启动接口运行，输入只能是 review pack 路径、model selector 和允许读取的文件列表；`codex-local` 可作为兼容 alias 或具体本地 agent 适配，不得作为唯一真实 provider。
-- **FR-189-047A**：`--model current` 必须通过稳定优先级解析：显式 CLI `--model` 非 current > project policy default model > provider config default model > 当前 agent/CLI 环境模型。解析结果必须写入 `ModelResolution`，包含 provider id、provider mode、model selector、resolved model、resolution source、status、code egress 和 blocker；无法解析时必须进入 `needs_user`。
+- **FR-189-047A**：模型解析必须区分默认路径和显式覆盖：未指定 `--model` 或指定 `--model current` 时，优先解析当前会话/当前 CLI agent 已连接模型；用户显式指定非 current 模型时，必须验证该模型服务已连接且可用；若仍无可用模型，可按 project policy default model、provider config default model 的顺序给出候选，但不得在未披露的情况下静默替换用户指定模型。解析结果必须写入 `ModelResolution`，包含 provider id、provider mode、model selector、resolved model、resolution source、status、code egress 和 blocker。
+- **FR-189-047B**：模型不可用必须 fail-closed，并在 human/JSON 输出中区分原因：未连接、provider command 不存在、鉴权缺失、网络不可达、超时、rate limit、上下文过大、输出不是合法 findings schema 或被 policy 禁止。
+- **FR-189-047C**：当用户显式选择的模型不可用时，系统不得自动 fallback 到当前模型或 mock reviewer；只能给出重试、重新选择模型、检查连接或使用 mock-reviewer dry-run 的下一步建议。
 - **FR-189-048**：每次 reviewer 启动必须写入 `reviewer-invocation.json`，包含 command、argv、cwd、input_paths、output_paths、isolation_mode、external_model_disclosure 和 exit status。
 - **FR-189-049**：如果系统无法证明 reviewer 是新会话、独立进程或已清空上下文的 reviewer，loop 必须进入 `blocked`，不得把结果标记为对抗 review。
 - **FR-189-050**：Review Agent prompt 必须由 AI-SDLC 生成，并明确要求只读、结构化输出、禁止修代码、禁止引用实现 agent 聊天上下文。
@@ -244,7 +261,7 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 ### 6.4 Review Pack
 
 - **FR-189-060**：系统必须生成 `.ai-sdlc/reviews/pr/<review-id>/review-pack.json`。
-- **FR-189-061**：Review pack 必须包含 repo root、base ref、head ref、base commit、head commit、diff summary、changed files、work item refs、test results refs、policy refs。
+- **FR-189-061**：Review pack 必须包含 diff source descriptor、repo root、base ref、head ref、base commit、head commit、patch path 或 SCM ref、diff summary、changed files、work item refs、test results refs、policy refs。
 - **FR-189-062**：Review pack 必须包含 `diff.patch` 或分片 diff 文件，并记录 diff 截断/分片策略。
 - **FR-189-063**：Review pack 必须包含 `changed-files.txt`。
 - **FR-189-064**：Review pack 可以包含 `spec-summary.md`、`task-summary.md`、`test-results.md`，但这些摘要必须来自 formal docs 和命令输出，不得来自实现 agent 自述。
@@ -258,7 +275,7 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 - **FR-189-072**：Review Agent 的最终 verdict 必须披露 review pack 是否完整；若关键文件被 omit，verdict 最高只能是 `blocked` 或 `changes_required`，除非用户显式 waiver。
 - **FR-189-073**：Review pack 摘要不得包含实现 agent 的主观解释；如需上下文，只能引用 formal docs、命令输出和仓库文件摘要。
 - **FR-189-074**：Review pack 必须写入 `schema_version`，并由 schema validation 覆盖；schema 文件或 Pydantic 模型必须纳入 focused tests。
-- **FR-189-075**：Review pack 必须记录 policy profile id 和本次 policy decisions，包括 provider、model selector、resolved model、是否代码外发、redaction strictness、max rounds 和 close mode。
+- **FR-189-075**：Review pack 必须记录 policy profile id 和本次 policy decisions，包括 diff source、provider、model selector、resolved model、模型可用性、是否代码外发、redaction strictness、max rounds 和 close mode。
 
 ### 6.5 Findings 与 Resolution
 
@@ -315,6 +332,8 @@ AI-SDLC 已具备阶段式治理、formal work item、验证门禁、前端 brow
 - **ReviewAttestation**：P1 能力，供 CI 或外部工具只读检查本地 review 覆盖状态。
 - **LoopPolicyProfile**：项目级 loop 策略，定义默认 provider、默认 model selector、代码外发披露/确认、redaction、round limit、close mode 和 omitted file 策略。
 - **ModelResolution**：一次 provider/model 解析结果，包含 `model_selector`、`resolved_model`、`provider_mode`、`resolution_source`、`status`、`code_egress` 和 blocker。
+- **DiffSourceDescriptor**：一次 review 输入来源解析结果，包含 source kind、adapter id、base/head/patch/scm refs、resolved commit 或 patch hash、access status、blocker 和 source-specific metadata；远端 PR/MR 只是该 descriptor 的一种形态。
+- **SourceAdapterResolution**：一次外部系统 adapter 解析结果，包含 adapter id、host type、auth/access 状态、是否需要用户选择、是否公司内网或远端服务、错误原因和下一步。
 - **ProviderRunnerInvocation**：一次 reviewer runner 调用记录，包含命令、model selector、resolved model、代码外发状态、输入、输出、退出码、allowlist 和隔离状态。
 - **SchemaValidationReport**：artifact schema 校验结果，包含 schema version、兼容性、错误列表和 next action。
 
@@ -375,7 +394,8 @@ P1 命令：
 ```bash
 ai-sdlc loop status
 ai-sdlc loop list
-ai-sdlc pr-review start --pr 123 --provider local-agent --model current --provider-command "my-local-reviewer"
+ai-sdlc pr-review start --diff-source scm-pr --source-id 123 --source-provider <github|gitlab|gitee|custom> --provider local-agent --model current --provider-command "my-local-reviewer"
+ai-sdlc pr-review start --diff-source patch --patch-file ./change.patch --provider local-agent --model current --provider-command "my-local-reviewer"
 ai-sdlc pr-review close --strict
 ai-sdlc pr-review attest
 ```
@@ -409,6 +429,8 @@ ai-sdlc pr-review attest
 - **SC-189-015**：artifact schema validation 能阻断缺失 `schema_version`、不兼容 version 和 findings schema 漂移。
 - **SC-189-016**：policy profile 禁止代码外发到远程模型服务时，任何会外发代码的 provider/model 启动必须被阻断；policy 未禁止时，系统不得因模型品牌是 GPT、Claude、DeepSeek、GLM 等而阻断。
 - **SC-189-017**：`close-check` 能区分 `fully_clean` 与 `risk_accepted`，不会把宽松 close 误当作干净收口。
+- **SC-189-018**：review pack 在本地 base/head、patch file、SCM adapter fixture 三类 diff source 下都能记录稳定 `DiffSourceDescriptor`；核心 review 状态机不依赖 GitHub 字段。
+- **SC-189-019**：默认模型解析优先使用当前会话/当前 CLI agent 已连接模型；显式指定模型不可用时，CLI 必须输出模型不可用原因并阻断启动，不得静默 fallback。
 
 ## 11. 风险与控制
 
@@ -423,6 +445,8 @@ ai-sdlc pr-review attest
 | CI 无模型网络 | 流水线无法运行模型审查 | 模型调用由本地独立 review agent 发起，默认使用用户当前模型；CI 只检查 artifact/commit hash/schema |
 | 普通用户不会配置 provider 或 base branch | 启动失败、学习成本过高 | P0 提供 `pr-review doctor`、base 自动检测、默认 provider 指引和 plain-language next command |
 | 多仓推广时 artifact/schema 漂移 | 企业无法审计、升级和自动化消费 | P0 增加 schema version、schema validation 和 policy profile |
+| 把远端 diff 写死为 GitHub PR | 公司内网、本地 patch、GitLab/Gitee/self-hosted SCM 用户无法使用 | 使用 `DiffSourceDescriptor` 和 SCM adapter 合同；GitHub 只是 adapter，不进入核心状态机 |
+| 模型不可用时静默 fallback | 用户以为使用了指定模型，实际 review 证据不可审计 | `ModelResolution` 必须记录解析来源和不可用原因；显式模型不可用时 fail-closed |
 
 ## 12. 发布与迁移要求
 
@@ -452,14 +476,14 @@ ai-sdlc pr-review attest
 1. `ai-sdlc loop status/list`。
 2. Requirement Loop 与 Design Contract Loop 的 dry-run/check 模式。
 3. Frontend Evidence Loop 接入已有 browser gate artifact。
-4. GitHub/GitLab PR diff 读取。
+4. Diff Source / SCM Adapter：支持 patch、本地 staged/unstaged、GitHub/GitLab/Gitee/self-hosted SCM 或公司内网 PR/MR diff 读取。
 5. Attestation artifact 和 CI 只读检查。
 6. Finding 去重和历史映射。
 
 ### P2：团队与企业增强
 
 1. 多 reviewer 角色。
-2. provider 策略中心。
+2. provider/model/source 策略中心。
 3. redaction 策略与敏感文件过滤。
 4. artifact 签名。
 5. 组织级 waiver 审批。
@@ -469,7 +493,8 @@ ai-sdlc pr-review attest
 
 | 问题 | 默认决策 | 阻塞阶段 |
 |------|----------|----------|
-| `local-agent` 如何具体启动独立 reviewer 会话并解析 `--model current` | P0 先定义 provider/model runner 合同与 mock provider；具体 host 集成在 plan 阶段确认，`codex-local` 仅作为可能 alias | design |
+| `local-agent` 如何具体启动独立 reviewer 会话并解析 `--model current` | P0 先定义 provider/model runner 合同与 mock provider；后续 host 集成必须默认优先当前会话/当前 CLI agent 模型，并验证显式指定模型可用性；`codex-local` 仅作为可能 alias | design |
+| 远端 diff/PR 如何接入 | 统一抽象为 `DiffSource`/SCM adapter，GitHub/GitLab/Gitee/self-hosted SCM 和 patch file 都是 adapter；不得把 GitHub PR id 写成核心合同 | design |
 | Review pack 摘要是否允许包含 handoff | 默认不允许包含实现 agent 主观 handoff；只允许 bounded formal docs 和命令证据 | design |
 | `REQUIRED` 在 `--require-no-blockers` 下如何表达 | 默认 close 阻断 unresolved `REQUIRED`；`--require-no-blockers` 只生成 `risk_accepted` 报告，不可标记为 `fully_clean` | design |
 | CI 是否强制检查 attestation | P1 可选，不作为 P0 阻断 | design |
@@ -519,16 +544,30 @@ ai-sdlc pr-review attest
 
 1. `loop-policy.yaml` 是否独立于 project config，或合并进既有 project config。
 2. schema 是否导出 JSON Schema 文件，或仅通过 Pydantic validation 和 tests 固化。
-3. `local-agent` 具体 host 集成方式与 `--model current` 解析方式仍需在 plan 阶段实测。
+3. `local-agent` 具体 host 集成方式仍需在实现阶段通过 provider runner 合同落地；`--model current` 的默认解析规则已在本次修订中确定为当前会话/当前 CLI agent 已连接模型优先，显式模型不可用必须 fail-closed。
+
+### Round 3：用户澄清后的适配性修订
+
+**触发原因**：用户明确指出 review 需求必须先修订进需求文档，而不是直接继续开发；同时补充了小白易用性、多代码仓形态、当前模型优先、显式模型不可用报错和非硬编码适配性要求。
+
+**修订结论**：本轮不新增实现动作，只修订需求与计划合同；后续开发 agent 必须先重新对齐 `spec.md -> plan.md -> tasks.md`。
+
+| Finding | 严重级别 | 用户澄清 | 修订结果 |
+|---------|----------|----------|----------|
+| USER-CLARIFY-001 | P0 | 用户代码仓可能是公司内网、本地目录、GitHub、GitLab、Gitee 或 self-hosted SCM，不能把远端 diff/PR 写死为 GitHub。 | 新增 `DiffSourceDescriptor`、`SourceAdapterResolution`、source adapter 合同和相关 FR/SC；GitHub 只允许作为 adapter。 |
+| USER-CLARIFY-002 | P0 | review 模型默认应使用当前会话/当前开发 CLI agent 已连接模型，也允许用户显式选择其他已连接模型服务。 | 更新 `ModelResolution` 规则：current 优先；显式模型必须验证可用；不可用必须 fail-closed 并输出原因。 |
+| USER-CLARIFY-003 | P0 | 技术小白必须能理解和使用，专业工程师也需要可配置和可审计。 | 新增双层 UX 原则：默认 human 输出给 Result/Next/可复制命令，`--json` 保留 source/provider/model/policy/artifact 细节。 |
+| USER-CLARIFY-004 | P0 | 不能只把 review 逻辑做成 GitHub PR 流程或 CI 流程；CI 不发起模型请求，但本地 agent 可以调用用户模型。 | 明确本地独立 review agent 调用模型，CI 只读 artifact/attestation/schema；不得把“CI 不调模型”误解为“不允许调大模型”。 |
 
 ## 17. Codex 开发 Agent 执行提示
 
 后续 Codex 开发 agent 必须遵守以下顺序：
 
-1. 以本已冻结 PRD 为需求真值，不得弱化独立 reviewer、本地 agent 默认当前模型、显式模型选择、CI 不发起模型请求、schema validation、policy profile 或小白路径。
+1. 以本已冻结并经 2026-06-30 澄清修订的 PRD 为需求真值，不得弱化独立 reviewer、本地 agent 默认当前模型、显式模型选择、模型不可用 fail-closed、CI 不发起模型请求、schema validation、policy profile、DiffSource 适配或小白路径。
 2. 实现前必须读取并遵守 `plan.md` 与 `tasks.md`。
 3. 每个任务必须绑定文件范围、验收标准和验证命令。
 4. 进入实现前必须确认当前阶段允许 execute。
 5. 实现必须优先完成 `mock-reviewer` 和 schema tests，再接 `local-agent` provider/model runner 合同。
 6. 不得调用 Codex 云端 PR review，不得把 GitHub `@codex review` 作为实现路径。
-7. 不得在 CI workflow 中加入 GPT、Claude、DeepSeek、GLM、Codex 或其他模型调用；模型调用只能由本地独立 review agent 发起。
+7. 不得把远端 diff/PR 写死为 GitHub；GitHub/GitLab/Gitee/self-hosted SCM、公司内网 SCM、patch file 和本地 diff 必须通过 source adapter 合同进入 review pack。
+8. 不得在 CI workflow 中加入 GPT、Claude、DeepSeek、GLM、Codex 或其他模型调用；模型调用只能由本地独立 review agent 发起。
