@@ -17,6 +17,7 @@ from ai_sdlc.core.loop_models import LoopStatus
 
 _CONTRACT_ID = re.compile(r"\b(?:FR|SC)(?:-[A-Za-z0-9]+)*-\d{3}\b")
 _TASK_ID = re.compile(r"\bT\d{2,3}\b")
+_TASK_SECTION = re.compile(r"(?m)^###\s+(?:Task|任务)\b.*$")
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _PLACEHOLDER_PATTERNS = (
     re.compile(r"待补(?:充|说明|验证|执行|确认)"),
@@ -273,18 +274,17 @@ def _task_findings(path: Path, text: str) -> list[DesignContractFinding]:
     task_ids = _TASK_ID.findall(text)
     if not task_ids:
         return [_finding("tasks_missing", "tasks.md does not define executable task ids.", path)]
-    sections = re.split(r"(?m)^### Task ", text)
-    if len(sections) == 1:
+    sections = _task_sections(text)
+    if not sections:
         return [
             _finding(
                 "task_section_gap",
-                "tasks.md mentions task ids but has no parseable ### Task sections.",
+                "tasks.md mentions task ids but has no parseable ### Task or ### 任务 sections.",
                 path,
             )
         ]
-    for section in sections[1:]:
-        header = section.splitlines()[0] if section.splitlines() else ""
-        task_id = next(iter(_TASK_ID.findall(f"{header}\n{section}")), "")
+    for section in sections:
+        task_id = next(iter(_TASK_ID.findall(section)), "")
         if not task_id:
             continue
         if "验收标准" not in section:
@@ -306,6 +306,15 @@ def _task_findings(path: Path, text: str) -> list[DesignContractFinding]:
                 )
             )
     return findings
+
+
+def _task_sections(text: str) -> list[str]:
+    matches = list(_TASK_SECTION.finditer(text))
+    sections: list[str] = []
+    for index, match in enumerate(matches):
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        sections.append(text[match.start() : end])
+    return sections
 
 
 def _scope_drift_findings(path: Path, text: str) -> list[DesignContractFinding]:

@@ -490,6 +490,10 @@
   - 处理：`design_contract` summary 直接暴露 `status`、`coverage_matrix_path`、`report_path`；core unit 和 CLI integration 均增加断言。
 - `design_contract_checks.py`：Treat Exit Criteria as contract sections
   - 处理：将 `exit criterion` / `exit criteria` 纳入 canonical contract section token；新增测试覆盖 `## Exit Criteria` 下的 `SC-*` 会进入 coverage matrix。
+- `design_contract_store.py`：Prevent closing non-current design contracts
+  - 处理：`close --loop-id` 必须与 `current-design-contract.json` 指向的 loop 一致；历史 passed loop 不能在当前 loop 有 blocker 时被显式关闭。
+- `design_contract_checks.py`：Accept generated Chinese task headings
+  - 处理：任务 parser 同时接受 `### Task ...` 与仓库模板生成的 `### 任务 ...`；真正非标准 heading 仍触发 `task_section_gap`。
 
 #### 7.4 统一验证命令
 
@@ -525,6 +529,21 @@
   - 结果：通过，`226 passed`。
 - `V23`（fourth remediation ruff / mypy / constraints / diff）
   - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_checks.py tests/unit/test_design_contract_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V24`（fifth Codex review current-close / Chinese task heading remediation）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`20 passed`。
+- `V25`（fifth remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`228 passed`。
+- `V26`（fifth remediation ruff / mypy / constraints / diff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py tests/unit/test_design_contract_loop.py`
   - 结果：通过，`All checks passed!`。
   - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
   - 结果：通过，`Success: no issues found in 6 source files`。

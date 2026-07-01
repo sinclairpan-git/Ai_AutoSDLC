@@ -239,7 +239,7 @@ def test_check_design_contract_loop_treats_exit_criteria_as_contract_section(
 def test_check_design_contract_loop_blocks_unparseable_task_sections(
     tmp_path: Path,
 ) -> None:
-    _write_work_item(tmp_path, task_heading="### 任务 1.1 Check contract")
+    _write_work_item(tmp_path, task_heading="### 工作 1.1 Check contract")
 
     result = check_design_contract_loop(
         DesignContractCheckOptions(
@@ -261,6 +261,23 @@ def test_check_design_contract_loop_blocks_unparseable_task_sections(
         ).read_text(encoding="utf-8")
     )
     assert "task_section_gap" in {finding["code"] for finding in report["findings"]}
+
+
+def test_check_design_contract_loop_accepts_generated_chinese_task_sections(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, task_heading="### 任务 1.1 Check contract")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-chinese-task-section",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.blocker_count == 0
 
 
 def test_check_design_contract_loop_checks_plan_scope_drift(tmp_path: Path) -> None:
@@ -443,6 +460,46 @@ def test_close_design_contract_loop_blocks_unresolved_contract(
     assert result.status == "needs_fix"
     assert result.loop_status == "needs_fix"
     assert result.blocker_count == 2
+
+
+def test_close_design_contract_loop_blocks_non_current_explicit_loop_id(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path)
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-old",
+        )
+    )
+    _write_work_item(
+        tmp_path,
+        include_task_refs=False,
+        relative_path="specs/current-contract",
+    )
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/current-contract",
+            loop_id="dc-current",
+        )
+    )
+
+    result = close_design_contract_loop(
+        DesignContractCloseOptions(root=tmp_path, loop_id="dc-old", yes=True)
+    )
+
+    assert result.status == "blocked"
+    assert "Only the current design-contract loop can be closed" in result.blocker
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "design-contract"
+        / "dc-old"
+        / "design-contract-close.json"
+    ).exists()
 
 
 def test_close_design_contract_loop_blocks_symlinked_current_pointer(
