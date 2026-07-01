@@ -10,12 +10,13 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete five Loop Engine loop types one by one; current
-    slice is WI-193 design-contract loop PR review. | State: PR #110 sixth Codex review
-    finding fixed locally: coverage-matrix.json and current-design-contract pointer
-    now use LoopArtifactModel-backed design-contract models with standard created_by/created_at/ai_sdlc_version
-    metadata. Unit passed 20 tests; focused regression passed 228 tests; ruff/mypy/verify
-    constraints/diff passed; truth sync snapshot b91cfadadefe753188d6b47475b8026afa12f94593f56d24985a4b233ee29d3d;
-    close-check only blocks on uncommitted changes. | Next: Commit artifact metadata
+    slice is WI-193 design-contract loop PR review. | State: PR #110 seventh Codex
+    review finding fixed locally: design-contract scope drift now blocks entering
+    local PR review implementation paths via ai-sdlc pr-review commands or pr_review_*
+    source files while not flagging no-regression text. Unit passed 21 tests; focused
+    regression passed 229 tests; ruff/mypy/verify constraints/diff passed; truth sync
+    snapshot f08db7d313396419fde89db148889c4eddcee6240e15019c958261e5df6611e9; close-check
+    only blocks on uncommitted changes. | Next: Commit local-pr-review scope drift
     remediation, rerun close-check, push, request @codex review, monitor checks/review,
     then merge PR #110 if clean.'
 current_branch: codex/189-loop-engine-complete-pr-review

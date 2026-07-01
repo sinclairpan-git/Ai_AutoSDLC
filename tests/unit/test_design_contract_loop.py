@@ -321,6 +321,37 @@ def test_check_design_contract_loop_checks_plan_scope_drift(tmp_path: Path) -> N
     assert scope_findings[0]["path"] == "specs/demo-contract/plan.md"
 
 
+def test_check_design_contract_loop_checks_local_review_scope_drift(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, plan_extra="Run ai-sdlc pr-review start.")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-local-review-drift",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-local-review-drift"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    scope_findings = [
+        finding for finding in report["findings"] if finding["code"] == "scope_drift"
+    ]
+    assert scope_findings
+    assert "ai-sdlc pr-review" in scope_findings[0]["message"]
+
+
 def test_check_design_contract_loop_blocks_non_canonical_work_item_dir(
     tmp_path: Path,
 ) -> None:

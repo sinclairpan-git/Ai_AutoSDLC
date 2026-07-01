@@ -318,7 +318,12 @@ def _task_sections(text: str) -> list[str]:
 
 
 def _scope_drift_findings(path: Path, text: str) -> list[DesignContractFinding]:
-    risky_tokens = ("implementation_loop.py", "frontend_evidence_loop.py")
+    risky_tokens = (
+        "implementation_loop.py",
+        "frontend_evidence_loop.py",
+        "ai-sdlc pr-review",
+        "pr_review_",
+    )
     return [
         _finding(
             "scope_drift",

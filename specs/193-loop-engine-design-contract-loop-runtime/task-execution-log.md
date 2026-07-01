@@ -496,6 +496,8 @@
   - 处理：任务 parser 同时接受 `### Task ...` 与仓库模板生成的 `### 任务 ...`；真正非标准 heading 仍触发 `task_section_gap`。
 - `design_contract_loop.py`：Add standard metadata to coverage artifacts
   - 处理：新增 `DesignContractCoverageMatrix` 和 `DesignContractCurrentPointer`，coverage matrix 与 current pointer 都通过 `LoopArtifactModel` 写入标准 `created_by`、`created_at`、`ai_sdlc_version`。
+- `design_contract_checks.py`：Block local-review scope drift
+  - 处理：将 `ai-sdlc pr-review` 命令与 `pr_review_*` 源文件信号纳入 design-contract scope drift 检查；保留普通 no-regression 文本不误伤。
 
 #### 7.4 统一验证命令
 
@@ -561,6 +563,21 @@
   - 结果：通过，`228 passed`。
 - `V29`（sixth remediation ruff / mypy / constraints / diff）
   - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py tests/unit/test_design_contract_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V30`（seventh Codex review local-pr-review scope drift remediation）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`21 passed`。
+- `V31`（seventh remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`229 passed`。
+- `V32`（seventh remediation ruff / mypy / constraints / diff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_checks.py tests/unit/test_design_contract_loop.py`
   - 结果：通过，`All checks passed!`。
   - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
   - 结果：通过，`Success: no issues found in 6 source files`。
