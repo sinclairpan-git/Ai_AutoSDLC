@@ -135,6 +135,206 @@ def test_loop_status_human_skips_update_notice(
     assert calls == []
 
 
+def test_loop_status_does_not_trigger_ide_adapter_hook(tmp_path: Path) -> None:
+    (tmp_path / ".ai-sdlc").mkdir()
+    with (
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        result = runner.invoke(app, ["loop", "status", "--json"])
+
+    assert result.exit_code == 0
+    adapter_hook.assert_not_called()
+
+
+def test_loop_requirement_status_does_not_trigger_ide_adapter_hook(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".ai-sdlc").mkdir()
+    with (
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        result = runner.invoke(app, ["loop", "requirement", "status", "--json"])
+
+    assert result.exit_code == 0
+    adapter_hook.assert_not_called()
+
+
+def test_loop_requirement_start_triggers_ide_adapter_hook(
+    tmp_path: Path,
+) -> None:
+    with (
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                "req-adapter-start",
+                "--idea",
+                "Ops users need approval reporting.",
+                "--acceptance",
+                "Approval report can be exported.",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    adapter_hook.assert_called_once()
+
+
+def test_loop_requirement_start_json_suppresses_adapter_notice(
+    tmp_path: Path,
+) -> None:
+    def _emit_notice(*, console) -> None:
+        console.print("IDE adapter refreshed")
+
+    with (
+        patch(
+            "ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized",
+            side_effect=_emit_notice,
+        ) as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                "req-adapter-json",
+                "--idea",
+                "Ops users need approval reporting.",
+                "--acceptance",
+                "Approval report can be exported.",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["loop_id"] == "req-adapter-json"
+    assert "IDE adapter refreshed" not in result.output
+    adapter_hook.assert_called_once()
+
+
+def test_loop_requirement_start_dry_run_skips_adapter_hook_and_reports_source(
+    tmp_path: Path,
+) -> None:
+    with (
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                "req-dry-run-json",
+                "--idea",
+                "Ops users need approval reporting.",
+                "--acceptance",
+                "Approval report can be exported.",
+                "--dry-run",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "dry_run"
+    assert payload["dry_run"] is True
+    assert payload["source_kind"] == "idea"
+    assert payload["source_path"] == ""
+    assert payload["requirement"]["summary"] == "Ops users need approval reporting."
+    assert payload["requirement"]["source_kind"] == "idea"
+    assert not (tmp_path / ".ai-sdlc").exists()
+    adapter_hook.assert_not_called()
+
+
+def test_loop_requirement_freeze_triggers_ide_adapter_hook(
+    tmp_path: Path,
+) -> None:
+    with (
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        start = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                "req-adapter-freeze",
+                "--idea",
+                "Ops users need approval reporting.",
+                "--acceptance",
+                "Approval report can be exported.",
+                "--json",
+            ],
+        )
+        adapter_hook.reset_mock()
+        result = runner.invoke(
+            app,
+            ["loop", "requirement", "freeze", "--yes", "--json"],
+        )
+
+    assert start.exit_code == 0
+    assert result.exit_code == 0
+    adapter_hook.assert_called_once()
+
+
+def test_loop_requirement_freeze_json_suppresses_adapter_notice(
+    tmp_path: Path,
+) -> None:
+    def _emit_notice(*, console) -> None:
+        console.print("IDE adapter refreshed")
+
+    with (
+        patch(
+            "ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized",
+            side_effect=_emit_notice,
+        ) as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        start = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                "req-adapter-freeze-json",
+                "--idea",
+                "Ops users need approval reporting.",
+                "--acceptance",
+                "Approval report can be exported.",
+                "--json",
+            ],
+        )
+        result = runner.invoke(
+            app,
+            ["loop", "requirement", "freeze", "--yes", "--json"],
+        )
+
+    assert start.exit_code == 0
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["loop_status"] == "closed"
+    assert "IDE adapter refreshed" not in start.output
+    assert "IDE adapter refreshed" not in result.output
+    assert adapter_hook.call_count == 2
+
+
 def test_loop_status_guidance_does_not_call_provider(tmp_path: Path) -> None:
     review_run_path = _write_review_run(tmp_path)
     _write_current_pointer(tmp_path, review_run_path)
@@ -360,6 +560,178 @@ def test_loop_status_json_blocks_absolute_current_pointer_path(
     payload = json.loads(result.output)
     assert payload["status"] == "blocked"
     assert "project-relative" in payload["blocker"]
+
+
+def test_loop_requirement_start_status_and_freeze_json(tmp_path: Path) -> None:
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        start = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                "req-cli",
+                "--idea",
+                "运营用户需要订单审批流，范围只覆盖后台人工审批。",
+                "--acceptance",
+                "审批节点可以配置",
+                "--json",
+            ],
+        )
+        status = runner.invoke(
+            app,
+            ["loop", "status", "--type", "requirement", "--json"],
+        )
+        freeze = runner.invoke(
+            app,
+            ["loop", "requirement", "freeze", "--yes", "--json"],
+        )
+
+    assert start.exit_code == 0
+    start_payload = json.loads(start.output)
+    assert start_payload["status"] == "ready"
+    assert start_payload["loop_id"] == "req-cli"
+    assert start_payload["acceptance_count"] == 1
+    assert start_payload["source_kind"] == "idea"
+    assert start_payload["source_path"] == ""
+    assert start_payload["requirement"]["summary"] == (
+        "运营用户需要订单审批流，范围只覆盖后台人工审批。"
+    )
+    assert start_payload["requirement"]["source_kind"] == "idea"
+
+    assert status.exit_code == 0
+    status_payload = json.loads(status.output)
+    assert status_payload["status"] == "ready"
+    assert status_payload["current_loop"]["loop_type"] == "requirement"
+    assert status_payload["current_loop"]["requirement"]["acceptance_count"] == 1
+    assert status_payload["next_guidance"]["command"] == (
+        "ai-sdlc loop requirement freeze --yes"
+    )
+
+    assert freeze.exit_code == 0
+    freeze_payload = json.loads(freeze.output)
+    assert freeze_payload["status"] == "ready"
+    assert freeze_payload["loop_status"] == "closed"
+    assert "design-contract" in freeze_payload["next_action"]
+
+
+def test_loop_requirement_start_human_needs_user_without_acceptance(
+    tmp_path: Path,
+) -> None:
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                "req-human",
+                "--idea",
+                "做一个报表",
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert "Result: needs_user" in result.output
+    assert "Next:" in result.output
+    assert "Loop ID: req-human" in result.output
+    assert "Clarifications:" in result.output
+    assert "Acceptance criteria: 0" in result.output
+
+
+def test_loop_requirement_freeze_requires_yes(tmp_path: Path) -> None:
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                "req-freeze-cli",
+                "--idea",
+                "财务用户需要付款审批，范围只覆盖国内付款。",
+                "--acceptance",
+                "审批通过后才能付款",
+            ],
+        )
+        result = runner.invoke(
+            app,
+            ["loop", "requirement", "freeze", "--json"],
+        )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["status"] == "blocked"
+    assert "--yes" in payload["next_action"]
+
+
+def test_loop_requirement_freeze_without_acceptance_exits_nonzero(
+    tmp_path: Path,
+) -> None:
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        start = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                "req-freeze-needs-user",
+                "--idea",
+                "Ops users need approval reporting.",
+            ],
+        )
+        result = runner.invoke(
+            app,
+            ["loop", "requirement", "freeze", "--yes", "--json"],
+        )
+
+    assert start.exit_code == 0
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["status"] == "needs_user"
+    assert "acceptance criterion" in payload["blocker"]
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "requirement"
+        / "req-freeze-needs-user"
+        / "requirement-freeze.json"
+    ).exists()
+
+
+def test_loop_requirement_list_json(tmp_path: Path) -> None:
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                "req-list",
+                "--idea",
+                "客服用户需要 SLA 提醒，范围只覆盖站内提醒。",
+                "--acceptance",
+                "SLA 超时前可以提醒",
+            ],
+        )
+        result = runner.invoke(
+            app,
+            ["loop", "list", "--type", "requirement", "--json"],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "ready"
+    assert payload["current_loop_id"] == "req-list"
+    assert payload["items"][0]["requirement"]["summary"] == (
+        "客服用户需要 SLA 提醒，范围只覆盖站内提醒。"
+    )
 
 
 def test_python_module_help_fallback_lists_loop() -> None:

@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+from io import StringIO
 from pathlib import Path
 
 import typer
 from rich.console import Console
 
+from ai_sdlc.cli.cli_hooks import run_ide_adapter_if_initialized
 from ai_sdlc.core.loop_status import (
     LoopListResult,
     LoopNextActionGuidance,
@@ -17,23 +19,48 @@ from ai_sdlc.core.loop_status import (
     get_loop_status,
     list_loops,
 )
+from ai_sdlc.core.requirement_loop import (
+    RequirementFreezeOptions,
+    RequirementLoopCommandResult,
+    RequirementStartOptions,
+    freeze_requirement_loop,
+    start_requirement_loop,
+)
 from ai_sdlc.utils.helpers import find_project_root
 
 loop_app = typer.Typer(
     help="Inspect read-only Loop Engine artifacts.",
     no_args_is_help=True,
 )
+requirement_app = typer.Typer(
+    help="Run the local deterministic requirement loop.",
+    no_args_is_help=True,
+)
 console = Console()
+
+
+def _run_requirement_writer_adapter(*, json_output: bool) -> None:
+    """Refresh adapter metadata before requirement commands write artifacts."""
+
+    adapter_console = (
+        Console(file=StringIO(), force_terminal=False) if json_output else console
+    )
+    run_ide_adapter_if_initialized(console=adapter_console)
 
 
 @loop_app.command(name="status")
 def loop_status(
+    loop_type: str = typer.Option(
+        "local-pr-review",
+        "--type",
+        help="Loop type to inspect: local-pr-review or requirement.",
+    ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
     """Show the current Loop Engine status from local artifacts."""
 
     root = _project_root_or_exit(json_output=json_output)
-    result = get_loop_status(root)
+    result = get_loop_status(root, loop_type=loop_type)
     _emit_status_result(result, json_output=json_output)
     raise typer.Exit(0 if result.status != LoopStatusCommandStatus.BLOCKED else 1)
 
@@ -43,7 +70,7 @@ def loop_list(
     loop_type: str = typer.Option(
         "local-pr-review",
         "--type",
-        help="Loop type to list. Current baseline supports local-pr-review.",
+        help="Loop type to list: local-pr-review or requirement.",
     ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
@@ -55,10 +82,87 @@ def loop_list(
     raise typer.Exit(0 if result.status != LoopStatusCommandStatus.BLOCKED else 1)
 
 
+@requirement_app.command(name="start")
+def requirement_start(
+    idea: str = typer.Option("", "--idea", help="Inline requirement idea text."),
+    input_file: str = typer.Option(
+        "",
+        "--input-file",
+        help="Local requirement markdown/text file.",
+    ),
+    acceptance: list[str] = typer.Option(
+        [],
+        "--acceptance",
+        help="Acceptance criterion. Repeat for multiple criteria.",
+    ),
+    work_item_id: str = typer.Option("", "--work-item-id", help="Linked work item id."),
+    loop_id: str = typer.Option("", "--loop-id", help="Optional stable loop id."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing."),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Start a local deterministic requirement loop."""
+
+    if not dry_run:
+        _run_requirement_writer_adapter(json_output=json_output)
+    root = _project_root_or_exit(json_output=json_output)
+    result = start_requirement_loop(
+        RequirementStartOptions(
+            root=root,
+            idea=idea,
+            input_file=input_file,
+            acceptance=tuple(acceptance),
+            work_item_id=work_item_id,
+            loop_id=loop_id,
+            dry_run=dry_run,
+        )
+    )
+    _emit_requirement_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != "blocked" else 1)
+
+
+@requirement_app.command(name="status")
+def requirement_status(
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Show the current requirement loop status."""
+
+    root = _project_root_or_exit(json_output=json_output)
+    result = get_loop_status(root, loop_type="requirement")
+    _emit_status_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != LoopStatusCommandStatus.BLOCKED else 1)
+
+
+@requirement_app.command(name="freeze")
+def requirement_freeze(
+    loop_id: str = typer.Option("", "--loop-id", help="Requirement loop id."),
+    yes: bool = typer.Option(False, "--yes", help="Confirm requirement freeze."),
+    accepted_by: str = typer.Option(
+        "local-user",
+        "--accepted-by",
+        help="Operator recorded in requirement-freeze.json.",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Freeze the current requirement loop after explicit confirmation."""
+
+    _run_requirement_writer_adapter(json_output=json_output)
+    root = _project_root_or_exit(json_output=json_output)
+    result = freeze_requirement_loop(
+        RequirementFreezeOptions(
+            root=root,
+            loop_id=loop_id,
+            yes=yes,
+            accepted_by=accepted_by,
+        )
+    )
+    _emit_requirement_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status == "ready" else 1)
+
+
 def _project_root_or_exit(*, json_output: bool = False) -> Path:
     root = find_project_root()
     if root is None:
-        payload = {
+        payload: dict[str, object] = {
             "status": LoopStatusCommandStatus.BLOCKED,
             "result": "Project is not initialized.",
             "blocker": "Project is not initialized; .ai-sdlc is missing.",
@@ -112,6 +216,35 @@ def _emit_list_result(result: LoopListResult, *, json_output: bool) -> None:
         _emit_loop_summary(loop, show_guidance=True)
 
 
+def _emit_requirement_result(
+    result: RequirementLoopCommandResult,
+    *,
+    json_output: bool,
+) -> None:
+    payload = result.model_dump(mode="json")
+    if json_output:
+        _emit_payload(payload, json_output=True)
+        return
+    console.print(f"Result: {payload.get('status', '')}")
+    if payload.get("blocker"):
+        console.print(f"Blocker: {payload['blocker']}")
+    console.print(f"Next: {payload.get('next_action') or '-'}")
+    if result.loop_id:
+        console.print(f"Loop ID: {result.loop_id}")
+    if result.loop_status:
+        console.print(f"Loop status: {result.loop_status}")
+    if result.summary:
+        console.print(f"Requirement: {result.summary}")
+    console.print(f"Clarifications: {result.clarification_count}")
+    console.print(f"Acceptance criteria: {result.acceptance_count}")
+    console.print(f"Frozen: {str(result.frozen).lower()}")
+    if result.artifacts:
+        console.print("Artifacts:")
+        for artifact in result.artifacts:
+            state = "exists" if artifact.exists else "planned"
+            console.print(f"- {artifact.kind}: {artifact.path} ({state})")
+
+
 def _emit_payload(payload: dict[str, object], *, json_output: bool) -> None:
     if json_output:
         typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -160,6 +293,16 @@ def _emit_loop_summary(loop: LoopSummary, *, show_guidance: bool = True) -> None
         for artifact in loop.artifacts:
             state = "exists" if artifact.exists else "missing"
             console.print(f"- {artifact.kind}: {artifact.path} ({state})")
+    if loop.requirement is not None:
+        requirement = loop.requirement
+        console.print(f"Requirement: {requirement.summary}")
+        console.print(f"Source: {requirement.source_kind}")
+        console.print(
+            "Requirement counts: "
+            f"clarifications={requirement.clarification_count}, "
+            f"acceptance={requirement.acceptance_count}, "
+            f"frozen={str(requirement.frozen).lower()}"
+        )
 
 
 def _emit_guidance(guidance: LoopNextActionGuidance) -> None:
@@ -192,5 +335,7 @@ def _emit_guidance_payload(payload: object) -> None:
 def _yes_no(value: object) -> str:
     return "yes" if bool(value) else "no"
 
+
+loop_app.add_typer(requirement_app, name="requirement")
 
 __all__ = ["loop_app"]

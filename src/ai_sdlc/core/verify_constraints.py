@@ -1111,6 +1111,68 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
             ),
         ),
     ),
+    "192": (
+        FeatureContractSurface(
+            label="requirement loop core runtime",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "requirement_loop.py",
+                    ),
+                    required_tokens=(
+                        "RequirementIntake",
+                        "RequirementFreeze",
+                        "start_requirement_loop",
+                        "freeze_requirement_loop",
+                        "CURRENT_REQUIREMENT_PATH",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="requirement loop status and CLI",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "loop_status.py",
+                    ),
+                    required_tokens=(
+                        "RequirementLoopSummary",
+                        "_get_requirement_loop_status",
+                        "_list_requirement_loops",
+                        "current-requirement.json",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "cli" / "loop_cmd.py",
+                    ),
+                    required_tokens=(
+                        "requirement_app",
+                        "requirement_start",
+                        "requirement_freeze",
+                        "--type",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="requirement loop user docs",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(Path("README.md"),),
+                    required_tokens=(
+                        "ai-sdlc loop requirement start",
+                        "ai-sdlc loop status --type requirement",
+                        "ai-sdlc loop requirement freeze --yes",
+                        "does not call any model service",
+                        "does not modify application code",
+                        "design-contract",
+                    ),
+                ),
+            ),
+        ),
+    ),
 }
 
 
@@ -3482,6 +3544,8 @@ def _feature_contract_surfaces_for_checkpoint(
         return FEATURE_CONTRACT_SURFACES["190"]
     if _is_191_work_item(work_item_id):
         return FEATURE_CONTRACT_SURFACES["191"]
+    if _is_192_work_item(work_item_id):
+        return FEATURE_CONTRACT_SURFACES["192"]
     return ()
 
 
@@ -3575,6 +3639,11 @@ def _is_190_work_item(work_item_id: str) -> bool:
 def _is_191_work_item(work_item_id: str) -> bool:
     normalized = work_item_id.strip()
     return normalized == "191" or normalized.startswith("191-") or normalized.startswith("191/")
+
+
+def _is_192_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "192" or normalized.startswith("192-") or normalized.startswith("192/")
 
 
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:

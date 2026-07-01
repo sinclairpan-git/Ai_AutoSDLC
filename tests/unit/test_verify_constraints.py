@@ -244,6 +244,42 @@ def test_191_feature_contract_surfaces_cover_loop_next_guidance_docs() -> None:
     assert "只读推导" in doc_tokens
 
 
+def test_192_feature_contract_surfaces_cover_requirement_loop_runtime() -> None:
+    checkpoint = Checkpoint(
+        current_stage="execute",
+        feature=FeatureInfo(
+            id="192-loop-engine-requirement-loop-runtime",
+            spec_dir="specs/192-loop-engine-requirement-loop-runtime",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="f",
+        ),
+    )
+
+    surfaces = verify_constraints_module._feature_contract_surfaces_for_checkpoint(
+        checkpoint
+    )
+
+    assert surfaces == verify_constraints_module.FEATURE_CONTRACT_SURFACES["192"]
+    labels = {surface.label for surface in surfaces}
+    assert "requirement loop core runtime" in labels
+    assert "requirement loop status and CLI" in labels
+    assert "requirement loop user docs" in labels
+    docs_surface = next(
+        surface
+        for surface in surfaces
+        if surface.label == "requirement loop user docs"
+    )
+    doc_tokens = {
+        token
+        for evidence in docs_surface.evidence_entries
+        for token in evidence.required_tokens
+    }
+    assert "ai-sdlc loop requirement start" in doc_tokens
+    assert "ai-sdlc loop requirement freeze --yes" in doc_tokens
+    assert "design-contract" in doc_tokens
+
+
 def test_verify_constraint_report_runtime_objects_canonicalize_lists() -> None:
     constraint_report = ConstraintReport(
         root=".",
