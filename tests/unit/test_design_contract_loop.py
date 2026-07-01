@@ -564,6 +564,40 @@ def test_check_design_contract_loop_accepts_direct_formal_as_product_term(
     assert result.blocker_count == 0
 
 
+def test_check_design_contract_loop_accepts_english_plan_sections(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    (work_item / "plan.md").write_text(
+        "\n".join(
+            [
+                "# Implementation Plan",
+                "",
+                "## Technical Context",
+                "Python runtime.",
+                "## Phase Plan",
+                "Phase 1.",
+                "## Verification",
+                "Run pytest.",
+                "## Rollback",
+                "Revert the commit.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-english-plan",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.blocker_count == 0
+
+
 def test_check_design_contract_loop_reports_unrendered_feature_spec_title(
     tmp_path: Path,
 ) -> None:

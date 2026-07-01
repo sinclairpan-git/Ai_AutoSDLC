@@ -356,12 +356,26 @@ def _is_draft_spec(text: str) -> bool:
 
 
 def _plan_findings(path: Path, text: str) -> list[DesignContractFinding]:
-    required = ("技术背景", "阶段计划", "验证", "回退")
+    required = (
+        ("技术背景", "Technical Context", "Technical Background"),
+        ("阶段计划", "Phase Plan", "Implementation Plan", "Delivery Plan"),
+        ("验证", "Verification", "Validation"),
+        ("回退", "Rollback", "Roll Back"),
+    )
     return [
-        _finding("plan_gap", f"plan.md is missing section or token: {token}.", path)
-        for token in required
-        if token not in text
+        _finding(
+            "plan_gap",
+            f"plan.md is missing section or token: {'/'.join(tokens)}.",
+            path,
+        )
+        for tokens in required
+        if not _has_any_plan_token(text, tokens)
     ]
+
+
+def _has_any_plan_token(text: str, tokens: tuple[str, ...]) -> bool:
+    lowered = text.lower()
+    return any(token.lower() in lowered for token in tokens)
 
 
 def _task_findings(path: Path, text: str) -> list[DesignContractFinding]:

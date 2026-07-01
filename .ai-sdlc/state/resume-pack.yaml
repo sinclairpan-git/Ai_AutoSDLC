@@ -10,11 +10,12 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete five Loop Engine loop types one by one; current
-    slice is WI-193 design-contract loop PR review. | State: PR #110 twenty-third
-    remediation implemented: design-contract placeholder detection no longer treats
-    direct-formal as a global placeholder term. Local verification passed: targeted
-    direct-formal/placeholder tests, 255 focused regression tests, focused ruff, focused
-    mypy, verify constraints, truth sync snapshot 1ba018c5086865c5f7139012b6ab557ae743f0fa00a72133a75995632a53a442.
+    slice is WI-193 design-contract loop PR review. | State: PR #110 twenty-fourth
+    remediation implemented: design-contract plan gap detection now accepts English
+    section equivalents for Technical Context, Phase Plan, Verification, and Rollback
+    while preserving Chinese requirements. Local verification passed: targeted English
+    plan tests, 256 focused regression tests, focused ruff, focused mypy, verify constraints,
+    truth sync snapshot 1ad9d67b1d37e4b136d0290c30aa4690c4537032729b38b2e20d95a03da44114.
     Pre-commit close-check passed every gate except expected git_closure because changes
     are not committed yet. | Next: Stage and commit remediation, rerun workitem close-check,
     push PR #110, request @codex review, and monitor checks/review.'
