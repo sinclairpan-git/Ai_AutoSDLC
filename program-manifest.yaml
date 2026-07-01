@@ -1875,10 +1875,10 @@ specs:
   path: specs/193-loop-engine-design-contract-loop-runtime
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-01T13:25:06Z'
+  generated_at: '2026-07-01T13:42:43Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 78e7dd14
+  repo_revision: 1f50f883
   authoring_hash: e8a99528b9f749beacd41db6152c52ad8f2fb8c7ca02fa277690fc6acc49f1f2
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1918,7 +1918,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: c7347dcbd4122bfdd7e8211cf659c837c9ab28a57cb8116ce553bf1502133023
+  snapshot_hash: 68f3bd6505e575cf3923d00338803706b639dd02ae0c2efe13f439144ed72b8b
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1937,8 +1937,8 @@ truth_snapshot:
     mapped_sources: 993
     unmapped_sources: 28
     missing_sources: 8
-    phase_signal_count: 3445
-    deferred_signal_count: 6249
+    phase_signal_count: 3446
+    deferred_signal_count: 6251
     non_goal_signal_count: 340
     layer_totals:
       blueprint: 1
@@ -10690,8 +10690,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 193-loop-engine-design-contract-loop-runtime
-      phase_signal_count: 23
-      deferred_signal_count: 29
+      phase_signal_count: 24
+      deferred_signal_count: 31
       non_goal_signal_count: 2
     - path: specs/193-loop-engine-design-contract-loop-runtime/development-summary.md
       source_type: development_summary

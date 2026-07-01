@@ -48,7 +48,10 @@ _PLACEHOLDER_PATTERNS = (
     re.compile(r"\bTODO\b", re.IGNORECASE),
     re.compile(r"\bTBD\b", re.IGNORECASE),
     re.compile(r"direct-formal", re.IGNORECASE),
-    re.compile(r"功能规格："),
+    re.compile(
+        r"功能规格：\s*(?:\{\{[^}]+\}\}|<[^>]+>|\$\{[^}]+\}|\bTODO\b|\bTBD\b|待(?:补|填|定|确认))",
+        re.IGNORECASE,
+    ),
 )
 _CONTRACT_SECTION_TOKENS = (
     "功能需求",

@@ -367,6 +367,50 @@ def test_check_design_contract_loop_reports_placeholders(tmp_path: Path) -> None
     assert "placeholder" in {finding["code"] for finding in report["findings"]}
 
 
+def test_check_design_contract_loop_accepts_filled_feature_spec_title(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, spec_title="# 功能规格：Frontend Program Demo")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-filled-feature-title",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.blocker_count == 0
+
+
+def test_check_design_contract_loop_reports_unrendered_feature_spec_title(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, spec_title="# 功能规格：{{ project_name }}")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-template-feature-title",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-template-feature-title"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "placeholder" in {finding["code"] for finding in report["findings"]}
+
+
 @pytest.mark.parametrize(
     "status_line",
     [
@@ -1144,6 +1188,7 @@ def _write_work_item(
     tasks_tail_extra: str = "",
     extra_task_sections: str = "",
     spec_status_line: str = "**状态**：已冻结",
+    spec_title: str = "# PRD：Demo Contract",
 ) -> Path:
     work_item = root / relative_path
     work_item.mkdir(parents=True)
@@ -1151,7 +1196,7 @@ def _write_work_item(
     work_item.joinpath("spec.md").write_text(
         "\n".join(
             [
-                "# PRD：Demo Contract",
+                spec_title,
                 "",
                 spec_status_line,
                 "",
