@@ -53,11 +53,15 @@ def check_design_contract_loop(
     """Check formal docs for implementation-readiness and persist artifacts."""
 
     root = options.root.resolve()
+    work_item_dir, work_item_blocker = resolve_work_item_dir(root, options.work_item)
+    if not options.loop_id.strip() and not work_item_blocker:
+        closed_current_result = _closed_current_recheck_result(root, work_item_dir)
+        if closed_current_result is not None:
+            return closed_current_result
     try:
         loop_id = resolve_loop_id(options.loop_id)
     except ValueError as exc:
         return _blocked_result(f"Invalid design-contract loop id: {exc}")
-    work_item_dir, work_item_blocker = resolve_work_item_dir(root, options.work_item)
     artifacts = design_contract_artifacts(root, loop_id)
     planned_refs = artifacts.refs(root)
     closed_result = _closed_recheck_result(root, artifacts)
@@ -270,6 +274,40 @@ def _closed_recheck_result(
         loop_id=loop_run.loop_id,
         next_action=next_action,
         artifacts=artifacts.refs(root, include_close=True),
+    )
+
+
+def _closed_current_recheck_result(
+    root: Path,
+    work_item_dir: Path,
+) -> DesignContractCommandResult | None:
+    loop_run_path, pointer_blocker = resolve_design_contract_loop_run_path(root, "")
+    if pointer_blocker:
+        return None
+    try:
+        loop_run = read_loop_run(loop_run_path)
+    except ValueError:
+        return None
+    if loop_run.status != LoopStatus.CLOSED or loop_run.work_item_id != work_item_dir.name:
+        return None
+    artifacts = design_contract_artifacts(root, loop_run.loop_id)
+    if not artifacts.close_path.is_file():
+        return None
+    try:
+        report = read_report(artifacts.report_json_path)
+    except ValueError as exc:
+        return _blocked_result(
+            f"Existing closed design-contract report is malformed: {exc}",
+            artifacts=artifacts.refs(root, include_close=True),
+        )
+    next_action = loop_run.next_action or _implementation_next_action(report.work_item_id)
+    return _result_from_report(
+        report,
+        artifacts=artifacts.refs(root, include_close=True),
+        result="Design contract is already closed.",
+        closed=True,
+        loop_status=LoopStatus.CLOSED,
+        next_action=next_action,
     )
 
 

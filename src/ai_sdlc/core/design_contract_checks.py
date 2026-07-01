@@ -357,9 +357,19 @@ def _task_sections(text: str) -> list[str]:
     matches = list(_TASK_SECTION.finditer(text))
     sections: list[str] = []
     for index, match in enumerate(matches):
-        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        next_task_start = (
+            matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        )
+        next_heading_start = _next_peer_heading_start(text, match.end())
+        end = min(next_task_start, next_heading_start)
         sections.append(text[match.start() : end])
     return sections
+
+
+def _next_peer_heading_start(text: str, start: int) -> int:
+    for match in re.finditer(r"(?m)^#{1,3}\s+.+$", text[start:]):
+        return start + match.start()
+    return len(text)
 
 
 def _has_task_acceptance(section: str) -> bool:

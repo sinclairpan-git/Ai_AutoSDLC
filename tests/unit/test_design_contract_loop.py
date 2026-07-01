@@ -199,6 +199,46 @@ def test_check_design_contract_loop_ignores_non_task_coverage_refs(
     }
 
 
+def test_check_design_contract_loop_ignores_trailing_non_task_coverage_refs(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(
+        tmp_path,
+        include_task_refs=False,
+        tasks_tail_extra="\n".join(
+            [
+                "",
+                "## Coverage matrix",
+                "",
+                "- FR-DEMO-001",
+                "- SC-DEMO-001",
+            ]
+        ),
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-trailing-coverage",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-trailing-coverage"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert {item["status"] for item in report["coverage_items"]} == {"missing"}
+    assert all(item["covered_by"] == [] for item in report["coverage_items"])
+
+
 def test_check_design_contract_loop_reports_placeholders(tmp_path: Path) -> None:
     _write_work_item(tmp_path, placeholder=True)
 
@@ -629,6 +669,39 @@ def test_check_design_contract_loop_blocks_recheck_of_closed_loop(
     assert loop_run["status"] == "closed"
 
 
+def test_check_design_contract_loop_preserves_closed_current_default_recheck(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path)
+    check_result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+        )
+    )
+    close_design_contract_loop(
+        DesignContractCloseOptions(root=tmp_path, loop_id=check_result.loop_id, yes=True)
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.closed is True
+    assert result.loop_id == check_result.loop_id
+    assert result.loop_status == "closed"
+    assert result.next_action == "Start implementation loop for demo-contract."
+
+    pointer = json.loads(
+        (tmp_path / CURRENT_DESIGN_CONTRACT_PATH).read_text(encoding="utf-8")
+    )
+    assert pointer["loop_id"] == check_result.loop_id
+
+
 def test_close_design_contract_loop_requires_yes(tmp_path: Path) -> None:
     _write_work_item(tmp_path)
     check_design_contract_loop(
@@ -821,6 +894,7 @@ def _write_work_item(
     acceptance_label: str = "- **验收标准**",
     verification_label: str = "- **验证**",
     tasks_intro_extra: str = "",
+    tasks_tail_extra: str = "",
     spec_status_line: str = "**状态**：已冻结",
 ) -> Path:
     work_item = root / relative_path
@@ -877,6 +951,7 @@ def _write_work_item(
                 "- **优先级**：P0",
                 f"{acceptance_label}：Cover {refs}.",
                 f"{verification_label}：uv run pytest tests/unit/test_demo.py -q",
+                tasks_tail_extra,
             ]
         ),
         encoding="utf-8",
