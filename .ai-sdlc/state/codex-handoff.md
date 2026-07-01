@@ -1,27 +1,30 @@
 # Continuity Handoff
 
-- Updated: 2026-07-01T05:07:51+00:00
-- Reason: after WI-193 formal baseline and truth sync
+- Updated: 2026-07-01T05:21:24+00:00
+- Reason: after WI-193 design-contract core runtime
 - Goal: Complete five Loop Engine loop types one by one; current slice is WI-193 design-contract loop
-- State: WI-193 formal docs are frozen and linked; program truth sync, diff check, and verify constraints pass; runtime implementation has not started yet.
+- State: WI-193 Batch 2 core runtime is implemented: design-contract models, checks, store helpers, check runtime, close runtime, and unit tests pass. Status/list and CLI are not connected yet.
 - Stage: execute
 - Work Item: 193-loop-engine-design-contract-loop-runtime
 - Branch: feature/193-loop-engine-design-contract-loop-runtime-docs
 
 ## Changed Files
-- M .ai-sdlc/project/config/project-state.yaml
-- M .ai-sdlc/state/checkpoint.yml
-- M program-manifest.yaml
-- ?? specs/193-loop-engine-design-contract-loop-runtime/
+- M specs/193-loop-engine-design-contract-loop-runtime/task-execution-log.md
+- ?? src/ai_sdlc/core/design_contract_checks.py
+- ?? src/ai_sdlc/core/design_contract_loop.py
+- ?? src/ai_sdlc/core/design_contract_models.py
+- ?? src/ai_sdlc/core/design_contract_store.py
+- ?? tests/unit/test_design_contract_loop.py
 
 ## Key Decisions
-- WI-193 only delivers design-contract loop; implementation and frontend-evidence remain separate future work items.
+- Design-contract P0 coverage uses deterministic FR/SC references in tasks; semantic coverage is deferred.
+- Runtime was split into models/checks/store/facade modules to keep new files under 400 lines.
 
 ## Commands / Tests
-- uv run ai-sdlc workitem link --wi-id 193-loop-engine-design-contract-loop-runtime --plan-uri specs/193-loop-engine-design-contract-loop-runtime/plan.md => passed
-- uv run ai-sdlc program truth sync --execute --yes => passed, snapshot cd4e72bb4a58ebc857add5cba2b581165c1cea564d33514aa9d782273002b0fe
+- uv run pytest tests/unit/test_design_contract_loop.py -q => 9 passed
+- uv run ruff check design-contract core files and tests => passed
+- uv run mypy design-contract core files => passed
 - git diff --check => passed
-- uv run ai-sdlc verify constraints => passed
 
 ## Blockers / Risks
 - none
@@ -30,4 +33,4 @@
 - none
 
 ## Exact Next Steps
-- Implement Batch 2: src/ai_sdlc/core/design_contract_loop.py and tests/unit/test_design_contract_loop.py.
+- Implement Batch 3: design-contract support in loop_status.py and loop_cmd.py with unit/integration tests.

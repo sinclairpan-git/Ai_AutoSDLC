@@ -10,10 +10,11 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete five Loop Engine loop types one by one; current
-    slice is WI-193 design-contract loop | State: WI-193 formal docs are frozen and
-    linked; program truth sync, diff check, and verify constraints pass; runtime implementation
-    has not started yet. | Next: Implement Batch 2: src/ai_sdlc/core/design_contract_loop.py
-    and tests/unit/test_design_contract_loop.py.'
+    slice is WI-193 design-contract loop | State: WI-193 Batch 2 core runtime is implemented:
+    design-contract models, checks, store helpers, check runtime, close runtime, and
+    unit tests pass. Status/list and CLI are not connected yet. | Next: Implement
+    Batch 3: design-contract support in loop_status.py and loop_cmd.py with unit/integration
+    tests.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''
