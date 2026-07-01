@@ -72,6 +72,29 @@ before implementation starts. The P0 path is deterministic and local: it does
 not call any model service, does not modify application code, and does not enter frontend evidence. If contract blockers remain, the loop stays in `needs_fix`
 and `close --yes` exits nonzero. A closed design-contract loop points to the implementation loop as the next action.
 
+### Implementation Loop
+
+After design-contract close, run the implementation loop to track task execution
+and verification evidence before frontend-evidence or local PR review:
+
+```bash
+ai-sdlc loop implementation start --wi specs/<work-item>
+ai-sdlc loop implementation record --task-id T11 --status done --verification "<command>" --evidence <path>
+ai-sdlc loop status --type implementation
+ai-sdlc loop implementation close --yes
+```
+
+`ai-sdlc loop implementation start` writes local implementation artifacts under
+`.ai-sdlc/loops/implementation/<loop-id>/`, including the design-contract input
+link, parsed task snapshot, progress, verification evidence, and JSON/Markdown
+report. It requires a closed same-work-item design-contract loop. The loop does
+not call any model service, does not modify application code, and does not assume
+GitHub, CI, or a remote PR. `record` only updates local task evidence. `close
+--yes` exits nonzero until all required P0/P1 tasks are done and have evidence or
+verification commands. A closed implementation loop points to `frontend-evidence`
+when the work item contains frontend or browser evidence signals; otherwise it
+points to `local-pr-review`.
+
 ### Local PR Review Loop
 
 For source-checkout builds that include the local PR review loop, use the

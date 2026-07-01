@@ -13,6 +13,15 @@ from ai_sdlc.core.design_contract_loop import (
     close_design_contract_loop,
 )
 from ai_sdlc.core.design_contract_models import CURRENT_DESIGN_CONTRACT_PATH
+from ai_sdlc.core.implementation_loop import (
+    CURRENT_IMPLEMENTATION_PATH,
+    ImplementationCloseOptions,
+    ImplementationRecordOptions,
+    ImplementationStartOptions,
+    close_implementation_loop,
+    record_implementation_progress,
+    start_implementation_loop,
+)
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
 from ai_sdlc.core.loop_models import LoopStatus
 from ai_sdlc.core.loop_status import (
@@ -912,9 +921,135 @@ def test_list_loops_reports_invalid_current_design_contract_target(
     assert result.next_guidance.safety == "blocked"
 
 
+def test_get_loop_status_reads_current_implementation_loop(tmp_path: Path) -> None:
+    _start_implementation_status_loop(tmp_path, loop_id="impl-status")
+
+    result = get_loop_status(tmp_path, loop_type="implementation")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.result == "Current implementation loop found."
+    assert result.current_loop is not None
+    assert result.current_loop.loop_type == "implementation"
+    assert result.current_loop.status == "running"
+    assert result.next_guidance.command.startswith(
+        "ai-sdlc loop implementation record"
+    )
+    assert result.next_guidance.requires_model is False
+    assert result.current_loop.implementation is not None
+    assert result.current_loop.implementation.work_item_id == "demo-design-contract"
+    assert result.current_loop.implementation.required_task_count == 1
+    assert result.current_loop.implementation.done_count == 0
+
+
+def test_list_loops_reads_implementation_runs_and_marks_current(
+    tmp_path: Path,
+) -> None:
+    _start_implementation_status_loop(tmp_path, loop_id="impl-old")
+    _start_implementation_status_loop(tmp_path, loop_id="impl-current")
+
+    result = list_loops(tmp_path, loop_type="implementation")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.result == "Implementation loops found."
+    assert result.current_loop_id == "impl-current"
+    assert [item.loop_id for item in result.items] == ["impl-current", "impl-old"]
+    assert result.items[0].is_current is True
+    assert result.items[0].next_guidance.command.startswith(
+        "ai-sdlc loop implementation record"
+    )
+    assert result.items[1].is_current is False
+    assert result.items[1].next_guidance.command == (
+        "ai-sdlc loop list --type implementation --json"
+    )
+
+
+def test_implementation_status_after_close_points_to_local_pr_review(
+    tmp_path: Path,
+) -> None:
+    _start_implementation_status_loop(tmp_path, loop_id="impl-closed")
+    record_implementation_progress(
+        ImplementationRecordOptions(
+            root=tmp_path,
+            loop_id="impl-closed",
+            task_id="T11",
+            status="done",
+            verification=("uv run pytest tests/unit/test_loop_status.py -q",),
+        )
+    )
+    close_implementation_loop(
+        ImplementationCloseOptions(root=tmp_path, loop_id="impl-closed", yes=True)
+    )
+
+    result = get_loop_status(tmp_path, loop_type="implementation")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.current_loop is not None
+    assert result.current_loop.status == "closed"
+    assert result.next_guidance.command == "ai-sdlc pr-review start"
+    assert result.next_guidance.requires_model is True
+    assert result.current_loop.implementation is not None
+    assert result.current_loop.implementation.closed is True
+
+
+def test_list_loops_reports_malformed_current_implementation_run(
+    tmp_path: Path,
+) -> None:
+    _start_implementation_status_loop(tmp_path, loop_id="impl-valid")
+    bad_dir = tmp_path / ".ai-sdlc" / "loops" / "implementation" / "impl-bad"
+    bad_dir.mkdir(parents=True)
+    bad_path = bad_dir / "loop-run.json"
+    bad_path.write_text("{not-json", encoding="utf-8")
+    LoopArtifactStore(tmp_path).write_json_artifact(
+        tmp_path / CURRENT_IMPLEMENTATION_PATH,
+        {
+            "schema_version": "1",
+            "artifact_kind": "current-implementation-pointer",
+            "loop_id": "impl-bad",
+            "loop_run_path": bad_path.relative_to(tmp_path).as_posix(),
+        },
+    )
+
+    result = list_loops(tmp_path, loop_type="implementation")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert [item.loop_id for item in result.items] == ["impl-valid"]
+    assert result.current_loop_id == ""
+    assert result.malformed_count == 1
+    assert result.artifact_errors[0].kind == "current-implementation-target"
+    assert result.blocker == (
+        "Current implementation pointer is malformed or references missing artifacts."
+    )
+    assert result.next_guidance.safety == "blocked"
+
+
+def _start_implementation_status_loop(root: Path, *, loop_id: str) -> None:
+    work_item = _write_design_contract_work_item(root)
+    check = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=root,
+            work_item="specs/demo-design-contract",
+            loop_id=f"dc-{loop_id}",
+        )
+    )
+    assert check.status == "ready"
+    close = close_design_contract_loop(
+        DesignContractCloseOptions(root=root, loop_id=f"dc-{loop_id}", yes=True)
+    )
+    assert close.status == "ready"
+    result = start_implementation_loop(
+        ImplementationStartOptions(
+            root=root,
+            work_item=work_item.as_posix(),
+            design_contract_loop_id=f"dc-{loop_id}",
+            loop_id=loop_id,
+        )
+    )
+    assert result.status == "ready"
+
+
 def _write_design_contract_work_item(root: Path) -> Path:
     work_item = root / "specs" / "demo-design-contract"
-    work_item.mkdir(parents=True)
+    work_item.mkdir(parents=True, exist_ok=True)
     work_item.joinpath("spec.md").write_text(
         "\n".join(
             [

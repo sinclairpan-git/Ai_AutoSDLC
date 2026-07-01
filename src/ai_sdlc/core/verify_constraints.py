@@ -1248,6 +1248,84 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
             ),
         ),
     ),
+    "194": (
+        FeatureContractSurface(
+            label="implementation loop core runtime",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "implementation_loop.py",
+                    ),
+                    required_tokens=(
+                        "start_implementation_loop",
+                        "record_implementation_progress",
+                        "close_implementation_loop",
+                        "CURRENT_IMPLEMENTATION_PATH",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src")
+                        / "ai_sdlc"
+                        / "core"
+                        / "implementation_models.py",
+                    ),
+                    required_tokens=(
+                        "ImplementationInput",
+                        "ImplementationReport",
+                        "ImplementationClose",
+                        "ImplementationStartOptions",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="implementation loop status and CLI",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "loop_status.py",
+                    ),
+                    required_tokens=(
+                        "ImplementationLoopSummary",
+                        "_get_implementation_loop_status",
+                        "_list_implementation_loops",
+                        "current-implementation.json",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "cli" / "loop_cmd.py",
+                    ),
+                    required_tokens=(
+                        "implementation_app",
+                        "implementation_start",
+                        "implementation_record",
+                        "implementation_close",
+                        "--type",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="implementation loop user docs",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(Path("README.md"),),
+                    required_tokens=(
+                        "ai-sdlc loop implementation start",
+                        "ai-sdlc loop status --type implementation",
+                        "ai-sdlc loop implementation record",
+                        "ai-sdlc loop implementation close --yes",
+                        "does not call any model service",
+                        "does not modify application code",
+                        "frontend-evidence",
+                        "local-pr-review",
+                    ),
+                ),
+            ),
+        ),
+    ),
 }
 
 
@@ -3623,6 +3701,8 @@ def _feature_contract_surfaces_for_checkpoint(
         return FEATURE_CONTRACT_SURFACES["192"]
     if _is_193_work_item(work_item_id):
         return FEATURE_CONTRACT_SURFACES["193"]
+    if _is_194_work_item(work_item_id):
+        return FEATURE_CONTRACT_SURFACES["194"]
     return ()
 
 
@@ -3726,6 +3806,11 @@ def _is_192_work_item(work_item_id: str) -> bool:
 def _is_193_work_item(work_item_id: str) -> bool:
     normalized = work_item_id.strip()
     return normalized == "193" or normalized.startswith("193-") or normalized.startswith("193/")
+
+
+def _is_194_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "194" or normalized.startswith("194-") or normalized.startswith("194/")
 
 
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:

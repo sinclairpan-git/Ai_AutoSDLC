@@ -12,6 +12,10 @@ from ai_sdlc.core.design_contract_models import (
     CURRENT_DESIGN_CONTRACT_PATH,
     DesignContractReport,
 )
+from ai_sdlc.core.implementation_models import (
+    CURRENT_IMPLEMENTATION_PATH,
+    ImplementationReport,
+)
 from ai_sdlc.core.loop_models import LoopRun, LoopStatus, LoopType
 from ai_sdlc.core.pr_review_models import ReviewRun
 from ai_sdlc.core.requirement_loop import (
@@ -115,6 +119,20 @@ class DesignContractLoopSummary(BaseModel):
     closed: bool = False
 
 
+class ImplementationLoopSummary(BaseModel):
+    """Implementation loop fields embedded in a generic loop summary."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    work_item_id: str = ""
+    work_item_path: str = ""
+    required_task_count: int = 0
+    done_count: int = 0
+    blocked_count: int = 0
+    evidence_count: int = 0
+    closed: bool = False
+
+
 class LoopSummary(BaseModel):
     """Generic read-only summary for one Loop Engine run."""
 
@@ -133,6 +151,7 @@ class LoopSummary(BaseModel):
     local_pr_review: LocalPRReviewSummary | None = None
     requirement: RequirementLoopSummary | None = None
     design_contract: DesignContractLoopSummary | None = None
+    implementation: ImplementationLoopSummary | None = None
 
 
 class LoopStatusResult(BaseModel):
@@ -201,21 +220,27 @@ def get_loop_status(
         return _get_requirement_loop_status(resolved_root)
     if normalized_loop_type == LoopType.DESIGN_CONTRACT.value:
         return _get_design_contract_loop_status(resolved_root)
+    if normalized_loop_type == LoopType.IMPLEMENTATION.value:
+        return _get_implementation_loop_status(resolved_root)
     if normalized_loop_type != LoopType.LOCAL_PR_REVIEW.value:
         return LoopStatusResult(
             status=LoopStatusCommandStatus.BLOCKED,
             result="Unsupported loop type.",
             blocker=f"Unsupported loop type for status: {normalized_loop_type}",
-            next_action="Use --type local-pr-review, requirement, or design-contract.",
+            next_action=(
+                "Use --type local-pr-review, requirement, design-contract, "
+                "or implementation."
+            ),
             next_guidance=_manual_guidance(
                 command="ai-sdlc loop status --type local-pr-review",
                 reason=(
-                    "Only local-pr-review, requirement, and design-contract "
-                    "loop status are implemented."
+                    "Only local-pr-review, requirement, design-contract, and "
+                    "implementation loop status are implemented."
                 ),
                 alternatives=[
                     "ai-sdlc loop status --type requirement",
                     "ai-sdlc loop status --type design-contract",
+                    "ai-sdlc loop status --type implementation",
                 ],
             ),
         )
@@ -317,21 +342,27 @@ def list_loops(
         return _list_requirement_loops(resolved_root)
     if normalized_loop_type == LoopType.DESIGN_CONTRACT.value:
         return _list_design_contract_loops(resolved_root)
+    if normalized_loop_type == LoopType.IMPLEMENTATION.value:
+        return _list_implementation_loops(resolved_root)
     if normalized_loop_type != LoopType.LOCAL_PR_REVIEW.value:
         return LoopListResult(
             status=LoopStatusCommandStatus.BLOCKED,
             result="Unsupported loop type.",
             blocker=f"Unsupported loop type for list: {normalized_loop_type}",
-            next_action="Use --type local-pr-review, requirement, or design-contract.",
+            next_action=(
+                "Use --type local-pr-review, requirement, design-contract, "
+                "or implementation."
+            ),
             next_guidance=_manual_guidance(
                 command="ai-sdlc loop list --type local-pr-review",
                 reason=(
-                    "Only local-pr-review, requirement, and design-contract "
-                    "loop list are implemented."
+                    "Only local-pr-review, requirement, design-contract, and "
+                    "implementation loop list are implemented."
                 ),
                 alternatives=[
                     "ai-sdlc loop list --type requirement",
                     "ai-sdlc loop list --type design-contract",
+                    "ai-sdlc loop list --type implementation",
                 ],
             ),
         )
@@ -973,6 +1004,236 @@ def _list_design_contract_loops(root: Path) -> LoopListResult:
     )
 
 
+def _get_implementation_loop_status(root: Path) -> LoopStatusResult:
+    pointer_path = root / CURRENT_IMPLEMENTATION_PATH
+    if not pointer_path.exists():
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.NO_CURRENT,
+            result="No current implementation loop.",
+            next_action="Run ai-sdlc loop implementation start --wi specs/<work-item>.",
+            next_guidance=_no_current_implementation_guidance(),
+        )
+    loop_run_path, pointer_error = _read_current_implementation_loop_run_path(
+        root,
+        pointer_path,
+    )
+    if pointer_error is not None:
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Current implementation pointer is malformed.",
+            blocker=pointer_error.error,
+            next_action="Rerun ai-sdlc loop implementation start.",
+            next_guidance=_implementation_blocked_guidance(
+                pointer_error.error,
+                evidence=[pointer_error.path],
+            ),
+        )
+    if loop_run_path is None or not loop_run_path.is_file():
+        blocker = "Current implementation pointer references a missing loop-run.json."
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Current implementation loop artifact is missing.",
+            blocker=blocker,
+            next_action="Rerun ai-sdlc loop implementation start.",
+            next_guidance=_implementation_blocked_guidance(
+                blocker,
+                evidence=[_repo_relative_path(root, loop_run_path or pointer_path)],
+            ),
+        )
+    try:
+        loop_run = LoopRun.model_validate(
+            json.loads(loop_run_path.read_text(encoding="utf-8"))
+        )
+        current_loop = _summary_from_implementation_loop_run(
+            root,
+            loop_run,
+            loop_run_path,
+            current_pointer_path=pointer_path,
+            is_current=True,
+        )
+    except (json.JSONDecodeError, OSError, ValidationError, ValueError) as exc:
+        blocker = f"Current implementation loop-run.json is malformed: {exc}"
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Current implementation loop artifact is malformed.",
+            blocker=blocker,
+            next_action="Rerun ai-sdlc loop implementation start.",
+            next_guidance=_implementation_blocked_guidance(
+                blocker,
+                evidence=[_repo_relative_path(root, loop_run_path)],
+            ),
+        )
+    return LoopStatusResult(
+        status=LoopStatusCommandStatus.READY,
+        result="Current implementation loop found.",
+        current_loop=current_loop,
+        next_action=current_loop.next_action,
+        next_guidance=current_loop.next_guidance,
+    )
+
+
+def _list_implementation_loops(root: Path) -> LoopListResult:
+    loop_root = root / AI_SDLC_DIR / "loops" / LoopType.IMPLEMENTATION.value
+    loop_run_paths = sorted(loop_root.glob("*/loop-run.json"))
+    artifact_errors: list[LoopArtifactError] = []
+    pointer_path = root / CURRENT_IMPLEMENTATION_PATH
+    current_loop_run_path, pointer_error = _read_current_implementation_loop_run_path(
+        root,
+        pointer_path,
+    )
+    if pointer_error is not None:
+        artifact_errors.append(pointer_error)
+    if current_loop_run_path is not None and not current_loop_run_path.is_file():
+        artifact_errors.append(
+            LoopArtifactError(
+                kind="current-implementation-target",
+                path=_repo_relative_path(root, current_loop_run_path),
+                error="referenced by current-implementation pointer but file is missing.",
+            )
+        )
+        current_loop_run_path = None
+    if current_loop_run_path is not None and not _is_implementation_loop_run_path(
+        root,
+        current_loop_run_path,
+    ):
+        artifact_errors.append(
+            LoopArtifactError(
+                kind="current-implementation-target",
+                path=_repo_relative_path(root, current_loop_run_path),
+                error=(
+                    "referenced by current-implementation pointer but is not "
+                    "an implementation loop-run.json artifact."
+                ),
+            )
+        )
+        current_loop_run_path = None
+    if not loop_run_paths:
+        if artifact_errors:
+            blocker = (
+                "Current implementation pointer is malformed or references "
+                "missing artifacts."
+            )
+            return LoopListResult(
+                status=LoopStatusCommandStatus.BLOCKED,
+                result="No readable implementation loops found.",
+                malformed_count=len(artifact_errors),
+                artifact_errors=artifact_errors,
+                blocker=blocker,
+                next_action=(
+                    "Inspect or remove malformed current-implementation.json artifacts."
+                ),
+                next_guidance=_implementation_blocked_guidance(
+                    blocker,
+                    evidence=[error.path for error in artifact_errors if error.path],
+                ),
+            )
+        return LoopListResult(
+            status=LoopStatusCommandStatus.NO_CURRENT,
+            result="No implementation loops found.",
+            next_action="Run ai-sdlc loop implementation start --wi specs/<work-item>.",
+            next_guidance=_no_current_implementation_guidance(),
+        )
+
+    loop_entries: list[tuple[LoopSummary, float]] = []
+    for loop_run_path in loop_run_paths:
+        try:
+            loop_run = LoopRun.model_validate(
+                json.loads(loop_run_path.read_text(encoding="utf-8"))
+            )
+            summary = _summary_from_implementation_loop_run(
+                root,
+                loop_run,
+                loop_run_path,
+                current_pointer_path=pointer_path
+                if _same_path(loop_run_path, current_loop_run_path)
+                else None,
+                is_current=_same_path(loop_run_path, current_loop_run_path),
+            )
+        except (json.JSONDecodeError, OSError, ValidationError, ValueError) as exc:
+            error_kind = (
+                "current-implementation-target"
+                if _same_path(loop_run_path, current_loop_run_path)
+                else "implementation-loop-run"
+            )
+            artifact_errors.append(
+                LoopArtifactError(
+                    kind=error_kind,
+                    path=_repo_relative_path(root, loop_run_path),
+                    error=str(exc),
+                )
+            )
+            continue
+        loop_entries.append((summary, _artifact_mtime(loop_run_path)))
+
+    loop_entries.sort(key=lambda item: item[0].loop_id)
+    loop_entries.sort(key=lambda item: item[1], reverse=True)
+    loop_entries.sort(key=lambda item: item[0].updated_at, reverse=True)
+    loops = [summary for summary, _mtime in loop_entries]
+    if not loops:
+        blocker = "All discovered implementation loop artifacts are malformed."
+        return LoopListResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="No readable implementation loops found.",
+            malformed_count=len(artifact_errors),
+            artifact_errors=artifact_errors,
+            blocker=blocker,
+            next_action="Inspect or remove malformed implementation loop artifacts.",
+            next_guidance=_implementation_blocked_guidance(
+                blocker,
+                evidence=[error.path for error in artifact_errors if error.path],
+            ),
+        )
+
+    current_loop = next((loop for loop in loops if loop.is_current), None)
+    pointer_errors = [
+        error
+        for error in artifact_errors
+        if error.kind in {"current-implementation-pointer", "current-implementation-target"}
+    ]
+    if current_loop is None and pointer_errors:
+        blocker = (
+            "Current implementation pointer is malformed or references "
+            "missing artifacts."
+        )
+        next_action = "Inspect or remove malformed current-implementation.json artifacts."
+        guidance = _implementation_blocked_guidance(
+            blocker,
+            evidence=[error.path for error in pointer_errors if error.path],
+        )
+    elif current_loop is None:
+        blocker = ""
+        next_action = "Run ai-sdlc loop implementation start --wi specs/<work-item>."
+        guidance = _no_current_implementation_guidance()
+    else:
+        blocker = ""
+        next_action = "Run ai-sdlc loop status --type implementation."
+        guidance = LoopNextActionGuidance(
+            command="ai-sdlc loop status --type implementation",
+            reason="Inspect the current implementation loop before choosing the next step.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.SAFE_READ_ONLY,
+            evidence=[current_loop.loop_id],
+            alternatives=[
+                current_loop.next_guidance.command
+                for current_loop in [current_loop]
+                if current_loop.next_guidance.command
+            ],
+        )
+    return LoopListResult(
+        status=LoopStatusCommandStatus.READY,
+        result="Implementation loops found.",
+        current_loop_id=current_loop.loop_id if current_loop is not None else "",
+        items=loops,
+        malformed_count=len(artifact_errors),
+        artifact_errors=artifact_errors,
+        blocker=blocker,
+        next_action=next_action,
+        next_guidance=guidance,
+    )
+
+
 def _summary_from_requirement_loop_run(
     root: Path,
     loop_run: LoopRun,
@@ -1100,6 +1361,70 @@ def _summary_from_design_contract_loop_run(
     )
 
 
+def _summary_from_implementation_loop_run(
+    root: Path,
+    loop_run: LoopRun,
+    loop_run_path: Path,
+    *,
+    current_pointer_path: Path | None = None,
+    is_current: bool = False,
+) -> LoopSummary:
+    if loop_run.loop_type != LoopType.IMPLEMENTATION:
+        raise ValueError("loop-run.json is not an implementation loop")
+    loop_dir = loop_run_path.parent
+    report_path = loop_dir / "implementation-report.json"
+    try:
+        report = ImplementationReport.model_validate(
+            json.loads(report_path.read_text(encoding="utf-8"))
+        )
+    except (json.JSONDecodeError, OSError, ValidationError, ValueError) as exc:
+        raise ValueError(f"implementation-report.json is malformed: {exc}") from exc
+    artifacts = [_artifact_ref(root, "loop-run", loop_run_path)]
+    if is_current and current_pointer_path is not None:
+        artifacts.insert(
+            0,
+            _artifact_ref(root, "current-implementation-pointer", current_pointer_path),
+        )
+    optional_artifacts = (
+        ("implementation-input", loop_dir / "implementation-input.json"),
+        ("implementation-tasks", loop_dir / "implementation-tasks.json"),
+        ("implementation-progress", loop_dir / "implementation-progress.json"),
+        ("verification-evidence", loop_dir / "verification-evidence.json"),
+        ("implementation-report-json", report_path),
+        ("implementation-report-md", loop_dir / "implementation-report.md"),
+        ("implementation-close", loop_dir / "implementation-close.json"),
+    )
+    for kind, path in optional_artifacts:
+        artifacts.append(_artifact_ref(root, kind, path))
+    closed = (loop_dir / "implementation-close.json").is_file()
+    return LoopSummary(
+        loop_id=loop_run.loop_id,
+        loop_type=loop_run.loop_type,
+        status=loop_run.status,
+        is_current=is_current,
+        updated_at=loop_run.updated_at,
+        next_action=loop_run.next_action,
+        next_guidance=_guidance_for_implementation_loop(
+            root,
+            loop_run,
+            loop_run_path,
+            report,
+            is_current=is_current,
+            closed=closed,
+        ),
+        artifacts=artifacts,
+        implementation=ImplementationLoopSummary(
+            work_item_id=report.work_item_id,
+            work_item_path=report.work_item_path,
+            required_task_count=report.required_task_count,
+            done_count=report.done_count,
+            blocked_count=report.blocked_count,
+            evidence_count=report.evidence_count,
+            closed=closed,
+        ),
+    )
+
+
 def _blocked_result(*, result: str, blocker: str) -> LoopStatusResult:
     return LoopStatusResult(
         status=LoopStatusCommandStatus.BLOCKED,
@@ -1167,6 +1492,24 @@ def _no_current_design_contract_guidance() -> LoopNextActionGuidance:
         evidence=[str(CURRENT_DESIGN_CONTRACT_PATH).replace("\\", "/")],
         alternatives=[
             "ai-sdlc loop design-contract check --wi specs/<work-item> --dry-run",
+        ],
+    )
+
+
+def _no_current_implementation_guidance() -> LoopNextActionGuidance:
+    return LoopNextActionGuidance(
+        command="ai-sdlc loop implementation start --wi specs/<work-item>",
+        reason=(
+            "No current implementation loop exists; start it after closing "
+            "the design-contract loop."
+        ),
+        requires_model=False,
+        writes_artifacts=True,
+        writes_code=False,
+        safety=LoopNextActionSafety.WRITES_PROJECT_ARTIFACTS,
+        evidence=[str(CURRENT_IMPLEMENTATION_PATH).replace("\\", "/")],
+        alternatives=[
+            "ai-sdlc loop implementation start --wi specs/<work-item> --dry-run",
         ],
     )
 
@@ -1243,6 +1586,26 @@ def _design_contract_blocked_guidance(
         or [str(CURRENT_DESIGN_CONTRACT_PATH).replace("\\", "/")],
         alternatives=[
             "Inspect or remove malformed design-contract loop artifacts.",
+        ],
+    )
+
+
+def _implementation_blocked_guidance(
+    reason: str,
+    *,
+    evidence: list[str] | None = None,
+) -> LoopNextActionGuidance:
+    return LoopNextActionGuidance(
+        command="ai-sdlc loop implementation start --wi specs/<work-item>",
+        reason=reason,
+        requires_model=False,
+        writes_artifacts=True,
+        writes_code=False,
+        safety=LoopNextActionSafety.BLOCKED,
+        evidence=evidence
+        or [str(CURRENT_IMPLEMENTATION_PATH).replace("\\", "/")],
+        alternatives=[
+            "Inspect or remove malformed implementation loop artifacts.",
         ],
     )
 
@@ -1613,6 +1976,102 @@ def _guidance_for_design_contract_loop(
     )
 
 
+def _guidance_for_implementation_loop(
+    root: Path,
+    loop_run: LoopRun,
+    loop_run_path: Path,
+    report: ImplementationReport,
+    *,
+    is_current: bool,
+    closed: bool,
+) -> LoopNextActionGuidance:
+    evidence = [
+        _repo_relative_path(root, loop_run_path),
+        _repo_relative_path(root, loop_run_path.parent / "implementation-report.json"),
+    ]
+    if not is_current:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop list --type implementation --json",
+            reason=(
+                "This is a historical, non-current implementation loop. Inspect "
+                "it instead of recording progress on the current pointer."
+            ),
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.SAFE_READ_ONLY,
+            evidence=evidence,
+            alternatives=["Inspect the historical implementation artifacts."],
+        )
+    if loop_run.status in {LoopStatus.RUNNING, LoopStatus.NEEDS_FIX}:
+        return LoopNextActionGuidance(
+            command=_command_from_next_action(loop_run.next_action)
+            or "ai-sdlc loop implementation record --task-id Txx --status done",
+            reason=(
+                "Implementation is still collecting task evidence before it can close."
+            ),
+            requires_model=False,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.WRITES_PROJECT_ARTIFACTS,
+            evidence=evidence,
+        )
+    if loop_run.status == LoopStatus.PASSED:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop implementation close --yes",
+            reason="All required implementation tasks have recorded evidence.",
+            requires_model=False,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.WRITES_PROJECT_ARTIFACTS,
+            evidence=evidence,
+        )
+    if loop_run.status == LoopStatus.CLOSED or closed:
+        next_command = (
+            f"ai-sdlc loop frontend-evidence start --wi {report.work_item_path}"
+            if report.requires_frontend_evidence
+            else "ai-sdlc pr-review start"
+        )
+        return LoopNextActionGuidance(
+            command=next_command,
+            reason=(
+                "Implementation is closed; continue with frontend-evidence "
+                if report.requires_frontend_evidence
+                else "Implementation is closed; continue with local PR review."
+            ),
+            requires_model=not report.requires_frontend_evidence,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.WRITES_PROJECT_ARTIFACTS,
+            evidence=[
+                *evidence,
+                _repo_relative_path(
+                    root,
+                    loop_run_path.parent / "implementation-close.json",
+                ),
+            ],
+        )
+    if loop_run.status in {LoopStatus.BLOCKED, LoopStatus.NEEDS_USER}:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop implementation status",
+            reason=loop_run.next_action or "Inspect the blocked implementation loop.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.BLOCKED,
+            evidence=evidence,
+        )
+    return LoopNextActionGuidance(
+        command="ai-sdlc loop implementation status",
+        reason=loop_run.next_action or "Inspect the implementation loop.",
+        requires_model=False,
+        writes_artifacts=False,
+        writes_code=False,
+        safety=LoopNextActionSafety.SAFE_READ_ONLY,
+        evidence=evidence,
+    )
+
+
 def _read_current_requirement_loop_run_path(
     root: Path,
     pointer_path: Path,
@@ -1733,9 +2192,80 @@ def _design_contract_pointer_error(
     )
 
 
+def _read_current_implementation_loop_run_path(
+    root: Path,
+    pointer_path: Path,
+) -> tuple[Path | None, LoopArtifactError | None]:
+    if not pointer_path.exists():
+        return None, None
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return None, _implementation_pointer_error(root, pointer_path, str(exc))
+    if not isinstance(pointer, dict):
+        return None, _implementation_pointer_error(
+            root,
+            pointer_path,
+            "root must be an object.",
+        )
+    path_text = pointer.get("loop_run_path")
+    if not isinstance(path_text, str) or not path_text.strip():
+        return None, _implementation_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must be a non-empty string.",
+        )
+    path = Path(path_text)
+    if path.is_absolute():
+        return None, _implementation_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must be project-relative.",
+        )
+    if ".." in path.parts:
+        return None, _implementation_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must not contain parent directory segments.",
+        )
+    candidate = (root / path).resolve(strict=False)
+    try:
+        candidate.relative_to(root.resolve(strict=False))
+    except ValueError:
+        return None, _implementation_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must stay within the project root.",
+        )
+    return candidate, None
+
+
+def _implementation_pointer_error(
+    root: Path,
+    pointer_path: Path,
+    error: str,
+) -> LoopArtifactError:
+    return LoopArtifactError(
+        kind="current-implementation-pointer",
+        path=_repo_relative_path(root, pointer_path),
+        error=error,
+    )
+
+
 def _is_design_contract_loop_run_path(root: Path, loop_run_path: Path) -> bool:
     loop_root = (
         root / AI_SDLC_DIR / "loops" / LoopType.DESIGN_CONTRACT.value
+    ).resolve(strict=False)
+    try:
+        relative = loop_run_path.resolve(strict=False).relative_to(loop_root)
+    except ValueError:
+        return False
+    return len(relative.parts) == 2 and relative.parts[1] == "loop-run.json"
+
+
+def _is_implementation_loop_run_path(root: Path, loop_run_path: Path) -> bool:
+    loop_root = (
+        root / AI_SDLC_DIR / "loops" / LoopType.IMPLEMENTATION.value
     ).resolve(strict=False)
     try:
         relative = loop_run_path.resolve(strict=False).relative_to(loop_root)
@@ -1880,6 +2410,7 @@ def _same_path(left: Path, right: Path | None) -> bool:
 __all__ = [
     "CURRENT_REVIEW_PATH",
     "DesignContractLoopSummary",
+    "ImplementationLoopSummary",
     "LoopArtifactError",
     "LocalPRReviewSummary",
     "LoopArtifactRef",
