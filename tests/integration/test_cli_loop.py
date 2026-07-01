@@ -21,6 +21,12 @@ from ai_sdlc.core.pr_review_models import (
     ReviewRun,
     ReviewVerdict,
 )
+from ai_sdlc.core.requirement_loop import (
+    RequirementFreezeOptions,
+    RequirementStartOptions,
+    freeze_requirement_loop,
+    start_requirement_loop,
+)
 
 runner = CliRunner()
 
@@ -843,7 +849,9 @@ def test_loop_design_contract_check_dry_run_skips_adapter_hook(
     assert payload["next_guidance"]["command"] == (
         "ai-sdlc loop design-contract check --wi specs/demo-design-contract"
     )
-    assert not (tmp_path / ".ai-sdlc").exists()
+    assert not (
+        tmp_path / ".ai-sdlc" / "loops" / "design-contract" / "dc-dry-run"
+    ).exists()
     adapter_hook.assert_not_called()
 
 
@@ -932,6 +940,7 @@ def _write_design_contract_work_item(
     *,
     include_task_refs: bool = True,
     verification_value: str = "uv run pytest tests/unit/test_demo.py -q",
+    requirement_loop_id: str = "req-current",
 ) -> Path:
     work_item = root / "specs" / "demo-design-contract"
     work_item.mkdir(parents=True)
@@ -983,7 +992,34 @@ def _write_design_contract_work_item(
         ),
         encoding="utf-8",
     )
+    _ensure_frozen_requirement_loop(root, loop_id=requirement_loop_id)
     return work_item
+
+
+def _ensure_frozen_requirement_loop(root: Path, *, loop_id: str) -> None:
+    freeze_path = (
+        root
+        / ".ai-sdlc"
+        / "loops"
+        / "requirement"
+        / loop_id
+        / "requirement-freeze.json"
+    )
+    if freeze_path.is_file():
+        return
+    start_result = start_requirement_loop(
+        RequirementStartOptions(
+            root=root,
+            loop_id=loop_id,
+            idea="Demo users need a checked design contract.",
+            acceptance=("The design contract can be checked before implementation.",),
+        )
+    )
+    assert start_result.status == "ready"
+    freeze_result = freeze_requirement_loop(
+        RequirementFreezeOptions(root=root, loop_id=loop_id, yes=True)
+    )
+    assert freeze_result.frozen is True
 
 
 def _write_review_run(

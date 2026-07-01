@@ -962,7 +962,34 @@ def _write_design_contract_work_item(root: Path) -> Path:
         ),
         encoding="utf-8",
     )
+    _ensure_frozen_requirement_loop(root, loop_id="req-current")
     return work_item
+
+
+def _ensure_frozen_requirement_loop(root: Path, *, loop_id: str) -> None:
+    freeze_path = (
+        root
+        / ".ai-sdlc"
+        / "loops"
+        / "requirement"
+        / loop_id
+        / "requirement-freeze.json"
+    )
+    if freeze_path.is_file():
+        return
+    start_result = start_requirement_loop(
+        RequirementStartOptions(
+            root=root,
+            loop_id=loop_id,
+            idea="Demo users need a checked design contract.",
+            acceptance=("The design contract can be checked before implementation.",),
+        )
+    )
+    assert start_result.status == "ready"
+    freeze_result = freeze_requirement_loop(
+        RequirementFreezeOptions(root=root, loop_id=loop_id, yes=True)
+    )
+    assert freeze_result.frozen is True
 
 
 def _write_review_run(

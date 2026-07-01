@@ -50,6 +50,7 @@ from ai_sdlc.core.loop_models import (
 from ai_sdlc.core.requirement_loop import (
     RequirementFreeze,
     _requirement_artifacts,
+    _resolve_requirement_loop_run_path,
 )
 from ai_sdlc.core.requirement_loop import (
     _read_loop_run as _read_requirement_loop_run,
@@ -87,6 +88,19 @@ def check_design_contract_loop(
         loop_id=loop_id,
         work_item_dir=work_item_dir,
         requirement_loop_id=options.requirement_loop_id,
+    )
+    resolved_requirement_loop_id, requirement_blocker, requirement_next_action = (
+        _required_requirement_loop_id(root, contract_input.requirement_loop_id)
+    )
+    if requirement_blocker:
+        return _blocked_result(
+            requirement_blocker,
+            loop_id=loop_id,
+            next_action=requirement_next_action,
+            artifacts=planned_refs,
+        )
+    contract_input = contract_input.model_copy(
+        update={"requirement_loop_id": resolved_requirement_loop_id}
     )
     requirement_blocker, requirement_next_action = _requirement_loop_gate(
         root,
@@ -268,6 +282,19 @@ def _refresh_report_before_close(
             loop_id=loop_run.loop_id,
             artifacts=artifacts.refs(root),
         )
+    resolved_requirement_loop_id, requirement_blocker, requirement_next_action = (
+        _required_requirement_loop_id(root, contract_input.requirement_loop_id)
+    )
+    if requirement_blocker:
+        return _blocked_result(
+            requirement_blocker,
+            loop_id=loop_run.loop_id,
+            next_action=requirement_next_action,
+            artifacts=artifacts.refs(root),
+        )
+    contract_input = contract_input.model_copy(
+        update={"requirement_loop_id": resolved_requirement_loop_id}
+    )
     requirement_blocker, requirement_next_action = _requirement_loop_gate(
         root,
         contract_input.requirement_loop_id,
@@ -386,9 +413,12 @@ def _closed_current_recheck_result(
 
 
 def _requirement_loop_gate(root: Path, requirement_loop_id: str) -> tuple[str, str]:
-    loop_id = requirement_loop_id.strip()
-    if not loop_id:
-        return "", ""
+    loop_id, blocker, next_action = _required_requirement_loop_id(
+        root,
+        requirement_loop_id,
+    )
+    if blocker:
+        return blocker, next_action
     try:
         safe_loop_id = _validate_requirement_loop_id(loop_id)
     except ValueError as exc:
@@ -431,6 +461,37 @@ def _requirement_loop_gate(root: Path, requirement_loop_id: str) -> tuple[str, s
             freeze_next_action,
         )
     return "", ""
+
+
+def _required_requirement_loop_id(
+    root: Path,
+    requirement_loop_id: str,
+) -> tuple[str, str, str]:
+    loop_id = requirement_loop_id.strip()
+    if loop_id:
+        return loop_id, "", ""
+    loop_run_path, pointer_blocker = _resolve_requirement_loop_run_path(root, "")
+    if pointer_blocker:
+        return (
+            "",
+            (
+                "A frozen current requirement loop is required before "
+                f"design-contract check: {pointer_blocker}"
+            ),
+            "Run ai-sdlc loop requirement start.",
+        )
+    try:
+        loop_run = _read_requirement_loop_run(loop_run_path)
+    except ValueError as exc:
+        return (
+            "",
+            (
+                "Current requirement loop must exist and be frozen before "
+                f"design-contract check: {exc}"
+            ),
+            "Run ai-sdlc loop requirement status.",
+        )
+    return loop_run.loop_id, "", ""
 
 
 def _build_loop_run(

@@ -595,6 +595,75 @@
 - 当前批次 worktree disposition 状态：retained（主工作区）。
 - 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
 
+### Batch 19：第二十轮 PR #110 Codex review remediation
+
+#### 19.1 本批目标
+
+- 修复 PR #110 最新 Codex review P1：默认 `ai-sdlc loop design-contract check --wi ...` 路径不得在缺少 frozen current requirement loop 时通过。
+- 确保无显式 `--requirement-loop-id` 时，design-contract check 会解析 current requirement，并把 frozen requirement loop id 写入 `design-contract-input.json`。
+- 确保 close 前 revalidation 对 legacy empty requirement input 也重新执行 requirement gate，不能绕过 requirement freeze。
+
+#### 19.2 变更范围
+
+- **验证画像**：code-change
+- `src/ai_sdlc/core/design_contract_loop.py`
+  - 新增 `_required_requirement_loop_id`，无显式 requirement id 时读取 current requirement pointer。
+  - `check_design_contract_loop` 在分析合同前解析并要求 frozen requirement loop。
+  - `_refresh_report_before_close` 在 close 前重新解析 requirement gate，并将 resolved requirement id 写回 fresh input artifact。
+- `tests/unit/test_design_contract_loop.py`
+  - 新增 missing current requirement、默认 current frozen requirement、默认 current unfrozen requirement regression。
+  - design-contract fixture 默认创建 frozen requirement loop；路径/loop id blocker 测试显式关闭该 fixture。
+- `tests/unit/test_loop_status.py` / `tests/integration/test_cli_loop.py`
+  - design-contract status/CLI fixtures 默认经过 frozen requirement 前置。
+  - dry-run 测试改为断言不写 design-contract artifacts，而不是假设 `.ai-sdlc` 完全不存在。
+
+#### 19.3 验证记录
+
+- `V95`（twentieth Codex review requirement-gate targeted）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_blocks_missing_current_requirement_loop tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_uses_current_frozen_requirement_by_default tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_blocks_unfrozen_current_requirement_loop tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_writes_passed_artifacts tests/integration/test_cli_loop.py::test_loop_design_contract_check_status_and_close_json tests/integration/test_cli_loop.py::test_loop_design_contract_check_dry_run_skips_adapter_hook tests/integration/test_cli_loop.py::test_loop_requirement_start_dry_run_skips_adapter_hook_and_reports_source -q`
+  - 结果：通过，`7 passed`。
+- `V96`（twentieth remediation design-contract unit）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`43 passed`。
+- `V97`（twentieth remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`252 passed`。
+- `V98`（twentieth remediation ruff / mypy / constraints / diff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_loop.py tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/requirement_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 7 source files`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V99`（program truth sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过，snapshot hash `770ab1988c758ca4e66f086ffa5bab302cea071958ac9548a580fee6d0aa5538`，已写入 `program-manifest.yaml`。
+- `V100`（pre-commit work item close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime`
+  - 结果：除 `git_closure` 因当前修复尚未提交而 BLOCKER 外，其余检查 PASS；提交后需复跑至 PASS。
+
+#### 19.4 代码审查结论
+
+- 宪章/规格对齐：design-contract loop 现在强制承接 frozen requirement loop，不再允许默认路径跳过需求冻结。
+- 质量风险：fixture 改为真实 frozen requirement 前置，覆盖默认 check、dry-run、status/list 和 CLI 路径。
+- 结论：可刷新 truth、close-check、提交、推送并重新请求 Codex review。
+
+#### 19.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：T41/T42 保持完成；本批为 PR review remediation，不新增交付范围。
+- `related_plan`（如存在）同步状态：无 related_plan；plan 边界仍为 design-contract loop。
+- 关联 branch/worktree disposition 计划：继续使用 PR #110 head branch。
+
+#### 19.6 归档后动作
+
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）。
+- **提交哈希**：当前 close-out commit，以 `git log -1` 为准。
+- 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier。
+- 当前批次 worktree disposition 状态：retained（主工作区）。
+- 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
+
 ### Batch 17：第十八轮 PR #110 Codex review remediation
 
 #### 17.1 本批目标

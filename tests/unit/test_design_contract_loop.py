@@ -95,6 +95,10 @@ def test_check_design_contract_loop_writes_passed_artifacts(tmp_path: Path) -> N
     assert loop_run["loop_type"] == "design-contract"
     assert loop_run["status"] == "passed"
     assert loop_run["work_item_id"] == work_item.name
+    contract_input = json.loads(
+        (loop_dir / "design-contract-input.json").read_text(encoding="utf-8")
+    )
+    assert contract_input["requirement_loop_id"] == "req-current"
 
 
 def test_check_design_contract_loop_dry_run_does_not_write(tmp_path: Path) -> None:
@@ -121,8 +125,94 @@ def test_check_design_contract_loop_dry_run_does_not_write(tmp_path: Path) -> No
     assert result.design_contract.report_path.endswith(
         ".ai-sdlc/loops/design-contract/dc-dry-run/design-contract-report.json"
     )
-    assert not (tmp_path / ".ai-sdlc").exists()
+    assert not (
+        tmp_path / ".ai-sdlc" / "loops" / "design-contract" / "dc-dry-run"
+    ).exists()
     assert any(artifact.kind == "loop-run" for artifact in result.artifacts)
+
+
+def test_check_design_contract_loop_blocks_missing_current_requirement_loop(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, with_frozen_requirement=False)
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-missing-current-requirement",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "frozen current requirement loop is required" in result.blocker
+    assert "No current requirement loop exists" in result.blocker
+    assert result.next_action == "Run ai-sdlc loop requirement start."
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "design-contract"
+        / "dc-missing-current-requirement"
+    ).exists()
+
+
+def test_check_design_contract_loop_uses_current_frozen_requirement_by_default(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, requirement_loop_id="req-default-frozen")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-current-requirement",
+        )
+    )
+
+    assert result.status == "ready"
+    input_payload = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-current-requirement"
+            / "design-contract-input.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert input_payload["requirement_loop_id"] == "req-default-frozen"
+
+
+def test_check_design_contract_loop_blocks_unfrozen_current_requirement_loop(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, with_frozen_requirement=False)
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-current-unfrozen",
+            idea="Demo users need a design contract.",
+            acceptance=("Design contract can be checked.",),
+        )
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-unfrozen-current-requirement",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert result.blocker == (
+        "Requirement loop req-current-unfrozen must be frozen before "
+        "design-contract check."
+    )
+    assert result.next_action == (
+        "Run ai-sdlc loop requirement freeze --loop-id req-current-unfrozen --yes."
+    )
 
 
 def test_check_design_contract_loop_blocks_missing_requirement_loop(
@@ -818,7 +908,11 @@ def test_check_design_contract_loop_allows_active_work_item_scope(
 def test_check_design_contract_loop_blocks_non_canonical_work_item_dir(
     tmp_path: Path,
 ) -> None:
-    _write_work_item(tmp_path, relative_path="other/demo-contract")
+    _write_work_item(
+        tmp_path,
+        relative_path="other/demo-contract",
+        with_frozen_requirement=False,
+    )
 
     result = check_design_contract_loop(
         DesignContractCheckOptions(
@@ -1175,7 +1269,7 @@ def test_check_design_contract_loop_blocks_unsafe_loop_id(tmp_path: Path) -> Non
 
     assert result.status == "blocked"
     assert "Invalid design-contract loop id" in result.blocker
-    assert not (tmp_path / ".ai-sdlc").exists()
+    assert not (tmp_path / ".ai-sdlc" / "loops" / "design-contract").exists()
 
 
 def test_check_design_contract_loop_blocks_missing_work_item(tmp_path: Path) -> None:
@@ -1253,6 +1347,8 @@ def _write_work_item(
     root: Path,
     *,
     include_task_refs: bool = True,
+    with_frozen_requirement: bool = True,
+    requirement_loop_id: str = "req-current",
     placeholder: bool = False,
     relative_path: str = "specs/demo-contract",
     task_heading: str = "### Task 1.1 Check contract",
@@ -1328,4 +1424,32 @@ def _write_work_item(
         ),
         encoding="utf-8",
     )
+    if with_frozen_requirement:
+        _ensure_frozen_requirement_loop(root, loop_id=requirement_loop_id)
     return work_item
+
+
+def _ensure_frozen_requirement_loop(root: Path, *, loop_id: str) -> None:
+    freeze_path = (
+        root
+        / ".ai-sdlc"
+        / "loops"
+        / "requirement"
+        / loop_id
+        / "requirement-freeze.json"
+    )
+    if freeze_path.is_file():
+        return
+    start_result = start_requirement_loop(
+        RequirementStartOptions(
+            root=root,
+            loop_id=loop_id,
+            idea="Demo users need a checked design contract.",
+            acceptance=("The design contract can be checked before implementation.",),
+        )
+    )
+    assert start_result.status == "ready"
+    freeze_result = freeze_requirement_loop(
+        RequirementFreezeOptions(root=root, loop_id=loop_id, yes=True)
+    )
+    assert freeze_result.frozen is True
