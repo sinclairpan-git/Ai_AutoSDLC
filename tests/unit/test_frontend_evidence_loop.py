@@ -259,6 +259,69 @@ def test_start_frontend_evidence_loop_blocks_receipt_without_evidence_artifacts(
     assert "playwright_smoke" in result.blocker
 
 
+def test_frontend_evidence_loop_reports_visual_regression_recheck_without_artifacts(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    artifact_path = _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+        overall_gate_status="incomplete",
+        probe_runtime_state="incomplete",
+        runtime_session_status="incomplete",
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+    payload["required_probe_set"].append("visual_regression")
+    execution_context = payload["execution_context"]
+    assert isinstance(execution_context, dict)
+    execution_context["required_probe_set"].append("visual_regression")
+    bundle_input = payload["bundle_input"]
+    assert isinstance(bundle_input, dict)
+    bundle_input["overall_gate_status"] = "incomplete"
+    bundle_input["blocking_reason_codes"] = ["visual_regression_evidence_missing"]
+    check_receipts = bundle_input["check_receipts"]
+    assert isinstance(check_receipts, list)
+    check_receipts.append(
+        _receipt(
+            "visual_regression",
+            "evidence_missing",
+            artifact_ids=[],
+            blocking_reason_codes=["visual_regression_evidence_missing"],
+            remediation_hints=["materialize visual regression baseline"],
+        )
+    )
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-visual-regression-recheck",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    assert result.loop_status == "needs_fix"
+    assert result.blocker_count == 2
+    assert result.next_guidance.command == "ai-sdlc program browser-gate-probe --execute"
+    report_path = (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "frontend-evidence"
+        / "fe-visual-regression-recheck"
+        / "frontend-evidence-report.json"
+    )
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert "materialize visual regression baseline" in report["blockers"]
+    assert "visual_regression_evidence_missing" in report["blockers"]
+
+
 def test_start_frontend_evidence_loop_respects_plain_language_blockers(
     tmp_path: Path,
 ) -> None:

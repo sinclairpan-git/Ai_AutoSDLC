@@ -72,6 +72,7 @@ from ai_sdlc.core.loop_models import (
 from ai_sdlc.models.frontend_browser_gate import (
     BrowserGateProbeRuntimeSession,
     BrowserProbeArtifactRecord,
+    BrowserProbeExecutionReceipt,
     BrowserQualityBundleMaterializationInput,
     BrowserQualityGateExecutionContext,
 )
@@ -492,7 +493,10 @@ def _namespace_blocker(
                 f"{record.artifact_ref}."
             )
     for receipt in bundle.check_receipts:
-        if not receipt.artifact_ids:
+        if (
+            not receipt.artifact_ids
+            and not _allows_empty_receipt_artifact_ids(receipt)
+        ):
             return (
                 "Frontend browser gate receipt has no evidence artifacts for "
                 f"{receipt.check_name}."
@@ -504,6 +508,18 @@ def _namespace_blocker(
                     f"record {artifact_id} for {receipt.check_name}."
                 )
     return ""
+
+
+def _allows_empty_receipt_artifact_ids(
+    receipt: BrowserProbeExecutionReceipt,
+) -> bool:
+    return (
+        receipt.check_name == "visual_regression"
+        and receipt.recheck_required
+        and receipt.classification_candidate
+        in {"evidence_missing", "transient_run_failure"}
+        and bool(receipt.blocking_reason_codes)
+    )
 
 
 def _ready_evidence_blocker(
