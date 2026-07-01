@@ -541,6 +541,29 @@ def test_check_design_contract_loop_accepts_filled_feature_spec_title(
     assert result.blocker_count == 0
 
 
+def test_check_design_contract_loop_accepts_direct_formal_as_product_term(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(
+        tmp_path,
+        spec_title="# 功能规格：Direct Formal Work Item",
+        spec_intro_extra="本功能延续 direct-formal work item 入口。",
+        plan_extra="direct-formal 是本次合同覆盖的正常产品术语。",
+        tasks_intro_extra="direct-formal 相关任务必须仍可进入合同检查。",
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-direct-formal-term",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.blocker_count == 0
+
+
 def test_check_design_contract_loop_reports_unrendered_feature_spec_title(
     tmp_path: Path,
 ) -> None:

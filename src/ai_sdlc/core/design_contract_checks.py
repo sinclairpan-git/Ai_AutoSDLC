@@ -48,7 +48,6 @@ _PLACEHOLDER_PATTERNS = (
     re.compile(r"待补(?:充|说明|验证|执行|确认)"),
     re.compile(r"\bTODO\b", re.IGNORECASE),
     re.compile(r"\bTBD\b", re.IGNORECASE),
-    re.compile(r"direct-formal", re.IGNORECASE),
     re.compile(
         r"功能规格：\s*(?:\{\{[^}]+\}\}|<[^>]+>|\$\{[^}]+\}|\bTODO\b|\bTBD\b|待(?:补|填|定|确认))",
         re.IGNORECASE,

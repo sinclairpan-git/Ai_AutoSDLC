@@ -788,6 +788,66 @@
 - 当前批次 worktree disposition 状态：retained（主工作区）。
 - 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
 
+### Batch 22：第二十三轮 PR #110 Codex review remediation
+
+#### 22.1 本批目标
+
+- 修复 PR #110 最新 Codex review P2：`direct-formal` 是合法产品/框架术语，不得被裸词 placeholder pattern 误判为模板占位。
+- 保持真正占位信号仍可被拦截：`TODO`、`TBD`、`待补...`、未渲染 `功能规格：{{ ... }}` 等模式继续有效。
+
+#### 22.2 变更范围
+
+- **验证画像**：code-change
+- `src/ai_sdlc/core/design_contract_checks.py`
+  - 从 `_PLACEHOLDER_PATTERNS` 移除裸 `direct-formal` 正则。
+- `tests/unit/test_design_contract_loop.py`
+  - 新增合法 direct-formal 术语回归，覆盖 spec/plan/tasks 中正常出现该术语且合同完整时必须通过。
+
+#### 22.3 验证记录
+
+- `V112`（twenty-third Codex review direct-formal targeted）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_accepts_direct_formal_as_product_term tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_reports_placeholders tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_accepts_filled_feature_spec_title tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_reports_unrendered_feature_spec_title -q`
+  - 结果：通过，`4 passed`。
+- `V113`（twenty-third remediation ruff / mypy）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_checks.py tests/unit/test_design_contract_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_loop.py`
+  - 结果：通过，`Success: no issues found in 2 source files`。
+- `V114`（twenty-third remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`255 passed`。
+- `V115`（twenty-third remediation constraints / diff）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V116`（twenty-third remediation program truth sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过，写入 `program-manifest.yaml`，snapshot hash `1ba018c5086865c5f7139012b6ab557ae743f0fa00a72133a75995632a53a442`。
+- `V117`（twenty-third remediation pre-commit work item close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime`
+  - 结果：除 `git_closure` 因当前修复尚未提交而 BLOCKER 外，其余检查 PASS；提交后需复跑至 PASS。
+
+#### 22.4 代码审查结论
+
+- 宪章/规格对齐：placeholder gate 继续拦截真实占位文本，但不再把 direct-formal 这样的正常需求术语当作占位。
+- 质量风险：新增 direct-formal 术语回归，覆盖当前 Codex actionable comment。
+- 结论：可刷新 truth、close-check、提交、推送并重新请求 Codex review。
+
+#### 22.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：T41/T42 保持完成；本批为 PR review remediation，不新增交付范围。
+- `related_plan`（如存在）同步状态：无 related_plan；plan 边界仍为 design-contract loop。
+- 关联 branch/worktree disposition 计划：继续使用 PR #110 head branch。
+
+#### 22.6 归档后动作
+
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）。
+- **提交哈希**：当前 close-out commit，以 `git log -1` 为准。
+- 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier。
+- 当前批次 worktree disposition 状态：retained（主工作区）。
+- 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
+
 ### Batch 17：第十八轮 PR #110 Codex review remediation
 
 #### 17.1 本批目标
