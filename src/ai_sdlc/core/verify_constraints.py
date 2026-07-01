@@ -1173,6 +1173,81 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
             ),
         ),
     ),
+    "193": (
+        FeatureContractSurface(
+            label="design-contract loop core runtime",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "design_contract_loop.py",
+                    ),
+                    required_tokens=(
+                        "check_design_contract_loop",
+                        "close_design_contract_loop",
+                        "CURRENT_DESIGN_CONTRACT_PATH",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src")
+                        / "ai_sdlc"
+                        / "core"
+                        / "design_contract_models.py",
+                    ),
+                    required_tokens=(
+                        "DesignContractInput",
+                        "DesignContractReport",
+                        "DesignContractClose",
+                        "DesignContractCheckOptions",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="design-contract loop status and CLI",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "loop_status.py",
+                    ),
+                    required_tokens=(
+                        "DesignContractLoopSummary",
+                        "_get_design_contract_loop_status",
+                        "_list_design_contract_loops",
+                        "current-design-contract.json",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "cli" / "loop_cmd.py",
+                    ),
+                    required_tokens=(
+                        "design_contract_app",
+                        "design_contract_check",
+                        "design_contract_close",
+                        "--type",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="design-contract loop user docs",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(Path("README.md"),),
+                    required_tokens=(
+                        "ai-sdlc loop design-contract check",
+                        "ai-sdlc loop status --type design-contract",
+                        "ai-sdlc loop design-contract close --yes",
+                        "does not call any model service",
+                        "does not modify application code",
+                        "does not enter frontend evidence",
+                        "implementation loop",
+                    ),
+                ),
+            ),
+        ),
+    ),
 }
 
 
@@ -3546,6 +3621,8 @@ def _feature_contract_surfaces_for_checkpoint(
         return FEATURE_CONTRACT_SURFACES["191"]
     if _is_192_work_item(work_item_id):
         return FEATURE_CONTRACT_SURFACES["192"]
+    if _is_193_work_item(work_item_id):
+        return FEATURE_CONTRACT_SURFACES["193"]
     return ()
 
 
@@ -3644,6 +3721,11 @@ def _is_191_work_item(work_item_id: str) -> bool:
 def _is_192_work_item(work_item_id: str) -> bool:
     normalized = work_item_id.strip()
     return normalized == "192" or normalized.startswith("192-") or normalized.startswith("192/")
+
+
+def _is_193_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "193" or normalized.startswith("193-") or normalized.startswith("193/")
 
 
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:

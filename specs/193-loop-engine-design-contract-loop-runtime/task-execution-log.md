@@ -253,3 +253,97 @@
 - 当前批次 branch disposition 状态：PR merge carrier
 - 当前批次 worktree disposition 状态：retained（主工作区）
 - 是否继续下一批：完成本批提交后进入 T41/T42。
+
+### Batch 2026-07-01-004 | T41-T42
+
+#### 5.1 批次范围
+
+- 覆盖任务：`T41`、`T42`
+- 覆盖阶段：docs, constraints, final regression, PR review preparation
+- 预读范围：`README.md`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`tasks.md`
+- 激活的规则：design-contract 是 implementation 前置合同检查；P0 不调用模型、不改业务代码、不进入 frontend evidence；final close-check 以本 work item 为收口事实面
+
+#### 5.2 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`README.md`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`、`program-manifest.yaml`、`task-execution-log.md`
+- 更新 README design-contract beginner path 与边界说明。
+- 更新 feature-contract surface registry，新增 WI-193 runtime、status/CLI、user docs surface。
+- 更新 verify constraints 单测，覆盖 WI-193 surface selection 和 README token。
+- 刷新 program truth snapshot。
+
+#### 5.3 统一验证命令
+
+- `V1`（feature-contract surface focused unit）
+  - 命令：`uv run pytest tests/unit/test_verify_constraints.py::test_193_feature_contract_surfaces_cover_design_contract_loop_runtime tests/unit/test_verify_constraints.py::test_192_feature_contract_surfaces_cover_requirement_loop_runtime -q`
+  - 结果：通过，`2 passed`。
+- `V2`（focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`217 passed`。
+- `V3`（focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/core/verify_constraints.py src/ai_sdlc/cli/loop_cmd.py tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+  - 结果：通过，`All checks passed!`。
+- `V4`（focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+- `V5`（verify constraints）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `V6`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V7`（program truth sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过，写入 `program-manifest.yaml`，snapshot hash `13679e91b482821af5e56d0ece7881caa54d7a18f59a323836dbdbe658064b85`；仓库级 source inventory 仍为历史 `migration_pending`。
+- `V8`（diagnostic mypy broader scope）
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/core/verify_constraints.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：未作为 WI-193 gate；`verify_constraints.py` 存在既有 PyYAML stub 和 frontend helper typing debt，本批不扩大修复范围。
+
+#### 5.4 任务记录
+
+##### T41 | 对齐用户文档和约束面
+
+- 改动范围：`README.md`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_verify_constraints.py`
+- 改动内容：README 新增 design-contract loop 命令与边界；constraints registry 新增 WI-193 runtime/status/CLI/docs surface；单测覆盖 WI-193 surface 选择。
+- 新增/调整的测试：`test_193_feature_contract_surfaces_cover_design_contract_loop_runtime`
+- 执行的命令：见 5.3。
+- 测试结果：通过。
+- 是否符合任务目标：符合。
+
+##### T42 | 完成最终回归与 PR 收口
+
+- 改动范围：`program-manifest.yaml`、`specs/193-loop-engine-design-contract-loop-runtime/task-execution-log.md`
+- 改动内容：执行 focused regression、ruff、mypy、diff check、verify constraints、program truth sync 和 close-check 预检；补齐 closeout 记录。
+- 执行的命令：见 5.3 和 5.5。
+- 测试结果：focused regression、ruff、focused mypy、diff check、verify constraints、program truth sync 均通过；close-check 首次预检发现日志 closeout 字段缺失，已在本批补齐。
+- 是否符合任务目标：进行中，待本批日志提交并复跑 close-check。
+
+#### 5.5 close-check 预检
+
+- `uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime`
+  - 结果：初次预检中 `tasks_completion`、`related_plan_drift`、`execution_log_fields`、`review_gate`、`completion_truth`、`branch_lifecycle`、`program_truth`、`provenance_phase1`、`docs_consistency`、`local_pr_review` 均通过。
+  - BLOCKER：最新 batch 缺少 verification profile；最新 batch 缺少 git close-out markers。
+  - 处理：已在 Batch 5.2 和 5.8 补齐 verification profile 与 git close-out markers；待本日志落盘后复跑。
+- 复跑结果：`tasks_completion`、`related_plan_drift`、`execution_log_fields`、`review_gate`、`verification_profile`、`completion_truth`、`branch_lifecycle`、`program_truth`、`provenance_phase1`、`docs_consistency`、`local_pr_review` 均通过；仅剩 `git_closure`，原因是本批 closeout 文件尚未提交。
+
+#### 5.6 代码审查结论
+
+- 宪章/规格对齐：WI-193 只交付 design-contract loop；P0 不调用模型、不改业务代码、不进入 frontend evidence；close 后 next action 指向 implementation。
+- 代码质量：verify constraints 复用现有 feature-contract surface registry；README 只补用户可见路径，不改变 local-pr-review 或 requirement loop 默认行为。
+- 测试质量：focused regression 覆盖 core runtime、status/list、CLI、verify constraints；全局 constraints 已通过。
+- 结论：可以进入最终 close-check 复跑、提交、推送、PR 和 Codex review。
+
+#### 5.7 任务/计划同步状态
+
+- `tasks.md` 同步状态：T11、T21、T22、T23、T31、T32、T41、T42 均已完成或进入最终 closeout。
+- `related_plan`（如存在）同步状态：无 related_plan；`plan.md` 与当前交付边界一致。
+- 关联 branch/worktree disposition 计划：`feature/193-loop-engine-design-contract-loop-runtime-docs` 作为 WI-193 PR merge carrier。
+- 说明：本 PR 完成 design-contract loop 后停止，不继续实现 implementation loop。
+
+#### 5.8 归档后动作
+
+- **已完成 git 提交**：是（本 marker 随最终提交一起落盘）
+- **提交哈希**：`pending-final-commit`
+- 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier
+- 当前批次 worktree disposition 状态：retained（主工作区）
+- 是否继续下一批：否；按目标要求先完成 WI-193 PR + Codex review，再进入 implementation loop。

@@ -10,11 +10,11 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete five Loop Engine loop types one by one; current
-    slice is WI-193 design-contract loop | State: WI-193 Batch 3 status/list and CLI
-    are implemented: loop status/list supports design-contract, loop design-contract
-    check/status/close is wired, and focused validation passed. Batch 4 README/verify
-    constraints/final regression/close-check remains before PR. | Next: Commit Batch
-    3, then implement Batch 4 README/verify constraints/final regression/close-check.'
+    slice is WI-193 design-contract loop | State: WI-193 Batch 4 README, verify constraints
+    surface, tests, program truth sync, and close-check preflight are complete. close-check
+    now only blocks on git_closure because the closeout files are intentionally uncommitted
+    before the final Batch 4 commit. | Next: Commit Batch 4 closeout, rerun workitem
+    close-check, then open WI-193 PR.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''
