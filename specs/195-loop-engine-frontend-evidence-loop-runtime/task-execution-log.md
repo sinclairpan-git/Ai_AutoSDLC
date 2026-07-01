@@ -337,6 +337,71 @@
 - 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
 - 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并
 
+### Batch 2026-07-01-006 | Codex review explicit probe state remediation
+
+#### 6.1 批次范围
+
+- 覆盖任务：`T42-R3`
+- 覆盖阶段：PR #112 third Codex review P1 remediation
+- 改动范围：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/195-loop-engine-frontend-evidence-loop-runtime/codex-handoff.md`
+
+#### 6.2 任务来源
+
+- 审查来源：PR #112 Codex review inline comment `3508675706`
+- 问题级别：P1
+- 问题摘要：`probe_runtime_state` 缺失时不应 fallback 到 `runtime_session.status`；browser gate writer 会输出该顶层字段，ingestion 必须要求它显式存在且为 `completed`。
+
+#### 6.3 修复内容
+
+- `_runtime_state_blocker` 去掉 `probe_runtime_state or session_status` fallback。
+- 缺失 `probe_runtime_state` 时返回 blocked，并提示重新运行 browser gate probe。
+- 单元测试新增缺失 `probe_runtime_state` 的 fail-closed 回归。
+
+#### 6.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py -q`
+- `V2`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V3`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V4`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V5`：`git diff --check`
+- `V6`：`uv run ai-sdlc verify constraints`
+- `V7`：`uv run ai-sdlc program truth sync --execute --yes`
+- `V8`：`uv run ai-sdlc workitem close-check --wi specs/195-loop-engine-frontend-evidence-loop-runtime`
+
+#### 6.5 验证结果
+
+- unit targeted：11 passed
+- focused regression：234 passed
+- ruff：PASS
+- mypy：PASS，5 source files
+- diff check：PASS
+- verify constraints：PASS，no BLOCKERs
+
+#### 6.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；本批只强化 browser gate artifact ingestion 的显式 runtime state 约束。
+- 代码质量：缺失顶层 `probe_runtime_state` 不再被 session status 掩盖，截断 artifact fail-closed。
+- 测试质量：新增缺失字段回归，并保持 focused suite 通过。
+- 结论：可刷新 truth、close-check、提交、推送并重新请求 Codex review。
+
+#### 6.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 完成；本批为 PR #112 third Codex review remediation。
+- `related_plan` 同步状态：不改变 WI-195 范围。
+- 关联 branch/worktree disposition 计划：继续使用 PR #112 carrier branch。
+
+#### 6.8 归档后动作
+
+- 第三轮 Codex review P1 已修复；下一步 truth sync、close-check、提交、推送并重新请求 Codex review。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/195-loop-engine-frontend-evidence-loop-runtime/codex-handoff.md`
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- **提交哈希**：`HEAD`
+- 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
+- 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并
+
 ### Batch 2026-07-01-005 | Codex review runtime-state and CLI exit remediation
 
 #### 5.1 批次范围

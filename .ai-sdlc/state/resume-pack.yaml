@@ -10,13 +10,11 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete frontend-evidence Loop Engine runtime and PR review/merge
-    | State: Second Codex review found P1 exit-code and runtime-state gaps. Fixed
-    frontend-evidence start to exit nonzero for needs_fix/needs_user/blocked, and
-    fail-closed when runtime_session.status or probe_runtime_state is not completed.
-    Unit targeted 10 passed, CLI integration 36 passed, focused regression 233 passed,
-    ruff/mypy/diff/verify passed. | Next: Run truth sync and close-check, commit,
-    push PR #112, request @codex review again, monitor checks/review, remediate if
-    needed, merge.'
+    | State: Third Codex review found P1 missing probe_runtime_state fallback. Removed
+    fallback to runtime_session.status; missing top-level probe_runtime_state now
+    blocks. Unit targeted 11 passed, focused regression 234 passed, ruff/mypy/diff/verify
+    passed. | Next: Run truth sync and close-check, commit, push PR #112, request
+    @codex review again, monitor checks/review, remediate if needed, merge.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''

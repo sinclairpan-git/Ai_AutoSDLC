@@ -238,6 +238,34 @@ def test_start_frontend_evidence_loop_blocks_failed_probe_runtime_state(
     assert "probe runtime state is not completed: failed" in result.blocker
 
 
+def test_start_frontend_evidence_loop_blocks_missing_probe_runtime_state(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    artifact_path = _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload.pop("probe_runtime_state")
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-missing-probe-state",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "probe runtime state is not completed: <missing>" in result.blocker
+
+
 def test_close_frontend_evidence_loop_requires_allow_warnings(
     tmp_path: Path,
 ) -> None:

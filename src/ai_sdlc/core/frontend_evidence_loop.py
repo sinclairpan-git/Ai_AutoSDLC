@@ -488,7 +488,7 @@ def _runtime_state_blocker(
     probe_runtime_state: str,
 ) -> str:
     session_status = runtime_session.status.strip()
-    effective_probe_state = probe_runtime_state or session_status
+    effective_probe_state = probe_runtime_state.strip()
     if session_status != "completed":
         return (
             "Frontend browser gate runtime session is not completed: "
