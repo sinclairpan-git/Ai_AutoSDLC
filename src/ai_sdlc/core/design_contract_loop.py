@@ -18,6 +18,8 @@ from ai_sdlc.core.design_contract_models import (
     DesignContractCommandResult,
     DesignContractCommandStatus,
     DesignContractCommandSummary,
+    DesignContractCoverageMatrix,
+    DesignContractCurrentPointer,
     DesignContractInput,
     DesignContractNextGuidance,
     DesignContractReport,
@@ -194,25 +196,21 @@ def _write_check_artifacts(
     store.write_json_artifact(artifacts.input_path, contract_input)
     store.write_json_artifact(
         artifacts.coverage_matrix_path,
-        {
-            "schema_version": "1",
-            "artifact_kind": "coverage-matrix",
-            "loop_id": contract_input.loop_id,
-            "work_item_id": contract_input.work_item_id,
-            "items": [item.model_dump(mode="json") for item in report.coverage_items],
-        },
+        DesignContractCoverageMatrix(
+            loop_id=contract_input.loop_id,
+            work_item_id=contract_input.work_item_id,
+            items=report.coverage_items,
+        ),
     )
     store.write_json_artifact(artifacts.report_json_path, report)
     store.write_markdown_artifact(artifacts.report_md_path, render_report_markdown(report))
     store.write_json_artifact(artifacts.loop_run_path, loop_run)
     store.write_json_artifact(
         artifacts.pointer_path,
-        {
-            "schema_version": "1",
-            "artifact_kind": "current-design-contract-pointer",
-            "loop_id": contract_input.loop_id,
-            "loop_run_path": repo_relative_path(root, artifacts.loop_run_path),
-        },
+        DesignContractCurrentPointer(
+            loop_id=contract_input.loop_id,
+            loop_run_path=repo_relative_path(root, artifacts.loop_run_path),
+        ),
     )
 
 

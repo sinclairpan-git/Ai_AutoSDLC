@@ -66,6 +66,18 @@ def test_check_design_contract_loop_writes_passed_artifacts(tmp_path: Path) -> N
         "FR-DEMO-001",
         "SC-DEMO-001",
     }
+    coverage = json.loads((loop_dir / "coverage-matrix.json").read_text(encoding="utf-8"))
+    assert coverage["artifact_kind"] == "coverage-matrix"
+    assert coverage["created_by"] == "ai-sdlc"
+    assert coverage["created_at"]
+    assert coverage["ai_sdlc_version"]
+    pointer = json.loads(
+        (tmp_path / CURRENT_DESIGN_CONTRACT_PATH).read_text(encoding="utf-8")
+    )
+    assert pointer["artifact_kind"] == "current-design-contract-pointer"
+    assert pointer["created_by"] == "ai-sdlc"
+    assert pointer["created_at"]
+    assert pointer["ai_sdlc_version"]
 
     loop_run = json.loads((loop_dir / "loop-run.json").read_text(encoding="utf-8"))
     assert loop_run["loop_type"] == "design-contract"

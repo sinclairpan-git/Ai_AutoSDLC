@@ -81,6 +81,15 @@ class ContractCoverageItem(BaseModel):
     blocker: str = ""
 
 
+class DesignContractCoverageMatrix(LoopArtifactModel):
+    """Machine-readable coverage matrix for one design-contract check."""
+
+    artifact_kind: str = "coverage-matrix"
+    loop_id: str
+    work_item_id: str
+    items: list[ContractCoverageItem] = Field(default_factory=list)
+
+
 class DesignContractFinding(BaseModel):
     """One deterministic design-contract finding."""
 
@@ -127,6 +136,14 @@ class DesignContractClose(LoopArtifactModel):
     report_path: str
     blocker_count: int = 0
     next_loop_type: LoopType = LoopType.IMPLEMENTATION
+
+
+class DesignContractCurrentPointer(LoopArtifactModel):
+    """Current design-contract loop pointer."""
+
+    artifact_kind: str = "current-design-contract-pointer"
+    loop_id: str
+    loop_run_path: str
 
 
 class DesignContractArtifactRef(BaseModel):
@@ -222,12 +239,14 @@ __all__ = [
     "ContractCoverageStatus",
     "ContractFindingSeverity",
     "DesignContractArtifactRef",
+    "DesignContractCoverageMatrix",
     "DesignContractCheckOptions",
     "DesignContractClose",
     "DesignContractCloseOptions",
     "DesignContractCommandResult",
     "DesignContractCommandStatus",
     "DesignContractCommandSummary",
+    "DesignContractCurrentPointer",
     "DesignContractFinding",
     "DesignContractInput",
     "DesignContractNextGuidance",
