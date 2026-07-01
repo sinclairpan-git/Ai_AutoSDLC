@@ -1882,10 +1882,10 @@ specs:
   depends_on: []
   frontend_evidence_class: framework_capability
 truth_snapshot:
-  generated_at: '2026-07-01T19:58:02Z'
+  generated_at: '2026-07-01T20:10:36Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 56bb9695
+  repo_revision: ebc5a24e
   authoring_hash: b86bcfa1f374ab297a564b58b09df23e468157278de27a91a0c75805e4dea88a
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1925,7 +1925,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 31e97ddd443c2a3abc6fe9be4de0553ea3d67d9e71b1497db3be99369d360c54
+  snapshot_hash: 1cb59032fce466b1d4a9443c63e3c31b8c5233e9d778870a3341732c26cc2845
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1944,8 +1944,8 @@ truth_snapshot:
     mapped_sources: 1003
     unmapped_sources: 28
     missing_sources: 10
-    phase_signal_count: 3508
-    deferred_signal_count: 6327
+    phase_signal_count: 3511
+    deferred_signal_count: 6330
     non_goal_signal_count: 341
     layer_totals:
       blueprint: 1
@@ -10787,8 +10787,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 195-loop-engine-frontend-evidence-loop-runtime
-      phase_signal_count: 10
-      deferred_signal_count: 11
+      phase_signal_count: 13
+      deferred_signal_count: 14
       non_goal_signal_count: 0
     - path: specs/195-loop-engine-frontend-evidence-loop-runtime/development-summary.md
       source_type: development_summary

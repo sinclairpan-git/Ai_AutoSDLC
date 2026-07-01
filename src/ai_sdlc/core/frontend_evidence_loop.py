@@ -352,13 +352,6 @@ def _build_snapshot(
             ),
         )
     probe_runtime_state = str(payload.get("probe_runtime_state", "")).strip()
-    runtime_state_blocker = _runtime_state_blocker(runtime_session, probe_runtime_state)
-    if runtime_state_blocker:
-        return _blocked_result(
-            runtime_state_blocker,
-            loop_id=frontend_input.loop_id,
-            next_action="Run ai-sdlc program browser-gate-probe --execute.",
-        )
     namespace_blocker = _namespace_blocker(
         root,
         execution_context,
@@ -379,6 +372,17 @@ def _build_snapshot(
         probe_runtime_state=probe_runtime_state,
         apply_artifact_path=str(payload.get("apply_artifact_path", "")).strip(),
     )
+    runtime_state_blocker = _runtime_state_blocker(
+        runtime_session,
+        probe_runtime_state,
+        execute_gate_state=decision.execute_gate_state,
+    )
+    if runtime_state_blocker:
+        return _blocked_result(
+            runtime_state_blocker,
+            loop_id=frontend_input.loop_id,
+            next_action="Run ai-sdlc program browser-gate-probe --execute.",
+        )
     receipts = [
         FrontendEvidenceReceiptSnapshot(
             check_name=receipt.check_name,
@@ -486,9 +490,15 @@ def _namespace_blocker(
 def _runtime_state_blocker(
     runtime_session: BrowserGateProbeRuntimeSession,
     probe_runtime_state: str,
+    *,
+    execute_gate_state: str,
 ) -> str:
     session_status = runtime_session.status.strip()
     effective_probe_state = probe_runtime_state.strip()
+    if not effective_probe_state:
+        return "Frontend browser gate probe runtime state is not completed: <missing>."
+    if execute_gate_state != FRONTEND_GATE_EXECUTE_STATE_READY:
+        return ""
     if session_status != "completed":
         return (
             "Frontend browser gate runtime session is not completed: "

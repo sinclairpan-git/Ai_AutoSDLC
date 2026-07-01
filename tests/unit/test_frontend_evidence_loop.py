@@ -334,6 +334,8 @@ def test_frontend_evidence_loop_needs_fix_for_missing_evidence(
         smoke_classification="evidence_missing",
         blocking_reason_codes=["playwright_probe_evidence_missing"],
         remediation_hints=["materialize shared Playwright runtime evidence"],
+        probe_runtime_state="incomplete",
+        runtime_session_status="incomplete",
     )
 
     result = start_frontend_evidence_loop(
