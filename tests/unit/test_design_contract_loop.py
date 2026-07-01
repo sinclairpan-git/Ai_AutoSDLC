@@ -225,6 +225,41 @@ def test_check_design_contract_loop_reports_placeholders(tmp_path: Path) -> None
     assert "placeholder" in {finding["code"] for finding in report["findings"]}
 
 
+@pytest.mark.parametrize(
+    "status_line",
+    [
+        "**状态**: 草稿",
+        "**Status**: Draft",
+    ],
+)
+def test_check_design_contract_loop_blocks_draft_status_variants(
+    tmp_path: Path,
+    status_line: str,
+) -> None:
+    _write_work_item(tmp_path, spec_status_line=status_line)
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-draft-status",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-draft-status"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "draft_spec" in {finding["code"] for finding in report["findings"]}
+
+
 def test_check_design_contract_loop_ignores_example_contract_ids(
     tmp_path: Path,
 ) -> None:
@@ -786,6 +821,7 @@ def _write_work_item(
     acceptance_label: str = "- **验收标准**",
     verification_label: str = "- **验证**",
     tasks_intro_extra: str = "",
+    spec_status_line: str = "**状态**：已冻结",
 ) -> Path:
     work_item = root / relative_path
     work_item.mkdir(parents=True)
@@ -795,7 +831,7 @@ def _write_work_item(
             [
                 "# PRD：Demo Contract",
                 "",
-                "**状态**：已冻结",
+                spec_status_line,
                 "",
                 spec_intro_extra,
                 "## 需求",

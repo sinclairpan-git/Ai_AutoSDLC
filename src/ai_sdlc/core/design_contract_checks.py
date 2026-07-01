@@ -19,6 +19,11 @@ _CONTRACT_ID = re.compile(r"\b(?:FR|SC)(?:-[A-Za-z0-9]+)*-\d{3}\b")
 _TASK_ID = re.compile(r"\bT\d{2,3}\b")
 _TASK_SECTION = re.compile(r"(?m)^###\s+(?:Task|任务)\b.*$")
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+_DRAFT_STATUS = re.compile(
+    r"(?im)^\s*(?:[-*]\s*)?"
+    r"(?:\*\*)?\s*(?:状态|status)\s*(?:\*\*)?"
+    r"\s*[:：]\s*(?:草稿|draft)\b"
+)
 _PLACEHOLDER_PATTERNS = (
     re.compile(r"待补(?:充|说明|验证|执行|确认)"),
     re.compile(r"\bTODO\b", re.IGNORECASE),
@@ -88,7 +93,7 @@ def analyze_design_contract(
     spec_text = texts.get("spec.md", "")
     plan_text = texts.get("plan.md", "")
     tasks_text = texts.get("tasks.md", "")
-    if spec_text and "状态**：草稿" in spec_text:
+    if spec_text and _is_draft_spec(spec_text):
         findings.append(
             _finding(
                 "draft_spec",
@@ -294,6 +299,10 @@ def _placeholder_findings(path: Path, text: str) -> list[DesignContractFinding]:
             )
             break
     return findings
+
+
+def _is_draft_spec(text: str) -> bool:
+    return bool(_DRAFT_STATUS.search(text))
 
 
 def _plan_findings(path: Path, text: str) -> list[DesignContractFinding]:
