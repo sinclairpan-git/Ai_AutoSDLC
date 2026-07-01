@@ -525,6 +525,68 @@
 - 当前批次 worktree disposition 状态：retained（主工作区）。
 - 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
 
+### Batch 17：第十八轮 PR #110 Codex review remediation
+
+#### 17.1 本批目标
+
+- 修复 PR #110 最新 Codex review P2：`loop list --type design-contract` 在 current pointer 指向存在但不是 design-contract loop-run 的文件时，必须 fail-readable 地报告 `current-design-contract-target`，不能静默当作无 current loop。
+
+#### 17.2 变更范围
+
+- **验证画像**：code-change
+- `src/ai_sdlc/core/loop_status.py`
+  - 在 design-contract list 读取 current pointer 后，校验 existing target 是否符合 `.ai-sdlc/loops/design-contract/<loop-id>/loop-run.json` 形态。
+  - 对存在但不属于 design-contract loop-run 的目标写入 `current-design-contract-target` artifact error，并清空 current pointer 参与后续 list 汇总。
+- `tests/unit/test_loop_status.py`
+  - 新增 current design-contract pointer 指向 requirement loop-run 的 regression，断言 valid design-contract history 不被隐藏，同时 blocker/guidance 显示 malformed current pointer。
+
+#### 17.3 验证记录
+
+- `V83`（eighteenth Codex review invalid-current-target remediation）
+  - 命令：`uv run pytest tests/unit/test_loop_status.py::test_list_loops_reports_invalid_current_design_contract_target tests/unit/test_loop_status.py::test_list_loops_reports_malformed_current_design_contract_run -q`
+  - 结果：通过，`2 passed`。
+- `V84`（eighteenth remediation loop-status unit）
+  - 命令：`uv run pytest tests/unit/test_loop_status.py -q`
+  - 结果：通过，`36 passed`。
+- `V85`（eighteenth remediation ruff / mypy）
+  - 命令：`uv run ruff check src/ai_sdlc/core/loop_status.py tests/unit/test_loop_status.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+- `V86`（eighteenth remediation focused regression / constraints / diff）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`247 passed`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V87`（program truth sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过，snapshot hash `f37141003f494b2c6de9a8d058874f762b09fc5b53ca520125f1da2fdcc6e97c`，已写入 `program-manifest.yaml`。
+- `V88`（pre-commit work item close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime`
+  - 结果：除 `git_closure` 因当前修复尚未提交而 BLOCKER 外，其余检查 PASS；提交后需复跑至 PASS。
+
+#### 17.4 代码审查结论
+
+- 宪章/规格对齐：design-contract list 的 current pointer 恢复路径保持 fail-readable；坏 current pointer 不隐藏历史可读 loop。
+- 质量风险：新增跨 loop-type 错指 target regression，覆盖当前 Codex actionable comment。
+- 结论：可刷新 truth、close-check、提交、推送并重新请求 Codex review。
+
+#### 17.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：T41/T42 保持完成；本批为 PR review remediation，不新增交付范围。
+- `related_plan`（如存在）同步状态：无 related_plan；plan 边界仍为 design-contract loop。
+- 关联 branch/worktree disposition 计划：继续使用 PR #110 head branch。
+
+#### 17.6 归档后动作
+
+- **已完成 git 提交**：否；本批记录会随 remediation commit 一起落盘。
+- **提交哈希**：提交后以 `git log -1` 为准。
+- 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier。
+- 当前批次 worktree disposition 状态：retained（主工作区）。
+- 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
+
 ### Batch 14：第十五轮 PR #110 Codex review remediation
 
 #### 14.1 本批目标

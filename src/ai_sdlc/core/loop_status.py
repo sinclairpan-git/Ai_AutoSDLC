@@ -830,6 +830,21 @@ def _list_design_contract_loops(root: Path) -> LoopListResult:
             )
         )
         current_loop_run_path = None
+    if current_loop_run_path is not None and not _is_design_contract_loop_run_path(
+        root,
+        current_loop_run_path,
+    ):
+        artifact_errors.append(
+            LoopArtifactError(
+                kind="current-design-contract-target",
+                path=_repo_relative_path(root, current_loop_run_path),
+                error=(
+                    "referenced by current-design-contract pointer but is not "
+                    "a design-contract loop-run.json artifact."
+                ),
+            )
+        )
+        current_loop_run_path = None
     if not loop_run_paths:
         if artifact_errors:
             blocker = (
@@ -1716,6 +1731,17 @@ def _design_contract_pointer_error(
         path=_repo_relative_path(root, pointer_path),
         error=error,
     )
+
+
+def _is_design_contract_loop_run_path(root: Path, loop_run_path: Path) -> bool:
+    loop_root = (
+        root / AI_SDLC_DIR / "loops" / LoopType.DESIGN_CONTRACT.value
+    ).resolve(strict=False)
+    try:
+        relative = loop_run_path.resolve(strict=False).relative_to(loop_root)
+    except ValueError:
+        return False
+    return len(relative.parts) == 2 and relative.parts[1] == "loop-run.json"
 
 
 def _normalize_loop_type(loop_type: LoopType | str) -> str:

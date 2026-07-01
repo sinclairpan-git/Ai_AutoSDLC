@@ -861,6 +861,57 @@ def test_list_loops_reports_malformed_current_design_contract_run(
     assert result.next_guidance.safety == "blocked"
 
 
+def test_list_loops_reports_invalid_current_design_contract_target(
+    tmp_path: Path,
+) -> None:
+    _write_design_contract_work_item(tmp_path)
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-design-contract",
+            loop_id="dc-valid",
+        )
+    )
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-wrong-target",
+            idea="运营用户需要订单审批流，范围只覆盖后台人工审批。",
+            acceptance=("审批节点可以配置",),
+        )
+    )
+    wrong_target = (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "requirement"
+        / "req-wrong-target"
+        / "loop-run.json"
+    )
+    LoopArtifactStore(tmp_path).write_json_artifact(
+        tmp_path / CURRENT_DESIGN_CONTRACT_PATH,
+        {
+            "schema_version": "1",
+            "artifact_kind": "current-design-contract-pointer",
+            "loop_id": "req-wrong-target",
+            "loop_run_path": wrong_target.relative_to(tmp_path).as_posix(),
+        },
+    )
+
+    result = list_loops(tmp_path, loop_type="design-contract")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert [item.loop_id for item in result.items] == ["dc-valid"]
+    assert result.current_loop_id == ""
+    assert result.malformed_count == 1
+    assert result.artifact_errors[0].kind == "current-design-contract-target"
+    assert "not a design-contract loop-run.json" in result.artifact_errors[0].error
+    assert result.blocker == (
+        "Current design-contract pointer is malformed or references missing artifacts."
+    )
+    assert result.next_guidance.safety == "blocked"
+
+
 def _write_design_contract_work_item(root: Path) -> Path:
     work_item = root / "specs" / "demo-design-contract"
     work_item.mkdir(parents=True)
