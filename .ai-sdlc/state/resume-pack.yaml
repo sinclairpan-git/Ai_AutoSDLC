@@ -10,9 +10,11 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete frontend-evidence Loop Engine runtime and PR review/merge
-    | State: WI-195 linked to checkpoint; T11 docs baseline validated; ready for T21
-    models/store | Next: Commit docs/linkage baseline, then implement frontend_evidence_models.py
-    and frontend_evidence_store.py'
+    | State: Frontend-evidence runtime, CLI, status/list, docs and constraints implemented;
+    focused regression, ruff, mypy, diff check, verify constraints and truth sync
+    passed; close-check preflight only needed git close-out markers, now recorded.
+    | Next: Run close-check again, then stage, commit, push, open PR, request Codex
+    review, monitor checks, remediate if needed, merge.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''

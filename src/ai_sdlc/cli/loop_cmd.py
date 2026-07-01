@@ -17,6 +17,13 @@ from ai_sdlc.core.design_contract_loop import (
     check_design_contract_loop,
     close_design_contract_loop,
 )
+from ai_sdlc.core.frontend_evidence_loop import (
+    FrontendEvidenceCloseOptions,
+    FrontendEvidenceCommandResult,
+    FrontendEvidenceStartOptions,
+    close_frontend_evidence_loop,
+    start_frontend_evidence_loop,
+)
 from ai_sdlc.core.implementation_loop import (
     ImplementationCloseOptions,
     ImplementationCommandResult,
@@ -60,6 +67,10 @@ implementation_app = typer.Typer(
     help="Run the local deterministic implementation loop.",
     no_args_is_help=True,
 )
+frontend_evidence_app = typer.Typer(
+    help="Run the local deterministic frontend-evidence loop.",
+    no_args_is_help=True,
+)
 console = Console()
 
 
@@ -79,7 +90,7 @@ def loop_status(
         "--type",
         help=(
             "Loop type to inspect: local-pr-review, requirement, "
-            "design-contract, or implementation."
+            "design-contract, implementation, or frontend-evidence."
         ),
     ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
@@ -99,7 +110,7 @@ def loop_list(
         "--type",
         help=(
             "Loop type to list: local-pr-review, requirement, "
-            "design-contract, or implementation."
+            "design-contract, implementation, or frontend-evidence."
         ),
     ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
@@ -376,6 +387,91 @@ def implementation_close(
     raise typer.Exit(0 if result.status == "ready" and result.closed else 1)
 
 
+@frontend_evidence_app.command(name="start")
+def frontend_evidence_start(
+    work_item: str = typer.Option(
+        "",
+        "--wi",
+        help="Work item directory or formal doc path, for example specs/123-name.",
+    ),
+    implementation_loop_id: str = typer.Option(
+        "",
+        "--implementation-loop-id",
+        help="Optional upstream implementation loop id.",
+    ),
+    artifact_path: str = typer.Option(
+        "",
+        "--artifact-path",
+        help="Optional project-local browser gate artifact path.",
+    ),
+    loop_id: str = typer.Option("", "--loop-id", help="Optional stable loop id."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing."),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Start tracking local frontend browser gate evidence."""
+
+    if not dry_run:
+        _run_project_writer_adapter(json_output=json_output)
+    root = _project_root_or_exit(json_output=json_output)
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=root,
+            work_item=work_item,
+            implementation_loop_id=implementation_loop_id,
+            artifact_path=artifact_path,
+            loop_id=loop_id,
+            dry_run=dry_run,
+        )
+    )
+    _emit_frontend_evidence_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != "blocked" else 1)
+
+
+@frontend_evidence_app.command(name="status")
+def frontend_evidence_status(
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Show the current frontend-evidence loop status."""
+
+    root = _project_root_or_exit(json_output=json_output)
+    result = get_loop_status(root, loop_type="frontend-evidence")
+    _emit_status_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != LoopStatusCommandStatus.BLOCKED else 1)
+
+
+@frontend_evidence_app.command(name="close")
+def frontend_evidence_close(
+    loop_id: str = typer.Option("", "--loop-id", help="Frontend-evidence loop id."),
+    yes: bool = typer.Option(False, "--yes", help="Confirm frontend evidence close."),
+    allow_warnings: bool = typer.Option(
+        False,
+        "--allow-warnings",
+        help="Allow advisory warnings to close with audit evidence.",
+    ),
+    closed_by: str = typer.Option(
+        "local-user",
+        "--closed-by",
+        help="Operator recorded in frontend-evidence-close.json.",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Close passed frontend-evidence after explicit confirmation."""
+
+    _run_project_writer_adapter(json_output=json_output)
+    root = _project_root_or_exit(json_output=json_output)
+    result = close_frontend_evidence_loop(
+        FrontendEvidenceCloseOptions(
+            root=root,
+            loop_id=loop_id,
+            yes=yes,
+            allow_warnings=allow_warnings,
+            closed_by=closed_by,
+        )
+    )
+    _emit_frontend_evidence_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status == "ready" and result.closed else 1)
+
+
 def _project_root_or_exit(*, json_output: bool = False) -> Path:
     root = find_project_root()
     if root is None:
@@ -527,6 +623,45 @@ def _emit_implementation_result(
             console.print(f"- {artifact.kind}: {artifact.path} ({state})")
 
 
+def _emit_frontend_evidence_result(
+    result: FrontendEvidenceCommandResult,
+    *,
+    json_output: bool,
+) -> None:
+    payload = result.model_dump(mode="json")
+    if json_output:
+        _emit_payload(payload, json_output=True)
+        return
+    console.print(f"Result: {payload.get('status', '')}")
+    if payload.get("blocker"):
+        console.print(f"Blocker: {payload['blocker']}")
+    console.print(f"Next: {payload.get('next_action') or '-'}")
+    if result.loop_id:
+        console.print(f"Loop ID: {result.loop_id}")
+    if result.loop_status:
+        console.print(f"Loop status: {result.loop_status}")
+    if result.work_item_id:
+        console.print(f"Work item: {result.work_item_id}")
+    if result.work_item_path:
+        console.print(f"Work item path: {result.work_item_path}")
+    if result.gate_run_id:
+        console.print(f"Gate run: {result.gate_run_id}")
+    if result.overall_gate_status:
+        console.print(f"Gate status: {result.overall_gate_status}")
+    if result.execute_gate_state:
+        console.print(f"Execute gate: {result.execute_gate_state}")
+    if result.decision_reason:
+        console.print(f"Decision reason: {result.decision_reason}")
+    console.print(f"Blockers: {result.blocker_count}")
+    console.print(f"Warnings: {result.warning_count}")
+    console.print(f"Closed: {str(result.closed).lower()}")
+    if result.artifacts:
+        console.print("Artifacts:")
+        for artifact in result.artifacts:
+            state = "exists" if artifact.exists else "planned"
+            console.print(f"- {artifact.kind}: {artifact.path} ({state})")
+
+
 def _emit_payload(payload: dict[str, object], *, json_output: bool) -> None:
     if json_output:
         typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -608,6 +743,21 @@ def _emit_loop_summary(loop: LoopSummary, *, show_guidance: bool = True) -> None
             f"evidence={implementation.evidence_count}, "
             f"closed={str(implementation.closed).lower()}"
         )
+    if loop.frontend_evidence is not None:
+        frontend = loop.frontend_evidence
+        console.print(f"Frontend evidence work item: {frontend.work_item_id}")
+        console.print(f"Frontend evidence path: {frontend.work_item_path}")
+        console.print(f"Frontend gate run: {frontend.gate_run_id}")
+        console.print(
+            "Frontend evidence counts: "
+            f"blockers={frontend.blocker_count}, "
+            f"warnings={frontend.warning_count}, "
+            f"closed={str(frontend.closed).lower()}"
+        )
+        if frontend.overall_gate_status:
+            console.print(f"Frontend gate status: {frontend.overall_gate_status}")
+        if frontend.execute_gate_state:
+            console.print(f"Frontend execute gate: {frontend.execute_gate_state}")
 
 
 def _emit_guidance(guidance: LoopNextActionGuidance) -> None:
@@ -644,5 +794,6 @@ def _yes_no(value: object) -> str:
 loop_app.add_typer(requirement_app, name="requirement")
 loop_app.add_typer(design_contract_app, name="design-contract")
 loop_app.add_typer(implementation_app, name="implementation")
+loop_app.add_typer(frontend_evidence_app, name="frontend-evidence")
 
 __all__ = ["loop_app"]

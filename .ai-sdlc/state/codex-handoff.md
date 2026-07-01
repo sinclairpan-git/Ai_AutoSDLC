@@ -1,27 +1,40 @@
 # Continuity Handoff
 
-- Updated: 2026-07-01T18:38:34+00:00
-- Reason: WI-195 checkpoint linkage updated
+- Updated: 2026-07-01T19:09:34+00:00
+- Reason: WI-195 final regression and PR carrier close-out
 - Goal: Complete frontend-evidence Loop Engine runtime and PR review/merge
-- State: WI-195 linked to checkpoint; T11 docs baseline validated; ready for T21 models/store
+- State: Frontend-evidence runtime, CLI, status/list, docs and constraints implemented; focused regression, ruff, mypy, diff check, verify constraints and truth sync passed; close-check preflight only needed git close-out markers, now recorded.
 - Stage: execute
 - Work Item: 195-loop-engine-frontend-evidence-loop-runtime
 - Branch: feature/195-loop-engine-frontend-evidence-loop-runtime-docs
 
 ## Changed Files
-- M .ai-sdlc/project/config/project-state.yaml
-- M .ai-sdlc/state/checkpoint.yml
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/194-loop-engine-implementation-loop-runtime/codex-handoff.md
+- M README.md
 - M program-manifest.yaml
-- ?? specs/195-loop-engine-frontend-evidence-loop-runtime/
+- M specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md
+- M specs/195-loop-engine-frontend-evidence-loop-runtime/tasks.md
+- M src/ai_sdlc/cli/loop_cmd.py
+- M src/ai_sdlc/core/loop_status.py
+- M src/ai_sdlc/core/verify_constraints.py
+- M tests/integration/test_cli_loop.py
+- M tests/unit/test_loop_status.py
+- M tests/unit/test_verify_constraints.py
+- ?? src/ai_sdlc/core/frontend_evidence_loop.py
+- ?? src/ai_sdlc/core/frontend_evidence_models.py
+- ?? src/ai_sdlc/core/frontend_evidence_store.py
+- ?? tests/unit/test_frontend_evidence_loop.py
 
 ## Key Decisions
-- Use existing browser gate artifact contract as source truth; frontend-evidence loop only writes Loop Engine artifacts
+- Use existing browser gate artifact contract as source truth; frontend-evidence only writes Loop Engine artifacts and remains local/no-model/no-GitHub-required.
 
 ## Commands / Tests
-- uv run ai-sdlc workitem link --wi-id 195-loop-engine-frontend-evidence-loop-runtime --plan-uri specs/195-loop-engine-frontend-evidence-loop-runtime/plan.md -> updated
+- pytest focused: 228 passed
+- ruff: All checks passed
+- mypy: Success, no issues in 5 source files
+- git diff --check: PASS
+- verify constraints: no BLOCKERs
+- truth sync: wrote program-manifest.yaml; WI-195 program truth PASS with unrelated migration_pending inventory retained
+- close-check preflight: all checks PASS except expected latest-batch git close-out marker, now added
 
 ## Blockers / Risks
 - none
@@ -30,4 +43,4 @@
 - none
 
 ## Exact Next Steps
-- Commit docs/linkage baseline, then implement frontend_evidence_models.py and frontend_evidence_store.py
+- Run close-check again, then stage, commit, push, open PR, request Codex review, monitor checks, remediate if needed, merge.

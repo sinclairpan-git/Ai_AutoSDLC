@@ -8,11 +8,18 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import yaml
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
+from ai_sdlc.core.implementation_models import (
+    ImplementationClose,
+    ImplementationCurrentPointer,
+    ImplementationReport,
+)
+from ai_sdlc.core.implementation_store import implementation_artifacts
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
-from ai_sdlc.core.loop_models import LoopStatus
+from ai_sdlc.core.loop_models import LoopRound, LoopRun, LoopStatus, LoopType
 from ai_sdlc.core.loop_status import CURRENT_REVIEW_PATH
 from ai_sdlc.core.pr_review_models import (
     ModelResolutionSource,
@@ -1065,6 +1072,64 @@ def test_loop_implementation_start_dry_run_skips_adapter_hook(
     adapter_hook.assert_not_called()
 
 
+def test_loop_frontend_evidence_start_status_and_close_json(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_frontend_work_item(tmp_path)
+    _write_closed_frontend_implementation(tmp_path, work_item)
+    _write_frontend_browser_gate_artifact(tmp_path, work_item_path="specs/demo-frontend")
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        start = runner.invoke(
+            app,
+            [
+                "loop",
+                "frontend-evidence",
+                "start",
+                "--wi",
+                "specs/demo-frontend",
+                "--implementation-loop-id",
+                "impl-frontend-cli",
+                "--loop-id",
+                "fe-cli",
+                "--json",
+            ],
+        )
+        status = runner.invoke(
+            app,
+            ["loop", "status", "--type", "frontend-evidence", "--json"],
+        )
+        close = runner.invoke(
+            app,
+            ["loop", "frontend-evidence", "close", "--loop-id", "fe-cli", "--yes", "--json"],
+        )
+
+    assert start.exit_code == 0
+    start_payload = json.loads(start.output)
+    assert start_payload["status"] == "ready"
+    assert start_payload["loop_status"] == "passed"
+    assert start_payload["frontend_evidence"]["gate_run_id"] == "gate-run-cli"
+    assert start_payload["frontend_evidence"]["report_path"].endswith(
+        ".ai-sdlc/loops/frontend-evidence/fe-cli/frontend-evidence-report.json"
+    )
+
+    assert status.exit_code == 0
+    status_payload = json.loads(status.output)
+    assert status_payload["current_loop"]["loop_type"] == "frontend-evidence"
+    assert status_payload["current_loop"]["frontend_evidence"]["work_item_id"] == (
+        "demo-frontend"
+    )
+    assert status_payload["next_guidance"]["command"] == (
+        "ai-sdlc loop frontend-evidence close --yes"
+    )
+
+    assert close.exit_code == 0
+    close_payload = json.loads(close.output)
+    assert close_payload["closed"] is True
+    assert close_payload["loop_status"] == "closed"
+    assert close_payload["next_action"] == "Run ai-sdlc pr-review start."
+
+
 def test_python_module_help_fallback_lists_loop() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "ai_sdlc", "--help"],
@@ -1077,6 +1142,196 @@ def test_python_module_help_fallback_lists_loop() -> None:
 
     assert result.returncode == 0
     assert "loop" in result.stdout
+
+
+def _write_frontend_work_item(root: Path) -> Path:
+    work_item = root / "specs" / "demo-frontend"
+    work_item.mkdir(parents=True)
+    work_item.joinpath("spec.md").write_text("# Frontend Demo\n", encoding="utf-8")
+    work_item.joinpath("plan.md").write_text("# Plan\n", encoding="utf-8")
+    work_item.joinpath("tasks.md").write_text("# Tasks\n", encoding="utf-8")
+    return work_item
+
+
+def _write_closed_frontend_implementation(root: Path, work_item: Path) -> None:
+    artifacts = implementation_artifacts(root, "impl-frontend-cli")
+    store = LoopArtifactStore(root)
+    store.create_loop_run_dir(
+        "impl-frontend-cli",
+        loop_type=LoopType.IMPLEMENTATION.value,
+    )
+    report = ImplementationReport(
+        loop_id="impl-frontend-cli",
+        work_item_id=work_item.name,
+        work_item_path=f"specs/{work_item.name}",
+        status=LoopStatus.PASSED,
+        required_task_count=1,
+        done_count=1,
+        requires_frontend_evidence=True,
+        next_action=(
+            f"Run ai-sdlc loop frontend-evidence start --wi specs/{work_item.name}."
+        ),
+    )
+    loop_run = LoopRun(
+        loop_id="impl-frontend-cli",
+        loop_type=LoopType.IMPLEMENTATION,
+        status=LoopStatus.CLOSED,
+        work_item_id=work_item.name,
+        current_round=1,
+        rounds=[
+            LoopRound(
+                round_number=1,
+                command=["ai-sdlc", "loop", "implementation", "start"],
+                status=LoopStatus.CLOSED,
+                result=LoopStatus.CLOSED,
+            )
+        ],
+        next_action=(
+            f"Run ai-sdlc loop frontend-evidence start --wi specs/{work_item.name}."
+        ),
+    )
+    store.write_json_artifact(artifacts.report_json_path, report)
+    store.write_json_artifact(artifacts.loop_run_path, loop_run)
+    store.write_json_artifact(
+        artifacts.close_path,
+        ImplementationClose(
+            loop_id="impl-frontend-cli",
+            report_path=artifacts.report_json_path.relative_to(root).as_posix(),
+            next_loop_type=LoopType.FRONTEND_EVIDENCE,
+        ),
+    )
+    store.write_json_artifact(
+        artifacts.pointer_path,
+        ImplementationCurrentPointer(
+            loop_id="impl-frontend-cli",
+            loop_run_path=artifacts.loop_run_path.relative_to(root).as_posix(),
+        ),
+    )
+
+
+def _write_frontend_browser_gate_artifact(
+    root: Path,
+    *,
+    work_item_path: str,
+) -> None:
+    gate_run_id = "gate-run-cli"
+    artifact_root = f".ai-sdlc/artifacts/frontend-browser-gate/{gate_run_id}"
+    screenshot_ref = f"{artifact_root}/shared-runtime/navigation-screenshot.png"
+    trace_ref = f"{artifact_root}/shared-runtime/playwright-trace.zip"
+    source_artifact_ref = ".ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml"
+    required_probe_set = [
+        "playwright_smoke",
+        "visual_expectation",
+        "basic_a11y",
+        "interaction_anti_pattern_checks",
+    ]
+    payload = {
+        "generated_at": "2026-07-01T00:00:00Z",
+        "apply_artifact_path": source_artifact_ref,
+        "probe_runtime_state": "completed",
+        "gate_run_id": gate_run_id,
+        "artifact_root": artifact_root,
+        "required_probe_set": required_probe_set,
+        "execution_context": {
+            "gate_run_id": gate_run_id,
+            "apply_result_id": "apply-result-cli",
+            "solution_snapshot_id": "solution-snapshot-cli",
+            "spec_dir": work_item_path,
+            "attachment_scope_ref": "scope:frontend",
+            "managed_frontend_target": "managed/frontend",
+            "readiness_subject_id": "subject-cli",
+            "effective_provider": "public-primevue",
+            "effective_style_pack": "modern-saas",
+            "style_fidelity_status": "verified",
+            "required_probe_set": required_probe_set,
+            "browser_entry_ref": "managed/frontend/index.html",
+        },
+        "runtime_session": {
+            "probe_runtime_session_id": "session-cli",
+            "gate_run_id": gate_run_id,
+            "apply_result_id": "apply-result-cli",
+            "solution_snapshot_id": "solution-snapshot-cli",
+            "spec_dir": work_item_path,
+            "attachment_scope_ref": "scope:frontend",
+            "managed_frontend_target": "managed/frontend",
+            "readiness_subject_id": "subject-cli",
+            "browser_entry_ref": "managed/frontend/index.html",
+            "artifact_root_ref": artifact_root,
+            "status": "completed",
+            "started_at": "2026-07-01T00:00:00Z",
+            "updated_at": "2026-07-01T00:00:01Z",
+            "finished_at": "2026-07-01T00:00:01Z",
+        },
+        "artifact_records": [
+            {
+                "artifact_id": "smoke-screenshot",
+                "gate_run_id": gate_run_id,
+                "check_name": "playwright_smoke",
+                "artifact_type": "navigation_screenshot",
+                "artifact_ref": screenshot_ref,
+                "capture_status": "captured",
+                "captured_at": "2026-07-01T00:00:01Z",
+            },
+            {
+                "artifact_id": "smoke-trace",
+                "gate_run_id": gate_run_id,
+                "check_name": "playwright_smoke",
+                "artifact_type": "playwright_trace",
+                "artifact_ref": trace_ref,
+                "capture_status": "captured",
+                "captured_at": "2026-07-01T00:00:01Z",
+            },
+        ],
+        "bundle_input": {
+            "bundle_id": "bundle-cli",
+            "gate_run_id": gate_run_id,
+            "apply_result_id": "apply-result-cli",
+            "solution_snapshot_id": "solution-snapshot-cli",
+            "spec_dir": work_item_path,
+            "attachment_scope_ref": "scope:frontend",
+            "managed_frontend_target": "managed/frontend",
+            "source_artifact_ref": source_artifact_ref,
+            "readiness_subject_id": "subject-cli",
+            "playwright_trace_refs": [trace_ref],
+            "screenshot_refs": [screenshot_ref],
+            "check_receipts": [
+                _browser_gate_receipt("playwright_smoke", ["smoke-screenshot", "smoke-trace"]),
+                _browser_gate_receipt("visual_expectation", ["smoke-screenshot"]),
+                _browser_gate_receipt("basic_a11y", ["smoke-screenshot"]),
+                _browser_gate_receipt("interaction_anti_pattern_checks", []),
+            ],
+            "smoke_verdict": "pass",
+            "visual_verdict": "pass",
+            "a11y_verdict": "pass",
+            "interaction_anti_pattern_verdict": "pass",
+            "overall_gate_status": "passed",
+            "generated_at": "2026-07-01T00:00:01Z",
+        },
+        "overall_gate_status": "passed",
+        "warnings": [],
+        "plain_language_blockers": [],
+        "recommended_next_steps": [],
+    }
+    artifact_path = (
+        root / ".ai-sdlc" / "memory" / "frontend-browser-gate" / "latest.yaml"
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+
+def _browser_gate_receipt(check_name: str, artifact_ids: list[str]) -> dict[str, object]:
+    return {
+        "check_name": check_name,
+        "started_at": "2026-07-01T00:00:00Z",
+        "finished_at": "2026-07-01T00:00:01Z",
+        "runtime_status": "completed",
+        "artifact_ids": artifact_ids,
+        "classification_candidate": "pass",
+        "requirement_linkage": [f"browser_quality_gate:{check_name}"],
+    }
 
 
 def _write_design_contract_work_item(

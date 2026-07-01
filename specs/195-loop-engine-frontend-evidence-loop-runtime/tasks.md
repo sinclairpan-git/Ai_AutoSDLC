@@ -49,7 +49,7 @@ Batch 4: docs, constraints, final regression, PR review
 ### Task 2.1 新增 frontend-evidence artifact models and store
 
 - **任务编号**：T21
-- **状态**：todo
+- **状态**：done
 - **优先级**：P0
 - **依赖**：T11
 - **文件**：src/ai_sdlc/core/frontend_evidence_models.py, src/ai_sdlc/core/frontend_evidence_store.py, tests/unit/test_frontend_evidence_loop.py
@@ -64,7 +64,7 @@ Batch 4: docs, constraints, final regression, PR review
 ### Task 2.2 实现 start runtime and browser gate artifact ingestion
 
 - **任务编号**：T22
-- **状态**：todo
+- **状态**：done
 - **优先级**：P0
 - **依赖**：T21
 - **文件**：src/ai_sdlc/core/frontend_evidence_loop.py, tests/unit/test_frontend_evidence_loop.py
@@ -84,7 +84,7 @@ Batch 4: docs, constraints, final regression, PR review
 ### Task 3.1 实现 close gate
 
 - **任务编号**：T31
-- **状态**：todo
+- **状态**：done
 - **优先级**：P0
 - **依赖**：T22
 - **文件**：src/ai_sdlc/core/frontend_evidence_loop.py, tests/unit/test_frontend_evidence_loop.py
@@ -99,7 +99,7 @@ Batch 4: docs, constraints, final regression, PR review
 ### Task 3.2 接入 CLI
 
 - **任务编号**：T32
-- **状态**：todo
+- **状态**：done
 - **优先级**：P0
 - **依赖**：T22, T31
 - **文件**：src/ai_sdlc/cli/loop_cmd.py, tests/integration/test_cli_loop.py
@@ -114,7 +114,7 @@ Batch 4: docs, constraints, final regression, PR review
 ### Task 3.3 接入 loop status/list
 
 - **任务编号**：T33
-- **状态**：todo
+- **状态**：done
 - **优先级**：P1
 - **依赖**：T22, T31
 - **文件**：src/ai_sdlc/core/loop_status.py, tests/unit/test_loop_status.py
@@ -133,7 +133,7 @@ Batch 4: docs, constraints, final regression, PR review
 ### Task 4.1 对齐用户文档和约束面
 
 - **任务编号**：T41
-- **状态**：todo
+- **状态**：done
 - **优先级**：P1
 - **依赖**：T32, T33
 - **文件**：README.md, src/ai_sdlc/core/verify_constraints.py, tests/unit/test_verify_constraints.py
@@ -148,7 +148,7 @@ Batch 4: docs, constraints, final regression, PR review
 ### Task 4.2 完成最终回归与 PR 收口
 
 - **任务编号**：T42
-- **状态**：todo
+- **状态**：done
 - **优先级**：P0
 - **依赖**：T41
 - **文件**：specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md, program-manifest.yaml, .ai-sdlc/state/codex-handoff.md

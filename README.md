@@ -95,6 +95,32 @@ verification commands. A closed implementation loop points to `frontend-evidence
 when the work item contains frontend or browser evidence signals; otherwise it
 points to `local-pr-review`.
 
+### Frontend Evidence Loop
+
+After implementation close, run the frontend-evidence loop when the next action
+points to frontend evidence:
+
+```bash
+ai-sdlc program browser-gate-probe --execute
+ai-sdlc loop frontend-evidence start --wi specs/<work-item>
+ai-sdlc loop status --type frontend-evidence
+ai-sdlc loop frontend-evidence close --yes
+```
+
+`ai-sdlc loop frontend-evidence start` writes local frontend evidence artifacts
+under `.ai-sdlc/loops/frontend-evidence/<loop-id>/`, including the browser gate
+input link, normalized evidence snapshot, JSON report, and Markdown report. It
+requires a closed same-work-item implementation loop that explicitly needs
+frontend evidence. The loop consumes local browser gate artifacts from
+`.ai-sdlc/memory/frontend-browser-gate/latest.yaml` or an explicit project-local
+`--artifact-path`; it does not run the browser gate itself, does not call any
+model service, does not modify application code, and does not assume GitHub, CI,
+or a remote preview URL. If browser evidence is missing or stale, rerun
+`ai-sdlc program browser-gate-probe --execute`. If the browser gate reports
+blockers or missing evidence, `close --yes` exits nonzero. If only advisory
+warnings remain, close requires `--allow-warnings` so the warning acceptance is
+recorded before the next loop, `local-pr-review`.
+
 ### Local PR Review Loop
 
 For source-checkout builds that include the local PR review loop, use the

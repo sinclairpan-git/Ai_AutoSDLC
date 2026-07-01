@@ -1326,6 +1326,85 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
             ),
         ),
     ),
+    "195": (
+        FeatureContractSurface(
+            label="frontend-evidence loop core runtime",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "frontend_evidence_loop.py",
+                    ),
+                    required_tokens=(
+                        "start_frontend_evidence_loop",
+                        "close_frontend_evidence_loop",
+                        "CURRENT_FRONTEND_EVIDENCE_PATH",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src")
+                        / "ai_sdlc"
+                        / "core"
+                        / "frontend_evidence_models.py",
+                    ),
+                    required_tokens=(
+                        "FrontendEvidenceInput",
+                        "FrontendEvidenceSnapshot",
+                        "FrontendEvidenceReport",
+                        "FrontendEvidenceClose",
+                        "FrontendEvidenceStartOptions",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="frontend-evidence loop status and CLI",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "core" / "loop_status.py",
+                    ),
+                    required_tokens=(
+                        "FrontendEvidenceLoopSummary",
+                        "_get_frontend_evidence_loop_status",
+                        "_list_frontend_evidence_loops",
+                        "current-frontend-evidence.json",
+                    ),
+                ),
+                FeatureContractEvidence(
+                    relative_paths=(
+                        Path("src") / "ai_sdlc" / "cli" / "loop_cmd.py",
+                    ),
+                    required_tokens=(
+                        "frontend_evidence_app",
+                        "frontend_evidence_start",
+                        "frontend_evidence_close",
+                        "--allow-warnings",
+                        "--type",
+                    ),
+                ),
+            ),
+        ),
+        FeatureContractSurface(
+            label="frontend-evidence loop user docs",
+            evidence_entries=(
+                FeatureContractEvidence(
+                    relative_paths=(Path("README.md"),),
+                    required_tokens=(
+                        "ai-sdlc loop frontend-evidence start",
+                        "ai-sdlc loop status --type frontend-evidence",
+                        "ai-sdlc loop frontend-evidence close --yes",
+                        "ai-sdlc program browser-gate-probe --execute",
+                        "does not call any model service",
+                        "does not modify application code",
+                        "does not assume GitHub",
+                        "--allow-warnings",
+                        "local-pr-review",
+                    ),
+                ),
+            ),
+        ),
+    ),
 }
 
 
@@ -3703,6 +3782,8 @@ def _feature_contract_surfaces_for_checkpoint(
         return FEATURE_CONTRACT_SURFACES["193"]
     if _is_194_work_item(work_item_id):
         return FEATURE_CONTRACT_SURFACES["194"]
+    if _is_195_work_item(work_item_id):
+        return FEATURE_CONTRACT_SURFACES["195"]
     return ()
 
 
@@ -3811,6 +3892,11 @@ def _is_193_work_item(work_item_id: str) -> bool:
 def _is_194_work_item(work_item_id: str) -> bool:
     normalized = work_item_id.strip()
     return normalized == "194" or normalized.startswith("194-") or normalized.startswith("194/")
+
+
+def _is_195_work_item(work_item_id: str) -> bool:
+    normalized = work_item_id.strip()
+    return normalized == "195" or normalized.startswith("195-") or normalized.startswith("195/")
 
 
 def _effective_feature_contract_wi_id(checkpoint: Checkpoint | None) -> str:
