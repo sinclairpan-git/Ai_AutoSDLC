@@ -587,6 +587,35 @@ def test_check_design_contract_loop_ignores_p2_task_detail_gaps(
     }
 
 
+def test_check_design_contract_loop_requires_verification_command(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, verification_value="")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-empty-verification",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-empty-verification"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "task_verification_gap" in {
+        finding["code"] for finding in report["findings"]
+    }
+
+
 def test_check_design_contract_loop_checks_plan_scope_drift(tmp_path: Path) -> None:
     _write_work_item(tmp_path, plan_extra="Touch implementation_loop.py.")
 
@@ -1067,6 +1096,7 @@ def _write_work_item(
     success_heading: str = "## 成功标准",
     acceptance_label: str = "- **验收标准**",
     verification_label: str = "- **验证**",
+    verification_value: str = "uv run pytest tests/unit/test_demo.py -q",
     tasks_intro_extra: str = "",
     tasks_tail_extra: str = "",
     extra_task_sections: str = "",
@@ -1125,7 +1155,7 @@ def _write_work_item(
                 "- **任务编号**：T11",
                 "- **优先级**：P0",
                 f"{acceptance_label}：Cover {refs}.",
-                f"{verification_label}：uv run pytest tests/unit/test_demo.py -q",
+                f"{verification_label}：{verification_value}",
                 extra_task_sections,
                 tasks_tail_extra,
             ]

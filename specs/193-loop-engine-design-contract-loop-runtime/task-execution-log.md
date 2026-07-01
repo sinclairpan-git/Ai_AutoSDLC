@@ -464,6 +464,65 @@
 - 当前批次 worktree disposition 状态：retained（主工作区）
 - 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
 
+### Batch 14：第十五轮 PR #110 Codex review remediation
+
+#### 14.1 本批目标
+
+- 修复 PR #110 最新 Codex review P2：P0/P1 task 只有 `验证` / `Verification` 标签但没有实际命令时，不得视为满足 verification command gate。
+
+#### 14.2 变更范围
+
+- **验证画像**：code-change
+- `src/ai_sdlc/core/design_contract_checks.py`
+  - `_has_task_verification` 从“出现验证标签即可通过”改为“验证标签关联的 inline 或后续行内容必须包含实际命令 token”。
+  - 支持常见命令入口：`uv run`、`python`、`pytest`、`ai-sdlc`、`npm/pnpm/yarn/npx`、`playwright`、`ruff`、`mypy`、`git diff --check` 等。
+- `tests/unit/test_design_contract_loop.py`
+  - 新增空 verification label 触发 `task_verification_gap` 的 regression。
+
+#### 14.3 验证记录
+
+- `V66`（fifteenth Codex review verification-command remediation）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`35 passed`。
+- `V67`（fifteenth remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`243 passed`。
+- `V68`（fifteenth remediation ruff / mypy / constraints / diff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_checks.py tests/unit/test_design_contract_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V69`（program truth sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过，snapshot hash `17df686643c1befea1705b374a08fd8310d7711735674940bac18958908384b7`，已写入 `program-manifest.yaml`。
+- `V70`（pre-commit work item close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime`
+  - 结果：除 `git_closure` 因当前修复尚未提交而 BLOCKER 外，其余检查 PASS；提交后需复跑至 PASS。
+
+#### 14.4 代码审查结论
+
+- 宪章/规格对齐：本批继续收紧 design-contract 对 P0/P1 task 的验证命令要求，避免无可执行验证步骤的合同进入 close。
+- 质量风险：新增空 verification label regression，覆盖 Codex 最新 actionable comment。
+- 结论：可刷新 truth、close-check、提交、推送并重新请求 Codex review。
+
+#### 14.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：T41/T42 保持完成；本批为 PR review remediation，不新增交付范围。
+- `related_plan`（如存在）同步状态：无 related_plan；plan 边界仍为 design-contract loop。
+- 关联 branch/worktree disposition 计划：继续使用 PR #110 head branch。
+
+#### 14.6 归档后动作
+
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- **提交哈希**：当前 close-out commit，以 `git log -1` 为准
+- 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier
+- 当前批次 worktree disposition 状态：retained（主工作区）
+- 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
+
 ### Batch 13：第十四轮 PR #110 Codex review remediation
 
 #### 13.1 本批目标

@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-01T12:11:04+00:00
-- Reason: after fourteenth PR #110 remediation post-commit close-check PASS
+- Updated: 2026-07-01T12:49:07+00:00
+- Reason: after fifteenth PR #110 remediation post-commit close-check PASS
 - Goal: Complete five Loop Engine loop types one by one; current slice is WI-193 design-contract loop PR review.
-- State: PR #110 latest Codex P2 remediation is committed locally in the latest commit: design-contract check validates an explicit requirement_loop_id against an existing frozen requirement loop before writing passed artifacts. Verification passed: design-contract unit 34 passed, focused regression 242 passed, ruff passed, mypy passed, verify constraints passed, diff check passed, truth sync snapshot a0701c375bee9a0a069867fb866999debe4f1971bea16041859faec78efa522f, and post-commit workitem close-check PASS.
+- State: PR #110 latest Codex P2 remediation is committed locally in the latest commit: P0/P1 task verification now requires an actual command-like value instead of only a verification label. Verification passed: design-contract unit 35 passed, focused regression 243 passed, ruff passed, mypy passed, verify constraints passed, diff check passed, truth sync snapshot 17df686643c1befea1705b374a08fd8310d7711735674940bac18958908384b7, and post-commit workitem close-check PASS.
 - Stage: execute
 - Work Item: 193-loop-engine-design-contract-loop-runtime
 - Branch: feature/193-loop-engine-design-contract-loop-runtime-docs
@@ -12,7 +12,7 @@
 - none
 
 ## Key Decisions
-- When requirement_loop_id is supplied, missing, unfrozen, mismatched, or malformed requirement freeze artifacts block design-contract check before implementation handoff.
+- Verification labels without executable command tokens are blockers for P0/P1 design-contract tasks.
 
 ## Commands / Tests
 - uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime => PASS

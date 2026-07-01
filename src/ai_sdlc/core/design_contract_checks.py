@@ -19,6 +19,25 @@ _CONTRACT_ID = re.compile(r"\b(?:FR|SC)(?:-[A-Za-z0-9]+)*-\d{3}\b")
 _TASK_ID = re.compile(r"\bT\d{2,3}\b")
 _TASK_SECTION = re.compile(r"(?m)^###\s+(?:Task|任务)\b.*$")
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+_VERIFICATION_LABEL = re.compile(r"(?:验证|verification|validation)", re.IGNORECASE)
+_VERIFICATION_COMMAND = re.compile(
+    r"(?i)(?:"
+    r"\buv\s+run\b|"
+    r"\bpython(?:\s+-m)?\b|"
+    r"\bpytest\b|"
+    r"\bai-sdlc\b|"
+    r"\b(?:npm|pnpm|yarn|npx)\b|"
+    r"\bplaywright\b|"
+    r"\b(?:ruff|mypy|pyright)\b|"
+    r"\b(?:vitest|eslint|prettier|tsc)\b|"
+    r"\bgit\s+diff\s+--check\b|"
+    r"\bmake\b|"
+    r"\bgo\s+test\b|"
+    r"\bcargo\s+test\b|"
+    r"\bdotnet\s+test\b|"
+    r"\b(?:mvn|gradle)\b"
+    r")"
+)
 _DRAFT_STATUS = re.compile(
     r"(?im)^\s*(?:[-*]\s*)?"
     r"(?:\*\*)?\s*(?:状态|status)\s*(?:\*\*)?"
@@ -381,8 +400,42 @@ def _has_task_acceptance(section: str) -> bool:
 
 
 def _has_task_verification(section: str) -> bool:
-    lower = section.lower()
-    return "验证" in section or "verification" in lower or "validation" in lower
+    lines = section.splitlines()
+    for index, line in enumerate(lines):
+        if not _VERIFICATION_LABEL.search(line):
+            continue
+        candidates = [_verification_label_value(line)]
+        candidates.extend(_following_verification_lines(lines[index + 1 :]))
+        if any(_looks_like_verification_command(candidate) for candidate in candidates):
+            return True
+    return False
+
+
+def _verification_label_value(line: str) -> str:
+    if "：" in line:
+        return line.split("：", 1)[1].strip()
+    if ":" in line:
+        return line.split(":", 1)[1].strip()
+    return ""
+
+
+def _following_verification_lines(lines: list[str]) -> list[str]:
+    values: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith("#") or re.search(r"\*\*[^*]+\*\*\s*[:：]", stripped):
+            break
+        values.append(stripped)
+        if len(values) >= 3:
+            break
+    return values
+
+
+def _looks_like_verification_command(value: str) -> bool:
+    cleaned = value.strip().strip("`").strip()
+    return bool(cleaned and _VERIFICATION_COMMAND.search(cleaned))
 
 
 def _task_priority(section: str) -> str:
