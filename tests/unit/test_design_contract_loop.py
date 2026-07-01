@@ -877,6 +877,49 @@ def test_check_design_contract_loop_preserves_closed_current_default_recheck(
     assert pointer["loop_id"] == check_result.loop_id
 
 
+def test_check_design_contract_loop_dry_run_after_close_stays_preview(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path)
+    check_result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+        )
+    )
+    close_design_contract_loop(
+        DesignContractCloseOptions(root=tmp_path, loop_id=check_result.loop_id, yes=True)
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-dry-after-close",
+            dry_run=True,
+        )
+    )
+
+    assert result.status == "dry_run"
+    assert result.dry_run is True
+    assert result.closed is False
+    assert result.loop_status == "created"
+    assert result.loop_id == "dc-dry-after-close"
+    assert result.next_guidance.writes_artifacts is True
+
+    pointer = json.loads(
+        (tmp_path / CURRENT_DESIGN_CONTRACT_PATH).read_text(encoding="utf-8")
+    )
+    assert pointer["loop_id"] == check_result.loop_id
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "design-contract"
+        / "dc-dry-after-close"
+    ).exists()
+
+
 def test_close_design_contract_loop_requires_yes(tmp_path: Path) -> None:
     _write_work_item(tmp_path)
     check_design_contract_loop(

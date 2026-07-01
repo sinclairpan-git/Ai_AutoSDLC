@@ -66,7 +66,7 @@ def check_design_contract_loop(
 
     root = options.root.resolve()
     work_item_dir, work_item_blocker = resolve_work_item_dir(root, options.work_item)
-    if not options.loop_id.strip() and not work_item_blocker:
+    if not options.dry_run and not options.loop_id.strip() and not work_item_blocker:
         closed_current_result = _closed_current_recheck_result(root, work_item_dir)
         if closed_current_result is not None:
             return closed_current_result
