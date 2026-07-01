@@ -1225,6 +1225,30 @@ def _write_frontend_browser_gate_artifact(
         "basic_a11y",
         "interaction_anti_pattern_checks",
     ]
+    artifact_records = [
+        {
+            "artifact_id": "smoke-screenshot",
+            "gate_run_id": gate_run_id,
+            "check_name": "playwright_smoke",
+            "artifact_type": "navigation_screenshot",
+            "artifact_ref": screenshot_ref,
+            "capture_status": "captured",
+            "captured_at": "2026-07-01T00:00:01Z",
+        },
+        {
+            "artifact_id": "smoke-trace",
+            "gate_run_id": gate_run_id,
+            "check_name": "playwright_smoke",
+            "artifact_type": "playwright_trace",
+            "artifact_ref": trace_ref,
+            "capture_status": "captured",
+            "captured_at": "2026-07-01T00:00:01Z",
+        },
+    ]
+    for record in artifact_records:
+        local_artifact_path = root / str(record["artifact_ref"])
+        local_artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        local_artifact_path.write_text("frontend evidence artifact\n", encoding="utf-8")
     payload = {
         "generated_at": "2026-07-01T00:00:00Z",
         "apply_artifact_path": source_artifact_ref,
@@ -1262,26 +1286,7 @@ def _write_frontend_browser_gate_artifact(
             "updated_at": "2026-07-01T00:00:01Z",
             "finished_at": "2026-07-01T00:00:01Z",
         },
-        "artifact_records": [
-            {
-                "artifact_id": "smoke-screenshot",
-                "gate_run_id": gate_run_id,
-                "check_name": "playwright_smoke",
-                "artifact_type": "navigation_screenshot",
-                "artifact_ref": screenshot_ref,
-                "capture_status": "captured",
-                "captured_at": "2026-07-01T00:00:01Z",
-            },
-            {
-                "artifact_id": "smoke-trace",
-                "gate_run_id": gate_run_id,
-                "check_name": "playwright_smoke",
-                "artifact_type": "playwright_trace",
-                "artifact_ref": trace_ref,
-                "capture_status": "captured",
-                "captured_at": "2026-07-01T00:00:01Z",
-            },
-        ],
+        "artifact_records": artifact_records,
         "bundle_input": {
             "bundle_id": "bundle-cli",
             "gate_run_id": gate_run_id,

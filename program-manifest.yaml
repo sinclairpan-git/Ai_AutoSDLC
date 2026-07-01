@@ -1882,10 +1882,10 @@ specs:
   depends_on: []
   frontend_evidence_class: framework_capability
 truth_snapshot:
-  generated_at: '2026-07-01T19:05:32Z'
+  generated_at: '2026-07-01T19:29:06Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 60f10411
+  repo_revision: 9dd7b144
   authoring_hash: b86bcfa1f374ab297a564b58b09df23e468157278de27a91a0c75805e4dea88a
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1925,7 +1925,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 7c9529fba202780015e19354b6d9806e9da22c41a8d3b81f6b212a011ec5f7db
+  snapshot_hash: adeb0d8ff6269ff8c5895a1bf4a11e56167bd229aa33f9b0d81723bd9acf4eb4
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1944,8 +1944,8 @@ truth_snapshot:
     mapped_sources: 1003
     unmapped_sources: 28
     missing_sources: 10
-    phase_signal_count: 3499
-    deferred_signal_count: 6318
+    phase_signal_count: 3502
+    deferred_signal_count: 6321
     non_goal_signal_count: 341
     layer_totals:
       blueprint: 1
@@ -10787,8 +10787,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 195-loop-engine-frontend-evidence-loop-runtime
-      phase_signal_count: 1
-      deferred_signal_count: 2
+      phase_signal_count: 4
+      deferred_signal_count: 5
       non_goal_signal_count: 0
     - path: specs/195-loop-engine-frontend-evidence-loop-runtime/development-summary.md
       source_type: development_summary

@@ -352,6 +352,7 @@ def _build_snapshot(
             ),
         )
     namespace_blocker = _namespace_blocker(
+        root,
         execution_context,
         runtime_session,
         artifact_records,
@@ -429,6 +430,7 @@ def _build_snapshot(
 
 
 def _namespace_blocker(
+    root: Path,
     execution_context: BrowserQualityGateExecutionContext,
     runtime_session: BrowserGateProbeRuntimeSession,
     artifact_records: list[BrowserProbeArtifactRecord],
@@ -444,12 +446,42 @@ def _namespace_blocker(
         return "Frontend browser gate artifact gate_run_id linkage is inconsistent."
     if runtime_session.artifact_root_ref != expected_artifact_root:
         return "Frontend browser gate artifact root namespace is inconsistent."
+    records_by_id: dict[str, BrowserProbeArtifactRecord] = {}
     for record in artifact_records:
         if record.gate_run_id != bundle.gate_run_id:
             return "Frontend browser gate artifact record gate_run_id is inconsistent."
+        if record.artifact_id in records_by_id:
+            return (
+                "Frontend browser gate artifact record id is duplicated: "
+                f"{record.artifact_id}."
+            )
+        records_by_id[record.artifact_id] = record
         if not record.artifact_ref.startswith(f"{expected_artifact_root}/"):
             return "Frontend browser gate artifact record escapes the gate namespace."
+        artifact_path = (root / record.artifact_ref).resolve()
+        if not _is_relative_to(artifact_path, root):
+            return "Frontend browser gate artifact record escapes the project root."
+        if not artifact_path.is_file():
+            return (
+                "Frontend browser gate artifact record file is missing: "
+                f"{record.artifact_ref}."
+            )
+    for receipt in bundle.check_receipts:
+        for artifact_id in receipt.artifact_ids:
+            if artifact_id not in records_by_id:
+                return (
+                    "Frontend browser gate receipt references missing artifact "
+                    f"record {artifact_id} for {receipt.check_name}."
+                )
     return ""
+
+
+def _is_relative_to(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
 
 
 def _build_report(

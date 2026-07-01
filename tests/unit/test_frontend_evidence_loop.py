@@ -145,6 +145,53 @@ def test_start_frontend_evidence_loop_blocks_scope_mismatch(tmp_path: Path) -> N
     assert "demo-frontend" in result.blocker
 
 
+def test_start_frontend_evidence_loop_blocks_missing_receipt_artifact_record(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+        omitted_artifact_record_ids=["smoke-trace"],
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-missing-receipt-record",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "references missing artifact record smoke-trace" in result.blocker
+
+
+def test_start_frontend_evidence_loop_blocks_missing_receipt_artifact_file(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+        missing_artifact_file_ids=["smoke-trace"],
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-missing-receipt-file",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "artifact record file is missing" in result.blocker
+    assert "playwright-trace.zip" in result.blocker
+
+
 def test_close_frontend_evidence_loop_requires_allow_warnings(
     tmp_path: Path,
 ) -> None:
@@ -316,6 +363,8 @@ def _write_browser_gate_artifact(
     blocking_reason_codes: list[str] | None = None,
     advisory_reason_codes: list[str] | None = None,
     remediation_hints: list[str] | None = None,
+    omitted_artifact_record_ids: list[str] | None = None,
+    missing_artifact_file_ids: list[str] | None = None,
 ) -> Path:
     gate_run_id = "gate-run-001"
     artifact_root = f".ai-sdlc/artifacts/frontend-browser-gate/{gate_run_id}"
@@ -329,6 +378,49 @@ def _write_browser_gate_artifact(
         "basic_a11y",
         "interaction_anti_pattern_checks",
     ]
+    artifact_records = [
+        {
+            "artifact_id": "smoke-screenshot",
+            "gate_run_id": gate_run_id,
+            "check_name": "playwright_smoke",
+            "artifact_type": "navigation_screenshot",
+            "artifact_ref": screenshot_ref,
+            "capture_status": "captured",
+            "captured_at": "2026-07-01T00:00:01Z",
+        },
+        {
+            "artifact_id": "smoke-trace",
+            "gate_run_id": gate_run_id,
+            "check_name": "playwright_smoke",
+            "artifact_type": "playwright_trace",
+            "artifact_ref": trace_ref,
+            "capture_status": "captured",
+            "captured_at": "2026-07-01T00:00:01Z",
+        },
+        {
+            "artifact_id": "interaction-snapshot",
+            "gate_run_id": gate_run_id,
+            "check_name": "interaction_anti_pattern_checks",
+            "artifact_type": "interaction_snapshot",
+            "artifact_ref": interaction_ref,
+            "capture_status": "captured",
+            "captured_at": "2026-07-01T00:00:01Z",
+        },
+    ]
+    omitted_record_ids = set(omitted_artifact_record_ids or [])
+    artifact_records = [
+        record
+        for record in artifact_records
+        if str(record["artifact_id"]) not in omitted_record_ids
+    ]
+    missing_file_ids = set(missing_artifact_file_ids or [])
+    for record in artifact_records:
+        if str(record["artifact_id"]) in missing_file_ids:
+            continue
+        local_artifact_path = tmp_path / str(record["artifact_ref"])
+        local_artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        local_artifact_path.write_text("frontend evidence artifact\n", encoding="utf-8")
+
     payload = {
         "generated_at": "2026-07-01T00:00:00Z",
         "apply_artifact_path": source_artifact_ref,
@@ -370,35 +462,7 @@ def _write_browser_gate_artifact(
             "updated_at": "2026-07-01T00:00:01Z",
             "finished_at": "2026-07-01T00:00:01Z",
         },
-        "artifact_records": [
-            {
-                "artifact_id": "smoke-screenshot",
-                "gate_run_id": gate_run_id,
-                "check_name": "playwright_smoke",
-                "artifact_type": "navigation_screenshot",
-                "artifact_ref": screenshot_ref,
-                "capture_status": "captured",
-                "captured_at": "2026-07-01T00:00:01Z",
-            },
-            {
-                "artifact_id": "smoke-trace",
-                "gate_run_id": gate_run_id,
-                "check_name": "playwright_smoke",
-                "artifact_type": "playwright_trace",
-                "artifact_ref": trace_ref,
-                "capture_status": "captured",
-                "captured_at": "2026-07-01T00:00:01Z",
-            },
-            {
-                "artifact_id": "interaction-snapshot",
-                "gate_run_id": gate_run_id,
-                "check_name": "interaction_anti_pattern_checks",
-                "artifact_type": "interaction_snapshot",
-                "artifact_ref": interaction_ref,
-                "capture_status": "captured",
-                "captured_at": "2026-07-01T00:00:01Z",
-            },
-        ],
+        "artifact_records": artifact_records,
         "bundle_input": {
             "bundle_id": "bundle-001",
             "gate_run_id": gate_run_id,

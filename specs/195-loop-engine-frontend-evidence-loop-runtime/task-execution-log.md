@@ -262,3 +262,77 @@
 - 当前批次 branch disposition 状态：`feature/195-loop-engine-frontend-evidence-loop-runtime-docs` 作为 PR merge carrier，提交后推送并创建 PR
 - 当前批次 worktree disposition 状态：提交后进入 PR / Codex review 监控
 - 是否继续下一批：提交、推送、PR、Codex review、merge
+
+### Batch 2026-07-01-004 | Codex review receipt artifact remediation
+
+#### 4.1 批次范围
+
+- 覆盖任务：`T42-R1`
+- 覆盖阶段：PR #112 Codex review P1 remediation
+- 改动范围：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`tests/integration/test_cli_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/195-loop-engine-frontend-evidence-loop-runtime/codex-handoff.md`
+
+#### 4.2 任务来源
+
+- 审查来源：PR #112 Codex review inline comment `3508505515`
+- 问题级别：P1
+- 问题摘要：browser gate receipt 引用 artifact IDs 时，frontend-evidence loop 只校验已有 `artifact_records` 的 namespace，没有强制每个 receipt artifact ID 解析到 namespaced record 和真实本地文件，可能让截断或不完整证据误判为 passed。
+
+#### 4.3 修复内容
+
+- `_namespace_blocker` 增加 receipt artifact closure 校验：
+  - artifact record id 不得重复。
+  - 每个 artifact record 必须位于 `.ai-sdlc/artifacts/frontend-browser-gate/<gate-run-id>/` namespace。
+  - 每个 artifact record 解析后的路径必须仍在项目根目录内。
+  - 每个 artifact record 必须对应存在的本地文件。
+  - 每个 receipt 的 artifact ID 必须能反向解析到 artifact record。
+- 单元测试新增两个 fail-closed 场景：
+  - receipt 引用缺失的 artifact record。
+  - artifact record 存在但本地文件缺失。
+- CLI 集成测试 fixture 补齐真实本地 browser artifact 文件，保证正常路径也覆盖文件存在要求。
+
+#### 4.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py -q`
+- `V2`：`uv run pytest tests/integration/test_cli_loop.py -q`
+- `V3`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V4`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V5`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V6`：`git diff --check`
+- `V7`：`uv run ai-sdlc verify constraints`
+- `V8`：`uv run ai-sdlc program truth sync --execute --yes`
+
+#### 4.5 验证结果
+
+- unit targeted：8 passed
+- CLI integration：35 passed
+- focused regression：230 passed
+- ruff：PASS
+- mypy：PASS，5 source files
+- diff check：PASS
+- verify constraints：PASS，no BLOCKERs
+- truth sync：PASS，written path `program-manifest.yaml`
+
+#### 4.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；本批只修 Codex review 指出的 frontend-evidence evidence integrity 问题，不扩展到 browser gate 重实现、模型调用或 GitHub 专用逻辑。
+- 代码质量：新增校验位于 ingestion trust boundary，错误 fail-readable，避免 close gate 接收截断证据。
+- 测试质量：新增缺 record 与缺文件回归，并保持 CLI happy path、status/list、docs constraints 不回归。
+- 结论：提交后推送 PR #112，重新请求 Codex review 并继续 required checks heartbeat。
+
+#### 4.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 仍为完成状态；本批为 PR review remediation。
+- `related_plan` 同步状态：不改变 WI-195 范围；仍只交付 `frontend-evidence` loop。
+- 关联 branch/worktree disposition 计划：继续使用 PR #112 carrier branch。
+
+#### 4.8 归档后动作
+
+- Codex review P1 已修复并通过 focused regression；下一步提交、推送并重新请求 Codex review。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`tests/integration/test_cli_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/195-loop-engine-frontend-evidence-loop-runtime/codex-handoff.md`
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- **提交哈希**：`HEAD`
+- 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
+- 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并
