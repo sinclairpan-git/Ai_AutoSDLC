@@ -261,11 +261,20 @@ def _current_work_item_path(root: Path) -> str:
     if not isinstance(payload, dict):
         return ""
     plan_uri = payload.get("linked_plan_uri")
-    if isinstance(plan_uri, str) and plan_uri.strip():
-        return str(Path(plan_uri).parent)
     wi_id = payload.get("linked_wi_id")
+    if isinstance(plan_uri, str) and plan_uri.strip():
+        plan_path = Path(plan_uri)
+        plan_parent = plan_path.parent
+        if (
+            plan_path.name == "plan.md"
+            and len(plan_parent.parts) == 2
+            and plan_parent.parts[0] == "specs"
+        ):
+            return plan_parent.as_posix()
     if isinstance(wi_id, str) and wi_id.strip():
         return f"specs/{wi_id}"
+    if isinstance(plan_uri, str) and plan_uri.strip():
+        return str(Path(plan_uri).parent)
     feature = payload.get("feature")
     if isinstance(feature, dict):
         spec_dir = feature.get("spec_dir")

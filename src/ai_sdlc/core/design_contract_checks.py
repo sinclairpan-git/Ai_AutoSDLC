@@ -332,6 +332,9 @@ def _task_findings(path: Path, text: str) -> list[DesignContractFinding]:
         task_id = next(iter(_TASK_ID.findall(section)), "")
         if not task_id:
             continue
+        priority = _task_priority(section)
+        if priority and priority not in {"P0", "P1"}:
+            continue
         if not _has_task_acceptance(section):
             findings.append(
                 _finding(
@@ -380,6 +383,11 @@ def _has_task_acceptance(section: str) -> bool:
 def _has_task_verification(section: str) -> bool:
     lower = section.lower()
     return "验证" in section or "verification" in lower or "validation" in lower
+
+
+def _task_priority(section: str) -> str:
+    match = re.search(r"(?:优先级|priority)[^\n]*(P[0-9])\b", section, re.IGNORECASE)
+    return match.group(1).upper() if match else ""
 
 
 def _scope_drift_findings(

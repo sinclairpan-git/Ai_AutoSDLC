@@ -441,6 +441,50 @@ def test_check_design_contract_loop_accepts_english_task_labels(
     assert result.blocker_count == 0
 
 
+def test_check_design_contract_loop_ignores_p2_task_detail_gaps(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(
+        tmp_path,
+        extra_task_sections="\n".join(
+            [
+                "",
+                "### Task 2.1 Deferred polish",
+                "",
+                "- **任务编号**：T12",
+                "- **优先级**：P2",
+                "- Backlog note without acceptance or verification details.",
+            ]
+        ),
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-p2-task-gap",
+        )
+    )
+
+    assert result.status == "ready"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-p2-task-gap"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "task_acceptance_gap" not in {
+        finding["code"] for finding in report["findings"]
+    }
+    assert "task_verification_gap" not in {
+        finding["code"] for finding in report["findings"]
+    }
+
+
 def test_check_design_contract_loop_checks_plan_scope_drift(tmp_path: Path) -> None:
     _write_work_item(tmp_path, plan_extra="Touch implementation_loop.py.")
 
@@ -881,6 +925,34 @@ def test_check_design_contract_loop_uses_checkpoint_feature_spec_dir(
     assert result.work_item_path == "specs/demo-contract"
 
 
+def test_check_design_contract_loop_prefers_checkpoint_linked_wi_id(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path)
+    checkpoint = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
+    checkpoint.parent.mkdir(parents=True)
+    checkpoint.write_text(
+        "\n".join(
+            [
+                "current_stage: execute",
+                "linked_plan_uri: .cursor/plans/demo.plan.md",
+                "linked_wi_id: demo-contract",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            loop_id="dc-checkpoint-linked-wi",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.work_item_path == "specs/demo-contract"
+
+
 def _write_work_item(
     root: Path,
     *,
@@ -895,6 +967,7 @@ def _write_work_item(
     verification_label: str = "- **验证**",
     tasks_intro_extra: str = "",
     tasks_tail_extra: str = "",
+    extra_task_sections: str = "",
     spec_status_line: str = "**状态**：已冻结",
 ) -> Path:
     work_item = root / relative_path
@@ -951,6 +1024,7 @@ def _write_work_item(
                 "- **优先级**：P0",
                 f"{acceptance_label}：Cover {refs}.",
                 f"{verification_label}：uv run pytest tests/unit/test_demo.py -q",
+                extra_task_sections,
                 tasks_tail_extra,
             ]
         ),

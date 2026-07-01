@@ -876,3 +876,66 @@
 - 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier
 - 当前批次 worktree disposition 状态：retained（主工作区）
 - 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
+
+### Batch 12：第十三轮 PR #110 Codex review remediation
+
+#### 12.1 本批目标
+
+- 修复 PR #110 最新 Codex review P2：checkpoint 同时存在外部 `linked_plan_uri` 和 `linked_wi_id` 时，design-contract no-`--wi` 路径应优先使用 canonical `specs/<linked_wi_id>`。
+- 修复 PR #110 最新 Codex review P2：task acceptance/verification 必填 gate 只强制 P0/P1；P2/P3 backlog task 不应阻断 implementation-ready contract。
+
+#### 12.2 变更范围
+
+- **验证画像**：code-change
+- `src/ai_sdlc/core/design_contract_store.py`
+  - `_current_work_item_path` 仅当 `linked_plan_uri` 指向 canonical `specs/<wi>/plan.md` 时优先 plan parent；否则优先 `linked_wi_id`。
+- `src/ai_sdlc/core/design_contract_checks.py`
+  - `_task_findings` 解析 task priority，P2/P3 task 跳过 acceptance / verification 必填 blocker。
+  - 新增 `_task_priority`。
+- `tests/unit/test_design_contract_loop.py`
+  - 新增 checkpoint external plan + linked_wi_id regression。
+  - 新增 P2 task 缺少 acceptance / verification 不阻断的 regression。
+
+#### 12.3 验证记录
+
+- `V56`（thirteenth Codex review checkpoint/P2-task remediation）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`31 passed`。
+- `V57`（thirteenth remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`239 passed`。
+- `V58`（thirteenth remediation ruff / mypy / constraints / diff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py tests/unit/test_design_contract_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V59`（program truth sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过，snapshot hash `1059cf3a0b3607539e0d11a8ddcd63f01606718ac7388b74b85053ae428515c7`，已写入 `program-manifest.yaml`。
+- `V60`（pre-commit work item close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime`
+  - 结果：除 `git_closure` 因当前修复尚未提交而 BLOCKER 外，其余检查 PASS；提交后需复跑至 PASS。
+
+#### 12.4 代码审查结论
+
+- 宪章/规格对齐：本批修复 no-`--wi` 当前 work item 解析和低优先级 backlog task gate，保持 design-contract loop 可服务真实用户项目。
+- 质量风险：新增 checkpoint 和 P2 task regression，避免把外部 plan URI 或 backlog 任务误判成 blocker。
+- 结论：可刷新 truth、close-check、提交、推送并重新请求 Codex review。
+
+#### 12.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：T41/T42 保持完成；本批为 PR review remediation，不新增交付范围。
+- `related_plan`（如存在）同步状态：无 related_plan；plan 边界仍为 design-contract loop。
+- 关联 branch/worktree disposition 计划：继续使用 PR #110 head branch。
+
+#### 12.6 归档后动作
+
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- **提交哈希**：当前 close-out commit，以 `git log -1` 为准
+- 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier
+- 当前批次 worktree disposition 状态：retained（主工作区）
+- 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
