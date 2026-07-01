@@ -192,6 +192,52 @@ def test_start_frontend_evidence_loop_blocks_missing_receipt_artifact_file(
     assert "playwright-trace.zip" in result.blocker
 
 
+def test_start_frontend_evidence_loop_blocks_failed_runtime_session(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+        runtime_session_status="failed",
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-failed-runtime-session",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "runtime session is not completed: failed" in result.blocker
+
+
+def test_start_frontend_evidence_loop_blocks_failed_probe_runtime_state(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+        probe_runtime_state="failed",
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-failed-probe-state",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "probe runtime state is not completed: failed" in result.blocker
+
+
 def test_close_frontend_evidence_loop_requires_allow_warnings(
     tmp_path: Path,
 ) -> None:
@@ -365,6 +411,8 @@ def _write_browser_gate_artifact(
     remediation_hints: list[str] | None = None,
     omitted_artifact_record_ids: list[str] | None = None,
     missing_artifact_file_ids: list[str] | None = None,
+    probe_runtime_state: str = "completed",
+    runtime_session_status: str = "completed",
 ) -> Path:
     gate_run_id = "gate-run-001"
     artifact_root = f".ai-sdlc/artifacts/frontend-browser-gate/{gate_run_id}"
@@ -424,7 +472,7 @@ def _write_browser_gate_artifact(
     payload = {
         "generated_at": "2026-07-01T00:00:00Z",
         "apply_artifact_path": source_artifact_ref,
-        "probe_runtime_state": "completed",
+        "probe_runtime_state": probe_runtime_state,
         "gate_run_id": gate_run_id,
         "artifact_root": artifact_root,
         "required_probe_set": required_probe_set,
@@ -457,7 +505,7 @@ def _write_browser_gate_artifact(
             "readiness_subject_id": "subject-001",
             "browser_entry_ref": "managed/frontend/index.html",
             "artifact_root_ref": artifact_root,
-            "status": "completed",
+            "status": runtime_session_status,
             "started_at": "2026-07-01T00:00:00Z",
             "updated_at": "2026-07-01T00:00:01Z",
             "finished_at": "2026-07-01T00:00:01Z",

@@ -1130,6 +1130,60 @@ def test_loop_frontend_evidence_start_status_and_close_json(
     assert close_payload["next_action"] == "Run ai-sdlc pr-review start."
 
 
+def test_loop_frontend_evidence_start_needs_fix_exits_nonzero(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_frontend_work_item(tmp_path)
+    _write_closed_frontend_implementation(tmp_path, work_item)
+    _write_frontend_browser_gate_artifact(tmp_path, work_item_path="specs/demo-frontend")
+    artifact_path = (
+        tmp_path / ".ai-sdlc" / "memory" / "frontend-browser-gate" / "latest.yaml"
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    payload["overall_gate_status"] = "incomplete"
+    payload["bundle_input"]["overall_gate_status"] = "incomplete"
+    payload["bundle_input"]["smoke_verdict"] = "evidence_missing"
+    payload["bundle_input"]["blocking_reason_codes"] = [
+        "playwright_probe_evidence_missing"
+    ]
+    payload["bundle_input"]["check_receipts"][0].update(
+        {
+            "runtime_status": "incomplete",
+            "classification_candidate": "evidence_missing",
+            "recheck_required": True,
+            "blocking_reason_codes": ["playwright_probe_evidence_missing"],
+            "remediation_hints": ["rerun browser gate probe"],
+        }
+    )
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        start = runner.invoke(
+            app,
+            [
+                "loop",
+                "frontend-evidence",
+                "start",
+                "--wi",
+                "specs/demo-frontend",
+                "--implementation-loop-id",
+                "impl-frontend-cli",
+                "--loop-id",
+                "fe-cli-needs-fix",
+                "--json",
+            ],
+        )
+
+    assert start.exit_code == 1
+    start_payload = json.loads(start.output)
+    assert start_payload["status"] == "needs_fix"
+    assert start_payload["loop_status"] == "needs_fix"
+    assert start_payload["blocker_count"] >= 1
+
+
 def test_python_module_help_fallback_lists_loop() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "ai_sdlc", "--help"],

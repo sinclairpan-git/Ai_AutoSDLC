@@ -351,6 +351,14 @@ def _build_snapshot(
                 "work item, or pass --artifact-path to the matching local artifact."
             ),
         )
+    probe_runtime_state = str(payload.get("probe_runtime_state", "")).strip()
+    runtime_state_blocker = _runtime_state_blocker(runtime_session, probe_runtime_state)
+    if runtime_state_blocker:
+        return _blocked_result(
+            runtime_state_blocker,
+            loop_id=frontend_input.loop_id,
+            next_action="Run ai-sdlc program browser-gate-probe --execute.",
+        )
     namespace_blocker = _namespace_blocker(
         root,
         execution_context,
@@ -368,7 +376,7 @@ def _build_snapshot(
         execution_context=execution_context,
         bundle=bundle,
         artifact_path=frontend_input.source_artifact_path,
-        probe_runtime_state=str(payload.get("probe_runtime_state", "")).strip(),
+        probe_runtime_state=probe_runtime_state,
         apply_artifact_path=str(payload.get("apply_artifact_path", "")).strip(),
     )
     receipts = [
@@ -402,8 +410,7 @@ def _build_snapshot(
         artifact_root=str(payload.get("artifact_root", "")).strip()
         or runtime_session.artifact_root_ref,
         apply_artifact_path=str(payload.get("apply_artifact_path", "")).strip(),
-        probe_runtime_state=str(payload.get("probe_runtime_state", "")).strip()
-        or runtime_session.status,
+        probe_runtime_state=probe_runtime_state or runtime_session.status,
         overall_gate_status=bundle.overall_gate_status,
         execute_gate_state=decision.execute_gate_state,
         decision_reason=decision.decision_reason,
@@ -473,6 +480,25 @@ def _namespace_blocker(
                     "Frontend browser gate receipt references missing artifact "
                     f"record {artifact_id} for {receipt.check_name}."
                 )
+    return ""
+
+
+def _runtime_state_blocker(
+    runtime_session: BrowserGateProbeRuntimeSession,
+    probe_runtime_state: str,
+) -> str:
+    session_status = runtime_session.status.strip()
+    effective_probe_state = probe_runtime_state or session_status
+    if session_status != "completed":
+        return (
+            "Frontend browser gate runtime session is not completed: "
+            f"{session_status or '<missing>'}."
+        )
+    if effective_probe_state != "completed":
+        return (
+            "Frontend browser gate probe runtime state is not completed: "
+            f"{effective_probe_state or '<missing>'}."
+        )
     return ""
 
 

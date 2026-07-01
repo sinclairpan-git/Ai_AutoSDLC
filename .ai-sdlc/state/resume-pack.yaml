@@ -10,12 +10,13 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete frontend-evidence Loop Engine runtime and PR review/merge
-    | State: PR #112 Codex review found P1 receipt artifact closure gap. Fixed frontend-evidence
-    ingestion to require receipt artifact IDs to resolve to unique namespaced records
-    and existing local files; targeted unit, CLI integration, focused regression,
-    ruff, mypy, diff check, verify constraints and truth sync passed. | Next: Run
-    close-check, stage remediation, commit, push PR #112, request @codex review again,
-    monitor required checks, remediate if needed, merge.'
+    | State: Second Codex review found P1 exit-code and runtime-state gaps. Fixed
+    frontend-evidence start to exit nonzero for needs_fix/needs_user/blocked, and
+    fail-closed when runtime_session.status or probe_runtime_state is not completed.
+    Unit targeted 10 passed, CLI integration 36 passed, focused regression 233 passed,
+    ruff/mypy/diff/verify passed. | Next: Run truth sync and close-check, commit,
+    push PR #112, request @codex review again, monitor checks/review, remediate if
+    needed, merge.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''

@@ -336,3 +336,76 @@
 - 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
 - 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
 - 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并
+
+### Batch 2026-07-01-005 | Codex review runtime-state and CLI exit remediation
+
+#### 5.1 批次范围
+
+- 覆盖任务：`T42-R2`
+- 覆盖阶段：PR #112 second Codex review P1 remediation
+- 改动范围：`src/ai_sdlc/core/frontend_evidence_loop.py`、`src/ai_sdlc/cli/loop_cmd.py`、`tests/unit/test_frontend_evidence_loop.py`、`tests/integration/test_cli_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/195-loop-engine-frontend-evidence-loop-runtime/codex-handoff.md`
+
+#### 5.2 任务来源
+
+- 审查来源：PR #112 Codex review inline comments `3508603519`、`3508603526`
+- 问题级别：P1
+- 问题摘要：
+  - `frontend-evidence start --json` 在 browser gate 为 `needs_fix` 时仍以 exit code 0 退出，脚本可能误判质量阻断为成功。
+  - runtime ingestion 未在构建 execute decision 前校验 `runtime_session.status` / `probe_runtime_state`，截断 artifact 可能用 failed/incomplete session 搭配 passed bundle 误判通过。
+
+#### 5.3 修复内容
+
+- CLI start exit code 改为仅 `ready` / `dry_run` 返回 0；`needs_fix`、`needs_user`、`blocked` 均返回 1。
+- `_build_snapshot` 在调用 `build_frontend_browser_gate_execute_decision` 前校验：
+  - `runtime_session.status == "completed"`
+  - effective `probe_runtime_state == "completed"`
+  - 任一非 completed 均 fail-closed，并提示重新运行 `ai-sdlc program browser-gate-probe --execute`。
+- 单元测试新增 failed runtime session 与 failed probe runtime state 两个 blocked 场景。
+- CLI 集成测试新增 `frontend-evidence start` 在 `needs_fix` JSON 输出下 exit code 为 1 的回归。
+
+#### 5.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py -q`
+- `V2`：`uv run pytest tests/integration/test_cli_loop.py -q`
+- `V3`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V4`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V5`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V6`：`git diff --check`
+- `V7`：`uv run ai-sdlc verify constraints`
+- `V8`：`uv run ai-sdlc program truth sync --execute --yes`
+- `V9`：`uv run ai-sdlc workitem close-check --wi specs/195-loop-engine-frontend-evidence-loop-runtime`
+
+#### 5.5 验证结果
+
+- unit targeted：10 passed
+- CLI integration：36 passed
+- focused regression：233 passed
+- ruff：PASS
+- mypy：PASS，5 source files
+- diff check：PASS
+- verify constraints：PASS，no BLOCKERs
+
+#### 5.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；本批只修 frontend-evidence runtime trust boundary 和 CLI exit semantics，不扩展到模型调用、远端 PR 或 browser gate 重实现。
+- 代码质量：failed/incomplete probe state 在 evidence ingestion 入口即 fail-closed；CLI exit code 与不可关闭状态保持一致。
+- 测试质量：新增 runtime state 和 CLI exit 回归，并保持 focused suite 通过。
+- 结论：可刷新 truth、close-check、提交、推送并重新请求 Codex review。
+
+#### 5.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 完成；本批为 PR #112 second Codex review remediation。
+- `related_plan` 同步状态：不改变 WI-195 范围。
+- 关联 branch/worktree disposition 计划：继续使用 PR #112 carrier branch。
+
+#### 5.8 归档后动作
+
+- 第二轮 Codex review P1 已修复；下一步 truth sync、close-check、提交、推送并重新请求 Codex review。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/frontend_evidence_loop.py`、`src/ai_sdlc/cli/loop_cmd.py`、`tests/unit/test_frontend_evidence_loop.py`、`tests/integration/test_cli_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/195-loop-engine-frontend-evidence-loop-runtime/codex-handoff.md`
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- **提交哈希**：`HEAD`
+- 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
+- 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并

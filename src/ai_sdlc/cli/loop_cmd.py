@@ -424,7 +424,7 @@ def frontend_evidence_start(
         )
     )
     _emit_frontend_evidence_result(result, json_output=json_output)
-    raise typer.Exit(0 if result.status != "blocked" else 1)
+    raise typer.Exit(0 if result.status in {"ready", "dry_run"} else 1)
 
 
 @frontend_evidence_app.command(name="status")
