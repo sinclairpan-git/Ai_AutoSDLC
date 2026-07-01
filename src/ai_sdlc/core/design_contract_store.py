@@ -110,6 +110,9 @@ def resolve_work_item_dir(root: Path, work_item: str) -> tuple[Path, str]:
         return root / "specs", f"Work item path must stay within project: {value}"
     if path.is_file() and path.name in {"spec.md", "plan.md", "tasks.md"}:
         path = path.parent
+    canonical_blocker = _canonical_work_item_blocker(root, path, value)
+    if canonical_blocker:
+        return path, canonical_blocker
     if not path.exists():
         return path, f"Work item path does not exist: {value}"
     if not path.is_dir():
@@ -245,6 +248,16 @@ def _resolve_repo_relative_path(root: Path, value: str) -> Path:
     resolved = path.resolve(strict=False)
     resolved.relative_to(root.resolve(strict=False))
     return resolved
+
+
+def _canonical_work_item_blocker(root: Path, path: Path, original: str) -> str:
+    try:
+        relative = path.resolve(strict=False).relative_to(root.resolve(strict=False))
+    except ValueError:
+        return f"Work item path must stay within project: {original}"
+    if len(relative.parts) != 2 or relative.parts[0] != "specs":
+        return f"Work item path must be a canonical specs/<work-item> directory: {original}"
+    return ""
 
 
 __all__ = [

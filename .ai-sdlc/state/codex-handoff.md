@@ -1,37 +1,41 @@
 # Continuity Handoff
 
-- Updated: 2026-07-01T05:42:46+00:00
-- Reason: after WI-193 Batch 4 docs constraints and close-check preflight
-- Goal: Complete five Loop Engine loop types one by one; current slice is WI-193 design-contract loop
-- State: WI-193 Batch 4 README, verify constraints surface, tests, program truth sync, and close-check preflight are complete. close-check now only blocks on git_closure because the closeout files are intentionally uncommitted before the final Batch 4 commit.
+- Updated: 2026-07-01T06:16:16+00:00
+- Reason: after PR #110 Codex review remediation
+- Goal: Complete five Loop Engine loop types one by one; current slice is WI-193 design-contract loop PR review
+- State: PR #110 Codex P2 feedback was addressed on the same branch: task section parsing now blocks missing ### Task sections, plan text participates in scope drift checks, --wi is canonical specs/<work-item> only, design-contract command JSON includes next_guidance, and closed loop IDs cannot be overwritten by recheck. Focused regression passed and close-check only blocks on uncommitted remediation changes.
 - Stage: execute
 - Work Item: 193-loop-engine-design-contract-loop-runtime
 - Branch: feature/193-loop-engine-design-contract-loop-runtime-docs
 
 ## Changed Files
-- M README.md
 - M program-manifest.yaml
 - M specs/193-loop-engine-design-contract-loop-runtime/task-execution-log.md
-- M src/ai_sdlc/core/verify_constraints.py
-- M tests/unit/test_verify_constraints.py
+- M src/ai_sdlc/core/design_contract_checks.py
+- M src/ai_sdlc/core/design_contract_loop.py
+- M src/ai_sdlc/core/design_contract_models.py
+- M src/ai_sdlc/core/design_contract_store.py
+- M tests/integration/test_cli_loop.py
+- M tests/unit/test_design_contract_loop.py
 
 ## Key Decisions
-- Design-contract user docs explicitly say P0 does not call any model service, does not modify application code, and does not enter frontend evidence.
-- WI-193 verify constraints now covers runtime, status/CLI, and README user docs surfaces.
+- Closed design-contract loop recheck returns blocked instead of rewriting loop-run.json.
+- Design-contract command JSON uses a local DesignContractNextGuidance model to avoid importing loop_status and creating a core cycle.
 
 ## Commands / Tests
-- uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q => 217 passed
-- uv run ruff check design-contract and verify-constraints files => passed
+- uv run pytest tests/unit/test_design_contract_loop.py -q => 13 passed
+- uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q => 221 passed
+- uv run ruff check design-contract remediation files => passed
 - uv run mypy design-contract runtime/status/CLI files => passed
 - uv run ai-sdlc verify constraints => no BLOCKERs
-- uv run ai-sdlc program truth sync --execute --yes => passed, snapshot 13679e91b482821af5e56d0ece7881caa54d7a18f59a323836dbdbe658064b85
-- uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime => only git_closure blocks until final commit
+- uv run ai-sdlc program truth sync --execute --yes => passed, snapshot 54396cc7832743478e2f13aca0bc83f775b0f4126fa636471c538bafcd951d7b
+- uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime => only git_closure blocks until remediation commit
 
 ## Blockers / Risks
-- After final Batch 4 commit, rerun close-check; then push branch, open PR, request Codex review, monitor checks, fix actionable feedback, and merge before starting implementation loop.
+- After committing, rerun close-check, push, request Codex re-review, monitor checks, then merge PR #110 before implementation loop.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit Batch 4 closeout, rerun workitem close-check, then open WI-193 PR.
+- Commit remediation, rerun close-check, push branch, request Codex re-review.

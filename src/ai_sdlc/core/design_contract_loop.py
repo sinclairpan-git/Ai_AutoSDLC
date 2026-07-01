@@ -19,6 +19,7 @@ from ai_sdlc.core.design_contract_models import (
     DesignContractCommandStatus,
     DesignContractCommandSummary,
     DesignContractInput,
+    DesignContractNextGuidance,
     DesignContractReport,
 )
 from ai_sdlc.core.design_contract_store import (
@@ -57,6 +58,9 @@ def check_design_contract_loop(
     work_item_dir, work_item_blocker = resolve_work_item_dir(root, options.work_item)
     artifacts = design_contract_artifacts(root, loop_id)
     planned_refs = artifacts.refs(root)
+    closed_result = _closed_recheck_result(root, artifacts)
+    if closed_result is not None:
+        return closed_result
     if work_item_blocker:
         return _blocked_result(work_item_blocker, artifacts=planned_refs)
 
@@ -76,6 +80,19 @@ def check_design_contract_loop(
             work_item_path=contract_input.work_item_path,
             dry_run=True,
             next_action="Run ai-sdlc loop design-contract check without --dry-run.",
+            next_guidance=DesignContractNextGuidance(
+                command=f"ai-sdlc loop design-contract check --wi {contract_input.work_item_path}",
+                reason="Dry run does not write artifacts; rerun without --dry-run to persist the contract report.",
+                requires_model=False,
+                writes_artifacts=True,
+                writes_code=False,
+                safety="writes_project_artifacts",
+                evidence=[
+                    contract_input.spec_path,
+                    contract_input.plan_path,
+                    contract_input.tasks_path,
+                ],
+            ),
             artifacts=planned_refs,
             design_contract=_command_summary(contract_input),
         )
@@ -229,6 +246,29 @@ def _write_close(
     )
 
 
+def _closed_recheck_result(
+    root: Path,
+    artifacts: DesignContractArtifacts,
+) -> DesignContractCommandResult | None:
+    if not artifacts.close_path.is_file():
+        return None
+    try:
+        loop_run = read_loop_run(artifacts.loop_run_path)
+    except ValueError as exc:
+        return _blocked_result(
+            f"Existing closed design-contract loop is malformed: {exc}",
+            artifacts=artifacts.refs(root, include_close=True),
+        )
+    next_action = _implementation_next_action(loop_run.work_item_id)
+    return _blocked_result(
+        "Design-contract loop is already closed; start implementation instead of rechecking it.",
+        result="Design-contract loop is already closed.",
+        loop_id=loop_run.loop_id,
+        next_action=next_action,
+        artifacts=artifacts.refs(root, include_close=True),
+    )
+
+
 def _build_loop_run(
     *,
     contract_input: DesignContractInput,
@@ -277,6 +317,7 @@ def _result_from_report(
     loop_status: LoopStatus | str = "",
     next_action: str = "",
 ) -> DesignContractCommandResult:
+    resolved_next_action = next_action or report.next_action
     return DesignContractCommandResult(
         status=(
             DesignContractCommandStatus.READY
@@ -292,7 +333,13 @@ def _result_from_report(
         warning_count=report.warning_count,
         coverage_count=report.coverage_count,
         closed=closed,
-        next_action=next_action or report.next_action,
+        next_action=resolved_next_action,
+        next_guidance=_next_guidance_for_result(
+            report,
+            next_action=resolved_next_action,
+            closed=closed,
+            artifacts=artifacts,
+        ),
         artifacts=artifacts,
         design_contract=DesignContractCommandSummary(
             work_item_id=report.work_item_id,
@@ -320,6 +367,14 @@ def _blocked_result(
         loop_status=LoopStatus.BLOCKED,
         blocker=blocker,
         next_action=next_action,
+        next_guidance=DesignContractNextGuidance(
+            command="",
+            reason=blocker,
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety="blocked",
+        ),
         artifacts=artifacts or [],
     )
 
@@ -338,6 +393,46 @@ def _next_action_for_report(report: DesignContractReport) -> str:
             f"ai-sdlc loop design-contract check --wi {report.work_item_path}."
         )
     return "Run ai-sdlc loop design-contract close --yes."
+
+
+def _next_guidance_for_result(
+    report: DesignContractReport,
+    *,
+    next_action: str,
+    closed: bool,
+    artifacts: list[DesignContractArtifactRef],
+) -> DesignContractNextGuidance:
+    evidence = [artifact.path for artifact in artifacts if artifact.path]
+    if closed:
+        return DesignContractNextGuidance(
+            command="",
+            reason="The design contract is closed; the next loop type is implementation.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety="no_action",
+            evidence=evidence,
+            alternatives=[next_action],
+        )
+    if report.blocker_count:
+        return DesignContractNextGuidance(
+            command=f"ai-sdlc loop design-contract check --wi {report.work_item_path}",
+            reason="The design contract has blockers; fix the formal docs and rerun the deterministic check.",
+            requires_model=False,
+            writes_artifacts=True,
+            writes_code=False,
+            safety="writes_project_artifacts",
+            evidence=evidence,
+        )
+    return DesignContractNextGuidance(
+        command="ai-sdlc loop design-contract close --yes",
+        reason="The design contract passed; close it before implementation.",
+        requires_model=False,
+        writes_artifacts=True,
+        writes_code=False,
+        safety="writes_project_artifacts",
+        evidence=evidence,
+    )
 
 
 def _implementation_next_action(work_item_id: str) -> str:

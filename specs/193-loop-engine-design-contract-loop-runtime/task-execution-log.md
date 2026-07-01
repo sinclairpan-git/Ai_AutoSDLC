@@ -347,3 +347,83 @@
 - 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier
 - 当前批次 worktree disposition 状态：retained（主工作区）
 - 是否继续下一批：否；按目标要求先完成 WI-193 PR + Codex review，再进入 implementation loop。
+
+### Batch 2026-07-01-005 | Codex review remediation
+
+#### 6.1 批次范围
+
+- 覆盖任务：Codex review actionable feedback for PR #110
+- 覆盖阶段：PR review remediation
+- 预读范围：GitHub review threads for PR #110、`design_contract_checks.py`、`design_contract_store.py`、`design_contract_models.py`、`design_contract_loop.py`、unit/integration tests
+- 激活的规则：对 Codex P2 actionable comments 做同分支修复；不扩大到 implementation loop；修复后重新验证、推送、复审
+
+#### 6.2 改动范围
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/core/design_contract_checks.py`、`src/ai_sdlc/core/design_contract_store.py`、`src/ai_sdlc/core/design_contract_models.py`、`src/ai_sdlc/core/design_contract_loop.py`、`tests/unit/test_design_contract_loop.py`、`tests/integration/test_cli_loop.py`、`task-execution-log.md`
+- 修复缺少 parseable `### Task` section 时仍可能通过的问题。
+- 将 plan 文本纳入 scope drift 检查，避免 plan 提前落入 implementation/frontend-evidence 文件。
+- 限定 design-contract work item 为 canonical `specs/<work-item>` 目录或目录下 formal doc。
+- 为 design-contract command JSON 增加 `next_guidance`，包含 `requires_model`、`writes_artifacts`、`writes_code`、`safety` 等结构化字段。
+- 阻止 `check --loop-id <closed-id>` 覆盖已关闭的 design-contract loop。
+
+#### 6.3 Codex review 线程处理
+
+- `design_contract_checks.py`：Reject task files without parseable task sections / Treat missing task sections as blockers
+  - 处理：新增 `task_section_gap` blocker；当存在 `Txx` token 但没有 `### Task ` heading 时进入 `needs_fix`。
+- `design_contract_checks.py`：Check plan text for scope drift
+  - 处理：对 `plan.md` 同样执行 `_scope_drift_findings`。
+- `design_contract_store.py`：Block non-canonical work item directories
+  - 处理：`--wi` 只接受 `specs/<work-item>` 目录或其 formal doc；`other/demo` 等路径 fail-readable。
+- `design_contract_models.py` / CLI JSON：Add next guidance to command JSON
+  - 处理：`DesignContractCommandResult` 增加 `next_guidance`，CLI JSON 直接输出该结构。
+- `design_contract_loop.py`：Preserve closed design-contract runs on recheck
+  - 处理：检测到 close artifact 后返回 blocked，不重写 `loop-run.json`。
+
+#### 6.4 统一验证命令
+
+- `V1`（design-contract runtime unit）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`13 passed`。
+- `V2`（CLI JSON focused integration）
+  - 命令：`uv run pytest tests/integration/test_cli_loop.py::test_loop_design_contract_check_status_and_close_json tests/integration/test_cli_loop.py::test_loop_design_contract_check_dry_run_skips_adapter_hook -q`
+  - 结果：通过，`2 passed`。
+- `V3`（focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`221 passed`。
+- `V4`（focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py tests/unit/test_design_contract_loop.py tests/integration/test_cli_loop.py`
+  - 结果：通过，`All checks passed!`。
+- `V5`（focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+- `V6`（verify constraints）
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+- `V7`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V8`（program truth sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：本日志落盘后执行；以后续 close-check `program_truth` PASS 为准。
+
+#### 6.5 代码审查结论
+
+- 宪章/规格对齐：修复均限制在 design-contract loop，未提前实现 implementation/frontend-evidence。
+- 代码质量：新增 JSON guidance 使用独立轻量 model，避免与 `loop_status.py` 形成循环依赖；canonical work item 检查集中在 store 层。
+- 测试质量：新增 4 个 runtime 回归和 CLI JSON assertions，覆盖所有 Codex actionable clusters。
+- 结论：可刷新 truth、close-check、提交、推送并重新请求 Codex review。
+
+#### 6.6 任务/计划同步状态
+
+- `tasks.md` 同步状态：T41/T42 保持完成；本批为 PR review remediation，不新增交付范围。
+- `related_plan`（如存在）同步状态：无 related_plan；plan 边界仍为 design-contract loop。
+- 关联 branch/worktree disposition 计划：继续使用 PR #110 head branch。
+
+#### 6.7 归档后动作
+
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- **提交哈希**：`pending-remediation-commit`
+- 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier
+- 当前批次 worktree disposition 状态：retained（主工作区）
+- 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。

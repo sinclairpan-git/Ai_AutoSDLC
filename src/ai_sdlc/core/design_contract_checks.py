@@ -80,6 +80,7 @@ def analyze_design_contract(
     )
     if plan_text:
         findings.extend(_plan_findings(Path(contract_input.plan_path), plan_text))
+        findings.extend(_scope_drift_findings(Path(contract_input.plan_path), plan_text))
     if tasks_text:
         findings.extend(_task_findings(Path(contract_input.tasks_path), tasks_text))
         findings.extend(_scope_drift_findings(Path(contract_input.tasks_path), tasks_text))
@@ -190,6 +191,14 @@ def _task_findings(path: Path, text: str) -> list[DesignContractFinding]:
     if not task_ids:
         return [_finding("tasks_missing", "tasks.md does not define executable task ids.", path)]
     sections = re.split(r"(?m)^### Task ", text)
+    if len(sections) == 1:
+        return [
+            _finding(
+                "task_section_gap",
+                "tasks.md mentions task ids but has no parseable ### Task sections.",
+                path,
+            )
+        ]
     for section in sections[1:]:
         header = section.splitlines()[0] if section.splitlines() else ""
         task_id = next(iter(_TASK_ID.findall(f"{header}\n{section}")), "")
@@ -221,7 +230,7 @@ def _scope_drift_findings(path: Path, text: str) -> list[DesignContractFinding]:
     return [
         _finding(
             "scope_drift",
-            f"tasks.md appears to implement out-of-scope file: {token}.",
+            f"{path.name} appears to implement out-of-scope file: {token}.",
             path,
         )
         for token in risky_tokens

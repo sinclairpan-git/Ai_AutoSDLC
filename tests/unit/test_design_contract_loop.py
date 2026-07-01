@@ -34,6 +34,10 @@ def test_check_design_contract_loop_writes_passed_artifacts(tmp_path: Path) -> N
     assert result.design_contract is not None
     assert result.design_contract.coverage_count == 2
     assert result.next_action == "Run ai-sdlc loop design-contract close --yes."
+    assert result.next_guidance.command == "ai-sdlc loop design-contract close --yes"
+    assert result.next_guidance.requires_model is False
+    assert result.next_guidance.writes_artifacts is True
+    assert result.next_guidance.writes_code is False
 
     loop_dir = tmp_path / ".ai-sdlc" / "loops" / "design-contract" / "dc-001"
     assert (loop_dir / "loop-run.json").is_file()
@@ -140,6 +144,80 @@ def test_check_design_contract_loop_reports_placeholders(tmp_path: Path) -> None
     assert "placeholder" in {finding["code"] for finding in report["findings"]}
 
 
+def test_check_design_contract_loop_blocks_unparseable_task_sections(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, task_heading="### 任务 1.1 Check contract")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-task-sections",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-task-sections"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "task_section_gap" in {finding["code"] for finding in report["findings"]}
+
+
+def test_check_design_contract_loop_checks_plan_scope_drift(tmp_path: Path) -> None:
+    _write_work_item(tmp_path, plan_extra="Touch implementation_loop.py.")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-plan-drift",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-plan-drift"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    scope_findings = [
+        finding for finding in report["findings"] if finding["code"] == "scope_drift"
+    ]
+    assert scope_findings
+    assert scope_findings[0]["path"] == "specs/demo-contract/plan.md"
+
+
+def test_check_design_contract_loop_blocks_non_canonical_work_item_dir(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, relative_path="other/demo-contract")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="other/demo-contract",
+            loop_id="dc-non-canonical",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "canonical specs/<work-item>" in result.blocker
+    assert not (tmp_path / ".ai-sdlc").exists()
+
+
 def test_close_design_contract_loop_writes_close_artifact(tmp_path: Path) -> None:
     _write_work_item(tmp_path)
     check_design_contract_loop(
@@ -158,9 +236,41 @@ def test_close_design_contract_loop_writes_close_artifact(tmp_path: Path) -> Non
     assert result.loop_status == "closed"
     assert result.closed is True
     assert result.next_action == "Start implementation loop for demo-contract."
+    assert result.next_guidance.safety == "no_action"
+    assert result.next_guidance.writes_artifacts is False
 
     loop_dir = tmp_path / ".ai-sdlc" / "loops" / "design-contract" / "dc-close"
     assert (loop_dir / "design-contract-close.json").is_file()
+    loop_run = json.loads((loop_dir / "loop-run.json").read_text(encoding="utf-8"))
+    assert loop_run["status"] == "closed"
+
+
+def test_check_design_contract_loop_blocks_recheck_of_closed_loop(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path)
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-closed-recheck",
+        )
+    )
+    close_design_contract_loop(
+        DesignContractCloseOptions(root=tmp_path, loop_id="dc-closed-recheck", yes=True)
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-closed-recheck",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "already closed" in result.blocker
+    loop_dir = tmp_path / ".ai-sdlc" / "loops" / "design-contract" / "dc-closed-recheck"
     loop_run = json.loads((loop_dir / "loop-run.json").read_text(encoding="utf-8"))
     assert loop_run["status"] == "closed"
 
@@ -247,8 +357,11 @@ def _write_work_item(
     *,
     include_task_refs: bool = True,
     placeholder: bool = False,
+    relative_path: str = "specs/demo-contract",
+    task_heading: str = "### Task 1.1 Check contract",
+    plan_extra: str = "",
 ) -> Path:
-    work_item = root / "specs" / "demo-contract"
+    work_item = root / relative_path
     work_item.mkdir(parents=True)
     spec_extra = "\nTODO: remove placeholder.\n" if placeholder else ""
     work_item.joinpath("spec.md").write_text(
@@ -283,6 +396,7 @@ def _write_work_item(
                 "Run pytest.",
                 "## 回退方式",
                 "Revert the commit.",
+                plan_extra,
             ]
         ),
         encoding="utf-8",
@@ -293,7 +407,7 @@ def _write_work_item(
             [
                 "# 任务分解",
                 "",
-                "### Task 1.1 Check contract",
+                task_heading,
                 "",
                 "- **任务编号**：T11",
                 "- **优先级**：P0",

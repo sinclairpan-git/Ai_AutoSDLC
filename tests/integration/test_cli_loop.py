@@ -768,6 +768,12 @@ def test_loop_design_contract_check_status_and_close_json(tmp_path: Path) -> Non
     assert check_payload["next_action"] == (
         "Run ai-sdlc loop design-contract close --yes."
     )
+    assert check_payload["next_guidance"]["command"] == (
+        "ai-sdlc loop design-contract close --yes"
+    )
+    assert check_payload["next_guidance"]["requires_model"] is False
+    assert check_payload["next_guidance"]["writes_artifacts"] is True
+    assert check_payload["next_guidance"]["writes_code"] is False
 
     assert status.exit_code == 0
     status_payload = json.loads(status.output)
@@ -786,6 +792,8 @@ def test_loop_design_contract_check_status_and_close_json(tmp_path: Path) -> Non
     assert close_payload["next_action"] == (
         "Start implementation loop for demo-design-contract."
     )
+    assert close_payload["next_guidance"]["safety"] == "no_action"
+    assert close_payload["next_guidance"]["writes_artifacts"] is False
 
 
 def test_loop_design_contract_check_dry_run_skips_adapter_hook(
@@ -817,6 +825,9 @@ def test_loop_design_contract_check_dry_run_skips_adapter_hook(
     assert payload["status"] == "dry_run"
     assert payload["dry_run"] is True
     assert payload["design_contract"]["work_item_id"] == "demo-design-contract"
+    assert payload["next_guidance"]["command"] == (
+        "ai-sdlc loop design-contract check --wi specs/demo-design-contract"
+    )
     assert not (tmp_path / ".ai-sdlc").exists()
     adapter_hook.assert_not_called()
 

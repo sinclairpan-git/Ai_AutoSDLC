@@ -152,6 +152,21 @@ class DesignContractCommandSummary(BaseModel):
     closed: bool = False
 
 
+class DesignContractNextGuidance(BaseModel):
+    """Structured follow-up guidance for design-contract command JSON."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    command: str = ""
+    reason: str = ""
+    requires_model: bool = False
+    writes_artifacts: bool = False
+    writes_code: bool = False
+    safety: str = "safe_read_only"
+    evidence: list[str] = Field(default_factory=list)
+    alternatives: list[str] = Field(default_factory=list)
+
+
 class DesignContractCommandResult(BaseModel):
     """Machine-readable result for design-contract loop commands."""
 
@@ -170,6 +185,9 @@ class DesignContractCommandResult(BaseModel):
     dry_run: bool = False
     blocker: str = ""
     next_action: str = ""
+    next_guidance: DesignContractNextGuidance = Field(
+        default_factory=DesignContractNextGuidance
+    )
     artifacts: list[DesignContractArtifactRef] = Field(default_factory=list)
     design_contract: DesignContractCommandSummary | None = None
 
@@ -209,5 +227,6 @@ __all__ = [
     "DesignContractCommandSummary",
     "DesignContractFinding",
     "DesignContractInput",
+    "DesignContractNextGuidance",
     "DesignContractReport",
 ]
