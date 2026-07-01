@@ -516,9 +516,16 @@ def _namespace_blocker(
     artifact_records: list[BrowserProbeArtifactRecord],
     bundle: BrowserQualityBundleMaterializationInput,
 ) -> str:
-    expected_artifact_root = (
-        f".ai-sdlc/artifacts/frontend-browser-gate/{bundle.gate_run_id}"
-    )
+    if not all(
+        _is_safe_gate_run_id(gate_run_id)
+        for gate_run_id in (
+            execution_context.gate_run_id,
+            runtime_session.gate_run_id,
+            bundle.gate_run_id,
+        )
+    ):
+        return "Frontend browser gate artifact gate_run_id is not a safe path segment."
+    expected_artifact_root = f".ai-sdlc/artifacts/frontend-browser-gate/{bundle.gate_run_id}"
     expected_artifact_root_path = (root / expected_artifact_root).resolve()
     if (
         runtime_session.gate_run_id != execution_context.gate_run_id
@@ -571,6 +578,11 @@ def _namespace_blocker(
                     f"record {artifact_id} for {receipt.check_name}."
                 )
     return ""
+
+
+def _is_safe_gate_run_id(gate_run_id: str) -> bool:
+    text = gate_run_id.strip()
+    return bool(text) and text not in {".", ".."} and "/" not in text and "\\" not in text
 
 
 def _runtime_session_scope_blocker(

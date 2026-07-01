@@ -330,6 +330,44 @@ def test_start_frontend_evidence_loop_blocks_runtime_session_scope_drift(
         ) in result.blocker
 
 
+def test_start_frontend_evidence_loop_blocks_unsafe_gate_run_id(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    artifact_path = _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+    payload["gate_run_id"] = "../other-run"
+    execution_context = payload["execution_context"]
+    runtime_session = payload["runtime_session"]
+    bundle_input = payload["bundle_input"]
+    assert isinstance(execution_context, dict)
+    assert isinstance(runtime_session, dict)
+    assert isinstance(bundle_input, dict)
+    execution_context["gate_run_id"] = "../other-run"
+    runtime_session["gate_run_id"] = "../other-run"
+    bundle_input["gate_run_id"] = "../other-run"
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-unsafe-gate-run",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "gate_run_id is not a safe path segment" in result.blocker
+
+
 def test_frontend_evidence_loop_reports_visual_regression_recheck_without_artifacts(
     tmp_path: Path,
 ) -> None:
