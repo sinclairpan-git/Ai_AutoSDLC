@@ -301,6 +301,7 @@
 - `V6`：`git diff --check`
 - `V7`：`uv run ai-sdlc verify constraints`
 - `V8`：`uv run ai-sdlc program truth sync --execute --yes`
+- `V9`：`uv run ai-sdlc workitem close-check --wi specs/195-loop-engine-frontend-evidence-loop-runtime`
 
 #### 4.5 验证结果
 
@@ -336,6 +337,73 @@
 - 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
 - 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
 - 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并
+
+### Batch 2026-07-01-010 | Codex review receipt evidence artifact remediation
+
+#### 10.1 批次范围
+
+- 覆盖任务：`T42-R7`
+- 覆盖阶段：PR #112 seventh Codex review P1 remediation
+- 改动范围：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`tests/integration/test_cli_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+
+#### 10.2 任务来源
+
+- 审查来源：PR #112 Codex review inline comment `3509001644`
+- 问题级别：P1
+- 问题摘要：browser gate artifact 若保留 required receipt 名称，但清空所有 `artifact_ids`、`artifact_records`、截图和 trace refs，frontend-evidence 会把 otherwise passed artifact 误判为 passed，进而允许 `close --yes` 绕过证据闭环。
+
+#### 10.3 修复内容
+
+- `_namespace_blocker` 对每个 browser gate receipt 增加空 `artifact_ids` fail-closed 校验。
+- 新增单元测试复现 Codex finding：清空 `artifact_records`、`screenshot_refs`、`playwright_trace_refs` 和所有 receipt `artifact_ids` 后，`start_frontend_evidence_loop` 必须 blocked。
+- 修正 CLI integration browser gate fixture，为 `interaction_anti_pattern_checks` 增加 `interaction-snapshot` artifact record 与 receipt artifact id，使 fixture 与真实 runtime 产物一致。
+
+#### 10.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py -q`
+- `V2`：`uv run pytest tests/integration/test_cli_loop.py -q`
+- `V3`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V4`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V5`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V6`：`git diff --check`
+- `V7`：`uv run ai-sdlc verify constraints`
+- `V8`：`uv run ai-sdlc program truth sync --execute --yes`
+
+#### 10.5 验证结果
+
+- unit targeted：14 passed
+- CLI integration：36 passed
+- focused regression：237 passed
+- ruff：PASS
+- mypy：PASS，5 source files
+- diff check：PASS
+- verify constraints：PASS，no BLOCKERs
+- truth sync：PASS，写回 `program-manifest.yaml`；truth snapshot state 仍为既有 `migration_pending`
+- workitem close-check：PASS，done_gate PASS ready for completion
+
+#### 10.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；本批只强化 frontend-evidence 对 browser gate evidence receipt 的信任边界，不调用模型、不重写 browser gate、不引入 GitHub/远端 PR 假设。
+- 代码质量：receipt 无证据 artifact 时直接 fail-closed，避免空证据 passed report 被关闭。
+- 测试质量：新增直接复现 Codex P1 的回归，并保持 CLI fixture 与真实 browser gate interaction evidence 一致。
+- 结论：可更新 handoff、提交、推送并重新请求 Codex review。
+
+#### 10.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 完成；本批为 PR #112 seventh Codex review remediation。
+- `related_plan` 同步状态：不改变 WI-195 范围。
+- 关联 branch/worktree disposition 计划：继续使用 PR #112 carrier branch。
+
+#### 10.8 归档后动作
+
+- 第七轮 Codex review P1 已修复；下一步 handoff update、提交、推送并重新请求 Codex review。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`tests/integration/test_cli_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
+- 是否继续下一批：否；提交后等待 PR #112 Codex review、required checks 与合并
 
 ### Batch 2026-07-01-008 | Codex review missing capture artifact remediation
 

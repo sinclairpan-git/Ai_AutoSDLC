@@ -1272,6 +1272,7 @@ def _write_frontend_browser_gate_artifact(
     artifact_root = f".ai-sdlc/artifacts/frontend-browser-gate/{gate_run_id}"
     screenshot_ref = f"{artifact_root}/shared-runtime/navigation-screenshot.png"
     trace_ref = f"{artifact_root}/shared-runtime/playwright-trace.zip"
+    interaction_ref = f"{artifact_root}/interaction/interaction-snapshot.json"
     source_artifact_ref = ".ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml"
     required_probe_set = [
         "playwright_smoke",
@@ -1295,6 +1296,15 @@ def _write_frontend_browser_gate_artifact(
             "check_name": "playwright_smoke",
             "artifact_type": "playwright_trace",
             "artifact_ref": trace_ref,
+            "capture_status": "captured",
+            "captured_at": "2026-07-01T00:00:01Z",
+        },
+        {
+            "artifact_id": "interaction-snapshot",
+            "gate_run_id": gate_run_id,
+            "check_name": "interaction_anti_pattern_checks",
+            "artifact_type": "interaction_snapshot",
+            "artifact_ref": interaction_ref,
             "capture_status": "captured",
             "captured_at": "2026-07-01T00:00:01Z",
         },
@@ -1357,7 +1367,10 @@ def _write_frontend_browser_gate_artifact(
                 _browser_gate_receipt("playwright_smoke", ["smoke-screenshot", "smoke-trace"]),
                 _browser_gate_receipt("visual_expectation", ["smoke-screenshot"]),
                 _browser_gate_receipt("basic_a11y", ["smoke-screenshot"]),
-                _browser_gate_receipt("interaction_anti_pattern_checks", []),
+                _browser_gate_receipt(
+                    "interaction_anti_pattern_checks",
+                    ["interaction-snapshot"],
+                ),
             ],
             "smoke_verdict": "pass",
             "visual_verdict": "pass",

@@ -481,6 +481,11 @@ def _namespace_blocker(
                 f"{record.artifact_ref}."
             )
     for receipt in bundle.check_receipts:
+        if not receipt.artifact_ids:
+            return (
+                "Frontend browser gate receipt has no evidence artifacts for "
+                f"{receipt.check_name}."
+            )
         for artifact_id in receipt.artifact_ids:
             if artifact_id not in records_by_id:
                 return (

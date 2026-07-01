@@ -220,6 +220,45 @@ def test_start_frontend_evidence_loop_blocks_artifact_ref_namespace_traversal(
     assert "escapes the gate namespace" in result.blocker
 
 
+def test_start_frontend_evidence_loop_blocks_receipt_without_evidence_artifacts(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    artifact_path = _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+    )
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict)
+    payload["artifact_records"] = []
+    bundle_input = payload["bundle_input"]
+    assert isinstance(bundle_input, dict)
+    bundle_input["screenshot_refs"] = []
+    bundle_input["playwright_trace_refs"] = []
+    check_receipts = bundle_input["check_receipts"]
+    assert isinstance(check_receipts, list)
+    for receipt in check_receipts:
+        assert isinstance(receipt, dict)
+        receipt["artifact_ids"] = []
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-empty-receipt-artifacts",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "has no evidence artifacts" in result.blocker
+    assert "playwright_smoke" in result.blocker
+
+
 def test_frontend_evidence_loop_preserves_missing_probe_artifact_report(
     tmp_path: Path,
 ) -> None:
