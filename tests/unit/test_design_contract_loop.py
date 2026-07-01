@@ -292,6 +292,27 @@ def test_check_design_contract_loop_accepts_generated_chinese_task_sections(
     assert result.blocker_count == 0
 
 
+def test_check_design_contract_loop_accepts_english_task_labels(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(
+        tmp_path,
+        acceptance_label="- **Acceptance Criteria**",
+        verification_label="- **Verification**",
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-english-task-labels",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.blocker_count == 0
+
+
 def test_check_design_contract_loop_checks_plan_scope_drift(tmp_path: Path) -> None:
     _write_work_item(tmp_path, plan_extra="Touch implementation_loop.py.")
 
@@ -350,6 +371,37 @@ def test_check_design_contract_loop_checks_local_review_scope_drift(
     ]
     assert scope_findings
     assert "ai-sdlc pr-review" in scope_findings[0]["message"]
+
+
+def test_check_design_contract_loop_checks_frontend_command_scope_drift(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, plan_extra="Run ai-sdlc loop frontend-evidence check.")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-frontend-command-drift",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-frontend-command-drift"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    scope_findings = [
+        finding for finding in report["findings"] if finding["code"] == "scope_drift"
+    ]
+    assert scope_findings
+    assert "ai-sdlc loop frontend-evidence" in scope_findings[0]["message"]
 
 
 def test_check_design_contract_loop_blocks_non_canonical_work_item_dir(
@@ -647,6 +699,8 @@ def _write_work_item(
     plan_extra: str = "",
     spec_intro_extra: str = "",
     success_heading: str = "## 成功标准",
+    acceptance_label: str = "- **验收标准**",
+    verification_label: str = "- **验证**",
 ) -> Path:
     work_item = root / relative_path
     work_item.mkdir(parents=True)
@@ -699,8 +753,8 @@ def _write_work_item(
                 "",
                 "- **任务编号**：T11",
                 "- **优先级**：P0",
-                f"- **验收标准**：Cover {refs}.",
-                "- **验证**：uv run pytest tests/unit/test_demo.py -q",
+                f"{acceptance_label}：Cover {refs}.",
+                f"{verification_label}：uv run pytest tests/unit/test_demo.py -q",
             ]
         ),
         encoding="utf-8",

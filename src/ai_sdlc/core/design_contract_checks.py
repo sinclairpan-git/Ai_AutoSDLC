@@ -287,7 +287,7 @@ def _task_findings(path: Path, text: str) -> list[DesignContractFinding]:
         task_id = next(iter(_TASK_ID.findall(section)), "")
         if not task_id:
             continue
-        if "验收标准" not in section:
+        if not _has_task_acceptance(section):
             findings.append(
                 _finding(
                     "task_acceptance_gap",
@@ -296,7 +296,7 @@ def _task_findings(path: Path, text: str) -> list[DesignContractFinding]:
                     task_id,
                 )
             )
-        if "验证" not in section:
+        if not _has_task_verification(section):
             findings.append(
                 _finding(
                     "task_verification_gap",
@@ -317,10 +317,22 @@ def _task_sections(text: str) -> list[str]:
     return sections
 
 
+def _has_task_acceptance(section: str) -> bool:
+    lower = section.lower()
+    return "验收标准" in section or "acceptance criteria" in lower
+
+
+def _has_task_verification(section: str) -> bool:
+    lower = section.lower()
+    return "验证" in section or "verification" in lower or "validation" in lower
+
+
 def _scope_drift_findings(path: Path, text: str) -> list[DesignContractFinding]:
     risky_tokens = (
         "implementation_loop.py",
         "frontend_evidence_loop.py",
+        "ai-sdlc loop implementation",
+        "ai-sdlc loop frontend-evidence",
         "ai-sdlc pr-review",
         "pr_review_",
     )
