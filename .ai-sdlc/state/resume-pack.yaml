@@ -10,14 +10,14 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete five Loop Engine loop types one by one; current
-    slice is WI-193 design-contract loop PR review. | State: PR #110 latest Codex
-    review P2s fixed locally: coverage extraction now ignores illustrative/example/code-block
-    FR/SC IDs, and design_contract JSON summary exposes status, coverage_matrix_path,
-    and report_path. Focused regression passed 225 tests; ruff/mypy/verify constraints/diff
-    passed; truth sync snapshot b916b953e3b1d2ef8967b2e471a9f30980bfc08678b33d4ca71ef3135149d9aa;
-    close-check only blocks on uncommitted changes. | Next: Commit latest PR #110
-    remediation, rerun close-check, push, request @codex review, monitor required
-    checks, then merge PR #110 if clean.'
+    slice is WI-193 design-contract loop PR review. | State: PR #110 fourth Codex
+    review P2 fixed locally: design-contract coverage extraction now treats Exit Criteria
+    as a contract success-criteria section. Unit passed 18 tests; focused regression
+    passed 226 tests; ruff/mypy/verify constraints/diff passed; truth sync snapshot
+    2580146f9339a904038e0273cfe3c79d47eeaa58e1f67ecad94f6306338d4e2a; close-check
+    only blocks on uncommitted changes. | Next: Commit Exit Criteria remediation,
+    rerun close-check, push, request @codex review, monitor checks/review, then merge
+    PR #110 if clean.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''

@@ -488,6 +488,8 @@
   - 处理：新增 heading-aware contract source extraction，只在 contract source section 内收集 FR/SC；新增测试覆盖用户故事/示例/code block 中的 ID 不进入 coverage。
 - `design_contract_models.py`：Expose the documented JSON summary fields
   - 处理：`design_contract` summary 直接暴露 `status`、`coverage_matrix_path`、`report_path`；core unit 和 CLI integration 均增加断言。
+- `design_contract_checks.py`：Treat Exit Criteria as contract sections
+  - 处理：将 `exit criterion` / `exit criteria` 纳入 canonical contract section token；新增测试覆盖 `## Exit Criteria` 下的 `SC-*` 会进入 coverage matrix。
 
 #### 7.4 统一验证命令
 
@@ -515,6 +517,21 @@
 - `V20`（work item close-check）
   - 命令：`uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime`
   - 结果：本日志落盘和 truth sync 后执行；提交前如仅剩 `git_closure` 属预期，提交后需复跑至 PASS。
+- `V21`（fourth Codex review exit-criteria remediation）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`18 passed`。
+- `V22`（fourth remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`226 passed`。
+- `V23`（fourth remediation ruff / mypy / constraints / diff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_checks.py tests/unit/test_design_contract_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
 
 #### 7.5 代码审查结论
 

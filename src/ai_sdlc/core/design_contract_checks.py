@@ -35,6 +35,8 @@ _CONTRACT_SECTION_TOKENS = (
     "functional requirements",
     "success criterion",
     "success criteria",
+    "exit criterion",
+    "exit criteria",
     "acceptance criteria",
 )
 _NON_CONTRACT_SECTION_TOKENS = (

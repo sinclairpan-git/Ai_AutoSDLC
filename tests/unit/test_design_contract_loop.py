@@ -205,6 +205,37 @@ def test_check_design_contract_loop_ignores_example_contract_ids(
     }
 
 
+def test_check_design_contract_loop_treats_exit_criteria_as_contract_section(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, success_heading="## Exit Criteria")
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-exit-criteria",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.coverage_count == 2
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-exit-criteria"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert {item["source_id"] for item in report["coverage_items"]} == {
+        "FR-DEMO-001",
+        "SC-DEMO-001",
+    }
+
+
 def test_check_design_contract_loop_blocks_unparseable_task_sections(
     tmp_path: Path,
 ) -> None:
@@ -515,6 +546,7 @@ def _write_work_item(
     task_heading: str = "### Task 1.1 Check contract",
     plan_extra: str = "",
     spec_intro_extra: str = "",
+    success_heading: str = "## 成功标准",
 ) -> Path:
     work_item = root / relative_path
     work_item.mkdir(parents=True)
@@ -531,7 +563,7 @@ def _write_work_item(
                 "",
                 "- **FR-DEMO-001**：系统必须检查合同覆盖。",
                 "",
-                "## 成功标准",
+                success_heading,
                 "",
                 "- **SC-DEMO-001**：合同通过后可以关闭。",
                 spec_extra,
