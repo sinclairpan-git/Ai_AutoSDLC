@@ -625,3 +625,66 @@
 - 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier
 - 当前批次 worktree disposition 状态：retained（主工作区）
 - 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
+
+### Batch 8：第九轮 PR #110 Codex review remediation
+
+#### 8.1 本批目标
+
+- 修复 PR #110 最新 Codex review P1：design-contract coverage 不得把 `tasks.md` 非任务段、延期说明或代码块中的 FR/SC 原始字符串误判为已覆盖。
+- 将 coverage source 限定为 parseable `### Task` / `### 任务` sections，并在 `covered_by` 中记录实际覆盖合同项的任务编号。
+- 保持本批范围只限 design-contract loop deterministic check，不进入 implementation / frontend-evidence / local-pr-review loop。
+
+#### 8.2 变更范围
+
+- **验证画像**：code-change
+- `src/ai_sdlc/core/design_contract_checks.py`
+  - `_coverage_items_for_spec` 改为消费 task coverage index。
+  - 新增 `_task_coverage_index`，只从可解析 task section 中提取 FR/SC，并记录覆盖任务 ID。
+  - 新增 `_without_fenced_blocks`，避免 task section 内 fenced code block 里的 FR/SC 被计为覆盖。
+- `tests/unit/test_design_contract_loop.py`
+  - happy path 断言 `covered_by` 为 `T11`。
+  - 新增非任务段 / fenced code block FR/SC 不算 coverage 的 regression。
+
+#### 8.3 验证记录
+
+- `V36`（ninth Codex review task-scoped coverage remediation）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`24 passed`。
+- `V37`（ninth remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`232 passed`。
+- `V38`（ninth remediation ruff / mypy / constraints / diff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_checks.py tests/unit/test_design_contract_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V39`（program truth sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过，snapshot hash `3d84b5cab666857b98f903a262818f59121a6781ad31779210381f7cd16b742e`，已写入 `program-manifest.yaml`。
+- `V40`（pre-commit work item close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime`
+  - 结果：除 `git_closure` 因当前修复尚未提交而 BLOCKER 外，其余检查 PASS；提交后需复跑至 PASS。
+
+#### 8.4 代码审查结论
+
+- 宪章/规格对齐：本批修复只收紧 design-contract coverage 的证据来源，不改变 loop 顺序，也不提前进入 implementation。
+- 质量风险：已覆盖“FR/SC 只出现在非任务段或代码块”时不得通过的 regression；正常任务覆盖仍可通过并记录 `covered_by=["T11"]`。
+- 结论：可提交、复跑 close-check、推送并重新请求 Codex review。
+
+#### 8.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：T41/T42 保持完成；本批为 PR review remediation，不新增交付范围。
+- `related_plan`（如存在）同步状态：无 related_plan；plan 边界仍为 design-contract loop。
+- 关联 branch/worktree disposition 计划：继续使用 PR #110 head branch。
+
+#### 8.6 归档后动作
+
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- **提交哈希**：当前 close-out commit，以 `git log -1` 为准
+- 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier
+- 当前批次 worktree disposition 状态：retained（主工作区）
+- 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。

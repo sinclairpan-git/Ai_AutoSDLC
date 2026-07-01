@@ -66,6 +66,12 @@ def test_check_design_contract_loop_writes_passed_artifacts(tmp_path: Path) -> N
         "FR-DEMO-001",
         "SC-DEMO-001",
     }
+    assert {
+        item["source_id"]: item["covered_by"] for item in report["coverage_items"]
+    } == {
+        "FR-DEMO-001": ["T11"],
+        "SC-DEMO-001": ["T11"],
+    }
     coverage = json.loads((loop_dir / "coverage-matrix.json").read_text(encoding="utf-8"))
     assert coverage["artifact_kind"] == "coverage-matrix"
     assert coverage["created_by"] == "ai-sdlc"
@@ -143,6 +149,53 @@ def test_check_design_contract_loop_reports_missing_coverage(
     )
     assert {finding["code"] for finding in report["findings"]} == {
         "missing_coverage"
+    }
+
+
+def test_check_design_contract_loop_ignores_non_task_coverage_refs(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(
+        tmp_path,
+        include_task_refs=False,
+        tasks_intro_extra="\n".join(
+            [
+                "## Deferred notes",
+                "",
+                "FR-DEMO-001 and SC-DEMO-001 are mentioned outside executable tasks.",
+                "",
+                "```markdown",
+                "FR-DEMO-001 SC-DEMO-001",
+                "```",
+                "",
+            ]
+        ),
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-non-task-coverage",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-non-task-coverage"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert {item["status"] for item in report["coverage_items"]} == {"missing"}
+    assert all(item["covered_by"] == [] for item in report["coverage_items"])
+    assert {finding["source_id"] for finding in report["findings"]} >= {
+        "FR-DEMO-001",
+        "SC-DEMO-001",
     }
 
 
@@ -701,6 +754,7 @@ def _write_work_item(
     success_heading: str = "## 成功标准",
     acceptance_label: str = "- **验收标准**",
     verification_label: str = "- **验证**",
+    tasks_intro_extra: str = "",
 ) -> Path:
     work_item = root / relative_path
     work_item.mkdir(parents=True)
@@ -749,6 +803,7 @@ def _write_work_item(
             [
                 "# 任务分解",
                 "",
+                tasks_intro_extra,
                 task_heading,
                 "",
                 "- **任务编号**：T11",

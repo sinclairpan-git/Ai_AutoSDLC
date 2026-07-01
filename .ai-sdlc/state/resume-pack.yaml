@@ -10,14 +10,15 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete five Loop Engine loop types one by one; current
-    slice is WI-193 design-contract loop PR review. | State: PR #110 eighth Codex
-    review remediation is committed in the latest local commit: English Acceptance
-    Criteria/Verification/Validation task labels are accepted, and implementation/frontend-evidence/local-pr-review
-    CLI entry signals are blocked as design-contract scope drift. Latest close-check
-    passed before this final handoff refresh; branch is ahead of origin by one commit
-    and ready to push for Codex review. | Next: Amend this final handoff refresh,
-    rerun close-check, push branch, request @codex review on PR #110, monitor checks/review,
-    remediate any actionable finding, and merge when clean.'
+    slice is WI-193 design-contract loop PR review. | State: PR #110 latest Codex
+    review P1 remediation is committed in the latest local commit: design-contract
+    coverage only counts FR/SC references inside parseable Task/任务 sections, ignores
+    fenced code blocks, and records covered_by task ids. Verification passed: unit
+    24 passed, focused regression 232 passed, ruff passed, mypy passed, verify constraints
+    passed, diff check passed, truth sync snapshot 3d84b5cab666857b98f903a262818f59121a6781ad31779210381f7cd16b742e,
+    and post-commit workitem close-check PASS. | Next: Amend this handoff refresh,
+    rerun close-check, push PR #110, request @codex review, monitor checks/review,
+    and merge when clean.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''

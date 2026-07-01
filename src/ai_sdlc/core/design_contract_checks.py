@@ -172,9 +172,11 @@ def _coverage_items_for_spec(
     tasks_text: str,
 ) -> list[ContractCoverageItem]:
     ids = sorted(set(_CONTRACT_ID.findall(_contract_source_text(spec_text))))
+    task_coverage = _task_coverage_index(tasks_text)
     items: list[ContractCoverageItem] = []
     for source_id in ids:
-        covered = source_id in tasks_text
+        covered_by = task_coverage.get(source_id, [])
+        covered = bool(covered_by)
         items.append(
             ContractCoverageItem(
                 source_id=source_id,
@@ -189,11 +191,41 @@ def _coverage_items_for_spec(
                     if covered
                     else ContractCoverageStatus.MISSING
                 ),
-                covered_by=[source_id] if covered else [],
-                blocker="" if covered else f"{source_id} is not referenced by tasks.md.",
+                covered_by=covered_by,
+                blocker=""
+                if covered
+                else f"{source_id} is not covered by a parseable task section.",
             )
         )
     return items
+
+
+def _task_coverage_index(tasks_text: str) -> dict[str, list[str]]:
+    coverage: dict[str, set[str]] = {}
+    for section in _task_sections(tasks_text):
+        task_id = next(iter(_TASK_ID.findall(section)), "")
+        if not task_id:
+            continue
+        task_body = _without_fenced_blocks(section)
+        for source_id in _CONTRACT_ID.findall(task_body):
+            coverage.setdefault(source_id, set()).add(task_id)
+    return {
+        source_id: sorted(task_ids)
+        for source_id, task_ids in sorted(coverage.items())
+    }
+
+
+def _without_fenced_blocks(text: str) -> str:
+    lines: list[str] = []
+    in_fence = False
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("```", "~~~")):
+            in_fence = not in_fence
+            continue
+        if not in_fence:
+            lines.append(line)
+    return "\n".join(lines)
 
 
 def _contract_source_text(spec_text: str) -> str:
