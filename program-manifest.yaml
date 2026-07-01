@@ -1877,12 +1877,16 @@ specs:
 - id: 194-loop-engine-implementation-loop-runtime
   path: specs/194-loop-engine-implementation-loop-runtime
   depends_on: []
+- id: 195-loop-engine-frontend-evidence-loop-runtime
+  path: specs/195-loop-engine-frontend-evidence-loop-runtime
+  depends_on: []
+  frontend_evidence_class: framework_capability
 truth_snapshot:
-  generated_at: '2026-07-01T17:57:45Z'
+  generated_at: '2026-07-01T18:36:12Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: fdff779a
-  authoring_hash: 6830f061117fd73a57208b295bf5b9e3c99753f6e4b031985efcd00613454dea
+  repo_revision: 93a52db8
+  authoring_hash: b86bcfa1f374ab297a564b58b09df23e468157278de27a91a0c75805e4dea88a
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1921,7 +1925,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 1992fb2cd56b868bf1293c3930f8e52c4767c2bde3c4642cde072f9df9fdc099
+  snapshot_hash: 6549263f2e26c2b4b130f15fedbcedfda1f3c58972bbfaf4a7ac18836bceea6b
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1936,30 +1940,30 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: incomplete
-    total_sources: 1026
-    mapped_sources: 998
+    total_sources: 1031
+    mapped_sources: 1003
     unmapped_sources: 28
-    missing_sources: 9
-    phase_signal_count: 3489
-    deferred_signal_count: 6306
+    missing_sources: 10
+    phase_signal_count: 3498
+    deferred_signal_count: 6316
     non_goal_signal_count: 341
     layer_totals:
       blueprint: 1
-      spec: 195
-      plan: 195
-      tasks: 195
-      execution: 195
-      close: 195
+      spec: 196
+      plan: 196
+      tasks: 196
+      execution: 196
+      close: 196
       requirements: 2
       defect: 3
       design: 8
       release: 37
     layer_materialized:
       blueprint: 1
-      spec: 195
-      plan: 195
-      tasks: 195
-      execution: 195
+      spec: 196
+      plan: 196
+      tasks: 196
+      execution: 196
       close: 186
       requirements: 2
       defect: 3
@@ -10747,6 +10751,51 @@ truth_snapshot:
       mapped: true
       exists: false
       mapping_ref: 194-loop-engine-implementation-loop-runtime
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/195-loop-engine-frontend-evidence-loop-runtime/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 195-loop-engine-frontend-evidence-loop-runtime
+      phase_signal_count: 3
+      deferred_signal_count: 4
+      non_goal_signal_count: 0
+    - path: specs/195-loop-engine-frontend-evidence-loop-runtime/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 195-loop-engine-frontend-evidence-loop-runtime
+      phase_signal_count: 4
+      deferred_signal_count: 4
+      non_goal_signal_count: 0
+    - path: specs/195-loop-engine-frontend-evidence-loop-runtime/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 195-loop-engine-frontend-evidence-loop-runtime
+      phase_signal_count: 2
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 195-loop-engine-frontend-evidence-loop-runtime
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/195-loop-engine-frontend-evidence-loop-runtime/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 195-loop-engine-frontend-evidence-loop-runtime
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0

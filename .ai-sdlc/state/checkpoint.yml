@@ -1,5 +1,5 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-07-01T16:37:06+00:00'
+pipeline_last_updated: '2026-07-01T18:38:26+00:00'
 current_stage: execute
 feature:
   id: 189-loop-engine-local-adversarial-pr-review
@@ -38,6 +38,6 @@ completed_stages:
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 194-loop-engine-implementation-loop-runtime
-linked_plan_uri: specs/194-loop-engine-implementation-loop-runtime/plan.md
-last_synced_at: '2026-07-01T16:37:06+00:00'
+linked_wi_id: 195-loop-engine-frontend-evidence-loop-runtime
+linked_plan_uri: specs/195-loop-engine-frontend-evidence-loop-runtime/plan.md
+last_synced_at: '2026-07-01T18:38:26+00:00'
