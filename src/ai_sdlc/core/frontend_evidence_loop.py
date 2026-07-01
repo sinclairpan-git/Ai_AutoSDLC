@@ -450,6 +450,7 @@ def _namespace_blocker(
     expected_artifact_root = (
         f".ai-sdlc/artifacts/frontend-browser-gate/{bundle.gate_run_id}"
     )
+    expected_artifact_root_path = (root / expected_artifact_root).resolve()
     if (
         runtime_session.gate_run_id != execution_context.gate_run_id
         or runtime_session.gate_run_id != bundle.gate_run_id
@@ -472,6 +473,8 @@ def _namespace_blocker(
         artifact_path = (root / record.artifact_ref).resolve()
         if not _is_relative_to(artifact_path, root):
             return "Frontend browser gate artifact record escapes the project root."
+        if not _is_relative_to(artifact_path, expected_artifact_root_path):
+            return "Frontend browser gate artifact record escapes the gate namespace."
         if record.capture_status == "captured" and not artifact_path.is_file():
             return (
                 "Frontend browser gate artifact record file is missing: "

@@ -192,6 +192,34 @@ def test_start_frontend_evidence_loop_blocks_missing_receipt_artifact_file(
     assert "playwright-trace.zip" in result.blocker
 
 
+def test_start_frontend_evidence_loop_blocks_artifact_ref_namespace_traversal(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+        artifact_ref_by_id={
+            "smoke-screenshot": (
+                ".ai-sdlc/artifacts/frontend-browser-gate/"
+                "gate-run-001/../other/navigation-screenshot.png"
+            )
+        },
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-artifact-namespace-traversal",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "escapes the gate namespace" in result.blocker
+
+
 def test_frontend_evidence_loop_preserves_missing_probe_artifact_report(
     tmp_path: Path,
 ) -> None:
@@ -489,6 +517,7 @@ def _write_browser_gate_artifact(
     omitted_artifact_record_ids: list[str] | None = None,
     missing_artifact_file_ids: list[str] | None = None,
     artifact_capture_status_by_id: dict[str, str] | None = None,
+    artifact_ref_by_id: dict[str, str] | None = None,
     probe_runtime_state: str = "completed",
     runtime_session_status: str = "completed",
 ) -> Path:
@@ -541,7 +570,11 @@ def _write_browser_gate_artifact(
     ]
     missing_file_ids = set(missing_artifact_file_ids or [])
     capture_status_by_id = artifact_capture_status_by_id or {}
+    artifact_refs = artifact_ref_by_id or {}
     for record in artifact_records:
+        artifact_ref = artifact_refs.get(str(record["artifact_id"]))
+        if artifact_ref:
+            record["artifact_ref"] = artifact_ref
         capture_status = capture_status_by_id.get(str(record["artifact_id"]))
         if capture_status:
             record["capture_status"] = capture_status

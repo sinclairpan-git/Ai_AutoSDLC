@@ -469,6 +469,69 @@
 - 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
 - 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并
 
+### Batch 2026-07-01-009 | Codex review artifact namespace traversal remediation
+
+#### 9.1 批次范围
+
+- 覆盖任务：`T42-R6`
+- 覆盖阶段：PR #112 sixth Codex review P2 remediation
+- 改动范围：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+
+#### 9.2 任务来源
+
+- 审查来源：PR #112 Codex review inline comment `3508927833`
+- 问题级别：P2
+- 问题摘要：artifact record 只用字符串前缀校验 gate namespace，`artifact_ref` 含 `../` 时可能解析到 gate-run namespace 外但仍在仓库内。
+
+#### 9.3 修复内容
+
+- `_namespace_blocker` 新增 resolved expected artifact root。
+- artifact record 除了字符串前缀与项目根校验外，还必须满足 resolved artifact path 位于 resolved gate-run artifact root 之下。
+- 单元测试新增 `../` namespace traversal 回归，断言 loop blocked 且提示 gate namespace escape。
+
+#### 9.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py -q`
+- `V2`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V3`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V4`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V5`：`git diff --check`
+- `V6`：`uv run ai-sdlc verify constraints`
+
+#### 9.5 验证结果
+
+- unit targeted：13 passed
+- focused regression：236 passed
+- ruff：PASS
+- mypy：PASS，5 source files
+- diff check：PASS
+- verify constraints：PASS，no BLOCKERs
+
+#### 9.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；本批强化 frontend-evidence artifact namespace trust boundary，不改变 loop 范围或调用模型。
+- 代码质量：同时保留字符串 namespace、项目根和 resolved gate root 校验，避免路径 traversal 伪造合法证据。
+- 测试质量：新增 traversal 回归，并保持 prior captured/missing/capture_failed artifact 行为覆盖。
+- 结论：可刷新 truth、handoff、close-check、提交、推送并重新请求 Codex review。
+
+#### 9.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 完成；本批为 PR #112 sixth Codex review remediation。
+- `related_plan` 同步状态：不改变 WI-195 范围。
+- 关联 branch/worktree disposition 计划：继续使用 PR #112 carrier branch。
+
+#### 9.8 归档后动作
+
+- 第六轮 Codex review P2 已修复；下一步 truth sync、handoff update、close-check、提交、推送并重新请求 Codex review。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- **提交哈希**：`HEAD`
+- 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
+- 是否继续下一批：否；提交后等待 PR #112 Codex review、required checks 与合并
+
 ### Batch 2026-07-01-006 | Codex review explicit probe state remediation
 
 #### 6.1 批次范围
