@@ -312,6 +312,8 @@
 - mypy：PASS，5 source files
 - diff check：PASS
 - verify constraints：PASS，no BLOCKERs
+- truth sync：PASS，写回 `program-manifest.yaml`；truth snapshot state 仍为既有 `migration_pending`，snapshot hash `49479c4b892abae9a259904481c06527ceb12e81312e3575c540473dad247a0a`
+- close-check：PASS，`done_gate PASS ready for completion`
 - truth sync：PASS，写回 `program-manifest.yaml`；truth snapshot state 仍为既有 `migration_pending`，snapshot hash `986838eda77e4a0d0bb1aacf4667f7be93f2d6dd69caf6ca609a7303b8270c56`
 - close-check：PASS，`done_gate PASS ready for completion`
 - truth sync：PASS，written path `program-manifest.yaml`
@@ -461,6 +463,70 @@
 #### 14.8 归档后动作
 
 - 第十一轮 Codex review P2 已修复；下一步 truth sync、handoff update、提交、推送并重新请求 Codex review。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
+- 是否继续下一批：否；提交后等待 PR #112 Codex review、required checks 与合并
+
+### Batch 2026-07-01-015 | Codex review runtime session scope remediation
+
+#### 15.1 批次范围
+
+- 覆盖任务：`T42-R12`
+- 覆盖阶段：PR #112 latest Codex review P2 remediation
+- 改动范围：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+
+#### 15.2 任务来源
+
+- 审查来源：PR #112 Codex review inline comment `3509496266`
+- 问题级别：P2
+- 问题摘要：`latest.yaml` 若包含当前 `execution_context` / `bundle_input`，但 `runtime_session` 来自其他 work item 或其他 browser entry，现有校验只比较 `gate_run_id`，可能把 stale/mismatched runtime session 当作当前证据并允许 close。
+
+#### 15.3 修复内容
+
+- `_namespace_blocker` 新增 runtime session scope 校验。
+- 校验字段覆盖 `apply_result_id`、`solution_snapshot_id`、`spec_dir`、`attachment_scope_ref`、`managed_frontend_target`、`readiness_subject_id`、`browser_entry_ref`。
+- 单元测试覆盖 `runtime_session.spec_dir` 和 `runtime_session.browser_entry_ref` 漂移时 fail-closed。
+
+#### 15.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py -q`
+- `V2`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V3`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V4`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V5`：`git diff --check`
+- `V6`：`uv run ai-sdlc verify constraints`
+- `V7`：`uv run ai-sdlc program truth sync --execute --yes`
+- `V8`：`uv run ai-sdlc workitem close-check --wi specs/195-loop-engine-frontend-evidence-loop-runtime`
+
+#### 15.5 验证结果
+
+- unit targeted：18 passed
+- focused regression：241 passed
+- ruff：PASS
+- mypy：PASS，5 source files
+- diff check：PASS
+- verify constraints：PASS，no BLOCKERs
+
+#### 15.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；frontend-evidence ingestion 现在按 work item、目标、入口和上游 ids fail-closed，避免 stale runtime session 进入当前 loop。
+- 代码质量：scope 校验集中在 namespace trust boundary；与既有 execution context/bundle linkage 校验互补，不改变 browser gate decision mapping。
+- 测试质量：新增 scope drift 回归，并保持 visual regression recheck 与普通空证据 fail-closed 用例通过。
+- 结论：可刷新 truth、更新 handoff、提交、推送并重新请求 Codex review。
+
+#### 15.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 完成；本批为 PR #112 latest Codex review remediation。
+- `related_plan` 同步状态：不改变 WI-195 范围。
+- 关联 branch/worktree disposition 计划：继续使用 PR #112 carrier branch。
+
+#### 15.8 归档后动作
+
+- 第十二轮 Codex review P2 已修复；下一步 truth sync、handoff update、提交、推送并重新请求 Codex review。
 - **验证画像**：`code-change`
 - **改动范围**：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
 - **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）

@@ -468,6 +468,12 @@ def _namespace_blocker(
         or runtime_session.gate_run_id != bundle.gate_run_id
     ):
         return "Frontend browser gate artifact gate_run_id linkage is inconsistent."
+    runtime_scope_blocker = _runtime_session_scope_blocker(
+        execution_context,
+        runtime_session,
+    )
+    if runtime_scope_blocker:
+        return runtime_scope_blocker
     if runtime_session.artifact_root_ref != expected_artifact_root:
         return "Frontend browser gate artifact root namespace is inconsistent."
     records_by_id: dict[str, BrowserProbeArtifactRecord] = {}
@@ -507,6 +513,30 @@ def _namespace_blocker(
                     "Frontend browser gate receipt references missing artifact "
                     f"record {artifact_id} for {receipt.check_name}."
                 )
+    return ""
+
+
+def _runtime_session_scope_blocker(
+    execution_context: BrowserQualityGateExecutionContext,
+    runtime_session: BrowserGateProbeRuntimeSession,
+) -> str:
+    scoped_fields = (
+        "apply_result_id",
+        "solution_snapshot_id",
+        "spec_dir",
+        "attachment_scope_ref",
+        "managed_frontend_target",
+        "readiness_subject_id",
+        "browser_entry_ref",
+    )
+    for field_name in scoped_fields:
+        runtime_value = getattr(runtime_session, field_name)
+        context_value = getattr(execution_context, field_name)
+        if runtime_value != context_value:
+            return (
+                "Frontend browser gate runtime session scope is inconsistent "
+                f"for {field_name}."
+            )
     return ""
 
 

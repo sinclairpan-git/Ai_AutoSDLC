@@ -259,6 +259,46 @@ def test_start_frontend_evidence_loop_blocks_receipt_without_evidence_artifacts(
     assert "playwright_smoke" in result.blocker
 
 
+def test_start_frontend_evidence_loop_blocks_runtime_session_scope_drift(
+    tmp_path: Path,
+) -> None:
+    cases = (
+        ("spec_dir", "specs/other-frontend"),
+        ("browser_entry_ref", "managed/other/index.html"),
+    )
+    for field_name, stale_value in cases:
+        case_root = tmp_path / field_name
+        work_item = _write_work_item(case_root)
+        _write_closed_implementation_loop(case_root, work_item)
+        artifact_path = _write_browser_gate_artifact(
+            case_root,
+            work_item_path="specs/demo-frontend",
+        )
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        assert isinstance(payload, dict)
+        runtime_session = payload["runtime_session"]
+        assert isinstance(runtime_session, dict)
+        runtime_session[field_name] = stale_value
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+
+        result = start_frontend_evidence_loop(
+            FrontendEvidenceStartOptions(
+                root=case_root,
+                work_item="specs/demo-frontend",
+                loop_id=f"fe-runtime-scope-{field_name.replace('_', '-')}",
+            )
+        )
+
+        assert result.status == "blocked"
+        assert (
+            "runtime session scope is inconsistent "
+            f"for {field_name}"
+        ) in result.blocker
+
+
 def test_frontend_evidence_loop_reports_visual_regression_recheck_without_artifacts(
     tmp_path: Path,
 ) -> None:
