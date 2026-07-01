@@ -21,6 +21,12 @@ from ai_sdlc.core.pr_review_models import (
     ReviewRun,
     ReviewVerdict,
 )
+from ai_sdlc.core.requirement_loop import (
+    RequirementFreezeOptions,
+    RequirementStartOptions,
+    freeze_requirement_loop,
+    start_requirement_loop,
+)
 
 runner = CliRunner()
 
@@ -734,6 +740,187 @@ def test_loop_requirement_list_json(tmp_path: Path) -> None:
     )
 
 
+def test_loop_design_contract_check_status_and_close_json(tmp_path: Path) -> None:
+    _write_design_contract_work_item(tmp_path)
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        check = runner.invoke(
+            app,
+            [
+                "loop",
+                "design-contract",
+                "check",
+                "--wi",
+                "specs/demo-design-contract",
+                "--loop-id",
+                "dc-cli",
+                "--json",
+            ],
+        )
+        status = runner.invoke(
+            app,
+            ["loop", "status", "--type", "design-contract", "--json"],
+        )
+        close = runner.invoke(
+            app,
+            ["loop", "design-contract", "close", "--yes", "--json"],
+        )
+
+    assert check.exit_code == 0
+    check_payload = json.loads(check.output)
+    assert check_payload["status"] == "ready"
+    assert check_payload["loop_status"] == "passed"
+    assert check_payload["design_contract"]["status"] == "passed"
+    assert check_payload["design_contract"]["coverage_count"] == 2
+    assert check_payload["design_contract"]["coverage_matrix_path"].endswith(
+        ".ai-sdlc/loops/design-contract/dc-cli/coverage-matrix.json"
+    )
+    assert check_payload["design_contract"]["report_path"].endswith(
+        ".ai-sdlc/loops/design-contract/dc-cli/design-contract-report.json"
+    )
+    assert check_payload["next_action"] == (
+        "Run ai-sdlc loop design-contract close --yes."
+    )
+    assert check_payload["next_guidance"]["command"] == (
+        "ai-sdlc loop design-contract close --yes"
+    )
+    assert check_payload["next_guidance"]["requires_model"] is False
+    assert check_payload["next_guidance"]["writes_artifacts"] is True
+    assert check_payload["next_guidance"]["writes_code"] is False
+
+    assert status.exit_code == 0
+    status_payload = json.loads(status.output)
+    assert status_payload["status"] == "ready"
+    assert status_payload["current_loop"]["loop_type"] == "design-contract"
+    assert status_payload["current_loop"]["design_contract"]["blocker_count"] == 0
+    assert status_payload["next_guidance"]["command"] == (
+        "ai-sdlc loop design-contract close --yes"
+    )
+
+    assert close.exit_code == 0
+    close_payload = json.loads(close.output)
+    assert close_payload["status"] == "ready"
+    assert close_payload["closed"] is True
+    assert close_payload["loop_status"] == "closed"
+    assert close_payload["design_contract"]["status"] == "closed"
+    assert close_payload["next_action"] == (
+        "Start implementation loop for demo-design-contract."
+    )
+    assert close_payload["next_guidance"]["safety"] == "no_action"
+    assert close_payload["next_guidance"]["writes_artifacts"] is False
+
+
+def test_loop_design_contract_check_dry_run_skips_adapter_hook(
+    tmp_path: Path,
+) -> None:
+    _write_design_contract_work_item(tmp_path)
+
+    with (
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "loop",
+                "design-contract",
+                "check",
+                "--wi",
+                "specs/demo-design-contract",
+                "--loop-id",
+                "dc-dry-run",
+                "--dry-run",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "dry_run"
+    assert payload["dry_run"] is True
+    assert payload["design_contract"]["status"] == "created"
+    assert payload["design_contract"]["work_item_id"] == "demo-design-contract"
+    assert payload["design_contract"]["coverage_matrix_path"].endswith(
+        ".ai-sdlc/loops/design-contract/dc-dry-run/coverage-matrix.json"
+    )
+    assert payload["design_contract"]["report_path"].endswith(
+        ".ai-sdlc/loops/design-contract/dc-dry-run/design-contract-report.json"
+    )
+    assert payload["next_guidance"]["command"] == (
+        "ai-sdlc loop design-contract check --wi specs/demo-design-contract"
+    )
+    assert not (
+        tmp_path / ".ai-sdlc" / "loops" / "design-contract" / "dc-dry-run"
+    ).exists()
+    adapter_hook.assert_not_called()
+
+
+def test_loop_design_contract_close_with_blockers_exits_nonzero(
+    tmp_path: Path,
+) -> None:
+    _write_design_contract_work_item(
+        tmp_path,
+        include_task_refs=False,
+        verification_value="",
+    )
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        check = runner.invoke(
+            app,
+            [
+                "loop",
+                "design-contract",
+                "check",
+                "--wi",
+                "specs/demo-design-contract",
+                "--loop-id",
+                "dc-blocked",
+                "--json",
+            ],
+        )
+        close = runner.invoke(
+            app,
+            ["loop", "design-contract", "close", "--yes", "--json"],
+        )
+
+    assert check.exit_code == 0
+    assert close.exit_code == 1
+    payload = json.loads(close.output)
+    assert payload["status"] == "needs_fix"
+    assert payload["blocker_count"] >= 2
+
+
+def test_loop_design_contract_list_json(tmp_path: Path) -> None:
+    _write_design_contract_work_item(tmp_path)
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        runner.invoke(
+            app,
+            [
+                "loop",
+                "design-contract",
+                "check",
+                "--wi",
+                "specs/demo-design-contract",
+                "--loop-id",
+                "dc-list",
+                "--json",
+            ],
+        )
+        result = runner.invoke(
+            app,
+            ["loop", "list", "--type", "design-contract", "--json"],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "ready"
+    assert payload["current_loop_id"] == "dc-list"
+    assert payload["items"][0]["design_contract"]["work_item_id"] == (
+        "demo-design-contract"
+    )
+
+
 def test_python_module_help_fallback_lists_loop() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "ai_sdlc", "--help"],
@@ -746,6 +933,93 @@ def test_python_module_help_fallback_lists_loop() -> None:
 
     assert result.returncode == 0
     assert "loop" in result.stdout
+
+
+def _write_design_contract_work_item(
+    root: Path,
+    *,
+    include_task_refs: bool = True,
+    verification_value: str = "uv run pytest tests/unit/test_demo.py -q",
+    requirement_loop_id: str = "req-current",
+) -> Path:
+    work_item = root / "specs" / "demo-design-contract"
+    work_item.mkdir(parents=True)
+    work_item.joinpath("spec.md").write_text(
+        "\n".join(
+            [
+                "# PRD：Demo Design Contract",
+                "",
+                "**状态**：已冻结",
+                "",
+                "## 需求",
+                "",
+                "- **FR-DEMO-001**：系统必须检查设计合同。",
+                "",
+                "## 成功标准",
+                "",
+                "- **SC-DEMO-001**：合同通过后可以进入实现。",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    work_item.joinpath("plan.md").write_text(
+        "\n".join(
+            [
+                "# 实施计划",
+                "## 技术背景",
+                "Python runtime.",
+                "## 阶段计划",
+                "Phase 1.",
+                "## 验证策略",
+                "Run pytest.",
+                "## 回退方式",
+                "Revert the commit.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    refs = "FR-DEMO-001 and SC-DEMO-001" if include_task_refs else "contract docs"
+    work_item.joinpath("tasks.md").write_text(
+        "\n".join(
+            [
+                "# 任务分解",
+                "### Task 1.1 Check contract",
+                "- **任务编号**：T11",
+                "- **优先级**：P0",
+                f"- **验收标准**：Cover {refs}.",
+                f"- **验证**：{verification_value}",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    _ensure_frozen_requirement_loop(root, loop_id=requirement_loop_id)
+    return work_item
+
+
+def _ensure_frozen_requirement_loop(root: Path, *, loop_id: str) -> None:
+    freeze_path = (
+        root
+        / ".ai-sdlc"
+        / "loops"
+        / "requirement"
+        / loop_id
+        / "requirement-freeze.json"
+    )
+    if freeze_path.is_file():
+        return
+    start_result = start_requirement_loop(
+        RequirementStartOptions(
+            root=root,
+            loop_id=loop_id,
+            idea="Demo users need a checked design contract.",
+            acceptance=("The design contract can be checked before implementation.",),
+        )
+    )
+    assert start_result.status == "ready"
+    freeze_result = freeze_requirement_loop(
+        RequirementFreezeOptions(root=root, loop_id=loop_id, yes=True)
+    )
+    assert freeze_result.frozen is True
 
 
 def _write_review_run(

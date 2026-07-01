@@ -280,6 +280,43 @@ def test_192_feature_contract_surfaces_cover_requirement_loop_runtime() -> None:
     assert "design-contract" in doc_tokens
 
 
+def test_193_feature_contract_surfaces_cover_design_contract_loop_runtime() -> None:
+    checkpoint = Checkpoint(
+        current_stage="execute",
+        feature=FeatureInfo(
+            id="193-loop-engine-design-contract-loop-runtime",
+            spec_dir="specs/193-loop-engine-design-contract-loop-runtime",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="f",
+        ),
+    )
+
+    surfaces = verify_constraints_module._feature_contract_surfaces_for_checkpoint(
+        checkpoint
+    )
+
+    assert surfaces == verify_constraints_module.FEATURE_CONTRACT_SURFACES["193"]
+    labels = {surface.label for surface in surfaces}
+    assert "design-contract loop core runtime" in labels
+    assert "design-contract loop status and CLI" in labels
+    assert "design-contract loop user docs" in labels
+    docs_surface = next(
+        surface
+        for surface in surfaces
+        if surface.label == "design-contract loop user docs"
+    )
+    doc_tokens = {
+        token
+        for evidence in docs_surface.evidence_entries
+        for token in evidence.required_tokens
+    }
+    assert "ai-sdlc loop design-contract check" in doc_tokens
+    assert "ai-sdlc loop design-contract close --yes" in doc_tokens
+    assert "does not enter frontend evidence" in doc_tokens
+    assert "implementation loop" in doc_tokens
+
+
 def test_verify_constraint_report_runtime_objects_canonicalize_lists() -> None:
     constraint_report = ConstraintReport(
         root=".",

@@ -54,6 +54,24 @@ in `needs_user` and cannot be frozen. `freeze --yes` records explicit local
 confirmation in `requirement-freeze.json`; the next loop is `design-contract`,
 not implementation.
 
+### Design Contract Loop
+
+After requirement freeze, run the design-contract loop before implementation:
+
+```bash
+ai-sdlc loop design-contract check --wi specs/<work-item>
+ai-sdlc loop status --type design-contract
+ai-sdlc loop design-contract close --yes
+```
+
+`ai-sdlc loop design-contract check` writes local design-contract artifacts under
+`.ai-sdlc/loops/design-contract/<loop-id>/`, including the normalized design
+input, coverage matrix, JSON report, and Markdown report. It checks that the
+frozen requirement has a matching `spec.md`, `plan.md`, and `tasks.md` contract
+before implementation starts. The P0 path is deterministic and local: it does
+not call any model service, does not modify application code, and does not enter frontend evidence. If contract blockers remain, the loop stays in `needs_fix`
+and `close --yes` exits nonzero. A closed design-contract loop points to the implementation loop as the next action.
+
 ### Local PR Review Loop
 
 For source-checkout builds that include the local PR review loop, use the
