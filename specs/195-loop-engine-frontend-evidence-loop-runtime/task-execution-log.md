@@ -338,6 +338,70 @@
 - 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
 - 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并
 
+### Batch 2026-07-01-011 | Codex review blocker status consistency remediation
+
+#### 11.1 批次范围
+
+- 覆盖任务：`T42-R8`
+- 覆盖阶段：PR #112 eighth Codex review P2 remediation
+- 改动范围：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+
+#### 11.2 任务来源
+
+- 审查来源：PR #112 Codex review inline comment `3509148587`
+- 问题级别：P2
+- 问题摘要：browser gate artifact 若携带 `plain_language_blockers` 且 execute gate otherwise ready，report blocker_count 非零但 loop status 仍为 `passed`，导致 start 指向 close，而 close 又拒绝关闭。
+
+#### 11.3 修复内容
+
+- `_loop_status_for_snapshot` 改为 blockers 优先判定；存在 blockers 时不得返回 `passed`。
+- execute gate blocked 且有 blockers 时保留 `blocked`，其他 blocker 场景进入 `needs_fix`。
+- 新增单元测试覆盖 otherwise-passed artifact 携带 `plain_language_blockers` 时，start 返回 `needs_fix` 且 next guidance 指向重新运行 browser gate probe。
+
+#### 11.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py -q`
+- `V2`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V3`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V4`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V5`：`git diff --check`
+- `V6`：`uv run ai-sdlc verify constraints`
+- `V7`：`uv run ai-sdlc program truth sync --execute --yes`
+
+#### 11.5 验证结果
+
+- unit targeted：15 passed
+- focused regression：238 passed
+- ruff：PASS
+- mypy：PASS，5 source files
+- diff check：PASS
+- verify constraints：PASS，no BLOCKERs
+- truth sync：PASS，写回 `program-manifest.yaml`；truth snapshot state 仍为既有 `migration_pending`
+
+#### 11.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；本批只修 frontend-evidence report status 与 blocker guidance 一致性，不改变模型、CI、GitHub 或 browser gate 边界。
+- 代码质量：blockers now dominate passed/advisory status, avoiding contradictory start/close guidance.
+- 测试质量：新增 plain-language blocker 回归，并保持 focused suite 通过。
+- 结论：可更新 handoff、提交、推送并重新请求 Codex review。
+
+#### 11.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 完成；本批为 PR #112 eighth Codex review remediation。
+- `related_plan` 同步状态：不改变 WI-195 范围。
+- 关联 branch/worktree disposition 计划：继续使用 PR #112 carrier branch。
+
+#### 11.8 归档后动作
+
+- 第八轮 Codex review P2 已修复；下一步 handoff update、提交、推送并重新请求 Codex review。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
+- 是否继续下一批：否；提交后等待 PR #112 Codex review、required checks 与合并
+
 ### Batch 2026-07-01-010 | Codex review receipt evidence artifact remediation
 
 #### 10.1 批次范围

@@ -259,6 +259,31 @@ def test_start_frontend_evidence_loop_blocks_receipt_without_evidence_artifacts(
     assert "playwright_smoke" in result.blocker
 
 
+def test_start_frontend_evidence_loop_respects_plain_language_blockers(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+        plain_language_blockers=["Browser gate evidence must be refreshed."],
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-plain-blocker",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    assert result.loop_status == "needs_fix"
+    assert result.blocker_count == 1
+    assert result.next_guidance.command == "ai-sdlc program browser-gate-probe --execute"
+
+
 def test_frontend_evidence_loop_preserves_missing_probe_artifact_report(
     tmp_path: Path,
 ) -> None:
@@ -559,6 +584,7 @@ def _write_browser_gate_artifact(
     artifact_ref_by_id: dict[str, str] | None = None,
     probe_runtime_state: str = "completed",
     runtime_session_status: str = "completed",
+    plain_language_blockers: list[str] | None = None,
 ) -> Path:
     gate_run_id = "gate-run-001"
     artifact_root = f".ai-sdlc/artifacts/frontend-browser-gate/{gate_run_id}"
@@ -720,7 +746,7 @@ def _write_browser_gate_artifact(
         },
         "overall_gate_status": overall_gate_status,
         "warnings": ["visual advisory warning"] if advisory_reason_codes else [],
-        "plain_language_blockers": [],
+        "plain_language_blockers": plain_language_blockers or [],
         "recommended_next_steps": [],
     }
     artifact_path = (

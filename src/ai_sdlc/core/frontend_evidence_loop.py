@@ -564,6 +564,10 @@ def _loop_status_for_snapshot(
     blockers: list[str],
     warnings: list[str],
 ) -> LoopStatus:
+    if blockers:
+        if snapshot.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_BLOCKED:
+            return LoopStatus.BLOCKED
+        return LoopStatus.NEEDS_FIX
     if snapshot.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_READY:
         if (
             snapshot.decision_reason == FRONTEND_GATE_DECISION_REASON_ADVISORY_ONLY
@@ -578,8 +582,6 @@ def _loop_status_for_snapshot(
         return LoopStatus.NEEDS_FIX
     if snapshot.execute_gate_state == FRONTEND_GATE_EXECUTE_STATE_BLOCKED:
         return LoopStatus.BLOCKED
-    if blockers:
-        return LoopStatus.NEEDS_FIX
     return LoopStatus.BLOCKED
 
 

@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-01T21:23:03+00:00
-- Reason: final close-check evidence for PR #112 seventh Codex review remediation
+- Updated: 2026-07-01T21:39:54+00:00
+- Reason: PR #112 eighth Codex review remediation
 - Goal: Complete frontend-evidence Loop Engine runtime and PR review/merge
-- State: PR #112 seventh Codex review P1 remediation has local tests, constraints, truth sync, and WI-195 close-check passing. Execution log now records close-check PASS.
+- State: PR #112 eighth Codex review P2 fixed locally: frontend-evidence now respects report blockers before marking evidence passed, so plain_language_blockers produce needs_fix guidance instead of contradictory close guidance. Tests, ruff, mypy, diff check, verify constraints, and truth sync passed.
 - Stage: execute
 - Work Item: 195-loop-engine-frontend-evidence-loop-runtime
 - Branch: feature/195-loop-engine-frontend-evidence-loop-runtime-docs
@@ -11,19 +11,22 @@
 ## Changed Files
 - M program-manifest.yaml
 - M specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md
+- M src/ai_sdlc/core/frontend_evidence_loop.py
+- M tests/unit/test_frontend_evidence_loop.py
 
 ## Key Decisions
-- Receipt-level evidence is mandatory for frontend-evidence ingestion; empty receipt artifact_ids fail closed as malformed browser gate evidence.
+- Blockers dominate frontend-evidence status; ready execute gate plus plain-language blockers is not passed.
 
 ## Commands / Tests
-- uv run ai-sdlc workitem close-check --wi specs/195-loop-engine-frontend-evidence-loop-runtime => PASS; done_gate PASS ready for completion
-- uv run ai-sdlc program truth sync --execute --yes => PASS; wrote program-manifest.yaml snapshot 67ad2a5a653c9fb612feff6007c653376d89bf96e11627ae3d427558983af520
+- uv run pytest tests/unit/test_frontend_evidence_loop.py -q => 15 passed
+- uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q => 238 passed
+- ruff/mypy/git diff --check/verify constraints/program truth sync => PASS
 
 ## Blockers / Risks
-- Need amend commit with final close-check evidence, push PR #112 branch, request Codex review, monitor review/checks, merge if clean.
+- Need close-check on clean tree after commit, push, request Codex review, monitor PR #112.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Amend receipt evidence remediation commit, rerun close-check on clean tree, push PR #112 branch, comment @codex review.
+- Commit blocker status consistency remediation, run close-check, push PR #112 branch, comment @codex review.
