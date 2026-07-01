@@ -21,6 +21,13 @@ from ai_sdlc.core.pr_review_models import (
     ReviewRun,
     ReviewVerdict,
 )
+from ai_sdlc.core.requirement_loop import (
+    CURRENT_REQUIREMENT_PATH,
+    RequirementFreezeOptions,
+    RequirementStartOptions,
+    freeze_requirement_loop,
+    start_requirement_loop,
+)
 
 
 def test_get_loop_status_reads_current_local_pr_review_summary(tmp_path: Path) -> None:
@@ -456,6 +463,253 @@ def test_list_loops_does_not_write_artifacts(tmp_path: Path) -> None:
 
     assert result.status == LoopStatusCommandStatus.READY
     assert _snapshot_files(tmp_path / ".ai-sdlc") == before
+
+
+def test_get_loop_status_reads_current_requirement_loop(tmp_path: Path) -> None:
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-status",
+            idea="运营用户需要订单审批流，范围只覆盖后台人工审批。",
+            acceptance=("审批节点可以配置",),
+        )
+    )
+
+    result = get_loop_status(tmp_path, loop_type="requirement")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.result == "Current requirement loop found."
+    assert result.current_loop is not None
+    assert result.current_loop.loop_type == "requirement"
+    assert result.current_loop.status == "needs_review"
+    assert result.next_guidance.command == "ai-sdlc loop requirement freeze --yes"
+    assert result.next_guidance.requires_model is False
+    assert result.current_loop.requirement is not None
+    assert result.current_loop.requirement.summary == (
+        "运营用户需要订单审批流，范围只覆盖后台人工审批。"
+    )
+    assert result.current_loop.requirement.acceptance_count == 1
+    assert result.current_loop.requirement.frozen is False
+
+
+def test_get_loop_status_reports_no_current_requirement_loop(tmp_path: Path) -> None:
+    (tmp_path / ".ai-sdlc").mkdir()
+
+    result = get_loop_status(tmp_path, loop_type="requirement")
+
+    assert result.status == LoopStatusCommandStatus.NO_CURRENT
+    assert result.result == "No current requirement loop."
+    assert result.next_guidance.command == 'ai-sdlc loop requirement start --idea "<需求描述>"'
+
+
+def test_get_loop_status_blocks_malformed_requirement_pointer_with_requirement_guidance(
+    tmp_path: Path,
+) -> None:
+    pointer_path = tmp_path / CURRENT_REQUIREMENT_PATH
+    pointer_path.parent.mkdir(parents=True)
+    pointer_path.write_text("{not-json", encoding="utf-8")
+
+    result = get_loop_status(tmp_path, loop_type="requirement")
+
+    assert result.status == LoopStatusCommandStatus.BLOCKED
+    assert result.next_action == "Rerun ai-sdlc loop requirement start."
+    assert result.next_guidance.command == 'ai-sdlc loop requirement start --idea "<需求描述>"'
+    assert result.next_guidance.requires_model is False
+    assert result.next_guidance.writes_artifacts is True
+    assert result.next_guidance.writes_code is False
+    assert ".ai-sdlc/loops/requirement/current-requirement.json" in (
+        result.next_guidance.evidence
+    )
+
+
+def test_get_loop_status_needs_user_guidance_updates_existing_requirement(
+    tmp_path: Path,
+) -> None:
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-needs-user-status",
+            idea="做一个报表",
+        )
+    )
+
+    result = get_loop_status(tmp_path, loop_type="requirement")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.current_loop is not None
+    assert result.current_loop.status == "needs_user"
+    assert result.next_guidance.command == (
+        'ai-sdlc loop requirement start --loop-id req-needs-user-status --acceptance "<验收标准>"'
+    )
+    assert result.next_guidance.requires_model is False
+
+
+def test_list_loops_reads_requirement_runs_and_marks_current(tmp_path: Path) -> None:
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-old",
+            idea="客服用户需要 SLA 提醒，范围只覆盖站内提醒。",
+            acceptance=("SLA 超时前可以提醒",),
+        )
+    )
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-current",
+            idea="运营用户需要订单审批流，范围只覆盖后台人工审批。",
+            acceptance=("审批节点可以配置",),
+        )
+    )
+
+    result = list_loops(tmp_path, loop_type="requirement")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.result == "Requirement loops found."
+    assert result.current_loop_id == "req-current"
+    assert [item.loop_id for item in result.items] == ["req-current", "req-old"]
+    assert result.items[0].is_current is True
+    assert result.items[0].next_guidance.command == "ai-sdlc loop requirement freeze --yes"
+    assert result.items[1].is_current is False
+    assert result.items[1].next_guidance.command == (
+        "ai-sdlc loop list --type requirement --json"
+    )
+
+
+def test_list_loops_orders_requirement_runs_by_updated_at_before_mtime(
+    tmp_path: Path,
+) -> None:
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-older",
+            idea="Ops users need invoice review.",
+            acceptance=("Invoices can be approved.",),
+        )
+    )
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-newer",
+            idea="Ops users need refund review.",
+            acceptance=("Refunds can be approved.",),
+        )
+    )
+    older_path = (
+        tmp_path / ".ai-sdlc" / "loops" / "requirement" / "req-older" / "loop-run.json"
+    )
+    newer_path = (
+        tmp_path / ".ai-sdlc" / "loops" / "requirement" / "req-newer" / "loop-run.json"
+    )
+    older_doc = json.loads(older_path.read_text(encoding="utf-8"))
+    older_doc["updated_at"] = "2026-06-29T01:00:00Z"
+    older_path.write_text(
+        json.dumps(older_doc, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    newer_doc = json.loads(newer_path.read_text(encoding="utf-8"))
+    newer_doc["updated_at"] = "2026-06-30T01:00:00Z"
+    newer_path.write_text(
+        json.dumps(newer_doc, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    os.utime(newer_path, (100.0, 100.0))
+    os.utime(older_path, (200.0, 200.0))
+
+    result = list_loops(tmp_path, loop_type="requirement")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert [item.loop_id for item in result.items] == ["req-newer", "req-older"]
+
+
+def test_list_loops_reports_malformed_requirement_without_hiding_valid_runs(
+    tmp_path: Path,
+) -> None:
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-valid",
+            idea="运营用户需要订单审批流，范围只覆盖后台人工审批。",
+            acceptance=("审批节点可以配置",),
+        )
+    )
+    bad_dir = tmp_path / ".ai-sdlc" / "loops" / "requirement" / "req-bad"
+    bad_dir.mkdir(parents=True)
+    (bad_dir / "loop-run.json").write_text("{not-json", encoding="utf-8")
+
+    result = list_loops(tmp_path, loop_type="requirement")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert [item.loop_id for item in result.items] == ["req-valid"]
+    assert result.malformed_count == 1
+    assert result.artifact_errors[0].kind == "requirement-loop-run"
+
+
+def test_list_loops_reports_malformed_current_requirement_run_as_blocked_guidance(
+    tmp_path: Path,
+) -> None:
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-valid",
+            idea="运营用户需要订单审批流，范围只覆盖后台人工审批。",
+            acceptance=("审批节点可以配置",),
+        )
+    )
+    bad_dir = tmp_path / ".ai-sdlc" / "loops" / "requirement" / "req-bad-current"
+    bad_dir.mkdir(parents=True)
+    bad_path = bad_dir / "loop-run.json"
+    bad_path.write_text("{not-json", encoding="utf-8")
+    LoopArtifactStore(tmp_path).write_json_artifact(
+        tmp_path / CURRENT_REQUIREMENT_PATH,
+        {
+            "schema_version": "1",
+            "artifact_kind": "current-requirement-pointer",
+            "loop_id": "req-bad-current",
+            "loop_run_path": bad_path.relative_to(tmp_path).as_posix(),
+        },
+    )
+
+    result = list_loops(tmp_path, loop_type="requirement")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert [item.loop_id for item in result.items] == ["req-valid"]
+    assert result.current_loop_id == ""
+    assert result.malformed_count == 1
+    assert result.artifact_errors[0].kind == "current-requirement-target"
+    assert result.blocker == (
+        "Current requirement pointer is malformed or references missing artifacts."
+    )
+    assert result.next_guidance.safety == "blocked"
+    assert ".ai-sdlc/loops/requirement/req-bad-current/loop-run.json" in (
+        result.next_guidance.evidence
+    )
+
+
+def test_requirement_status_after_freeze_points_to_design_contract(
+    tmp_path: Path,
+) -> None:
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-frozen-status",
+            idea="财务用户需要付款审批，范围只覆盖国内付款。",
+            acceptance=("审批通过后才能付款",),
+        )
+    )
+    freeze_requirement_loop(RequirementFreezeOptions(root=tmp_path, yes=True))
+
+    result = get_loop_status(tmp_path, loop_type="requirement")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.current_loop is not None
+    assert result.current_loop.status == "closed"
+    assert result.current_loop.requirement is not None
+    assert result.current_loop.requirement.frozen is True
+    assert result.next_guidance.safety == "no_action"
+    assert result.next_guidance.alternatives == [
+        "Start design-contract loop from requirement req-frozen-status."
+    ]
 
 
 def _write_review_run(

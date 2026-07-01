@@ -8,8 +8,12 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
-from ai_sdlc.core.loop_models import LoopStatus, LoopType
+from ai_sdlc.core.loop_models import LoopRun, LoopStatus, LoopType
 from ai_sdlc.core.pr_review_models import ReviewRun
+from ai_sdlc.core.requirement_loop import (
+    CURRENT_REQUIREMENT_PATH,
+    RequirementIntake,
+)
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
 CURRENT_REVIEW_PATH = Path(AI_SDLC_DIR) / "reviews" / "pr" / "current-review.json"
@@ -80,6 +84,20 @@ class LocalPRReviewSummary(BaseModel):
     code_egress: bool = False
 
 
+class RequirementLoopSummary(BaseModel):
+    """Requirement loop fields embedded in a generic loop summary."""
+
+    model_config = ConfigDict(extra="forbid", use_enum_values=True)
+
+    work_item_id: str = ""
+    source_kind: str = "idea"
+    source_path: str = ""
+    summary: str = ""
+    clarification_count: int = 0
+    acceptance_count: int = 0
+    frozen: bool = False
+
+
 class LoopSummary(BaseModel):
     """Generic read-only summary for one Loop Engine run."""
 
@@ -96,6 +114,7 @@ class LoopSummary(BaseModel):
     )
     artifacts: list[LoopArtifactRef] = Field(default_factory=list)
     local_pr_review: LocalPRReviewSummary | None = None
+    requirement: RequirementLoopSummary | None = None
 
 
 class LoopStatusResult(BaseModel):
@@ -142,11 +161,16 @@ class LoopListResult(BaseModel):
     )
 
 
-def get_loop_status(root: Path) -> LoopStatusResult:
+def get_loop_status(
+    root: Path,
+    *,
+    loop_type: LoopType | str = LoopType.LOCAL_PR_REVIEW,
+) -> LoopStatusResult:
     """Return the current Loop Engine status without writing artifacts."""
 
     resolved_root = root.resolve()
     ai_sdlc_dir = resolved_root / AI_SDLC_DIR
+    normalized_loop_type = _normalize_loop_type(loop_type)
     if not ai_sdlc_dir.is_dir():
         return LoopStatusResult(
             status=LoopStatusCommandStatus.BLOCKED,
@@ -154,6 +178,20 @@ def get_loop_status(root: Path) -> LoopStatusResult:
             blocker="Project is not initialized; .ai-sdlc is missing.",
             next_action="Run ai-sdlc init .",
             next_guidance=_init_guidance(),
+        )
+    if normalized_loop_type == LoopType.REQUIREMENT.value:
+        return _get_requirement_loop_status(resolved_root)
+    if normalized_loop_type != LoopType.LOCAL_PR_REVIEW.value:
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Unsupported loop type.",
+            blocker=f"Unsupported loop type for status: {normalized_loop_type}",
+            next_action="Use --type local-pr-review or --type requirement.",
+            next_guidance=_manual_guidance(
+                command="ai-sdlc loop status --type local-pr-review",
+                reason="Only local-pr-review and requirement loop status are implemented.",
+                alternatives=["ai-sdlc loop status --type requirement"],
+            ),
         )
 
     pointer_path = resolved_root / CURRENT_REVIEW_PATH
@@ -247,18 +285,20 @@ def list_loops(
         )
 
     normalized_loop_type = (
-        loop_type.value if isinstance(loop_type, LoopType) else str(loop_type)
+        _normalize_loop_type(loop_type)
     )
+    if normalized_loop_type == LoopType.REQUIREMENT.value:
+        return _list_requirement_loops(resolved_root)
     if normalized_loop_type != LoopType.LOCAL_PR_REVIEW.value:
         return LoopListResult(
             status=LoopStatusCommandStatus.BLOCKED,
             result="Unsupported loop type.",
             blocker=f"Unsupported loop type for list: {normalized_loop_type}",
-            next_action="Use loop_type=local-pr-review.",
+            next_action="Use --type local-pr-review or --type requirement.",
             next_guidance=_manual_guidance(
                 command="ai-sdlc loop list --type local-pr-review",
-                reason="This Loop list baseline only supports local PR review runs.",
-                evidence=[],
+                reason="Only local-pr-review and requirement loop list are implemented.",
+                alternatives=["ai-sdlc loop list --type requirement"],
             ),
         )
 
@@ -463,6 +503,273 @@ def _summary_from_review_run(
     )
 
 
+def _get_requirement_loop_status(root: Path) -> LoopStatusResult:
+    pointer_path = root / CURRENT_REQUIREMENT_PATH
+    if not pointer_path.exists():
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.NO_CURRENT,
+            result="No current requirement loop.",
+            next_action="Run ai-sdlc loop requirement start --idea \"<需求描述>\".",
+            next_guidance=_no_current_requirement_guidance(),
+        )
+    loop_run_path, pointer_error = _read_current_requirement_loop_run_path(
+        root,
+        pointer_path,
+    )
+    if pointer_error is not None:
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Current requirement pointer is malformed.",
+            blocker=pointer_error.error,
+            next_action="Rerun ai-sdlc loop requirement start.",
+            next_guidance=_requirement_blocked_guidance(
+                pointer_error.error,
+                evidence=[pointer_error.path],
+            ),
+        )
+    if loop_run_path is None or not loop_run_path.is_file():
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Current requirement loop artifact is missing.",
+            blocker="Current requirement pointer references a missing loop-run.json.",
+            next_action="Rerun ai-sdlc loop requirement start.",
+            next_guidance=_requirement_blocked_guidance(
+                "Current requirement pointer references a missing loop-run.json.",
+                evidence=[_repo_relative_path(root, loop_run_path or pointer_path)],
+            ),
+        )
+    try:
+        loop_run = LoopRun.model_validate(
+            json.loads(loop_run_path.read_text(encoding="utf-8"))
+        )
+        current_loop = _summary_from_requirement_loop_run(
+            root,
+            loop_run,
+            loop_run_path,
+            current_pointer_path=pointer_path,
+            is_current=True,
+        )
+    except (json.JSONDecodeError, OSError, ValidationError, ValueError) as exc:
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Current requirement loop artifact is malformed.",
+            blocker=f"Current requirement loop-run.json is malformed: {exc}",
+            next_action="Rerun ai-sdlc loop requirement start.",
+            next_guidance=_requirement_blocked_guidance(
+                f"Current requirement loop-run.json is malformed: {exc}",
+                evidence=[_repo_relative_path(root, loop_run_path)],
+            ),
+        )
+    return LoopStatusResult(
+        status=LoopStatusCommandStatus.READY,
+        result="Current requirement loop found.",
+        current_loop=current_loop,
+        next_action=current_loop.next_action,
+        next_guidance=current_loop.next_guidance,
+    )
+
+
+def _list_requirement_loops(root: Path) -> LoopListResult:
+    loop_root = root / AI_SDLC_DIR / "loops" / LoopType.REQUIREMENT.value
+    loop_run_paths = sorted(loop_root.glob("*/loop-run.json"))
+    artifact_errors: list[LoopArtifactError] = []
+    pointer_path = root / CURRENT_REQUIREMENT_PATH
+    current_loop_run_path, pointer_error = _read_current_requirement_loop_run_path(
+        root,
+        pointer_path,
+    )
+    if pointer_error is not None:
+        artifact_errors.append(pointer_error)
+    if current_loop_run_path is not None and not current_loop_run_path.is_file():
+        artifact_errors.append(
+            LoopArtifactError(
+                kind="current-requirement-target",
+                path=_repo_relative_path(root, current_loop_run_path),
+                error="referenced by current-requirement pointer but file is missing.",
+            )
+        )
+        current_loop_run_path = None
+    if not loop_run_paths:
+        if artifact_errors:
+            blocker = "Current requirement pointer is malformed or references missing artifacts."
+            return LoopListResult(
+                status=LoopStatusCommandStatus.BLOCKED,
+                result="No readable requirement loops found.",
+                malformed_count=len(artifact_errors),
+                artifact_errors=artifact_errors,
+                blocker=blocker,
+                next_action="Inspect or remove malformed current-requirement.json artifacts.",
+                next_guidance=_requirement_blocked_guidance(
+                    blocker,
+                    evidence=[error.path for error in artifact_errors if error.path],
+                ),
+            )
+        return LoopListResult(
+            status=LoopStatusCommandStatus.NO_CURRENT,
+            result="No requirement loops found.",
+            next_action="Run ai-sdlc loop requirement start --idea \"<需求描述>\".",
+            next_guidance=_no_current_requirement_guidance(),
+        )
+
+    loop_entries: list[tuple[LoopSummary, float]] = []
+    for loop_run_path in loop_run_paths:
+        try:
+            loop_run = LoopRun.model_validate(
+                json.loads(loop_run_path.read_text(encoding="utf-8"))
+            )
+            summary = _summary_from_requirement_loop_run(
+                root,
+                loop_run,
+                loop_run_path,
+                current_pointer_path=pointer_path
+                if _same_path(loop_run_path, current_loop_run_path)
+                else None,
+                is_current=_same_path(loop_run_path, current_loop_run_path),
+            )
+        except (json.JSONDecodeError, OSError, ValidationError, ValueError) as exc:
+            error_kind = (
+                "current-requirement-target"
+                if _same_path(loop_run_path, current_loop_run_path)
+                else "requirement-loop-run"
+            )
+            artifact_errors.append(
+                LoopArtifactError(
+                    kind=error_kind,
+                    path=_repo_relative_path(root, loop_run_path),
+                    error=str(exc),
+                )
+            )
+            continue
+        loop_entries.append((summary, _artifact_mtime(loop_run_path)))
+
+    loop_entries.sort(key=lambda item: item[0].loop_id)
+    loop_entries.sort(key=lambda item: item[1], reverse=True)
+    loop_entries.sort(key=lambda item: item[0].updated_at, reverse=True)
+    loops = [summary for summary, _mtime in loop_entries]
+    if not loops:
+        blocker = "All discovered requirement loop artifacts are malformed."
+        return LoopListResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="No readable requirement loops found.",
+            malformed_count=len(artifact_errors),
+            artifact_errors=artifact_errors,
+            blocker=blocker,
+            next_action="Inspect or remove malformed requirement loop artifacts.",
+            next_guidance=_requirement_blocked_guidance(
+                blocker,
+                evidence=[error.path for error in artifact_errors if error.path],
+            ),
+        )
+
+    current_loop = next((loop for loop in loops if loop.is_current), None)
+    pointer_errors = [
+        error
+        for error in artifact_errors
+        if error.kind in {"current-requirement-pointer", "current-requirement-target"}
+    ]
+    if current_loop is None and pointer_errors:
+        blocker = "Current requirement pointer is malformed or references missing artifacts."
+        next_action = "Inspect or remove malformed current-requirement.json artifacts."
+        guidance = _requirement_blocked_guidance(
+            blocker,
+            evidence=[error.path for error in pointer_errors if error.path],
+        )
+    elif current_loop is None:
+        blocker = ""
+        next_action = "Run ai-sdlc loop requirement start --idea \"<需求描述>\"."
+        guidance = _no_current_requirement_guidance()
+    else:
+        blocker = ""
+        next_action = "Run ai-sdlc loop status --type requirement."
+        guidance = LoopNextActionGuidance(
+            command="ai-sdlc loop status --type requirement",
+            reason="Inspect the current requirement loop before choosing the next step.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.SAFE_READ_ONLY,
+            evidence=[current_loop.loop_id],
+            alternatives=[
+                current_loop.next_guidance.command
+                for current_loop in [current_loop]
+                if current_loop.next_guidance.command
+            ],
+        )
+    return LoopListResult(
+        status=LoopStatusCommandStatus.READY,
+        result="Requirement loops found.",
+        current_loop_id=current_loop.loop_id if current_loop is not None else "",
+        items=loops,
+        malformed_count=len(artifact_errors),
+        artifact_errors=artifact_errors,
+        blocker=blocker,
+        next_action=next_action,
+        next_guidance=guidance,
+    )
+
+
+def _summary_from_requirement_loop_run(
+    root: Path,
+    loop_run: LoopRun,
+    loop_run_path: Path,
+    *,
+    current_pointer_path: Path | None = None,
+    is_current: bool = False,
+) -> LoopSummary:
+    if loop_run.loop_type != LoopType.REQUIREMENT:
+        raise ValueError("loop-run.json is not a requirement loop")
+    loop_dir = loop_run_path.parent
+    intake_path = loop_dir / "requirement-intake.json"
+    try:
+        intake = RequirementIntake.model_validate(
+            json.loads(intake_path.read_text(encoding="utf-8"))
+        )
+    except (json.JSONDecodeError, OSError, ValidationError, ValueError) as exc:
+        raise ValueError(f"requirement-intake.json is malformed: {exc}") from exc
+    artifacts = [_artifact_ref(root, "loop-run", loop_run_path)]
+    if is_current and current_pointer_path is not None:
+        artifacts.insert(
+            0,
+            _artifact_ref(root, "current-requirement-pointer", current_pointer_path),
+        )
+    optional_artifacts = (
+        ("requirement-intake", intake_path),
+        ("requirement-brief", loop_dir / "requirement-brief.md"),
+        ("clarification-questions", loop_dir / "clarification-questions.md"),
+        ("acceptance-checklist", loop_dir / "acceptance-checklist.md"),
+        ("requirement-freeze", loop_dir / "requirement-freeze.json"),
+    )
+    for kind, path in optional_artifacts:
+        artifacts.append(_artifact_ref(root, kind, path))
+    frozen = (loop_dir / "requirement-freeze.json").is_file()
+    return LoopSummary(
+        loop_id=loop_run.loop_id,
+        loop_type=loop_run.loop_type,
+        status=loop_run.status,
+        is_current=is_current,
+        updated_at=loop_run.updated_at,
+        next_action=loop_run.next_action,
+        next_guidance=_guidance_for_requirement_loop(
+            root,
+            loop_run,
+            loop_run_path,
+            intake,
+            is_current=is_current,
+            frozen=frozen,
+        ),
+        artifacts=artifacts,
+        requirement=RequirementLoopSummary(
+            work_item_id=loop_run.work_item_id,
+            source_kind=str(intake.source_kind),
+            source_path=intake.source_path,
+            summary=intake.summary,
+            clarification_count=len(intake.clarification_questions),
+            acceptance_count=len(intake.acceptance_criteria),
+            frozen=frozen,
+        ),
+    )
+
+
 def _blocked_result(*, result: str, blocker: str) -> LoopStatusResult:
     return LoopStatusResult(
         status=LoopStatusCommandStatus.BLOCKED,
@@ -501,6 +808,21 @@ def _no_current_review_guidance() -> LoopNextActionGuidance:
     )
 
 
+def _no_current_requirement_guidance() -> LoopNextActionGuidance:
+    return LoopNextActionGuidance(
+        command='ai-sdlc loop requirement start --idea "<需求描述>"',
+        reason="No current requirement loop exists; capture the requirement before design.",
+        requires_model=False,
+        writes_artifacts=True,
+        writes_code=False,
+        safety=LoopNextActionSafety.WRITES_PROJECT_ARTIFACTS,
+        evidence=[str(CURRENT_REQUIREMENT_PATH).replace("\\", "/")],
+        alternatives=[
+            'ai-sdlc loop requirement start --input-file <path>',
+        ],
+    )
+
+
 def _manual_guidance(
     *,
     command: str = "",
@@ -534,6 +856,26 @@ def _blocked_guidance(
         safety=LoopNextActionSafety.BLOCKED,
         evidence=evidence or [str(CURRENT_REVIEW_PATH).replace("\\", "/")],
         alternatives=["Inspect the malformed local PR review artifact."],
+    )
+
+
+def _requirement_blocked_guidance(
+    reason: str,
+    *,
+    evidence: list[str] | None = None,
+) -> LoopNextActionGuidance:
+    return LoopNextActionGuidance(
+        command='ai-sdlc loop requirement start --idea "<需求描述>"',
+        reason=reason,
+        requires_model=False,
+        writes_artifacts=True,
+        writes_code=False,
+        safety=LoopNextActionSafety.BLOCKED,
+        evidence=evidence or [str(CURRENT_REQUIREMENT_PATH).replace("\\", "/")],
+        alternatives=[
+            "Inspect or remove malformed requirement loop artifacts.",
+            'ai-sdlc loop requirement start --input-file <path>',
+        ],
     )
 
 
@@ -720,6 +1062,163 @@ def _guidance_for_review_run(
     )
 
 
+def _guidance_for_requirement_loop(
+    root: Path,
+    loop_run: LoopRun,
+    loop_run_path: Path,
+    intake: RequirementIntake,
+    *,
+    is_current: bool,
+    frozen: bool,
+) -> LoopNextActionGuidance:
+    evidence = [
+        _repo_relative_path(root, loop_run_path),
+        _repo_relative_path(root, loop_run_path.parent / "requirement-intake.json"),
+    ]
+    if not is_current:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop list --type requirement --json",
+            reason=(
+                "This is a historical, non-current requirement loop. Inspect it "
+                "instead of freezing the current pointer."
+            ),
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.SAFE_READ_ONLY,
+            evidence=evidence,
+            alternatives=["Inspect the historical requirement loop artifacts."],
+        )
+    if loop_run.status == LoopStatus.NEEDS_USER:
+        return LoopNextActionGuidance(
+            command=(
+                "ai-sdlc loop requirement start "
+                f'--loop-id {loop_run.loop_id} --acceptance "<验收标准>"'
+            ),
+            reason=(
+                "The requirement loop needs at least one acceptance criterion "
+                "before it can be frozen."
+            ),
+            requires_model=False,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.NEEDS_USER,
+            evidence=[*evidence, _repo_relative_path(root, loop_run_path.parent / "acceptance-checklist.md")],
+        )
+    if loop_run.status in {LoopStatus.NEEDS_REVIEW, LoopStatus.PASSED}:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop requirement freeze --yes",
+            reason=(
+                "The requirement has acceptance criteria; freeze it before "
+                "starting the design-contract loop."
+            ),
+            requires_model=False,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.WRITES_PROJECT_ARTIFACTS,
+            evidence=evidence,
+        )
+    if loop_run.status == LoopStatus.CLOSED:
+        return LoopNextActionGuidance(
+            command="",
+            reason="The requirement loop is frozen; the next loop type is design-contract.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.NO_ACTION,
+            evidence=[
+                *evidence,
+                _repo_relative_path(root, loop_run_path.parent / "requirement-freeze.json"),
+            ],
+            alternatives=[
+                f"Start design-contract loop from requirement {loop_run.loop_id}."
+            ],
+        )
+    if loop_run.status in {LoopStatus.BLOCKED, LoopStatus.NEEDS_FIX}:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop requirement status",
+            reason=loop_run.next_action or "Inspect the blocked requirement loop.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.BLOCKED,
+            evidence=evidence,
+        )
+    return LoopNextActionGuidance(
+        command="ai-sdlc loop requirement status",
+        reason=loop_run.next_action or f"Inspect requirement: {intake.summary}",
+        requires_model=False,
+        writes_artifacts=False,
+        writes_code=False,
+        safety=LoopNextActionSafety.SAFE_READ_ONLY,
+        evidence=evidence,
+    )
+
+
+def _read_current_requirement_loop_run_path(
+    root: Path,
+    pointer_path: Path,
+) -> tuple[Path | None, LoopArtifactError | None]:
+    if not pointer_path.exists():
+        return None, None
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return None, _requirement_pointer_error(root, pointer_path, str(exc))
+    if not isinstance(pointer, dict):
+        return None, _requirement_pointer_error(
+            root,
+            pointer_path,
+            "root must be an object.",
+        )
+    path_text = pointer.get("loop_run_path")
+    if not isinstance(path_text, str) or not path_text.strip():
+        return None, _requirement_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must be a non-empty string.",
+        )
+    path = Path(path_text)
+    if path.is_absolute():
+        return None, _requirement_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must be project-relative.",
+        )
+    if ".." in path.parts:
+        return None, _requirement_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must not contain parent directory segments.",
+        )
+    candidate = (root / path).resolve(strict=False)
+    try:
+        candidate.relative_to(root.resolve(strict=False))
+    except ValueError:
+        return None, _requirement_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must stay within the project root.",
+        )
+    return candidate, None
+
+
+def _requirement_pointer_error(
+    root: Path,
+    pointer_path: Path,
+    error: str,
+) -> LoopArtifactError:
+    return LoopArtifactError(
+        kind="current-requirement-pointer",
+        path=_repo_relative_path(root, pointer_path),
+        error=error,
+    )
+
+
+def _normalize_loop_type(loop_type: LoopType | str) -> str:
+    return loop_type.value if isinstance(loop_type, LoopType) else str(loop_type)
+
+
 def _artifact_path_if_present(root: Path, path_text: str) -> str:
     if not path_text.strip():
         return ""
@@ -857,6 +1356,7 @@ __all__ = [
     "LoopListResult",
     "LoopNextActionGuidance",
     "LoopNextActionSafety",
+    "RequirementLoopSummary",
     "LoopStatusCommandStatus",
     "LoopStatusResult",
     "LoopSummary",

@@ -36,6 +36,24 @@ Run the CLI from the source checkout with `uv run ai-sdlc ...`, or use `python -
 
 If the target machine does not already have Python 3.11, prefer the packaged installers so the runtime can be detected and provisioned automatically instead of asking the user to install Python by hand. The offline bundle can now carry a bundled `python-runtime/` payload for zero-preinstalled-Python installs on the target host.
 
+### Requirement Loop
+
+For source-checkout builds that include the requirement loop, capture and freeze
+the requirement before moving into design-contract work:
+
+```bash
+ai-sdlc loop requirement start --idea "Describe the requirement" --acceptance "How this will be accepted"
+ai-sdlc loop status --type requirement
+ai-sdlc loop requirement freeze --yes
+```
+
+`ai-sdlc loop requirement start` writes local requirement artifacts under
+`.ai-sdlc/loops/requirement/<loop-id>/`, including the requirement intake,
+plain-language clarification questions, and an acceptance checklist. It does not call any model service, does not contact a remote issue tracker, and does not modify application code. If no acceptance criterion is present, the loop remains
+in `needs_user` and cannot be frozen. `freeze --yes` records explicit local
+confirmation in `requirement-freeze.json`; the next loop is `design-contract`,
+not implementation.
+
 ### Local PR Review Loop
 
 For source-checkout builds that include the local PR review loop, use the
