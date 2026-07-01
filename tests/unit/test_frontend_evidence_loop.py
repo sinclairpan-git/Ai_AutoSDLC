@@ -101,6 +101,37 @@ def test_start_frontend_evidence_loop_dry_run_does_not_write(tmp_path: Path) -> 
     ).exists()
 
 
+def test_start_frontend_evidence_loop_blocks_stale_browser_gate_artifact(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(
+        tmp_path,
+        work_item,
+        closed_at="2026-07-01T00:00:10Z",
+    )
+    _write_browser_gate_artifact(tmp_path, work_item_path="specs/demo-frontend")
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-stale-browser-gate",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "older than the closed implementation loop" in result.blocker
+    assert result.next_guidance.command == "ai-sdlc program browser-gate-probe --execute"
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "frontend-evidence"
+        / "fe-stale-browser-gate"
+    ).exists()
+
+
 def test_start_frontend_evidence_loop_blocks_missing_browser_gate_artifact(
     tmp_path: Path,
 ) -> None:
@@ -639,7 +670,12 @@ def _write_work_item(tmp_path: Path) -> Path:
     return work_item
 
 
-def _write_closed_implementation_loop(tmp_path: Path, work_item: Path) -> None:
+def _write_closed_implementation_loop(
+    tmp_path: Path,
+    work_item: Path,
+    *,
+    closed_at: str = "2026-06-30T23:59:59Z",
+) -> None:
     artifacts = implementation_artifacts(tmp_path, "impl-frontend")
     store = LoopArtifactStore(tmp_path)
     store.create_loop_run_dir("impl-frontend", loop_type=LoopType.IMPLEMENTATION.value)
@@ -679,6 +715,7 @@ def _write_closed_implementation_loop(tmp_path: Path, work_item: Path) -> None:
         artifacts.close_path,
         ImplementationClose(
             loop_id="impl-frontend",
+            closed_at=closed_at,
             report_path=f"specs/{work_item.name}/implementation-report.json",
             next_loop_type=LoopType.FRONTEND_EVIDENCE,
         ),

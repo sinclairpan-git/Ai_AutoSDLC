@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from pathlib import Path
 
 import yaml  # type: ignore[import-untyped]
@@ -48,6 +50,7 @@ from ai_sdlc.core.frontend_gate_verification import (
     FRONTEND_GATE_EXECUTE_STATE_RECHECK_REQUIRED,
     build_frontend_browser_gate_execute_decision,
 )
+from ai_sdlc.core.implementation_models import ImplementationClose
 from ai_sdlc.core.implementation_store import (
     implementation_artifacts,
     resolve_implementation_loop_run_path,
@@ -300,6 +303,53 @@ def _implementation_gate(
     return loop_run.loop_id, repo_relative_path(root, artifacts.report_json_path), ""
 
 
+def _browser_gate_freshness_blocker(
+    root: Path,
+    frontend_input: FrontendEvidenceInput,
+    payload: dict[str, object],
+) -> str:
+    close_path = implementation_artifacts(
+        root,
+        frontend_input.implementation_loop_id,
+    ).close_path
+    try:
+        close_payload = json.loads(close_path.read_text(encoding="utf-8"))
+        implementation_close = ImplementationClose.model_validate(close_payload)
+    except Exception as exc:
+        return f"Implementation close artifact is not readable: {exc}"
+
+    browser_generated_at = _parse_utc_timestamp(
+        str(payload.get("generated_at", "")).strip()
+    )
+    implementation_closed_at = _parse_utc_timestamp(implementation_close.closed_at)
+    if browser_generated_at is None:
+        return "Frontend browser gate artifact generated_at is missing or invalid."
+    if implementation_closed_at is None:
+        return "Implementation close artifact closed_at is missing or invalid."
+    if browser_generated_at < implementation_closed_at:
+        return (
+            "Frontend browser gate artifact is older than the closed "
+            "implementation loop; rerun ai-sdlc program browser-gate-probe "
+            "--execute after implementation close."
+        )
+    return ""
+
+
+def _parse_utc_timestamp(value: str) -> datetime | None:
+    text = value.strip()
+    if not text:
+        return None
+    if text.endswith("Z"):
+        text = f"{text[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
 def _build_snapshot(
     root: Path,
     frontend_input: FrontendEvidenceInput,
@@ -351,6 +401,13 @@ def _build_snapshot(
                 "Run ai-sdlc program browser-gate-probe --execute for the current "
                 "work item, or pass --artifact-path to the matching local artifact."
             ),
+        )
+    freshness_blocker = _browser_gate_freshness_blocker(root, frontend_input, payload)
+    if freshness_blocker:
+        return _blocked_result(
+            freshness_blocker,
+            loop_id=frontend_input.loop_id,
+            next_action="Run ai-sdlc program browser-gate-probe --execute.",
         )
     probe_runtime_state = str(payload.get("probe_runtime_state", "")).strip()
     namespace_blocker = _namespace_blocker(

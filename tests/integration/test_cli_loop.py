@@ -1250,6 +1250,7 @@ def _write_closed_frontend_implementation(root: Path, work_item: Path) -> None:
         artifacts.close_path,
         ImplementationClose(
             loop_id="impl-frontend-cli",
+            closed_at="2026-06-30T23:59:59Z",
             report_path=artifacts.report_json_path.relative_to(root).as_posix(),
             next_loop_type=LoopType.FRONTEND_EVIDENCE,
         ),

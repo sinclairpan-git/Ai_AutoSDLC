@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-01T23:10:09+00:00
-- Reason: PR #112 runtime session scope remediation close-check passed
+- Updated: 2026-07-01T23:29:25+00:00
+- Reason: PR #112 stale browser evidence remediation close-check passed
 - Goal: Complete frontend-evidence Loop Engine runtime and PR review/merge
-- State: PR #112 latest Codex review P2 fixed and committed locally: runtime_session scope/linkage now fails closed on stale spec_dir/browser_entry_ref and related scope fields. Focused tests, ruff, mypy, diff check, verify constraints, truth sync, and workitem close-check all passed. Branch is ahead of origin by one remediation commit and ready to push.
+- State: PR #112 latest Codex review P1 fixed and committed locally: frontend-evidence rejects browser-gate artifacts older than implementation close. Unit, focused regression, ruff, mypy, diff check, verify constraints, truth sync, and workitem close-check all passed. Branch is ahead of origin by one remediation commit and ready to push.
 - Stage: execute
 - Work Item: 195-loop-engine-frontend-evidence-loop-runtime
 - Branch: feature/195-loop-engine-frontend-evidence-loop-runtime-docs
@@ -12,16 +12,16 @@
 - M specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md
 
 ## Key Decisions
-- Treat runtime_session scope drift as frontend browser gate artifact trust-boundary failure before building the frontend evidence report.
+- Browser gate artifact freshness is bound to implementation-close.closed_at; stale same-work-item evidence must rerun browser-gate-probe.
 
 ## Commands / Tests
-- uv run pytest tests/unit/test_frontend_evidence_loop.py -q => 18 passed
-- uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q => 241 passed
+- uv run pytest tests/unit/test_frontend_evidence_loop.py -q => 19 passed
+- uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q => 242 passed
 - uv run ruff check focused frontend-evidence files => PASS
 - uv run mypy focused frontend-evidence files => PASS
 - git diff --check => PASS
 - uv run ai-sdlc verify constraints => PASS, no BLOCKERs
-- uv run ai-sdlc program truth sync --execute --yes => PASS, snapshot 49479c4b892abae9a259904481c06527ceb12e81312e3575c540473dad247a0a
+- uv run ai-sdlc program truth sync --execute --yes => PASS, snapshot 4667142f28b1c1de60e13688f148e0b246d0466b1ef696cfebbc1372a9312709
 - uv run ai-sdlc workitem close-check --wi specs/195-loop-engine-frontend-evidence-loop-runtime => PASS, done_gate PASS
 
 ## Blockers / Risks
