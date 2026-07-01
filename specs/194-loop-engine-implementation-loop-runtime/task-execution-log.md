@@ -247,3 +247,64 @@
 - 当前批次 branch disposition 状态：提交后推送到 PR #111 并重新请求 Codex review
 - 当前批次 worktree disposition 状态：提交后继续 PR #111 heartbeat
 - 是否继续下一批：否；等待 PR #111 Codex review、required checks 与合并
+
+### Batch 2026-07-01-004 | Codex review truth snapshot remediation
+
+#### 2.20 批次范围
+
+- 覆盖任务：`T42` PR review remediation
+- 覆盖阶段：PR #111 最新 Codex review 后的 artifact 收口
+- 改动范围：`program-manifest.yaml`、`specs/194-loop-engine-implementation-loop-runtime/task-execution-log.md`、handoff artifacts
+
+#### 2.21 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_implementation_loop.py -q`
+- `V2`：`uv run pytest tests/unit/test_implementation_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V3`：`uv run ruff check src/ai_sdlc/core/implementation_models.py src/ai_sdlc/core/implementation_store.py src/ai_sdlc/core/implementation_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_implementation_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V4`：`uv run mypy src/ai_sdlc/core/implementation_models.py src/ai_sdlc/core/implementation_store.py src/ai_sdlc/core/implementation_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V5`：`uv run ai-sdlc verify constraints`
+- `V6`：`uv run ai-sdlc program truth sync --execute --yes`
+- `V7`：`uv run ai-sdlc workitem close-check --wi specs/194-loop-engine-implementation-loop-runtime`
+- `V8`：`git diff --check`
+
+#### 2.22 任务记录
+
+##### T42-R2 | Codex review truth snapshot remediation
+
+- 改动内容：
+  - 根据 PR #111 最新 Codex review P1，刷新 `program-manifest.yaml`，将 truth snapshot 的 `repo_revision` 从 `1af9ca1d` 更新到当前实现修复提交。
+  - 复核 PR #111 最新 Codex review P2：blocked 状态下的说明性 `next_action` 已由 `test_record_implementation_progress_blocked_state_has_no_fake_command` 覆盖，当前代码只把真实 `ai-sdlc` 命令写入 `next_guidance.command`。
+- 执行的命令：
+  - `uv run pytest tests/unit/test_implementation_loop.py -q`
+  - `uv run pytest tests/unit/test_implementation_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - `uv run ruff check src/ai_sdlc/core/implementation_models.py src/ai_sdlc/core/implementation_store.py src/ai_sdlc/core/implementation_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_implementation_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+  - `uv run mypy src/ai_sdlc/core/implementation_models.py src/ai_sdlc/core/implementation_store.py src/ai_sdlc/core/implementation_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - `uv run ai-sdlc verify constraints`
+  - `uv run ai-sdlc program truth sync --execute --yes`
+  - `uv run ai-sdlc workitem close-check --wi specs/194-loop-engine-implementation-loop-runtime`
+  - `git diff --check`
+- 测试结果：unit regression 11 passed；focused regression 227 passed；ruff passed；mypy passed；verify constraints no BLOCKERs；truth sync refreshed `program-manifest.yaml`；pre-commit close-check 除预期 git closure 外均 PASS；diff check passed。
+- 是否符合任务目标：符合；PR review 指出的 truth snapshot drift 已修复，next guidance command 风险由现有 regression 证明已覆盖。
+
+#### 2.23 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：本批只收口 WI-194 PR review artifact，不扩展到 frontend-evidence 或后续 loop。
+- 代码质量：无新增 runtime 逻辑；保持上一批行为修复。
+- 测试质量：复跑 focused regression、lint、type check、truth sync、close-check 和 whitespace check。
+- 结论：提交后推送到 PR #111，重新请求 Codex review，并继续监控 required checks。
+
+#### 2.24 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 仍为 PR review/checks/merge 收口中。
+- `related_plan` 同步状态：无 plan 范围变更。
+- 关联 branch/worktree disposition 计划：继续使用 PR #111 carrier branch。
+
+#### 2.25 归档后动作
+
+- **改动范围**：`program-manifest.yaml`、`specs/194-loop-engine-implementation-loop-runtime/task-execution-log.md`、handoff artifacts
+- **已完成 git 提交**：是（本 marker 随 truth remediation commit 一起落盘）
+- **提交哈希**：`pending-truth-remediation-commit`
+- 当前批次 branch disposition 状态：提交后推送到 PR #111 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #111 heartbeat
+- 是否继续下一批：否；等待 PR #111 Codex review、required checks 与合并
