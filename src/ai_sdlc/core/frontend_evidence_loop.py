@@ -372,6 +372,17 @@ def _build_snapshot(
         probe_runtime_state=probe_runtime_state,
         apply_artifact_path=str(payload.get("apply_artifact_path", "")).strip(),
     )
+    ready_evidence_blocker = _ready_evidence_blocker(
+        artifact_records,
+        bundle,
+        execute_gate_state=decision.execute_gate_state,
+    )
+    if ready_evidence_blocker:
+        return _blocked_result(
+            ready_evidence_blocker,
+            loop_id=frontend_input.loop_id,
+            next_action="Run ai-sdlc program browser-gate-probe --execute.",
+        )
     runtime_state_blocker = _runtime_state_blocker(
         runtime_session,
         probe_runtime_state,
@@ -491,6 +502,27 @@ def _namespace_blocker(
                 return (
                     "Frontend browser gate receipt references missing artifact "
                     f"record {artifact_id} for {receipt.check_name}."
+                )
+    return ""
+
+
+def _ready_evidence_blocker(
+    artifact_records: list[BrowserProbeArtifactRecord],
+    bundle: BrowserQualityBundleMaterializationInput,
+    *,
+    execute_gate_state: str,
+) -> str:
+    if execute_gate_state != FRONTEND_GATE_EXECUTE_STATE_READY:
+        return ""
+    records_by_id = {record.artifact_id: record for record in artifact_records}
+    for receipt in bundle.check_receipts:
+        for artifact_id in receipt.artifact_ids:
+            record = records_by_id[artifact_id]
+            if record.capture_status != "captured":
+                return (
+                    "Frontend browser gate receipt references non-captured "
+                    f"evidence artifact {artifact_id} for {receipt.check_name}: "
+                    f"{record.capture_status}."
                 )
     return ""
 

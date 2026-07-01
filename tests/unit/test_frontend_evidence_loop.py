@@ -284,6 +284,30 @@ def test_start_frontend_evidence_loop_respects_plain_language_blockers(
     assert result.next_guidance.command == "ai-sdlc program browser-gate-probe --execute"
 
 
+def test_start_frontend_evidence_loop_blocks_ready_gate_with_missing_evidence(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+        artifact_capture_status_by_id={"smoke-screenshot": "missing"},
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-ready-missing-evidence",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "non-captured evidence artifact smoke-screenshot" in result.blocker
+    assert "missing" in result.blocker
+
+
 def test_frontend_evidence_loop_preserves_missing_probe_artifact_report(
     tmp_path: Path,
 ) -> None:

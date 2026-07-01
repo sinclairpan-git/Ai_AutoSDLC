@@ -10,12 +10,11 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete frontend-evidence Loop Engine runtime and PR review/merge
-    | State: PR #112 eighth Codex review P2 fixed locally: frontend-evidence now respects
-    report blockers before marking evidence passed, so plain_language_blockers produce
-    needs_fix guidance instead of contradictory close guidance. Tests, ruff, mypy,
-    diff check, verify constraints, and truth sync passed. | Next: Commit blocker
-    status consistency remediation, run close-check, push PR #112 branch, comment
-    @codex review.'
+    | State: PR #112 ninth Codex review P1 fixed locally: READY frontend-evidence
+    now rejects receipt evidence records with missing/capture_failed status while
+    preserving non-ready missing-evidence reports. Tests, ruff, mypy, diff check,
+    verify constraints, and truth sync passed. | Next: Commit ready evidence capture-status
+    remediation, run close-check, push PR #112 branch, comment @codex review.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''
