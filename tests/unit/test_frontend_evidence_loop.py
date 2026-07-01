@@ -192,6 +192,53 @@ def test_start_frontend_evidence_loop_blocks_missing_receipt_artifact_file(
     assert "playwright-trace.zip" in result.blocker
 
 
+def test_frontend_evidence_loop_preserves_missing_probe_artifact_report(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    _write_browser_gate_artifact(
+        tmp_path,
+        work_item_path="specs/demo-frontend",
+        overall_gate_status="incomplete",
+        smoke_classification="evidence_missing",
+        blocking_reason_codes=["playwright_probe_evidence_missing"],
+        remediation_hints=["materialize shared Playwright runtime evidence"],
+        probe_runtime_state="incomplete",
+        runtime_session_status="incomplete",
+        artifact_capture_status_by_id={"smoke-screenshot": "missing"},
+    )
+
+    result = start_frontend_evidence_loop(
+        FrontendEvidenceStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-missing-capture-record",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    assert result.loop_status == "needs_fix"
+    assert result.blocker_count == 2
+    loop_dir = (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "frontend-evidence"
+        / "fe-missing-capture-record"
+    )
+    assert (loop_dir / "frontend-evidence-report.json").is_file()
+    snapshot = json.loads(
+        (loop_dir / "frontend-evidence-snapshot.json").read_text(encoding="utf-8")
+    )
+    screenshot_record = next(
+        record
+        for record in snapshot["artifact_records"]
+        if record["artifact_id"] == "smoke-screenshot"
+    )
+    assert screenshot_record["capture_status"] == "missing"
+
+
 def test_start_frontend_evidence_loop_blocks_failed_runtime_session(
     tmp_path: Path,
 ) -> None:
@@ -441,6 +488,7 @@ def _write_browser_gate_artifact(
     remediation_hints: list[str] | None = None,
     omitted_artifact_record_ids: list[str] | None = None,
     missing_artifact_file_ids: list[str] | None = None,
+    artifact_capture_status_by_id: dict[str, str] | None = None,
     probe_runtime_state: str = "completed",
     runtime_session_status: str = "completed",
 ) -> Path:
@@ -492,8 +540,14 @@ def _write_browser_gate_artifact(
         if str(record["artifact_id"]) not in omitted_record_ids
     ]
     missing_file_ids = set(missing_artifact_file_ids or [])
+    capture_status_by_id = artifact_capture_status_by_id or {}
     for record in artifact_records:
+        capture_status = capture_status_by_id.get(str(record["artifact_id"]))
+        if capture_status:
+            record["capture_status"] = capture_status
         if str(record["artifact_id"]) in missing_file_ids:
+            continue
+        if record["capture_status"] != "captured":
             continue
         local_artifact_path = tmp_path / str(record["artifact_ref"])
         local_artifact_path.parent.mkdir(parents=True, exist_ok=True)

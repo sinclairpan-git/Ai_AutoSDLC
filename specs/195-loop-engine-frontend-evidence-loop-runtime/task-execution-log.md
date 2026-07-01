@@ -337,6 +337,72 @@
 - 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
 - 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并
 
+### Batch 2026-07-01-008 | Codex review missing capture artifact remediation
+
+#### 8.1 批次范围
+
+- 覆盖任务：`T42-R5`
+- 覆盖阶段：PR #112 fifth Codex review P2 remediation
+- 改动范围：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+
+#### 8.2 任务来源
+
+- 审查来源：PR #112 Codex review inline comment `3508836576`
+- 问题级别：P2
+- 问题摘要：browser gate 在正常 incomplete/transient probe 下可能写入 `capture_status="missing"` 或 `capture_status="capture_failed"` 的 artifact record，这些 record 可合法没有本地截图/trace 文件；frontend-evidence 不应因此提前 blocked，而应生成 `needs_fix` report。
+
+#### 8.3 修复内容
+
+- `_namespace_blocker` 保留 artifact id、gate namespace、project root 和 receipt closure 校验。
+- 仅对 `capture_status="captured"` 的 artifact record 强制要求本地文件存在。
+- `missing` / `capture_failed` artifact record 允许进入 snapshot/report，由 browser gate decision 生成 `needs_fix`，让用户能通过 `loop status --type frontend-evidence` 看到修复证据。
+- 单元测试新增 missing capture record 回归，断言 report/snapshot 仍落盘且状态为 `needs_fix`。
+
+#### 8.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py -q`
+- `V2`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V3`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V4`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V5`：`git diff --check`
+- `V6`：`uv run ai-sdlc verify constraints`
+- `V7`：`uv run ai-sdlc program truth sync --execute --yes`
+
+#### 8.5 验证结果
+
+- unit targeted：12 passed
+- focused regression：235 passed
+- ruff：PASS
+- mypy：PASS，5 source files
+- diff check：PASS
+- verify constraints：PASS，no BLOCKERs
+- truth sync：PASS，written path `program-manifest.yaml`；全局 truth snapshot 仍为既有 `migration_pending`
+
+#### 8.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；本批只修 frontend-evidence artifact ingestion 的失败证据保留逻辑，不改变 browser gate、模型调用或 PR source 假设。
+- 代码质量：receipt artifact closure 仍 fail-closed，captured evidence 缺文件仍 blocked；missing/capture_failed evidence 进入 report，避免失败证据丢失。
+- 测试质量：新增 missing capture record 回归，并保持 captured 缺文件、missing receipt、runtime state、CLI/status/list 和 constraints focused suite 通过。
+- 结论：可更新 handoff、close-check、提交、推送并重新请求 Codex review。
+
+#### 8.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 完成；本批为 PR #112 fifth Codex review remediation。
+- `related_plan` 同步状态：不改变 WI-195 范围。
+- 关联 branch/worktree disposition 计划：继续使用 PR #112 carrier branch。
+
+#### 8.8 归档后动作
+
+- 第五轮 Codex review P2 已修复；下一步 handoff update、close-check、提交、推送并重新请求 Codex review。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- **提交哈希**：`HEAD`
+- 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
+- 是否继续下一批：否；提交后等待 PR #112 Codex review、required checks 与合并
+
 ### Batch 2026-07-01-007 | Codex review non-passing runtime report remediation
 
 #### 7.1 批次范围

@@ -472,7 +472,7 @@ def _namespace_blocker(
         artifact_path = (root / record.artifact_ref).resolve()
         if not _is_relative_to(artifact_path, root):
             return "Frontend browser gate artifact record escapes the project root."
-        if not artifact_path.is_file():
+        if record.capture_status == "captured" and not artifact_path.is_file():
             return (
                 "Frontend browser gate artifact record file is missing: "
                 f"{record.artifact_ref}."
