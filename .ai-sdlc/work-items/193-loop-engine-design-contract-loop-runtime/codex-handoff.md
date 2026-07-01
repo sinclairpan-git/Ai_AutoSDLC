@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-01T11:54:09+00:00
-- Reason: after thirteenth PR #110 remediation post-commit close-check PASS
+- Updated: 2026-07-01T12:11:04+00:00
+- Reason: after fourteenth PR #110 remediation post-commit close-check PASS
 - Goal: Complete five Loop Engine loop types one by one; current slice is WI-193 design-contract loop PR review.
-- State: PR #110 thirteenth Codex P2 remediation is committed locally in the latest commit: checkpoint canonical linked_wi_id is preferred over external linked_plan_uri, and P2/P3 task detail gaps no longer block design-contract readiness. Verification passed: unit 31 passed, focused regression 239 passed, ruff passed, mypy passed, verify constraints passed, diff check passed, truth sync snapshot 1059cf3a0b3607539e0d11a8ddcd63f01606718ac7388b74b85053ae428515c7, and post-commit workitem close-check PASS.
+- State: PR #110 latest Codex P2 remediation is committed locally in the latest commit: design-contract check validates an explicit requirement_loop_id against an existing frozen requirement loop before writing passed artifacts. Verification passed: design-contract unit 34 passed, focused regression 242 passed, ruff passed, mypy passed, verify constraints passed, diff check passed, truth sync snapshot a0701c375bee9a0a069867fb866999debe4f1971bea16041859faec78efa522f, and post-commit workitem close-check PASS.
 - Stage: execute
 - Work Item: 193-loop-engine-design-contract-loop-runtime
 - Branch: feature/193-loop-engine-design-contract-loop-runtime-docs
@@ -12,7 +12,7 @@
 - none
 
 ## Key Decisions
-- P0/P1 tasks remain strict for acceptance and verification; lower priority backlog tasks are not implementation-readiness blockers.
+- When requirement_loop_id is supplied, missing, unfrozen, mismatched, or malformed requirement freeze artifacts block design-contract check before implementation handoff.
 
 ## Commands / Tests
 - uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime => PASS

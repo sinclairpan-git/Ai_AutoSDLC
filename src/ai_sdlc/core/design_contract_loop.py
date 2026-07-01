@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from pydantic import ValidationError
+
 from ai_sdlc.core.design_contract_checks import (
     analyze_design_contract,
     render_report_markdown,
@@ -45,6 +47,16 @@ from ai_sdlc.core.loop_models import (
     LoopType,
     utc_now_iso,
 )
+from ai_sdlc.core.requirement_loop import (
+    RequirementFreeze,
+    _requirement_artifacts,
+)
+from ai_sdlc.core.requirement_loop import (
+    _read_loop_run as _read_requirement_loop_run,
+)
+from ai_sdlc.core.requirement_loop import (
+    _validate_explicit_loop_id as _validate_requirement_loop_id,
+)
 
 
 def check_design_contract_loop(
@@ -76,6 +88,17 @@ def check_design_contract_loop(
         work_item_dir=work_item_dir,
         requirement_loop_id=options.requirement_loop_id,
     )
+    requirement_blocker, requirement_next_action = _requirement_loop_gate(
+        root,
+        contract_input.requirement_loop_id,
+    )
+    if requirement_blocker:
+        return _blocked_result(
+            requirement_blocker,
+            loop_id=loop_id,
+            next_action=requirement_next_action,
+            artifacts=planned_refs,
+        )
     if options.dry_run:
         return DesignContractCommandResult(
             status=DesignContractCommandStatus.DRY_RUN,
@@ -309,6 +332,54 @@ def _closed_current_recheck_result(
         loop_status=LoopStatus.CLOSED,
         next_action=next_action,
     )
+
+
+def _requirement_loop_gate(root: Path, requirement_loop_id: str) -> tuple[str, str]:
+    loop_id = requirement_loop_id.strip()
+    if not loop_id:
+        return "", ""
+    try:
+        safe_loop_id = _validate_requirement_loop_id(loop_id)
+    except ValueError as exc:
+        return (
+            f"Invalid requirement loop id: {exc}",
+            "Run ai-sdlc loop requirement status.",
+        )
+    artifacts = _requirement_artifacts(root, safe_loop_id)
+    freeze_next_action = (
+        f"Run ai-sdlc loop requirement freeze --loop-id {safe_loop_id} --yes."
+    )
+    try:
+        loop_run = _read_requirement_loop_run(artifacts.loop_run_path)
+    except ValueError as exc:
+        return (
+            f"Requirement loop {safe_loop_id} must exist and be frozen before design-contract check: {exc}",
+            "Run ai-sdlc loop requirement start.",
+        )
+    if loop_run.loop_id != safe_loop_id:
+        return (
+            f"Requirement loop id mismatch: expected {safe_loop_id}, found {loop_run.loop_id}.",
+            "Run ai-sdlc loop requirement status.",
+        )
+    if loop_run.status != LoopStatus.CLOSED or not artifacts.freeze_path.is_file():
+        return (
+            f"Requirement loop {safe_loop_id} must be frozen before design-contract check.",
+            freeze_next_action,
+        )
+    try:
+        freeze_payload = LoopArtifactStore(root).read_json_artifact(artifacts.freeze_path)
+        freeze = RequirementFreeze.model_validate(freeze_payload)
+    except (OSError, ValueError, ValidationError) as exc:
+        return (
+            f"Requirement freeze artifact for {safe_loop_id} is malformed: {exc}",
+            freeze_next_action,
+        )
+    if freeze.loop_id != safe_loop_id:
+        return (
+            f"Requirement freeze artifact id mismatch: expected {safe_loop_id}, found {freeze.loop_id}.",
+            freeze_next_action,
+        )
+    return "", ""
 
 
 def _build_loop_run(
