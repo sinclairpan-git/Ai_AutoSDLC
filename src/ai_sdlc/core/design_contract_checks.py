@@ -115,10 +115,14 @@ def analyze_design_contract(
     )
     if plan_text:
         findings.extend(_plan_findings(Path(contract_input.plan_path), plan_text))
-        findings.extend(_scope_drift_findings(Path(contract_input.plan_path), plan_text))
+        findings.extend(
+            _scope_drift_findings(Path(contract_input.plan_path), plan_text, contract_input)
+        )
     if tasks_text:
         findings.extend(_task_findings(Path(contract_input.tasks_path), tasks_text))
-        findings.extend(_scope_drift_findings(Path(contract_input.tasks_path), tasks_text))
+        findings.extend(
+            _scope_drift_findings(Path(contract_input.tasks_path), tasks_text, contract_input)
+        )
 
     blocker_count = sum(
         1 for finding in findings if finding.severity == ContractFindingSeverity.BLOCKER
@@ -359,24 +363,53 @@ def _has_task_verification(section: str) -> bool:
     return "验证" in section or "verification" in lower or "validation" in lower
 
 
-def _scope_drift_findings(path: Path, text: str) -> list[DesignContractFinding]:
+def _scope_drift_findings(
+    path: Path,
+    text: str,
+    contract_input: DesignContractInput,
+) -> list[DesignContractFinding]:
     risky_tokens = (
-        "implementation_loop.py",
-        "frontend_evidence_loop.py",
-        "ai-sdlc loop implementation",
-        "ai-sdlc loop frontend-evidence",
-        "ai-sdlc pr-review",
-        "pr_review_",
+        ("implementation", "implementation_loop.py"),
+        ("implementation", "ai-sdlc loop implementation"),
+        ("frontend-evidence", "frontend_evidence_loop.py"),
+        ("frontend-evidence", "ai-sdlc loop frontend-evidence"),
+        ("pr-review", "ai-sdlc pr-review"),
+        ("pr-review", "pr_review_"),
     )
+    allowed_scopes = _allowed_scope_families(contract_input)
     return [
         _finding(
             "scope_drift",
             f"{path.name} appears to implement out-of-scope file: {token}.",
             path,
         )
-        for token in risky_tokens
-        if token in text
+        for family, token in risky_tokens
+        if family not in allowed_scopes and token in text
     ]
+
+
+def _allowed_scope_families(contract_input: DesignContractInput) -> set[str]:
+    scope_text = " ".join(
+        [
+            contract_input.work_item_id,
+            contract_input.work_item_path,
+            contract_input.spec_path,
+            contract_input.plan_path,
+            contract_input.tasks_path,
+        ]
+    ).lower()
+    allowed: set[str] = set()
+    if "implementation-loop" in scope_text or "implementation_loop" in scope_text:
+        allowed.add("implementation")
+    if "frontend-evidence" in scope_text or "frontend_evidence" in scope_text:
+        allowed.add("frontend-evidence")
+    if (
+        "local-pr-review" in scope_text
+        or "local-adversarial-pr-review" in scope_text
+        or "pr_review" in scope_text
+    ):
+        allowed.add("pr-review")
+    return allowed
 
 
 def item_to_finding(item: ContractCoverageItem) -> DesignContractFinding:

@@ -457,6 +457,37 @@ def test_check_design_contract_loop_checks_frontend_command_scope_drift(
     assert "ai-sdlc loop frontend-evidence" in scope_findings[0]["message"]
 
 
+def test_check_design_contract_loop_allows_active_work_item_scope(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(
+        tmp_path,
+        relative_path="specs/implementation-loop-runtime",
+        plan_extra="Run ai-sdlc loop implementation check and touch implementation_loop.py.",
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/implementation-loop-runtime",
+            loop_id="dc-active-scope",
+        )
+    )
+
+    assert result.status == "ready"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-active-scope"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert "scope_drift" not in {finding["code"] for finding in report["findings"]}
+
+
 def test_check_design_contract_loop_blocks_non_canonical_work_item_dir(
     tmp_path: Path,
 ) -> None:
