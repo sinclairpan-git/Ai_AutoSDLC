@@ -483,6 +483,7 @@ def test_close_frontend_evidence_loop_requires_allow_warnings(
     assert close_payload["artifact_kind"] == "frontend-evidence-close"
     assert close_payload["allow_warnings"] is True
     assert close_payload["warning_count"] == 3
+    assert close_payload["accepted_warning_reason_codes"] == ["low_contrast_text"]
 
 
 def test_frontend_evidence_loop_needs_fix_for_missing_evidence(

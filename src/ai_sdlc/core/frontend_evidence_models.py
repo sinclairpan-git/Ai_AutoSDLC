@@ -156,6 +156,7 @@ class FrontendEvidenceClose(LoopArtifactModel):
     report_path: str
     allow_warnings: bool = False
     warning_count: int = 0
+    accepted_warning_reason_codes: list[str] = Field(default_factory=list)
     next_loop_type: LoopType = LoopType.LOCAL_PR_REVIEW
 
 

@@ -338,6 +338,70 @@
 - 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
 - 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并
 
+### Batch 2026-07-01-013 | Codex review accepted warning reason codes remediation
+
+#### 13.1 批次范围
+
+- 覆盖任务：`T42-R10`
+- 覆盖阶段：PR #112 tenth Codex review P2 remediation
+- 改动范围：`src/ai_sdlc/core/frontend_evidence_models.py`、`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+
+#### 13.2 任务来源
+
+- 审查来源：PR #112 Codex review inline comment `3509302140`
+- 问题级别：P2
+- 问题摘要：`passed_with_advisories` 在 `--allow-warnings` close 时，close artifact 只记录 `warning_count`，没有记录被接受的 warning/advisory reason codes。
+
+#### 13.3 修复内容
+
+- `FrontendEvidenceClose` 新增 `accepted_warning_reason_codes`。
+- `_write_close` 在 `allow_warnings=True` 时写入 report 的 `advisory_reason_codes`。
+- 单元测试覆盖 advisory close artifact 必须记录 `low_contrast_text`。
+
+#### 13.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py -q`
+- `V2`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V3`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V4`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_store.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V5`：`git diff --check`
+- `V6`：`uv run ai-sdlc verify constraints`
+- `V7`：`uv run ai-sdlc program truth sync --execute --yes`
+
+#### 13.5 验证结果
+
+- unit targeted：16 passed
+- focused regression：239 passed
+- ruff：PASS
+- mypy：PASS，5 source files
+- diff check：PASS
+- verify constraints：PASS，no BLOCKERs
+- truth sync：PASS，写回 `program-manifest.yaml`；truth snapshot state 仍为既有 `migration_pending`
+
+#### 13.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；close artifact 现在保留 warning acceptance 的 reason-code 证据，便于审计消费者不追溯 report 也能理解接受范围。
+- 代码质量：新增字段向后兼容已有 close artifact 读取，不改变 close gate 语义。
+- 测试质量：新增 close artifact reason-code assertion，并保持 focused suite 通过。
+- 结论：可更新 handoff、提交、推送并重新请求 Codex review。
+
+#### 13.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 完成；本批为 PR #112 tenth Codex review remediation。
+- `related_plan` 同步状态：不改变 WI-195 范围。
+- 关联 branch/worktree disposition 计划：继续使用 PR #112 carrier branch。
+
+#### 13.8 归档后动作
+
+- 第十轮 Codex review P2 已修复；下一步 handoff update、提交、推送并重新请求 Codex review。
+- **验证画像**：`code-change`
+- **改动范围**：`src/ai_sdlc/core/frontend_evidence_models.py`、`src/ai_sdlc/core/frontend_evidence_loop.py`、`tests/unit/test_frontend_evidence_loop.py`、`program-manifest.yaml`、`specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md`、handoff artifacts
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）
+- 当前批次 branch disposition 状态：提交后推送到 PR #112 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
+- 是否继续下一批：否；提交后等待 PR #112 Codex review、required checks 与合并
+
 ### Batch 2026-07-01-012 | Codex review ready evidence capture-status remediation
 
 #### 12.1 批次范围

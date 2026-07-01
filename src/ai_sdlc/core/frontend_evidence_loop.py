@@ -709,6 +709,9 @@ def _write_close(
         report_path=repo_relative_path(root, artifacts.report_json_path),
         allow_warnings=allow_warnings,
         warning_count=report.warning_count,
+        accepted_warning_reason_codes=(
+            list(report.advisory_reason_codes) if allow_warnings else []
+        ),
     )
     loop_run.status = LoopStatus.CLOSED
     loop_run.updated_at = utc_now_iso()
