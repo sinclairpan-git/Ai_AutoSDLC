@@ -163,7 +163,12 @@ def resolve_design_contract_loop_run_path(
     path = Path(path_text)
     if path.is_absolute() or ".." in path.parts:
         return pointer_path, "Current design-contract pointer path must be project-relative."
-    return (root / path).resolve(strict=False), ""
+    candidate = (root / path).resolve(strict=False)
+    try:
+        candidate.relative_to(root.resolve(strict=False))
+    except ValueError:
+        return pointer_path, "Current design-contract pointer path must stay within project."
+    return candidate, ""
 
 
 def read_loop_run(path: Path) -> LoopRun:

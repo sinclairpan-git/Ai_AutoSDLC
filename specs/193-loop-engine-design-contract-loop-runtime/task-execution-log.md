@@ -379,6 +379,8 @@
   - 处理：`DesignContractCommandResult` 增加 `next_guidance`，CLI JSON 直接输出该结构。
 - `design_contract_loop.py`：Preserve closed design-contract runs on recheck
   - 处理：检测到 close artifact 后返回 blocked，不重写 `loop-run.json`。
+- `design_contract_store.py`：Reject current pointers that resolve outside the repo
+  - 处理：`current-design-contract.json` 中的相对路径解析后必须仍位于 repo root 内；symlink 指向 repo 外时 fail-readable。
 
 #### 6.4 统一验证命令
 
@@ -406,6 +408,21 @@
 - `V8`（program truth sync）
   - 命令：`uv run ai-sdlc program truth sync --execute --yes`
   - 结果：本日志落盘后执行；以后续 close-check `program_truth` PASS 为准。
+- `V9`（second Codex review pointer hardening）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`14 passed`。
+- `V10`（second remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`222 passed`。
+- `V11`（second remediation ruff / mypy / constraints）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_store.py tests/unit/test_design_contract_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
 
 #### 6.5 代码审查结论
 

@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from ai_sdlc.core.design_contract_loop import (
     CURRENT_DESIGN_CONTRACT_PATH,
     DesignContractCheckOptions,
@@ -320,6 +322,39 @@ def test_close_design_contract_loop_blocks_unresolved_contract(
     assert result.status == "needs_fix"
     assert result.loop_status == "needs_fix"
     assert result.blocker_count == 2
+
+
+def test_close_design_contract_loop_blocks_symlinked_current_pointer(
+    tmp_path: Path,
+) -> None:
+    outside = tmp_path.parent / f"{tmp_path.name}-outside"
+    outside.mkdir()
+    outside.joinpath("loop-run.json").write_text("{}", encoding="utf-8")
+    link = tmp_path / "linked-outside"
+    try:
+        link.symlink_to(outside, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink unavailable: {exc}")
+    pointer_path = tmp_path / CURRENT_DESIGN_CONTRACT_PATH
+    pointer_path.parent.mkdir(parents=True)
+    pointer_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1",
+                "artifact_kind": "current-design-contract-pointer",
+                "loop_id": "dc-symlink",
+                "loop_run_path": "linked-outside/loop-run.json",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = close_design_contract_loop(
+        DesignContractCloseOptions(root=tmp_path, yes=True)
+    )
+
+    assert result.status == "blocked"
+    assert "must stay within project" in result.blocker
 
 
 def test_check_design_contract_loop_blocks_unsafe_loop_id(tmp_path: Path) -> None:
