@@ -70,7 +70,7 @@ _TASK_SECTION = re.compile(r"(?m)^###\s+(?:Task|任务)\b.*$")
 _HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _PRIORITY = re.compile(r"(?:优先级|priority)[^\n]*(P[0-9])\b", re.IGNORECASE)
 _FRONTEND_SIGNAL = re.compile(
-    r"(?i)(frontend|browser|playwright|vue|react|ui|css|前端|浏览器|页面|组件)"
+    r"(?i)(\b(?:frontend|browser|playwright|vue|react|ui|css)\b|前端|浏览器|页面|组件)"
 )
 
 
@@ -927,6 +927,8 @@ def _command_from_next_action(next_action: str) -> str:
     text = next_action.strip()
     if text.lower().startswith("run "):
         text = text[4:].strip()
+    if not text.startswith("ai-sdlc "):
+        return ""
     return text[:-1] if text.endswith(".") else text
 
 

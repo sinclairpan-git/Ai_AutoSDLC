@@ -189,3 +189,61 @@
 - 当前批次 branch disposition 状态：`feature/194-loop-engine-implementation-loop-runtime-docs` 作为 PR merge carrier，提交后推送并创建 PR
 - 当前批次 worktree disposition 状态：提交后进入 PR / Codex review 监控
 - 是否继续下一批：否；必须先完成本 PR 的 Codex review、required checks 与合并，才能进入 frontend-evidence loop
+
+### Batch 2026-07-01-003 | Codex review remediation
+
+#### 2.14 批次范围
+
+- 覆盖任务：`T42` PR review remediation
+- 覆盖阶段：PR #111 Codex review 后的 focused fix
+- 改动范围：`src/ai_sdlc/core/implementation_loop.py`、`tests/unit/test_implementation_loop.py`、`specs/194-loop-engine-implementation-loop-runtime/task-execution-log.md`
+
+#### 2.15 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_implementation_loop.py -q`
+- `V2`：`uv run ruff check src/ai_sdlc/core/implementation_loop.py tests/unit/test_implementation_loop.py`
+- `V3`：`uv run pytest tests/unit/test_implementation_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V4`：`uv run ruff check src/ai_sdlc/core/implementation_models.py src/ai_sdlc/core/implementation_store.py src/ai_sdlc/core/implementation_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_implementation_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py`
+- `V5`：`uv run mypy src/ai_sdlc/core/implementation_models.py src/ai_sdlc/core/implementation_store.py src/ai_sdlc/core/implementation_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V6`：`uv run ai-sdlc verify constraints`
+- `V7`：`git diff --check`
+- `V8`：`uv run ai-sdlc workitem close-check --wi specs/194-loop-engine-implementation-loop-runtime`
+
+#### 2.16 任务记录
+
+##### T42-R1 | Codex review remediation
+
+- 改动内容：
+  - 修复 `_FRONTEND_SIGNAL` 中 bare `ui` 会命中 `guidance`、`suite` 等普通单词的问题，英文前端信号改为独立词匹配。
+  - 修复 blocked next action prose 被写入 `next_guidance.command` 的问题，只有真实 `ai-sdlc` 命令才进入 command 字段。
+- 新增/调整的测试：
+  - `test_close_implementation_loop_ignores_frontend_signal_inside_words`
+  - `test_record_implementation_progress_blocked_state_has_no_fake_command`
+- 执行的命令：
+  - `uv run pytest tests/unit/test_implementation_loop.py -q`
+  - `uv run ruff check src/ai_sdlc/core/implementation_loop.py tests/unit/test_implementation_loop.py`
+- 测试结果：11 passed；focused regression 227 passed；ruff passed；mypy passed；verify constraints no BLOCKERs；diff check passed；pre-commit close-check 除预期 git closure 外均 PASS。
+- 是否符合任务目标：符合；两个 Codex review P2 均已用 focused tests 锁定。
+
+#### 2.17 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：本批只修 Codex review 指出的 implementation loop runtime 行为，不扩展到 frontend-evidence。
+- 代码质量：frontend signal 与 next guidance command 语义更严格，降低误路由和 UI/JSON 消费风险。
+- 测试质量：新增回归覆盖非前端英文单词和 blocked guidance command。
+- 结论：进入 focused regression、truth sync、close-check、提交并重新请求 Codex review。
+
+#### 2.18 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：T42 仍为 PR review/remediation 收口中。
+- `related_plan` 同步状态：无 plan 范围变更。
+- 关联 branch/worktree disposition 计划：继续使用 PR #111 carrier branch。
+
+#### 2.19 归档后动作
+
+- **改动范围**：`src/ai_sdlc/core/implementation_loop.py`、`tests/unit/test_implementation_loop.py`、`specs/194-loop-engine-implementation-loop-runtime/task-execution-log.md`
+- **已完成 git 提交**：是
+- **提交哈希**：`HEAD`
+- 当前批次 branch disposition 状态：提交后推送到 PR #111 并重新请求 Codex review
+- 当前批次 worktree disposition 状态：提交后继续 PR #111 heartbeat
+- 是否继续下一批：否；等待 PR #111 Codex review、required checks 与合并

@@ -209,6 +209,35 @@ def test_record_implementation_progress_blocks_done_without_evidence(
     assert "must include --evidence or --verification" in result.blocker
 
 
+def test_record_implementation_progress_blocked_state_has_no_fake_command(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_ready_work_item(tmp_path)
+    _close_design_contract_for_work_item(tmp_path, work_item)
+    start_implementation_loop(
+        ImplementationStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-implementation-loop",
+            loop_id="impl-task-blocked",
+        )
+    )
+
+    result = record_implementation_progress(
+        ImplementationRecordOptions(
+            root=tmp_path,
+            loop_id="impl-task-blocked",
+            task_id="T11",
+            status="blocked",
+            note="等待用户提供验证环境。",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    assert result.loop_status == "needs_fix"
+    assert result.next_action == "Resolve implementation blocker for T11, then record progress."
+    assert result.next_guidance.command == ""
+
+
 def test_close_implementation_loop_blocks_incomplete_required_tasks(
     tmp_path: Path,
 ) -> None:
@@ -323,10 +352,63 @@ def test_close_implementation_loop_routes_frontend_work_to_frontend_evidence(
     assert close_payload["next_loop_type"] == "frontend-evidence"
 
 
-def _write_ready_work_item(tmp_path: Path, *, frontend: bool = False) -> Path:
+def test_close_implementation_loop_ignores_frontend_signal_inside_words(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_ready_work_item(
+        tmp_path,
+        extra_spec="This backend build guidance uses a test suite.",
+    )
+    _close_design_contract_for_work_item(tmp_path, work_item)
+    start_implementation_loop(
+        ImplementationStartOptions(
+            root=tmp_path,
+            work_item="specs/demo-implementation-loop",
+            loop_id="impl-non-frontend-words",
+        )
+    )
+    record_implementation_progress(
+        ImplementationRecordOptions(
+            root=tmp_path,
+            loop_id="impl-non-frontend-words",
+            task_id="T11",
+            status="done",
+            verification=("uv run pytest tests/unit/test_implementation_loop.py -q",),
+        )
+    )
+
+    result = close_implementation_loop(
+        ImplementationCloseOptions(
+            root=tmp_path,
+            loop_id="impl-non-frontend-words",
+            yes=True,
+        )
+    )
+
+    assert result.next_action == "Run ai-sdlc pr-review start."
+    close_payload = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "implementation"
+            / "impl-non-frontend-words"
+            / "implementation-close.json"
+        ).read_text("utf-8")
+    )
+    assert close_payload["next_loop_type"] == "local-pr-review"
+
+
+def _write_ready_work_item(
+    tmp_path: Path,
+    *,
+    frontend: bool = False,
+    extra_spec: str = "",
+) -> Path:
     work_item = tmp_path / "specs" / "demo-implementation-loop"
     work_item.mkdir(parents=True)
     frontend_text = " 前端页面和浏览器证据。" if frontend else ""
+    extra_spec_text = f" {extra_spec}" if extra_spec else ""
     (work_item / "spec.md").write_text(
         "\n".join(
             [
@@ -336,7 +418,7 @@ def _write_ready_work_item(tmp_path: Path, *, frontend: bool = False) -> Path:
                 "",
                 "## 需求",
                 "",
-                f"- **FR-IMPL-001**：系统必须记录实现任务证据。{frontend_text}",
+                f"- **FR-IMPL-001**：系统必须记录实现任务证据。{frontend_text}{extra_spec_text}",
                 "",
                 "## 成功标准",
                 "",
