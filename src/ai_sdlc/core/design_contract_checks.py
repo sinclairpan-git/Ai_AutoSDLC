@@ -17,12 +17,44 @@ from ai_sdlc.core.loop_models import LoopStatus
 
 _CONTRACT_ID = re.compile(r"\b(?:FR|SC)(?:-[A-Za-z0-9]+)*-\d{3}\b")
 _TASK_ID = re.compile(r"\bT\d{2,3}\b")
+_HEADING = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 _PLACEHOLDER_PATTERNS = (
     re.compile(r"待补(?:充|说明|验证|执行|确认)"),
     re.compile(r"\bTODO\b", re.IGNORECASE),
     re.compile(r"\bTBD\b", re.IGNORECASE),
     re.compile(r"direct-formal", re.IGNORECASE),
     re.compile(r"功能规格："),
+)
+_CONTRACT_SECTION_TOKENS = (
+    "功能需求",
+    "成功标准",
+    "验收标准",
+    "requirement",
+    "requirements",
+    "functional requirement",
+    "functional requirements",
+    "success criterion",
+    "success criteria",
+    "acceptance criteria",
+)
+_NON_CONTRACT_SECTION_TOKENS = (
+    "示例",
+    "样例",
+    "用户故事",
+    "用户场景",
+    "验收场景",
+    "独立测试",
+    "测试",
+    "场景",
+    "用例",
+    "非目标",
+    "example",
+    "fixture",
+    "story",
+    "scenario",
+    "test",
+    "non-goal",
+    "non goal",
 )
 
 
@@ -136,7 +168,7 @@ def _coverage_items_for_spec(
     spec_text: str,
     tasks_text: str,
 ) -> list[ContractCoverageItem]:
-    ids = sorted(set(_CONTRACT_ID.findall(spec_text)))
+    ids = sorted(set(_CONTRACT_ID.findall(_contract_source_text(spec_text))))
     items: list[ContractCoverageItem] = []
     for source_id in ids:
         covered = source_id in tasks_text
@@ -159,6 +191,55 @@ def _coverage_items_for_spec(
             )
         )
     return items
+
+
+def _contract_source_text(spec_text: str) -> str:
+    lines: list[str] = []
+    active_by_level: dict[int, bool] = {}
+    in_fence = False
+    for line in spec_text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith(("```", "~~~")):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        heading = _HEADING.match(line)
+        if heading:
+            level = len(heading.group(1))
+            title = _normalized_heading_title(heading.group(2))
+            active_by_level = {
+                existing_level: active
+                for existing_level, active in active_by_level.items()
+                if existing_level < level
+            }
+            inherited = active_by_level[max(active_by_level)] if active_by_level else False
+            if _is_non_contract_section(title):
+                active_by_level[level] = False
+            elif _is_contract_section(title):
+                active_by_level[level] = True
+            else:
+                active_by_level[level] = inherited
+            continue
+        if active_by_level and active_by_level[max(active_by_level)]:
+            lines.append(line)
+    return "\n".join(lines)
+
+
+def _normalized_heading_title(title: str) -> str:
+    normalized = re.sub(r"[`*_#]", "", title).strip().lower()
+    normalized = re.sub(r"^\d+(?:\.\d+)*[.)、]?\s*", "", normalized)
+    return normalized.strip()
+
+
+def _is_contract_section(title: str) -> bool:
+    if title in {"需求", "功能需求", "成功标准", "验收标准"}:
+        return True
+    return any(token in title for token in _CONTRACT_SECTION_TOKENS)
+
+
+def _is_non_contract_section(title: str) -> bool:
+    return any(token in title for token in _NON_CONTRACT_SECTION_TOKENS)
 
 
 def _placeholder_findings(path: Path, text: str) -> list[DesignContractFinding]:

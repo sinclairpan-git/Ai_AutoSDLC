@@ -144,11 +144,14 @@ class DesignContractCommandSummary(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    status: str = ""
     work_item_id: str = ""
     work_item_path: str = ""
     blocker_count: int = 0
     warning_count: int = 0
     coverage_count: int = 0
+    coverage_matrix_path: str = ""
+    report_path: str = ""
     closed: bool = False
 
 

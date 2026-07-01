@@ -10,14 +10,14 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete five Loop Engine loop types one by one; current
-    slice is WI-193 design-contract loop PR review | State: Third Codex re-review
-    found repeat-close stale next action and checkpoint feature.spec_dir fallback
-    gaps. Both are fixed: repeated close preserves implementation next action, and
-    check without --wi uses checkpoint feature.spec_dir when linked_plan_uri/linked_wi_id
-    are absent. Focused suite passed 224 tests; ruff/mypy/verify constraints passed;
-    truth sync snapshot ccafdf8ade017477830a782cc819766da6c6c6e3628222698166ce5390ebeeb1;
-    close-check only blocks on uncommitted changes. | Next: Commit third remediation,
-    rerun close-check, push, request Codex re-review.'
+    slice is WI-193 design-contract loop PR review. | State: PR #110 latest Codex
+    review P2s fixed locally: coverage extraction now ignores illustrative/example/code-block
+    FR/SC IDs, and design_contract JSON summary exposes status, coverage_matrix_path,
+    and report_path. Focused regression passed 225 tests; ruff/mypy/verify constraints/diff
+    passed; truth sync snapshot b916b953e3b1d2ef8967b2e471a9f30980bfc08678b33d4ca71ef3135149d9aa;
+    close-check only blocks on uncommitted changes. | Next: Commit latest PR #110
+    remediation, rerun close-check, push, request @codex review, monitor required
+    checks, then merge PR #110 if clean.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''

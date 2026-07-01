@@ -34,7 +34,14 @@ def test_check_design_contract_loop_writes_passed_artifacts(tmp_path: Path) -> N
     assert result.blocker_count == 0
     assert result.coverage_count == 2
     assert result.design_contract is not None
+    assert result.design_contract.status == "passed"
     assert result.design_contract.coverage_count == 2
+    assert result.design_contract.coverage_matrix_path.endswith(
+        ".ai-sdlc/loops/design-contract/dc-001/coverage-matrix.json"
+    )
+    assert result.design_contract.report_path.endswith(
+        ".ai-sdlc/loops/design-contract/dc-001/design-contract-report.json"
+    )
     assert result.next_action == "Run ai-sdlc loop design-contract close --yes."
     assert result.next_guidance.command == "ai-sdlc loop design-contract close --yes"
     assert result.next_guidance.requires_model is False
@@ -82,7 +89,14 @@ def test_check_design_contract_loop_dry_run_does_not_write(tmp_path: Path) -> No
     assert result.dry_run is True
     assert result.loop_status == "created"
     assert result.design_contract is not None
+    assert result.design_contract.status == "created"
     assert result.design_contract.work_item_id == "demo-contract"
+    assert result.design_contract.coverage_matrix_path.endswith(
+        ".ai-sdlc/loops/design-contract/dc-dry-run/coverage-matrix.json"
+    )
+    assert result.design_contract.report_path.endswith(
+        ".ai-sdlc/loops/design-contract/dc-dry-run/design-contract-report.json"
+    )
     assert not (tmp_path / ".ai-sdlc").exists()
     assert any(artifact.kind == "loop-run" for artifact in result.artifacts)
 
@@ -144,6 +158,51 @@ def test_check_design_contract_loop_reports_placeholders(tmp_path: Path) -> None
         ).read_text(encoding="utf-8")
     )
     assert "placeholder" in {finding["code"] for finding in report["findings"]}
+
+
+def test_check_design_contract_loop_ignores_example_contract_ids(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(
+        tmp_path,
+        spec_intro_extra="\n".join(
+            [
+                "## 用户故事与示例",
+                "",
+                "**独立测试**：构造 `FR-EXAMPLE-001` 和 `SC-EXAMPLE-001`。",
+                "",
+                "```markdown",
+                "- **FR-CODE-001**：代码块中的编号不能成为合同项。",
+                "```",
+                "",
+            ]
+        ),
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-ignore-examples",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.coverage_count == 2
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-ignore-examples"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert {item["source_id"] for item in report["coverage_items"]} == {
+        "FR-DEMO-001",
+        "SC-DEMO-001",
+    }
 
 
 def test_check_design_contract_loop_blocks_unparseable_task_sections(
@@ -237,6 +296,8 @@ def test_close_design_contract_loop_writes_close_artifact(tmp_path: Path) -> Non
     assert result.status == "ready"
     assert result.loop_status == "closed"
     assert result.closed is True
+    assert result.design_contract is not None
+    assert result.design_contract.status == "closed"
     assert result.next_action == "Start implementation loop for demo-contract."
     assert result.next_guidance.safety == "no_action"
     assert result.next_guidance.writes_artifacts is False
@@ -453,6 +514,7 @@ def _write_work_item(
     relative_path: str = "specs/demo-contract",
     task_heading: str = "### Task 1.1 Check contract",
     plan_extra: str = "",
+    spec_intro_extra: str = "",
 ) -> Path:
     work_item = root / relative_path
     work_item.mkdir(parents=True)
@@ -464,6 +526,7 @@ def _write_work_item(
                 "",
                 "**状态**：已冻结",
                 "",
+                spec_intro_extra,
                 "## 需求",
                 "",
                 "- **FR-DEMO-001**：系统必须检查合同覆盖。",

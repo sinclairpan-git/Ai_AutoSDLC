@@ -94,7 +94,11 @@ def check_design_contract_loop(
                 ],
             ),
             artifacts=planned_refs,
-            design_contract=_command_summary(contract_input),
+            design_contract=_command_summary(
+                contract_input,
+                status=LoopStatus.CREATED,
+                artifacts=planned_refs,
+            ),
         )
 
     report = analyze_design_contract(root, contract_input)
@@ -320,6 +324,7 @@ def _result_from_report(
     next_action: str = "",
 ) -> DesignContractCommandResult:
     resolved_next_action = next_action or report.next_action
+    resolved_loop_status = loop_status or report.status
     return DesignContractCommandResult(
         status=(
             DesignContractCommandStatus.READY
@@ -328,7 +333,7 @@ def _result_from_report(
         ),
         result=result,
         loop_id=report.loop_id,
-        loop_status=loop_status or report.status,
+        loop_status=resolved_loop_status,
         work_item_id=report.work_item_id,
         work_item_path=report.work_item_path,
         blocker_count=report.blocker_count,
@@ -343,12 +348,10 @@ def _result_from_report(
             artifacts=artifacts,
         ),
         artifacts=artifacts,
-        design_contract=DesignContractCommandSummary(
-            work_item_id=report.work_item_id,
-            work_item_path=report.work_item_path,
-            blocker_count=report.blocker_count,
-            warning_count=report.warning_count,
-            coverage_count=report.coverage_count,
+        design_contract=_command_summary_for_report(
+            report,
+            artifacts=artifacts,
+            status=resolved_loop_status,
             closed=closed,
         ),
     )
@@ -381,11 +384,50 @@ def _blocked_result(
     )
 
 
-def _command_summary(contract_input: DesignContractInput) -> DesignContractCommandSummary:
+def _command_summary(
+    contract_input: DesignContractInput,
+    *,
+    status: LoopStatus | str,
+    artifacts: list[DesignContractArtifactRef],
+) -> DesignContractCommandSummary:
     return DesignContractCommandSummary(
+        status=_status_value(status),
         work_item_id=contract_input.work_item_id,
         work_item_path=contract_input.work_item_path,
+        coverage_matrix_path=_artifact_path(artifacts, "coverage-matrix"),
+        report_path=_artifact_path(artifacts, "design-contract-report-json"),
     )
+
+
+def _command_summary_for_report(
+    report: DesignContractReport,
+    *,
+    artifacts: list[DesignContractArtifactRef],
+    status: LoopStatus | str,
+    closed: bool,
+) -> DesignContractCommandSummary:
+    return DesignContractCommandSummary(
+        status=_status_value(status),
+        work_item_id=report.work_item_id,
+        work_item_path=report.work_item_path,
+        blocker_count=report.blocker_count,
+        warning_count=report.warning_count,
+        coverage_count=report.coverage_count,
+        coverage_matrix_path=_artifact_path(artifacts, "coverage-matrix"),
+        report_path=_artifact_path(artifacts, "design-contract-report-json"),
+        closed=closed,
+    )
+
+
+def _artifact_path(
+    artifacts: list[DesignContractArtifactRef],
+    kind: str,
+) -> str:
+    return next((artifact.path for artifact in artifacts if artifact.kind == kind), "")
+
+
+def _status_value(status: LoopStatus | str) -> str:
+    return status.value if isinstance(status, LoopStatus) else str(status)
 
 
 def _next_action_for_report(report: DesignContractReport) -> str:

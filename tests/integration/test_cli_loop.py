@@ -764,7 +764,14 @@ def test_loop_design_contract_check_status_and_close_json(tmp_path: Path) -> Non
     check_payload = json.loads(check.output)
     assert check_payload["status"] == "ready"
     assert check_payload["loop_status"] == "passed"
+    assert check_payload["design_contract"]["status"] == "passed"
     assert check_payload["design_contract"]["coverage_count"] == 2
+    assert check_payload["design_contract"]["coverage_matrix_path"].endswith(
+        ".ai-sdlc/loops/design-contract/dc-cli/coverage-matrix.json"
+    )
+    assert check_payload["design_contract"]["report_path"].endswith(
+        ".ai-sdlc/loops/design-contract/dc-cli/design-contract-report.json"
+    )
     assert check_payload["next_action"] == (
         "Run ai-sdlc loop design-contract close --yes."
     )
@@ -789,6 +796,7 @@ def test_loop_design_contract_check_status_and_close_json(tmp_path: Path) -> Non
     assert close_payload["status"] == "ready"
     assert close_payload["closed"] is True
     assert close_payload["loop_status"] == "closed"
+    assert close_payload["design_contract"]["status"] == "closed"
     assert close_payload["next_action"] == (
         "Start implementation loop for demo-design-contract."
     )
@@ -824,7 +832,14 @@ def test_loop_design_contract_check_dry_run_skips_adapter_hook(
     payload = json.loads(result.output)
     assert payload["status"] == "dry_run"
     assert payload["dry_run"] is True
+    assert payload["design_contract"]["status"] == "created"
     assert payload["design_contract"]["work_item_id"] == "demo-design-contract"
+    assert payload["design_contract"]["coverage_matrix_path"].endswith(
+        ".ai-sdlc/loops/design-contract/dc-dry-run/coverage-matrix.json"
+    )
+    assert payload["design_contract"]["report_path"].endswith(
+        ".ai-sdlc/loops/design-contract/dc-dry-run/design-contract-report.json"
+    )
     assert payload["next_guidance"]["command"] == (
         "ai-sdlc loop design-contract check --wi specs/demo-design-contract"
     )
