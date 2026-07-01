@@ -519,8 +519,78 @@
 
 #### 15.6 归档后动作
 
-- **已完成 git 提交**：否；本批记录会随 remediation commit 一起落盘。
-- **提交哈希**：提交后以 `git log -1` 为准。
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）。
+- **提交哈希**：当前 close-out commit，以 `git log -1` 为准。
+- 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier。
+- 当前批次 worktree disposition 状态：retained（主工作区）。
+- 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
+
+### Batch 18：第十九轮 PR #110 Codex review remediation
+
+#### 18.1 本批目标
+
+- 修复 PR #110 最新 Codex review P1：`close --yes` 不得信任 stale `design-contract-report.json`，必须在关闭前重新校验当前 `spec.md`、`plan.md`、`tasks.md`。
+- 修复 PR #110 最新 Codex review P2：当前生成任务格式不重复 literal `FR-*` / `SC-*` 时，design-contract coverage gate 应能基于完整 P0/P1 任务的验收和验证信息做保守推断覆盖。
+
+#### 18.2 变更范围
+
+- **验证画像**：code-change
+- `src/ai_sdlc/core/design_contract_loop.py`
+  - close 前重读 `design-contract-input.json`，重新执行 requirement gate 与 `analyze_design_contract`。
+  - fresh report 有 blocker 时刷新 report / coverage / loop-run artifacts，并阻断 close。
+- `src/ai_sdlc/core/design_contract_checks.py`
+  - `_task_coverage_index` 在无 literal FR/SC task coverage 时，若可解析 P0/P1 task 均有验收和验证命令，则用 task id 对全部 contract ids 做推断覆盖。
+  - 任一 P0/P1 task 缺验收或验证时不启用推断覆盖。
+- `tests/unit/test_design_contract_loop.py`
+  - 新增 generated task coverage 推断 regression。
+  - 新增 close 前 docs 变坏会重新校验并阻断 close 的 regression。
+  - 调整 missing coverage 相关测试，显式缺少验证命令以关闭推断覆盖。
+- `tests/integration/test_cli_loop.py`
+  - 调整 close-with-blockers fixture，显式缺少验证命令以制造真实 blocker。
+
+#### 18.3 验证记录
+
+- `V89`（nineteenth Codex review close/coverage remediation targeted）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_reports_missing_coverage tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_infers_generated_task_coverage tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_ignores_non_task_coverage_refs tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_ignores_trailing_non_task_coverage_refs tests/unit/test_design_contract_loop.py::test_close_design_contract_loop_revalidates_changed_docs -q`
+  - 结果：通过，`5 passed`。
+- `V90`（nineteenth remediation design-contract / CLI targeted）
+  - 命令：`uv run pytest tests/integration/test_cli_loop.py::test_loop_design_contract_close_with_blockers_exits_nonzero tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`41 passed`。
+- `V91`（nineteenth remediation ruff / mypy）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_loop.py tests/unit/test_design_contract_loop.py tests/integration/test_cli_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+- `V92`（nineteenth remediation focused regression / constraints / diff）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`249 passed`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V93`（program truth sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过，snapshot hash `5226ed535ac695c4050a6ee83dcc796ea8aa04ff221cfb4e3f03ad8c6ec8bcd1`，已写入 `program-manifest.yaml`。
+- `V94`（pre-commit work item close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime`
+  - 结果：除 `git_closure` 因当前修复尚未提交而 BLOCKER 外，其余检查 PASS；提交后需复跑至 PASS。
+
+#### 18.4 代码审查结论
+
+- 宪章/规格对齐：close gate 现在基于当前 docs，而不是 stale report；coverage gate 兼容当前 generated task format，同时仍要求 P0/P1 task 有验收和验证。
+- 质量风险：新增 close stale-doc regression 与 inferred coverage regression，覆盖当前 Codex actionable comments。
+- 结论：可刷新 truth、close-check、提交、推送并重新请求 Codex review。
+
+#### 18.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：T41/T42 保持完成；本批为 PR review remediation，不新增交付范围。
+- `related_plan`（如存在）同步状态：无 related_plan；plan 边界仍为 design-contract loop。
+- 关联 branch/worktree disposition 计划：继续使用 PR #110 head branch。
+
+#### 18.6 归档后动作
+
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）。
+- **提交哈希**：当前 close-out commit，以 `git log -1` 为准。
 - 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier。
 - 当前批次 worktree disposition 状态：retained（主工作区）。
 - 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。

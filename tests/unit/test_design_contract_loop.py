@@ -224,7 +224,7 @@ def test_check_design_contract_loop_accepts_frozen_requirement_loop(
 def test_check_design_contract_loop_reports_missing_coverage(
     tmp_path: Path,
 ) -> None:
-    _write_work_item(tmp_path, include_task_refs=False)
+    _write_work_item(tmp_path, include_task_refs=False, verification_value="")
 
     result = check_design_contract_loop(
         DesignContractCheckOptions(
@@ -236,7 +236,7 @@ def test_check_design_contract_loop_reports_missing_coverage(
 
     assert result.status == "needs_fix"
     assert result.loop_status == "needs_fix"
-    assert result.blocker_count == 2
+    assert result.blocker_count >= 2
     assert "Fix design-contract blockers" in result.next_action
 
     report = json.loads(
@@ -249,8 +249,39 @@ def test_check_design_contract_loop_reports_missing_coverage(
             / "design-contract-report.json"
         ).read_text(encoding="utf-8")
     )
-    assert {finding["code"] for finding in report["findings"]} == {
-        "missing_coverage"
+    assert "missing_coverage" in {finding["code"] for finding in report["findings"]}
+
+
+def test_check_design_contract_loop_infers_generated_task_coverage(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, include_task_refs=False)
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-inferred-coverage",
+        )
+    )
+
+    assert result.status == "ready"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-inferred-coverage"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert {item["status"] for item in report["coverage_items"]} == {"covered"}
+    assert {
+        item["source_id"]: item["covered_by"] for item in report["coverage_items"]
+    } == {
+        "FR-DEMO-001": ["T11"],
+        "SC-DEMO-001": ["T11"],
     }
 
 
@@ -260,6 +291,7 @@ def test_check_design_contract_loop_ignores_non_task_coverage_refs(
     _write_work_item(
         tmp_path,
         include_task_refs=False,
+        verification_value="",
         tasks_intro_extra="\n".join(
             [
                 "## Deferred notes",
@@ -307,6 +339,7 @@ def test_check_design_contract_loop_ignores_trailing_non_task_coverage_refs(
     _write_work_item(
         tmp_path,
         include_task_refs=False,
+        verification_value="",
         tasks_tail_extra="\n".join(
             [
                 "",
@@ -829,6 +862,51 @@ def test_close_design_contract_loop_writes_close_artifact(tmp_path: Path) -> Non
     assert loop_run["status"] == "closed"
 
 
+def test_close_design_contract_loop_revalidates_changed_docs(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path)
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-stale-close",
+        )
+    )
+    tasks_path = tmp_path / "specs" / "demo-contract" / "tasks.md"
+    tasks_path.write_text(
+        tasks_path.read_text(encoding="utf-8").replace(
+            "- **验证**：uv run pytest tests/unit/test_demo.py -q",
+            "- **验证**：",
+        ),
+        encoding="utf-8",
+    )
+
+    result = close_design_contract_loop(
+        DesignContractCloseOptions(root=tmp_path, loop_id="dc-stale-close", yes=True)
+    )
+
+    assert result.status == "needs_fix"
+    assert result.loop_status == "needs_fix"
+    assert result.closed is False
+    assert not (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "design-contract"
+        / "dc-stale-close"
+        / "design-contract-close.json"
+    ).exists()
+
+    loop_dir = tmp_path / ".ai-sdlc" / "loops" / "design-contract" / "dc-stale-close"
+    loop_run = json.loads((loop_dir / "loop-run.json").read_text(encoding="utf-8"))
+    report = json.loads((loop_dir / "design-contract-report.json").read_text(encoding="utf-8"))
+    assert loop_run["status"] == "needs_fix"
+    assert "task_verification_gap" in {
+        finding["code"] for finding in report["findings"]
+    }
+
+
 def test_close_design_contract_loop_repeat_close_keeps_implementation_next_action(
     tmp_path: Path,
 ) -> None:
@@ -993,7 +1071,7 @@ def test_close_design_contract_loop_requires_yes(tmp_path: Path) -> None:
 def test_close_design_contract_loop_blocks_unresolved_contract(
     tmp_path: Path,
 ) -> None:
-    _write_work_item(tmp_path, include_task_refs=False)
+    _write_work_item(tmp_path, include_task_refs=False, verification_value="")
     check_design_contract_loop(
         DesignContractCheckOptions(
             root=tmp_path,
@@ -1008,7 +1086,7 @@ def test_close_design_contract_loop_blocks_unresolved_contract(
 
     assert result.status == "needs_fix"
     assert result.loop_status == "needs_fix"
-    assert result.blocker_count == 2
+    assert result.blocker_count >= 2
 
 
 def test_close_design_contract_loop_blocks_non_current_explicit_loop_id(

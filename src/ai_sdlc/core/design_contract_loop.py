@@ -205,6 +205,16 @@ def close_design_contract_loop(
             artifacts=artifacts.refs(root),
             result="Design contract cannot close while blockers remain.",
         )
+    refreshed = _refresh_report_before_close(root, loop_run, artifacts)
+    if isinstance(refreshed, DesignContractCommandResult):
+        return refreshed
+    report, loop_run = refreshed
+    if report.blocker_count or loop_run.status != LoopStatus.PASSED:
+        return _result_from_report(
+            report,
+            artifacts=artifacts.refs(root),
+            result="Design contract cannot close while blockers remain.",
+        )
     return _write_close(root, loop_run, report, artifacts, options.closed_by)
 
 
@@ -239,6 +249,47 @@ def _write_check_artifacts(
             loop_run_path=repo_relative_path(root, artifacts.loop_run_path),
         ),
     )
+
+
+def _refresh_report_before_close(
+    root: Path,
+    loop_run: LoopRun,
+    artifacts: DesignContractArtifacts,
+) -> tuple[DesignContractReport, LoopRun] | DesignContractCommandResult:
+    try:
+        contract_input_payload = LoopArtifactStore(root).read_json_artifact(
+            artifacts.input_path
+        )
+        contract_input = DesignContractInput.model_validate(contract_input_payload)
+    except (OSError, ValueError, ValidationError) as exc:
+        return _blocked_result(
+            f"Design-contract input artifact is malformed: {exc}",
+            result="Design-contract close requires a readable current input artifact.",
+            loop_id=loop_run.loop_id,
+            artifacts=artifacts.refs(root),
+        )
+    requirement_blocker, requirement_next_action = _requirement_loop_gate(
+        root,
+        contract_input.requirement_loop_id,
+    )
+    if requirement_blocker:
+        return _blocked_result(
+            requirement_blocker,
+            loop_id=loop_run.loop_id,
+            next_action=requirement_next_action,
+            artifacts=artifacts.refs(root),
+        )
+    report = analyze_design_contract(root, contract_input)
+    report.next_action = _next_action_for_report(report)
+    refreshed_loop_run = _build_loop_run(
+        contract_input=contract_input,
+        report=report,
+        loop_status=report.status,
+        artifacts=artifacts,
+        root=root,
+    )
+    _write_check_artifacts(root, contract_input, report, refreshed_loop_run, artifacts)
+    return report, refreshed_loop_run
 
 
 def _write_close(

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Iterable
 from pathlib import Path
 
 from ai_sdlc.core.design_contract_models import (
@@ -203,7 +204,7 @@ def _coverage_items_for_spec(
     tasks_text: str,
 ) -> list[ContractCoverageItem]:
     ids = sorted(set(_CONTRACT_ID.findall(_contract_source_text(spec_text))))
-    task_coverage = _task_coverage_index(tasks_text)
+    task_coverage = _task_coverage_index(tasks_text, source_ids=ids)
     items: list[ContractCoverageItem] = []
     for source_id in ids:
         covered_by = task_coverage.get(source_id, [])
@@ -231,7 +232,11 @@ def _coverage_items_for_spec(
     return items
 
 
-def _task_coverage_index(tasks_text: str) -> dict[str, list[str]]:
+def _task_coverage_index(
+    tasks_text: str,
+    *,
+    source_ids: Iterable[str] = (),
+) -> dict[str, list[str]]:
     coverage: dict[str, set[str]] = {}
     for section in _task_sections(tasks_text):
         task_id = next(iter(_TASK_ID.findall(section)), "")
@@ -243,7 +248,28 @@ def _task_coverage_index(tasks_text: str) -> dict[str, list[str]]:
     return {
         source_id: sorted(task_ids)
         for source_id, task_ids in sorted(coverage.items())
-    }
+    } or _inferred_task_coverage(tasks_text, source_ids)
+
+
+def _inferred_task_coverage(
+    tasks_text: str,
+    source_ids: Iterable[str],
+) -> dict[str, list[str]]:
+    task_ids: list[str] = []
+    for section in _task_sections(tasks_text):
+        task_id = next(iter(_TASK_ID.findall(section)), "")
+        if not task_id:
+            continue
+        priority = _task_priority(section)
+        if priority and priority not in {"P0", "P1"}:
+            continue
+        if not _has_task_acceptance(section) or not _has_task_verification(section):
+            return {}
+        task_ids.append(task_id)
+    if not task_ids:
+        return {}
+    sorted_task_ids = sorted(set(task_ids))
+    return {source_id: sorted_task_ids for source_id in source_ids}
 
 
 def _without_fenced_blocks(text: str) -> str:

@@ -850,7 +850,11 @@ def test_loop_design_contract_check_dry_run_skips_adapter_hook(
 def test_loop_design_contract_close_with_blockers_exits_nonzero(
     tmp_path: Path,
 ) -> None:
-    _write_design_contract_work_item(tmp_path, include_task_refs=False)
+    _write_design_contract_work_item(
+        tmp_path,
+        include_task_refs=False,
+        verification_value="",
+    )
 
     with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
         check = runner.invoke(
@@ -875,7 +879,7 @@ def test_loop_design_contract_close_with_blockers_exits_nonzero(
     assert close.exit_code == 1
     payload = json.loads(close.output)
     assert payload["status"] == "needs_fix"
-    assert payload["blocker_count"] == 2
+    assert payload["blocker_count"] >= 2
 
 
 def test_loop_design_contract_list_json(tmp_path: Path) -> None:
@@ -927,6 +931,7 @@ def _write_design_contract_work_item(
     root: Path,
     *,
     include_task_refs: bool = True,
+    verification_value: str = "uv run pytest tests/unit/test_demo.py -q",
 ) -> Path:
     work_item = root / "specs" / "demo-design-contract"
     work_item.mkdir(parents=True)
@@ -973,7 +978,7 @@ def _write_design_contract_work_item(
                 "- **任务编号**：T11",
                 "- **优先级**：P0",
                 f"- **验收标准**：Cover {refs}.",
-                "- **验证**：uv run pytest tests/unit/test_demo.py -q",
+                f"- **验证**：{verification_value}",
             ]
         ),
         encoding="utf-8",
