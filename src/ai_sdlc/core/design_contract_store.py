@@ -243,6 +243,11 @@ def _current_work_item_path(root: Path) -> str:
     wi_id = payload.get("linked_wi_id")
     if isinstance(wi_id, str) and wi_id.strip():
         return f"specs/{wi_id}"
+    feature = payload.get("feature")
+    if isinstance(feature, dict):
+        spec_dir = feature.get("spec_dir")
+        if isinstance(spec_dir, str) and spec_dir.strip():
+            return spec_dir
     return ""
 
 

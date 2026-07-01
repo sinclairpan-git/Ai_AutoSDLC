@@ -381,6 +381,10 @@
   - 处理：检测到 close artifact 后返回 blocked，不重写 `loop-run.json`。
 - `design_contract_store.py`：Reject current pointers that resolve outside the repo
   - 处理：`current-design-contract.json` 中的相对路径解析后必须仍位于 repo root 内；symlink 指向 repo 外时 fail-readable。
+- `design_contract_loop.py`：Preserve the implementation next action on repeat close
+  - 处理：重复执行 `close --yes` 时复用已关闭 loop-run 的 implementation next action，不回退到旧 report 的 close 指令。
+- `design_contract_store.py`：Fall back to the checkpoint feature spec directory
+  - 处理：`linked_plan_uri` / `linked_wi_id` 缺失时，使用 checkpoint `feature.spec_dir` 作为当前 work item。
 
 #### 6.4 统一验证命令
 
@@ -416,6 +420,21 @@
   - 结果：通过，`222 passed`。
 - `V11`（second remediation ruff / mypy / constraints）
   - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_store.py tests/unit/test_design_contract_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V12`（third Codex review repeat-close/checkpoint fallback）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`16 passed`。
+- `V13`（third remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`224 passed`。
+- `V14`（third remediation ruff / mypy / constraints）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_store.py tests/unit/test_design_contract_loop.py`
   - 结果：通过，`All checks passed!`。
   - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
   - 结果：通过，`Success: no issues found in 6 source files`。

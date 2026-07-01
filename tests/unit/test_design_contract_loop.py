@@ -247,6 +247,35 @@ def test_close_design_contract_loop_writes_close_artifact(tmp_path: Path) -> Non
     assert loop_run["status"] == "closed"
 
 
+def test_close_design_contract_loop_repeat_close_keeps_implementation_next_action(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path)
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-repeat-close",
+        )
+    )
+    close_design_contract_loop(
+        DesignContractCloseOptions(root=tmp_path, loop_id="dc-repeat-close", yes=True)
+    )
+
+    result = close_design_contract_loop(
+        DesignContractCloseOptions(root=tmp_path, loop_id="dc-repeat-close", yes=True)
+    )
+
+    assert result.status == "ready"
+    assert result.closed is True
+    assert result.loop_status == "closed"
+    assert result.next_action == "Start implementation loop for demo-contract."
+    assert result.next_guidance.safety == "no_action"
+    assert result.next_guidance.alternatives == [
+        "Start implementation loop for demo-contract."
+    ]
+
+
 def test_check_design_contract_loop_blocks_recheck_of_closed_loop(
     tmp_path: Path,
 ) -> None:
@@ -385,6 +414,35 @@ def test_check_design_contract_loop_blocks_missing_work_item(tmp_path: Path) -> 
     assert result.status == "blocked"
     assert "does not exist" in result.blocker
     assert not (tmp_path / ".ai-sdlc").exists()
+
+
+def test_check_design_contract_loop_uses_checkpoint_feature_spec_dir(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path)
+    checkpoint = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
+    checkpoint.parent.mkdir(parents=True)
+    checkpoint.write_text(
+        "\n".join(
+            [
+                "current_stage: execute",
+                "feature:",
+                "  id: demo-contract",
+                "  spec_dir: specs/demo-contract",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            loop_id="dc-checkpoint-spec-dir",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.work_item_path == "specs/demo-contract"
 
 
 def _write_work_item(

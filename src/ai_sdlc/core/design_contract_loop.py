@@ -163,6 +163,8 @@ def close_design_contract_loop(
             result="Design contract is already closed.",
             closed=True,
             loop_status=LoopStatus.CLOSED,
+            next_action=loop_run.next_action
+            or _implementation_next_action(report.work_item_id),
         )
     if report.blocker_count or loop_run.status != LoopStatus.PASSED:
         return _result_from_report(
