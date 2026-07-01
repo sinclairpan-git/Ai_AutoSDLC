@@ -921,6 +921,150 @@ def test_loop_design_contract_list_json(tmp_path: Path) -> None:
     )
 
 
+def test_loop_implementation_start_record_status_and_close_json(
+    tmp_path: Path,
+) -> None:
+    _write_design_contract_work_item(tmp_path)
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        design_check = runner.invoke(
+            app,
+            [
+                "loop",
+                "design-contract",
+                "check",
+                "--wi",
+                "specs/demo-design-contract",
+                "--loop-id",
+                "dc-impl-cli",
+                "--json",
+            ],
+        )
+        design_close = runner.invoke(
+            app,
+            ["loop", "design-contract", "close", "--yes", "--json"],
+        )
+        start = runner.invoke(
+            app,
+            [
+                "loop",
+                "implementation",
+                "start",
+                "--wi",
+                "specs/demo-design-contract",
+                "--design-contract-loop-id",
+                "dc-impl-cli",
+                "--loop-id",
+                "impl-cli",
+                "--json",
+            ],
+        )
+        status = runner.invoke(
+            app,
+            ["loop", "status", "--type", "implementation", "--json"],
+        )
+        record = runner.invoke(
+            app,
+            [
+                "loop",
+                "implementation",
+                "record",
+                "--loop-id",
+                "impl-cli",
+                "--task-id",
+                "T11",
+                "--status",
+                "done",
+                "--verification",
+                "uv run pytest tests/integration/test_cli_loop.py -q",
+                "--json",
+            ],
+        )
+        close = runner.invoke(
+            app,
+            ["loop", "implementation", "close", "--loop-id", "impl-cli", "--yes", "--json"],
+        )
+
+    assert design_check.exit_code == 0
+    assert design_close.exit_code == 0
+    assert start.exit_code == 0
+    start_payload = json.loads(start.output)
+    assert start_payload["status"] == "ready"
+    assert start_payload["loop_status"] == "running"
+    assert start_payload["implementation"]["required_task_count"] == 1
+    assert start_payload["implementation"]["report_path"].endswith(
+        ".ai-sdlc/loops/implementation/impl-cli/implementation-report.json"
+    )
+
+    assert status.exit_code == 0
+    status_payload = json.loads(status.output)
+    assert status_payload["current_loop"]["loop_type"] == "implementation"
+    assert status_payload["current_loop"]["implementation"]["done_count"] == 0
+
+    assert record.exit_code == 0
+    record_payload = json.loads(record.output)
+    assert record_payload["loop_status"] == "passed"
+    assert record_payload["done_count"] == 1
+    assert record_payload["next_guidance"]["command"] == (
+        "ai-sdlc loop implementation close --yes"
+    )
+
+    assert close.exit_code == 0
+    close_payload = json.loads(close.output)
+    assert close_payload["closed"] is True
+    assert close_payload["loop_status"] == "closed"
+    assert close_payload["next_action"] == "Run ai-sdlc pr-review start."
+
+
+def test_loop_implementation_start_dry_run_skips_adapter_hook(
+    tmp_path: Path,
+) -> None:
+    _write_design_contract_work_item(tmp_path)
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        runner.invoke(
+            app,
+            [
+                "loop",
+                "design-contract",
+                "check",
+                "--wi",
+                "specs/demo-design-contract",
+                "--loop-id",
+                "dc-impl-dry-run",
+                "--json",
+            ],
+        )
+        runner.invoke(app, ["loop", "design-contract", "close", "--yes", "--json"])
+    with (
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "loop",
+                "implementation",
+                "start",
+                "--wi",
+                "specs/demo-design-contract",
+                "--design-contract-loop-id",
+                "dc-impl-dry-run",
+                "--loop-id",
+                "impl-dry-run",
+                "--dry-run",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "dry_run"
+    assert payload["implementation"]["required_task_count"] == 1
+    assert not (
+        tmp_path / ".ai-sdlc" / "loops" / "implementation" / "impl-dry-run"
+    ).exists()
+    adapter_hook.assert_not_called()
+
+
 def test_python_module_help_fallback_lists_loop() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "ai_sdlc", "--help"],

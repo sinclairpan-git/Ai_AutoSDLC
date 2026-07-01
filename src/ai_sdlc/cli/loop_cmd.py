@@ -17,6 +17,15 @@ from ai_sdlc.core.design_contract_loop import (
     check_design_contract_loop,
     close_design_contract_loop,
 )
+from ai_sdlc.core.implementation_loop import (
+    ImplementationCloseOptions,
+    ImplementationCommandResult,
+    ImplementationRecordOptions,
+    ImplementationStartOptions,
+    close_implementation_loop,
+    record_implementation_progress,
+    start_implementation_loop,
+)
 from ai_sdlc.core.loop_status import (
     LoopListResult,
     LoopNextActionGuidance,
@@ -47,6 +56,10 @@ design_contract_app = typer.Typer(
     help="Run the local deterministic design-contract loop.",
     no_args_is_help=True,
 )
+implementation_app = typer.Typer(
+    help="Run the local deterministic implementation loop.",
+    no_args_is_help=True,
+)
 console = Console()
 
 
@@ -64,7 +77,10 @@ def loop_status(
     loop_type: str = typer.Option(
         "local-pr-review",
         "--type",
-        help="Loop type to inspect: local-pr-review, requirement, or design-contract.",
+        help=(
+            "Loop type to inspect: local-pr-review, requirement, "
+            "design-contract, or implementation."
+        ),
     ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
@@ -81,7 +97,10 @@ def loop_list(
     loop_type: str = typer.Option(
         "local-pr-review",
         "--type",
-        help="Loop type to list: local-pr-review, requirement, or design-contract.",
+        help=(
+            "Loop type to list: local-pr-review, requirement, "
+            "design-contract, or implementation."
+        ),
     ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
@@ -243,6 +262,120 @@ def design_contract_close(
     raise typer.Exit(0 if result.status == "ready" and result.closed else 1)
 
 
+@implementation_app.command(name="start")
+def implementation_start(
+    work_item: str = typer.Option(
+        "",
+        "--wi",
+        help="Work item directory or formal doc path, for example specs/123-name.",
+    ),
+    design_contract_loop_id: str = typer.Option(
+        "",
+        "--design-contract-loop-id",
+        help="Optional upstream design-contract loop id.",
+    ),
+    loop_id: str = typer.Option("", "--loop-id", help="Optional stable loop id."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing."),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Start tracking implementation task evidence."""
+
+    if not dry_run:
+        _run_project_writer_adapter(json_output=json_output)
+    root = _project_root_or_exit(json_output=json_output)
+    result = start_implementation_loop(
+        ImplementationStartOptions(
+            root=root,
+            work_item=work_item,
+            design_contract_loop_id=design_contract_loop_id,
+            loop_id=loop_id,
+            dry_run=dry_run,
+        )
+    )
+    _emit_implementation_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != "blocked" else 1)
+
+
+@implementation_app.command(name="record")
+def implementation_record(
+    task_id: str = typer.Option("", "--task-id", help="Task id such as T11."),
+    status: str = typer.Option(
+        "",
+        "--status",
+        help="Task status: pending, in_progress, done, or blocked.",
+    ),
+    evidence: list[str] = typer.Option(
+        [],
+        "--evidence",
+        help="Evidence path or note. Repeat for multiple evidence entries.",
+    ),
+    verification: list[str] = typer.Option(
+        [],
+        "--verification",
+        help="Verification command. Repeat for multiple commands.",
+    ),
+    note: str = typer.Option("", "--note", help="Optional progress note."),
+    loop_id: str = typer.Option("", "--loop-id", help="Implementation loop id."),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Record task progress and verification evidence."""
+
+    _run_project_writer_adapter(json_output=json_output)
+    root = _project_root_or_exit(json_output=json_output)
+    result = record_implementation_progress(
+        ImplementationRecordOptions(
+            root=root,
+            task_id=task_id,
+            status=status,
+            evidence=tuple(evidence),
+            verification=tuple(verification),
+            note=note,
+            loop_id=loop_id,
+        )
+    )
+    _emit_implementation_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != "blocked" else 1)
+
+
+@implementation_app.command(name="status")
+def implementation_status(
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Show the current implementation loop status."""
+
+    root = _project_root_or_exit(json_output=json_output)
+    result = get_loop_status(root, loop_type="implementation")
+    _emit_status_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != LoopStatusCommandStatus.BLOCKED else 1)
+
+
+@implementation_app.command(name="close")
+def implementation_close(
+    loop_id: str = typer.Option("", "--loop-id", help="Implementation loop id."),
+    yes: bool = typer.Option(False, "--yes", help="Confirm implementation close."),
+    closed_by: str = typer.Option(
+        "local-user",
+        "--closed-by",
+        help="Operator recorded in implementation-close.json.",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Close a completed implementation loop after explicit confirmation."""
+
+    _run_project_writer_adapter(json_output=json_output)
+    root = _project_root_or_exit(json_output=json_output)
+    result = close_implementation_loop(
+        ImplementationCloseOptions(
+            root=root,
+            loop_id=loop_id,
+            yes=yes,
+            closed_by=closed_by,
+        )
+    )
+    _emit_implementation_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status == "ready" and result.closed else 1)
+
+
 def _project_root_or_exit(*, json_output: bool = False) -> Path:
     root = find_project_root()
     if root is None:
@@ -361,6 +494,39 @@ def _emit_design_contract_result(
             console.print(f"- {artifact.kind}: {artifact.path} ({state})")
 
 
+def _emit_implementation_result(
+    result: ImplementationCommandResult,
+    *,
+    json_output: bool,
+) -> None:
+    payload = result.model_dump(mode="json")
+    if json_output:
+        _emit_payload(payload, json_output=True)
+        return
+    console.print(f"Result: {payload.get('status', '')}")
+    if payload.get("blocker"):
+        console.print(f"Blocker: {payload['blocker']}")
+    console.print(f"Next: {payload.get('next_action') or '-'}")
+    if result.loop_id:
+        console.print(f"Loop ID: {result.loop_id}")
+    if result.loop_status:
+        console.print(f"Loop status: {result.loop_status}")
+    if result.work_item_id:
+        console.print(f"Work item: {result.work_item_id}")
+    if result.work_item_path:
+        console.print(f"Work item path: {result.work_item_path}")
+    console.print(f"Required tasks: {result.required_task_count}")
+    console.print(f"Done tasks: {result.done_count}")
+    console.print(f"Blocked tasks: {result.blocked_count}")
+    console.print(f"Evidence items: {result.evidence_count}")
+    console.print(f"Closed: {str(result.closed).lower()}")
+    if result.artifacts:
+        console.print("Artifacts:")
+        for artifact in result.artifacts:
+            state = "exists" if artifact.exists else "planned"
+            console.print(f"- {artifact.kind}: {artifact.path} ({state})")
+
+
 def _emit_payload(payload: dict[str, object], *, json_output: bool) -> None:
     if json_output:
         typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -430,6 +596,18 @@ def _emit_loop_summary(loop: LoopSummary, *, show_guidance: bool = True) -> None
             f"coverage={design_contract.coverage_count}, "
             f"closed={str(design_contract.closed).lower()}"
         )
+    if loop.implementation is not None:
+        implementation = loop.implementation
+        console.print(f"Implementation work item: {implementation.work_item_id}")
+        console.print(f"Implementation path: {implementation.work_item_path}")
+        console.print(
+            "Implementation counts: "
+            f"required={implementation.required_task_count}, "
+            f"done={implementation.done_count}, "
+            f"blocked={implementation.blocked_count}, "
+            f"evidence={implementation.evidence_count}, "
+            f"closed={str(implementation.closed).lower()}"
+        )
 
 
 def _emit_guidance(guidance: LoopNextActionGuidance) -> None:
@@ -465,5 +643,6 @@ def _yes_no(value: object) -> str:
 
 loop_app.add_typer(requirement_app, name="requirement")
 loop_app.add_typer(design_contract_app, name="design-contract")
+loop_app.add_typer(implementation_app, name="implementation")
 
 __all__ = ["loop_app"]
