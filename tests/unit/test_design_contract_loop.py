@@ -754,6 +754,49 @@ def test_check_design_contract_loop_ignores_p2_task_detail_gaps(
     }
 
 
+def test_check_design_contract_loop_ignores_p2_task_contract_coverage(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(
+        tmp_path,
+        include_task_refs=False,
+        verification_value="",
+        extra_task_sections="\n".join(
+            [
+                "",
+                "### Task 2.1 Deferred coverage note",
+                "",
+                "- **任务编号**：T12",
+                "- **优先级**：P2",
+                "- Deferred backlog mentions FR-DEMO-001 and SC-DEMO-001.",
+            ]
+        ),
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            loop_id="dc-p2-coverage",
+        )
+    )
+
+    assert result.status == "needs_fix"
+    report = json.loads(
+        (
+            tmp_path
+            / ".ai-sdlc"
+            / "loops"
+            / "design-contract"
+            / "dc-p2-coverage"
+            / "design-contract-report.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert {item["status"] for item in report["coverage_items"]} == {"missing"}
+    assert all(item["covered_by"] == [] for item in report["coverage_items"])
+    assert "missing_coverage" in {finding["code"] for finding in report["findings"]}
+
+
 def test_check_design_contract_loop_requires_verification_command(
     tmp_path: Path,
 ) -> None:

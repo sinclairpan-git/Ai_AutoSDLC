@@ -242,6 +242,9 @@ def _task_coverage_index(
         task_id = next(iter(_TASK_ID.findall(section)), "")
         if not task_id:
             continue
+        priority = _task_priority(section)
+        if priority and priority not in {"P0", "P1"}:
+            continue
         task_body = _without_fenced_blocks(section)
         for source_id in _CONTRACT_ID.findall(task_body):
             coverage.setdefault(source_id, set()).add(task_id)
