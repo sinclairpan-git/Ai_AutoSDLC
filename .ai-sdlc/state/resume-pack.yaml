@@ -10,11 +10,11 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Complete five Loop Engine loop types one by one; current
-    slice is WI-193 design-contract loop | State: WI-193 Batch 2 core runtime is implemented:
-    design-contract models, checks, store helpers, check runtime, close runtime, and
-    unit tests pass. Status/list and CLI are not connected yet. | Next: Implement
-    Batch 3: design-contract support in loop_status.py and loop_cmd.py with unit/integration
-    tests.'
+    slice is WI-193 design-contract loop | State: WI-193 Batch 3 status/list and CLI
+    are implemented: loop status/list supports design-contract, loop design-contract
+    check/status/close is wired, and focused validation passed. Batch 4 README/verify
+    constraints/final regression/close-check remains before PR. | Next: Commit Batch
+    3, then implement Batch 4 README/verify constraints/final regression/close-check.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''

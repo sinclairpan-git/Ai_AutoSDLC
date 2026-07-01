@@ -6,6 +6,13 @@ import json
 import os
 from pathlib import Path
 
+from ai_sdlc.core.design_contract_loop import (
+    DesignContractCheckOptions,
+    DesignContractCloseOptions,
+    check_design_contract_loop,
+    close_design_contract_loop,
+)
+from ai_sdlc.core.design_contract_models import CURRENT_DESIGN_CONTRACT_PATH
 from ai_sdlc.core.loop_artifacts import LoopArtifactStore
 from ai_sdlc.core.loop_models import LoopStatus
 from ai_sdlc.core.loop_status import (
@@ -710,6 +717,201 @@ def test_requirement_status_after_freeze_points_to_design_contract(
     assert result.next_guidance.alternatives == [
         "Start design-contract loop from requirement req-frozen-status."
     ]
+
+
+def test_get_loop_status_reads_current_design_contract_loop(tmp_path: Path) -> None:
+    _write_design_contract_work_item(tmp_path)
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-design-contract",
+            loop_id="dc-status",
+        )
+    )
+
+    result = get_loop_status(tmp_path, loop_type="design-contract")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.result == "Current design-contract loop found."
+    assert result.current_loop is not None
+    assert result.current_loop.loop_type == "design-contract"
+    assert result.current_loop.status == "passed"
+    assert result.next_guidance.command == "ai-sdlc loop design-contract close --yes"
+    assert result.next_guidance.requires_model is False
+    assert result.current_loop.design_contract is not None
+    assert result.current_loop.design_contract.work_item_id == "demo-design-contract"
+    assert result.current_loop.design_contract.coverage_count == 2
+
+
+def test_get_loop_status_reports_no_current_design_contract_loop(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".ai-sdlc").mkdir()
+
+    result = get_loop_status(tmp_path, loop_type="design-contract")
+
+    assert result.status == LoopStatusCommandStatus.NO_CURRENT
+    assert result.result == "No current design-contract loop."
+    assert result.next_guidance.command == (
+        "ai-sdlc loop design-contract check --wi specs/<work-item>"
+    )
+    assert result.next_guidance.requires_model is False
+    assert result.next_guidance.writes_artifacts is True
+
+
+def test_list_loops_reads_design_contract_runs_and_marks_current(
+    tmp_path: Path,
+) -> None:
+    _write_design_contract_work_item(tmp_path)
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-design-contract",
+            loop_id="dc-old",
+        )
+    )
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-design-contract",
+            loop_id="dc-current",
+        )
+    )
+
+    result = list_loops(tmp_path, loop_type="design-contract")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.result == "Design-contract loops found."
+    assert result.current_loop_id == "dc-current"
+    assert [item.loop_id for item in result.items] == ["dc-current", "dc-old"]
+    assert result.items[0].is_current is True
+    assert result.items[0].design_contract is not None
+    assert result.items[0].next_guidance.command == (
+        "ai-sdlc loop design-contract close --yes"
+    )
+    assert result.items[1].is_current is False
+    assert result.items[1].next_guidance.command == (
+        "ai-sdlc loop list --type design-contract --json"
+    )
+
+
+def test_design_contract_status_after_close_points_to_implementation(
+    tmp_path: Path,
+) -> None:
+    _write_design_contract_work_item(tmp_path)
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-design-contract",
+            loop_id="dc-closed",
+        )
+    )
+    close_design_contract_loop(
+        DesignContractCloseOptions(root=tmp_path, loop_id="dc-closed", yes=True)
+    )
+
+    result = get_loop_status(tmp_path, loop_type="design-contract")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert result.current_loop is not None
+    assert result.current_loop.status == "closed"
+    assert result.current_loop.design_contract is not None
+    assert result.current_loop.design_contract.closed is True
+    assert result.next_guidance.safety == "no_action"
+    assert result.next_guidance.alternatives == [
+        "Start implementation loop for demo-design-contract."
+    ]
+
+
+def test_list_loops_reports_malformed_current_design_contract_run(
+    tmp_path: Path,
+) -> None:
+    _write_design_contract_work_item(tmp_path)
+    check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-design-contract",
+            loop_id="dc-valid",
+        )
+    )
+    bad_dir = tmp_path / ".ai-sdlc" / "loops" / "design-contract" / "dc-bad"
+    bad_dir.mkdir(parents=True)
+    bad_path = bad_dir / "loop-run.json"
+    bad_path.write_text("{not-json", encoding="utf-8")
+    LoopArtifactStore(tmp_path).write_json_artifact(
+        tmp_path / CURRENT_DESIGN_CONTRACT_PATH,
+        {
+            "schema_version": "1",
+            "artifact_kind": "current-design-contract-pointer",
+            "loop_id": "dc-bad",
+            "loop_run_path": bad_path.relative_to(tmp_path).as_posix(),
+        },
+    )
+
+    result = list_loops(tmp_path, loop_type="design-contract")
+
+    assert result.status == LoopStatusCommandStatus.READY
+    assert [item.loop_id for item in result.items] == ["dc-valid"]
+    assert result.current_loop_id == ""
+    assert result.malformed_count == 1
+    assert result.artifact_errors[0].kind == "current-design-contract-target"
+    assert result.blocker == (
+        "Current design-contract pointer is malformed or references missing artifacts."
+    )
+    assert result.next_guidance.safety == "blocked"
+
+
+def _write_design_contract_work_item(root: Path) -> Path:
+    work_item = root / "specs" / "demo-design-contract"
+    work_item.mkdir(parents=True)
+    work_item.joinpath("spec.md").write_text(
+        "\n".join(
+            [
+                "# PRD：Demo Design Contract",
+                "",
+                "**状态**：已冻结",
+                "",
+                "## 需求",
+                "",
+                "- **FR-DEMO-001**：系统必须检查设计合同。",
+                "",
+                "## 成功标准",
+                "",
+                "- **SC-DEMO-001**：合同通过后可以进入实现。",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    work_item.joinpath("plan.md").write_text(
+        "\n".join(
+            [
+                "# 实施计划",
+                "## 技术背景",
+                "Python runtime.",
+                "## 阶段计划",
+                "Phase 1.",
+                "## 验证策略",
+                "Run pytest.",
+                "## 回退方式",
+                "Revert the commit.",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    work_item.joinpath("tasks.md").write_text(
+        "\n".join(
+            [
+                "# 任务分解",
+                "### Task 1.1 Check contract",
+                "- **任务编号**：T11",
+                "- **优先级**：P0",
+                "- **验收标准**：Cover FR-DEMO-001 and SC-DEMO-001.",
+                "- **验证**：uv run pytest tests/unit/test_demo.py -q",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    return work_item
 
 
 def _write_review_run(

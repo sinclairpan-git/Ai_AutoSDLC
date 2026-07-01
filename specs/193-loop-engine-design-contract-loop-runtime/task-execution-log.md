@@ -174,3 +174,82 @@
 - 当前批次 branch disposition 状态：PR merge carrier
 - 当前批次 worktree disposition 状态：retained（主工作区）
 - 是否继续下一批：完成本批提交后进入 T31/T32。
+
+### Batch 2026-07-01-003 | T31-T32
+
+#### 4.1 批次范围
+
+- 覆盖任务：`T31`、`T32`
+- 覆盖阶段：status/list and CLI
+- 预读范围：`src/ai_sdlc/core/loop_status.py`、`src/ai_sdlc/cli/loop_cmd.py`、`tests/unit/test_loop_status.py`、`tests/integration/test_cli_loop.py`
+- 激活的规则：status/list read-only、design-contract writer dry-run no-write、JSON output parser-safe、close fail-closed
+
+#### 4.2 统一验证命令
+
+- `V1`（CLI focused integration）
+  - 命令：`uv run pytest tests/integration/test_cli_loop.py -q`
+  - 结果：通过，`32 passed`。
+- `V2`（status/list + core focused unit）
+  - 命令：`uv run pytest tests/unit/test_loop_status.py tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`44 passed`。
+- `V3`（focused ruff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py`
+  - 结果：通过，`All checks passed!`。
+- `V4`（focused mypy）
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/design_contract_models.py src/ai_sdlc/core/design_contract_checks.py src/ai_sdlc/core/design_contract_store.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+  - 结果：通过，`Success: no issues found in 6 source files`。
+- `V5`（diff whitespace）
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+
+#### 4.3 任务记录
+
+##### T31 | 接入 loop status/list
+
+- 改动范围：`src/ai_sdlc/core/loop_status.py`、`tests/unit/test_loop_status.py`
+- 改动内容：新增 `DesignContractLoopSummary`、`loop status/list --type design-contract` current/list reader、design-contract pointer repair guidance、passed/needs_fix/closed next guidance。
+- 新增/调整的测试：覆盖 current design-contract status、no-current guidance、list marks current、closed points to implementation、malformed current target。
+- 执行的命令：见 4.2。
+- 测试结果：通过。
+- 是否符合任务目标：符合。
+
+##### T32 | 接入 CLI
+
+- 改动范围：`src/ai_sdlc/cli/loop_cmd.py`、`tests/integration/test_cli_loop.py`
+- 改动内容：新增 `ai-sdlc loop design-contract check/status/close`，check dry-run 不触发 adapter、不写 artifact，close 不能关闭时返回非零；human 输出展示 work item、blocker、warning、coverage 和 artifact path。
+- 新增/调整的测试：覆盖 check/status/close JSON、dry-run skips adapter、close with blockers exits nonzero、list JSON。
+- 执行的命令：见 4.2。
+- 测试结果：通过。
+- 是否符合任务目标：符合。
+
+#### 4.4 代码审查结论
+
+- 宪章/规格对齐：CLI writer 命令刷新 adapter，dry-run 保持 no-write；status/list 只读；JSON 输出由 payload 直接渲染，不混入 Rich 文本。
+- 代码质量：沿用 requirement loop CLI 模式，未改变 local-pr-review 默认入口。
+- 测试质量：integration tests 覆盖 design-contract check/status/list/close 和 dry-run adapter 边界；status/list unit tests 覆盖 malformed current target。
+- 结论：Batch 3 可进入 docs/constraints/final regression。
+
+#### 4.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：T31/T32 已完成；T41/T42 待执行。
+- `related_plan`（如存在）同步状态：无 related_plan；`plan.md` Phase 2 已完成。
+- 关联 branch/worktree disposition 计划：本分支继续作为 WI-193 PR carrier。
+- 说明：Batch 4 需要补 README、verify constraints surface、program truth sync 和 close-check。
+
+#### 4.6 自动决策记录
+
+- AD-193-006：`loop design-contract check` 的 `needs_fix` 属于成功生成报告的可恢复状态，CLI exit 0；`close` 未真正关闭时 exit 1，便于自动化阻断 implementation。
+- AD-193-007：`loop status/list --type design-contract` 继续复用通用 `LoopSummary`，通过 `design_contract` 扩展字段暴露 work item 和 coverage counters。
+
+#### 4.7 批次结论
+
+- design-contract status/list and CLI 已完成。
+- 下一步进入 README、verify constraints、最终回归和 close-check。
+
+#### 4.8 归档后动作
+
+- 已完成 git 提交：否
+- 提交哈希：待本批提交后生成
+- 当前批次 branch disposition 状态：PR merge carrier
+- 当前批次 worktree disposition 状态：retained（主工作区）
+- 是否继续下一批：完成本批提交后进入 T41/T42。

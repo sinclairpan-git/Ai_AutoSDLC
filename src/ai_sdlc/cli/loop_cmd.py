@@ -10,6 +10,13 @@ import typer
 from rich.console import Console
 
 from ai_sdlc.cli.cli_hooks import run_ide_adapter_if_initialized
+from ai_sdlc.core.design_contract_loop import (
+    DesignContractCheckOptions,
+    DesignContractCloseOptions,
+    DesignContractCommandResult,
+    check_design_contract_loop,
+    close_design_contract_loop,
+)
 from ai_sdlc.core.loop_status import (
     LoopListResult,
     LoopNextActionGuidance,
@@ -36,11 +43,15 @@ requirement_app = typer.Typer(
     help="Run the local deterministic requirement loop.",
     no_args_is_help=True,
 )
+design_contract_app = typer.Typer(
+    help="Run the local deterministic design-contract loop.",
+    no_args_is_help=True,
+)
 console = Console()
 
 
-def _run_requirement_writer_adapter(*, json_output: bool) -> None:
-    """Refresh adapter metadata before requirement commands write artifacts."""
+def _run_project_writer_adapter(*, json_output: bool) -> None:
+    """Refresh adapter metadata before loop commands write project artifacts."""
 
     adapter_console = (
         Console(file=StringIO(), force_terminal=False) if json_output else console
@@ -53,7 +64,7 @@ def loop_status(
     loop_type: str = typer.Option(
         "local-pr-review",
         "--type",
-        help="Loop type to inspect: local-pr-review or requirement.",
+        help="Loop type to inspect: local-pr-review, requirement, or design-contract.",
     ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
@@ -70,7 +81,7 @@ def loop_list(
     loop_type: str = typer.Option(
         "local-pr-review",
         "--type",
-        help="Loop type to list: local-pr-review or requirement.",
+        help="Loop type to list: local-pr-review, requirement, or design-contract.",
     ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
@@ -103,7 +114,7 @@ def requirement_start(
     """Start a local deterministic requirement loop."""
 
     if not dry_run:
-        _run_requirement_writer_adapter(json_output=json_output)
+        _run_project_writer_adapter(json_output=json_output)
     root = _project_root_or_exit(json_output=json_output)
     result = start_requirement_loop(
         RequirementStartOptions(
@@ -145,7 +156,7 @@ def requirement_freeze(
 ) -> None:
     """Freeze the current requirement loop after explicit confirmation."""
 
-    _run_requirement_writer_adapter(json_output=json_output)
+    _run_project_writer_adapter(json_output=json_output)
     root = _project_root_or_exit(json_output=json_output)
     result = freeze_requirement_loop(
         RequirementFreezeOptions(
@@ -157,6 +168,79 @@ def requirement_freeze(
     )
     _emit_requirement_result(result, json_output=json_output)
     raise typer.Exit(0 if result.status == "ready" else 1)
+
+
+@design_contract_app.command(name="check")
+def design_contract_check(
+    work_item: str = typer.Option(
+        "",
+        "--wi",
+        help="Work item directory or formal doc path, for example specs/123-name.",
+    ),
+    requirement_loop_id: str = typer.Option(
+        "",
+        "--requirement-loop-id",
+        help="Optional upstream requirement loop id.",
+    ),
+    loop_id: str = typer.Option("", "--loop-id", help="Optional stable loop id."),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing."),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Check whether formal docs are ready for implementation."""
+
+    if not dry_run:
+        _run_project_writer_adapter(json_output=json_output)
+    root = _project_root_or_exit(json_output=json_output)
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=root,
+            work_item=work_item,
+            requirement_loop_id=requirement_loop_id,
+            loop_id=loop_id,
+            dry_run=dry_run,
+        )
+    )
+    _emit_design_contract_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != "blocked" else 1)
+
+
+@design_contract_app.command(name="status")
+def design_contract_status(
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Show the current design-contract loop status."""
+
+    root = _project_root_or_exit(json_output=json_output)
+    result = get_loop_status(root, loop_type="design-contract")
+    _emit_status_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != LoopStatusCommandStatus.BLOCKED else 1)
+
+
+@design_contract_app.command(name="close")
+def design_contract_close(
+    loop_id: str = typer.Option("", "--loop-id", help="Design-contract loop id."),
+    yes: bool = typer.Option(False, "--yes", help="Confirm design-contract close."),
+    closed_by: str = typer.Option(
+        "local-user",
+        "--closed-by",
+        help="Operator recorded in design-contract-close.json.",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Close a passed design-contract loop after explicit confirmation."""
+
+    _run_project_writer_adapter(json_output=json_output)
+    root = _project_root_or_exit(json_output=json_output)
+    result = close_design_contract_loop(
+        DesignContractCloseOptions(
+            root=root,
+            loop_id=loop_id,
+            yes=yes,
+            closed_by=closed_by,
+        )
+    )
+    _emit_design_contract_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status == "ready" and result.closed else 1)
 
 
 def _project_root_or_exit(*, json_output: bool = False) -> Path:
@@ -245,6 +329,38 @@ def _emit_requirement_result(
             console.print(f"- {artifact.kind}: {artifact.path} ({state})")
 
 
+def _emit_design_contract_result(
+    result: DesignContractCommandResult,
+    *,
+    json_output: bool,
+) -> None:
+    payload = result.model_dump(mode="json")
+    if json_output:
+        _emit_payload(payload, json_output=True)
+        return
+    console.print(f"Result: {payload.get('status', '')}")
+    if payload.get("blocker"):
+        console.print(f"Blocker: {payload['blocker']}")
+    console.print(f"Next: {payload.get('next_action') or '-'}")
+    if result.loop_id:
+        console.print(f"Loop ID: {result.loop_id}")
+    if result.loop_status:
+        console.print(f"Loop status: {result.loop_status}")
+    if result.work_item_id:
+        console.print(f"Work item: {result.work_item_id}")
+    if result.work_item_path:
+        console.print(f"Work item path: {result.work_item_path}")
+    console.print(f"Blockers: {result.blocker_count}")
+    console.print(f"Warnings: {result.warning_count}")
+    console.print(f"Coverage items: {result.coverage_count}")
+    console.print(f"Closed: {str(result.closed).lower()}")
+    if result.artifacts:
+        console.print("Artifacts:")
+        for artifact in result.artifacts:
+            state = "exists" if artifact.exists else "planned"
+            console.print(f"- {artifact.kind}: {artifact.path} ({state})")
+
+
 def _emit_payload(payload: dict[str, object], *, json_output: bool) -> None:
     if json_output:
         typer.echo(json.dumps(payload, ensure_ascii=False, indent=2))
@@ -303,6 +419,17 @@ def _emit_loop_summary(loop: LoopSummary, *, show_guidance: bool = True) -> None
             f"acceptance={requirement.acceptance_count}, "
             f"frozen={str(requirement.frozen).lower()}"
         )
+    if loop.design_contract is not None:
+        design_contract = loop.design_contract
+        console.print(f"Design contract work item: {design_contract.work_item_id}")
+        console.print(f"Design contract path: {design_contract.work_item_path}")
+        console.print(
+            "Design contract counts: "
+            f"blockers={design_contract.blocker_count}, "
+            f"warnings={design_contract.warning_count}, "
+            f"coverage={design_contract.coverage_count}, "
+            f"closed={str(design_contract.closed).lower()}"
+        )
 
 
 def _emit_guidance(guidance: LoopNextActionGuidance) -> None:
@@ -337,5 +464,6 @@ def _yes_no(value: object) -> str:
 
 
 loop_app.add_typer(requirement_app, name="requirement")
+loop_app.add_typer(design_contract_app, name="design-contract")
 
 __all__ = ["loop_app"]
