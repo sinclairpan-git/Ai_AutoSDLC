@@ -311,6 +311,40 @@ def test_check_design_contract_loop_accepts_frozen_requirement_loop(
     assert input_payload["requirement_loop_id"] == "req-frozen"
 
 
+def test_check_design_contract_loop_blocks_mismatched_requirement_work_item(
+    tmp_path: Path,
+) -> None:
+    _write_work_item(tmp_path, with_frozen_requirement=False)
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-other-work-item",
+            idea="Other work item needs a design contract.",
+            acceptance=("Other work item can be checked.",),
+            work_item_id="other-contract",
+        )
+    )
+    freeze_requirement_loop(
+        RequirementFreezeOptions(root=tmp_path, loop_id="req-other-work-item", yes=True)
+    )
+
+    result = check_design_contract_loop(
+        DesignContractCheckOptions(
+            root=tmp_path,
+            work_item="specs/demo-contract",
+            requirement_loop_id="req-other-work-item",
+            loop_id="dc-mismatched-requirement",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert result.blocker == (
+        "Requirement loop req-other-work-item belongs to work item other-contract, "
+        "but design-contract work item is demo-contract."
+    )
+    assert "--work-item-id demo-contract" in result.next_action
+
+
 def test_check_design_contract_loop_reports_missing_coverage(
     tmp_path: Path,
 ) -> None:

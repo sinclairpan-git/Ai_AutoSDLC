@@ -49,6 +49,7 @@ from ai_sdlc.core.loop_models import (
 )
 from ai_sdlc.core.requirement_loop import (
     RequirementFreeze,
+    RequirementIntake,
     _requirement_artifacts,
     _resolve_requirement_loop_run_path,
 )
@@ -105,6 +106,7 @@ def check_design_contract_loop(
     requirement_blocker, requirement_next_action = _requirement_loop_gate(
         root,
         contract_input.requirement_loop_id,
+        work_item_id=contract_input.work_item_id,
     )
     if requirement_blocker:
         return _blocked_result(
@@ -298,6 +300,7 @@ def _refresh_report_before_close(
     requirement_blocker, requirement_next_action = _requirement_loop_gate(
         root,
         contract_input.requirement_loop_id,
+        work_item_id=contract_input.work_item_id,
     )
     if requirement_blocker:
         return _blocked_result(
@@ -412,7 +415,12 @@ def _closed_current_recheck_result(
     )
 
 
-def _requirement_loop_gate(root: Path, requirement_loop_id: str) -> tuple[str, str]:
+def _requirement_loop_gate(
+    root: Path,
+    requirement_loop_id: str,
+    *,
+    work_item_id: str = "",
+) -> tuple[str, str]:
     loop_id, blocker, next_action = _required_requirement_loop_id(
         root,
         requirement_loop_id,
@@ -460,6 +468,30 @@ def _requirement_loop_gate(root: Path, requirement_loop_id: str) -> tuple[str, s
             f"Requirement freeze artifact id mismatch: expected {safe_loop_id}, found {freeze.loop_id}.",
             freeze_next_action,
         )
+    work_item = work_item_id.strip()
+    if work_item:
+        try:
+            intake_payload = LoopArtifactStore(root).read_json_artifact(
+                artifacts.intake_path
+            )
+            intake = RequirementIntake.model_validate(intake_payload)
+        except (OSError, ValueError, ValidationError) as exc:
+            return (
+                f"Requirement intake artifact for {safe_loop_id} is malformed: {exc}",
+                "Run ai-sdlc loop requirement status.",
+            )
+        intake_work_item = intake.work_item_id.strip()
+        if intake_work_item and intake_work_item != work_item:
+            return (
+                (
+                    f"Requirement loop {safe_loop_id} belongs to work item "
+                    f"{intake_work_item}, but design-contract work item is {work_item}."
+                ),
+                (
+                    "Run ai-sdlc loop requirement start "
+                    f"--work-item-id {work_item} --acceptance \"<验收标准>\"."
+                ),
+            )
     return "", ""
 
 

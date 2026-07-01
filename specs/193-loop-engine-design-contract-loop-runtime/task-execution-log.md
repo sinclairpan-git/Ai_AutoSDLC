@@ -724,6 +724,70 @@
 - 当前批次 worktree disposition 状态：retained（主工作区）。
 - 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
 
+### Batch 21：第二十二轮 PR #110 Codex review remediation
+
+#### 21.1 本批目标
+
+- 修复 PR #110 最新 Codex review P2：显式 `--requirement-loop-id` 指向其他 work item 的 frozen requirement 时，design-contract check 不得通过。
+- 保持空 `RequirementIntake.work_item_id` 可作为通用 requirement；只有记录了具体 work item 时才强制匹配。
+
+#### 21.2 变更范围
+
+- **验证画像**：code-change
+- `src/ai_sdlc/core/design_contract_loop.py`
+  - `_requirement_loop_gate` 增加 `work_item_id` 参数。
+  - gate 在 frozen requirement 通过后读取 `requirement-intake.json`，若 intake work item 与 design-contract work item 不一致则 blocked。
+  - `check_design_contract_loop` 与 close 前 revalidation 均传入当前 `contract_input.work_item_id`。
+- `tests/unit/test_design_contract_loop.py`
+  - 新增 mismatched requirement work item regression。
+
+#### 21.3 验证记录
+
+- `V106`（twenty-second Codex review requirement work item targeted）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_blocks_mismatched_requirement_work_item tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_accepts_frozen_requirement_loop tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_blocks_missing_requirement_loop tests/unit/test_design_contract_loop.py::test_check_design_contract_loop_blocks_unfrozen_requirement_loop -q`
+  - 结果：通过，`4 passed`。
+- `V107`（twenty-second remediation design-contract unit）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py -q`
+  - 结果：通过，`45 passed`。
+- `V108`（twenty-second remediation focused regression）
+  - 命令：`uv run pytest tests/unit/test_design_contract_loop.py tests/unit/test_loop_status.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+  - 结果：通过，`254 passed`。
+- `V109`（twenty-second remediation ruff / mypy / constraints / diff）
+  - 命令：`uv run ruff check src/ai_sdlc/core/design_contract_loop.py tests/unit/test_design_contract_loop.py`
+  - 结果：通过，`All checks passed!`。
+  - 命令：`uv run mypy src/ai_sdlc/core/design_contract_loop.py src/ai_sdlc/core/requirement_loop.py`
+  - 结果：通过，`Success: no issues found in 2 source files`。
+  - 命令：`uv run ai-sdlc verify constraints`
+  - 结果：通过，`verify constraints: no BLOCKERs.`。
+  - 命令：`git diff --check`
+  - 结果：通过，无输出。
+- `V110`（twenty-second remediation program truth sync）
+  - 命令：`uv run ai-sdlc program truth sync --execute --yes`
+  - 结果：通过，写入 `program-manifest.yaml`，snapshot hash `13e3c651109f031ec0f9920b6de53b47864031c21011e2a0114b0adc602da001`。
+- `V111`（twenty-second remediation pre-commit work item close-check）
+  - 命令：`uv run ai-sdlc workitem close-check --wi specs/193-loop-engine-design-contract-loop-runtime`
+  - 结果：除 `git_closure` 因当前修复尚未提交而 BLOCKER 外，其余检查 PASS；提交后需复跑至 PASS。
+
+#### 21.4 代码审查结论
+
+- 宪章/规格对齐：design-contract loop 现在保持 requirement traceability，不能用其他 work item 的 frozen requirement 进入实现前合同。
+- 质量风险：新增 explicit requirement id mismatch regression，覆盖当前 Codex actionable comment。
+- 结论：可刷新 truth、close-check、提交、推送并重新请求 Codex review。
+
+#### 21.5 任务/计划同步状态
+
+- `tasks.md` 同步状态：T41/T42 保持完成；本批为 PR review remediation，不新增交付范围。
+- `related_plan`（如存在）同步状态：无 related_plan；plan 边界仍为 design-contract loop。
+- 关联 branch/worktree disposition 计划：继续使用 PR #110 head branch。
+
+#### 21.6 归档后动作
+
+- **已完成 git 提交**：是（本 marker 随 remediation commit 一起落盘）。
+- **提交哈希**：当前 close-out commit，以 `git log -1` 为准。
+- 当前批次 branch disposition 状态：`feature/193-loop-engine-design-contract-loop-runtime-docs` 为 PR merge carrier。
+- 当前批次 worktree disposition 状态：retained（主工作区）。
+- 是否继续下一批：否；需完成 PR #110 Codex re-review 和 checks 后再进入 implementation loop。
+
 ### Batch 17：第十八轮 PR #110 Codex review remediation
 
 #### 17.1 本批目标
