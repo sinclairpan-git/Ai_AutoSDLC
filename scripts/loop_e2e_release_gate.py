@@ -14,6 +14,7 @@ import json
 import os
 import platform
 import shlex
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -354,12 +355,12 @@ def run_scenario(
         ["init", ".", "--agent-target", "codex", "--shell", "powershell"],
         note="Initialize AI-SDLC in a fresh target repository.",
     )
+    if include_windows_playwright_provider_e2e:
+        _run_windows_playwright_provider_install_check(h)
     _git(h.project_root, "add", ".")
     _git(h.project_root, "commit", "-m", "initialize ai-sdlc")
     base_commit = _git(h.project_root, "rev-parse", "HEAD")
     h.result.key_artifacts["base_commit"] = base_commit
-    if include_windows_playwright_provider_e2e:
-        _run_windows_playwright_provider_install_check(h)
 
     missing_req = h.run(
         "requirement_start_missing_acceptance",
@@ -1107,6 +1108,10 @@ def _run_windows_playwright_provider_install_check(h: E2EHarness) -> None:
             field="available",
         )
         is True,
+    )
+    shutil.rmtree(frontend_dir, ignore_errors=True)
+    h.result.assertions.append(
+        "Windows Playwright install sandbox cleaned before PR review diff"
     )
 
 

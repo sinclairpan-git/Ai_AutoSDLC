@@ -10,11 +10,12 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: Windows frontend loop E2E validates Playwright recommendation
-    and no-install skip path | State: First GitHub Windows run 28559577028 failed
-    because Python subprocess could not resolve npm as npm.cmd. Updated Windows harness
-    to execute npm/npx doctor-recommended commands via cmd.exe /d /s /c. Local ruff,
-    py_compile, workflow tests, and flag-enabled E2E passed. | Next: Commit cmd.exe
-    npm/npx harness fix, push, and monitor a fresh Windows Loop E2E run.'
+    and no-install skip path without contaminating PR review diff | State: Second
+    GitHub Windows run 28559691684 proved frontend Playwright install, Chromium smoke,
+    no-install doctor, and skip artifacts ran; later PR review failed because Playwright
+    sandbox files polluted the review diff. Moved Windows Playwright check before
+    base commit and delete sandbox after success. | Next: Commit sandbox cleanup/move
+    fix, push, and monitor third Windows Loop E2E run.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''
