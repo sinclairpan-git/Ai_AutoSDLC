@@ -210,8 +210,12 @@ def test_materialize_builtin_frontend_provider_profile_artifacts_writes_public_p
         ],
         "template_dev_dependencies": [
             "@antfu/eslint-config",
+            "@commitlint/cli",
+            "@commitlint/config-conventional",
             "@vitejs/plugin-vue",
             "eslint",
+            "husky",
+            "lint-staged",
             "playwright",
             "prettier",
             "typescript",

@@ -1,153 +1,196 @@
-Vue3 企业级前端开发规范方案（PrimeVue + UnoCSS）
-一、方案定位
-适用于：
-企业中后台系统
-Vue3 + TypeScript 技术栈
-多人协作开发
-中大型项目
-长期维护项目
-原子化 CSS 开发模式
-不使用暗黑模式
-不做复杂多主题系统
+# Vue3 企业级前端开发规范方案 v1.3（AI 执行版）
 
-二、最终技术栈
+## 1. 目标
 
-三、核心设计思想
-技术职责划分
-组件逻辑 -> PrimeVue
-页面布局 -> UnoCSS
-视觉统一 -> CSS Variables
-业务样式 -> 少量普通 CSS
+本规范用于约束 AI 直接产出可落地、可维护、可机械化收口的 Vue3 前端代码。
 
-四、整体开发原则
-原则一：优先使用 UnoCSS
-优先通过原子类完成布局与样式。
-推荐：
-<div class="flex items-center gap-3 px-4 py-2">
-不推荐：
-<div class="user-wrapper">
-.user-wrapper {
-  display: flex;
-  align-items: center;
-}
+默认目标不是“先做出来”，而是“按统一技术方案、统一视觉语言、统一工程边界做出来”，并让后续 SDLC 的生成、验证、修复和交付闭环可以稳定复用。
 
-原则二：尽量减少 CSS 文件
-避免：
-UserTable.css
-UserForm.css
-OrderDialog.css
-大量出现。
+## 2. 默认技术方案
 
-原则三：统一设计 Token
-禁止直接写颜色值：
-color: #409eff;
-统一使用：
-color: var(--app-primary);
+除非用户明确指定其他方案，否则默认采用：
 
-原则四：页面只负责“组装”
-页面组件只负责：
-数据请求
-页面拼装
-路由参数
-权限控制
-复杂逻辑应拆分至：
-composables
-business components
-stores
+- `Vue3 + TypeScript + Vite`
+- `PrimeVue + @primeuix/themes + primeicons`
+- `definePreset(Aura) + darkModeSelector=false`
+- 主色固定为 `#1770e6`
+- `UnoCSS + CSS Variables`
+- `Pinia + Vue Router + Axios`
+- `vee-validate + zod`
+- `vue-i18n`
+- `Vitest + Playwright + ESLint + Prettier + husky + lint-staged + commitlint`
 
-五、推荐项目目录结构
+## 3. 页面视觉规则
+
+### 3.1 必须遵守
+
+- 导航容器属于页面内容体系的一部分。
+- 左侧导航和顶部导航都允许使用，但不同导航形态不得出现风格强割裂。
+- 页面内导航、页头、卡片、标签、按钮、筛选器必须属于同一视觉家族。
+- 导航激活态、页头胶囊、badge、按钮、标签必须共享 `#1770e6` 的语义高亮。
+- 同一筛选区内输入框、下拉框、按钮必须统一高度、圆角、边框和 focus 态。
+
+### 3.2 明确禁止
+
+- 左侧深色导航 + 右侧浅色品牌内容区。
+- 顶部导航一套中性色，内容区另一套蓝色体系。
+- 黑色 `contrast` 标签和浅色品牌标签大面积同屏混用。
+- 原生 `select` 与 PrimeVue 输入框并排使用导致明显割裂。
+- 深色块滥用于普通卡片、筛选区、导航区。
+
+## 4. 主题与组件规则
+
+默认优先级为：
+
+1. `PrimeVue Theme Token`
+2. 基础组件封装
+3. `UnoCSS` 布局与间距
+4. 页面局部样式补充
+
+不要直接在页面里散落大量颜色值，不要用零散业务 CSS 全局覆盖 PrimeVue 基础外观，也不要让同一页面出现两套圆角、边框、阴影体系。
+
+### 4.1 基础组件封装规则
+
+统一使用组件库后，仍然需要对高频基础控件进行 `Base` 层收口，但不要机械地把所有组件都封一层。
+
+优先封装：
+
+- 高频复用组件
+- 有统一视觉规则的组件
+- 有统一交互规则的组件
+- 未来可能需要全局调整的组件
+
+典型高优先级组件：
+
+- `Button`
+- `InputText`
+- `Select`
+- `Tag`
+- `Dialog`
+- 表单项外壳
+
+不要做：
+
+- 不要只是透传组件库原参数而没有新增统一价值。
+- 不要把明显属于业务语义的组件错误塞进 `Base` 层。
+- 不要因为已经统一了组件库，就放弃统一组件用法。
+
+### 4.2 按钮与标签统一规则
+
+- 主操作按钮默认走品牌蓝主按钮或品牌蓝强调按钮。
+- 不要在同一产品内长期混用蓝色主操作和绿色主操作。
+- 可见性、风险、状态标签应拆分类处理，不要全部压成一个 `warn`。
+- 标签映射应优先进入统一业务组件，而不是页面局部直接写 `severity`。
+
+## 5. 国际化规则
+
+所有新增用户可见中文文案，开发阶段统一写成：
+
+```vue
+$i('中文')
+```
+
+不要直接写裸中文，也不要一上来就手写英文 key。
+
+必须包 `$i(...)` 的内容：
+
+- 页面标题
+- 按钮文案
+- `label`
+- `placeholder`
+- 空状态
+- 错误提示
+- 成功提示
+- tooltip
+- 标签文案
+- 表格列标题
+- 弹窗标题
+- tabs 文案
+
+不要包 `$i(...)` 的内容：
+
+- 变量名
+- 枚举值
+- 接口字段
+- 路由 name
+- 权限码
+- 埋点字段
+- 调试日志
+
+允许的开发期最终态：
+
+```vue
+$i('新建模板')
+```
+
+若当前文件已经是稳定 key 体系，只延续既有 key，不回退成裸中文。不要擅自把 `$i('中文')` 改成其他运行时 API，除非用户明确要求。
+
+## 6. AI 输出禁令
+
+- 不要直接翻译成英文文案。
+- 不要直接发明大量 `user.title`、`page.header.name` 之类的 key。
+- 不要把视觉优化只做在左侧导航，遗漏顶部导航、badge、胶囊、筛选器。
+- 不要一边统一按钮风格，一边放任标签和输入框继续使用旧风格。
+- 不要引入未经确认的第二套组件库。
+- 不要为了省事回退到原生表单控件。
+
+## 7. 推荐目录结构
+
+```text
 src/
 ├── api/
-│
+│   ├── http.ts
+│   ├── interceptors.ts
+│   ├── types.ts
+│   └── modules/
 ├── assets/
-│
 ├── components/
 │   ├── base/
 │   ├── business/
 │   └── layout/
-│
 ├── composables/
-│
 ├── constants/
-│
 ├── directives/
-│
 ├── layouts/
-│
 ├── plugins/
-│
 ├── router/
 │   ├── index.ts
 │   └── modules/
-│
 ├── stores/
-│
 ├── styles/
 │   ├── reset.css
 │   ├── variables.css
 │   └── main.css
-│
 ├── types/
-│
 ├── utils/
-│
 ├── views/
-│
 ├── theme.ts
-│
 ├── App.vue
 └── main.ts
+```
 
-六、UnoCSS 规范
-安装
-pnpm add -D unocss
+## 8. 实现约束
 
-vite.config.ts
-import UnoCSS from 'unocss/vite'
+### 8.1 目录与职责
 
-export default defineConfig({
-  plugins: [
-    UnoCSS(),
-  ],
-})
+- 页面只负责组装，不承载大段基础交互封装。
+- 高频基础控件优先进入 `Base` 层。
+- 业务语义组件进入 `Business` 层。
+- 不要在页面文件里重复声明大量公共类型和公共状态逻辑。
 
-uno.config.ts
-import {
-  defineConfig,
-  presetUno,
-  presetIcons,
-  presetTypography,
-} from 'unocss'
+### 8.2 样式与主题
 
-export default defineConfig({
-  presets: [
-    presetUno(),
-    presetIcons(),
-    presetTypography(),
-  ],
-})
+- `UnoCSS` 负责布局与间距。
+- `CSS Variables` 负责品牌与壳层变量。
+- `PrimeVue Theme` 负责基础组件视觉 token。
+- 不要用页面 CSS 大面积覆盖 `.p-button`、`.p-inputtext`、`.p-select`、`.p-tag`。
 
-UnoCSS 使用规范
-UnoCSS 负责
-flex
-grid
-spacing
-typography
-responsive
-hover
-transition
-layout
+`src/styles/variables.css` 至少保留以下 token 组：
 
-普通 CSS 负责
-特殊动画
-第三方组件覆盖
-极复杂样式场景
-
-七、CSS Variables 规范
-styles/variables.css
+```css
 :root {
   /* colors */
-  --app-primary: #3b82f6;
+  --app-primary: #1770e6;
   --app-success: #22c55e;
   --app-warning: #f59e0b;
   --app-danger: #ef4444;
@@ -171,266 +214,99 @@ styles/variables.css
   --app-header-height: 56px;
   --app-sidebar-width: 220px;
 }
+```
 
-八、PrimeVue 使用规范
-禁止直接大量使用 PrimeVue 原始组件
-不推荐：
-<Button />
-<DataTable />
-<InputText />
-直接散落业务代码。
+### 8.3 TypeScript、Pinia、路由、API
 
-推荐封装 Base 组件
-components/base/
-├── BaseButton.vue
-├── BaseTable.vue
-├── BaseDialog.vue
-├── BaseForm.vue
+- 默认开启 `TypeScript strict`。
+- 不用 `any` 兜底业务类型；不确定输入优先用 `unknown` 并在边界处收窄。
+- store 按领域拆分，不要生成超级大 store。
+- 路由按 `router/modules` 拆分。
+- API 按 `api/modules` 拆分。
+- 接口命名优先使用 `get/create/update/delete`。
 
-Base 组件职责
-统一：
-loading
-size
-国际化
-权限控制
-默认样式
-空状态
-错误状态
+### 8.4 表单控件与筛选区
 
-九、组件开发规范
-组件分层
+- 同一筛选区内统一高度、圆角、边框、focus 态。
+- 能用 PrimeVue 同家族控件时，优先不用原生控件混搭。
+- 不要让输入框、按钮、下拉框分别维持三套不同外观。
 
-Base组件
-例如：
-BaseButton
-BaseTable
-BaseCard
-特点：
-不包含业务逻辑
-高复用
-高统一性
+## 9. 提交前检查
 
-Business组件
-例如：
-UserTable
-OrderPanel
-特点：
-包含业务逻辑
-服务于特定模块
+提交前至少确认：
 
-十、TypeScript 规范
-tsconfig 必须开启 strict
-{
-  "compilerOptions": {
-    "strict": true
-  }
-}
+- 所有新增可见中文是否已包 `$i(...)`。
+- 是否存在导航与内容区风格割裂。
+- 是否存在标签、按钮、输入框三套不同视觉语言。
+- 是否仍残留黑色 `contrast` 标签滥用。
+- 是否仍残留原生 `select`。
+- 是否仍存在页面私有大面积基础组件样式覆盖。
+- 是否已形成 `Base / Business / View` 基本分层。
+- store、router、api 是否仍然集中堆在单文件内。
 
-禁止使用 any
-允许：
-unknown
+## 10. 工程化与提交规则
 
-类型统一管理
-types/
-禁止：
-页面内大量 inline type
-到处重复定义类型
+多人协作项目默认应补齐以下工具链：
 
-API 返回结构统一
-interface ApiResponse<T> {
-  code: number
-  message: string
-  data: T
-}
+- `husky`
+- `lint-staged`
+- `commitlint`
+- `ESLint`
+- `Prettier`
 
-十一、Pinia 规范
-推荐结构
-stores/
-├── app.ts
-├── user.ts
-├── permission.ts
-└── settings.ts
+AI 在生成项目规范、初始化方案或工程化建议时，不要遗漏这部分基础约束。
 
-规范要求
-一个领域一个 store
-禁止：
-global.ts
-超级大 store。
+默认要求：
 
-十二、路由规范
-推荐结构
-router/
-├── index.ts
-└── modules/
-    ├── dashboard.ts
-    ├── system.ts
-    └── user.ts
+- 提交前运行 `lint-staged`。
+- 禁止提交存在 lint 错误的代码。
+- `commit message` 至少遵循 `feat:`、`fix:`、`docs:`、`refactor:`、`style:`、`test:`。
+- 不要把格式化噪音和业务改动混成一次不可读提交。
 
-meta 规范
-meta: {
-  title: '用户管理',
-  auth: true,
-  keepAlive: true,
-  roles: ['admin'],
-}
+推荐安装依赖时，不要遗漏：
 
-十三、API 管理规范
-推荐目录
-api/
-├── modules/
-├── http.ts
-├── interceptors.ts
-└── types.ts
+- `vue-router`
+- `pinia`
+- `axios`
+- `primevue`
+- `primeicons`
+- `@primeuix/themes`
+- `vee-validate`
+- `zod`
+- `vue-i18n`
+- `@vueuse/core`
+- `dayjs`
+- `typescript`
+- `vite`
+- `unocss`
+- `eslint`
+- `prettier`
+- `husky`
+- `lint-staged`
+- `@commitlint/cli`
+- `@commitlint/config-conventional`
+- `playwright`
 
-接口命名规范
-推荐：
-getUserList
-createUser
-updateUser
-deleteUser
-不推荐：
-fetchUserApi
-queryUserListApi
+## 11. 输出口径
 
-十四、ESLint 规范
-推荐方案
-@antfu/eslint-config
+如果用户让你实现页面：
 
-推荐规则
-{
-  semi: false,
-  quotes: ['error', 'single'],
-}
+- 先按本规范产出代码。
+- 国际化先用 `$i('中文')`。
+- 技术栈、组件库和 style pack 仍必须先经过前端方案确认。
 
-必须要求
-保存自动格式化
-CI 执行 ESLint
-禁止提交 lint 错误代码
+如果用户让你写规范或约束：
 
-十五、Git 提交规范
-推荐工具
-husky
-lint-staged
-commitlint
+- 优先保证规则明确、动作可执行、边界清晰。
+- 不要把规范写成泛泛而谈的设计描述。
 
-commit message 规范
-feat:
-fix:
-refactor:
-docs:
-style:
-test:
+## 12. 与旧版规范差异评估
 
-十六、国际化规范
-推荐
-vue-i18n
-
-禁止
-<div>用户管理</div>
-
-推荐
-<div>{{ t('user.title') }}</div>
-
-十七、推荐安装依赖
-运行依赖
-pnpm add vue-router pinia axios primevue primeicons
-
-pnpm add vee-validate zod vue-i18n @vueuse/core dayjs
-
-开发依赖
-pnpm add -D typescript vite unocss eslint prettier vitest playwright
-
-十八、推荐开发原则
-原则一
-先组合，不要先封装。
-
-原则二
-先原子化，不要先写 CSS。
-
-原则三
-先拆组件，不要写巨型页面。
-
-原则四
-页面只负责“组装”。
-
-十九、最终推荐方案
-Vue3
-+ TypeScript
-+ Vite
-+ PrimeVue
-+ Pinia
-+ Vue Router
-+ UnoCSS
-+ CSS Variables
-+ Axios
-+ vee-validate
-+ zod
-+ vue-i18n
-+ ESLint
-+ Prettier
-+ Vitest
-
-二十、方案优势
-该方案具备以下优势：
-学习成本低
-开发效率高
-TypeScript 友好
-AI 辅助开发友好
-样式维护成本低
-组件化程度高
-长期维护成本低
-适合多人协作
-非常适合现代 Vue3 企业项目
-
-二十一、AI-SDLC 默认落地映射
-
-当前 AI-SDLC 源码版本中，普通前端需求的首个推荐 provider 已对齐本规范：
-
-frontend_stack
-vue3
-
-provider_id
-public-primevue
-
-style_pack_id
-modern-saas
-
-默认生成路径包括：
-Vite
-PrimeVue
-UnoCSS
-CSS Variables
-Pinia
-Vue Router
-BaseButton / BaseTable / BaseDialog / BaseForm
-
-企业 Vue2 组件库仍作为显式选择路径保留：
-
-frontend_stack
-vue2
-
-provider_id
-enterprise-vue2
-
-style_pack_id
-enterprise-default
-
-二十二、AI-SDLC Web、视觉和可访问性质量门
-
-Web smoke blocker：
-Vite dev server 无法启动
-页面无法打开
-页面白屏或主要内容缺失
-browser console error
-browser page error
-
-首版 warning / advisory：
-桌面 1440x900 截图证据
-移动 390x844 截图证据
-视觉结构、主内容、横向溢出
-Button / Input / Select / Dialog / Form 覆盖
-Dialog close / focus return 风险
-表单控件缺少 label 或 aria 等价名称
-键盘焦点可见性问题
-
-这些 warning 不阻断普通生成，但必须作为浏览器 gate 证据沉淀，后续可升级为 pixel diff、结构 diff 或更严格的可访问性 blocker。
+| 维度 | 旧版仓库规范 | v1.3 优化后要求 | SDLC 升级动作 |
+| --- | --- | --- | --- |
+| 默认技术栈 | 已确认 `vue3/public-primevue/modern-saas` | 保持不变，明确 `PrimeVue + @primeuix/themes + primeicons` 和 `#1770e6` | 不改变默认 provider，只强化规范 |
+| 视觉一致性 | 强调 token 与 UnoCSS，但禁止项不够具体 | 明确导航、页头、badge、按钮、标签、筛选器属于同一视觉家族 | 进入生成 hard rules 与 PRD 验收 |
+| Base / Business 分层 | 已有 Base 组件边界 | 补充优先封装对象和“不机械全封装”边界 | 进入规范与生成规则 |
+| 国际化 | 旧版偏向 vue-i18n / key 管理 | 开发期新增可见中文先写 `$i('中文')`，稳定 key 体系继续沿用 | PRD 从泛化 i18n 改成开发期执行规则 |
+| 表单控件 | 已建议 PrimeVue | 明确禁止原生 `select` 与 PrimeVue 输入框混搭 | 进入生成 hard rules |
+| 工程化 | ESLint/Prettier/Vitest/Playwright 已是默认基线，husky 等是增强项 | 多人协作默认补齐 `husky + lint-staged + commitlint` | 升级模板 dev dependencies；验证等级仍为 advisory |

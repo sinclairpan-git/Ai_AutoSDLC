@@ -5218,6 +5218,9 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert '"primevue/datatable"' in generated_by_path["src/generated/provider-adapter.ts"]
     assert "RouterView" in generated_by_path["src/App.vue"]
     smoke_view = generated_by_path["src/views/ManagedDeliverySmoke.vue"]
+    assert '$i("PrimeVue adapter 已落地")' in smoke_view
+    assert "severity=\"contrast\"" not in smoke_view
+    assert 'severity="primary"' in smoke_view
     assert "BaseButton" in smoke_view
     assert "BaseTable" in smoke_view
     assert "BaseDialog" in smoke_view
@@ -5283,6 +5286,10 @@ def test_build_frontend_managed_delivery_apply_request_merges_builtin_primevue_d
     assert package_json["dependencies"]["zod"] == "latest"
     assert package_json["devDependencies"]["playwright"] == "latest"
     assert package_json["devDependencies"]["eslint"] == "latest"
+    assert package_json["devDependencies"]["husky"] == "latest"
+    assert package_json["devDependencies"]["lint-staged"] == "latest"
+    assert package_json["devDependencies"]["@commitlint/cli"] == "latest"
+    assert package_json["devDependencies"]["@commitlint/config-conventional"] == "latest"
     artifact_action = next(
         action
         for action in request.execution_view.action_items

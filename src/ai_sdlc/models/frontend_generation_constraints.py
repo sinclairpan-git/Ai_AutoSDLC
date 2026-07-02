@@ -242,6 +242,39 @@ def build_mvp_frontend_generation_constraints(
                         "or the governed provider adapter before feature-specific wrappers"
                     ),
                 ),
+                GenerationHardRule(
+                    rule_id="visual-family-consistency",
+                    category="absolute",
+                    description=(
+                        "navigation, page headers, badges, buttons, tags, cards, and "
+                        "filters must share the same PrimeVue token family and #1770e6 "
+                        "semantic highlight"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="no-native-form-control-mixing",
+                    category="absolute",
+                    description=(
+                        "native select or form controls cannot be mixed beside PrimeVue "
+                        "inputs in the same filter or form surface"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="visible-chinese-dev-i18n-wrapper",
+                    category="absolute",
+                    description=(
+                        "new visible Simplified Chinese UI copy must use $i('中文') during "
+                        "development unless the file already follows a stable i18n key system"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="semantic-tag-severity-mapping",
+                    category="controlled_exception",
+                    description=(
+                        "status, risk, and visibility labels must use governed semantic "
+                        "mapping instead of page-local raw severity shortcuts"
+                    ),
+                ),
             ]
         )
         disallowed_naked_values.extend(
@@ -254,6 +287,9 @@ def build_mvp_frontend_generation_constraints(
                 ".p-tag",
                 ".p-card",
                 ".p-dialog",
+                "native-select",
+                "raw-visible-chinese-without-$i",
+                "severity=contrast",
             ]
         )
 

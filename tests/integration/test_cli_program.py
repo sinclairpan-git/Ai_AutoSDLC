@@ -2503,6 +2503,9 @@ class TestCliProgram:
         smoke_view = (
             root / "managed" / "frontend" / "src" / "views" / "ManagedDeliverySmoke.vue"
         ).read_text(encoding="utf-8")
+        assert '$i("PrimeVue adapter 已落地")' in smoke_view
+        assert 'severity="contrast"' not in smoke_view
+        assert 'severity="primary"' in smoke_view
         assert "BaseButton" in smoke_view
         assert "BaseTable" in smoke_view
         assert "BaseDialog" in smoke_view
@@ -5639,8 +5642,12 @@ specs:
         ]
         assert provider_manifest["template_dev_dependencies"] == [
             "@antfu/eslint-config",
+            "@commitlint/cli",
+            "@commitlint/config-conventional",
             "@vitejs/plugin-vue",
             "eslint",
+            "husky",
+            "lint-staged",
             "playwright",
             "prettier",
             "typescript",
@@ -5695,7 +5702,7 @@ specs:
         assert (
             "recommended_tooling: `Vite + TypeScript + UnoCSS + CSS Variables + Pinia + "
             "Vue Router + Axios + vee-validate + zod + vue-i18n + Vitest + Playwright + "
-            "ESLint + Prettier`"
+            "ESLint + Prettier + husky + lint-staged + commitlint`"
             in report_text
         )
 

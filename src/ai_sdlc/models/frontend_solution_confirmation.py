@@ -25,8 +25,12 @@ PUBLIC_PRIMEVUE_TEMPLATE_REQUIRED_CSS_IMPORTS = (
 )
 PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES = (
     "@antfu/eslint-config",
+    "@commitlint/cli",
+    "@commitlint/config-conventional",
     "@vitejs/plugin-vue",
     "eslint",
+    "husky",
+    "lint-staged",
     "playwright",
     "prettier",
     "typescript",
