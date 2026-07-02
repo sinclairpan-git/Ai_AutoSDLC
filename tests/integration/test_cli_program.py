@@ -2503,6 +2503,9 @@ class TestCliProgram:
         smoke_view = (
             root / "managed" / "frontend" / "src" / "views" / "ManagedDeliverySmoke.vue"
         ).read_text(encoding="utf-8")
+        assert '$i("PrimeVue adapter 已落地")' in smoke_view
+        assert 'severity="contrast"' not in smoke_view
+        assert 'severity="primary"' in smoke_view
         assert "BaseButton" in smoke_view
         assert "BaseTable" in smoke_view
         assert "BaseDialog" in smoke_view

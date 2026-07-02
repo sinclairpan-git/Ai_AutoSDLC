@@ -5218,6 +5218,9 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert '"primevue/datatable"' in generated_by_path["src/generated/provider-adapter.ts"]
     assert "RouterView" in generated_by_path["src/App.vue"]
     smoke_view = generated_by_path["src/views/ManagedDeliverySmoke.vue"]
+    assert '$i("PrimeVue adapter 已落地")' in smoke_view
+    assert "severity=\"contrast\"" not in smoke_view
+    assert 'severity="primary"' in smoke_view
     assert "BaseButton" in smoke_view
     assert "BaseTable" in smoke_view
     assert "BaseDialog" in smoke_view

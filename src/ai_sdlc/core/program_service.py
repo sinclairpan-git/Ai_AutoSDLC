@@ -6525,6 +6525,7 @@ const baseFormFields = [
   { id: "adapter", label: "Adapter", value: frontendDeliveryContext.providerThemeAdapterId },
 ];
 const dialogVisible = ref(false);
+const $i = (text: string) => text;
 </script>
 
 <template>
@@ -6533,16 +6534,16 @@ const dialogVisible = ref(false);
       <template #start>
         <div>
           <p class="delivery-eyebrow">{{ frontendDeliveryContext.deliveryEntryId }}</p>
-          <h1 class="delivery-title">PrimeVue adapter 已落地</h1>
+          <h1 class="delivery-title">{{ $i("PrimeVue adapter 已落地") }}</h1>
           <p class="delivery-subtitle">
-            下载到项目中的组件通过 generated provider adapter 进入 Kernel 语义层，不再只是包名清单。
+            {{ $i("下载到项目中的组件通过 generated provider adapter 进入 Kernel 语义层，不再只是包名清单。") }}
           </p>
         </div>
       </template>
       <template #end>
         <BaseButton
           label="Create workspace"
-          severity="contrast"
+          severity="primary"
           @click="dialogVisible = true"
         />
       </template>
