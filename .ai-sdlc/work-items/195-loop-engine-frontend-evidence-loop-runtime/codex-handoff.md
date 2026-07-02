@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-02T01:53:01+00:00
-- Reason: After diagnosing second Windows E2E failure.
-- Goal: Windows frontend loop E2E validates Playwright recommendation and no-install skip path without contaminating PR review diff
-- State: Second GitHub Windows run 28559691684 proved frontend Playwright install, Chromium smoke, no-install doctor, and skip artifacts ran; later PR review failed because Playwright sandbox files polluted the review diff. Moved Windows Playwright check before base commit and delete sandbox after success.
+- Updated: 2026-07-02T02:06:53+00:00
+- Reason: After adding real Playwright-generated frontend evidence E2E path.
+- Goal: Verify Windows frontend loop can generate and close evidence after Playwright install
+- State: Acknowledged gap: previous Windows E2E only proved Playwright install and Chromium launch, not browser-gate-probe artifact generation plus frontend-evidence closure. Added Windows-only E2E path that writes minimal managed frontend/apply truth, installs Playwright in managed/frontend, runs program browser-gate-probe --execute, asserts passed artifact, then closes frontend-evidence using that generated artifact. Local ruff, py_compile, workflow tests, default E2E, and flag-enabled non-Windows E2E passed.
 - Stage: execute
 - Work Item: 195-loop-engine-frontend-evidence-loop-runtime
 - Branch: codex/loop-e2e-release-gate
@@ -15,17 +15,17 @@
 - none
 
 ## Commands / Tests
-- GitHub Loop E2E run 28559691684 => Windows frontend steps reached: doctor recommendation, npm install, npx chromium install, chromium launch, no-install doctor, frontend skip; failed later at PR review due omitted node_modules diff
 - uv run ruff check scripts/loop_e2e_release_gate.py => pass
 - uv run python -m py_compile scripts/loop_e2e_release_gate.py => pass
 - uv run pytest tests/integration/test_github_workflows.py -q => 8 passed
-- uv run python scripts/loop_e2e_release_gate.py --include-windows-playwright-provider-e2e => pass on macOS; no-install path exercised
+- uv run python scripts/loop_e2e_release_gate.py => pass
+- uv run python scripts/loop_e2e_release_gate.py --include-windows-playwright-provider-e2e => pass on macOS fallback path
 
 ## Blockers / Risks
-- none
+- Need GitHub windows-latest runner to verify the new real Playwright browser-gate-probe evidence path.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit sandbox cleanup/move fix, push, and monitor third Windows Loop E2E run.
+- Commit, push, monitor Loop E2E Release Gate Windows artifact, and report generated-evidence screenshots/results.

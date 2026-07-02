@@ -256,6 +256,7 @@ class E2EHarness:
             "- Implementation loop: missing task evidence blocks close; recorded evidence closes.",
             "- Frontend-evidence loop: missing browser artifact blocks start; valid artifact closes.",
             "- Windows frontend provider path: no Codex/no local Playwright, doctor-recommended Playwright install, Chromium smoke.",
+            "- Windows Playwright evidence path: installed Playwright runs browser-gate-probe, materializes browser evidence, and closes frontend-evidence.",
             "- No-install frontend path: provider tooling unavailable, explicit skip closes with audit instead of hard-blocking.",
             "- Local PR review loop: mock adversarial finding forces fix/rerun; clean rerun closes and attests.",
             "",
@@ -677,51 +678,16 @@ def run_scenario(
         and fe_doctor_codex.parsed_json.get("recommended_provider") == "codex-browser"
         and "Playwright" not in str(fe_doctor_codex.parsed_json.get("next_action", "")),
     )
-    _write_browser_gate_artifact(h.project_root, work_item_path="specs/demo-loop-e2e")
-    fe_doctor_auto = h.run(
-        "frontend_evidence_doctor_auto_artifact",
-        ["loop", "frontend-evidence", "doctor", "--provider", "auto", "--json"],
-        parse_json=True,
-    )
-    h.assert_true(
-        "Auto provider prefers existing browser artifact",
-        fe_doctor_auto.parsed_json is not None
-        and fe_doctor_auto.parsed_json.get("browser_artifact_available") is True
-        and fe_doctor_auto.parsed_json.get("recommended_provider") == "external-artifact",
-    )
-    fe_start = h.run(
-        "frontend_evidence_start_ready",
-        [
-            "loop",
-            "frontend-evidence",
-            "start",
-            "--wi",
-            "specs/demo-loop-e2e",
-            "--implementation-loop-id",
-            "impl-e2e",
-            "--loop-id",
-            "fe-e2e",
-            "--json",
-        ],
-        parse_json=True,
-    )
-    h.assert_true(
-        "Frontend-evidence loop starts and passes with valid browser artifact",
-        fe_start.parsed_json is not None
-        and fe_start.parsed_json.get("loop_status") == "passed",
-    )
-    h.run("frontend_evidence_status_human", ["loop", "status", "--type", "frontend-evidence"])
-    fe_close = h.run(
-        "frontend_evidence_close",
-        ["loop", "frontend-evidence", "close", "--loop-id", "fe-e2e", "--yes", "--json"],
-        parse_json=True,
-    )
-    h.assert_true(
-        "Frontend-evidence close points to local PR review",
-        fe_close.parsed_json is not None
-        and fe_close.parsed_json.get("closed") is True
-        and "pr-review" in str(fe_close.parsed_json.get("next_action", "")),
-    )
+    if include_windows_playwright_provider_e2e and platform.system().lower() == "windows":
+        _run_windows_playwright_generated_frontend_evidence_loop(h)
+    else:
+        _write_browser_gate_artifact(h.project_root, work_item_path="specs/demo-loop-e2e")
+        _run_frontend_evidence_ready_path(
+            h,
+            loop_id="fe-e2e",
+            start_slug="frontend_evidence_start_ready",
+            close_slug="frontend_evidence_close",
+        )
     _git(h.project_root, "add", ".")
     _git(h.project_root, "commit", "-m", "record loop evidence artifacts")
     h.result.key_artifacts["loop_evidence_commit"] = _git(
@@ -988,6 +954,400 @@ def _write_browser_gate_artifact(root: Path, *, work_item_path: str) -> None:
     artifact_path.write_text(
         yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
         encoding="utf-8",
+    )
+
+
+def _run_frontend_evidence_ready_path(
+    h: E2EHarness,
+    *,
+    loop_id: str,
+    doctor_slug: str = "frontend_evidence_doctor_auto_artifact",
+    start_slug: str,
+    close_slug: str,
+    status_slug: str = "frontend_evidence_status_human",
+) -> None:
+    fe_doctor_auto = h.run(
+        doctor_slug,
+        ["loop", "frontend-evidence", "doctor", "--provider", "auto", "--json"],
+        parse_json=True,
+    )
+    h.assert_true(
+        "Auto provider prefers existing browser artifact",
+        fe_doctor_auto.parsed_json is not None
+        and fe_doctor_auto.parsed_json.get("browser_artifact_available") is True
+        and fe_doctor_auto.parsed_json.get("recommended_provider") == "external-artifact",
+    )
+    fe_start = h.run(
+        start_slug,
+        [
+            "loop",
+            "frontend-evidence",
+            "start",
+            "--wi",
+            "specs/demo-loop-e2e",
+            "--implementation-loop-id",
+            "impl-e2e",
+            "--loop-id",
+            loop_id,
+            "--json",
+        ],
+        parse_json=True,
+    )
+    h.assert_true(
+        "Frontend-evidence loop starts and passes with valid browser artifact",
+        fe_start.parsed_json is not None
+        and fe_start.parsed_json.get("loop_status") == "passed",
+    )
+    h.run(status_slug, ["loop", "status", "--type", "frontend-evidence"])
+    fe_close = h.run(
+        close_slug,
+        ["loop", "frontend-evidence", "close", "--loop-id", loop_id, "--yes", "--json"],
+        parse_json=True,
+    )
+    h.assert_true(
+        "Frontend-evidence close points to local PR review",
+        fe_close.parsed_json is not None
+        and fe_close.parsed_json.get("closed") is True
+        and "pr-review" in str(fe_close.parsed_json.get("next_action", "")),
+    )
+
+
+def _run_windows_playwright_generated_frontend_evidence_loop(h: E2EHarness) -> None:
+    frontend_dir_rel = "managed/frontend"
+    frontend_dir = h.project_root / frontend_dir_rel
+    _write_playwright_probe_truth(
+        h.project_root,
+        work_item_path="specs/demo-loop-e2e",
+        frontend_dir_rel=frontend_dir_rel,
+    )
+    h.run_raw(
+        "windows_playwright_evidence_absent_before_install",
+        [
+            "node",
+            "-e",
+            (
+                "try { require.resolve('@playwright/test'); process.exit(0); } "
+                "catch (error) { console.log('local @playwright/test missing'); process.exit(1); }"
+            ),
+        ],
+        cwd=frontend_dir,
+        expected=(1,),
+        note="The evidence frontend target starts without local Playwright.",
+    )
+    doctor = h.run(
+        "frontend_evidence_doctor_playwright_recommends_evidence_install",
+        [
+            "loop",
+            "frontend-evidence",
+            "doctor",
+            "--provider",
+            "playwright",
+            "--frontend-dir",
+            frontend_dir_rel,
+            "--json",
+        ],
+        parse_json=True,
+        note="Read SDLC-recommended Playwright setup commands for the evidence frontend target.",
+    )
+    commands = _provider_install_commands(doctor.parsed_json, provider_id="playwright")
+    h.assert_true(
+        "Playwright evidence doctor recommends npm install and chromium install commands",
+        commands
+        == ["npm install -D @playwright/test", "npx playwright install chromium"],
+    )
+    for index, command in enumerate(commands, start=1):
+        h.run_raw(
+            f"windows_playwright_evidence_recommended_command_{index}",
+            _windows_shell_command(command),
+            cwd=frontend_dir,
+            note=f"Executing SDLC-recommended evidence command: {command}",
+        )
+    doctor_after = h.run(
+        "frontend_evidence_doctor_playwright_evidence_ready_after_install",
+        [
+            "loop",
+            "frontend-evidence",
+            "doctor",
+            "--provider",
+            "playwright",
+            "--frontend-dir",
+            frontend_dir_rel,
+            "--json",
+        ],
+        parse_json=True,
+    )
+    h.assert_true(
+        "Playwright evidence doctor reports provider available after install",
+        doctor_after.parsed_json is not None
+        and doctor_after.parsed_json.get("status") == "ready"
+        and _provider_field(
+            doctor_after.parsed_json,
+            provider_id="playwright",
+            field="available",
+        )
+        is True,
+    )
+    probe = h.run(
+        "frontend_browser_gate_probe_execute_after_playwright_install",
+        ["program", "browser-gate-probe", "--execute"],
+        note="Materialize browser evidence through the installed Playwright runtime.",
+    )
+    h.assert_true(
+        "Browser gate probe execute command exits successfully",
+        probe.returncode == 0,
+    )
+    artifact_path = h.project_root / ".ai-sdlc" / "memory" / "frontend-browser-gate" / "latest.yaml"
+    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8")) or {}
+    h.assert_true(
+        "Playwright browser gate probe materializes a passed artifact",
+        isinstance(payload, dict)
+        and payload.get("probe_runtime_state") == "completed"
+        and payload.get("overall_gate_status") == "passed"
+        and str(payload.get("artifact_root", "")).startswith(
+            ".ai-sdlc/artifacts/frontend-browser-gate/"
+        ),
+    )
+    h.result.key_artifacts["playwright_generated_browser_gate_artifact"] = str(artifact_path)
+    _run_frontend_evidence_ready_path(
+        h,
+        loop_id="fe-e2e",
+        doctor_slug="frontend_evidence_doctor_auto_playwright_generated_artifact",
+        start_slug="frontend_evidence_start_playwright_generated_artifact",
+        close_slug="frontend_evidence_close_playwright_generated_artifact",
+        status_slug="frontend_evidence_status_playwright_generated_human",
+    )
+    _cleanup_playwright_install_files(frontend_dir)
+    h.result.assertions.append(
+        "Playwright install files cleaned after generated frontend evidence closes"
+    )
+
+
+def _write_playwright_probe_truth(
+    root: Path,
+    *,
+    work_item_path: str,
+    frontend_dir_rel: str,
+) -> None:
+    from ai_sdlc.core.frontend_visual_a11y_evidence_provider import (
+        FrontendVisualA11yEvidenceEvaluation,
+        build_frontend_visual_a11y_evidence_artifact,
+        write_frontend_visual_a11y_evidence_artifact,
+    )
+    from ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts import (
+        materialize_frontend_provider_runtime_adapter_artifacts,
+    )
+    from ai_sdlc.generators.frontend_quality_platform_artifacts import (
+        materialize_frontend_quality_platform_artifacts,
+    )
+    from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
+        materialize_frontend_solution_confirmation_artifacts,
+    )
+    from ai_sdlc.models.frontend_provider_runtime_adapter import (
+        build_p3_target_project_adapter_scaffold_baseline,
+    )
+    from ai_sdlc.models.frontend_quality_platform import (
+        build_p2_frontend_quality_platform_baseline,
+    )
+    from ai_sdlc.models.frontend_solution_confirmation import (
+        build_builtin_install_strategies,
+        build_builtin_style_pack_manifests,
+        build_mvp_solution_snapshot,
+    )
+
+    work_item_id = Path(work_item_path).name
+    materialize_frontend_solution_confirmation_artifacts(
+        root,
+        style_packs=build_builtin_style_pack_manifests(),
+        install_strategies=build_builtin_install_strategies(),
+        snapshot=build_mvp_solution_snapshot(
+            project_id=work_item_id,
+            effective_provider_id="public-primevue",
+            effective_style_pack_id="modern-saas",
+            requested_provider_id="public-primevue",
+            requested_style_pack_id="modern-saas",
+            recommended_provider_id="public-primevue",
+            recommended_style_pack_id="modern-saas",
+            recommended_frontend_stack="vue3",
+            requested_frontend_stack="vue3",
+            effective_frontend_stack="vue3",
+            style_fidelity_status="full",
+        ),
+    )
+    materialize_frontend_quality_platform_artifacts(
+        root,
+        platform=build_p2_frontend_quality_platform_baseline(),
+    )
+    materialize_frontend_provider_runtime_adapter_artifacts(
+        root,
+        runtime_adapter=build_p3_target_project_adapter_scaffold_baseline(),
+    )
+
+    spec_dir = root / work_item_path
+    visual_a11y = build_frontend_visual_a11y_evidence_artifact(
+        evaluations=[
+            FrontendVisualA11yEvidenceEvaluation(
+                evaluation_id="demo-loop-e2e-visual-a11y-pass",
+                target_id="demo-loop-e2e",
+                surface_id="page:demo-loop-e2e",
+                outcome="pass",
+                report_type="coverage-report",
+                severity="info",
+                location_anchor=frontend_dir_rel,
+                quality_hint="E2E fixture exposes visible text, heading, landmark, and primary action.",
+                changed_scope_explanation="Windows Playwright frontend evidence E2E fixture.",
+            )
+        ],
+        provider_kind="manual",
+        provider_name="loop-e2e-fixture",
+        generated_at=_now(),
+    )
+    write_frontend_visual_a11y_evidence_artifact(spec_dir, visual_a11y)
+
+    frontend_dir = root / frontend_dir_rel
+    _write_file(
+        frontend_dir / "package.json",
+        _frontend_package_json("frontend-loop-playwright-evidence-e2e"),
+    )
+    _write_file(
+        frontend_dir / "index.html",
+        textwrap.dedent(
+            """\
+            <!doctype html>
+            <html lang="en">
+              <head>
+                <meta charset="utf-8">
+                <title>AI-SDLC Playwright Evidence E2E</title>
+              </head>
+              <body>
+                <main aria-label="AI-SDLC frontend evidence">
+                  <h1>AI-SDLC Frontend Evidence</h1>
+                  <p>Playwright generated this browser gate evidence on Windows.</p>
+                  <div class="entry-eyebrow">vue3-public-primevue</div>
+                  <ul aria-label="component packages">
+                    <li class="package-item">primevue</li>
+                    <li class="package-item">@primeuix/themes</li>
+                  </ul>
+                  <ul aria-label="page schemas">
+                    <li class="page-item">dashboard-workspace</li>
+                    <li class="page-item">search-list-workspace</li>
+                  </ul>
+                  <button type="button" aria-label="Confirm evidence">Confirm evidence</button>
+                </main>
+                <script id="frontend-delivery-context" type="application/json">
+                  {"deliveryEntryId":"vue3-public-primevue"}
+                </script>
+              </body>
+            </html>
+            """
+        ),
+    )
+    apply_artifact = root / ".ai-sdlc" / "memory" / "frontend-managed-delivery-apply" / "latest.yaml"
+    apply_artifact.parent.mkdir(parents=True, exist_ok=True)
+    apply_payload = {
+        "generated_at": _now(),
+        "manifest_path": "program-manifest.yaml",
+        "request_source_path": ".ai-sdlc/memory/frontend-managed-delivery/apply-request-playwright-e2e.yaml",
+        "apply_state": "ready_to_apply",
+        "action_plan_id": "plan-loop-e2e-playwright",
+        "plan_fingerprint": "fp-loop-e2e-playwright",
+        "result_status": "apply_succeeded_pending_browser_gate",
+        "apply_result_id": "apply-result-loop-e2e-playwright",
+        "headline": "Playwright evidence E2E fixture ready for browser gate.",
+        "delivery_complete": False,
+        "browser_gate_required": True,
+        "browser_gate_state": "pending",
+        "next_required_gate": "browser_gate",
+        "selected_action_ids": ["artifact-generate"],
+        "executed_action_ids": ["artifact-generate"],
+        "failed_action_ids": [],
+        "blocked_action_ids": [],
+        "skipped_action_ids": [],
+        "ledger_entries": [],
+        "remaining_blockers": [],
+        "warnings": [],
+        "plain_language_blockers": [],
+        "recommended_next_steps": ["Run ai-sdlc program browser-gate-probe --execute."],
+        "execution_view": {
+            "action_plan_id": "plan-loop-e2e-playwright",
+            "confirmation_surface_id": "surface-loop-e2e-playwright",
+            "plan_fingerprint": "fp-loop-e2e-playwright",
+            "protocol_version": "1",
+            "managed_target_ref": "managed://frontend/app",
+            "managed_target_path": frontend_dir_rel,
+            "attachment_scope_ref": "scope://demo-loop-e2e",
+            "readiness_subject_id": "demo-loop-e2e",
+            "spec_dir": work_item_path,
+            "action_items": [
+                {
+                    "action_id": "dependency-install",
+                    "effect_kind": "mutate",
+                    "action_type": "dependency_install",
+                    "required": True,
+                    "selected": True,
+                    "default_selected": True,
+                    "depends_on_action_ids": [],
+                    "rollback_ref": "rollback:dependency-install",
+                    "retry_ref": "retry:dependency-install",
+                    "cleanup_ref": "cleanup:dependency-install",
+                    "risk_flags": [],
+                    "source_linkage_refs": {"spec": work_item_path},
+                    "executor_payload": {
+                        "package_manager": "npm",
+                        "working_directory": frontend_dir_rel,
+                        "packages": ["@playwright/test"],
+                    },
+                }
+            ],
+            "will_not_touch": [],
+        },
+        "decision_receipt": {
+            "decision_receipt_id": "receipt-loop-e2e-playwright",
+            "action_plan_id": "plan-loop-e2e-playwright",
+            "confirmation_surface_id": "surface-loop-e2e-playwright",
+            "decision": "continue",
+            "selected_action_ids": ["artifact-generate"],
+            "deselected_optional_action_ids": [],
+            "risk_acknowledgement_ids": [],
+            "second_confirmation_acknowledged": True,
+            "confirmed_plan_fingerprint": "fp-loop-e2e-playwright",
+            "created_at": _now(),
+        },
+        "source_linkage": {
+            "managed_delivery_apply_artifact_path": ".ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml",
+            "managed_delivery_apply_result_status": "apply_succeeded_pending_browser_gate",
+            "request_source_path": ".ai-sdlc/memory/frontend-managed-delivery/apply-request-playwright-e2e.yaml",
+        },
+    }
+    apply_artifact.write_text(
+        yaml.safe_dump(apply_payload, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+
+
+def _frontend_package_json(name: str) -> str:
+    return (
+        json.dumps(
+            {
+                "name": name,
+                "private": True,
+                "version": "0.0.0",
+                "scripts": {},
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+
+
+def _cleanup_playwright_install_files(frontend_dir: Path) -> None:
+    shutil.rmtree(frontend_dir / "node_modules", ignore_errors=True)
+    for rel in ("package-lock.json", "npm-shrinkwrap.json"):
+        path = frontend_dir / rel
+        if path.exists():
+            path.unlink()
+    _write_file(
+        frontend_dir / "package.json",
+        _frontend_package_json("frontend-loop-playwright-evidence-e2e"),
     )
 
 
