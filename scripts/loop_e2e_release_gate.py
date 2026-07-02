@@ -688,6 +688,13 @@ def run_scenario(
             start_slug="frontend_evidence_start_ready",
             close_slug="frontend_evidence_close",
         )
+    _write_file(
+        h.project_root / ".ai-sdlc" / "project" / "config" / "loop-policy.yaml",
+        "allowed_omitted_file_policy: allow-with-waiver\n",
+    )
+    h.result.assertions.append(
+        "PR review policy explicitly waives omitted binary browser artifacts"
+    )
     _git(h.project_root, "add", ".")
     _git(h.project_root, "commit", "-m", "record loop evidence artifacts")
     h.result.key_artifacts["loop_evidence_commit"] = _git(
