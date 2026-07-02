@@ -19,6 +19,16 @@ _HEX_COLOR_PATTERN = re.compile(r"^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]
 _RGB_COLOR_PATTERN = re.compile(r"^rgb\(", re.IGNORECASE)
 _RGBA_COLOR_PATTERN = re.compile(r"^rgba\(", re.IGNORECASE)
 _SIZE_PATTERN = re.compile(r"^\d+(?:\.\d+)?(?:px|rem|em|%)$")
+_CJK_TEXT_PATTERN = re.compile(r"[\u4e00-\u9fff]")
+_PRIMEVUE_BASE_SELECTORS = (
+    ".p-button",
+    ".p-inputtextarea",
+    ".p-inputtext",
+    ".p-select",
+    ".p-tag",
+    ".p-card",
+    ".p-dialog",
+)
 _ALLOWED_OVERRIDE_NAMESPACES = {
     "surface",
     "accent",
@@ -182,13 +192,29 @@ def validate_frontend_theme_token_governance(
 
 def _classify_naked_value(value: str) -> str | None:
     stripped = value.strip()
+    lowered = stripped.lower()
     if _HEX_COLOR_PATTERN.fullmatch(stripped):
         return "hex-color"
     if _RGBA_COLOR_PATTERN.match(stripped):
         return "rgba-color"
     if _RGB_COLOR_PATTERN.match(stripped):
         return "rgb-color"
-    if "shadow" in stripped.lower():
+    if "!important" in lowered:
+        return "!important"
+    for selector in _PRIMEVUE_BASE_SELECTORS:
+        if selector in stripped:
+            return selector
+    if "severity=contrast" in lowered or re.search(
+        r"\bseverity\s*=\s*['\"]contrast['\"]", stripped
+    ):
+        return "severity=contrast"
+    if stripped == "native-select" or "<select" in lowered:
+        return "native-select"
+    if stripped == "raw-visible-chinese-without-$i" or (
+        _CJK_TEXT_PATTERN.search(stripped) and "$i(" not in stripped
+    ):
+        return "raw-visible-chinese-without-$i"
+    if "shadow" in lowered:
         return "shadow"
     if _SIZE_PATTERN.fullmatch(stripped):
         return "spacing-or-size"

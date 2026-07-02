@@ -103,6 +103,64 @@ def test_validate_frontend_theme_token_governance_blocks_unknown_anchor_unsuppor
     assert any("token floor bypass" in blocker for blocker in result.blockers)
 
 
+def test_validate_frontend_theme_token_governance_blocks_public_primevue_v13_token_floor_entries() -> None:
+    governance = build_p2_frontend_theme_token_governance_baseline()
+    constraints = build_mvp_frontend_generation_constraints(
+        effective_provider_id="public-primevue"
+    )
+    schema_set = build_p2_frontend_page_ui_schema_baseline()
+    provider_profile = build_mvp_enterprise_vue2_provider_profile()
+    snapshot = build_mvp_solution_snapshot(
+        requested_provider_id="public-primevue",
+        effective_provider_id="public-primevue",
+        recommended_provider_id="public-primevue",
+        requested_style_pack_id="enterprise-default",
+        effective_style_pack_id="enterprise-default",
+        recommended_style_pack_id="enterprise-default",
+        style_fidelity_status="full",
+    )
+    blocked_values = {
+        "!important": "color: var(--ai-sdlc-color-primary) !important",
+        ".p-button": ".p-button",
+        ".p-inputtext": ".p-inputtext",
+        ".p-select": ".p-select",
+        ".p-inputtextarea": ".p-inputtextarea",
+        ".p-tag": ".p-tag",
+        ".p-card": ".p-card",
+        ".p-dialog": ".p-dialog",
+        "native-select": '<select class="field">',
+        "raw-visible-chinese-without-$i": "表格标题",
+        "severity=contrast": 'severity="contrast"',
+    }
+    override_template = governance.custom_overrides[0]
+    overrides = [
+        override_template.model_copy(
+            update={
+                "override_id": f"public-primevue-v13-token-{index}",
+                "requested_value": value,
+                "effective_value": value,
+                "fallback_reason_code": None,
+            }
+        )
+        for index, value in enumerate(blocked_values.values())
+    ]
+    broken_governance = governance.model_copy(update={"custom_overrides": overrides})
+
+    result = validate_frontend_theme_token_governance(
+        broken_governance,
+        constraints=constraints,
+        page_ui_schema=schema_set,
+        provider_profile=provider_profile,
+        solution_snapshot=snapshot,
+    )
+
+    assert result.passed is False
+    for expected_kind in blocked_values:
+        assert any(
+            f"forbidden {expected_kind}" in blocker for blocker in result.blockers
+        )
+
+
 def test_validate_frontend_theme_token_governance_deduplicates_referenced_ids() -> None:
     governance = build_p2_frontend_theme_token_governance_baseline()
     constraints = build_mvp_frontend_generation_constraints()

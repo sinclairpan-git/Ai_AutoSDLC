@@ -9,11 +9,10 @@ working_set_snapshot:
   plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/plan.md
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
-  context_summary: 'Goal: 发布 v0.9.3：Vue3 前端规范 v1.3 AI 执行版 | State: PR #115 checks
-    曾全绿，但 Codex review 在最新提交指出 public-primevue 生成模板仍有裸中文与 severity=contrast；已将 ManagedDeliverySmoke
-    模板改为开发期 $i() 包裹中文，并把 BaseButton severity 改为 primary，补充 unit/integration 断言。 |
-    Next: 提交 public-primevue template self-consistency fix，推送 PR #115，重新触发 Codex review
-    并监控检查。'
+  context_summary: 'Goal: 发布 v0.9.3：Vue3 前端规范 v1.3 AI 执行版 | State: PR #115 最新 Codex
+    review P2 已修复：public-primevue v1.3 token-floor 新增禁止项现在会被 frontend theme token
+    governance 验证器实际分类并阻断；新增单测覆盖 !important、PrimeVue 基础选择器、native select、裸中文、severity
+    contrast。 | Next: 提交并推送 P2 修复，重新请求 Codex review，等待 CI 全绿后将 PR #115 标 ready 并合并。'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''
