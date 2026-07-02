@@ -20,8 +20,13 @@ from ai_sdlc.core.design_contract_loop import (
 from ai_sdlc.core.frontend_evidence_loop import (
     FrontendEvidenceCloseOptions,
     FrontendEvidenceCommandResult,
+    FrontendEvidenceDoctorOptions,
+    FrontendEvidenceDoctorResult,
+    FrontendEvidenceSkipOptions,
     FrontendEvidenceStartOptions,
     close_frontend_evidence_loop,
+    doctor_frontend_evidence_provider,
+    skip_frontend_evidence_loop,
     start_frontend_evidence_loop,
 )
 from ai_sdlc.core.implementation_loop import (
@@ -427,6 +432,88 @@ def frontend_evidence_start(
     raise typer.Exit(0 if result.status in {"ready", "dry_run"} else 1)
 
 
+@frontend_evidence_app.command(name="doctor")
+def frontend_evidence_doctor(
+    provider: str = typer.Option(
+        "auto",
+        "--provider",
+        help=(
+            "Browser evidence provider: auto, codex-browser, browser-mcp, "
+            "external-artifact, or playwright."
+        ),
+    ),
+    frontend_dir: str = typer.Option(
+        "",
+        "--frontend-dir",
+        help="Optional project-local frontend package directory for Playwright checks.",
+    ),
+    browser: str = typer.Option(
+        "chromium",
+        "--browser",
+        help="Browser name used only for optional Playwright install command guidance.",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Check local browser evidence provider readiness without installing."""
+
+    root = _project_root_or_exit(json_output=json_output)
+    result = doctor_frontend_evidence_provider(
+        FrontendEvidenceDoctorOptions(
+            root=root,
+            provider=provider,
+            frontend_dir=frontend_dir,
+            browser=browser,
+        )
+    )
+    _emit_frontend_evidence_doctor_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != "blocked" else 1)
+
+
+@frontend_evidence_app.command(name="skip")
+def frontend_evidence_skip(
+    work_item: str = typer.Option(
+        "",
+        "--wi",
+        help="Work item directory or formal doc path, for example specs/123-name.",
+    ),
+    implementation_loop_id: str = typer.Option(
+        "",
+        "--implementation-loop-id",
+        help="Optional upstream implementation loop id.",
+    ),
+    loop_id: str = typer.Option("", "--loop-id", help="Optional stable loop id."),
+    reason: str = typer.Option(
+        "",
+        "--reason",
+        help="Why browser evidence cannot be collected on this machine.",
+    ),
+    yes: bool = typer.Option(False, "--yes", help="Confirm frontend evidence skip."),
+    closed_by: str = typer.Option(
+        "local-user",
+        "--closed-by",
+        help="Operator recorded in frontend-evidence-close.json.",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Skip frontend browser evidence with explicit local risk acceptance."""
+
+    _run_project_writer_adapter(json_output=json_output)
+    root = _project_root_or_exit(json_output=json_output)
+    result = skip_frontend_evidence_loop(
+        FrontendEvidenceSkipOptions(
+            root=root,
+            work_item=work_item,
+            implementation_loop_id=implementation_loop_id,
+            loop_id=loop_id,
+            reason=reason,
+            yes=yes,
+            closed_by=closed_by,
+        )
+    )
+    _emit_frontend_evidence_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status == "ready" and result.closed else 1)
+
+
 @frontend_evidence_app.command(name="status")
 def frontend_evidence_status(
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
@@ -655,11 +742,59 @@ def _emit_frontend_evidence_result(
     console.print(f"Blockers: {result.blocker_count}")
     console.print(f"Warnings: {result.warning_count}")
     console.print(f"Closed: {str(result.closed).lower()}")
+    console.print(f"Skipped: {str(result.skipped).lower()}")
+    if result.skip_reason:
+        console.print(f"Skip reason: {result.skip_reason}")
     if result.artifacts:
         console.print("Artifacts:")
         for artifact in result.artifacts:
             state = "exists" if artifact.exists else "planned"
             console.print(f"- {artifact.kind}: {artifact.path} ({state})")
+
+
+def _emit_frontend_evidence_doctor_result(
+    result: FrontendEvidenceDoctorResult,
+    *,
+    json_output: bool,
+) -> None:
+    payload = result.model_dump(mode="json")
+    if json_output:
+        _emit_payload(payload, json_output=True)
+        return
+    console.print(f"Result: {payload.get('status', '')}")
+    if result.blocker:
+        console.print(f"Blocker: {result.blocker}")
+    console.print(f"Next: {result.next_action or '-'}")
+    console.print(f"Requested provider: {result.requested_provider}")
+    console.print(f"Recommended provider: {result.recommended_provider or '-'}")
+    console.print(
+        "Browser artifact: "
+        f"{result.browser_artifact_path or '-'} "
+        f"({'exists' if result.browser_artifact_available else 'missing'})"
+    )
+    _emit_guidance_payload(payload.get("next_guidance"))
+    if result.providers:
+        console.print("Providers:")
+        for provider in result.providers:
+            console.print(
+                f"- {provider.provider_id}: "
+                f"available={str(provider.available).lower()}, "
+                f"selected={str(provider.selected).lower()}"
+            )
+            if provider.package_manager:
+                console.print(f"  package manager: {provider.package_manager}")
+            for command in provider.run_commands:
+                console.print(f"  run: {command}")
+            if provider.provider_id == "playwright" and not provider.selected:
+                console.print(
+                    "  optional install: run doctor --provider playwright "
+                    "to view Playwright setup commands"
+                )
+            else:
+                for command in provider.install_commands:
+                    console.print(f"  optional install: {command}")
+            for note in provider.safety_notes:
+                console.print(f"  note: {note}")
 
 
 def _emit_payload(payload: dict[str, object], *, json_output: bool) -> None:
@@ -754,6 +889,9 @@ def _emit_loop_summary(loop: LoopSummary, *, show_guidance: bool = True) -> None
             f"warnings={frontend.warning_count}, "
             f"closed={str(frontend.closed).lower()}"
         )
+        console.print(f"Frontend evidence skipped: {str(frontend.skipped).lower()}")
+        if frontend.skip_reason:
+            console.print(f"Frontend evidence skip reason: {frontend.skip_reason}")
         if frontend.overall_gate_status:
             console.print(f"Frontend gate status: {frontend.overall_gate_status}")
         if frontend.execute_gate_state:

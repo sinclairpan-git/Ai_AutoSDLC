@@ -14,6 +14,7 @@ from ai_sdlc.core.design_contract_models import (
 )
 from ai_sdlc.core.frontend_evidence_models import (
     CURRENT_FRONTEND_EVIDENCE_PATH,
+    FrontendEvidenceClose,
     FrontendEvidenceReport,
 )
 from ai_sdlc.core.implementation_models import (
@@ -151,6 +152,8 @@ class FrontendEvidenceLoopSummary(BaseModel):
     blocker_count: int = 0
     warning_count: int = 0
     closed: bool = False
+    skipped: bool = False
+    skip_reason: str = ""
 
 
 class LoopSummary(BaseModel):
@@ -1720,7 +1723,20 @@ def _summary_from_frontend_evidence_loop_run(
     )
     for kind, path in optional_artifacts:
         artifacts.append(_artifact_ref(root, kind, path))
-    closed = (loop_dir / "frontend-evidence-close.json").is_file()
+    close_path = loop_dir / "frontend-evidence-close.json"
+    closed = close_path.is_file()
+    skipped = False
+    skip_reason = ""
+    if closed:
+        try:
+            close_payload = FrontendEvidenceClose.model_validate(
+                json.loads(close_path.read_text(encoding="utf-8"))
+            )
+            skipped = close_payload.skipped
+            skip_reason = close_payload.skip_reason
+        except (json.JSONDecodeError, OSError, ValidationError, ValueError):
+            skipped = False
+            skip_reason = ""
     return LoopSummary(
         loop_id=loop_run.loop_id,
         loop_type=loop_run.loop_type,
@@ -1747,6 +1763,8 @@ def _summary_from_frontend_evidence_loop_run(
             blocker_count=report.blocker_count,
             warning_count=report.warning_count,
             closed=closed,
+            skipped=skipped,
+            skip_reason=skip_reason,
         ),
     )
 

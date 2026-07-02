@@ -157,6 +157,9 @@ class FrontendEvidenceClose(LoopArtifactModel):
     allow_warnings: bool = False
     warning_count: int = 0
     accepted_warning_reason_codes: list[str] = Field(default_factory=list)
+    skipped: bool = False
+    skip_reason: str = ""
+    skip_risk_acknowledgement: str = ""
     next_loop_type: LoopType = LoopType.LOCAL_PR_REVIEW
 
 
@@ -194,6 +197,8 @@ class FrontendEvidenceCommandSummary(BaseModel):
     warning_count: int = 0
     report_path: str = ""
     closed: bool = False
+    skipped: bool = False
+    skip_reason: str = ""
 
 
 class FrontendEvidenceNextGuidance(BaseModel):
@@ -229,8 +234,10 @@ class FrontendEvidenceCommandResult(BaseModel):
     blocker_count: int = 0
     warning_count: int = 0
     closed: bool = False
+    skipped: bool = False
     dry_run: bool = False
     allow_warnings: bool = False
+    skip_reason: str = ""
     blocker: str = ""
     next_action: str = ""
     next_guidance: FrontendEvidenceNextGuidance = Field(
@@ -238,6 +245,45 @@ class FrontendEvidenceCommandResult(BaseModel):
     )
     artifacts: list[FrontendEvidenceArtifactRef] = Field(default_factory=list)
     frontend_evidence: FrontendEvidenceCommandSummary | None = None
+
+
+class FrontendEvidenceProviderCheck(BaseModel):
+    """Read-only browser E2E provider readiness surfaced by doctor."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider_id: str
+    available: bool = False
+    selected: bool = False
+    package_manager: str = ""
+    package_manager_available: bool = False
+    node_available: bool = False
+    frontend_dir: str = ""
+    package_json_path: str = ""
+    evidence: list[str] = Field(default_factory=list)
+    install_commands: list[str] = Field(default_factory=list)
+    run_commands: list[str] = Field(default_factory=list)
+    alternatives: list[str] = Field(default_factory=list)
+    safety_notes: list[str] = Field(default_factory=list)
+
+
+class FrontendEvidenceDoctorResult(BaseModel):
+    """Machine-readable result for frontend-evidence provider readiness checks."""
+
+    model_config = ConfigDict(extra="forbid", use_enum_values=True)
+
+    status: FrontendEvidenceCommandStatus
+    result: str = ""
+    blocker: str = ""
+    next_action: str = ""
+    next_guidance: FrontendEvidenceNextGuidance = Field(
+        default_factory=FrontendEvidenceNextGuidance
+    )
+    browser_artifact_available: bool = False
+    browser_artifact_path: str = ""
+    requested_provider: str = "auto"
+    recommended_provider: str = ""
+    providers: list[FrontendEvidenceProviderCheck] = Field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -250,6 +296,29 @@ class FrontendEvidenceStartOptions:
     artifact_path: str = ""
     loop_id: str = ""
     dry_run: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class FrontendEvidenceDoctorOptions:
+    """Inputs for checking frontend-evidence browser provider readiness."""
+
+    root: Path
+    frontend_dir: str = ""
+    provider: str = "auto"
+    browser: str = "chromium"
+
+
+@dataclass(frozen=True, slots=True)
+class FrontendEvidenceSkipOptions:
+    """Inputs for explicitly skipping frontend browser evidence."""
+
+    root: Path
+    work_item: str = ""
+    implementation_loop_id: str = ""
+    loop_id: str = ""
+    reason: str = ""
+    yes: bool = False
+    closed_by: str = "local-user"
 
 
 @dataclass(frozen=True, slots=True)
@@ -274,10 +343,14 @@ __all__ = [
     "FrontendEvidenceCommandStatus",
     "FrontendEvidenceCommandSummary",
     "FrontendEvidenceCurrentPointer",
+    "FrontendEvidenceDoctorOptions",
+    "FrontendEvidenceDoctorResult",
     "FrontendEvidenceInput",
     "FrontendEvidenceNextGuidance",
+    "FrontendEvidenceProviderCheck",
     "FrontendEvidenceReceiptSnapshot",
     "FrontendEvidenceReport",
+    "FrontendEvidenceSkipOptions",
     "FrontendEvidenceSnapshot",
     "FrontendEvidenceStartOptions",
 ]
