@@ -87,6 +87,10 @@ def test_build_mvp_frontend_generation_constraints_adds_primevue_rules_only_for_
         "no-global-primevue-base-selector-rewrite",
         "unocss-first-page-layout",
         "base-components-before-business-usage",
+        "visual-family-consistency",
+        "no-native-form-control-mixing",
+        "visible-chinese-dev-i18n-wrapper",
+        "semantic-tag-severity-mapping",
     ]
     assert constraints.token_rules.disallowed_naked_values == [
         "hex-color",
@@ -102,6 +106,9 @@ def test_build_mvp_frontend_generation_constraints_adds_primevue_rules_only_for_
         ".p-tag",
         ".p-card",
         ".p-dialog",
+        "native-select",
+        "raw-visible-chinese-without-$i",
+        "severity=contrast",
     ]
 
 
