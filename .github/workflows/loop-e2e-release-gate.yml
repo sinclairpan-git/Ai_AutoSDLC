@@ -59,7 +59,11 @@ jobs:
           $safeOs = "${{ matrix.os }}".Replace("-", "_")
           $evidenceRoot = Join-Path $env:RUNNER_TEMP "loop-e2e-release-gate-$safeOs"
           Remove-Item -Recurse -Force $evidenceRoot -ErrorAction SilentlyContinue
-          uv run python scripts/loop_e2e_release_gate.py --evidence-root $evidenceRoot
+          $scriptArgs = @("scripts/loop_e2e_release_gate.py", "--evidence-root", $evidenceRoot)
+          if ("${{ matrix.os }}" -eq "windows-latest") {
+            $scriptArgs += "--include-windows-playwright-provider-e2e"
+          }
+          uv run python @scriptArgs
 
       - name: Upload Loop E2E evidence
         if: always()

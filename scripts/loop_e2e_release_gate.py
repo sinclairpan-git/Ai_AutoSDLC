@@ -95,19 +95,44 @@ class E2EHarness:
         expected: tuple[int, ...] = (0,),
         note: str = "",
         parse_json: bool = False,
+        env_overrides: dict[str, str] | None = None,
+    ) -> StepResult:
+        return self.run_raw(
+            slug,
+            [*self.cli, *args],
+            cwd=self.project_root,
+            expected=expected,
+            note=note,
+            parse_json=parse_json,
+            env_overrides=env_overrides,
+        )
+
+    def run_raw(
+        self,
+        slug: str,
+        command: list[str],
+        *,
+        cwd: Path | None = None,
+        expected: tuple[int, ...] = (0,),
+        note: str = "",
+        parse_json: bool = False,
+        env_overrides: dict[str, str] | None = None,
     ) -> StepResult:
         self.step_index += 1
-        command = [*self.cli, *args]
+        command_cwd = cwd or self.project_root
+        env = {**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"}
+        if env_overrides:
+            env.update(env_overrides)
         started = time.monotonic()
         completed = subprocess.run(
             command,
-            cwd=self.project_root,
+            cwd=command_cwd,
             text=True,
             encoding="utf-8",
             errors="replace",
             capture_output=True,
             check=False,
-            env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"},
+            env=env,
         )
         duration = time.monotonic() - started
         prefix = f"{self.step_index:02d}_{slug}"
@@ -141,7 +166,7 @@ class E2EHarness:
             index=self.step_index,
             slug=slug,
             command=command,
-            cwd=str(self.project_root),
+            cwd=str(command_cwd),
             returncode=completed.returncode,
             expected_returncodes=list(expected),
             status=status,
@@ -229,6 +254,8 @@ class E2EHarness:
             "- Design-contract loop: incomplete contract blocks close; repaired contract closes.",
             "- Implementation loop: missing task evidence blocks close; recorded evidence closes.",
             "- Frontend-evidence loop: missing browser artifact blocks start; valid artifact closes.",
+            "- Windows frontend provider path: no Codex/no local Playwright, doctor-recommended Playwright install, Chromium smoke.",
+            "- No-install frontend path: provider tooling unavailable, explicit skip closes with audit instead of hard-blocking.",
             "- Local PR review loop: mock adversarial finding forces fix/rerun; clean rerun closes and attests.",
             "",
             "## Step Results",
@@ -262,6 +289,14 @@ def main() -> int:
         default="",
         help="CLI command to invoke. Defaults to '<current python> -m ai_sdlc'.",
     )
+    parser.add_argument(
+        "--include-windows-playwright-provider-e2e",
+        action="store_true",
+        help=(
+            "On Windows, verify frontend-evidence doctor Playwright install "
+            "commands and the no-install skip path."
+        ),
+    )
     args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
@@ -288,7 +323,12 @@ def main() -> int:
         cli=cli,
     )
     try:
-        run_scenario(harness)
+        run_scenario(
+            harness,
+            include_windows_playwright_provider_e2e=(
+                args.include_windows_playwright_provider_e2e
+            ),
+        )
         harness.write_summary()
         print(harness.evidence_root)
         return 0
@@ -297,7 +337,11 @@ def main() -> int:
             temp_dir.cleanup()
 
 
-def run_scenario(h: E2EHarness) -> None:
+def run_scenario(
+    h: E2EHarness,
+    *,
+    include_windows_playwright_provider_e2e: bool = False,
+) -> None:
     _git(h.project_root, "init", "--initial-branch=main")
     _git(h.project_root, "config", "user.email", "loop-e2e@example.com")
     _git(h.project_root, "config", "user.name", "Loop E2E")
@@ -314,6 +358,8 @@ def run_scenario(h: E2EHarness) -> None:
     _git(h.project_root, "commit", "-m", "initialize ai-sdlc")
     base_commit = _git(h.project_root, "rev-parse", "HEAD")
     h.result.key_artifacts["base_commit"] = base_commit
+    if include_windows_playwright_provider_e2e:
+        _run_windows_playwright_provider_install_check(h)
 
     missing_req = h.run(
         "requirement_start_missing_acceptance",
@@ -556,6 +602,37 @@ def run_scenario(h: E2EHarness) -> None:
         and fe_missing.parsed_json.get("next_guidance", {}).get("command")
         == "ai-sdlc loop frontend-evidence doctor",
     )
+    no_install_env = (
+        _no_install_env(h.evidence_root) if include_windows_playwright_provider_e2e else None
+    )
+    if include_windows_playwright_provider_e2e and no_install_env is not None:
+        no_install_doctor = h.run(
+            "frontend_evidence_doctor_playwright_no_install_tools",
+            [
+                "loop",
+                "frontend-evidence",
+                "doctor",
+                "--provider",
+                "playwright",
+                "--frontend-dir",
+                "managed/no-install-frontend",
+                "--json",
+            ],
+            parse_json=True,
+            env_overrides=no_install_env,
+            note="Simulates a machine where node/npm/codex/browser tools are unavailable.",
+        )
+        h.assert_true(
+            "Doctor reports needs_user when no install tools are available",
+            no_install_doctor.parsed_json is not None
+            and no_install_doctor.parsed_json.get("status") == "needs_user"
+            and _provider_field(
+                no_install_doctor.parsed_json,
+                provider_id="playwright",
+                field="package_manager_available",
+            )
+            is False,
+        )
     fe_skip = h.run(
         "frontend_evidence_skip_browser_unavailable",
         [
@@ -574,6 +651,12 @@ def run_scenario(h: E2EHarness) -> None:
             "--json",
         ],
         parse_json=True,
+        env_overrides=no_install_env,
+        note=(
+            "No install-tool PATH is active; skip must still close with audit."
+            if no_install_env
+            else ""
+        ),
     )
     h.assert_true(
         "Frontend-evidence can be skipped with explicit risk acceptance",
@@ -905,6 +988,176 @@ def _write_browser_gate_artifact(root: Path, *, work_item_path: str) -> None:
         yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
         encoding="utf-8",
     )
+
+
+def _run_windows_playwright_provider_install_check(h: E2EHarness) -> None:
+    if platform.system().lower() != "windows":
+        h.result.assertions.append(
+            "Skipped Windows Playwright provider install check on non-Windows host"
+        )
+        return
+
+    frontend_dir = h.project_root / "managed" / "frontend-playwright-install"
+    _write_file(
+        frontend_dir / "package.json",
+        json.dumps(
+            {
+                "name": "frontend-loop-playwright-install-e2e",
+                "private": True,
+                "version": "0.0.0",
+                "scripts": {},
+            },
+            indent=2,
+        )
+        + "\n",
+    )
+    h.result.key_artifacts["windows_playwright_frontend_dir"] = str(frontend_dir)
+    h.run_raw(
+        "windows_codex_cli_absent",
+        ["where.exe", "codex"],
+        expected=(1,),
+        note="Windows runner should not rely on a Codex browser-control CLI.",
+    )
+    h.run_raw("windows_node_available", ["node", "--version"])
+    h.run_raw("windows_npm_available", ["npm", "--version"])
+    h.run_raw(
+        "windows_local_playwright_absent_before_install",
+        [
+            "node",
+            "-e",
+            (
+                "try { require.resolve('@playwright/test'); process.exit(0); } "
+                "catch (error) { console.log('local @playwright/test missing'); process.exit(1); }"
+            ),
+        ],
+        cwd=frontend_dir,
+        expected=(1,),
+        note="The clean frontend package starts without local Playwright.",
+    )
+    doctor = h.run(
+        "frontend_evidence_doctor_playwright_recommends_windows_install",
+        [
+            "loop",
+            "frontend-evidence",
+            "doctor",
+            "--provider",
+            "playwright",
+            "--frontend-dir",
+            "managed/frontend-playwright-install",
+            "--json",
+        ],
+        parse_json=True,
+        note="Read SDLC-recommended Playwright setup commands from doctor output.",
+    )
+    commands = _provider_install_commands(doctor.parsed_json, provider_id="playwright")
+    h.assert_true(
+        "Playwright doctor recommends npm install and chromium install commands",
+        commands
+        == ["npm install -D @playwright/test", "npx playwright install chromium"],
+    )
+    for index, command in enumerate(commands, start=1):
+        h.run_raw(
+            f"windows_playwright_recommended_command_{index}",
+            _split_recommended_command(command),
+            cwd=frontend_dir,
+            note=f"Executing SDLC-recommended command: {command}",
+        )
+    h.run_raw(
+        "windows_playwright_chromium_launch_smoke",
+        [
+            "node",
+            "-e",
+            (
+                "const { chromium } = require('@playwright/test'); "
+                "(async () => { "
+                "const browser = await chromium.launch(); "
+                "const page = await browser.newPage(); "
+                "await page.setContent('<h1>AI-SDLC Frontend Loop</h1>'); "
+                "const text = await page.textContent('h1'); "
+                "await browser.close(); "
+                "if (text !== 'AI-SDLC Frontend Loop') throw new Error('unexpected page text'); "
+                "console.log('chromium launch ok'); "
+                "})().catch((error) => { console.error(error); process.exit(1); });"
+            ),
+        ],
+        cwd=frontend_dir,
+        note="Verify the recommended install produced a usable Chromium runtime.",
+    )
+    doctor_after = h.run(
+        "frontend_evidence_doctor_playwright_ready_after_install",
+        [
+            "loop",
+            "frontend-evidence",
+            "doctor",
+            "--provider",
+            "playwright",
+            "--frontend-dir",
+            "managed/frontend-playwright-install",
+            "--json",
+        ],
+        parse_json=True,
+    )
+    h.assert_true(
+        "Playwright doctor reports provider available after recommended install",
+        doctor_after.parsed_json is not None
+        and doctor_after.parsed_json.get("status") == "ready"
+        and _provider_field(
+            doctor_after.parsed_json,
+            provider_id="playwright",
+            field="available",
+        )
+        is True,
+    )
+
+
+def _provider_install_commands(
+    payload: dict[str, Any] | None,
+    *,
+    provider_id: str,
+) -> list[str]:
+    provider = _provider_payload(payload, provider_id=provider_id)
+    commands = provider.get("install_commands", [])
+    if not isinstance(commands, list):
+        raise AssertionError(f"{provider_id} install_commands must be a list")
+    return [str(command) for command in commands]
+
+
+def _provider_field(
+    payload: dict[str, Any] | None,
+    *,
+    provider_id: str,
+    field: str,
+) -> object:
+    return _provider_payload(payload, provider_id=provider_id).get(field)
+
+
+def _provider_payload(
+    payload: dict[str, Any] | None,
+    *,
+    provider_id: str,
+) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise AssertionError("doctor payload is missing")
+    providers = payload.get("providers", [])
+    if not isinstance(providers, list):
+        raise AssertionError("doctor payload providers must be a list")
+    for provider in providers:
+        if isinstance(provider, dict) and provider.get("provider_id") == provider_id:
+            return provider
+    raise AssertionError(f"provider {provider_id} not found in doctor payload")
+
+
+def _split_recommended_command(command: str) -> list[str]:
+    return shlex.split(command, posix=os.name != "nt")
+
+
+def _no_install_env(evidence_root: Path) -> dict[str, str]:
+    empty_path = evidence_root / "no-install-path"
+    empty_path.mkdir(parents=True, exist_ok=True)
+    return {
+        "PATH": str(empty_path),
+        "AI_SDLC_BROWSER_PROVIDER": "",
+    }
 
 
 def _mark_resolution_fixed(path: Path) -> None:
