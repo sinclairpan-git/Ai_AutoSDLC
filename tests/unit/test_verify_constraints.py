@@ -354,6 +354,44 @@ def test_194_feature_contract_surfaces_cover_implementation_loop_runtime() -> No
     assert "local-pr-review" in doc_tokens
 
 
+def test_195_feature_contract_surfaces_cover_frontend_evidence_loop_runtime() -> None:
+    checkpoint = Checkpoint(
+        current_stage="execute",
+        feature=FeatureInfo(
+            id="195-loop-engine-frontend-evidence-loop-runtime",
+            spec_dir="specs/195-loop-engine-frontend-evidence-loop-runtime",
+            design_branch="d",
+            feature_branch="f",
+            current_branch="f",
+        ),
+    )
+
+    surfaces = verify_constraints_module._feature_contract_surfaces_for_checkpoint(
+        checkpoint
+    )
+
+    assert surfaces == verify_constraints_module.FEATURE_CONTRACT_SURFACES["195"]
+    labels = {surface.label for surface in surfaces}
+    assert "frontend-evidence loop core runtime" in labels
+    assert "frontend-evidence loop status and CLI" in labels
+    assert "frontend-evidence loop user docs" in labels
+    docs_surface = next(
+        surface
+        for surface in surfaces
+        if surface.label == "frontend-evidence loop user docs"
+    )
+    doc_tokens = {
+        token
+        for evidence in docs_surface.evidence_entries
+        for token in evidence.required_tokens
+    }
+    assert "ai-sdlc loop frontend-evidence start" in doc_tokens
+    assert "ai-sdlc loop frontend-evidence close --yes" in doc_tokens
+    assert "ai-sdlc program browser-gate-probe --execute" in doc_tokens
+    assert "does not assume GitHub" in doc_tokens
+    assert "--allow-warnings" in doc_tokens
+
+
 def test_verify_constraint_report_runtime_objects_canonicalize_lists() -> None:
     constraint_report = ConstraintReport(
         root=".",

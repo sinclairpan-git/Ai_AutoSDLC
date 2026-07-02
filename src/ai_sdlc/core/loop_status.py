@@ -12,6 +12,10 @@ from ai_sdlc.core.design_contract_models import (
     CURRENT_DESIGN_CONTRACT_PATH,
     DesignContractReport,
 )
+from ai_sdlc.core.frontend_evidence_models import (
+    CURRENT_FRONTEND_EVIDENCE_PATH,
+    FrontendEvidenceReport,
+)
 from ai_sdlc.core.implementation_models import (
     CURRENT_IMPLEMENTATION_PATH,
     ImplementationReport,
@@ -133,6 +137,22 @@ class ImplementationLoopSummary(BaseModel):
     closed: bool = False
 
 
+class FrontendEvidenceLoopSummary(BaseModel):
+    """Frontend-evidence loop fields embedded in a generic loop summary."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    work_item_id: str = ""
+    work_item_path: str = ""
+    gate_run_id: str = ""
+    overall_gate_status: str = ""
+    execute_gate_state: str = ""
+    decision_reason: str = ""
+    blocker_count: int = 0
+    warning_count: int = 0
+    closed: bool = False
+
+
 class LoopSummary(BaseModel):
     """Generic read-only summary for one Loop Engine run."""
 
@@ -152,6 +172,7 @@ class LoopSummary(BaseModel):
     requirement: RequirementLoopSummary | None = None
     design_contract: DesignContractLoopSummary | None = None
     implementation: ImplementationLoopSummary | None = None
+    frontend_evidence: FrontendEvidenceLoopSummary | None = None
 
 
 class LoopStatusResult(BaseModel):
@@ -222,6 +243,8 @@ def get_loop_status(
         return _get_design_contract_loop_status(resolved_root)
     if normalized_loop_type == LoopType.IMPLEMENTATION.value:
         return _get_implementation_loop_status(resolved_root)
+    if normalized_loop_type == LoopType.FRONTEND_EVIDENCE.value:
+        return _get_frontend_evidence_loop_status(resolved_root)
     if normalized_loop_type != LoopType.LOCAL_PR_REVIEW.value:
         return LoopStatusResult(
             status=LoopStatusCommandStatus.BLOCKED,
@@ -229,18 +252,19 @@ def get_loop_status(
             blocker=f"Unsupported loop type for status: {normalized_loop_type}",
             next_action=(
                 "Use --type local-pr-review, requirement, design-contract, "
-                "or implementation."
+                "implementation, or frontend-evidence."
             ),
             next_guidance=_manual_guidance(
                 command="ai-sdlc loop status --type local-pr-review",
                 reason=(
                     "Only local-pr-review, requirement, design-contract, and "
-                    "implementation loop status are implemented."
+                    "implementation/frontend-evidence loop status are implemented."
                 ),
                 alternatives=[
                     "ai-sdlc loop status --type requirement",
                     "ai-sdlc loop status --type design-contract",
                     "ai-sdlc loop status --type implementation",
+                    "ai-sdlc loop status --type frontend-evidence",
                 ],
             ),
         )
@@ -344,6 +368,8 @@ def list_loops(
         return _list_design_contract_loops(resolved_root)
     if normalized_loop_type == LoopType.IMPLEMENTATION.value:
         return _list_implementation_loops(resolved_root)
+    if normalized_loop_type == LoopType.FRONTEND_EVIDENCE.value:
+        return _list_frontend_evidence_loops(resolved_root)
     if normalized_loop_type != LoopType.LOCAL_PR_REVIEW.value:
         return LoopListResult(
             status=LoopStatusCommandStatus.BLOCKED,
@@ -351,18 +377,19 @@ def list_loops(
             blocker=f"Unsupported loop type for list: {normalized_loop_type}",
             next_action=(
                 "Use --type local-pr-review, requirement, design-contract, "
-                "or implementation."
+                "implementation, or frontend-evidence."
             ),
             next_guidance=_manual_guidance(
                 command="ai-sdlc loop list --type local-pr-review",
                 reason=(
                     "Only local-pr-review, requirement, design-contract, and "
-                    "implementation loop list are implemented."
+                    "implementation/frontend-evidence loop list are implemented."
                 ),
                 alternatives=[
                     "ai-sdlc loop list --type requirement",
                     "ai-sdlc loop list --type design-contract",
                     "ai-sdlc loop list --type implementation",
+                    "ai-sdlc loop list --type frontend-evidence",
                 ],
             ),
         )
@@ -1234,6 +1261,237 @@ def _list_implementation_loops(root: Path) -> LoopListResult:
     )
 
 
+def _get_frontend_evidence_loop_status(root: Path) -> LoopStatusResult:
+    pointer_path = root / CURRENT_FRONTEND_EVIDENCE_PATH
+    if not pointer_path.exists():
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.NO_CURRENT,
+            result="No current frontend-evidence loop.",
+            next_action="Run ai-sdlc loop frontend-evidence start --wi specs/<work-item>.",
+            next_guidance=_no_current_frontend_evidence_guidance(),
+        )
+    loop_run_path, pointer_error = _read_current_frontend_evidence_loop_run_path(
+        root,
+        pointer_path,
+    )
+    if pointer_error is not None:
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Current frontend-evidence pointer is malformed.",
+            blocker=pointer_error.error,
+            next_action="Rerun ai-sdlc loop frontend-evidence start.",
+            next_guidance=_frontend_evidence_blocked_guidance(
+                pointer_error.error,
+                evidence=[pointer_error.path],
+            ),
+        )
+    if loop_run_path is None or not loop_run_path.is_file():
+        blocker = "Current frontend-evidence pointer references a missing loop-run.json."
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Current frontend-evidence loop artifact is missing.",
+            blocker=blocker,
+            next_action="Rerun ai-sdlc loop frontend-evidence start.",
+            next_guidance=_frontend_evidence_blocked_guidance(
+                blocker,
+                evidence=[_repo_relative_path(root, loop_run_path or pointer_path)],
+            ),
+        )
+    try:
+        loop_run = LoopRun.model_validate(
+            json.loads(loop_run_path.read_text(encoding="utf-8"))
+        )
+        current_loop = _summary_from_frontend_evidence_loop_run(
+            root,
+            loop_run,
+            loop_run_path,
+            current_pointer_path=pointer_path,
+            is_current=True,
+        )
+    except (json.JSONDecodeError, OSError, ValidationError, ValueError) as exc:
+        blocker = f"Current frontend-evidence loop-run.json is malformed: {exc}"
+        return LoopStatusResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="Current frontend-evidence loop artifact is malformed.",
+            blocker=blocker,
+            next_action="Rerun ai-sdlc loop frontend-evidence start.",
+            next_guidance=_frontend_evidence_blocked_guidance(
+                blocker,
+                evidence=[_repo_relative_path(root, loop_run_path)],
+            ),
+        )
+    return LoopStatusResult(
+        status=LoopStatusCommandStatus.READY,
+        result="Current frontend-evidence loop found.",
+        current_loop=current_loop,
+        next_action=current_loop.next_action,
+        next_guidance=current_loop.next_guidance,
+    )
+
+
+def _list_frontend_evidence_loops(root: Path) -> LoopListResult:
+    loop_root = root / AI_SDLC_DIR / "loops" / LoopType.FRONTEND_EVIDENCE.value
+    loop_run_paths = sorted(loop_root.glob("*/loop-run.json"))
+    artifact_errors: list[LoopArtifactError] = []
+    pointer_path = root / CURRENT_FRONTEND_EVIDENCE_PATH
+    current_loop_run_path, pointer_error = _read_current_frontend_evidence_loop_run_path(
+        root,
+        pointer_path,
+    )
+    if pointer_error is not None:
+        artifact_errors.append(pointer_error)
+    if current_loop_run_path is not None and not current_loop_run_path.is_file():
+        artifact_errors.append(
+            LoopArtifactError(
+                kind="current-frontend-evidence-target",
+                path=_repo_relative_path(root, current_loop_run_path),
+                error="referenced by current-frontend-evidence pointer but file is missing.",
+            )
+        )
+        current_loop_run_path = None
+    if current_loop_run_path is not None and not _is_frontend_evidence_loop_run_path(
+        root,
+        current_loop_run_path,
+    ):
+        artifact_errors.append(
+            LoopArtifactError(
+                kind="current-frontend-evidence-target",
+                path=_repo_relative_path(root, current_loop_run_path),
+                error=(
+                    "referenced by current-frontend-evidence pointer but is not "
+                    "a frontend-evidence loop-run.json artifact."
+                ),
+            )
+        )
+        current_loop_run_path = None
+    if not loop_run_paths:
+        if artifact_errors:
+            blocker = (
+                "Current frontend-evidence pointer is malformed or references "
+                "missing artifacts."
+            )
+            return LoopListResult(
+                status=LoopStatusCommandStatus.BLOCKED,
+                result="No readable frontend-evidence loops found.",
+                malformed_count=len(artifact_errors),
+                artifact_errors=artifact_errors,
+                blocker=blocker,
+                next_action=(
+                    "Inspect or remove malformed current-frontend-evidence.json artifacts."
+                ),
+                next_guidance=_frontend_evidence_blocked_guidance(
+                    blocker,
+                    evidence=[error.path for error in artifact_errors if error.path],
+                ),
+            )
+        return LoopListResult(
+            status=LoopStatusCommandStatus.NO_CURRENT,
+            result="No frontend-evidence loops found.",
+            next_action="Run ai-sdlc loop frontend-evidence start --wi specs/<work-item>.",
+            next_guidance=_no_current_frontend_evidence_guidance(),
+        )
+
+    loop_entries: list[tuple[LoopSummary, float]] = []
+    for loop_run_path in loop_run_paths:
+        try:
+            loop_run = LoopRun.model_validate(
+                json.loads(loop_run_path.read_text(encoding="utf-8"))
+            )
+            summary = _summary_from_frontend_evidence_loop_run(
+                root,
+                loop_run,
+                loop_run_path,
+                current_pointer_path=pointer_path
+                if _same_path(loop_run_path, current_loop_run_path)
+                else None,
+                is_current=_same_path(loop_run_path, current_loop_run_path),
+            )
+        except (json.JSONDecodeError, OSError, ValidationError, ValueError) as exc:
+            error_kind = (
+                "current-frontend-evidence-target"
+                if _same_path(loop_run_path, current_loop_run_path)
+                else "frontend-evidence-loop-run"
+            )
+            artifact_errors.append(
+                LoopArtifactError(
+                    kind=error_kind,
+                    path=_repo_relative_path(root, loop_run_path),
+                    error=str(exc),
+                )
+            )
+            continue
+        loop_entries.append((summary, _artifact_mtime(loop_run_path)))
+
+    loop_entries.sort(key=lambda item: item[0].loop_id)
+    loop_entries.sort(key=lambda item: item[1], reverse=True)
+    loop_entries.sort(key=lambda item: item[0].updated_at, reverse=True)
+    loops = [summary for summary, _mtime in loop_entries]
+    if not loops:
+        blocker = "All discovered frontend-evidence loop artifacts are malformed."
+        return LoopListResult(
+            status=LoopStatusCommandStatus.BLOCKED,
+            result="No readable frontend-evidence loops found.",
+            malformed_count=len(artifact_errors),
+            artifact_errors=artifact_errors,
+            blocker=blocker,
+            next_action="Inspect or remove malformed frontend-evidence loop artifacts.",
+            next_guidance=_frontend_evidence_blocked_guidance(
+                blocker,
+                evidence=[error.path for error in artifact_errors if error.path],
+            ),
+        )
+
+    current_loop = next((loop for loop in loops if loop.is_current), None)
+    pointer_errors = [
+        error
+        for error in artifact_errors
+        if error.kind
+        in {"current-frontend-evidence-pointer", "current-frontend-evidence-target"}
+    ]
+    if current_loop is None and pointer_errors:
+        blocker = (
+            "Current frontend-evidence pointer is malformed or references "
+            "missing artifacts."
+        )
+        next_action = "Inspect or remove malformed current-frontend-evidence.json artifacts."
+        guidance = _frontend_evidence_blocked_guidance(
+            blocker,
+            evidence=[error.path for error in pointer_errors if error.path],
+        )
+    elif current_loop is None:
+        blocker = ""
+        next_action = "Run ai-sdlc loop frontend-evidence start --wi specs/<work-item>."
+        guidance = _no_current_frontend_evidence_guidance()
+    else:
+        blocker = ""
+        next_action = "Run ai-sdlc loop status --type frontend-evidence."
+        guidance = LoopNextActionGuidance(
+            command="ai-sdlc loop status --type frontend-evidence",
+            reason="Inspect the current frontend-evidence loop before choosing the next step.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.SAFE_READ_ONLY,
+            evidence=[current_loop.loop_id],
+            alternatives=[
+                current_loop.next_guidance.command
+                for current_loop in [current_loop]
+                if current_loop.next_guidance.command
+            ],
+        )
+    return LoopListResult(
+        status=LoopStatusCommandStatus.READY,
+        result="Frontend-evidence loops found.",
+        current_loop_id=current_loop.loop_id if current_loop is not None else "",
+        items=loops,
+        malformed_count=len(artifact_errors),
+        artifact_errors=artifact_errors,
+        blocker=blocker,
+        next_action=next_action,
+        next_guidance=guidance,
+    )
+
+
 def _summary_from_requirement_loop_run(
     root: Path,
     loop_run: LoopRun,
@@ -1425,6 +1683,74 @@ def _summary_from_implementation_loop_run(
     )
 
 
+def _summary_from_frontend_evidence_loop_run(
+    root: Path,
+    loop_run: LoopRun,
+    loop_run_path: Path,
+    *,
+    current_pointer_path: Path | None = None,
+    is_current: bool = False,
+) -> LoopSummary:
+    if loop_run.loop_type != LoopType.FRONTEND_EVIDENCE:
+        raise ValueError("loop-run.json is not a frontend-evidence loop")
+    loop_dir = loop_run_path.parent
+    report_path = loop_dir / "frontend-evidence-report.json"
+    try:
+        report = FrontendEvidenceReport.model_validate(
+            json.loads(report_path.read_text(encoding="utf-8"))
+        )
+    except (json.JSONDecodeError, OSError, ValidationError, ValueError) as exc:
+        raise ValueError(f"frontend-evidence-report.json is malformed: {exc}") from exc
+    artifacts = [_artifact_ref(root, "loop-run", loop_run_path)]
+    if is_current and current_pointer_path is not None:
+        artifacts.insert(
+            0,
+            _artifact_ref(
+                root,
+                "current-frontend-evidence-pointer",
+                current_pointer_path,
+            ),
+        )
+    optional_artifacts = (
+        ("frontend-evidence-input", loop_dir / "frontend-evidence-input.json"),
+        ("frontend-evidence-snapshot", loop_dir / "frontend-evidence-snapshot.json"),
+        ("frontend-evidence-report-json", report_path),
+        ("frontend-evidence-report-md", loop_dir / "frontend-evidence-report.md"),
+        ("frontend-evidence-close", loop_dir / "frontend-evidence-close.json"),
+    )
+    for kind, path in optional_artifacts:
+        artifacts.append(_artifact_ref(root, kind, path))
+    closed = (loop_dir / "frontend-evidence-close.json").is_file()
+    return LoopSummary(
+        loop_id=loop_run.loop_id,
+        loop_type=loop_run.loop_type,
+        status=loop_run.status,
+        is_current=is_current,
+        updated_at=loop_run.updated_at,
+        next_action=loop_run.next_action,
+        next_guidance=_guidance_for_frontend_evidence_loop(
+            root,
+            loop_run,
+            loop_run_path,
+            report,
+            is_current=is_current,
+            closed=closed,
+        ),
+        artifacts=artifacts,
+        frontend_evidence=FrontendEvidenceLoopSummary(
+            work_item_id=report.work_item_id,
+            work_item_path=report.work_item_path,
+            gate_run_id=report.gate_run_id,
+            overall_gate_status=report.overall_gate_status,
+            execute_gate_state=report.execute_gate_state,
+            decision_reason=report.decision_reason,
+            blocker_count=report.blocker_count,
+            warning_count=report.warning_count,
+            closed=closed,
+        ),
+    )
+
+
 def _blocked_result(*, result: str, blocker: str) -> LoopStatusResult:
     return LoopStatusResult(
         status=LoopStatusCommandStatus.BLOCKED,
@@ -1510,6 +1836,25 @@ def _no_current_implementation_guidance() -> LoopNextActionGuidance:
         evidence=[str(CURRENT_IMPLEMENTATION_PATH).replace("\\", "/")],
         alternatives=[
             "ai-sdlc loop implementation start --wi specs/<work-item> --dry-run",
+        ],
+    )
+
+
+def _no_current_frontend_evidence_guidance() -> LoopNextActionGuidance:
+    return LoopNextActionGuidance(
+        command="ai-sdlc loop frontend-evidence start --wi specs/<work-item>",
+        reason=(
+            "No current frontend-evidence loop exists; start it after closing "
+            "a frontend implementation loop and running the local browser gate."
+        ),
+        requires_model=False,
+        writes_artifacts=True,
+        writes_code=False,
+        safety=LoopNextActionSafety.WRITES_PROJECT_ARTIFACTS,
+        evidence=[str(CURRENT_FRONTEND_EVIDENCE_PATH).replace("\\", "/")],
+        alternatives=[
+            "ai-sdlc program browser-gate-probe --execute",
+            "ai-sdlc loop frontend-evidence start --wi specs/<work-item> --dry-run",
         ],
     )
 
@@ -1606,6 +1951,27 @@ def _implementation_blocked_guidance(
         or [str(CURRENT_IMPLEMENTATION_PATH).replace("\\", "/")],
         alternatives=[
             "Inspect or remove malformed implementation loop artifacts.",
+        ],
+    )
+
+
+def _frontend_evidence_blocked_guidance(
+    reason: str,
+    *,
+    evidence: list[str] | None = None,
+) -> LoopNextActionGuidance:
+    return LoopNextActionGuidance(
+        command="ai-sdlc loop frontend-evidence start --wi specs/<work-item>",
+        reason=reason,
+        requires_model=False,
+        writes_artifacts=True,
+        writes_code=False,
+        safety=LoopNextActionSafety.BLOCKED,
+        evidence=evidence
+        or [str(CURRENT_FRONTEND_EVIDENCE_PATH).replace("\\", "/")],
+        alternatives=[
+            "ai-sdlc program browser-gate-probe --execute",
+            "Inspect or remove malformed frontend-evidence loop artifacts.",
         ],
     )
 
@@ -2072,6 +2438,103 @@ def _guidance_for_implementation_loop(
     )
 
 
+def _guidance_for_frontend_evidence_loop(
+    root: Path,
+    loop_run: LoopRun,
+    loop_run_path: Path,
+    report: FrontendEvidenceReport,
+    *,
+    is_current: bool,
+    closed: bool,
+) -> LoopNextActionGuidance:
+    evidence = [
+        _repo_relative_path(root, loop_run_path),
+        _repo_relative_path(root, loop_run_path.parent / "frontend-evidence-report.json"),
+    ]
+    if not is_current:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop list --type frontend-evidence --json",
+            reason=(
+                "This is a historical, non-current frontend-evidence loop. "
+                "Inspect it instead of closing the current pointer."
+            ),
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.SAFE_READ_ONLY,
+            evidence=evidence,
+            alternatives=["Inspect the historical frontend-evidence artifacts."],
+        )
+    if loop_run.status == LoopStatus.PASSED:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop frontend-evidence close --yes",
+            reason="Frontend browser gate evidence passed; close it before PR review.",
+            requires_model=False,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.WRITES_PROJECT_ARTIFACTS,
+            evidence=evidence,
+        )
+    if loop_run.status == LoopStatus.NEEDS_USER:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop frontend-evidence close --yes --allow-warnings",
+            reason=(
+                "Frontend browser gate evidence has advisory warnings; close only "
+                "after explicitly recording acceptance."
+            ),
+            requires_model=False,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.NEEDS_USER,
+            evidence=evidence,
+        )
+    if loop_run.status == LoopStatus.NEEDS_FIX:
+        return LoopNextActionGuidance(
+            command="ai-sdlc program browser-gate-probe --execute",
+            reason="Frontend browser gate evidence has blockers or needs a recheck.",
+            requires_model=False,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.WRITES_PROJECT_ARTIFACTS,
+            evidence=evidence,
+        )
+    if loop_run.status == LoopStatus.CLOSED or closed:
+        return LoopNextActionGuidance(
+            command="ai-sdlc pr-review start",
+            reason="Frontend evidence is closed; continue with local PR review.",
+            requires_model=True,
+            writes_artifacts=True,
+            writes_code=False,
+            safety=LoopNextActionSafety.MAY_CALL_LOCAL_REVIEW_AGENT,
+            evidence=[
+                *evidence,
+                _repo_relative_path(
+                    root,
+                    loop_run_path.parent / "frontend-evidence-close.json",
+                ),
+            ],
+        )
+    if loop_run.status in {LoopStatus.BLOCKED, LoopStatus.NEEDS_USER}:
+        return LoopNextActionGuidance(
+            command="ai-sdlc loop frontend-evidence status",
+            reason=loop_run.next_action or "Inspect the blocked frontend-evidence loop.",
+            requires_model=False,
+            writes_artifacts=False,
+            writes_code=False,
+            safety=LoopNextActionSafety.BLOCKED,
+            evidence=evidence,
+        )
+    return LoopNextActionGuidance(
+        command="ai-sdlc loop frontend-evidence status",
+        reason=loop_run.next_action or "Inspect the frontend-evidence loop.",
+        requires_model=False,
+        writes_artifacts=False,
+        writes_code=False,
+        safety=LoopNextActionSafety.SAFE_READ_ONLY,
+        evidence=evidence,
+    )
+
+
 def _read_current_requirement_loop_run_path(
     root: Path,
     pointer_path: Path,
@@ -2252,6 +2715,66 @@ def _implementation_pointer_error(
     )
 
 
+def _read_current_frontend_evidence_loop_run_path(
+    root: Path,
+    pointer_path: Path,
+) -> tuple[Path | None, LoopArtifactError | None]:
+    if not pointer_path.exists():
+        return None, None
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        return None, _frontend_evidence_pointer_error(root, pointer_path, str(exc))
+    if not isinstance(pointer, dict):
+        return None, _frontend_evidence_pointer_error(
+            root,
+            pointer_path,
+            "root must be an object.",
+        )
+    path_text = pointer.get("loop_run_path")
+    if not isinstance(path_text, str) or not path_text.strip():
+        return None, _frontend_evidence_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must be a non-empty string.",
+        )
+    path = Path(path_text)
+    if path.is_absolute():
+        return None, _frontend_evidence_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must be project-relative.",
+        )
+    if ".." in path.parts:
+        return None, _frontend_evidence_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must not contain parent directory segments.",
+        )
+    candidate = (root / path).resolve(strict=False)
+    try:
+        candidate.relative_to(root.resolve(strict=False))
+    except ValueError:
+        return None, _frontend_evidence_pointer_error(
+            root,
+            pointer_path,
+            "loop_run_path must stay within the project root.",
+        )
+    return candidate, None
+
+
+def _frontend_evidence_pointer_error(
+    root: Path,
+    pointer_path: Path,
+    error: str,
+) -> LoopArtifactError:
+    return LoopArtifactError(
+        kind="current-frontend-evidence-pointer",
+        path=_repo_relative_path(root, pointer_path),
+        error=error,
+    )
+
+
 def _is_design_contract_loop_run_path(root: Path, loop_run_path: Path) -> bool:
     loop_root = (
         root / AI_SDLC_DIR / "loops" / LoopType.DESIGN_CONTRACT.value
@@ -2266,6 +2789,17 @@ def _is_design_contract_loop_run_path(root: Path, loop_run_path: Path) -> bool:
 def _is_implementation_loop_run_path(root: Path, loop_run_path: Path) -> bool:
     loop_root = (
         root / AI_SDLC_DIR / "loops" / LoopType.IMPLEMENTATION.value
+    ).resolve(strict=False)
+    try:
+        relative = loop_run_path.resolve(strict=False).relative_to(loop_root)
+    except ValueError:
+        return False
+    return len(relative.parts) == 2 and relative.parts[1] == "loop-run.json"
+
+
+def _is_frontend_evidence_loop_run_path(root: Path, loop_run_path: Path) -> bool:
+    loop_root = (
+        root / AI_SDLC_DIR / "loops" / LoopType.FRONTEND_EVIDENCE.value
     ).resolve(strict=False)
     try:
         relative = loop_run_path.resolve(strict=False).relative_to(loop_root)
@@ -2413,6 +2947,7 @@ __all__ = [
     "ImplementationLoopSummary",
     "LoopArtifactError",
     "LocalPRReviewSummary",
+    "FrontendEvidenceLoopSummary",
     "LoopArtifactRef",
     "LoopListResult",
     "LoopNextActionGuidance",
