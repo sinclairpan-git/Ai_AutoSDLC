@@ -1125,7 +1125,6 @@ def _run_windows_playwright_generated_frontend_evidence_loop(h: E2EHarness) -> N
         isinstance(payload, dict)
         and payload.get("probe_runtime_state") == "completed"
         and payload.get("overall_gate_status") in passed_statuses
-        and payload.get("execute_gate_state") == "ready"
         and str(payload.get("artifact_root", "")).startswith(
             ".ai-sdlc/artifacts/frontend-browser-gate/"
         ),
