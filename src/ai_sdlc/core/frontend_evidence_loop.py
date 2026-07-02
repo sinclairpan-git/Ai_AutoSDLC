@@ -669,13 +669,8 @@ def _playwright_provider_check(
     package_manager_available = bool(package_manager and shutil.which(package_manager))
     node_available = shutil.which("node") is not None
     package_declared = _package_json_declares_playwright(package_json)
-    node_modules_available = (
-        (frontend_dir / "node_modules" / "@playwright" / "test").exists()
-        or (frontend_dir / "node_modules" / "playwright").exists()
-    )
-    available = node_available and package_manager_available and (
-        package_declared or node_modules_available
-    )
+    playwright_runtime_path = _playwright_runtime_path(root, frontend_dir)
+    available = node_available and playwright_runtime_path is not None
     selected = requested_provider == "playwright" or (
         requested_provider == "auto" and available
     )
@@ -683,8 +678,10 @@ def _playwright_provider_check(
     evidence: list[str] = []
     if package_json.is_file():
         evidence.append(repo_relative_path(root, package_json))
-    if node_modules_available:
-        evidence.append(repo_relative_path(root, frontend_dir / "node_modules"))
+    if package_declared:
+        evidence.append("package.json declares Playwright")
+    if playwright_runtime_path is not None:
+        evidence.append(repo_relative_path(root, playwright_runtime_path))
     if node_available:
         evidence.append("node executable found on PATH")
     if package_manager_available:
@@ -700,7 +697,7 @@ def _playwright_provider_check(
         package_json_path=repo_relative_path(root, package_json) if package_json.is_file() else "",
         evidence=evidence,
         install_commands=install_commands,
-        run_commands=["ai-sdlc program browser-gate-probe --execute"],
+        run_commands=["ai-sdlc program browser-gate-probe --execute"] if available else [],
         alternatives=[
             "Use Codex browser control or a browser MCP/plugin if that capability already exists.",
             "Import a compatible project-local browser gate artifact with --artifact-path.",
@@ -710,6 +707,25 @@ def _playwright_provider_check(
             "Do not run OS-level browser dependency installation silently; require explicit user confirmation first.",
         ],
     )
+
+
+def _playwright_runtime_path(root: Path, frontend_dir: Path) -> Path | None:
+    current = frontend_dir.resolve()
+    resolved_root = root.resolve()
+    while True:
+        candidate = current / "node_modules" / "playwright"
+        if candidate.exists():
+            return candidate
+        if current == resolved_root:
+            return None
+        try:
+            current.relative_to(resolved_root)
+        except ValueError:
+            return None
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
 
 
 def _detect_package_manager(frontend_dir: Path) -> str:
@@ -838,7 +854,11 @@ def _doctor_next_guidance(
     )
     return FrontendEvidenceNextGuidance(
         command=_command_from_next_action(next_action)
-        or _doctor_guidance_command(recommended_provider),
+        or _doctor_guidance_command(
+            recommended_provider,
+            status=status,
+            providers=providers,
+        ),
         reason=(
             f"Recommended browser evidence provider: {recommended_provider}. "
             "Existing browser control or imported artifacts are preferred before optional Playwright installation."
@@ -852,9 +872,26 @@ def _doctor_next_guidance(
     )
 
 
-def _doctor_guidance_command(recommended_provider: str) -> str:
+def _doctor_guidance_command(
+    recommended_provider: str,
+    *,
+    status: FrontendEvidenceCommandStatus,
+    providers: list[FrontendEvidenceProviderCheck],
+) -> str:
     if recommended_provider == "playwright":
-        return "ai-sdlc program browser-gate-probe --execute"
+        if status == FrontendEvidenceCommandStatus.READY:
+            return "ai-sdlc program browser-gate-probe --execute"
+        playwright = next(
+            (
+                provider
+                for provider in providers
+                if provider.provider_id == "playwright"
+            ),
+            None,
+        )
+        if playwright is not None and playwright.install_commands:
+            return playwright.install_commands[0]
+        return "ai-sdlc loop frontend-evidence doctor --provider playwright"
     return "ai-sdlc loop frontend-evidence start --wi specs/<work-item> --artifact-path <browser-gate-artifact.yaml>"
 
 

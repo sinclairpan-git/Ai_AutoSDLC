@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 
@@ -206,6 +207,68 @@ def test_doctor_supports_explicit_codex_browser_without_playwright_push(
     )
     assert codex_provider.selected is True
     assert codex_provider.install_commands == []
+
+
+def test_doctor_does_not_mark_declared_playwright_ready_without_runtime(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "package.json").write_text(
+        json.dumps({"devDependencies": {"@playwright/test": "^1.45.0"}}),
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.core.frontend_evidence_loop.shutil.which") as which:
+        which.side_effect = lambda command: f"/usr/bin/{command}" if command in {
+            "node",
+            "npm",
+        } else None
+        result = doctor_frontend_evidence_provider(
+            FrontendEvidenceDoctorOptions(root=tmp_path, provider="playwright")
+        )
+
+    assert result.status == "needs_user"
+    assert result.recommended_provider == "playwright"
+    assert "browser-gate-probe" not in result.next_action
+    assert result.next_guidance.command == "npm install -D @playwright/test"
+    playwright = next(
+        provider for provider in result.providers if provider.provider_id == "playwright"
+    )
+    assert playwright.selected is True
+    assert playwright.available is False
+    assert playwright.node_available is True
+    assert playwright.package_manager_available is True
+    assert playwright.run_commands == []
+    assert "npm install -D @playwright/test" in playwright.install_commands
+    assert "package.json declares Playwright" in playwright.evidence
+
+
+def test_doctor_marks_playwright_ready_only_when_runtime_is_installed(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "package.json").write_text(
+        json.dumps({"devDependencies": {"@playwright/test": "^1.45.0"}}),
+        encoding="utf-8",
+    )
+    (tmp_path / "node_modules" / "playwright").mkdir(parents=True)
+
+    with patch("ai_sdlc.core.frontend_evidence_loop.shutil.which") as which:
+        which.side_effect = lambda command: f"/usr/bin/{command}" if command in {
+            "node",
+            "npm",
+        } else None
+        result = doctor_frontend_evidence_provider(
+            FrontendEvidenceDoctorOptions(root=tmp_path, provider="playwright")
+        )
+
+    assert result.status == "ready"
+    assert result.next_guidance.command == "ai-sdlc program browser-gate-probe --execute"
+    playwright = next(
+        provider for provider in result.providers if provider.provider_id == "playwright"
+    )
+    assert playwright.selected is True
+    assert playwright.available is True
+    assert playwright.run_commands == ["ai-sdlc program browser-gate-probe --execute"]
+    assert "node_modules/playwright" in playwright.evidence
 
 
 def test_skip_frontend_evidence_loop_requires_confirmation(tmp_path: Path) -> None:
