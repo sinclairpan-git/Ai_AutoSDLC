@@ -10,6 +10,7 @@ on:
       - "pyproject.toml"
       - "uv.lock"
       - "scripts/loop_e2e_release_gate.py"
+      - "scripts/frontend_browser_gate_probe_runner.mjs"
       - "src/**"
 
 permissions:
