@@ -1019,7 +1019,7 @@ def _run_windows_playwright_provider_install_check(h: E2EHarness) -> None:
         note="Windows runner should not rely on a Codex browser-control CLI.",
     )
     h.run_raw("windows_node_available", ["node", "--version"])
-    h.run_raw("windows_npm_available", ["npm", "--version"])
+    h.run_raw("windows_npm_available", _windows_shell_command("npm --version"))
     h.run_raw(
         "windows_local_playwright_absent_before_install",
         [
@@ -1058,7 +1058,7 @@ def _run_windows_playwright_provider_install_check(h: E2EHarness) -> None:
     for index, command in enumerate(commands, start=1):
         h.run_raw(
             f"windows_playwright_recommended_command_{index}",
-            _split_recommended_command(command),
+            _windows_shell_command(command),
             cwd=frontend_dir,
             note=f"Executing SDLC-recommended command: {command}",
         )
@@ -1147,8 +1147,8 @@ def _provider_payload(
     raise AssertionError(f"provider {provider_id} not found in doctor payload")
 
 
-def _split_recommended_command(command: str) -> list[str]:
-    return shlex.split(command, posix=os.name != "nt")
+def _windows_shell_command(command: str) -> list[str]:
+    return ["cmd.exe", "/d", "/s", "/c", command]
 
 
 def _no_install_env(evidence_root: Path) -> dict[str, str]:
