@@ -1098,7 +1098,8 @@ def _run_windows_playwright_generated_frontend_evidence_loop(h: E2EHarness) -> N
     )
     artifact_path = h.project_root / ".ai-sdlc" / "memory" / "frontend-browser-gate" / "latest.yaml"
     payload = _load_browser_gate_payload(artifact_path)
-    if payload.get("overall_gate_status") != "passed":
+    passed_statuses = {"passed", "passed_with_advisories"}
+    if payload.get("overall_gate_status") not in passed_statuses:
         h.assert_true(
             "First Playwright browser gate probe can request visual baseline",
             payload.get("overall_gate_status") == "incomplete"
@@ -1120,10 +1121,11 @@ def _run_windows_playwright_generated_frontend_evidence_loop(h: E2EHarness) -> N
         )
         payload = _load_browser_gate_payload(artifact_path)
     h.assert_true(
-        "Playwright browser gate probe materializes a passed artifact",
+        "Playwright browser gate probe materializes frontend-ready evidence",
         isinstance(payload, dict)
         and payload.get("probe_runtime_state") == "completed"
-        and payload.get("overall_gate_status") == "passed"
+        and payload.get("overall_gate_status") in passed_statuses
+        and payload.get("execute_gate_state") == "ready"
         and str(payload.get("artifact_root", "")).startswith(
             ".ai-sdlc/artifacts/frontend-browser-gate/"
         ),
