@@ -10,8 +10,10 @@ import yaml
 from ai_sdlc.core.frontend_evidence_loop import (
     CURRENT_FRONTEND_EVIDENCE_PATH,
     FrontendEvidenceCloseOptions,
+    FrontendEvidenceDoctorOptions,
     FrontendEvidenceStartOptions,
     close_frontend_evidence_loop,
+    doctor_frontend_evidence_provider,
     start_frontend_evidence_loop,
 )
 from ai_sdlc.core.implementation_models import (
@@ -148,7 +150,7 @@ def test_start_frontend_evidence_loop_blocks_missing_browser_gate_artifact(
 
     assert result.status == "blocked"
     assert "artifact is missing" in result.blocker
-    assert result.next_guidance.command == "ai-sdlc program browser-gate-probe --execute"
+    assert result.next_guidance.command == "ai-sdlc loop frontend-evidence doctor"
     assert not (
         tmp_path
         / ".ai-sdlc"
@@ -156,6 +158,52 @@ def test_start_frontend_evidence_loop_blocks_missing_browser_gate_artifact(
         / "frontend-evidence"
         / "fe-missing-artifact"
     ).exists()
+
+
+def test_doctor_prefers_existing_browser_artifact_over_playwright(
+    tmp_path: Path,
+) -> None:
+    _write_browser_gate_artifact(tmp_path, work_item_path="specs/demo-frontend")
+
+    result = doctor_frontend_evidence_provider(
+        FrontendEvidenceDoctorOptions(root=tmp_path)
+    )
+
+    assert result.status == "ready"
+    assert result.browser_artifact_available is True
+    assert result.recommended_provider == "external-artifact"
+    assert result.next_guidance.command == (
+        "ai-sdlc loop frontend-evidence start --wi specs/<work-item>"
+    )
+    playwright = next(
+        provider
+        for provider in result.providers
+        if provider.provider_id == "playwright"
+    )
+    assert playwright.selected is False
+
+
+def test_doctor_supports_explicit_codex_browser_without_playwright_push(
+    tmp_path: Path,
+) -> None:
+    result = doctor_frontend_evidence_provider(
+        FrontendEvidenceDoctorOptions(root=tmp_path, provider="codex-browser")
+    )
+
+    assert result.status == "needs_user"
+    assert result.recommended_provider == "codex-browser"
+    assert "Playwright" not in result.next_action
+    assert result.next_guidance.command == (
+        "ai-sdlc loop frontend-evidence start --wi specs/<work-item> "
+        "--artifact-path <browser-gate-artifact.yaml>"
+    )
+    codex_provider = next(
+        provider
+        for provider in result.providers
+        if provider.provider_id == "codex-browser"
+    )
+    assert codex_provider.selected is True
+    assert codex_provider.install_commands == []
 
 
 def test_start_frontend_evidence_loop_blocks_scope_mismatch(tmp_path: Path) -> None:

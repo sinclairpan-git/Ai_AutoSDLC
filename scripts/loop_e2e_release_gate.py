@@ -532,7 +532,7 @@ def run_scenario(h: E2EHarness) -> None:
         and "frontend-evidence" in str(impl_close.parsed_json.get("next_action", "")),
     )
 
-    h.run(
+    fe_missing = h.run(
         "frontend_evidence_start_missing_artifact_blocks",
         [
             "loop",
@@ -550,7 +550,35 @@ def run_scenario(h: E2EHarness) -> None:
         parse_json=True,
         note="Expected blocker: browser gate artifact has not been materialized yet.",
     )
+    h.assert_true(
+        "Missing frontend artifact points to provider doctor",
+        fe_missing.parsed_json is not None
+        and fe_missing.parsed_json.get("next_guidance", {}).get("command")
+        == "ai-sdlc loop frontend-evidence doctor",
+    )
+    fe_doctor_codex = h.run(
+        "frontend_evidence_doctor_codex_browser",
+        ["loop", "frontend-evidence", "doctor", "--provider", "codex-browser", "--json"],
+        parse_json=True,
+    )
+    h.assert_true(
+        "Codex browser provider path does not hard-push Playwright",
+        fe_doctor_codex.parsed_json is not None
+        and fe_doctor_codex.parsed_json.get("recommended_provider") == "codex-browser"
+        and "Playwright" not in str(fe_doctor_codex.parsed_json.get("next_action", "")),
+    )
     _write_browser_gate_artifact(h.project_root, work_item_path="specs/demo-loop-e2e")
+    fe_doctor_auto = h.run(
+        "frontend_evidence_doctor_auto_artifact",
+        ["loop", "frontend-evidence", "doctor", "--provider", "auto", "--json"],
+        parse_json=True,
+    )
+    h.assert_true(
+        "Auto provider prefers existing browser artifact",
+        fe_doctor_auto.parsed_json is not None
+        and fe_doctor_auto.parsed_json.get("browser_artifact_available") is True
+        and fe_doctor_auto.parsed_json.get("recommended_provider") == "external-artifact",
+    )
     fe_start = h.run(
         "frontend_evidence_start_ready",
         [

@@ -1,34 +1,41 @@
 # Continuity Handoff
 
-- Updated: 2026-07-02T00:50:01+00:00
-- Reason: Loop E2E release gate harness added and local macOS validation passed
-- Goal: Run clean-environment E2E release gate for five Loop Engine loops on macOS and Windows
-- State: Added scripts/loop_e2e_release_gate.py and .github/workflows/loop-e2e-release-gate.yml. Local macOS source-checkout clean-project E2E passed and generated report under .ai-sdlc/artifacts/loop-e2e-release-gate/loop-e2e-20260702T004916Z. Next is GitHub macOS/windows-latest workflow evidence.
+- Updated: 2026-07-02T01:18:29+00:00
+- Reason: frontend-evidence provider-first browser readiness added
+- Goal: Finish Loop E2E release gate follow-up for provider-first frontend evidence guidance
+- State: Implemented read-only frontend-evidence doctor with provider auto/codex-browser/browser-mcp/external-artifact/playwright; updated spec/plan/tasks/README/constraints/tests/E2E script; local E2E passed at .ai-sdlc/artifacts/loop-e2e-release-gate/loop-e2e-20260702T011620Z.
 - Stage: execute
 - Work Item: 195-loop-engine-frontend-evidence-loop-runtime
 - Branch: codex/loop-e2e-release-gate
 
 ## Changed Files
-- ?? .github/workflows/loop-e2e-release-gate.yml
-- ?? scripts/loop_e2e_release_gate.py
+- M README.md
+- M scripts/loop_e2e_release_gate.py
+- M specs/195-loop-engine-frontend-evidence-loop-runtime/plan.md
+- M specs/195-loop-engine-frontend-evidence-loop-runtime/spec.md
+- M specs/195-loop-engine-frontend-evidence-loop-runtime/task-execution-log.md
+- M specs/195-loop-engine-frontend-evidence-loop-runtime/tasks.md
+- M src/ai_sdlc/cli/loop_cmd.py
+- M src/ai_sdlc/core/frontend_evidence_loop.py
+- M src/ai_sdlc/core/frontend_evidence_models.py
+- M src/ai_sdlc/core/verify_constraints.py
+- M tests/integration/test_cli_loop.py
+- M tests/unit/test_frontend_evidence_loop.py
+- M tests/unit/test_verify_constraints.py
 
 ## Key Decisions
-- E2E harness invokes real ai-sdlc subprocess commands in a fresh target repository and records stdout/stderr, summary.json, report.md, and SVG terminal screenshots.
-- Expected blocker paths are treated as PASS only when the CLI returns the required nonzero gate result.
+- Do not hard-push Playwright; prefer existing browser gate artifacts, Codex browser control, browser MCP/plugin, or external project-local artifacts before optional Playwright setup.
 
 ## Commands / Tests
-- uv run python scripts/loop_e2e_release_gate.py => PASS
-- uv run ruff check scripts/loop_e2e_release_gate.py => PASS
-- uv run ai-sdlc verify constraints => PASS, no BLOCKERs
-- uv run pytest tests/integration/test_github_workflows.py -q => 8 passed
+- uv run pytest tests/unit/test_frontend_evidence_loop.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py -q => 211 passed
+- uv run python scripts/loop_e2e_release_gate.py => PASS, artifact root .ai-sdlc/artifacts/loop-e2e-release-gate/loop-e2e-20260702T011620Z
+- uv run ruff check focused files => PASS; uv run mypy focused frontend evidence files => PASS; uv run ai-sdlc verify constraints => PASS; git diff --check => PASS
 
 ## Blockers / Risks
-- none
+- PR #113 GitHub macOS/windows-latest workflow evidence must rerun after push.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit and push codex/loop-e2e-release-gate
-- Open PR to trigger Loop E2E Release Gate on macos-latest and windows-latest
-- Download artifacts and compile final user report
+- Commit provider-first frontend evidence follow-up on codex/loop-e2e-release-gate, push to PR #113, then monitor Loop E2E Release Gate.

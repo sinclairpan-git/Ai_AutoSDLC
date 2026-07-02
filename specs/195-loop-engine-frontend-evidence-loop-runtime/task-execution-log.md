@@ -346,6 +346,82 @@
 - 当前批次 worktree disposition 状态：提交后继续 PR #112 heartbeat
 - 是否继续下一批：否；等待 PR #112 Codex review、required checks 与合并
 
+### Batch 2026-07-02-001 | Provider-first browser evidence readiness guidance
+
+#### 1.1 批次范围
+
+- 覆盖任务：`T51`、`T52`
+- 覆盖阶段：PR #113 release gate follow-up；frontend loop 场景补强
+- 改动范围：`README.md`、`specs/195-loop-engine-frontend-evidence-loop-runtime/spec.md`、`plan.md`、`tasks.md`、`src/ai_sdlc/core/frontend_evidence_models.py`、`src/ai_sdlc/core/frontend_evidence_loop.py`、`src/ai_sdlc/cli/loop_cmd.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_frontend_evidence_loop.py`、`tests/integration/test_cli_loop.py`、`tests/unit/test_verify_constraints.py`、`scripts/loop_e2e_release_gate.py`
+
+#### 1.2 任务来源
+
+- 用户要求：将“用户可能已有 Codex browser 控制能力、浏览器 MCP/插件，不能硬推 Playwright；若缺浏览器 E2E 能力，应给出具体、用户友好的路径”纳入前端 loop 场景。
+- 风险摘要：
+  - 只提示安装 Playwright 会误伤 Codex/browser MCP/企业内网 E2E 用户。
+  - 缺 artifact 时直接提示 `browser-gate-probe` 会把 provider 选择、artifact 导入和 Playwright 缺失混成一个问题。
+
+#### 1.3 修订内容
+
+- PRD 新增 P0 用户故事 `1A`：浏览器 E2E 能力缺失时 provider-first 指引。
+- 新增只读 `ai-sdlc loop frontend-evidence doctor`：
+  - `--provider auto|codex-browser|browser-mcp|external-artifact|playwright`
+  - `--frontend-dir`
+  - `--browser`
+  - `--json`
+- doctor 推荐顺序改为已有 artifact / 已配置 browser provider / 已安装 Playwright / 用户显式选择后可选安装 Playwright。
+- `frontend-evidence start` 缺 browser gate artifact 时，下一步改为 `ai-sdlc loop frontend-evidence doctor`。
+- README 新手路径先运行 doctor；Codex browser/browser MCP 用户走 artifact 导入；显式 Playwright 用户通过 doctor 查看 npm/pnpm/yarn 安装命令。
+- release gate E2E 脚本新增 provider-first 断言：
+  - 缺 artifact 指向 doctor。
+  - `--provider codex-browser` 不硬推 Playwright。
+  - 写入 artifact 后 auto 推荐 `external-artifact`。
+
+#### 1.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V2`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py scripts/loop_e2e_release_gate.py`
+- `V3`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/cli/loop_cmd.py`
+- `V4`：`git diff --check`
+- `V5`：`uv run ai-sdlc verify constraints`
+- `V6`：`uv run python scripts/loop_e2e_release_gate.py`
+- `V7`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py -q`
+
+#### 1.5 验证结果
+
+- focused pytest：203 passed
+- final focused pytest + workflow tests：211 passed
+- ruff：PASS
+- mypy：PASS，3 source files
+- diff check：PASS
+- verify constraints：PASS，no BLOCKERs
+- local clean-project Loop E2E：PASS，artifact root `.ai-sdlc/artifacts/loop-e2e-release-gate/loop-e2e-20260702T011620Z`
+
+#### 1.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；新增 doctor 是只读 provider readiness，不调用模型、不安装依赖、不写业务代码。
+- 代码质量：provider-first 输出避免把 Playwright 设为默认唯一推荐；显式 Playwright 仍给具体安装命令。
+- 测试质量：新增单元、CLI 集成和 E2E 脚本断言覆盖 Codex browser、external artifact 和 Playwright 显式路径。
+- 结论：可提交到 PR #113 carrier branch，并等待 GitHub macOS/Windows E2E 重新验证。
+
+#### 1.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：新增 Batch 5；T51/T52 done；T53 planned。
+- `related_plan` 同步状态：新增 provider-first readiness 工作流 A1。
+- 关联 branch/worktree disposition 计划：继续使用 `codex/loop-e2e-release-gate` 和 PR #113。
+
+#### 1.8 归档后动作
+
+- 下一步提交、推送，并让 PR #113 重新跑 Loop E2E Release Gate。
+- **验证画像**：`code-change`
+- **改动范围**：见 1.1。
+- **已完成 git 提交**：否（本 marker 将随 provider-first follow-up commit 一起落盘）
+- **提交哈希**：`pending`
+- 当前批次 branch disposition 状态：待提交并推送到 PR #113
+- 当前批次 worktree disposition 状态：待 GitHub macOS/windows-latest workflow evidence 刷新
+- 是否继续下一批：否；等待 PR #113 checks
+
 ### Batch 2026-07-01-013 | Codex review accepted warning reason codes remediation
 
 #### 13.1 批次范围

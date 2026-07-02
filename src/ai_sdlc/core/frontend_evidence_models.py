@@ -240,6 +240,45 @@ class FrontendEvidenceCommandResult(BaseModel):
     frontend_evidence: FrontendEvidenceCommandSummary | None = None
 
 
+class FrontendEvidenceProviderCheck(BaseModel):
+    """Read-only browser E2E provider readiness surfaced by doctor."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    provider_id: str
+    available: bool = False
+    selected: bool = False
+    package_manager: str = ""
+    package_manager_available: bool = False
+    node_available: bool = False
+    frontend_dir: str = ""
+    package_json_path: str = ""
+    evidence: list[str] = Field(default_factory=list)
+    install_commands: list[str] = Field(default_factory=list)
+    run_commands: list[str] = Field(default_factory=list)
+    alternatives: list[str] = Field(default_factory=list)
+    safety_notes: list[str] = Field(default_factory=list)
+
+
+class FrontendEvidenceDoctorResult(BaseModel):
+    """Machine-readable result for frontend-evidence provider readiness checks."""
+
+    model_config = ConfigDict(extra="forbid", use_enum_values=True)
+
+    status: FrontendEvidenceCommandStatus
+    result: str = ""
+    blocker: str = ""
+    next_action: str = ""
+    next_guidance: FrontendEvidenceNextGuidance = Field(
+        default_factory=FrontendEvidenceNextGuidance
+    )
+    browser_artifact_available: bool = False
+    browser_artifact_path: str = ""
+    requested_provider: str = "auto"
+    recommended_provider: str = ""
+    providers: list[FrontendEvidenceProviderCheck] = Field(default_factory=list)
+
+
 @dataclass(frozen=True, slots=True)
 class FrontendEvidenceStartOptions:
     """Inputs for starting a frontend-evidence loop."""
@@ -250,6 +289,16 @@ class FrontendEvidenceStartOptions:
     artifact_path: str = ""
     loop_id: str = ""
     dry_run: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class FrontendEvidenceDoctorOptions:
+    """Inputs for checking frontend-evidence browser provider readiness."""
+
+    root: Path
+    frontend_dir: str = ""
+    provider: str = "auto"
+    browser: str = "chromium"
 
 
 @dataclass(frozen=True, slots=True)
@@ -274,8 +323,11 @@ __all__ = [
     "FrontendEvidenceCommandStatus",
     "FrontendEvidenceCommandSummary",
     "FrontendEvidenceCurrentPointer",
+    "FrontendEvidenceDoctorOptions",
+    "FrontendEvidenceDoctorResult",
     "FrontendEvidenceInput",
     "FrontendEvidenceNextGuidance",
+    "FrontendEvidenceProviderCheck",
     "FrontendEvidenceReceiptSnapshot",
     "FrontendEvidenceReport",
     "FrontendEvidenceSnapshot",

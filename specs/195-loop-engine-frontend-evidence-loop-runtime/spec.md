@@ -7,9 +7,9 @@
 
 ## 范围
 
-本工作项交付 Loop Engine 的 `frontend-evidence` 一等闭环。它把已有前端浏览器门禁证据纳入 `.ai-sdlc/loops/frontend-evidence/<loop-id>/`，并提供 `start/status/close`、统一 `loop status/list --type frontend-evidence`、小白友好输出、JSON 输出和关闭门禁。
+本工作项交付 Loop Engine 的 `frontend-evidence` 一等闭环。它把已有前端浏览器门禁证据纳入 `.ai-sdlc/loops/frontend-evidence/<loop-id>/`，并提供 `doctor/start/status/close`、统一 `loop status/list --type frontend-evidence`、小白友好输出、JSON 输出和关闭门禁。
 
-本工作项不重新实现前端生成、不重新实现浏览器探测、不固定 Vue/PrimeVue/GitHub/远端预览站点，也不要求 CI 调用模型或运行浏览器。浏览器探测仍由已有本地命令 `ai-sdlc program browser-gate-probe --execute` 负责；本 loop 只消费其本地 artifact 并做确定性验收。
+本工作项不重新实现前端生成、不把浏览器探测固定为 Playwright、不固定 Vue/PrimeVue/GitHub/远端预览站点，也不要求 CI 调用模型或运行浏览器。浏览器证据可以来自已有本地命令 `ai-sdlc program browser-gate-probe --execute`、Codex browser 控制能力、浏览器 MCP/插件、企业内网 E2E 工具或用户显式导入的项目内 artifact；本 loop 只做 provider readiness guidance、artifact ingestion 和确定性验收。
 
 ## 用户场景与测试
 
@@ -24,8 +24,24 @@
 **验收场景**：
 
 1. **Given** implementation loop 已关闭且 `requires_frontend_evidence=true`，**When** 用户执行 `frontend-evidence start`，**Then** 系统读取本地 browser gate artifact，写入 loop-run、input、snapshot、report 和 current pointer。
-2. **Given** 未执行 browser gate，**When** 用户执行 `frontend-evidence start`，**Then** 系统返回可读 blocker，并推荐 `ai-sdlc program browser-gate-probe --execute`。
+2. **Given** 未执行 browser gate 且没有可用 artifact，**When** 用户执行 `frontend-evidence start`，**Then** 系统返回可读 blocker，并推荐先执行 `ai-sdlc loop frontend-evidence doctor` 判断当前机器已有浏览器证据 provider。
 3. **Given** 用户显式传入 `--artifact-path`，**When** 该路径指向项目内合法 YAML，**Then** 系统优先消费该 artifact，而不是写死 latest 路径。
+
+### 用户故事 1A：浏览器 E2E 能力缺失时 provider-first 指引（优先级：P0）
+
+作为小白用户或只会 vibe coding 的用户，我希望当前电脑没有 Playwright、Codex browser、浏览器 MCP 或企业 E2E artifact 时，系统能先告诉我有哪些可用路径和具体下一步，而不是硬推某一个工具。
+
+**优先级说明**：前端 loop 的真实可用性取决于本地浏览器证据来源；该路径必须兼容 Codex、非 Codex、本地仓、公司内网仓和 GitHub 仓。
+
+**独立测试**：执行 `ai-sdlc loop frontend-evidence doctor --provider auto --json`、`--provider codex-browser`、`--provider playwright`，验证推荐 provider、可选安装命令、artifact 导入路径和 fail-readable 输出。
+
+**验收场景**：
+
+1. **Given** `.ai-sdlc/memory/frontend-browser-gate/latest.yaml` 已存在，**When** 用户执行 `frontend-evidence doctor --provider auto`，**Then** 系统优先推荐 `external-artifact` 或已有 artifact 路径，不推荐安装 Playwright。
+2. **Given** 用户使用 Codex 且已有 browser 控制能力，**When** 用户执行 `frontend-evidence doctor --provider codex-browser`，**Then** 系统提示用 Codex browser 产生兼容 browser gate artifact，再用 `start --artifact-path` 导入，不要求安装 Playwright。
+3. **Given** 用户已有浏览器 MCP/插件，**When** 用户执行 `frontend-evidence doctor --provider browser-mcp`，**Then** 系统提示用该插件产生或转换项目内 artifact，并保留 `start --artifact-path` 兜底。
+4. **Given** 用户没有任何可用 provider 且明确选择 Playwright，**When** 用户执行 `frontend-evidence doctor --provider playwright`，**Then** 系统按项目 package manager 输出 npm/pnpm/yarn 的具体安装命令，但不得自动执行安装。
+5. **Given** 用户选择不安装任何浏览器 runtime，**When** 用户已有企业内网 E2E、Cypress、Selenium、手工截图验收或其他 agent artifact，**Then** 系统必须允许显式导入项目内兼容 artifact；不能因为不是 Playwright 而拒绝。
 
 ### 用户故事 2：质量阻塞 fail-closed（优先级：P0）
 
@@ -93,6 +109,8 @@
 - 只有 advisory warnings。
 - implementation loop 未关闭、work item 不匹配、implementation report 不要求前端证据。
 - current pointer 指向缺失或 malformed artifact。
+- Codex/browser MCP/企业 E2E provider 存在但 CLI 无法自动探测，只能由用户显式 `--provider` 或导入 artifact 声明。
+- Playwright 未安装、Node/package manager 缺失、浏览器 runtime 缺失，但用户已有其他 browser provider。
 
 ## 需求
 
@@ -113,6 +131,11 @@
 - **FR-013**：本 loop 不得调用模型、不得调用 Codex 云端 review、不得要求 CI 调用模型、不得假设 GitHub PR。
 - **FR-014**：本 loop 不得写业务代码或前端代码，只写 `.ai-sdlc/loops/frontend-evidence/` 及 current pointer。
 - **FR-015**：系统必须接入 `verify constraints` 和 README，防止文档宣称的 command surface 与实现漂移。
+- **FR-016**：系统必须提供只读 `ai-sdlc loop frontend-evidence doctor`，支持 `--provider auto|codex-browser|browser-mcp|external-artifact|playwright`、`--frontend-dir`、`--browser`、`--json`。
+- **FR-017**：`doctor --provider auto` 必须 provider-first：已有 artifact 或已配置 browser provider 优先，Playwright 只能作为可选 provider，不能被硬编码为唯一推荐。
+- **FR-018**：当用户显式选择 `codex-browser` 或 `browser-mcp` 时，系统必须说明该 provider 负责产生浏览器证据 artifact，`frontend-evidence` 负责导入和验收 artifact，不得要求安装 Playwright。
+- **FR-019**：当用户显式选择 `playwright` 时，系统必须输出 npm/pnpm/yarn 对应的具体安装命令和浏览器安装命令；自动安装必须另有显式确认，不得静默执行。
+- **FR-020**：缺失 browser gate artifact 时，`start` 必须优先引导用户执行 `frontend-evidence doctor`，避免把 provider 缺失、artifact 未导入和 Playwright 缺失混为一类问题。
 
 ### 关键实体
 
@@ -121,6 +144,8 @@
 - **FrontendEvidenceReport**：验收报告，包括 loop status、gate status、blockers、warnings、reason codes、证据路径和 next action。
 - **FrontendEvidenceClose**：关闭确认，包括确认人、是否允许 warnings、report path 和下一步 loop。
 - **FrontendEvidenceCurrentPointer**：当前 frontend-evidence loop 指针。
+- **FrontendEvidenceProviderCheck**：只读 provider readiness 结果，包括 provider id、是否可用、是否被选中、安装命令、运行命令、替代路径和安全提示。
+- **FrontendEvidenceDoctorResult**：provider-first 诊断结果，包括 requested provider、recommended provider、artifact 可用性、provider 候选和 next guidance。
 
 ## 成功标准
 
@@ -130,7 +155,8 @@
 - **SC-002**：`tests/integration/test_cli_loop.py` 覆盖 `frontend-evidence start/status/close` human 与 JSON 输出。
 - **SC-003**：`tests/unit/test_loop_status.py` 覆盖 `loop status/list --type frontend-evidence` current、history 和 malformed pointer。
 - **SC-004**：`tests/unit/test_verify_constraints.py` 覆盖 README/CLI/constraint surface。
-- **SC-005**：focused regression、ruff、mypy、`uv run ai-sdlc verify constraints`、`workitem close-check`、Codex review、required checks 全部通过后才合并。
+- **SC-005**：`tests/unit/test_frontend_evidence_loop.py` 与 `tests/integration/test_cli_loop.py` 覆盖 provider-first doctor，不硬推 Playwright，并覆盖显式 Playwright 安装命令展示。
+- **SC-006**：focused regression、ruff、mypy、`uv run ai-sdlc verify constraints`、`workitem close-check`、Codex review、required checks 全部通过后才合并。
 
 ---
 frontend_evidence_class: framework_capability

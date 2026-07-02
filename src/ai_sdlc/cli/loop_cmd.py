@@ -20,8 +20,11 @@ from ai_sdlc.core.design_contract_loop import (
 from ai_sdlc.core.frontend_evidence_loop import (
     FrontendEvidenceCloseOptions,
     FrontendEvidenceCommandResult,
+    FrontendEvidenceDoctorOptions,
+    FrontendEvidenceDoctorResult,
     FrontendEvidenceStartOptions,
     close_frontend_evidence_loop,
+    doctor_frontend_evidence_provider,
     start_frontend_evidence_loop,
 )
 from ai_sdlc.core.implementation_loop import (
@@ -427,6 +430,43 @@ def frontend_evidence_start(
     raise typer.Exit(0 if result.status in {"ready", "dry_run"} else 1)
 
 
+@frontend_evidence_app.command(name="doctor")
+def frontend_evidence_doctor(
+    provider: str = typer.Option(
+        "auto",
+        "--provider",
+        help=(
+            "Browser evidence provider: auto, codex-browser, browser-mcp, "
+            "external-artifact, or playwright."
+        ),
+    ),
+    frontend_dir: str = typer.Option(
+        "",
+        "--frontend-dir",
+        help="Optional project-local frontend package directory for Playwright checks.",
+    ),
+    browser: str = typer.Option(
+        "chromium",
+        "--browser",
+        help="Browser name used only for optional Playwright install command guidance.",
+    ),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Check local browser evidence provider readiness without installing."""
+
+    root = _project_root_or_exit(json_output=json_output)
+    result = doctor_frontend_evidence_provider(
+        FrontendEvidenceDoctorOptions(
+            root=root,
+            provider=provider,
+            frontend_dir=frontend_dir,
+            browser=browser,
+        )
+    )
+    _emit_frontend_evidence_doctor_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status != "blocked" else 1)
+
+
 @frontend_evidence_app.command(name="status")
 def frontend_evidence_status(
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
@@ -660,6 +700,51 @@ def _emit_frontend_evidence_result(
         for artifact in result.artifacts:
             state = "exists" if artifact.exists else "planned"
             console.print(f"- {artifact.kind}: {artifact.path} ({state})")
+
+
+def _emit_frontend_evidence_doctor_result(
+    result: FrontendEvidenceDoctorResult,
+    *,
+    json_output: bool,
+) -> None:
+    payload = result.model_dump(mode="json")
+    if json_output:
+        _emit_payload(payload, json_output=True)
+        return
+    console.print(f"Result: {payload.get('status', '')}")
+    if result.blocker:
+        console.print(f"Blocker: {result.blocker}")
+    console.print(f"Next: {result.next_action or '-'}")
+    console.print(f"Requested provider: {result.requested_provider}")
+    console.print(f"Recommended provider: {result.recommended_provider or '-'}")
+    console.print(
+        "Browser artifact: "
+        f"{result.browser_artifact_path or '-'} "
+        f"({'exists' if result.browser_artifact_available else 'missing'})"
+    )
+    _emit_guidance_payload(payload.get("next_guidance"))
+    if result.providers:
+        console.print("Providers:")
+        for provider in result.providers:
+            console.print(
+                f"- {provider.provider_id}: "
+                f"available={str(provider.available).lower()}, "
+                f"selected={str(provider.selected).lower()}"
+            )
+            if provider.package_manager:
+                console.print(f"  package manager: {provider.package_manager}")
+            for command in provider.run_commands:
+                console.print(f"  run: {command}")
+            if provider.provider_id == "playwright" and not provider.selected:
+                console.print(
+                    "  optional install: run doctor --provider playwright "
+                    "to view Playwright setup commands"
+                )
+            else:
+                for command in provider.install_commands:
+                    console.print(f"  optional install: {command}")
+            for note in provider.safety_notes:
+                console.print(f"  note: {note}")
 
 
 def _emit_payload(payload: dict[str, object], *, json_output: bool) -> None:
