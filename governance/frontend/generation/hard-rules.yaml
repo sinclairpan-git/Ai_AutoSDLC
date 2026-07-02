@@ -17,3 +17,35 @@ rules:
 - rule_id: token-layout-exception
   category: controlled_exception
   description: token or layout deviation requires structured exception
+- rule_id: primevue-theme-token-first
+  category: absolute
+  description: PrimeVue component visuals must be governed by definePreset theme tokens
+    before business CSS overrides
+- rule_id: no-global-primevue-base-selector-rewrite
+  category: absolute
+  description: global rewrites of PrimeVue base selectors such as .p-button, .p-inputtext,
+    .p-select, .p-inputtextarea, .p-tag, .p-card, or .p-dialog are forbidden
+- rule_id: unocss-first-page-layout
+  category: absolute
+  description: page layout and spacing must prefer UnoCSS utilities and CSS variables
+    over scattered local CSS
+- rule_id: base-components-before-business-usage
+  category: absolute
+  description: business pages must consume PrimeVue through Base components or the governed
+    provider adapter before feature-specific wrappers
+- rule_id: visual-family-consistency
+  category: absolute
+  description: navigation, page headers, badges, buttons, tags, cards, and filters must
+    share the same PrimeVue token family and #1770e6 semantic highlight
+- rule_id: no-native-form-control-mixing
+  category: absolute
+  description: native select or form controls cannot be mixed beside PrimeVue inputs
+    in the same filter or form surface
+- rule_id: visible-chinese-dev-i18n-wrapper
+  category: absolute
+  description: new visible Simplified Chinese UI copy must use $i('中文') during development
+    unless the file already follows a stable i18n key system
+- rule_id: semantic-tag-severity-mapping
+  category: controlled_exception
+  description: status, risk, and visibility labels must use governed semantic mapping
+    instead of page-local raw severity shortcuts

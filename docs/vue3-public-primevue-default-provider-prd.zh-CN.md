@@ -2,6 +2,7 @@
 
 **文档状态**：已归档，三轮对抗评审通过  
 **创建日期**：2026-06-22  
+**最近更新**：2026-07-02，吸收 `Vue3企业级前端开发规范方案 v1.3（AI 执行版）`
 **适用仓库**：Ai_AutoSDLC  
 **输入文档**：`docs/Vue3企业级前端开发规范方案.md`  
 **目标版本**：下一轮前端治理版本  
@@ -19,6 +20,7 @@
 3. 保留 `enterprise-vue2` 作为企业私有组件库兼容路径，但不再作为普通默认首推路径。
 4. 让 `program solution-confirm`、managed delivery、provider profile、生成模板和验证面使用同一套 Vue3 默认口径。
 5. 将样式职责边界固化为：组件逻辑由 PrimeVue 承担，页面布局由 UnoCSS 承担，视觉统一由 CSS Variables 承担，复杂业务样式由少量普通 CSS 承担。
+6. 将 v1.3 规范中的视觉家族、Base/Business 分层、开发期 `$i('中文')` 国际化和工程化提交规则沉淀为可执行治理约束。
 
 ## 3. 非目标
 
@@ -136,8 +138,12 @@ Vue3 默认模板开发依赖必须覆盖：
 - `eslint`
 - `prettier`
 - `@antfu/eslint-config`
+- `husky`
+- `lint-staged`
+- `@commitlint/cli`
+- `@commitlint/config-conventional`
 
-husky、lint-staged、commitlint 可作为企业项目增强项进入后续分阶段任务，但不得替代默认 Web/视觉测试与基础 lint/format 依赖。
+husky、lint-staged、commitlint 必须进入多人协作项目的默认工程化建议和依赖清单，但验证等级仍为 advisory；不得替代默认 Web/视觉测试与基础 lint/format 依赖，也不得作为普通生成的首版 blocker。
 
 ### FR-004 UnoCSS 默认集成
 
@@ -248,7 +254,9 @@ Vue3 默认模板必须启用 TypeScript strict。默认生成代码不得使用
 
 ### FR-011 国际化基线
 
-Vue3 默认模板必须支持 vue-i18n。框架生成的用户可见业务文案应支持通过 i18n key 管理；不应在模板中大量直接硬编码业务中文。
+Vue3 默认模板必须支持 vue-i18n。框架新增用户可见中文文案时，开发阶段必须先使用 `$i('中文')` 包裹，例如 `$i('新建模板')`；不得直接写裸中文，也不得在需求未确认前发明大量英文 key。
+
+必须覆盖页面标题、按钮文案、label、placeholder、空状态、错误提示、成功提示、tooltip、标签文案、表格列标题、弹窗标题和 tabs 文案。变量名、枚举值、接口字段、路由 name、权限码、埋点字段和调试日志不得被误包。若当前文件已稳定采用 i18n key 体系，则延续既有 key，不回退成裸中文。
 
 ### FR-012 质量与验证
 
@@ -260,6 +268,8 @@ Vue3 默认模板必须支持 vue-i18n。框架生成的用户可见业务文案
 4. managed delivery 生成模板包含 UnoCSS 配置、CSS Variables、PrimeVue 初始化和目录结构。
 5. verify constraints 或等价验证面能发现默认口径与生成口径漂移。
 6. 业务 `views/` 和 `components/business/` 中的 `primevue/*` 直接 import 可被 scan 发现。
+7. 新增可见中文未使用 `$i('中文')` 或稳定 i18n key 时可被治理规则识别为风险。
+8. 原生 `select` 与 PrimeVue 输入框在同一筛选/表单面混用、黑色 `contrast` 标签滥用、导航与内容区视觉割裂必须进入 warning 证据。
 
 ### FR-013 验证等级
 
@@ -276,7 +286,9 @@ Vue3 默认模板必须支持 vue-i18n。框架生成的用户可见业务文案
 | 桌面/移动关键视口截图为空、主内容不可见或明显重叠 | warning，稳定后升级为 blocker | 首版先建立视觉证据和 baseline |
 | 基础键盘焦点、Dialog 开关、表单 label / aria 存在缺口 | warning | 首版纳入可访问性证据，不阻断普通生成 |
 | `src/views/` 或 `src/components/business/` 直接 import `primevue/*` | warning，后续可升级为 targeted blocker | 本轮先作为可观测治理边界，避免首版过度拦截 |
-| ESLint、Prettier、Playwright、husky、lint-staged、commitlint 未配置 | advisory | 本轮仅作为增强建议，不阻断普通生成 |
+| 新增可见中文未使用 `$i('中文')` 或稳定 i18n key | warning，后续可升级为 targeted blocker | 开发期先保留中文语义，避免 AI 伪造 key |
+| 原生 `select` 与 PrimeVue 输入框混用、`contrast` 标签滥用、导航/内容区视觉割裂 | warning | v1.3 首版作为视觉一致性证据，不阻断普通生成 |
+| ESLint、Prettier、Playwright、husky、lint-staged、commitlint 未配置 | advisory | 工程增强项不阻断普通生成 |
 
 ### FR-014 Web 与视觉测试规划
 
@@ -369,6 +381,14 @@ Given Web smoke 通过，When 执行视觉证据采集，Then 必须产出桌面
 
 Given 生成的默认验证页包含按钮、表格、弹窗和表单，When 执行基础交互检查，Then Dialog 开关、表单 label / aria、键盘焦点和基础控件可访问性问题必须进入 warning 级证据报告。
 
+### AC-011 开发期国际化执行
+
+Given AI 新增 Vue3 页面、组件或表单，When 输出用户可见中文，Then 新增文案必须使用 `$i('中文')` 或沿用当前文件已有稳定 i18n key 体系，不得直接写裸中文或擅自生成英文 key。
+
+### AC-012 视觉家族一致性
+
+Given AI 生成企业后台、管理台、工作台、表格、表单或审批流页面，When 页面包含导航、页头、badge、按钮、标签、筛选器或表单控件，Then 它们必须共享 `#1770e6` 语义高亮和同一 PrimeVue token 家族；原生 `select` 与 PrimeVue 控件混用、黑色 `contrast` 标签大面积同屏使用必须至少进入 warning 证据。
+
 ## 8. 迁移与兼容
 
 1. 现有 `enterprise-vue2` 用户不应被破坏。
@@ -387,7 +407,7 @@ Given 生成的默认验证页包含按钮、表格、弹窗和表单，When 执
 | style pack 与 CSS Variables 双轨漂移 | 高 | 要求 provider theme adapter、style pack、variables.css 使用同一 token 映射 |
 | 默认前端只生成文件但无法真实启动或渲染 | 高 | 将 Web smoke 白屏、fatal console error 和关键样式未生效设为 blocker |
 | 视觉测试过早采用严格 pixel diff 导致误报过多 | 中 | 首版以截图证据和结构化 warning 为主，baseline 稳定后再升级 blocker |
-| i18n、lint、Playwright 一次性全硬阻断导致落地成本过高 | 中 | 使用 blocker/warning/advisory 分级；工程增强项本轮不阻断普通生成 |
+| i18n、lint、Playwright 一次性全硬阻断导致落地成本过高 | 中 | 使用 blocker/warning/advisory 分级；`$i('中文')` 和视觉一致性先进入 warning，工程增强项本轮不阻断普通生成 |
 
 ## 10. 分阶段建议
 
@@ -421,7 +441,7 @@ Given 生成的默认验证页包含按钮、表格、弹窗和表单，When 执
 
 - 引入 ESLint/Prettier 推荐配置。
 - 引入 Vitest 基线。
-- 视项目成熟度引入 Playwright、husky、lint-staged、commitlint。
+- 引入 Playwright、husky、lint-staged、commitlint 的默认建议和依赖清单，但保持普通生成 advisory 等级。
 
 ## 11. 对抗评审记录
 

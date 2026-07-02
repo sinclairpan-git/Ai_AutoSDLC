@@ -102,6 +102,10 @@ def test_generation_constraint_artifacts_preserve_constraint_payloads(tmp_path) 
         "no-global-primevue-base-selector-rewrite",
         "unocss-first-page-layout",
         "base-components-before-business-usage",
+        "visual-family-consistency",
+        "no-native-form-control-mixing",
+        "visible-chinese-dev-i18n-wrapper",
+        "semantic-tag-severity-mapping",
     ]
     assert token_rules["disallowed_naked_values"] == [
         "hex-color",
@@ -117,6 +121,9 @@ def test_generation_constraint_artifacts_preserve_constraint_payloads(tmp_path) 
         ".p-tag",
         ".p-card",
         ".p-dialog",
+        "native-select",
+        "raw-visible-chinese-without-$i",
+        "severity=contrast",
     ]
     assert "override-ui-kernel-standard-body" in exceptions["forbidden_overrides"]
 

@@ -4,4 +4,15 @@ disallowed_naked_values:
 - rgba-color
 - shadow
 - spacing-or-size
+- '!important'
+- .p-button
+- .p-inputtext
+- .p-select
+- .p-inputtextarea
+- .p-tag
+- .p-card
+- .p-dialog
+- native-select
+- raw-visible-chinese-without-$i
+- severity=contrast
 forbid_inline_core_style: true

@@ -220,7 +220,7 @@ class TestApplyAdapter:
             assert "PrimeVue + @primeuix/themes + primeicons" in text
             assert "definePreset(Aura) + #1770e6 + darkModeSelector=false" in text
             assert "Vite + TypeScript + UnoCSS + CSS Variables" in text
-            assert "Vitest + Playwright + ESLint + Prettier" in text
+            assert "Vitest + Playwright + ESLint + Prettier + husky + lint-staged + commitlint" in text
             assert "企业后台" in text
             assert "不得被当成 Vue2 信号" in text
             assert "高级可选方案" in text

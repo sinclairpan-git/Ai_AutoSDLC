@@ -5639,8 +5639,12 @@ specs:
         ]
         assert provider_manifest["template_dev_dependencies"] == [
             "@antfu/eslint-config",
+            "@commitlint/cli",
+            "@commitlint/config-conventional",
             "@vitejs/plugin-vue",
             "eslint",
+            "husky",
+            "lint-staged",
             "playwright",
             "prettier",
             "typescript",
@@ -5695,7 +5699,7 @@ specs:
         assert (
             "recommended_tooling: `Vite + TypeScript + UnoCSS + CSS Variables + Pinia + "
             "Vue Router + Axios + vee-validate + zod + vue-i18n + Vitest + Playwright + "
-            "ESLint + Prettier`"
+            "ESLint + Prettier + husky + lint-staged + commitlint`"
             in report_text
         )
 

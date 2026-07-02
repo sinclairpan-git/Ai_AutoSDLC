@@ -19,8 +19,12 @@ template_runtime_dependencies:
 - zod
 template_dev_dependencies:
 - '@antfu/eslint-config'
+- '@commitlint/cli'
+- '@commitlint/config-conventional'
 - '@vitejs/plugin-vue'
 - eslint
+- husky
+- lint-staged
 - playwright
 - prettier
 - typescript

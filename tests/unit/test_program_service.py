@@ -5283,6 +5283,10 @@ def test_build_frontend_managed_delivery_apply_request_merges_builtin_primevue_d
     assert package_json["dependencies"]["zod"] == "latest"
     assert package_json["devDependencies"]["playwright"] == "latest"
     assert package_json["devDependencies"]["eslint"] == "latest"
+    assert package_json["devDependencies"]["husky"] == "latest"
+    assert package_json["devDependencies"]["lint-staged"] == "latest"
+    assert package_json["devDependencies"]["@commitlint/cli"] == "latest"
+    assert package_json["devDependencies"]["@commitlint/config-conventional"] == "latest"
     artifact_action = next(
         action
         for action in request.execution_view.action_items

@@ -6104,7 +6104,8 @@ def _frontend_solution_confirmation_tooling(
     ):
         return (
             "Vite + TypeScript + UnoCSS + CSS Variables + Pinia + Vue Router + "
-            "Axios + vee-validate + zod + vue-i18n + Vitest + Playwright + ESLint + Prettier"
+            "Axios + vee-validate + zod + vue-i18n + Vitest + Playwright + ESLint + "
+            "Prettier + husky + lint-staged + commitlint"
         )
     if snapshot.recommended_frontend_stack == "vue2":
         return "Vue 2.7 + vue-router 3 + Vuex 3 + SCSS"
