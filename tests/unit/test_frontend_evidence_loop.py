@@ -4,14 +4,19 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import yaml
 
 from ai_sdlc.core.frontend_evidence_loop import (
     CURRENT_FRONTEND_EVIDENCE_PATH,
     FrontendEvidenceCloseOptions,
+    FrontendEvidenceDoctorOptions,
+    FrontendEvidenceSkipOptions,
     FrontendEvidenceStartOptions,
     close_frontend_evidence_loop,
+    doctor_frontend_evidence_provider,
+    skip_frontend_evidence_loop,
     start_frontend_evidence_loop,
 )
 from ai_sdlc.core.implementation_models import (
@@ -148,7 +153,7 @@ def test_start_frontend_evidence_loop_blocks_missing_browser_gate_artifact(
 
     assert result.status == "blocked"
     assert "artifact is missing" in result.blocker
-    assert result.next_guidance.command == "ai-sdlc program browser-gate-probe --execute"
+    assert result.next_guidance.command == "ai-sdlc loop frontend-evidence doctor"
     assert not (
         tmp_path
         / ".ai-sdlc"
@@ -156,6 +161,179 @@ def test_start_frontend_evidence_loop_blocks_missing_browser_gate_artifact(
         / "frontend-evidence"
         / "fe-missing-artifact"
     ).exists()
+
+
+def test_doctor_prefers_existing_browser_artifact_over_playwright(
+    tmp_path: Path,
+) -> None:
+    _write_browser_gate_artifact(tmp_path, work_item_path="specs/demo-frontend")
+
+    result = doctor_frontend_evidence_provider(
+        FrontendEvidenceDoctorOptions(root=tmp_path)
+    )
+
+    assert result.status == "ready"
+    assert result.browser_artifact_available is True
+    assert result.recommended_provider == "external-artifact"
+    assert result.next_guidance.command == (
+        "ai-sdlc loop frontend-evidence start --wi specs/<work-item>"
+    )
+    playwright = next(
+        provider
+        for provider in result.providers
+        if provider.provider_id == "playwright"
+    )
+    assert playwright.selected is False
+
+
+def test_doctor_supports_explicit_codex_browser_without_playwright_push(
+    tmp_path: Path,
+) -> None:
+    result = doctor_frontend_evidence_provider(
+        FrontendEvidenceDoctorOptions(root=tmp_path, provider="codex-browser")
+    )
+
+    assert result.status == "needs_user"
+    assert result.recommended_provider == "codex-browser"
+    assert "Playwright" not in result.next_action
+    assert result.next_guidance.command == (
+        "ai-sdlc loop frontend-evidence start --wi specs/<work-item> "
+        "--artifact-path <browser-gate-artifact.yaml>"
+    )
+    codex_provider = next(
+        provider
+        for provider in result.providers
+        if provider.provider_id == "codex-browser"
+    )
+    assert codex_provider.selected is True
+    assert codex_provider.install_commands == []
+
+
+def test_doctor_does_not_mark_declared_playwright_ready_without_runtime(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "package.json").write_text(
+        json.dumps({"devDependencies": {"@playwright/test": "^1.45.0"}}),
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.core.frontend_evidence_loop.shutil.which") as which:
+        which.side_effect = lambda command: f"/usr/bin/{command}" if command in {
+            "node",
+            "npm",
+        } else None
+        result = doctor_frontend_evidence_provider(
+            FrontendEvidenceDoctorOptions(root=tmp_path, provider="playwright")
+        )
+
+    assert result.status == "needs_user"
+    assert result.recommended_provider == "playwright"
+    assert "browser-gate-probe" not in result.next_action
+    assert result.next_guidance.command == "npm install -D @playwright/test"
+    playwright = next(
+        provider for provider in result.providers if provider.provider_id == "playwright"
+    )
+    assert playwright.selected is True
+    assert playwright.available is False
+    assert playwright.node_available is True
+    assert playwright.package_manager_available is True
+    assert playwright.run_commands == []
+    assert "npm install -D @playwright/test" in playwright.install_commands
+    assert "package.json declares Playwright" in playwright.evidence
+
+
+def test_doctor_marks_playwright_ready_only_when_runtime_is_installed(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "package.json").write_text(
+        json.dumps({"devDependencies": {"@playwright/test": "^1.45.0"}}),
+        encoding="utf-8",
+    )
+    (tmp_path / "node_modules" / "playwright").mkdir(parents=True)
+
+    with patch("ai_sdlc.core.frontend_evidence_loop.shutil.which") as which:
+        which.side_effect = lambda command: f"/usr/bin/{command}" if command in {
+            "node",
+            "npm",
+        } else None
+        result = doctor_frontend_evidence_provider(
+            FrontendEvidenceDoctorOptions(root=tmp_path, provider="playwright")
+        )
+
+    assert result.status == "ready"
+    assert result.next_guidance.command == "ai-sdlc program browser-gate-probe --execute"
+    playwright = next(
+        provider for provider in result.providers if provider.provider_id == "playwright"
+    )
+    assert playwright.selected is True
+    assert playwright.available is True
+    assert playwright.run_commands == ["ai-sdlc program browser-gate-probe --execute"]
+    assert "node_modules/playwright" in playwright.evidence
+
+
+def test_skip_frontend_evidence_loop_requires_confirmation(tmp_path: Path) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+
+    result = skip_frontend_evidence_loop(
+        FrontendEvidenceSkipOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-skip-no-yes",
+            reason="Browser control is unavailable on this machine.",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "requires explicit confirmation" in result.result
+    assert not (
+        tmp_path / ".ai-sdlc" / "loops" / "frontend-evidence" / "fe-skip-no-yes"
+    ).exists()
+
+
+def test_skip_frontend_evidence_loop_closes_with_audit_without_browser_artifact(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    reason = "Company laptop cannot install browser plugins or launch controlled browsers."
+
+    result = skip_frontend_evidence_loop(
+        FrontendEvidenceSkipOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-skip-browser-unavailable",
+            reason=reason,
+            yes=True,
+            closed_by="tester",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.closed is True
+    assert result.skipped is True
+    assert result.loop_status == "closed"
+    assert result.skip_reason == reason
+    assert result.next_guidance.command == "ai-sdlc pr-review start"
+    loop_dir = (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "frontend-evidence"
+        / "fe-skip-browser-unavailable"
+    )
+    close_payload = json.loads(
+        (loop_dir / "frontend-evidence-close.json").read_text(encoding="utf-8")
+    )
+    report_payload = json.loads(
+        (loop_dir / "frontend-evidence-report.json").read_text(encoding="utf-8")
+    )
+    assert close_payload["skipped"] is True
+    assert close_payload["skip_reason"] == reason
+    assert close_payload["closed_by"] == "tester"
+    assert report_payload["status"] == "closed"
+    assert report_payload["overall_gate_status"] == "skipped"
+    assert "frontend_browser_e2e_skipped" in report_payload["advisory_reason_codes"]
 
 
 def test_start_frontend_evidence_loop_blocks_scope_mismatch(tmp_path: Path) -> None:

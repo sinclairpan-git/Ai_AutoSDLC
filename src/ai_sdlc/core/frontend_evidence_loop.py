@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
 from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -21,10 +23,14 @@ from ai_sdlc.core.frontend_evidence_models import (
     FrontendEvidenceCommandStatus,
     FrontendEvidenceCommandSummary,
     FrontendEvidenceCurrentPointer,
+    FrontendEvidenceDoctorOptions,
+    FrontendEvidenceDoctorResult,
     FrontendEvidenceInput,
     FrontendEvidenceNextGuidance,
+    FrontendEvidenceProviderCheck,
     FrontendEvidenceReceiptSnapshot,
     FrontendEvidenceReport,
+    FrontendEvidenceSkipOptions,
     FrontendEvidenceSnapshot,
     FrontendEvidenceStartOptions,
 )
@@ -78,6 +84,19 @@ from ai_sdlc.models.frontend_browser_gate import (
     BrowserProbeExecutionReceipt,
     BrowserQualityBundleMaterializationInput,
     BrowserQualityGateExecutionContext,
+)
+
+_SUPPORTED_BROWSER_PROVIDERS = {
+    "auto",
+    "codex-browser",
+    "browser-mcp",
+    "external-artifact",
+    "playwright",
+}
+_FRONTEND_EVIDENCE_SKIP_REASON_CODE = "frontend_browser_e2e_skipped"
+_FRONTEND_EVIDENCE_SKIP_RISK = (
+    "Frontend browser evidence was explicitly skipped because no local browser "
+    "control provider was available. Continue only with human risk acceptance."
 )
 
 
@@ -138,7 +157,7 @@ def start_frontend_evidence_loop(
                 f"{source_artifact_path or DEFAULT_FRONTEND_BROWSER_GATE_ARTIFACT_PATH.as_posix()}."
             ),
             loop_id=loop_id,
-            next_action="Run ai-sdlc program browser-gate-probe --execute.",
+            next_action="Run ai-sdlc loop frontend-evidence doctor.",
             artifacts=planned_refs,
         )
 
@@ -177,6 +196,252 @@ def start_frontend_evidence_loop(
         report,
         artifacts=artifacts.refs(root),
         result=_result_text_for_report(report),
+    )
+
+
+def doctor_frontend_evidence_provider(
+    options: FrontendEvidenceDoctorOptions,
+) -> FrontendEvidenceDoctorResult:
+    """Inspect browser E2E provider readiness without installing anything."""
+
+    root = options.root.resolve()
+    requested_provider = (options.provider or "auto").strip() or "auto"
+    if requested_provider not in _SUPPORTED_BROWSER_PROVIDERS:
+        provider_list = ", ".join(sorted(_SUPPORTED_BROWSER_PROVIDERS))
+        blocker = (
+            f"Unsupported frontend evidence browser provider: {requested_provider}. "
+            f"Supported providers: {provider_list}."
+        )
+        return FrontendEvidenceDoctorResult(
+            status=FrontendEvidenceCommandStatus.BLOCKED,
+            result="Frontend browser provider doctor is blocked.",
+            blocker=blocker,
+            next_action="Run ai-sdlc loop frontend-evidence doctor --provider auto.",
+            next_guidance=FrontendEvidenceNextGuidance(
+                command="ai-sdlc loop frontend-evidence doctor --provider auto",
+                reason=blocker,
+                requires_model=False,
+                writes_artifacts=False,
+                writes_code=False,
+                safety="blocked",
+            ),
+            requested_provider=requested_provider,
+        )
+
+    frontend_dir, frontend_dir_blocker = _resolve_frontend_doctor_dir(
+        root,
+        options.frontend_dir,
+    )
+    if frontend_dir_blocker:
+        return FrontendEvidenceDoctorResult(
+            status=FrontendEvidenceCommandStatus.BLOCKED,
+            result="Frontend browser provider doctor is blocked.",
+            blocker=frontend_dir_blocker,
+            next_action="Run ai-sdlc loop frontend-evidence doctor --frontend-dir <project-local-dir>.",
+            next_guidance=FrontendEvidenceNextGuidance(
+                command="ai-sdlc loop frontend-evidence doctor --frontend-dir <project-local-dir>",
+                reason=frontend_dir_blocker,
+                requires_model=False,
+                writes_artifacts=False,
+                writes_code=False,
+                safety="blocked",
+            ),
+            requested_provider=requested_provider,
+        )
+
+    artifact_path = (root / DEFAULT_FRONTEND_BROWSER_GATE_ARTIFACT_PATH).resolve()
+    artifact_available = artifact_path.is_file()
+    configured_provider = _configured_browser_provider()
+    providers = [
+        _external_artifact_provider_check(
+            root=root,
+            artifact_available=artifact_available,
+            requested_provider=requested_provider,
+        ),
+        _configured_browser_provider_check(
+            provider_id="codex-browser",
+            configured_provider=configured_provider,
+            requested_provider=requested_provider,
+        ),
+        _configured_browser_provider_check(
+            provider_id="browser-mcp",
+            configured_provider=configured_provider,
+            requested_provider=requested_provider,
+        ),
+        _playwright_provider_check(
+            root=root,
+            frontend_dir=frontend_dir,
+            browser=options.browser,
+            requested_provider=requested_provider,
+        ),
+    ]
+    recommended_provider = _recommended_provider(
+        providers,
+        requested_provider=requested_provider,
+    )
+    status = (
+        FrontendEvidenceCommandStatus.READY
+        if any(provider.available and provider.selected for provider in providers)
+        else FrontendEvidenceCommandStatus.NEEDS_USER
+    )
+    result = (
+        "Frontend browser evidence provider is ready."
+        if status == FrontendEvidenceCommandStatus.READY
+        else "Frontend browser evidence provider needs user selection or setup."
+    )
+    next_action = _doctor_next_action(
+        status=status,
+        recommended_provider=recommended_provider,
+        providers=providers,
+    )
+    return FrontendEvidenceDoctorResult(
+        status=status,
+        result=result,
+        blocker="" if status == FrontendEvidenceCommandStatus.READY else result,
+        next_action=next_action,
+        next_guidance=_doctor_next_guidance(
+            next_action=next_action,
+            status=status,
+            recommended_provider=recommended_provider,
+            providers=providers,
+        ),
+        browser_artifact_available=artifact_available,
+        browser_artifact_path=repo_relative_path(root, artifact_path),
+        requested_provider=requested_provider,
+        recommended_provider=recommended_provider,
+        providers=providers,
+    )
+
+
+def skip_frontend_evidence_loop(
+    options: FrontendEvidenceSkipOptions,
+) -> FrontendEvidenceCommandResult:
+    """Explicitly skip frontend browser evidence with local audit artifacts."""
+
+    root = options.root.resolve()
+    if not options.yes:
+        return _blocked_result(
+            "Pass --yes after accepting the risk of skipping frontend browser evidence.",
+            result="Frontend evidence skip requires explicit confirmation.",
+            next_action=(
+                "Run ai-sdlc loop frontend-evidence skip --wi specs/<work-item> "
+                '--reason "<why browser evidence cannot be collected>" --yes.'
+            ),
+        )
+    reason = " ".join(options.reason.strip().split())
+    if len(reason) < 12:
+        return _blocked_result(
+            "Pass --reason with a concrete explanation of why browser evidence cannot be collected.",
+            result="Frontend evidence skip requires a reason.",
+            next_action=(
+                "Run ai-sdlc loop frontend-evidence skip --wi specs/<work-item> "
+                '--reason "<why browser evidence cannot be collected>" --yes.'
+            ),
+        )
+
+    work_item_dir, work_item_blocker = resolve_work_item_dir(root, options.work_item)
+    try:
+        loop_id = resolve_loop_id(options.loop_id)
+    except ValueError as exc:
+        return _blocked_result(f"Invalid frontend-evidence loop id: {exc}")
+    artifacts = frontend_evidence_artifacts(root, loop_id)
+    planned_refs = artifacts.refs(root, include_close=True)
+    if work_item_blocker:
+        return _blocked_result(work_item_blocker, loop_id=loop_id, artifacts=planned_refs)
+    if artifacts.loop_run_path.is_file():
+        return _blocked_result(
+            "Frontend-evidence loop id already exists; choose a new --loop-id.",
+            loop_id=loop_id,
+            artifacts=planned_refs,
+        )
+
+    implementation_loop_id, implementation_report_path, implementation_blocker = (
+        _implementation_gate(
+            root,
+            options.implementation_loop_id,
+            work_item_id=work_item_dir.name,
+        )
+    )
+    if implementation_blocker:
+        return _blocked_result(
+            implementation_blocker,
+            loop_id=loop_id,
+            next_action=(
+                f"Run ai-sdlc loop implementation close --yes for {work_item_dir.name}."
+            ),
+            artifacts=planned_refs,
+        )
+
+    source_artifact_path = repo_relative_path(root, artifacts.close_path)
+    frontend_input = FrontendEvidenceInput(
+        loop_id=loop_id,
+        work_item_id=work_item_dir.name,
+        work_item_path=repo_relative_path(root, work_item_dir),
+        implementation_loop_id=implementation_loop_id,
+        implementation_report_path=implementation_report_path,
+        source_type="frontend-evidence-skip",
+        source_artifact_path=source_artifact_path,
+    )
+    snapshot = FrontendEvidenceSnapshot(
+        loop_id=loop_id,
+        work_item_id=work_item_dir.name,
+        gate_run_id="skipped",
+        source_artifact_path=source_artifact_path,
+        overall_gate_status="skipped",
+        execute_gate_state="skipped",
+        decision_reason=_FRONTEND_EVIDENCE_SKIP_REASON_CODE,
+        spec_dir=repo_relative_path(root, work_item_dir),
+        blocking_reason_codes=[],
+        advisory_reason_codes=[_FRONTEND_EVIDENCE_SKIP_REASON_CODE],
+        warnings=[_FRONTEND_EVIDENCE_SKIP_RISK, reason],
+        recommended_next_steps=[_local_pr_review_next_action()],
+    )
+    report = FrontendEvidenceReport(
+        loop_id=loop_id,
+        work_item_id=work_item_dir.name,
+        work_item_path=repo_relative_path(root, work_item_dir),
+        status=LoopStatus.CLOSED,
+        gate_run_id="skipped",
+        source_artifact_path=source_artifact_path,
+        overall_gate_status="skipped",
+        execute_gate_state="skipped",
+        decision_reason=_FRONTEND_EVIDENCE_SKIP_REASON_CODE,
+        blocker_count=0,
+        warning_count=2,
+        warnings=[_FRONTEND_EVIDENCE_SKIP_RISK, reason],
+        advisory_reason_codes=[_FRONTEND_EVIDENCE_SKIP_REASON_CODE],
+        next_action=_local_pr_review_next_action(),
+    )
+    loop_run = _build_skip_loop_run(
+        frontend_input=frontend_input,
+        report=report,
+        artifacts=artifacts,
+        root=root,
+    )
+    close = FrontendEvidenceClose(
+        loop_id=loop_id,
+        closed_by=options.closed_by.strip() or "local-user",
+        report_path=repo_relative_path(root, artifacts.report_json_path),
+        allow_warnings=True,
+        warning_count=report.warning_count,
+        accepted_warning_reason_codes=list(report.advisory_reason_codes),
+        skipped=True,
+        skip_reason=reason,
+        skip_risk_acknowledgement=_FRONTEND_EVIDENCE_SKIP_RISK,
+    )
+    _write_skip_artifacts(root, frontend_input, snapshot, report, loop_run, close, artifacts)
+    return _result_from_report(
+        report,
+        artifacts=artifacts.refs(root, include_close=True),
+        result="Frontend evidence loop skipped with explicit risk acceptance.",
+        status=FrontendEvidenceCommandStatus.READY,
+        closed=True,
+        skipped=True,
+        skip_reason=reason,
+        loop_status=LoopStatus.CLOSED,
+        next_action=_local_pr_review_next_action(),
+        allow_warnings=True,
+        snapshot=snapshot,
     )
 
 
@@ -301,6 +566,333 @@ def _implementation_gate(
             f"Implementation loop {loop_run.loop_id} does not require frontend evidence."
         )
     return loop_run.loop_id, repo_relative_path(root, artifacts.report_json_path), ""
+
+
+def _resolve_frontend_doctor_dir(
+    root: Path,
+    frontend_dir: str,
+) -> tuple[Path, str]:
+    raw_frontend_dir = frontend_dir.strip()
+    if raw_frontend_dir:
+        candidate = (root / raw_frontend_dir).resolve()
+        try:
+            candidate.relative_to(root)
+        except ValueError:
+            return root, "Frontend dir must stay inside the project root."
+        return candidate, ""
+    managed_frontend = root / "managed" / "frontend"
+    if (managed_frontend / "package.json").is_file():
+        return managed_frontend.resolve(), ""
+    return root, ""
+
+
+def _configured_browser_provider() -> str:
+    configured = os.environ.get("AI_SDLC_BROWSER_PROVIDER", "").strip()
+    if configured in {"codex-browser", "browser-mcp", "external-artifact", "playwright"}:
+        return configured
+    return ""
+
+
+def _external_artifact_provider_check(
+    *,
+    root: Path,
+    artifact_available: bool,
+    requested_provider: str,
+) -> FrontendEvidenceProviderCheck:
+    selected = requested_provider in {"auto", "external-artifact"} and artifact_available
+    return FrontendEvidenceProviderCheck(
+        provider_id="external-artifact",
+        available=artifact_available,
+        selected=selected,
+        evidence=[repo_relative_path(root, root / DEFAULT_FRONTEND_BROWSER_GATE_ARTIFACT_PATH)]
+        if artifact_available
+        else [],
+        run_commands=[
+            "ai-sdlc loop frontend-evidence start --wi specs/<work-item>",
+            "ai-sdlc loop frontend-evidence start --wi specs/<work-item> --artifact-path <browser-gate-artifact.yaml>",
+        ],
+        alternatives=[
+            "Use Codex browser control, a browser MCP/plugin, Cypress, Selenium, Playwright, or an enterprise E2E runner to produce a compatible browser gate artifact.",
+        ],
+        safety_notes=[
+            "This path does not install dependencies and only imports project-local evidence artifacts.",
+        ],
+    )
+
+
+def _configured_browser_provider_check(
+    *,
+    provider_id: str,
+    configured_provider: str,
+    requested_provider: str,
+) -> FrontendEvidenceProviderCheck:
+    requested = requested_provider == provider_id
+    configured = configured_provider == provider_id
+    selected = requested or (requested_provider == "auto" and configured)
+    available = configured
+    label = (
+        "Codex browser control"
+        if provider_id == "codex-browser"
+        else "browser MCP/plugin control"
+    )
+    evidence = [f"AI_SDLC_BROWSER_PROVIDER={configured_provider}"] if configured else []
+    if requested and not configured:
+        evidence.append(f"requested --provider {provider_id}")
+    return FrontendEvidenceProviderCheck(
+        provider_id=provider_id,
+        available=available,
+        selected=selected,
+        evidence=evidence,
+        run_commands=[
+            "Use your browser-capable agent/plugin to exercise the frontend and export a compatible browser gate artifact.",
+            "ai-sdlc loop frontend-evidence start --wi specs/<work-item> --artifact-path <browser-gate-artifact.yaml>",
+        ],
+        alternatives=[
+            "If this provider cannot export an artifact, run any existing local E2E harness and pass its adapted project-local artifact with --artifact-path.",
+            "Only choose Playwright installation when no existing browser provider is available.",
+        ],
+        safety_notes=[
+            f"{label} is treated as an external evidence provider; the frontend-evidence loop validates the resulting artifact instead of calling the provider directly.",
+        ],
+    )
+
+
+def _playwright_provider_check(
+    *,
+    root: Path,
+    frontend_dir: Path,
+    browser: str,
+    requested_provider: str,
+) -> FrontendEvidenceProviderCheck:
+    package_json = frontend_dir / "package.json"
+    package_manager = _detect_package_manager(frontend_dir)
+    package_manager_available = bool(package_manager and shutil.which(package_manager))
+    node_available = shutil.which("node") is not None
+    package_declared = _package_json_declares_playwright(package_json)
+    playwright_runtime_path = _playwright_runtime_path(root, frontend_dir)
+    available = node_available and playwright_runtime_path is not None
+    selected = requested_provider == "playwright" or (
+        requested_provider == "auto" and available
+    )
+    install_commands = _playwright_install_commands(package_manager, browser)
+    evidence: list[str] = []
+    if package_json.is_file():
+        evidence.append(repo_relative_path(root, package_json))
+    if package_declared:
+        evidence.append("package.json declares Playwright")
+    if playwright_runtime_path is not None:
+        evidence.append(repo_relative_path(root, playwright_runtime_path))
+    if node_available:
+        evidence.append("node executable found on PATH")
+    if package_manager_available:
+        evidence.append(f"{package_manager} executable found on PATH")
+    return FrontendEvidenceProviderCheck(
+        provider_id="playwright",
+        available=available,
+        selected=selected,
+        package_manager=package_manager,
+        package_manager_available=package_manager_available,
+        node_available=node_available,
+        frontend_dir=repo_relative_path(root, frontend_dir),
+        package_json_path=repo_relative_path(root, package_json) if package_json.is_file() else "",
+        evidence=evidence,
+        install_commands=install_commands,
+        run_commands=["ai-sdlc program browser-gate-probe --execute"] if available else [],
+        alternatives=[
+            "Use Codex browser control or a browser MCP/plugin if that capability already exists.",
+            "Import a compatible project-local browser gate artifact with --artifact-path.",
+        ],
+        safety_notes=[
+            "Playwright is optional when another browser-capable provider can produce compatible evidence.",
+            "Do not run OS-level browser dependency installation silently; require explicit user confirmation first.",
+        ],
+    )
+
+
+def _playwright_runtime_path(root: Path, frontend_dir: Path) -> Path | None:
+    current = frontend_dir.resolve()
+    resolved_root = root.resolve()
+    while True:
+        candidate = current / "node_modules" / "playwright"
+        if candidate.exists():
+            return candidate
+        if current == resolved_root:
+            return None
+        try:
+            current.relative_to(resolved_root)
+        except ValueError:
+            return None
+        parent = current.parent
+        if parent == current:
+            return None
+        current = parent
+
+
+def _detect_package_manager(frontend_dir: Path) -> str:
+    if (frontend_dir / "pnpm-lock.yaml").is_file():
+        return "pnpm"
+    if (frontend_dir / "yarn.lock").is_file():
+        return "yarn"
+    if (frontend_dir / "package-lock.json").is_file() or (
+        frontend_dir / "package.json"
+    ).is_file():
+        return "npm"
+    for candidate in ("pnpm", "yarn", "npm"):
+        if shutil.which(candidate):
+            return candidate
+    return ""
+
+
+def _package_json_declares_playwright(package_json: Path) -> bool:
+    if not package_json.is_file():
+        return False
+    try:
+        payload = json.loads(package_json.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(payload, dict):
+        return False
+    for dependency_key in ("dependencies", "devDependencies", "optionalDependencies"):
+        dependencies = payload.get(dependency_key)
+        if not isinstance(dependencies, dict):
+            continue
+        if "playwright" in dependencies or "@playwright/test" in dependencies:
+            return True
+    return False
+
+
+def _playwright_install_commands(package_manager: str, browser: str) -> list[str]:
+    resolved_browser = browser.strip() or "chromium"
+    if package_manager == "pnpm":
+        return [
+            "pnpm add -D @playwright/test",
+            f"pnpm exec playwright install {resolved_browser}",
+        ]
+    if package_manager == "yarn":
+        return [
+            "yarn add -D @playwright/test",
+            f"yarn playwright install {resolved_browser}",
+        ]
+    return [
+        "npm install -D @playwright/test",
+        f"npx playwright install {resolved_browser}",
+    ]
+
+
+def _recommended_provider(
+    providers: list[FrontendEvidenceProviderCheck],
+    *,
+    requested_provider: str,
+) -> str:
+    if requested_provider != "auto":
+        return requested_provider
+    for provider_id in (
+        "external-artifact",
+        "codex-browser",
+        "browser-mcp",
+        "playwright",
+    ):
+        if any(
+            provider.provider_id == provider_id and provider.available
+            for provider in providers
+        ):
+            return provider_id
+    return "external-artifact"
+
+
+def _doctor_next_action(
+    *,
+    status: FrontendEvidenceCommandStatus,
+    recommended_provider: str,
+    providers: list[FrontendEvidenceProviderCheck],
+) -> str:
+    recommended_check = next(
+        (
+            provider
+            for provider in providers
+            if provider.provider_id == recommended_provider
+        ),
+        None,
+    )
+    if status == FrontendEvidenceCommandStatus.READY:
+        if (
+            recommended_provider == "external-artifact"
+            and recommended_check is not None
+            and recommended_check.available
+        ):
+            return "Run ai-sdlc loop frontend-evidence start --wi specs/<work-item>."
+        if recommended_provider == "playwright":
+            return "Run ai-sdlc program browser-gate-probe --execute."
+        if recommended_provider in {"codex-browser", "browser-mcp"}:
+            return "Use the configured browser provider to produce a browser gate artifact, then run frontend-evidence start with --artifact-path."
+        return "Run ai-sdlc loop frontend-evidence start --wi specs/<work-item> --artifact-path <browser-gate-artifact.yaml>."
+    if recommended_provider in {"codex-browser", "browser-mcp", "external-artifact"}:
+        return "Use an available browser provider to produce a browser gate artifact, then run frontend-evidence start with --artifact-path."
+    return "Use an existing browser provider, or explicitly install Playwright after user confirmation."
+
+
+def _doctor_next_guidance(
+    *,
+    next_action: str,
+    status: FrontendEvidenceCommandStatus,
+    recommended_provider: str,
+    providers: list[FrontendEvidenceProviderCheck],
+) -> FrontendEvidenceNextGuidance:
+    evidence = [
+        evidence_item
+        for provider in providers
+        for evidence_item in provider.evidence
+    ]
+    alternatives: list[str] = []
+    for provider in providers:
+        alternatives.extend(provider.alternatives)
+        if provider.selected or recommended_provider == "playwright":
+            alternatives.extend(provider.install_commands)
+    alternatives.append(
+        "If browser evidence cannot be collected on this machine, run "
+        'ai-sdlc loop frontend-evidence skip --wi specs/<work-item> --reason "<why>" --yes.'
+    )
+    return FrontendEvidenceNextGuidance(
+        command=_command_from_next_action(next_action)
+        or _doctor_guidance_command(
+            recommended_provider,
+            status=status,
+            providers=providers,
+        ),
+        reason=(
+            f"Recommended browser evidence provider: {recommended_provider}. "
+            "Existing browser control or imported artifacts are preferred before optional Playwright installation."
+        ),
+        requires_model=False,
+        writes_artifacts=status != FrontendEvidenceCommandStatus.BLOCKED,
+        writes_code=False,
+        safety="safe_read_only" if status == FrontendEvidenceCommandStatus.READY else "needs_user",
+        evidence=_unique_strings(evidence),
+        alternatives=_unique_strings(alternatives),
+    )
+
+
+def _doctor_guidance_command(
+    recommended_provider: str,
+    *,
+    status: FrontendEvidenceCommandStatus,
+    providers: list[FrontendEvidenceProviderCheck],
+) -> str:
+    if recommended_provider == "playwright":
+        if status == FrontendEvidenceCommandStatus.READY:
+            return "ai-sdlc program browser-gate-probe --execute"
+        playwright = next(
+            (
+                provider
+                for provider in providers
+                if provider.provider_id == "playwright"
+            ),
+            None,
+        )
+        if playwright is not None and playwright.install_commands:
+            return playwright.install_commands[0]
+        return "ai-sdlc loop frontend-evidence doctor --provider playwright"
+    return "ai-sdlc loop frontend-evidence start --wi specs/<work-item> --artifact-path <browser-gate-artifact.yaml>"
 
 
 def _browser_gate_freshness_blocker(
@@ -808,6 +1400,38 @@ def _write_artifacts(
     )
 
 
+def _write_skip_artifacts(
+    root: Path,
+    frontend_input: FrontendEvidenceInput,
+    snapshot: FrontendEvidenceSnapshot,
+    report: FrontendEvidenceReport,
+    loop_run: LoopRun,
+    close: FrontendEvidenceClose,
+    artifacts: FrontendEvidenceArtifacts,
+) -> None:
+    store = LoopArtifactStore(root)
+    store.create_loop_run_dir(
+        frontend_input.loop_id,
+        loop_type=LoopType.FRONTEND_EVIDENCE.value,
+    )
+    store.write_json_artifact(artifacts.input_path, frontend_input)
+    store.write_json_artifact(artifacts.snapshot_path, snapshot)
+    store.write_json_artifact(artifacts.report_json_path, report)
+    store.write_markdown_artifact(
+        artifacts.report_md_path,
+        _render_report_markdown(report),
+    )
+    store.write_json_artifact(artifacts.close_path, close)
+    store.write_json_artifact(artifacts.loop_run_path, loop_run)
+    store.write_json_artifact(
+        artifacts.pointer_path,
+        FrontendEvidenceCurrentPointer(
+            loop_id=frontend_input.loop_id,
+            loop_run_path=repo_relative_path(root, artifacts.loop_run_path),
+        ),
+    )
+
+
 def _write_close(
     root: Path,
     loop_run: LoopRun,
@@ -892,6 +1516,41 @@ def _build_loop_run(
     )
 
 
+def _build_skip_loop_run(
+    *,
+    frontend_input: FrontendEvidenceInput,
+    report: FrontendEvidenceReport,
+    artifacts: FrontendEvidenceArtifacts,
+    root: Path,
+) -> LoopRun:
+    output_artifacts = [
+        repo_relative_path(root, artifacts.input_path),
+        repo_relative_path(root, artifacts.snapshot_path),
+        repo_relative_path(root, artifacts.report_json_path),
+        repo_relative_path(root, artifacts.report_md_path),
+        repo_relative_path(root, artifacts.close_path),
+    ]
+    return LoopRun(
+        loop_id=frontend_input.loop_id,
+        loop_type=LoopType.FRONTEND_EVIDENCE,
+        status=LoopStatus.CLOSED,
+        work_item_id=frontend_input.work_item_id,
+        current_round=1,
+        rounds=[
+            LoopRound(
+                round_number=1,
+                input_artifacts=[frontend_input.implementation_report_path],
+                output_artifacts=output_artifacts,
+                command=["ai-sdlc", "loop", "frontend-evidence", "skip"],
+                status=LoopStatus.CLOSED,
+                result=LoopStatus.CLOSED,
+                next_action=report.next_action,
+            )
+        ],
+        next_action=report.next_action,
+    )
+
+
 def _result_from_report(
     report: FrontendEvidenceReport,
     *,
@@ -899,11 +1558,13 @@ def _result_from_report(
     result: str,
     status: FrontendEvidenceCommandStatus | None = None,
     closed: bool = False,
+    skipped: bool = False,
     dry_run: bool = False,
     loop_status: LoopStatus | str = "",
     next_action: str = "",
     blocker: str = "",
     allow_warnings: bool = False,
+    skip_reason: str = "",
     snapshot: FrontendEvidenceSnapshot | None = None,
 ) -> FrontendEvidenceCommandResult:
     resolved_status = status or _command_status_for_loop_status(report.status)
@@ -923,8 +1584,10 @@ def _result_from_report(
         blocker_count=report.blocker_count,
         warning_count=report.warning_count,
         closed=closed,
+        skipped=skipped,
         dry_run=dry_run,
         allow_warnings=allow_warnings,
+        skip_reason=skip_reason,
         blocker=blocker,
         next_action=resolved_next_action,
         next_guidance=_next_guidance_for_result(
@@ -946,6 +1609,8 @@ def _result_from_report(
             warning_count=report.warning_count,
             report_path=_artifact_path(artifacts, "frontend-evidence-report-json"),
             closed=closed,
+            skipped=skipped,
+            skip_reason=skip_reason,
         ),
     )
 
@@ -1187,10 +1852,15 @@ __all__ = [
     "FrontendEvidenceCloseOptions",
     "FrontendEvidenceCommandResult",
     "FrontendEvidenceCommandStatus",
+    "FrontendEvidenceDoctorOptions",
+    "FrontendEvidenceDoctorResult",
     "FrontendEvidenceInput",
     "FrontendEvidenceReport",
+    "FrontendEvidenceSkipOptions",
     "FrontendEvidenceSnapshot",
     "FrontendEvidenceStartOptions",
     "close_frontend_evidence_loop",
+    "doctor_frontend_evidence_provider",
+    "skip_frontend_evidence_loop",
     "start_frontend_evidence_loop",
 ]

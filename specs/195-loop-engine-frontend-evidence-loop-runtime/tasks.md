@@ -20,6 +20,7 @@ Batch 1: formal baseline freeze and linkage
 Batch 2: frontend-evidence models, store, and ingestion runtime
 Batch 3: close gate, CLI, and status/list
 Batch 4: docs, constraints, final regression, PR review
+Batch 5: provider-first browser evidence readiness guidance
 ```
 
 ---
@@ -167,6 +168,72 @@ Batch 4: docs, constraints, final regression, PR review
   - `uv run ai-sdlc program truth sync --execute --yes`
   - `uv run ai-sdlc workitem close-check --wi specs/195-loop-engine-frontend-evidence-loop-runtime`
 
+---
+
+## Batch 5：provider-first browser evidence readiness guidance
+
+### Task 5.1 新增 frontend-evidence provider doctor
+
+- **任务编号**：T51
+- **状态**：done
+- **优先级**：P0
+- **依赖**：T32
+- **文件**：src/ai_sdlc/core/frontend_evidence_models.py, src/ai_sdlc/core/frontend_evidence_loop.py, src/ai_sdlc/cli/loop_cmd.py, tests/unit/test_frontend_evidence_loop.py, tests/integration/test_cli_loop.py
+- **可并行**：否
+- **验收标准**：
+  1. `ai-sdlc loop frontend-evidence doctor --provider auto` 是只读命令，不调用模型、不写业务代码、不安装依赖
+  2. provider 候选至少覆盖 `external-artifact`、`codex-browser`、`browser-mcp`、`playwright`
+  3. auto 模式必须优先已有 artifact 或已配置 browser provider，不得把 Playwright 硬编码为唯一推荐
+  4. 显式 `--provider codex-browser` 或 `--provider browser-mcp` 时，输出用该 provider 产生 artifact 后 `start --artifact-path` 的路径，不展示为必须安装 Playwright
+  5. 显式 `--provider playwright` 时，按 npm/pnpm/yarn 输出具体安装命令，但仍不得自动执行安装
+- **验证**：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/integration/test_cli_loop.py -q`
+
+### Task 5.2 同步前端 loop PRD、计划、README 和约束语义
+
+- **任务编号**：T52
+- **状态**：done
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：README.md, specs/195-loop-engine-frontend-evidence-loop-runtime/spec.md, specs/195-loop-engine-frontend-evidence-loop-runtime/plan.md, specs/195-loop-engine-frontend-evidence-loop-runtime/tasks.md, tests/unit/test_verify_constraints.py
+- **可并行**：否
+- **验收标准**：
+  1. PRD 明确 Codex browser、browser MCP/plugin、external artifact 和 Playwright 都是可选 provider，不把任何一个写成唯一前提
+  2. README 的新手路径先执行 `frontend-evidence doctor`，再根据 provider 输出进入 browser gate 或 artifact 导入
+  3. 文档不出现尚未实现的自动安装命令作为普通用户主路径
+  4. verify constraints 覆盖 `frontend-evidence doctor` 和 no hard Playwright promise
+- **验证**：`uv run pytest tests/unit/test_verify_constraints.py -q`、`uv run ai-sdlc verify constraints`
+
+### Task 5.3 规划显式安装 provider 的后续闭环
+
+- **任务编号**：T53
+- **状态**：planned
+- **优先级**：P1
+- **依赖**：T51
+- **文件**：后续 work item
+- **可并行**：是
+- **验收标准**：
+  1. 若实现 `install-provider`，必须要求用户显式 `--yes`，不得静默安装
+  2. 只能在项目/受控 frontend 目录中修改 package manifest 和 lockfile，不得污染全局 Node 或系统浏览器目录
+  3. Linux/system dependency 安装必须单独确认，不得自动 sudo
+  4. 安装失败必须明确指出不可用 provider、失败命令和可替代 provider
+- **验证**：后续 work item 独立 E2E。
+
+### Task 5.4 新增无法采集浏览器证据时的显式 skip 路径
+
+- **任务编号**：T54
+- **状态**：done
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：src/ai_sdlc/core/frontend_evidence_models.py, src/ai_sdlc/core/frontend_evidence_loop.py, src/ai_sdlc/cli/loop_cmd.py, src/ai_sdlc/core/loop_status.py, tests/unit/test_frontend_evidence_loop.py, tests/integration/test_cli_loop.py, scripts/loop_e2e_release_gate.py, README.md
+- **可并行**：否
+- **验收标准**：
+  1. `ai-sdlc loop frontend-evidence skip --wi specs/<work-item> --reason <text> --yes` 可在无 browser gate artifact 时关闭 frontend-evidence loop
+  2. skip 必须要求 closed same-work-item implementation loop、明确 reason 和 `--yes`
+  3. skip 不得把证据状态伪装为 passed，必须记录 `skipped=true`、`skip_reason` 和风险接受说明
+  4. `loop status --type frontend-evidence` 必须展示 skipped 与 skip reason，并允许继续 local PR review
+  5. release E2E 必须覆盖缺 browser artifact 时可显式 skip，不硬卡
+- **验证**：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/integration/test_cli_loop.py -q`、`uv run python scripts/loop_e2e_release_gate.py`
+
 ## 全局约束
 
 1. 本 PR 只交付 `frontend-evidence` loop，不重新实现 frontend browser gate。
@@ -174,4 +241,6 @@ Batch 4: docs, constraints, final regression, PR review
 3. 本 loop 不得修改业务代码或前端代码。
 4. 不得把 GitHub、远端 PR diff、远端 preview URL 作为必需前提。
 5. 不得把 Vue3 PrimeVue、企业内网、本地文件或 GitHub Pages 任一场景硬编码为唯一合法路径。
-6. 每批完成后必须更新 `task-execution-log.md` 和 handoff。
+6. 不得把 Playwright 硬编码为唯一浏览器 E2E provider；已有 Codex browser、browser MCP/plugin、企业 E2E 或 external artifact 必须可走通。
+7. 若用户无法采集浏览器证据，frontend-evidence 必须允许显式 skip 并记录风险接受，不得永久阻塞后续 local PR review。
+8. 每批完成后必须更新 `task-execution-log.md` 和 handoff。

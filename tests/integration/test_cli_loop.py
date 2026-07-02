@@ -1184,6 +1184,112 @@ def test_loop_frontend_evidence_start_needs_fix_exits_nonzero(
     assert start_payload["blocker_count"] >= 1
 
 
+def test_loop_frontend_evidence_doctor_respects_codex_browser_provider(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".ai-sdlc").mkdir()
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(
+            app,
+            [
+                "loop",
+                "frontend-evidence",
+                "doctor",
+                "--provider",
+                "codex-browser",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)
+    assert payload["status"] == "needs_user"
+    assert payload["recommended_provider"] == "codex-browser"
+    assert "Playwright" not in payload["next_action"]
+    codex_provider = next(
+        provider
+        for provider in payload["providers"]
+        if provider["provider_id"] == "codex-browser"
+    )
+    assert codex_provider["selected"] is True
+    assert codex_provider["install_commands"] == []
+
+
+def test_loop_frontend_evidence_doctor_playwright_provider_shows_install_commands(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".ai-sdlc").mkdir()
+    (tmp_path / "package.json").write_text(
+        json.dumps({"scripts": {"test": "vitest"}}),
+        encoding="utf-8",
+    )
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(
+            app,
+            [
+                "loop",
+                "frontend-evidence",
+                "doctor",
+                "--provider",
+                "playwright",
+            ],
+        )
+
+    assert result.exit_code == 0
+    assert "Recommended provider: playwright" in result.output
+    assert "optional install: npm install -D @playwright/test" in result.output
+    assert "optional install: npx playwright install chromium" in result.output
+
+
+def test_loop_frontend_evidence_skip_json_closes_with_audit(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_frontend_work_item(tmp_path)
+    _write_closed_frontend_implementation(tmp_path, work_item)
+    reason = "User cannot install browser plugins or run a controlled browser locally."
+
+    with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
+        skip = runner.invoke(
+            app,
+            [
+                "loop",
+                "frontend-evidence",
+                "skip",
+                "--wi",
+                "specs/demo-frontend",
+                "--implementation-loop-id",
+                "impl-frontend-cli",
+                "--loop-id",
+                "fe-cli-skip",
+                "--reason",
+                reason,
+                "--yes",
+                "--json",
+            ],
+        )
+        status = runner.invoke(
+            app,
+            ["loop", "status", "--type", "frontend-evidence", "--json"],
+        )
+
+    assert skip.exit_code == 0
+    skip_payload = json.loads(skip.output)
+    assert skip_payload["closed"] is True
+    assert skip_payload["skipped"] is True
+    assert skip_payload["skip_reason"] == reason
+    assert skip_payload["next_action"] == "Run ai-sdlc pr-review start."
+
+    assert status.exit_code == 0
+    status_payload = json.loads(status.output)
+    frontend = status_payload["current_loop"]["frontend_evidence"]
+    assert frontend["closed"] is True
+    assert frontend["skipped"] is True
+    assert frontend["skip_reason"] == reason
+    assert status_payload["next_guidance"]["command"] == "ai-sdlc pr-review start"
+
+
 def test_python_module_help_fallback_lists_loop() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "ai_sdlc", "--help"],

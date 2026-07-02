@@ -114,6 +114,17 @@ def test_posix_offline_smoke_workflow_covers_macos_linux_bundle_install_and_cli_
     assert "--install-log" in workflow
 
 
+def test_loop_e2e_release_gate_covers_browser_probe_runner_changes() -> None:
+    workflow_path = _WORKFLOWS_DIR / "loop-e2e-release-gate.yml"
+
+    assert workflow_path.is_file()
+
+    workflow = workflow_path.read_text(encoding="utf-8")
+
+    assert "scripts/loop_e2e_release_gate.py" in workflow
+    assert "scripts/frontend_browser_gate_probe_runner.mjs" in workflow
+
+
 def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
     workflow_path = _WORKFLOWS_DIR / "release-artifact-smoke.yml"
 

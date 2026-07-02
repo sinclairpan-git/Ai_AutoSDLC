@@ -101,6 +101,7 @@ After implementation close, run the frontend-evidence loop when the next action
 points to frontend evidence:
 
 ```bash
+ai-sdlc loop frontend-evidence doctor --provider auto
 ai-sdlc program browser-gate-probe --execute
 ai-sdlc loop frontend-evidence start --wi specs/<work-item>
 ai-sdlc loop status --type frontend-evidence
@@ -113,13 +114,49 @@ input link, normalized evidence snapshot, JSON report, and Markdown report. It
 requires a closed same-work-item implementation loop that explicitly needs
 frontend evidence. The loop consumes local browser gate artifacts from
 `.ai-sdlc/memory/frontend-browser-gate/latest.yaml` or an explicit project-local
-`--artifact-path`; it does not run the browser gate itself, does not call any
-model service, does not modify application code, and does not assume GitHub, CI,
-or a remote preview URL. If browser evidence is missing or stale, rerun
-`ai-sdlc program browser-gate-probe --execute`. If the browser gate reports
-blockers or missing evidence, `close --yes` exits nonzero. If only advisory
-warnings remain, close requires `--allow-warnings` so the warning acceptance is
-recorded before the next loop, `local-pr-review`.
+`--artifact-path`; it does not call any model service, does not modify
+application code, and does not assume GitHub, CI, or a remote preview URL.
+
+Use `ai-sdlc loop frontend-evidence doctor --provider auto` before collecting
+browser evidence when the local browser E2E capability is unclear. The doctor is
+read-only and provider-first: existing browser gate artifacts, explicitly
+configured Codex browser control, browser MCP/plugin control, or external
+project-local artifacts are preferred before optional Playwright setup. If you
+already have Codex/browser-plugin control, use that provider to exercise the
+frontend and export a compatible browser gate artifact, then run:
+
+```bash
+ai-sdlc loop frontend-evidence start --wi specs/<work-item> --artifact-path <browser-gate-artifact.yaml>
+```
+
+If you explicitly choose Playwright, inspect concrete package-manager commands
+without installing anything:
+
+```bash
+ai-sdlc loop frontend-evidence doctor --provider playwright
+```
+
+Only after the doctor shows Playwright is the chosen path should you run the
+displayed npm/pnpm/yarn commands yourself or through a future explicit
+`--yes` installer. If browser evidence is missing, `start` points back to the
+doctor instead of assuming Playwright is required.
+
+If the user cannot install a browser plugin, cannot use Codex/browser-MCP
+control, cannot run local browser E2E, and cannot import an enterprise/browser
+artifact, do not hard-block the SDLC. Use an explicit skip with a concrete
+reason:
+
+```bash
+ai-sdlc loop frontend-evidence skip --wi specs/<work-item> --reason "Browser control is unavailable on this machine" --yes
+```
+
+Skip is not treated as a browser-quality pass. It writes local audit artifacts
+with `skipped=true`, `skip_reason`, and a risk acknowledgement, then moves the
+next action to `local-pr-review`. If the browser gate reports blockers or
+missing evidence and the user has a viable browser provider, `close --yes` still
+exits nonzero. If only advisory warnings remain, close requires
+`--allow-warnings` so the warning acceptance is recorded before the next loop,
+`local-pr-review`.
 
 ### Local PR Review Loop
 
