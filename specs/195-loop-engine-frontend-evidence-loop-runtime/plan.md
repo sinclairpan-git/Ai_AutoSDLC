@@ -4,7 +4,7 @@
 
 ## 概述
 
-交付 `frontend-evidence` 一等闭环。该 loop 位于 implementation close 之后、local PR review 之前，先通过 provider-first doctor 判断当前机器可用的浏览器证据来源，再消费本地前端 browser gate artifact，生成稳定 Loop Engine artifact，并通过 close gate 保证前端质量证据不会丢失或被误判。
+交付 `frontend-evidence` 一等闭环。该 loop 位于 implementation close 之后、local PR review 之前，先通过 provider-first doctor 判断当前机器可用的浏览器证据来源，再消费本地前端 browser gate artifact，生成稳定 Loop Engine artifact，并通过 close gate 保证前端质量证据不会丢失或被误判。若用户无法安装浏览器插件、无法控制浏览器且无法生成兼容 artifact，必须允许显式 skip 并记录风险接受，不能硬卡流程。
 
 ## 技术背景
 
@@ -13,7 +13,7 @@
 **存储**：`.ai-sdlc/loops/frontend-evidence/<loop-id>/` 和 `.ai-sdlc/loops/frontend-evidence/current-frontend-evidence.json`。
 **测试**：pytest unit/integration、ruff、mypy、verify constraints、workitem close-check。
 **目标平台**：macOS、Linux、Windows PowerShell/cmd；不依赖 CI 网络访问模型。
-**约束**：不调用模型、不调用云端 PR review、不写业务/前端代码、不硬编码 GitHub 或远端 preview，不把 Vue3 PrimeVue 当成唯一合法前端栈，不把 Playwright 当成唯一合法浏览器 provider。
+**约束**：不调用模型、不调用云端 PR review、不写业务/前端代码、不硬编码 GitHub 或远端 preview，不把 Vue3 PrimeVue 当成唯一合法前端栈，不把 Playwright 当成唯一合法浏览器 provider，不因本地无法控制浏览器而永久阻塞 SDLC。
 
 ## 宪章检查
 
@@ -24,6 +24,7 @@
 | 小白可执行 | human 输出包含 Result/Next/Blocker/Artifacts，不要求用户理解内部 schema |
 | 高级可自动化 | 所有命令支持 `--json`，字段稳定且无 Rich 文本 |
 | 适配多场景 | artifact contract 记录 provider/style/source，不依赖 GitHub、远端 URL、单一前端栈或单一浏览器 provider |
+| 不硬卡用户 | 无浏览器控制能力时允许显式 skip，记录风险但继续 local PR review |
 
 ## 项目结构
 
@@ -78,7 +79,7 @@ tests/unit/test_verify_constraints.py
 
 ### Phase 3：CLI 与统一 status/list
 
-**目标**：注册 `ai-sdlc loop frontend-evidence doctor/start/status/close`，扩展 `loop status/list --type frontend-evidence`。
+**目标**：注册 `ai-sdlc loop frontend-evidence doctor/start/status/close/skip`，扩展 `loop status/list --type frontend-evidence`。
 **产物**：`loop_cmd.py`、`loop_status.py`、integration tests。
 **验证方式**：`uv run pytest tests/unit/test_loop_status.py tests/integration/test_cli_loop.py -q`。
 **回退方式**：移除 Typer 子命令和 status/list 分支。
@@ -106,6 +107,13 @@ tests/unit/test_verify_constraints.py
 **验证方式**：`doctor --provider auto` 优先已有 artifact/已配置 provider；`doctor --provider codex-browser` 和 `--provider browser-mcp` 输出 artifact 导入路径；`doctor --provider playwright` 才展示具体 npm/pnpm/yarn 安装命令。
 **回退方式**：无写入；用户可改用其他 provider 或显式 `--artifact-path`。
 
+### 工作流 A2：无法采集浏览器证据时显式跳过
+
+**范围**：用户无法安装浏览器插件、无法控制浏览器、无法运行 browser E2E，也无法导入企业 E2E artifact。
+**影响范围**：只写 `.ai-sdlc/loops/frontend-evidence/<loop-id>/` 的 skip audit artifacts，不写业务代码，不调用模型。
+**验证方式**：`skip --reason ... --yes` 写入 closed loop、`frontend-evidence-close.json` 记录 `skipped=true` 和 reason，`loop status --type frontend-evidence` 展示 skipped 并指向 local PR review。
+**回退方式**：后续用户可重新运行 browser gate 并创建新的 frontend-evidence loop 覆盖 current pointer。
+
 ### 工作流 B：质量阻塞修复
 
 **范围**：browser gate 返回 blocked/incomplete 或 artifact 不可信。
@@ -129,6 +137,7 @@ tests/unit/test_verify_constraints.py
 | quality blocker fail-closed | unit tests blocked/incomplete/advisory | close command exit code |
 | status/list | loop_status unit tests | CLI human output snapshots |
 | provider doctor | frontend_evidence unit tests | CLI doctor human/JSON |
+| explicit skip | frontend_evidence unit tests | CLI skip JSON + release E2E |
 | docs/constraints | verify constraints unit tests | `uv run ai-sdlc verify constraints` |
 
 ## 开放问题
@@ -138,6 +147,7 @@ tests/unit/test_verify_constraints.py
 | 是否在本 loop 内主动运行 browser gate | 已决：不主动运行；doctor 做 provider-first readiness，start 只消费 artifact | 无 |
 | 是否支持非 latest artifact | 已决：P0 支持显式 `--artifact-path` | 无 |
 | 是否硬推 Playwright | 已决：不得硬推；Codex browser、browser MCP、external artifact 优先于可选 Playwright 安装 | 无 |
+| 无法控制浏览器时是否硬卡 | 已决：不得硬卡；提供显式 skip + audit artifact + local PR review 下一步 | 无 |
 | 是否支持其他未来证据格式 | P2 留 source contract，不在本 PR 实现多格式解析 | 不阻塞 P0/P1 |
 
 ## 实施顺序建议

@@ -218,6 +218,22 @@ Batch 5: provider-first browser evidence readiness guidance
   4. 安装失败必须明确指出不可用 provider、失败命令和可替代 provider
 - **验证**：后续 work item 独立 E2E。
 
+### Task 5.4 新增无法采集浏览器证据时的显式 skip 路径
+
+- **任务编号**：T54
+- **状态**：done
+- **优先级**：P0
+- **依赖**：T51
+- **文件**：src/ai_sdlc/core/frontend_evidence_models.py, src/ai_sdlc/core/frontend_evidence_loop.py, src/ai_sdlc/cli/loop_cmd.py, src/ai_sdlc/core/loop_status.py, tests/unit/test_frontend_evidence_loop.py, tests/integration/test_cli_loop.py, scripts/loop_e2e_release_gate.py, README.md
+- **可并行**：否
+- **验收标准**：
+  1. `ai-sdlc loop frontend-evidence skip --wi specs/<work-item> --reason <text> --yes` 可在无 browser gate artifact 时关闭 frontend-evidence loop
+  2. skip 必须要求 closed same-work-item implementation loop、明确 reason 和 `--yes`
+  3. skip 不得把证据状态伪装为 passed，必须记录 `skipped=true`、`skip_reason` 和风险接受说明
+  4. `loop status --type frontend-evidence` 必须展示 skipped 与 skip reason，并允许继续 local PR review
+  5. release E2E 必须覆盖缺 browser artifact 时可显式 skip，不硬卡
+- **验证**：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/integration/test_cli_loop.py -q`、`uv run python scripts/loop_e2e_release_gate.py`
+
 ## 全局约束
 
 1. 本 PR 只交付 `frontend-evidence` loop，不重新实现 frontend browser gate。
@@ -226,4 +242,5 @@ Batch 5: provider-first browser evidence readiness guidance
 4. 不得把 GitHub、远端 PR diff、远端 preview URL 作为必需前提。
 5. 不得把 Vue3 PrimeVue、企业内网、本地文件或 GitHub Pages 任一场景硬编码为唯一合法路径。
 6. 不得把 Playwright 硬编码为唯一浏览器 E2E provider；已有 Codex browser、browser MCP/plugin、企业 E2E 或 external artifact 必须可走通。
-7. 每批完成后必须更新 `task-execution-log.md` 和 handoff。
+7. 若用户无法采集浏览器证据，frontend-evidence 必须允许显式 skip 并记录风险接受，不得永久阻塞后续 local PR review。
+8. 每批完成后必须更新 `task-execution-log.md` 和 handoff。

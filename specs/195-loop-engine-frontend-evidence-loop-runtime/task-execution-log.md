@@ -422,6 +422,79 @@
 - 当前批次 worktree disposition 状态：待 GitHub macOS/windows-latest workflow evidence 刷新
 - 是否继续下一批：否；等待 PR #113 checks
 
+### Batch 2026-07-02-002 | Frontend evidence explicit skip for unavailable browser control
+
+#### 2.1 批次范围
+
+- 覆盖任务：`T54`
+- 覆盖阶段：PR #113 release gate follow-up；frontend loop 不硬卡补强
+- 改动范围：`README.md`、`specs/195-loop-engine-frontend-evidence-loop-runtime/spec.md`、`plan.md`、`tasks.md`、`src/ai_sdlc/core/frontend_evidence_models.py`、`src/ai_sdlc/core/frontend_evidence_loop.py`、`src/ai_sdlc/core/loop_status.py`、`src/ai_sdlc/cli/loop_cmd.py`、`src/ai_sdlc/core/verify_constraints.py`、`tests/unit/test_frontend_evidence_loop.py`、`tests/integration/test_cli_loop.py`、`tests/unit/test_verify_constraints.py`、`scripts/loop_e2e_release_gate.py`
+
+#### 2.2 任务来源
+
+- 用户要求：如果用户没办法安装浏览器插件控制浏览器，前端 loop 必须可以跳过，不能硬卡。
+- 风险摘要：
+  - 仅提供 provider doctor 仍可能让没有任何 browser control 能力的用户停在 frontend-evidence loop。
+  - 直接跳过若无审计，会把质量证据缺失误读为通过。
+
+#### 2.3 修订内容
+
+- 新增 `ai-sdlc loop frontend-evidence skip --wi specs/<work-item> --reason <text> --yes`。
+- skip 要求 closed same-work-item implementation loop、明确 reason 和 `--yes`。
+- skip 不要求 browser gate artifact，不调用模型、不安装依赖、不写业务代码。
+- skip 成功后写入 `frontend-evidence-input/snapshot/report/close/loop-run/current pointer`，其中 close artifact 记录：
+  - `skipped=true`
+  - `skip_reason`
+  - `skip_risk_acknowledgement`
+  - `closed_by`
+- `loop status --type frontend-evidence` 展示 skipped 和 skip reason，下一步进入 local PR review。
+- release E2E 新增缺 browser artifact 时显式 skip 的断言。
+
+#### 2.4 统一验证命令
+
+- **验证画像**：`code-change`
+- `V1`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py -q`
+- `V2`：`uv run ruff check src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py src/ai_sdlc/core/verify_constraints.py tests/unit/test_frontend_evidence_loop.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py scripts/loop_e2e_release_gate.py`
+- `V3`：`uv run mypy src/ai_sdlc/core/frontend_evidence_models.py src/ai_sdlc/core/frontend_evidence_loop.py src/ai_sdlc/core/loop_status.py src/ai_sdlc/cli/loop_cmd.py`
+- `V4`：`uv run ai-sdlc verify constraints`
+- `V5`：`uv run python scripts/loop_e2e_release_gate.py`
+- `V6`：`uv run pytest tests/unit/test_frontend_evidence_loop.py tests/integration/test_cli_loop.py tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py -q`
+- `V7`：`git diff --check`
+
+#### 2.5 验证结果
+
+- focused pytest：206 passed
+- final focused pytest + workflow tests：214 passed
+- ruff：PASS
+- mypy：PASS，4 source files
+- verify constraints：PASS，no BLOCKERs
+- local clean-project Loop E2E：PASS，artifact root `.ai-sdlc/artifacts/loop-e2e-release-gate/loop-e2e-20260702T013108Z`
+- diff check：PASS
+
+#### 2.6 代码审查结论（Mandatory）
+
+- 宪章/规格对齐：符合；跳过路径是显式风险接受，不把前端证据缺失伪装为 passed。
+- 代码质量：skip 使用同一 implementation gate，持久化 closed loop 和 close artifact，status/list 可读 skipped。
+- 测试质量：新增 unit、CLI integration、release E2E 覆盖无 browser control 时不硬卡。
+- 结论：可提交并推送到 PR #113，等待 GitHub checks 重新验证。
+
+#### 2.7 任务/计划同步状态（Mandatory）
+
+- `tasks.md` 同步状态：新增 T54 done。
+- `related_plan` 同步状态：新增 Workflow A2 explicit skip。
+- 关联 branch/worktree disposition 计划：继续使用 `codex/loop-e2e-release-gate` 和 PR #113。
+
+#### 2.8 归档后动作
+
+- 下一步提交、推送，并让 PR #113 重新跑 Loop E2E Release Gate。
+- **验证画像**：`code-change`
+- **改动范围**：见 2.1。
+- **已完成 git 提交**：否（本 marker 将随 skip follow-up commit 一起落盘）
+- **提交哈希**：`pending`
+- 当前批次 branch disposition 状态：待提交并推送到 PR #113
+- 当前批次 worktree disposition 状态：待 GitHub macOS/windows-latest workflow evidence 刷新
+- 是否继续下一批：否；等待 PR #113 checks
+
 ### Batch 2026-07-01-013 | Codex review accepted warning reason codes remediation
 
 #### 13.1 批次范围

@@ -157,6 +157,9 @@ class FrontendEvidenceClose(LoopArtifactModel):
     allow_warnings: bool = False
     warning_count: int = 0
     accepted_warning_reason_codes: list[str] = Field(default_factory=list)
+    skipped: bool = False
+    skip_reason: str = ""
+    skip_risk_acknowledgement: str = ""
     next_loop_type: LoopType = LoopType.LOCAL_PR_REVIEW
 
 
@@ -194,6 +197,8 @@ class FrontendEvidenceCommandSummary(BaseModel):
     warning_count: int = 0
     report_path: str = ""
     closed: bool = False
+    skipped: bool = False
+    skip_reason: str = ""
 
 
 class FrontendEvidenceNextGuidance(BaseModel):
@@ -229,8 +234,10 @@ class FrontendEvidenceCommandResult(BaseModel):
     blocker_count: int = 0
     warning_count: int = 0
     closed: bool = False
+    skipped: bool = False
     dry_run: bool = False
     allow_warnings: bool = False
+    skip_reason: str = ""
     blocker: str = ""
     next_action: str = ""
     next_guidance: FrontendEvidenceNextGuidance = Field(
@@ -302,6 +309,19 @@ class FrontendEvidenceDoctorOptions:
 
 
 @dataclass(frozen=True, slots=True)
+class FrontendEvidenceSkipOptions:
+    """Inputs for explicitly skipping frontend browser evidence."""
+
+    root: Path
+    work_item: str = ""
+    implementation_loop_id: str = ""
+    loop_id: str = ""
+    reason: str = ""
+    yes: bool = False
+    closed_by: str = "local-user"
+
+
+@dataclass(frozen=True, slots=True)
 class FrontendEvidenceCloseOptions:
     """Inputs for closing a frontend-evidence loop."""
 
@@ -330,6 +350,7 @@ __all__ = [
     "FrontendEvidenceProviderCheck",
     "FrontendEvidenceReceiptSnapshot",
     "FrontendEvidenceReport",
+    "FrontendEvidenceSkipOptions",
     "FrontendEvidenceSnapshot",
     "FrontendEvidenceStartOptions",
 ]

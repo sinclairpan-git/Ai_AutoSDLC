@@ -7,7 +7,7 @@
 
 ## 范围
 
-本工作项交付 Loop Engine 的 `frontend-evidence` 一等闭环。它把已有前端浏览器门禁证据纳入 `.ai-sdlc/loops/frontend-evidence/<loop-id>/`，并提供 `doctor/start/status/close`、统一 `loop status/list --type frontend-evidence`、小白友好输出、JSON 输出和关闭门禁。
+本工作项交付 Loop Engine 的 `frontend-evidence` 一等闭环。它把已有前端浏览器门禁证据纳入 `.ai-sdlc/loops/frontend-evidence/<loop-id>/`，并提供 `doctor/start/status/close/skip`、统一 `loop status/list --type frontend-evidence`、小白友好输出、JSON 输出和关闭门禁。
 
 本工作项不重新实现前端生成、不把浏览器探测固定为 Playwright、不固定 Vue/PrimeVue/GitHub/远端预览站点，也不要求 CI 调用模型或运行浏览器。浏览器证据可以来自已有本地命令 `ai-sdlc program browser-gate-probe --execute`、Codex browser 控制能力、浏览器 MCP/插件、企业内网 E2E 工具或用户显式导入的项目内 artifact；本 loop 只做 provider readiness guidance、artifact ingestion 和确定性验收。
 
@@ -42,6 +42,22 @@
 3. **Given** 用户已有浏览器 MCP/插件，**When** 用户执行 `frontend-evidence doctor --provider browser-mcp`，**Then** 系统提示用该插件产生或转换项目内 artifact，并保留 `start --artifact-path` 兜底。
 4. **Given** 用户没有任何可用 provider 且明确选择 Playwright，**When** 用户执行 `frontend-evidence doctor --provider playwright`，**Then** 系统按项目 package manager 输出 npm/pnpm/yarn 的具体安装命令，但不得自动执行安装。
 5. **Given** 用户选择不安装任何浏览器 runtime，**When** 用户已有企业内网 E2E、Cypress、Selenium、手工截图验收或其他 agent artifact，**Then** 系统必须允许显式导入项目内兼容 artifact；不能因为不是 Playwright 而拒绝。
+6. **Given** 用户无法安装浏览器插件、无法启用 Codex/browser MCP 控制浏览器、也无法生成兼容 artifact，**When** 用户明确执行 `frontend-evidence skip --reason ... --yes`，**Then** 系统必须写入风险接受 artifact 并允许进入 local PR review，不得把用户硬卡在 frontend-evidence loop。
+
+### 用户故事 1B：无法采集浏览器证据时可显式跳过（优先级：P0）
+
+作为无法安装浏览器插件或无法控制浏览器的普通用户，我希望前端证据 loop 可以显式跳过并继续后续 PR review，而不是因为本机环境限制无法完成 SDLC。
+
+**优先级说明**：Loop 提供质量提升，但不能把本地环境能力缺口变成不可恢复阻塞；跳过必须可审计，不能伪装成通过。
+
+**独立测试**：在没有 browser gate artifact 的仓库中执行 `ai-sdlc loop frontend-evidence skip --wi specs/<work-item> --reason "..." --yes --json`，验证 loop closed、`skipped=true`、close artifact 记录 reason，下一步为 `ai-sdlc pr-review start`。
+
+**验收场景**：
+
+1. **Given** implementation loop 已关闭且要求前端证据，**When** 用户执行 skip 且没有 `--yes`，**Then** 系统返回 fail-readable，不写 artifact。
+2. **Given** 用户执行 skip 但没有提供具体 `--reason`，**When** CLI 校验输入，**Then** 系统返回 fail-readable，不写 artifact。
+3. **Given** 用户确认无法采集浏览器证据并执行 `skip --reason ... --yes`，**When** 命令成功，**Then** 系统写入 `frontend-evidence-input/snapshot/report/close/loop-run/current pointer`，其中 close artifact 记录 `skipped=true`、`skip_reason`、确认人和风险说明。
+4. **Given** frontend-evidence loop 已 skip closed，**When** 用户执行 `loop status --type frontend-evidence`，**Then** 输出必须显示 skipped 状态和 skip reason，下一步指向 local PR review。
 
 ### 用户故事 2：质量阻塞 fail-closed（优先级：P0）
 
@@ -111,6 +127,7 @@
 - current pointer 指向缺失或 malformed artifact。
 - Codex/browser MCP/企业 E2E provider 存在但 CLI 无法自动探测，只能由用户显式 `--provider` 或导入 artifact 声明。
 - Playwright 未安装、Node/package manager 缺失、浏览器 runtime 缺失，但用户已有其他 browser provider。
+- 用户既不能安装浏览器插件，也不能使用 Codex/browser MCP 或企业 E2E artifact，此时必须允许显式 skip，不得硬卡。
 
 ## 需求
 
@@ -136,6 +153,10 @@
 - **FR-018**：当用户显式选择 `codex-browser` 或 `browser-mcp` 时，系统必须说明该 provider 负责产生浏览器证据 artifact，`frontend-evidence` 负责导入和验收 artifact，不得要求安装 Playwright。
 - **FR-019**：当用户显式选择 `playwright` 时，系统必须输出 npm/pnpm/yarn 对应的具体安装命令和浏览器安装命令；自动安装必须另有显式确认，不得静默执行。
 - **FR-020**：缺失 browser gate artifact 时，`start` 必须优先引导用户执行 `frontend-evidence doctor`，避免把 provider 缺失、artifact 未导入和 Playwright 缺失混为一类问题。
+- **FR-021**：系统必须提供 `ai-sdlc loop frontend-evidence skip --wi <work-item> --reason <text> --yes`，用于用户无法采集浏览器证据时显式跳过。
+- **FR-022**：`skip` 必须要求 closed same-work-item implementation loop、明确 `--reason` 和 `--yes`；缺任一条件不得写入 artifact。
+- **FR-023**：`skip` 成功后必须写入 close artifact，记录 `skipped=true`、`skip_reason`、`skip_risk_acknowledgement`、`closed_by`，并把 loop 状态置为 `closed`、下一步指向 local PR review。
+- **FR-024**：`loop status/list --type frontend-evidence` 必须展示 skipped 与 skip reason，避免把跳过误读为浏览器证据通过。
 
 ### 关键实体
 
@@ -146,6 +167,7 @@
 - **FrontendEvidenceCurrentPointer**：当前 frontend-evidence loop 指针。
 - **FrontendEvidenceProviderCheck**：只读 provider readiness 结果，包括 provider id、是否可用、是否被选中、安装命令、运行命令、替代路径和安全提示。
 - **FrontendEvidenceDoctorResult**：provider-first 诊断结果，包括 requested provider、recommended provider、artifact 可用性、provider 候选和 next guidance。
+- **FrontendEvidenceSkipOptions**：显式跳过输入，包括 work item、implementation loop、skip reason、确认人和 `--yes`。
 
 ## 成功标准
 
@@ -156,7 +178,8 @@
 - **SC-003**：`tests/unit/test_loop_status.py` 覆盖 `loop status/list --type frontend-evidence` current、history 和 malformed pointer。
 - **SC-004**：`tests/unit/test_verify_constraints.py` 覆盖 README/CLI/constraint surface。
 - **SC-005**：`tests/unit/test_frontend_evidence_loop.py` 与 `tests/integration/test_cli_loop.py` 覆盖 provider-first doctor，不硬推 Playwright，并覆盖显式 Playwright 安装命令展示。
-- **SC-006**：focused regression、ruff、mypy、`uv run ai-sdlc verify constraints`、`workitem close-check`、Codex review、required checks 全部通过后才合并。
+- **SC-006**：`tests/unit/test_frontend_evidence_loop.py`、`tests/integration/test_cli_loop.py` 和 release E2E 覆盖 skip 路径，证明无浏览器控制能力时不会硬卡。
+- **SC-007**：focused regression、ruff、mypy、`uv run ai-sdlc verify constraints`、`workitem close-check`、Codex review、required checks 全部通过后才合并。
 
 ---
 frontend_evidence_class: framework_capability

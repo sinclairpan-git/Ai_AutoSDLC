@@ -9,11 +9,12 @@ working_set_snapshot:
   plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/plan.md
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
-  context_summary: 'Goal: Finish Loop E2E release gate follow-up for provider-first
-    frontend evidence guidance | State: Implemented read-only frontend-evidence doctor
-    with provider auto/codex-browser/browser-mcp/external-artifact/playwright; updated
-    spec/plan/tasks/README/constraints/tests/E2E script; local E2E passed at .ai-sdlc/artifacts/loop-e2e-release-gate/loop-e2e-20260702T011620Z.
-    | Next: Commit provider-first frontend evidence follow-up on codex/loop-e2e-release-gate,
+  context_summary: 'Goal: Ensure frontend evidence loop does not hard-block users
+    without browser control capability | State: Implemented ai-sdlc loop frontend-evidence
+    skip with required --reason and --yes; skip writes closed frontend-evidence artifacts
+    with skipped=true and skip_reason, status/list disclose skipped, README/spec/plan/tasks/constraints/tests/E2E
+    updated. Local E2E passed at .ai-sdlc/artifacts/loop-e2e-release-gate/loop-e2e-20260702T013108Z.
+    | Next: Commit explicit frontend evidence skip follow-up on codex/loop-e2e-release-gate,
     push to PR #113, then monitor Loop E2E Release Gate.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''

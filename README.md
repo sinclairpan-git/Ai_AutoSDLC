@@ -139,10 +139,24 @@ ai-sdlc loop frontend-evidence doctor --provider playwright
 Only after the doctor shows Playwright is the chosen path should you run the
 displayed npm/pnpm/yarn commands yourself or through a future explicit
 `--yes` installer. If browser evidence is missing, `start` points back to the
-doctor instead of assuming Playwright is required. If the browser gate reports
-blockers or missing evidence, `close --yes` exits nonzero. If only advisory
-warnings remain, close requires `--allow-warnings` so the warning acceptance is
-recorded before the next loop, `local-pr-review`.
+doctor instead of assuming Playwright is required.
+
+If the user cannot install a browser plugin, cannot use Codex/browser-MCP
+control, cannot run local browser E2E, and cannot import an enterprise/browser
+artifact, do not hard-block the SDLC. Use an explicit skip with a concrete
+reason:
+
+```bash
+ai-sdlc loop frontend-evidence skip --wi specs/<work-item> --reason "Browser control is unavailable on this machine" --yes
+```
+
+Skip is not treated as a browser-quality pass. It writes local audit artifacts
+with `skipped=true`, `skip_reason`, and a risk acknowledgement, then moves the
+next action to `local-pr-review`. If the browser gate reports blockers or
+missing evidence and the user has a viable browser provider, `close --yes` still
+exits nonzero. If only advisory warnings remain, close requires
+`--allow-warnings` so the warning acceptance is recorded before the next loop,
+`local-pr-review`.
 
 ### Local PR Review Loop
 

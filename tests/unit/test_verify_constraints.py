@@ -388,10 +388,12 @@ def test_195_feature_contract_surfaces_cover_frontend_evidence_loop_runtime() ->
     assert "ai-sdlc loop frontend-evidence doctor --provider auto" in doc_tokens
     assert "ai-sdlc loop frontend-evidence start" in doc_tokens
     assert "ai-sdlc loop frontend-evidence close --yes" in doc_tokens
+    assert "ai-sdlc loop frontend-evidence skip" in doc_tokens
     assert "ai-sdlc program browser-gate-probe --execute" in doc_tokens
     assert "Codex browser" in doc_tokens
     assert "browser MCP" in doc_tokens
     assert "optional Playwright" in doc_tokens
+    assert "skipped=true" in doc_tokens
     assert "does not assume GitHub" in doc_tokens
     assert "--allow-warnings" in doc_tokens
 

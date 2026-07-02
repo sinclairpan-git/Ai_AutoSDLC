@@ -11,9 +11,11 @@ from ai_sdlc.core.frontend_evidence_loop import (
     CURRENT_FRONTEND_EVIDENCE_PATH,
     FrontendEvidenceCloseOptions,
     FrontendEvidenceDoctorOptions,
+    FrontendEvidenceSkipOptions,
     FrontendEvidenceStartOptions,
     close_frontend_evidence_loop,
     doctor_frontend_evidence_provider,
+    skip_frontend_evidence_loop,
     start_frontend_evidence_loop,
 )
 from ai_sdlc.core.implementation_models import (
@@ -204,6 +206,71 @@ def test_doctor_supports_explicit_codex_browser_without_playwright_push(
     )
     assert codex_provider.selected is True
     assert codex_provider.install_commands == []
+
+
+def test_skip_frontend_evidence_loop_requires_confirmation(tmp_path: Path) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+
+    result = skip_frontend_evidence_loop(
+        FrontendEvidenceSkipOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-skip-no-yes",
+            reason="Browser control is unavailable on this machine.",
+        )
+    )
+
+    assert result.status == "blocked"
+    assert "requires explicit confirmation" in result.result
+    assert not (
+        tmp_path / ".ai-sdlc" / "loops" / "frontend-evidence" / "fe-skip-no-yes"
+    ).exists()
+
+
+def test_skip_frontend_evidence_loop_closes_with_audit_without_browser_artifact(
+    tmp_path: Path,
+) -> None:
+    work_item = _write_work_item(tmp_path)
+    _write_closed_implementation_loop(tmp_path, work_item)
+    reason = "Company laptop cannot install browser plugins or launch controlled browsers."
+
+    result = skip_frontend_evidence_loop(
+        FrontendEvidenceSkipOptions(
+            root=tmp_path,
+            work_item="specs/demo-frontend",
+            loop_id="fe-skip-browser-unavailable",
+            reason=reason,
+            yes=True,
+            closed_by="tester",
+        )
+    )
+
+    assert result.status == "ready"
+    assert result.closed is True
+    assert result.skipped is True
+    assert result.loop_status == "closed"
+    assert result.skip_reason == reason
+    assert result.next_guidance.command == "ai-sdlc pr-review start"
+    loop_dir = (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "frontend-evidence"
+        / "fe-skip-browser-unavailable"
+    )
+    close_payload = json.loads(
+        (loop_dir / "frontend-evidence-close.json").read_text(encoding="utf-8")
+    )
+    report_payload = json.loads(
+        (loop_dir / "frontend-evidence-report.json").read_text(encoding="utf-8")
+    )
+    assert close_payload["skipped"] is True
+    assert close_payload["skip_reason"] == reason
+    assert close_payload["closed_by"] == "tester"
+    assert report_payload["status"] == "closed"
+    assert report_payload["overall_gate_status"] == "skipped"
+    assert "frontend_browser_e2e_skipped" in report_payload["advisory_reason_codes"]
 
 
 def test_start_frontend_evidence_loop_blocks_scope_mismatch(tmp_path: Path) -> None:

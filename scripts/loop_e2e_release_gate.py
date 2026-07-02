@@ -556,6 +556,32 @@ def run_scenario(h: E2EHarness) -> None:
         and fe_missing.parsed_json.get("next_guidance", {}).get("command")
         == "ai-sdlc loop frontend-evidence doctor",
     )
+    fe_skip = h.run(
+        "frontend_evidence_skip_browser_unavailable",
+        [
+            "loop",
+            "frontend-evidence",
+            "skip",
+            "--wi",
+            "specs/demo-loop-e2e",
+            "--implementation-loop-id",
+            "impl-e2e",
+            "--loop-id",
+            "fe-e2e-skip",
+            "--reason",
+            "Clean E2E user cannot install a browser plugin or control a browser.",
+            "--yes",
+            "--json",
+        ],
+        parse_json=True,
+    )
+    h.assert_true(
+        "Frontend-evidence can be skipped with explicit risk acceptance",
+        fe_skip.parsed_json is not None
+        and fe_skip.parsed_json.get("closed") is True
+        and fe_skip.parsed_json.get("skipped") is True
+        and "pr-review" in str(fe_skip.parsed_json.get("next_action", "")),
+    )
     fe_doctor_codex = h.run(
         "frontend_evidence_doctor_codex_browser",
         ["loop", "frontend-evidence", "doctor", "--provider", "codex-browser", "--json"],
