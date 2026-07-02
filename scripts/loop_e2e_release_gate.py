@@ -767,7 +767,9 @@ def run_scenario(
         "Local PR review closes cleanly",
         review_close.parsed_json is not None
         and review_close.parsed_json.get("status") == "closed"
-        and review_close.parsed_json.get("verdict") in {"clean", "fully_clean"},
+        and review_close.parsed_json.get("verdict")
+        in {"clean", "fully_clean", "risk_accepted"}
+        and review_close.parsed_json.get("unresolved_required", 0) == 0,
     )
     review_attest = h.run(
         "pr_review_attest",
