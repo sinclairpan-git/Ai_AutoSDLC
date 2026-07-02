@@ -256,7 +256,7 @@ class E2EHarness:
             "- Implementation loop: missing task evidence blocks close; recorded evidence closes.",
             "- Frontend-evidence loop: missing browser artifact blocks start; valid artifact closes.",
             "- Windows frontend provider path: no Codex/no local Playwright, doctor-recommended Playwright install, Chromium smoke.",
-            "- Windows Playwright evidence path: installed Playwright runs browser-gate-probe, materializes browser evidence, and closes frontend-evidence.",
+            "- Windows Playwright evidence path: installed Playwright runs browser-gate-probe, handles first-run baseline when needed, materializes browser evidence, and closes frontend-evidence.",
             "- No-install frontend path: provider tooling unavailable, explicit skip closes with audit instead of hard-blocking.",
             "- Local PR review loop: mock adversarial finding forces fix/rerun; clean rerun closes and attests.",
             "",
@@ -1097,7 +1097,28 @@ def _run_windows_playwright_generated_frontend_evidence_loop(h: E2EHarness) -> N
         probe.returncode == 0,
     )
     artifact_path = h.project_root / ".ai-sdlc" / "memory" / "frontend-browser-gate" / "latest.yaml"
-    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8")) or {}
+    payload = _load_browser_gate_payload(artifact_path)
+    if payload.get("overall_gate_status") != "passed":
+        h.assert_true(
+            "First Playwright browser gate probe can request visual baseline",
+            payload.get("overall_gate_status") == "incomplete"
+            and payload.get("probe_runtime_state") == "incomplete",
+        )
+        h.run(
+            "frontend_browser_gate_baseline_execute_after_playwright_probe",
+            ["program", "browser-gate-baseline", "--execute", "--yes"],
+            note="Materialize the first-run visual regression baseline requested by browser-gate-probe.",
+        )
+        rerun_probe = h.run(
+            "frontend_browser_gate_probe_rerun_after_visual_baseline",
+            ["program", "browser-gate-probe", "--execute"],
+            note="Re-run browser-gate-probe after baseline materialization.",
+        )
+        h.assert_true(
+            "Browser gate probe rerun exits successfully after baseline",
+            rerun_probe.returncode == 0,
+        )
+        payload = _load_browser_gate_payload(artifact_path)
     h.assert_true(
         "Playwright browser gate probe materializes a passed artifact",
         isinstance(payload, dict)
@@ -1120,6 +1141,13 @@ def _run_windows_playwright_generated_frontend_evidence_loop(h: E2EHarness) -> N
     h.result.assertions.append(
         "Playwright install files cleaned after generated frontend evidence closes"
     )
+
+
+def _load_browser_gate_payload(path: Path) -> dict[str, Any]:
+    payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(payload, dict):
+        raise AssertionError(f"browser gate artifact is not a mapping: {path}")
+    return payload
 
 
 def _write_playwright_probe_truth(
