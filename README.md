@@ -4,21 +4,24 @@ AI-native SDLC automation framework — a Python CLI tool and rule file set for 
 
 ## Release And Current Source
 
-`v0.9.1` is the current published framework release. This release makes Vue3
-`public-primevue` / PrimeVue + `@primeuix/themes` the ordinary first
-recommendation for frontend solution confirmation, restores the advanced
-multi-solution choice path for experienced users, and keeps explicit `vue2` /
-`enterprise-vue2` selection available for built-in enterprise component-library
-users. It also preserves the Windows command-entry hardening from `v0.8.10`, so
-new PowerShell, cmd, and Git Bash terminals resolve the latest installed CLI
-instead of stale Python `Scripts` entries.
+`v0.9.2` is the current published framework release. This release introduces
+the Loop Engineering runtime for requirement freeze, design-contract checks,
+implementation evidence, frontend evidence, and local adversarial PR review.
+The loop path is local-first, evidence-backed, beginner-readable, and adaptable
+to local worktrees, patch files, staged or unstaged changes, and future SCM PR
+adapters instead of assuming GitHub-only review.
 
-If you want the published release, install `v0.9.1`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
+It keeps Vue3 `public-primevue` / PrimeVue + `@primeuix/themes` as the ordinary
+first recommendation for frontend solution confirmation, preserves explicit
+`vue2` / `enterprise-vue2` compatibility, and retains the Windows command-entry
+hardening from `v0.8.10`.
 
-- Current release notes: `docs/releases/v0.9.1.md`
-- Windows offline bundle: `ai-sdlc-offline-0.9.1-windows-amd64.zip`
-- macOS offline bundle: `ai-sdlc-offline-0.9.1-macos-arm64.tar.gz`
-- Linux offline bundle: `ai-sdlc-offline-0.9.1-linux-amd64.tar.gz`
+If you want the published release, install `v0.9.2`. If you are evaluating newer unreleased behavior beyond this tag, prefer the source-checkout path below.
+
+- Current release notes: `docs/releases/v0.9.2.md`
+- Windows offline bundle: `ai-sdlc-offline-0.9.2-windows-amd64.zip`
+- macOS offline bundle: `ai-sdlc-offline-0.9.2-macos-arm64.tar.gz`
+- Linux offline bundle: `ai-sdlc-offline-0.9.2-linux-amd64.tar.gz`
 - Offline packaging details: `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
 - Windows CI smoke evidence: `.github/workflows/windows-offline-smoke.yml` uploads `windows-offline-smoke-evidence` with `install.log`, `help.txt`, `adapter-status.txt`, `run-dry-run.txt`, and `bundle-manifest.json`
@@ -289,29 +292,29 @@ return to the application project root before running project commands such as
 macOS Apple Silicon:
 
 ```bash
-curl -L -o ai-sdlc-offline-0.9.1-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.9.1/ai-sdlc-offline-0.9.1-macos-arm64.tar.gz"
-tar xzf ai-sdlc-offline-0.9.1-macos-arm64.tar.gz
-cd ai-sdlc-offline-0.9.1-macos-arm64
+curl -L -o ai-sdlc-offline-0.9.2-macos-arm64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.9.2/ai-sdlc-offline-0.9.2-macos-arm64.tar.gz"
+tar xzf ai-sdlc-offline-0.9.2-macos-arm64.tar.gz
+cd ai-sdlc-offline-0.9.2-macos-arm64
 ./install_offline.sh --upgrade-existing
 ```
 
 Linux x64:
 
 ```bash
-curl -L -o ai-sdlc-offline-0.9.1-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.9.1/ai-sdlc-offline-0.9.1-linux-amd64.tar.gz"
-tar xzf ai-sdlc-offline-0.9.1-linux-amd64.tar.gz
-cd ai-sdlc-offline-0.9.1-linux-amd64
+curl -L -o ai-sdlc-offline-0.9.2-linux-amd64.tar.gz "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.9.2/ai-sdlc-offline-0.9.2-linux-amd64.tar.gz"
+tar xzf ai-sdlc-offline-0.9.2-linux-amd64.tar.gz
+cd ai-sdlc-offline-0.9.2-linux-amd64
 ./install_offline.sh --upgrade-existing
 ```
 
 Windows PowerShell:
 
 ```powershell
-$BundleName = "ai-sdlc-offline-0.9.1-windows-amd64"
+$BundleName = "ai-sdlc-offline-0.9.2-windows-amd64"
 $PackageName = "$BundleName.zip"
 $PackageDir = (Get-Location).Path
 $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
-Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.9.1/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
+Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.9.2/$PackageName" -OutFile (Join-Path $PackageDir $PackageName)
 New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
 Expand-Archive -LiteralPath (Join-Path $PackageDir $PackageName) -DestinationPath $ExtractRoot -Force
 Set-Location (Join-Path $ExtractRoot $BundleName)
@@ -484,7 +487,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 
 ## Documentation
 
-- Current release notes: `docs/releases/v0.9.1.md`
+- Current release notes: `docs/releases/v0.9.2.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
