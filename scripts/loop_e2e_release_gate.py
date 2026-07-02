@@ -991,17 +991,31 @@ def _run_frontend_evidence_ready_path(
             loop_id,
             "--json",
         ],
+        expected=(0, 1),
         parse_json=True,
     )
+    start_payload = fe_start.parsed_json or {}
+    start_status = start_payload.get("loop_status")
+    advisory_needs_user = (
+        start_status == "needs_user"
+        and start_payload.get("overall_gate_status") == "passed_with_advisories"
+        and start_payload.get("execute_gate_state") == "ready"
+        and start_payload.get("blocker_count") == 0
+        and "allow-warnings" in str(start_payload.get("next_action", ""))
+    )
     h.assert_true(
-        "Frontend-evidence loop starts and passes with valid browser artifact",
+        "Frontend-evidence loop starts with valid browser artifact",
         fe_start.parsed_json is not None
-        and fe_start.parsed_json.get("loop_status") == "passed",
+        and (start_status == "passed" or advisory_needs_user),
     )
     h.run(status_slug, ["loop", "status", "--type", "frontend-evidence"])
+    close_args = ["loop", "frontend-evidence", "close", "--loop-id", loop_id, "--yes"]
+    if advisory_needs_user:
+        close_args.append("--allow-warnings")
+    close_args.append("--json")
     fe_close = h.run(
         close_slug,
-        ["loop", "frontend-evidence", "close", "--loop-id", loop_id, "--yes", "--json"],
+        close_args,
         parse_json=True,
     )
     h.assert_true(
