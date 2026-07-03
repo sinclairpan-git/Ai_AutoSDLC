@@ -12,7 +12,17 @@ disallowed_naked_values:
 - .p-tag
 - .p-card
 - .p-dialog
+- business-type-any
+warning_naked_values:
+- native-input
 - native-select
+- raw-visible-enum-label
 - raw-visible-chinese-without-$i
 - severity=contrast
+- missing-theme-surface-token
+- missing-theme-highlight-token
+- missing-router-meta-contract
+- missing-api-response-generic
+- dark-block-on-ordinary-surface
+- mixed-formatting-and-business-change
 forbid_inline_core_style: true

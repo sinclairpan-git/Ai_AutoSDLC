@@ -5422,7 +5422,6 @@ specs:
             "vee-validate",
             "zod",
             "vue-i18n",
-            "Vitest",
             "Playwright",
             "ESLint",
             "Prettier",
@@ -5701,7 +5700,7 @@ specs:
         )
         assert (
             "recommended_tooling: `Vite + TypeScript + UnoCSS + CSS Variables + Pinia + "
-            "Vue Router + Axios + vee-validate + zod + vue-i18n + Vitest + Playwright + "
+            "Vue Router + Axios + vee-validate + zod + vue-i18n + Playwright + "
             "ESLint + Prettier + husky + lint-staged + commitlint`"
             in report_text
         )

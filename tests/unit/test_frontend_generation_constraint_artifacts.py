@@ -106,6 +106,14 @@ def test_generation_constraint_artifacts_preserve_constraint_payloads(tmp_path) 
         "no-native-form-control-mixing",
         "visible-chinese-dev-i18n-wrapper",
         "semantic-tag-severity-mapping",
+        "theme-semantic-token-completeness",
+        "scoped-frontend-engineering-boundary",
+        "base-layer-permission-control",
+        "router-meta-contract",
+        "shared-api-response-contract",
+        "typescript-strict-unknown-first",
+        "dark-information-block-boundary",
+        "commit-granularity-readability",
     ]
     assert token_rules["disallowed_naked_values"] == [
         "hex-color",
@@ -121,9 +129,20 @@ def test_generation_constraint_artifacts_preserve_constraint_payloads(tmp_path) 
         ".p-tag",
         ".p-card",
         ".p-dialog",
+        "business-type-any",
+    ]
+    assert token_rules["warning_naked_values"] == [
+        "native-input",
         "native-select",
+        "raw-visible-enum-label",
         "raw-visible-chinese-without-$i",
         "severity=contrast",
+        "missing-theme-surface-token",
+        "missing-theme-highlight-token",
+        "missing-router-meta-contract",
+        "missing-api-response-generic",
+        "dark-block-on-ordinary-surface",
+        "mixed-formatting-and-business-change",
     ]
     assert "override-ui-kernel-standard-body" in exceptions["forbidden_overrides"]
 
@@ -165,7 +184,9 @@ def test_load_frontend_generation_constraint_artifacts_deduplicates_manifest_lis
 
     materialize_frontend_generation_constraint_artifacts(tmp_path, constraints)
 
-    manifest_path = frontend_generation_governance_root(tmp_path) / "generation.manifest.yaml"
+    manifest_path = (
+        frontend_generation_governance_root(tmp_path) / "generation.manifest.yaml"
+    )
     manifest = _read_yaml(manifest_path)
     manifest["component_library_packages"] = [
         "primevue",

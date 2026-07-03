@@ -463,7 +463,7 @@ FRONTEND_SOLUTION_CONFIRMATION_REQUIRED_TOKENS = (
     "definePreset(Aura) + #1770e6 + darkModeSelector=false",
     "Vite + TypeScript + UnoCSS + CSS Variables",
     "Pinia + Vue Router + Axios + vee-validate + zod + vue-i18n",
-    "Vitest + Playwright + ESLint + Prettier + husky + lint-staged + commitlint",
+    "Playwright + ESLint + Prettier + husky + lint-staged + commitlint",
     "企业后台",
     "不得被当成 Vue2 信号",
     "高级可选方案",
@@ -475,6 +475,10 @@ FRONTEND_SOLUTION_CONFIRMATION_REQUIRED_TOKENS = (
     "--provider-id",
     "--style-pack-id",
     "enterprise-vue2",
+)
+FRONTEND_SOLUTION_CONFIRMATION_FORBIDDEN_TOKENS = (
+    "Vitest + Playwright + ESLint + Prettier + husky + lint-staged + commitlint",
+    "vue-i18n + Vitest + Playwright",
 )
 ADAPTER_TEMPLATE_COMMENT_POLICY_RELS = (
     *ADAPTER_TEMPLATE_CLI_PATH_RELS,
@@ -4715,6 +4719,16 @@ def _frontend_solution_confirmation_instruction_blockers(root: Path) -> list[str
             blockers.append(
                 "BLOCKER: frontend solution confirmation instruction drift in "
                 f"{rel.as_posix()}: {', '.join(missing)}"
+            )
+        forbidden = [
+            token
+            for token in FRONTEND_SOLUTION_CONFIRMATION_FORBIDDEN_TOKENS
+            if token in text
+        ]
+        if forbidden:
+            blockers.append(
+                "BLOCKER: frontend solution confirmation instruction has stale "
+                f"default tooling in {rel.as_posix()}: {', '.join(forbidden)}"
             )
     return blockers
 
