@@ -19,7 +19,9 @@ from ai_sdlc.models.frontend_provider_profile import (
 )
 
 
-def test_build_mvp_frontend_generation_constraints_contains_expected_recipe_range_and_order() -> None:
+def test_build_mvp_frontend_generation_constraints_contains_expected_recipe_range_and_order() -> (
+    None
+):
     constraints = build_mvp_frontend_generation_constraints()
 
     assert constraints.work_item_id == "017"
@@ -38,7 +40,9 @@ def test_build_mvp_frontend_generation_constraints_contains_expected_recipe_rang
     ]
 
 
-def test_build_mvp_frontend_generation_constraints_aligns_whitelist_with_provider_profile() -> None:
+def test_build_mvp_frontend_generation_constraints_aligns_whitelist_with_provider_profile() -> (
+    None
+):
     constraints = build_mvp_frontend_generation_constraints()
     provider_profile = build_mvp_enterprise_vue2_provider_profile()
 
@@ -47,7 +51,9 @@ def test_build_mvp_frontend_generation_constraints_aligns_whitelist_with_provide
     ]
 
 
-def test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rules_and_exception_boundaries() -> None:
+def test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rules_and_exception_boundaries() -> (
+    None
+):
     constraints = build_mvp_frontend_generation_constraints()
 
     assert [rule.rule_id for rule in constraints.hard_rules.rules] == [
@@ -67,11 +73,17 @@ def test_build_mvp_frontend_generation_constraints_exposes_hard_rules_token_rule
     ]
     assert constraints.token_rules.forbid_inline_core_style is True
     assert constraints.exceptions.requires_structured_declaration is True
-    assert "override-ui-kernel-standard-body" in constraints.exceptions.forbidden_overrides
-    assert "override-non-exempt-hard-rules" in constraints.exceptions.forbidden_overrides
+    assert (
+        "override-ui-kernel-standard-body" in constraints.exceptions.forbidden_overrides
+    )
+    assert (
+        "override-non-exempt-hard-rules" in constraints.exceptions.forbidden_overrides
+    )
 
 
-def test_build_mvp_frontend_generation_constraints_adds_primevue_rules_only_for_public_provider() -> None:
+def test_build_mvp_frontend_generation_constraints_adds_primevue_rules_only_for_public_provider() -> (
+    None
+):
     constraints = build_mvp_frontend_generation_constraints(
         effective_provider_id="public-primevue"
     )
@@ -91,6 +103,14 @@ def test_build_mvp_frontend_generation_constraints_adds_primevue_rules_only_for_
         "no-native-form-control-mixing",
         "visible-chinese-dev-i18n-wrapper",
         "semantic-tag-severity-mapping",
+        "theme-semantic-token-completeness",
+        "scoped-frontend-engineering-boundary",
+        "base-layer-permission-control",
+        "router-meta-contract",
+        "shared-api-response-contract",
+        "typescript-strict-unknown-first",
+        "dark-information-block-boundary",
+        "commit-granularity-readability",
     ]
     assert constraints.token_rules.disallowed_naked_values == [
         "hex-color",
@@ -106,9 +126,20 @@ def test_build_mvp_frontend_generation_constraints_adds_primevue_rules_only_for_
         ".p-tag",
         ".p-card",
         ".p-dialog",
+        "business-type-any",
+    ]
+    assert constraints.token_rules.warning_naked_values == [
+        "native-input",
         "native-select",
+        "raw-visible-enum-label",
         "raw-visible-chinese-without-$i",
         "severity=contrast",
+        "missing-theme-surface-token",
+        "missing-theme-highlight-token",
+        "missing-router-meta-contract",
+        "missing-api-response-generic",
+        "dark-block-on-ordinary-surface",
+        "mixed-formatting-and-business-change",
     ]
 
 
@@ -152,6 +183,14 @@ def test_frontend_generation_constraint_set_rejects_duplicate_hard_rule_ids() ->
         )
 
 
+def test_token_rule_set_rejects_blocker_warning_overlap() -> None:
+    with pytest.raises(ValueError, match="both blocker and warning"):
+        TokenRuleSet(
+            disallowed_naked_values=["hex-color"],
+            warning_naked_values=["hex-color"],
+        )
+
+
 def test_frontend_generation_constraint_models_deduplicate_set_like_lists() -> None:
     constraints = FrontendGenerationConstraintSet(
         work_item_id="017",
@@ -176,7 +215,8 @@ def test_frontend_generation_constraint_models_deduplicate_set_like_lists() -> N
             ]
         ),
         token_rules=TokenRuleSet(
-            disallowed_naked_values=["hex-color", "hex-color", "shadow"]
+            disallowed_naked_values=["hex-color", "hex-color", "shadow"],
+            warning_naked_values=["native-input", "native-input"],
         ),
         exceptions=GenerationExceptionPolicy(
             allowed_objects=["recipe-deviation", "recipe-deviation", "token-exception"],
@@ -193,6 +233,7 @@ def test_frontend_generation_constraint_models_deduplicate_set_like_lists() -> N
     assert constraints.recipe.allowed_recipe_ids == ["ListPage", "FormPage"]
     assert constraints.whitelist.default_component_ids == ["UiButton", "UiInput"]
     assert constraints.token_rules.disallowed_naked_values == ["hex-color", "shadow"]
+    assert constraints.token_rules.warning_naked_values == ["native-input"]
     assert constraints.exceptions.allowed_objects == [
         "recipe-deviation",
         "token-exception",

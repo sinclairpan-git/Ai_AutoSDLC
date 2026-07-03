@@ -51,7 +51,9 @@ def test_validate_frontend_theme_token_governance_passes_for_builtin_baseline() 
     assert result.artifact_root == "governance/frontend/theme-token-governance"
 
 
-def test_validate_frontend_theme_token_governance_blocks_unknown_anchor_unsupported_pair_illegal_namespace_and_token_floor_bypass() -> None:
+def test_validate_frontend_theme_token_governance_blocks_unknown_anchor_unsupported_pair_illegal_namespace_and_token_floor_bypass() -> (
+    None
+):
     governance = build_p2_frontend_theme_token_governance_baseline()
     constraints = build_mvp_frontend_generation_constraints()
     schema_set = build_p2_frontend_page_ui_schema_baseline()
@@ -98,12 +100,16 @@ def test_validate_frontend_theme_token_governance_blocks_unknown_anchor_unsuppor
 
     assert result.passed is False
     assert any("unknown schema anchor" in blocker for blocker in result.blockers)
-    assert any("unsupported provider/style pair" in blocker for blocker in result.blockers)
+    assert any(
+        "unsupported provider/style pair" in blocker for blocker in result.blockers
+    )
     assert any("illegal override namespace" in blocker for blocker in result.blockers)
     assert any("token floor bypass" in blocker for blocker in result.blockers)
 
 
-def test_validate_frontend_theme_token_governance_blocks_public_primevue_v13_token_floor_entries() -> None:
+def test_validate_frontend_theme_token_governance_blocks_public_primevue_token_floor_entries() -> (
+    None
+):
     governance = build_p2_frontend_theme_token_governance_baseline()
     constraints = build_mvp_frontend_generation_constraints(
         effective_provider_id="public-primevue"
@@ -128,9 +134,7 @@ def test_validate_frontend_theme_token_governance_blocks_public_primevue_v13_tok
         ".p-tag": ".p-tag",
         ".p-card": ".p-card",
         ".p-dialog": ".p-dialog",
-        "native-select": '<select class="field">',
-        "raw-visible-chinese-without-$i": "表格标题",
-        "severity=contrast": 'severity="contrast"',
+        "business-type-any": "business-type-any",
     }
     override_template = governance.custom_overrides[0]
     overrides = [
@@ -159,6 +163,111 @@ def test_validate_frontend_theme_token_governance_blocks_public_primevue_v13_tok
         assert any(
             f"forbidden {expected_kind}" in blocker for blocker in result.blockers
         )
+
+
+def test_validate_frontend_theme_token_governance_reports_public_primevue_warning_evidence() -> (
+    None
+):
+    governance = build_p2_frontend_theme_token_governance_baseline()
+    constraints = build_mvp_frontend_generation_constraints(
+        effective_provider_id="public-primevue"
+    )
+    schema_set = build_p2_frontend_page_ui_schema_baseline()
+    provider_profile = build_mvp_enterprise_vue2_provider_profile()
+    snapshot = build_mvp_solution_snapshot(
+        requested_provider_id="public-primevue",
+        effective_provider_id="public-primevue",
+        recommended_provider_id="public-primevue",
+        requested_style_pack_id="enterprise-default",
+        effective_style_pack_id="enterprise-default",
+        recommended_style_pack_id="enterprise-default",
+        style_fidelity_status="full",
+    )
+    warning_values = {
+        "native-input": '<input class="field">',
+        "native-select": '<select class="field">',
+        "raw-visible-enum-label": "raw-visible-enum-label",
+        "raw-visible-chinese-without-$i": "表格标题",
+        "severity=contrast": 'severity="contrast"',
+        "missing-theme-surface-token": "missing-theme-surface-token",
+        "missing-theme-highlight-token": "missing-theme-highlight-token",
+        "missing-router-meta-contract": "missing-router-meta-contract",
+        "missing-api-response-generic": "missing-api-response-generic",
+        "dark-block-on-ordinary-surface": "dark-block-on-ordinary-surface",
+        "mixed-formatting-and-business-change": (
+            "mixed-formatting-and-business-change"
+        ),
+    }
+    override_template = governance.custom_overrides[0]
+    overrides = [
+        override_template.model_copy(
+            update={
+                "override_id": f"public-primevue-warning-token-{index}",
+                "requested_value": value,
+                "effective_value": value,
+                "fallback_reason_code": None,
+            }
+        )
+        for index, value in enumerate(warning_values.values())
+    ]
+    warning_governance = governance.model_copy(update={"custom_overrides": overrides})
+
+    result = validate_frontend_theme_token_governance(
+        warning_governance,
+        constraints=constraints,
+        page_ui_schema=schema_set,
+        provider_profile=provider_profile,
+        solution_snapshot=snapshot,
+    )
+
+    assert result.passed is True
+    assert result.blockers == []
+    for expected_kind in warning_values:
+        assert any(
+            f"warning-only {expected_kind}" in warning for warning in result.warnings
+        )
+
+
+def test_validate_frontend_theme_token_governance_does_not_warn_for_primevue_inputtext() -> (
+    None
+):
+    governance = build_p2_frontend_theme_token_governance_baseline()
+    constraints = build_mvp_frontend_generation_constraints(
+        effective_provider_id="public-primevue"
+    )
+    schema_set = build_p2_frontend_page_ui_schema_baseline()
+    provider_profile = build_mvp_enterprise_vue2_provider_profile()
+    snapshot = build_mvp_solution_snapshot(
+        requested_provider_id="public-primevue",
+        effective_provider_id="public-primevue",
+        recommended_provider_id="public-primevue",
+        requested_style_pack_id="enterprise-default",
+        effective_style_pack_id="enterprise-default",
+        recommended_style_pack_id="enterprise-default",
+        style_fidelity_status="full",
+    )
+    override = governance.custom_overrides[0].model_copy(
+        update={
+            "override_id": "public-primevue-inputtext-snippet",
+            "requested_value": '<InputText class="field" />',
+            "effective_value": '<InputText class="field" />',
+            "fallback_reason_code": None,
+        }
+    )
+    inputtext_governance = governance.model_copy(
+        update={"custom_overrides": [override]}
+    )
+
+    result = validate_frontend_theme_token_governance(
+        inputtext_governance,
+        constraints=constraints,
+        page_ui_schema=schema_set,
+        provider_profile=provider_profile,
+        solution_snapshot=snapshot,
+    )
+
+    assert result.passed is True
+    assert not any("native-input" in warning for warning in result.warnings)
 
 
 def test_validate_frontend_theme_token_governance_deduplicates_referenced_ids() -> None:
@@ -201,7 +310,9 @@ def test_validate_frontend_theme_token_governance_deduplicates_referenced_ids() 
     assert len(result.referenced_slot_ids) == len(set(result.referenced_slot_ids))
 
 
-def test_frontend_theme_token_governance_validation_result_runtime_object_canonicalizes_lists() -> None:
+def test_frontend_theme_token_governance_validation_result_runtime_object_canonicalizes_lists() -> (
+    None
+):
     result = FrontendThemeTokenGovernanceValidationResult(
         passed=False,
         blockers=["a", "a"],

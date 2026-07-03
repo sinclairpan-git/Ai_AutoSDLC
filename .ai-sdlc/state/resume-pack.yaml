@@ -9,10 +9,11 @@ working_set_snapshot:
   plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/plan.md
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
-  context_summary: 'Goal: 发布 v0.9.3：Vue3 前端规范 v1.3 AI 执行版 | State: PR #115 最新 Codex
-    review P2 已修复：public-primevue v1.3 token-floor 新增禁止项现在会被 frontend theme token
-    governance 验证器实际分类并阻断；新增单测覆盖 !important、PrimeVue 基础选择器、native select、裸中文、severity
-    contrast。 | Next: 提交并推送 P2 修复，重新请求 Codex review，等待 CI 全绿后将 PR #115 标 ready 并合并。'
+  context_summary: 'Goal: 刷新 Vue3 企业级前端规范到 v1.6.1，并同步 SDLC 前端规范代码、治理规则和测试 | State:
+    Codex review P2/P3/P2 均已处理：warning-only evidence token 已进入 warning_naked_values；PrimeVue
+    <InputText> 不再被 native input 检测误报；verify constraints 现在禁止旧 Vitest + Playwright
+    默认工具链串。最终全量 pytest 已通过，准备 amend/push 并重新请求 Codex review。 | Next: amend 提交并推送，重新请求
+    Codex review，继续监控 CI/review。'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''

@@ -49,3 +49,39 @@ rules:
   category: controlled_exception
   description: status, risk, and visibility labels must use governed semantic mapping
     instead of page-local raw severity shortcuts
+- rule_id: theme-semantic-token-completeness
+  category: absolute
+  description: PrimeVue definePreset themes must define primary, surface, and highlight
+    semantics instead of leaving visual family alignment to page CSS
+- rule_id: scoped-frontend-engineering-boundary
+  category: absolute
+  description: frontend lint, format, commit, and hook constraints must be scoped to
+    the confirmed frontend subproject instead of being silently expanded to the host
+    repository
+- rule_id: base-layer-permission-control
+  category: absolute
+  description: Base components must carry shared permission, disabled, loading, and
+    i18n access patterns for high-frequency controls
+- rule_id: router-meta-contract
+  category: absolute
+  description: Vue Router modules must use governed meta fields such as title, auth,
+    keepAlive, and roles for generated routes
+- rule_id: shared-api-response-contract
+  category: absolute
+  description: generated API layers must route common request and response types through
+    api/types.ts or types/ with a reusable generic response envelope when the backend
+    contract wraps responses
+- rule_id: typescript-strict-unknown-first
+  category: absolute
+  description: generated TypeScript must assume strict mode and prefer unknown with
+    boundary narrowing over any as a business-type fallback
+- rule_id: dark-information-block-boundary
+  category: absolute
+  description: dark high-contrast blocks are reserved for code, output, preview, or
+    reading surfaces and must not be used as ordinary cards, filters, navigation, or
+    routine information groups
+- rule_id: commit-granularity-readability
+  category: controlled_exception
+  description: frontend changes must keep formatting noise separate from business changes
+    and use commit messages that expose the true intent within the configured commitlint
+    contract

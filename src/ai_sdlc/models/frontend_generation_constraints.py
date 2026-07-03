@@ -86,12 +86,25 @@ class TokenRuleSet(FrontendGenerationModel):
     """Minimal token and naked-value rule set."""
 
     disallowed_naked_values: list[str] = Field(default_factory=list)
+    warning_naked_values: list[str] = Field(default_factory=list)
     forbid_inline_core_style: bool = True
 
-    @field_validator("disallowed_naked_values", mode="before")
+    @field_validator("disallowed_naked_values", "warning_naked_values", mode="before")
     @classmethod
-    def _dedupe_disallowed_naked_values(cls, value: object) -> list[str]:
+    def _dedupe_token_rule_values(cls, value: object) -> list[str]:
         return _dedupe_strings(value)
+
+    @model_validator(mode="after")
+    def _prevent_token_rule_overlap(self) -> TokenRuleSet:
+        overlap = sorted(
+            set(self.disallowed_naked_values) & set(self.warning_naked_values)
+        )
+        if overlap:
+            joined = ", ".join(overlap)
+            raise ValueError(
+                f"token values cannot be both blocker and warning: {joined}"
+            )
+        return self
 
 
 class GenerationExceptionPolicy(FrontendGenerationModel):
@@ -206,6 +219,7 @@ def build_mvp_frontend_generation_constraints(
         "shadow",
         "spacing-or-size",
     ]
+    warning_naked_values: list[str] = []
     if effective_provider_id == "public-primevue":
         hard_rules.extend(
             [
@@ -275,6 +289,75 @@ def build_mvp_frontend_generation_constraints(
                         "mapping instead of page-local raw severity shortcuts"
                     ),
                 ),
+                GenerationHardRule(
+                    rule_id="theme-semantic-token-completeness",
+                    category="absolute",
+                    description=(
+                        "PrimeVue definePreset themes must define primary, surface, "
+                        "and highlight semantics instead of leaving visual family "
+                        "alignment to page CSS"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="scoped-frontend-engineering-boundary",
+                    category="absolute",
+                    description=(
+                        "frontend lint, format, commit, and hook constraints must be "
+                        "scoped to the confirmed frontend subproject instead of being "
+                        "silently expanded to the host repository"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="base-layer-permission-control",
+                    category="absolute",
+                    description=(
+                        "Base components must carry shared permission, disabled, loading, "
+                        "and i18n access patterns for high-frequency controls"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="router-meta-contract",
+                    category="absolute",
+                    description=(
+                        "Vue Router modules must use governed meta fields such as title, "
+                        "auth, keepAlive, and roles for generated routes"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="shared-api-response-contract",
+                    category="absolute",
+                    description=(
+                        "generated API layers must route common request and response "
+                        "types through api/types.ts or types/ with a reusable generic "
+                        "response envelope when the backend contract wraps responses"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="typescript-strict-unknown-first",
+                    category="absolute",
+                    description=(
+                        "generated TypeScript must assume strict mode and prefer unknown "
+                        "with boundary narrowing over any as a business-type fallback"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="dark-information-block-boundary",
+                    category="absolute",
+                    description=(
+                        "dark high-contrast blocks are reserved for code, output, preview, "
+                        "or reading surfaces and must not be used as ordinary cards, "
+                        "filters, navigation, or routine information groups"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="commit-granularity-readability",
+                    category="controlled_exception",
+                    description=(
+                        "frontend changes must keep formatting noise separate from "
+                        "business changes and use commit messages that expose the true "
+                        "intent within the configured commitlint contract"
+                    ),
+                ),
             ]
         )
         disallowed_naked_values.extend(
@@ -287,9 +370,22 @@ def build_mvp_frontend_generation_constraints(
                 ".p-tag",
                 ".p-card",
                 ".p-dialog",
+                "business-type-any",
+            ]
+        )
+        warning_naked_values.extend(
+            [
+                "native-input",
                 "native-select",
+                "raw-visible-enum-label",
                 "raw-visible-chinese-without-$i",
                 "severity=contrast",
+                "missing-theme-surface-token",
+                "missing-theme-highlight-token",
+                "missing-router-meta-contract",
+                "missing-api-response-generic",
+                "dark-block-on-ordinary-surface",
+                "mixed-formatting-and-business-change",
             ]
         )
 
@@ -312,15 +408,12 @@ def build_mvp_frontend_generation_constraints(
             allowed_recipe_ids=[recipe.recipe_id for recipe in kernel.page_recipes]
         ),
         whitelist=WhitelistGenerationConstraint(
-            default_component_ids=[
-                entry.component_id for entry in provider.whitelist
-            ]
+            default_component_ids=[entry.component_id for entry in provider.whitelist]
         ),
-        hard_rules=GenerationHardRuleSet(
-            rules=hard_rules
-        ),
+        hard_rules=GenerationHardRuleSet(rules=hard_rules),
         token_rules=TokenRuleSet(
-            disallowed_naked_values=disallowed_naked_values
+            disallowed_naked_values=disallowed_naked_values,
+            warning_naked_values=warning_naked_values,
         ),
         exceptions=GenerationExceptionPolicy(),
     )

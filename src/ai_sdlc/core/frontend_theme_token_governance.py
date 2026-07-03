@@ -20,6 +20,7 @@ _RGB_COLOR_PATTERN = re.compile(r"^rgb\(", re.IGNORECASE)
 _RGBA_COLOR_PATTERN = re.compile(r"^rgba\(", re.IGNORECASE)
 _SIZE_PATTERN = re.compile(r"^\d+(?:\.\d+)?(?:px|rem|em|%)$")
 _CJK_TEXT_PATTERN = re.compile(r"[\u4e00-\u9fff]")
+_NATIVE_INPUT_TAG_PATTERN = re.compile(r"<\s*input(?=[\s>/])", re.IGNORECASE)
 _PRIMEVUE_BASE_SELECTORS = (
     ".p-button",
     ".p-inputtextarea",
@@ -29,6 +30,16 @@ _PRIMEVUE_BASE_SELECTORS = (
     ".p-card",
     ".p-dialog",
 )
+_V161_MARKER_TOKENS = {
+    "raw-visible-enum-label",
+    "missing-theme-surface-token",
+    "missing-theme-highlight-token",
+    "missing-router-meta-contract",
+    "missing-api-response-generic",
+    "business-type-any",
+    "dark-block-on-ordinary-surface",
+    "mixed-formatting-and-business-change",
+}
 _ALLOWED_OVERRIDE_NAMESPACES = {
     "surface",
     "accent",
@@ -109,18 +120,31 @@ def validate_frontend_theme_token_governance(
     }
 
     for mapping in governance.token_mappings:
-        if mapping.page_schema_id and mapping.page_schema_id not in known_page_schema_ids:
+        if (
+            mapping.page_schema_id
+            and mapping.page_schema_id not in known_page_schema_ids
+        ):
             blockers.append(f"unknown page schema: {mapping.page_schema_id}")
-        if mapping.schema_anchor_id and mapping.schema_anchor_id not in known_anchor_ids:
+        if (
+            mapping.schema_anchor_id
+            and mapping.schema_anchor_id not in known_anchor_ids
+        ):
             blockers.append(f"unknown schema anchor: {mapping.schema_anchor_id}")
         if mapping.render_slot_id and mapping.render_slot_id not in known_slot_ids:
             blockers.append(f"unknown render slot: {mapping.render_slot_id}")
 
     disallowed_naked_values = set(constraints.token_rules.disallowed_naked_values)
+    warning_naked_values = set(constraints.token_rules.warning_naked_values)
     for override in governance.custom_overrides:
-        if override.page_schema_id and override.page_schema_id not in known_page_schema_ids:
+        if (
+            override.page_schema_id
+            and override.page_schema_id not in known_page_schema_ids
+        ):
             blockers.append(f"unknown page schema: {override.page_schema_id}")
-        if override.schema_anchor_id and override.schema_anchor_id not in known_anchor_ids:
+        if (
+            override.schema_anchor_id
+            and override.schema_anchor_id not in known_anchor_ids
+        ):
             blockers.append(f"unknown schema anchor: {override.schema_anchor_id}")
         if override.render_slot_id and override.render_slot_id not in known_slot_ids:
             blockers.append(f"unknown render slot: {override.render_slot_id}")
@@ -133,6 +157,11 @@ def validate_frontend_theme_token_governance(
                 blockers.append(
                     "token floor bypass: "
                     f"{override.override_id} uses forbidden {naked_value_kind}"
+                )
+            elif naked_value_kind in warning_naked_values:
+                warnings.append(
+                    "token warning evidence: "
+                    f"{override.override_id} uses warning-only {naked_value_kind}"
                 )
 
     style_support_by_id = {
@@ -208,6 +237,10 @@ def _classify_naked_value(value: str) -> str | None:
         r"\bseverity\s*=\s*['\"]contrast['\"]", stripped
     ):
         return "severity=contrast"
+    if stripped in _V161_MARKER_TOKENS:
+        return stripped
+    if _NATIVE_INPUT_TAG_PATTERN.search(stripped):
+        return "native-input"
     if stripped == "native-select" or "<select" in lowered:
         return "native-select"
     if stripped == "raw-visible-chinese-without-$i" or (

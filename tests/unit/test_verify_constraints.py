@@ -3003,7 +3003,7 @@ def test_frontend_solution_confirmation_instruction_accepts_required_pipeline_gu
         "definePreset(Aura) + #1770e6 + darkModeSelector=false、"
         "Vite + TypeScript + UnoCSS + CSS Variables、"
         "Pinia + Vue Router + Axios + vee-validate + zod + vue-i18n、"
-        "Vitest + Playwright + ESLint + Prettier + husky + lint-staged + commitlint。"
+        "Playwright + ESLint + Prettier + husky + lint-staged + commitlint。"
         "企业后台、中后台、管理台、表格、表单、审批流、工作台等场景词"
         "不得被当成 Vue2 信号。"
         "方案建议必须保留高级可选方案，覆盖 data-console、high-clarity、"
@@ -3017,6 +3017,44 @@ def test_frontend_solution_confirmation_instruction_accepts_required_pipeline_gu
     blockers = collect_constraint_blockers(tmp_path)
 
     assert not any("frontend solution confirmation instruction" in x for x in blockers)
+
+
+def test_frontend_solution_confirmation_instruction_blocks_stale_vitest_default_tooling(
+    tmp_path: Path,
+) -> None:
+    mem = tmp_path / ".ai-sdlc" / "memory"
+    mem.mkdir(parents=True)
+    (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
+    rules_dir = tmp_path / "src" / "ai_sdlc" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+    (rules_dir / "pipeline.md").write_text(
+        "# 流水线总控规则\n\n"
+        "前端需求进入实现前必须先给出技术栈 / 组件库建议，等待用户明确确认。"
+        "确认前不得进入 execute。"
+        "确认后才允许 program solution-confirm --execute --yes。"
+        "普通新前端需求首个推荐必须是 frontend_stack=vue3 / "
+        "provider_id=public-primevue / style_pack_id=modern-saas。"
+        "默认展示 PrimeVue + @primeuix/themes + primeicons、"
+        "definePreset(Aura) + #1770e6 + darkModeSelector=false、"
+        "Vite + TypeScript + UnoCSS + CSS Variables、"
+        "Pinia + Vue Router + Axios + vee-validate + zod + vue-i18n、"
+        "Vitest + Playwright + ESLint + Prettier + husky + lint-staged + commitlint。"
+        "企业后台、中后台、管理台、表格、表单、审批流、工作台等场景词"
+        "不得被当成 Vue2 信号。"
+        "方案建议必须保留高级可选方案，覆盖 data-console、high-clarity、"
+        "macos-glass 等风格。"
+        "可用 program solution-confirm --dry-run --mode advanced 查看，"
+        "并用 --frontend-stack、--provider-id、--style-pack-id 自定义选择。"
+        "框架自带 Vue2 企业级组件库默认使用 enterprise-vue2。\n",
+        encoding="utf-8",
+    )
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any(
+        "stale default tooling" in x and "Vitest + Playwright" in x
+        for x in blockers
+    )
 
 
 def test_doc_first_rule_surfaces_block_when_doc_first_task_targets_code(
