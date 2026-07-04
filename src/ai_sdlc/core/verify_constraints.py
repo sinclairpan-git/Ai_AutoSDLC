@@ -597,33 +597,18 @@ FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_FILES = (
     Path("src") / "api" / "client.ts",
     Path("src") / "api" / "interceptors.ts",
     Path("src") / "api" / "types.ts",
+    Path("src") / "components" / "base" / "BaseButton.vue",
+    Path("src") / "components" / "base" / "BaseTable.vue",
+    Path("src") / "components" / "base" / "BaseDialog.vue",
+    Path("src") / "components" / "base" / "BaseForm.vue",
     Path("src") / "i18n" / "index.ts",
+    Path("src") / "pages" / "ManagedDeliverySmoke.vue",
     Path("src") / "plugins" / "primevue.ts",
     Path("src") / "router" / "index.ts",
     Path("src") / "stores" / "app.ts",
     Path("src") / "styles" / "variables.css",
     Path("src") / "styles" / "main.css",
     Path("src") / "transform" / "index.ts",
-)
-FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_DIRS = (
-    Path("src") / "api" / "modules",
-    Path("src") / "assets",
-    Path("src") / "components" / "base",
-    Path("src") / "components" / "business",
-    Path("src") / "components" / "layout",
-    Path("src") / "composables",
-    Path("src") / "constants",
-    Path("src") / "directives",
-    Path("src") / "i18n",
-    Path("src") / "layouts",
-    Path("src") / "pages",
-    Path("src") / "plugins",
-    Path("src") / "router" / "modules",
-    Path("src") / "stores",
-    Path("src") / "styles",
-    Path("src") / "transform",
-    Path("src") / "types",
-    Path("src") / "utils",
 )
 FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
     "framework_capability",
@@ -4312,14 +4297,6 @@ def _frontend_public_primevue_template_file_blockers(
         return []
 
     blockers: list[str] = []
-    for required_dir in FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_DIRS:
-        required_path = managed_frontend_root / required_dir
-        if not required_path.is_dir():
-            blockers.append(
-                "BLOCKER: frontend public-primevue template missing required directory "
-                f"{required_dir.as_posix()}: {required_path.as_posix()}"
-            )
-
     for required_file in FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_FILES:
         required_path = managed_frontend_root / required_file
         if not required_path.is_file():

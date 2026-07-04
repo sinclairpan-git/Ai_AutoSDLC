@@ -5152,6 +5152,9 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert artifact_action.default_selected is True
     assert artifact_action.depends_on_action_ids == ["visual-regression-runtime-install"]
     generated_files = artifact_action.executor_payload["files"]
+    assert artifact_action.executor_payload["cleanup_files"] == [
+        "src/views/ManagedDeliverySmoke.vue"
+    ]
     assert [item["path"] for item in generated_files] == [
         "vite.config.ts",
         "tsconfig.json",
@@ -5816,6 +5819,12 @@ def test_execute_frontend_managed_delivery_apply_reapplies_existing_workspace_sc
         / "frontend-runtime"
         / "public-primevue"
         / "runtime-boundary-receipt.yaml": "stale receipt\n",
+        root
+        / "managed"
+        / "frontend"
+        / "src"
+        / "views"
+        / "ManagedDeliverySmoke.vue": "<template>legacy smoke</template>\n",
     }
     for path, content in existing_targets.items():
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -5859,6 +5868,9 @@ def test_execute_frontend_managed_delivery_apply_reapplies_existing_workspace_sc
     ).read_text(encoding="utf-8")
     assert "mappedComponents" in provider_adapter
     assert "UiSearchBar" in provider_adapter
+    assert not (
+        root / "managed" / "frontend" / "src" / "views" / "ManagedDeliverySmoke.vue"
+    ).exists()
 
 
 def test_execute_frontend_managed_delivery_apply_materializes_inheritance_governance_artifacts(

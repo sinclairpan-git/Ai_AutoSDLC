@@ -88,10 +88,11 @@ class ArtifactGenerateExecutionPayload(FrontendManagedDeliveryModel):
 
     directories: list[str] = Field(default_factory=list)
     files: list[GeneratedArtifactFile] = Field(default_factory=list)
+    cleanup_files: list[str] = Field(default_factory=list)
 
-    @field_validator("directories", mode="before")
+    @field_validator("directories", "cleanup_files", mode="before")
     @classmethod
-    def _dedupe_directories(cls, value: object) -> list[str]:
+    def _dedupe_paths(cls, value: object) -> list[str]:
         return _dedupe_strings(value)
 
 

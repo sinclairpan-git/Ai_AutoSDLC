@@ -5563,6 +5563,9 @@ class ProgramService:
                 "src/types",
                 "src/utils",
             ],
+            "cleanup_files": [
+                "src/views/ManagedDeliverySmoke.vue",
+            ],
             "files": [
                 {
                     "path": "vite.config.ts",

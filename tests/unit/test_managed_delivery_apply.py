@@ -1508,6 +1508,7 @@ def test_run_managed_delivery_apply_generates_artifacts_inside_managed_target(
         action_type="artifact_generate",
         executor_payload={
             "directories": ["src"],
+            "cleanup_files": ["src/views/ManagedDeliverySmoke.vue"],
             "files": [
                 {
                     "path": "src/App.vue",
@@ -1518,6 +1519,11 @@ def test_run_managed_delivery_apply_generates_artifacts_inside_managed_target(
     )
     view = _build_view(action)
     receipt = _build_receipt(selected_action_ids=["a1"])
+    legacy_smoke = (
+        tmp_path / "managed" / "frontend" / "src" / "views" / "ManagedDeliverySmoke.vue"
+    )
+    legacy_smoke.parent.mkdir(parents=True, exist_ok=True)
+    legacy_smoke.write_text("<template>legacy</template>\n", encoding="utf-8")
 
     result = run_managed_delivery_apply(
         view,
@@ -1533,6 +1539,7 @@ def test_run_managed_delivery_apply_generates_artifacts_inside_managed_target(
     assert (tmp_path / "managed" / "frontend" / "src" / "App.vue").read_text(
         encoding="utf-8"
     ) == "<template>Hello</template>\n"
+    assert not legacy_smoke.exists()
 
 
 def test_run_managed_delivery_apply_blocks_artifact_generate_outside_managed_target(

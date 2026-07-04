@@ -735,7 +735,18 @@ def _validate_executor_payload(
             )
             for directory in payload.directories
         ]
-        for target in [*file_paths, *dir_paths]:
+        cleanup_paths = [
+            _resolve_managed_child(
+                managed_root,
+                cleanup_file,
+                blocker="artifact_generate_cleanup_outside_managed_target",
+            )
+            for cleanup_file in payload.cleanup_files
+        ]
+        directory_cleanup_targets = [path for path in cleanup_paths if path.is_dir()]
+        if directory_cleanup_targets:
+            raise ValueError("artifact_generate_cleanup_target_not_file")
+        for target in [*file_paths, *dir_paths, *cleanup_paths]:
             _ensure_not_in_will_not_touch(
                 target,
                 repo_root,
@@ -747,6 +758,7 @@ def _validate_executor_payload(
             "payload": payload,
             "file_paths": file_paths,
             "dir_paths": dir_paths,
+            "cleanup_paths": cleanup_paths,
         }
     if action.action_type == "workspace_integration":
         payload = WorkspaceIntegrationExecutionPayload.model_validate(
@@ -820,6 +832,7 @@ def _before_state_for_action(
             {
                 "managed_target_path": view.managed_target_path,
                 "file_count": str(len(prepared.get("file_paths", ()))),
+                "cleanup_file_count": str(len(prepared.get("cleanup_paths", ()))),
             }
         )
     if action.action_type == "workspace_integration":
@@ -911,11 +924,13 @@ def _execute_action(
                     managed_root,
                     prepared.get("dir_paths", []),
                     prepared.get("file_paths", []),
+                    prepared.get("cleanup_paths", []),
                 )
         else:
             after_state = {
                 "mode": "preflight",
                 "generated_files": str(len(payload.files)),
+                "cleanup_files": str(len(payload.cleanup_files)),
             }
         after_state.setdefault("state", f"after:{action.action_id}")
         after_state.setdefault("managed_target_ref", view.managed_target_ref)
@@ -1321,7 +1336,15 @@ def _default_artifact_writer(
     managed_root: Path,
     dir_paths: list[Path],
     file_paths: list[Path],
+    cleanup_paths: list[Path] | None = None,
 ) -> dict[str, str]:
+    cleaned_files = 0
+    for cleanup_path in cleanup_paths or []:
+        if cleanup_path.exists():
+            if cleanup_path.is_dir():
+                raise ValueError("artifact_generate_cleanup_target_not_file")
+            cleanup_path.unlink()
+            cleaned_files += 1
     for directory in dir_paths:
         directory.mkdir(parents=True, exist_ok=True)
     for generated_file, target in zip(payload.files, file_paths, strict=True):
@@ -1331,6 +1354,7 @@ def _default_artifact_writer(
         "output_root": str(managed_root),
         "generated_files": str(len(payload.files)),
         "generated_directories": str(len(dir_paths)),
+        "cleanup_files": str(cleaned_files),
     }
 
 

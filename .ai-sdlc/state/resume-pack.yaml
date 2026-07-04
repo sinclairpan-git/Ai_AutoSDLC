@@ -10,15 +10,15 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: 发布 AI-SDLC v0.9.5，包含 Vue3 public-primevue v1.7.1 视觉规范刷新
-    | State: v0.9.5 版本面已同步：新增 docs/releases/v0.9.5.md；pyproject、__init__、uv.lock、README、USER_GUIDE、offline
-    docs/checklist、GitHub workflows、verify_constraints 和版本敏感测试已从 v0.9.4 对齐到 v0.9.5；v1.7.1
-    前端治理改动保持在同一发布分支。 | Next: Stage, commit, push codex/release-v0.9.5-vue3-v1.7.1,
-    open PR, request Codex review, monitor required checks, then merge and create/publish
-    v0.9.5 release after release-build assets exist.'
-current_branch: codex/release-v0.9.5-vue3-v1.7.1
+    | State: 已修复 Codex review 的两个 P2：artifact_generate payload 新增 cleanup_files 并清理
+    legacy src/views/ManagedDeliverySmoke.vue；verify constraints 不再阻断 Git fresh checkout
+    中缺失的空 scaffold 目录，改为强校验真实模板文件。 | Next: Commit and push review fixes, reply to
+    Codex inline comments, request another Codex review, then monitor PR checks before
+    merge/release.'
+current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-07-04T06:10:41+00:00'
+timestamp: '2026-07-04T06:43:41+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-01T18:38:26+00:00'
 checkpoint_fingerprint: d0621f0754b464938fd42308e8a83a7b37782d50842366665b6d1a44a378ddf3
