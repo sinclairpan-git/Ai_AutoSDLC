@@ -3926,10 +3926,7 @@ def test_188_frontend_solution_confirmation_blocks_missing_public_template_files
     assert report.coverage_gaps == ("frontend_solution_confirmation_consistency",)
     assert any("template missing required file src/main.ts" in blocker for blocker in report.blockers)
     assert any("template missing required file src/api/client.ts" in blocker for blocker in report.blockers)
-    assert any(
-        "template missing required file src/pages/ManagedDeliverySmoke.vue" in blocker
-        for blocker in report.blockers
-    )
+    assert any("missing required smoke page file" in blocker for blocker in report.blockers)
     assert any("index.html missing Vite module entry" in blocker for blocker in report.blockers)
 
 
@@ -3946,6 +3943,9 @@ def test_188_frontend_solution_confirmation_ignores_missing_empty_template_dirs(
         if required_file == Path("index.html"):
             content = '<script type="module" src="/src/main.ts"></script>\n'
         target.write_text(content, encoding="utf-8")
+    smoke_page = managed_frontend / "src" / "pages" / "ManagedDeliverySmoke.vue"
+    smoke_page.parent.mkdir(parents=True, exist_ok=True)
+    smoke_page.write_text("<template>smoke</template>\n", encoding="utf-8")
 
     report = build_constraint_report(tmp_path)
 
@@ -3953,6 +3953,28 @@ def test_188_frontend_solution_confirmation_ignores_missing_empty_template_dirs(
     assert not any(
         "template missing required directory" in blocker for blocker in report.blockers
     )
+
+
+def test_188_frontend_solution_confirmation_accepts_legacy_views_smoke_page(
+    tmp_path: Path,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(tmp_path)
+    managed_frontend = tmp_path / "managed" / "frontend"
+    for required_file in verify_constraints_module.FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_FILES:
+        target = managed_frontend / required_file
+        target.parent.mkdir(parents=True, exist_ok=True)
+        content = "placeholder\n"
+        if required_file == Path("index.html"):
+            content = '<script type="module" src="/src/main.ts"></script>\n'
+        target.write_text(content, encoding="utf-8")
+    legacy_smoke_page = managed_frontend / "src" / "views" / "ManagedDeliverySmoke.vue"
+    legacy_smoke_page.parent.mkdir(parents=True, exist_ok=True)
+    legacy_smoke_page.write_text("<template>legacy smoke</template>\n", encoding="utf-8")
+
+    report = build_constraint_report(tmp_path)
+
+    assert not any("missing required smoke page file" in blocker for blocker in report.blockers)
 
 
 def test_073_frontend_solution_confirmation_verification_rejects_string_false_override_flag(

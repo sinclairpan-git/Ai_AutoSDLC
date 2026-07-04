@@ -602,13 +602,16 @@ FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_FILES = (
     Path("src") / "components" / "base" / "BaseDialog.vue",
     Path("src") / "components" / "base" / "BaseForm.vue",
     Path("src") / "i18n" / "index.ts",
-    Path("src") / "pages" / "ManagedDeliverySmoke.vue",
     Path("src") / "plugins" / "primevue.ts",
     Path("src") / "router" / "index.ts",
     Path("src") / "stores" / "app.ts",
     Path("src") / "styles" / "variables.css",
     Path("src") / "styles" / "main.css",
     Path("src") / "transform" / "index.ts",
+)
+FRONTEND_PUBLIC_PRIMEVUE_SMOKE_PAGE_TEMPLATE_FILES = (
+    Path("src") / "pages" / "ManagedDeliverySmoke.vue",
+    Path("src") / "views" / "ManagedDeliverySmoke.vue",
 )
 FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
     "framework_capability",
@@ -4304,6 +4307,19 @@ def _frontend_public_primevue_template_file_blockers(
                 "BLOCKER: frontend public-primevue template missing required file "
                 f"{required_file.as_posix()}: {required_path.as_posix()}"
             )
+
+    if not any(
+        (managed_frontend_root / smoke_page_file).is_file()
+        for smoke_page_file in FRONTEND_PUBLIC_PRIMEVUE_SMOKE_PAGE_TEMPLATE_FILES
+    ):
+        smoke_options = " or ".join(
+            smoke_page_file.as_posix()
+            for smoke_page_file in FRONTEND_PUBLIC_PRIMEVUE_SMOKE_PAGE_TEMPLATE_FILES
+        )
+        blockers.append(
+            "BLOCKER: frontend public-primevue template missing required smoke "
+            f"page file {smoke_options}"
+        )
 
     index_path = managed_frontend_root / "index.html"
     if index_path.is_file() and "/src/main.ts" not in index_path.read_text(

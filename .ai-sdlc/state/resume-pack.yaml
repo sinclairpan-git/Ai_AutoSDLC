@@ -10,11 +10,10 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
   context_summary: 'Goal: 发布 AI-SDLC v0.9.5，包含 Vue3 public-primevue v1.7.1 视觉规范刷新
-    | State: 已修复 Codex review 的两个 P2：artifact_generate payload 新增 cleanup_files 并清理
-    legacy src/views/ManagedDeliverySmoke.vue；verify constraints 不再阻断 Git fresh checkout
-    中缺失的空 scaffold 目录，改为强校验真实模板文件。 | Next: Commit and push review fixes, reply to
-    Codex inline comments, request another Codex review, then monitor PR checks before
-    merge/release.'
+    | State: 已修复第二轮 Codex review P2：verify constraints 对 smoke page 改为接受 src/pages/ManagedDeliverySmoke.vue
+    或 legacy src/views/ManagedDeliverySmoke.vue，避免历史 v0.9.4 managed frontend 在未 re-apply
+    前被强制失败。 | Next: Commit and push smoke-page compatibility fix, reply to Codex inline
+    comment, request another Codex review, then continue PR heartbeat.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''
