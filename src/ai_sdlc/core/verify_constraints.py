@@ -144,7 +144,7 @@ SKIP_REGISTRY_REL = Path("src") / "ai_sdlc" / "rules" / "agent-skip-registry.zh.
 FRAMEWORK_DEFECT_BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 VERIFICATION_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "verification.md"
 PR_CHECKLIST_REL = Path("docs") / "pull-request-checklist.zh.md"
-RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.9.4.md"
+RELEASE_NOTES_CURRENT_REL = Path("docs") / "releases" / "v0.9.5.md"
 RELEASE_POLICY_REL = Path("docs") / "框架自迭代开发与发布约定.md"
 README_REL = Path("README.md")
 USER_GUIDE_REL = Path("USER_GUIDE.zh-CN.md")
@@ -256,25 +256,25 @@ RECONCILE_SMOKE_CONTRACT_SURFACES: dict[Path, tuple[str, ...]] = {
 }
 RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     README_REL: (
-        "v0.9.4",
-        "docs/releases/v0.9.4.md",
-        "ai-sdlc-offline-0.9.4-windows-amd64.zip",
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz",
+        "v0.9.5",
+        "docs/releases/v0.9.5.md",
+        "ai-sdlc-offline-0.9.5-windows-amd64.zip",
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.9.4",
+        "releases/download/v0.9.5",
         "-AddToPath",
         "--add-to-path",
         "python -m ai_sdlc",
     ),
     RELEASE_NOTES_CURRENT_REL: (
-        "v0.9.4",
+        "v0.9.5",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.9.4",
+        "releases/download/v0.9.5",
         "Windows",
         ".zip",
         "macOS / Linux",
@@ -286,11 +286,11 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "python -m ai_sdlc",
     ),
     USER_GUIDE_REL: (
-        "v0.9.4",
+        "v0.9.5",
         "No such command 'install'",
         "ai-sdlc self-update check",
         "--upgrade-existing",
-        "releases/download/v0.9.4",
+        "releases/download/v0.9.5",
         "Windows",
         "macOS",
         "Linux",
@@ -302,10 +302,10 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
         "python -m ai_sdlc",
     ),
     OFFLINE_README_REL: (
-        "v0.9.4",
-        "ai-sdlc-offline-0.9.4-windows-amd64.zip",
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz",
+        "v0.9.5",
+        "ai-sdlc-offline-0.9.5-windows-amd64.zip",
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz",
         "-AddToPath",
         "--add-to-path",
         "ai-sdlc --help",
@@ -313,38 +313,38 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     ),
     RELEASE_POLICY_REL: (
         "README.md",
-        "docs/releases/v0.9.4.md",
+        "docs/releases/v0.9.5.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
         "docs/pull-request-checklist.zh.md",
         "普通用户主路径",
         "live host evidence",
         "materialized only",
-        "ai-sdlc-offline-0.9.4-windows-amd64.zip",
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.9.5-windows-amd64.zip",
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz",
     ),
     PR_CHECKLIST_REL: (
         "README.md",
-        "docs/releases/v0.9.4.md",
+        "docs/releases/v0.9.5.md",
         "USER_GUIDE.zh-CN.md",
         "packaging/offline/README.md",
-        "v0.9.4",
+        "v0.9.5",
         "普通用户主路径",
         "materialized only",
-        "ai-sdlc-offline-0.9.4-windows-amd64.zip",
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz",
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz",
+        "ai-sdlc-offline-0.9.5-windows-amd64.zip",
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz",
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz",
     ),
-    RELEASE_BUILD_WORKFLOW_REL: ("default: v0.9.4",),
-    RELEASE_ARTIFACT_SMOKE_WORKFLOW_REL: ("default: v0.9.4",),
+    RELEASE_BUILD_WORKFLOW_REL: ("default: v0.9.5",),
+    RELEASE_ARTIFACT_SMOKE_WORKFLOW_REL: ("default: v0.9.5",),
     WINDOWS_OFFLINE_SMOKE_WORKFLOW_REL: (
-        "expected upgraded ai-sdlc version 0.9.4",
-        r"0\.9\.4",
+        "expected upgraded ai-sdlc version 0.9.5",
+        r"0\.9\.5",
     ),
 }
 BEGINNER_GUIDE_REQUIRED_TOKENS = (
-    "当前正式发布版：`v0.9.4`",
+    "当前正式发布版：`v0.9.5`",
     "## 第一章：全新用户 + 全新空项目",
     "## 第二章：全新用户 + 已有项目",
     "## 第三章：老用户升级",
@@ -354,9 +354,9 @@ BEGINNER_GUIDE_REQUIRED_TOKENS = (
     "执行成功以后，你应该看到",
     "如果失败",
     "切换到 AI 对话",
-    "ai-sdlc-offline-0.9.4-windows-amd64.zip",
-    "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz",
-    "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz",
+    "ai-sdlc-offline-0.9.5-windows-amd64.zip",
+    "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz",
+    "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz",
     "-AddToPath",
     "--add-to-path",
     "ai-sdlc --help",
@@ -367,7 +367,7 @@ BEGINNER_GUIDE_REQUIRED_TOKENS = (
     "Place the zip in the current directory, cd into that directory, then retry",
     "D:\\work\\ui-test-platform 是示例路径；请替换成你的真实项目根目录",
     "Codex + PowerShell project init",
-    'cd D:\\work\\ui-test-platform\n& "D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.4-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe" init . --agent-target codex --shell powershell',
+    'cd D:\\work\\ui-test-platform\n& "D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.5-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe" init . --agent-target codex --shell powershell',
     "Windows 当前终端立即初始化时，不要直接照抄裸 `ai-sdlc init .`",
     "Direct shim",
     "安装器会把最新 AI-SDLC 命令入口设为优先",
@@ -380,7 +380,7 @@ BEGINNER_GUIDE_EXISTING_PROJECT_INIT_TOKENS = (
     "Direct shim",
     "安装器会把最新 AI-SDLC 命令入口设为优先",
     "Codex + PowerShell project init",
-    'cd D:\\work\\my-existing-project\n& "D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.4-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe" init . --agent-target codex --shell powershell',
+    'cd D:\\work\\my-existing-project\n& "D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.5-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe" init . --agent-target codex --shell powershell',
     "~/work/my-existing-project 是示例路径；请替换成你的真实项目根目录",
     "cd ~/work/my-existing-project\nai-sdlc init .",
     "如果 `ai-sdlc` 不在 PATH",
@@ -464,6 +464,13 @@ FRONTEND_SOLUTION_CONFIRMATION_REQUIRED_TOKENS = (
     "Vite + TypeScript + UnoCSS + CSS Variables",
     "Pinia + Vue Router + Axios + vee-validate + zod + vue-i18n",
     "Playwright + ESLint + Prettier + husky + lint-staged + commitlint",
+    "规范正文",
+    "可选建议",
+    "已经落地",
+    "primary / surface / highlight",
+    "theme.ts 是主题预设唯一入口",
+    "pages/",
+    "views/",
     "企业后台",
     "不得被当成 Vue2 信号",
     "高级可选方案",
@@ -587,11 +594,36 @@ FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_FILES = (
     Path("src") / "App.vue",
     Path("src") / "main.ts",
     Path("src") / "theme.ts",
+    Path("src") / "api" / "client.ts",
+    Path("src") / "api" / "interceptors.ts",
+    Path("src") / "api" / "types.ts",
+    Path("src") / "i18n" / "index.ts",
     Path("src") / "plugins" / "primevue.ts",
     Path("src") / "router" / "index.ts",
     Path("src") / "stores" / "app.ts",
     Path("src") / "styles" / "variables.css",
     Path("src") / "styles" / "main.css",
+    Path("src") / "transform" / "index.ts",
+)
+FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_DIRS = (
+    Path("src") / "api" / "modules",
+    Path("src") / "assets",
+    Path("src") / "components" / "base",
+    Path("src") / "components" / "business",
+    Path("src") / "components" / "layout",
+    Path("src") / "composables",
+    Path("src") / "constants",
+    Path("src") / "directives",
+    Path("src") / "i18n",
+    Path("src") / "layouts",
+    Path("src") / "pages",
+    Path("src") / "plugins",
+    Path("src") / "router" / "modules",
+    Path("src") / "stores",
+    Path("src") / "styles",
+    Path("src") / "transform",
+    Path("src") / "types",
+    Path("src") / "utils",
 )
 FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
     "framework_capability",
@@ -3447,8 +3479,10 @@ def _frontend_public_primevue_import_boundary_report(
 
 def _iter_public_primevue_boundary_source_files(root: Path):
     scan_roots = (
+        root / "src" / "pages",
         root / "src" / "views",
         root / "src" / "components" / "business",
+        root / "managed" / "frontend" / "src" / "pages",
         root / "managed" / "frontend" / "src" / "views",
         root / "managed" / "frontend" / "src" / "components" / "business",
     )
@@ -4278,6 +4312,14 @@ def _frontend_public_primevue_template_file_blockers(
         return []
 
     blockers: list[str] = []
+    for required_dir in FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_DIRS:
+        required_path = managed_frontend_root / required_dir
+        if not required_path.is_dir():
+            blockers.append(
+                "BLOCKER: frontend public-primevue template missing required directory "
+                f"{required_dir.as_posix()}: {required_path.as_posix()}"
+            )
+
     for required_file in FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_FILES:
         required_path = managed_frontend_root / required_file
         if not required_path.is_file():
@@ -4536,7 +4578,7 @@ def _package_init_fallback_version(root: Path) -> str | None:
 
 
 def _release_version_truth_blockers(root: Path) -> list[str]:
-    expected_version = "0.9.4"
+    expected_version = "0.9.5"
     blockers: list[str] = []
     pyproject_version = _pyproject_version(root)
     if pyproject_version and pyproject_version != expected_version:

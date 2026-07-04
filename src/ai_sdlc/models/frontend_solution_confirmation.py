@@ -254,6 +254,9 @@ def build_builtin_style_pack_manifests() -> list[StylePackManifest]:
                 "layout_strategy": "unocss-first",
                 "component_visual_owner": "primevue-theme-token",
                 "business_css_scope": "shell-and-exceptions-only",
+                "required_semantic_tokens": "primary,surface,highlight",
+                "shell_visual_family": "light-brand-surface",
+                "ordinary_css_scope": "animations-complex-shell-third-party-exceptions",
             },
         ),
         StylePackManifest(
@@ -332,6 +335,10 @@ def _default_provider_theme_adapter_config(
         "primary_color": "#1770e6",
         "dark_mode_selector": "false",
         "theme_entry": "src/theme.ts",
+        "required_semantic_tokens": "primary,surface,highlight",
+        "style_owner": "primevue-theme-token",
+        "shell_visual_family": "light-brand-surface",
+        "theme_entry_singleton": "true",
     }
 
 

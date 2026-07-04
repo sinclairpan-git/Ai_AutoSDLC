@@ -5552,14 +5552,16 @@ class ProgramService:
                 "src/constants",
                 "src/directives",
                 "src/generated",
+                "src/i18n",
                 "src/layouts",
+                "src/pages",
                 "src/plugins",
                 "src/router/modules",
                 "src/stores",
                 "src/styles",
+                "src/transform",
                 "src/types",
                 "src/utils",
-                "src/views",
             ],
             "files": [
                 {
@@ -5591,6 +5593,22 @@ class ProgramService:
                     "content": self._managed_frontend_theme_ts_content(),
                 },
                 {
+                    "path": "src/api/client.ts",
+                    "content": self._managed_frontend_api_client_ts_content(),
+                },
+                {
+                    "path": "src/api/interceptors.ts",
+                    "content": self._managed_frontend_api_interceptors_ts_content(),
+                },
+                {
+                    "path": "src/api/types.ts",
+                    "content": self._managed_frontend_api_types_ts_content(),
+                },
+                {
+                    "path": "src/i18n/index.ts",
+                    "content": self._managed_frontend_i18n_index_ts_content(),
+                },
+                {
                     "path": "src/plugins/primevue.ts",
                     "content": self._managed_frontend_primevue_plugin_ts_content(),
                 },
@@ -5613,6 +5631,10 @@ class ProgramService:
                 {
                     "path": "src/styles/main.css",
                     "content": self._managed_frontend_main_css_content(),
+                },
+                {
+                    "path": "src/transform/index.ts",
+                    "content": self._managed_frontend_transform_index_ts_content(),
                 },
                 {
                     "path": "src/generated/frontend-delivery-context.ts",
@@ -5647,7 +5669,7 @@ class ProgramService:
                     "content": self._managed_frontend_base_form_vue_content(),
                 },
                 {
-                    "path": "src/views/ManagedDeliverySmoke.vue",
+                    "path": "src/pages/ManagedDeliverySmoke.vue",
                     "content": self._managed_frontend_app_vue_content(delivery_context),
                 },
             ],
@@ -5952,6 +5974,7 @@ import {{ createPinia }} from "pinia";
 import {{ createApp }} from "vue";
 
 import App from "./App.vue";
+import {{ installI18n }} from "./i18n";
 import {{ primeVuePlugin }} from "./plugins/primevue";
 import router from "./router";
 
@@ -5960,6 +5983,7 @@ const app = createApp(App);
 app.use(createPinia());
 app.use(router);
 app.use(primeVuePlugin);
+installI18n(app);
 
 app.mount("#app");
 """
@@ -5973,48 +5997,113 @@ export const AppPreset = definePreset(Aura, {
     primary: {
       50: "#eef6ff",
       100: "#d9ebff",
-      200: "#b7d8ff",
-      300: "#86bdff",
-      400: "#4f99ff",
+      200: "#bddcff",
+      300: "#90c6ff",
+      400: "#5ca6ff",
       500: "#1770e6",
-      600: "#125fcc",
-      700: "#104fa8",
-      800: "#123f82",
-      900: "#153966",
-      950: "#0d2340",
+      600: "#1159b8",
+      700: "#0f468d",
+      800: "#123d73",
+      900: "#17345f",
+      950: "#10213f",
     },
     colorScheme: {
       light: {
         surface: {
           0: "#ffffff",
-          50: "#f7f9fc",
-          100: "#eef2f7",
-          200: "#d8dee9",
-          300: "#c3ccd9",
-          400: "#98a5b8",
-          500: "#6b778c",
-          600: "#4b5565",
-          700: "#344054",
-          800: "#1f2937",
-          900: "#111827",
-          950: "#0b1220",
+          50: "#f6faff",
+          100: "#edf4fb",
+          200: "#d9e5f2",
+          300: "#c1d3e6",
+          400: "#99abc4",
+          500: "#72829a",
+          600: "#5d6c84",
+          700: "#44536b",
+          800: "#2e3d54",
+          900: "#1c2a41",
+          950: "#10213f",
         },
         primary: {
-          color: "#1770e6",
+          color: "{primary.500}",
           contrastColor: "#ffffff",
-          hoverColor: "#125fcc",
-          activeColor: "#104fa8",
+          hoverColor: "{primary.600}",
+          activeColor: "{primary.700}",
         },
         highlight: {
-          background: "#eef6ff",
+          background: "#e8f1ff",
           focusBackground: "#d9ebff",
           color: "#1770e6",
-          focusColor: "#125fcc",
+          focusColor: "#1159b8",
         },
       },
     },
   },
 });
+"""
+
+    def _managed_frontend_api_client_ts_content(self) -> str:
+        return """import axios from "axios";
+
+import { setupInterceptors } from "./interceptors";
+import type { ApiResponse } from "./types";
+
+export const apiClient = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? "/api",
+  timeout: 15000,
+});
+
+setupInterceptors(apiClient);
+
+export async function request<T>(config: Parameters<typeof apiClient.request>[0]): Promise<T> {
+  const response = await apiClient.request<ApiResponse<T>>(config);
+  return response.data.data;
+}
+"""
+
+    def _managed_frontend_api_interceptors_ts_content(self) -> str:
+        return """import type { AxiosInstance } from "axios";
+
+export function setupInterceptors(client: AxiosInstance): void {
+  client.interceptors.response.use(
+    response => response,
+    error => Promise.reject(error),
+  );
+}
+"""
+
+    def _managed_frontend_api_types_ts_content(self) -> str:
+        return """export interface ApiResponse<T> {
+  code: number;
+  message: string;
+  data: T;
+}
+"""
+
+    def _managed_frontend_i18n_index_ts_content(self) -> str:
+        return """import type { App } from "vue";
+import { createI18n } from "vue-i18n";
+
+export const i18n = createI18n({
+  legacy: false,
+  locale: "zh-CN",
+  fallbackLocale: "zh-CN",
+  messages: {
+    "zh-CN": {},
+  },
+  missingWarn: false,
+  fallbackWarn: false,
+});
+
+export function installI18n(app: App): void {
+  app.use(i18n);
+  app.config.globalProperties.$i = (text: string) => text;
+}
+
+declare module "vue" {
+  interface ComponentCustomProperties {
+    $i: (text: string) => string;
+  }
+}
 """
 
     def _managed_frontend_primevue_plugin_ts_content(self) -> str:
@@ -6048,7 +6137,7 @@ const router = createRouter({
     {
       path: "/",
       name: "managed-delivery-smoke",
-      component: () => import("../views/ManagedDeliverySmoke.vue"),
+      component: () => import("../pages/ManagedDeliverySmoke.vue"),
     },
   ],
 });
@@ -6125,6 +6214,14 @@ body {
 
 #app {
   min-height: 100vh;
+}
+"""
+
+    def _managed_frontend_transform_index_ts_content(self) -> str:
+        return """import type { ApiResponse } from "../api/types";
+
+export function transformApiResponse<T>(response: ApiResponse<T>): T {
+  return response.data;
 }
 """
 

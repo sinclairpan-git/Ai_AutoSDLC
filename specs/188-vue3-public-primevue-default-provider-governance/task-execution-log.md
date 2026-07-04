@@ -177,3 +177,21 @@ Batch 2 through Batch 7 implementation paths passed targeted verification.
 - Codex review: 最新针对 head `4c15536` 的评论为 “Didn't find any major issues.”
 - GitHub checks: Compatibility Gate、Cross Platform Validation（macOS/Ubuntu/Windows, Python 3.11/3.12）、Upgrade、Windows Shell Smoke、core-smoke、smoke、verify 全部通过。
 - Local close-out: 当前归档更新仅修正 spec/plan/task-execution-log 与 handoff/resume 的完成状态，不改变已合并功能代码。
+
+### Batch 8 | v1.7.1 visual standard refresh
+
+- status: done
+- removed comment reason: docs/Vue3企业级前端开发规范方案.md replaces the v1.6.1 heading layout with the user supplied v1.7.1 AI-executable structure; removed headings including "### `UnoCSS`", "### `CSS Variables`", "### `PrimeVue Theme`", "### 不要做", "### 核心规则", "### 必须输出的基线", "#### `error`", "#### `warn`", "#### `off`", "### 当前规则来源", "### 当前显式覆盖值", and "### AI 输出要求" are not silently discarded; their rules are absorbed into the new `样式职责边界`, `状态、表单、接口与国际化`, and `Git 初始化与提交链路规则` sections.
+- removed comment reason: "b/docs/Vue3\344\274\201\344\270\232\347\272\247\345\211\215\347\253\257\345\274\200\345\217\221\350\247\204\350\214\203\346\226\271\346\241\210.md" is the Git escaped path for docs/Vue3企业级前端开发规范方案.md; compact removed heading summaries ##`UnoCSS`, ##`CSSVariab, ##`PrimeVueT, ##不要做, ##核心规则, ##必须输出的基线, ###`error`, ###`warn`, ###`off`, ##当前规则来源, ##当前显式覆盖值, and ##AI输出要求 are absorbed by the v1.7.1 replacement structure rather than deleted without rationale.
+- implementation_summary:
+  - Upgraded the canonical Vue3 frontend standard to v1.7.1.
+  - Added v1.7.1 public-primevue generation constraints for theme single source, path-level directory contracts, normative/advisory/landed output boundaries, and ordinary CSS exception boundaries.
+  - Moved the managed Vue3 scaffold default page root to `src/pages/`, kept import-boundary scanning for historical `src/views/`, and added API, i18n, and DTO transform entries.
+  - Updated adapter instruction surfaces and user docs to distinguish mandatory rules, optional advice, and already landed project facts.
+- commands:
+  - `uv run pytest tests/unit/test_frontend_generation_constraints.py tests/unit/test_frontend_generation_constraint_artifacts.py tests/unit/test_frontend_theme_token_governance.py tests/unit/test_frontend_solution_confirmation_models.py tests/unit/test_frontend_solution_confirmation_artifacts.py tests/unit/test_frontend_provider_profile_artifacts.py tests/unit/test_verify_constraints.py tests/unit/test_program_service.py -q` => 560 passed
+  - `uv run pytest tests/integration/test_cli_program.py::TestCliProgram::test_program_managed_delivery_apply_execute_writes_managed_artifacts tests/integration/test_cli_program.py::TestCliProgram::test_program_managed_delivery_apply_execute_reapplies_existing_workspace_scaffold -q` => 2 passed
+  - `uv run ai-sdlc verify constraints` => blocked before this log entry by comment deletion reason requirements for the v1.7.1 document structure replacement.
+  - `uv run ai-sdlc verify constraints` => no BLOCKERs after recording the deletion reason.
+  - `git diff --check` => pass
+  - `uv run ruff check src tests` => pass

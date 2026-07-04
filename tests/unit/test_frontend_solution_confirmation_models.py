@@ -30,6 +30,13 @@ def test_build_builtin_style_pack_manifests_covers_five_canonical_styles() -> No
     assert modern_saas.design_tokens["primary_color"] == "#1770e6"
     assert modern_saas.design_tokens["theme_api"] == "definePreset"
     assert modern_saas.design_tokens["dark_mode"] == "disabled"
+    assert modern_saas.design_tokens["required_semantic_tokens"] == (
+        "primary,surface,highlight"
+    )
+    assert modern_saas.design_tokens["shell_visual_family"] == "light-brand-surface"
+    assert modern_saas.design_tokens["ordinary_css_scope"] == (
+        "animations-complex-shell-third-party-exceptions"
+    )
     assert modern_saas.recommended_for == [
         "enterprise-admin",
         "internal-workbench",
@@ -100,6 +107,10 @@ def test_build_mvp_solution_snapshot_creates_versioned_requested_effective_chain
         "primary_color": "#1770e6",
         "dark_mode_selector": "false",
         "theme_entry": "src/theme.ts",
+        "required_semantic_tokens": "primary,surface,highlight",
+        "style_owner": "primevue-theme-token",
+        "shell_visual_family": "light-brand-surface",
+        "theme_entry_singleton": "true",
     }
 
 
@@ -126,6 +137,10 @@ def test_build_mvp_solution_snapshot_does_not_add_primevue_theme_metadata_to_vue
         "primary_color",
         "dark_mode_selector",
         "theme_entry",
+        "required_semantic_tokens",
+        "style_owner",
+        "shell_visual_family",
+        "theme_entry_singleton",
     ]:
         assert primevue_only_key not in snapshot.provider_theme_adapter_config
 
@@ -197,6 +212,10 @@ def test_build_mvp_solution_snapshot_preserves_previous_state_when_versioning() 
         "primary_color": "#1770e6",
         "dark_mode_selector": "false",
         "theme_entry": "src/theme.ts",
+        "required_semantic_tokens": "primary,surface,highlight",
+        "style_owner": "primevue-theme-token",
+        "shell_visual_family": "light-brand-surface",
+        "theme_entry_singleton": "true",
     }
     assert derived.provider_theme_adapter_config == original.provider_theme_adapter_config
 

@@ -5160,12 +5160,17 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
         "src/env.d.ts",
         "src/main.ts",
         "src/theme.ts",
+        "src/api/client.ts",
+        "src/api/interceptors.ts",
+        "src/api/types.ts",
+        "src/i18n/index.ts",
         "src/plugins/primevue.ts",
         "src/router/index.ts",
         "src/stores/app.ts",
         "src/styles/reset.css",
         "src/styles/variables.css",
         "src/styles/main.css",
+        "src/transform/index.ts",
         "src/generated/frontend-delivery-context.ts",
         "src/generated/provider-adapter.ts",
         "src/App.vue",
@@ -5173,7 +5178,7 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
         "src/components/base/BaseTable.vue",
         "src/components/base/BaseDialog.vue",
         "src/components/base/BaseForm.vue",
-        "src/views/ManagedDeliverySmoke.vue",
+        "src/pages/ManagedDeliverySmoke.vue",
     ]
     generated_by_path = {item["path"]: item["content"] for item in generated_files}
     assert '<div id="app"></div>' in generated_by_path["index.html"]
@@ -5184,6 +5189,14 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     ) < generated_by_path["src/main.ts"].index('import "virtual:uno.css";')
     assert "definePreset" in generated_by_path["src/theme.ts"]
     assert "#1770e6" in generated_by_path["src/theme.ts"]
+    assert 'color: "{primary.500}"' in generated_by_path["src/theme.ts"]
+    assert "surface:" in generated_by_path["src/theme.ts"]
+    assert "highlight:" in generated_by_path["src/theme.ts"]
+    assert "axios.create" in generated_by_path["src/api/client.ts"]
+    assert "setupInterceptors" in generated_by_path["src/api/interceptors.ts"]
+    assert "interface ApiResponse<T>" in generated_by_path["src/api/types.ts"]
+    assert "createI18n" in generated_by_path["src/i18n/index.ts"]
+    assert "transformApiResponse" in generated_by_path["src/transform/index.ts"]
     assert "PrimeVue" in generated_by_path["src/plugins/primevue.ts"]
     assert "preset: AppPreset" in generated_by_path["src/plugins/primevue.ts"]
     assert "darkModeSelector: false" in generated_by_path["src/plugins/primevue.ts"]
@@ -5217,7 +5230,7 @@ def test_build_frontend_managed_delivery_apply_request_materializes_artifact_gen
     assert '"UiTable"' in generated_by_path["src/generated/provider-adapter.ts"]
     assert '"primevue/datatable"' in generated_by_path["src/generated/provider-adapter.ts"]
     assert "RouterView" in generated_by_path["src/App.vue"]
-    smoke_view = generated_by_path["src/views/ManagedDeliverySmoke.vue"]
+    smoke_view = generated_by_path["src/pages/ManagedDeliverySmoke.vue"]
     assert '$i("PrimeVue adapter 已落地")' in smoke_view
     assert "severity=\"contrast\"" not in smoke_view
     assert 'severity="primary"' in smoke_view
@@ -5359,7 +5372,7 @@ def test_build_frontend_managed_delivery_apply_request_generates_safe_enterprise
     smoke_view = next(
         item
         for item in generated_files
-        if item["path"] == "src/views/ManagedDeliverySmoke.vue"
+        if item["path"] == "src/pages/ManagedDeliverySmoke.vue"
     )["content"]
     assert "ProviderFallbackComponent" in provider_adapter
     assert '"UiPageHeader"' in provider_adapter
