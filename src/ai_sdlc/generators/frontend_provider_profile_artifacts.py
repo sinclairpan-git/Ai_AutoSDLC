@@ -58,6 +58,18 @@ def materialize_frontend_provider_profile_artifacts(
         "cross_stack_fallback_targets": profile.cross_stack_fallback_targets,
     }
     if profile.provider_id == "public-primevue":
+        manifest_payload.update(
+            {
+                "visual_contract_version": "v1.7.1",
+                "theme_required_semantics": ["primary", "surface", "highlight"],
+                "theme_entry": "src/theme.ts",
+                "default_page_root": "src/pages",
+                "legacy_page_root": "src/views",
+                "api_entry": "src/api/client.ts",
+                "dto_transform_root": "src/transform",
+                "i18n_mode": "compatible-optional",
+            }
+        )
         manifest_payload["template_runtime_dependencies"] = list(
             PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES
         )

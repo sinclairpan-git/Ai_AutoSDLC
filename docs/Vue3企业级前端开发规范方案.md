@@ -1,23 +1,25 @@
-# Vue3企业级前端开发规范方案 v1.6.1（AI执行版）
+# Vue3企业级前端开发规范方案 v1.7.1（AI执行版）
 
 ## 1. 目标
 
 本规范用于约束 AI 直接输出可落地的 Vue3 前端代码与工程化配置。
 
-`v1.6.1` 的目标是在 `v1.6` 基础上补齐仍然缺失的强约束：
+`v1.7.1` 用于修正 `v1.7` 仍可能造成执行偏差的两类问题：
 
-- `TypeScript`、路由 `meta`、公共响应结构
-- `Base` 层中的统一权限控制职责
-- Git 提交粒度与可读性要求
-- 深色信息块使用边界
+- 规范正文与可选建议边界不清
+- 目录结构只有职责描述、缺少路径级约束
 
-同时明确：
-
-- 接口命名以后台实际契约、生成代码或既有服务层约定为主，不做前端命名风格强限制
+AI 必须把“规范正文”“可选建议”“已经落地”三者严格区分。
 
 ## 2. 默认技术方案
 
 除非用户明确指定其他方案，否则默认采用：
+
+- `frontend_stack=vue3`
+- `provider_id=public-primevue`
+- `style_pack_id=modern-saas`
+
+并同时具备以下技术栈：
 
 - `Vue3 + TypeScript + Vite`
 - `PrimeVue + @primeuix/themes + primeicons`
@@ -26,19 +28,13 @@
 - `UnoCSS + CSS Variables`
 - `Pinia + Vue Router + Axios`
 - `vee-validate + zod`
-- `vue-i18n`
+- `vue-i18n`（仅在项目启用国际化时接入）
 - `Playwright`
 - `ESLint + Prettier + husky + lint-staged + commitlint`
 
 ## 3. 工程化边界
 
 当用户说“这是前端项目的约束”时，默认按前端子项目边界落地，不自动扩大为整个宿主仓库约束。
-
-SDLC 不硬编码唯一前端子项目名。AI 必须优先读取当前项目已经确认的前端子项目路径；若项目没有明确路径，必须先在方案确认或初始化阶段收口。以下路径只作为已确认项目的示例：
-
-```txt
-apps/prompt-template-center
-```
 
 AI 必须区分：
 
@@ -122,65 +118,88 @@ export const AppPreset = definePreset(Aura, {
 });
 ```
 
-壳层样式默认方向：
+### 样式职责边界
 
-```css
-.shell__sidebar {
-    background: linear-gradient(180deg, #f6faff 0%, #edf4fb 100%);
-    border: 1px solid #d9e5f2;
-    border-radius: 28px;
-    box-shadow: 0 18px 40px rgba(23, 112, 230, 0.08);
-}
+`UnoCSS`：
 
-.shell__nav-link.is-active {
-    background: #e8f1ff;
-    color: #1770e6;
-    border-color: #c8dcff;
-}
-
-.shell__topbar {
-    background: rgba(255, 255, 255, 0.78);
-    border: 1px solid rgba(16, 35, 62, 0.08);
-    box-shadow: 0 12px 30px rgba(23, 112, 230, 0.06);
-    backdrop-filter: blur(16px);
-}
-```
-
-## 5. 样式职责边界
-
-### `UnoCSS`
-
-- 负责布局、间距、排版、响应式、过渡
+- 负责 `flex / grid / layout / spacing / responsive / typography / hover / transition`
 - 优先用原子类完成页面结构
 
-### `CSS Variables`
+`CSS Variables`：
 
 - 负责品牌变量、布局变量、壳层变量
 - 不负责替代 `PrimeVue Theme` 去承接大面积基础组件视觉
 
-### `PrimeVue Theme`
+普通 CSS：
+
+- 只负责特殊动画、极复杂结构样式、少量页面壳层补充、第三方组件例外覆盖
+
+`PrimeVue Theme`：
 
 - 负责基础组件 token
 - 负责 `primary / surface / highlight`
 - 负责按钮、输入框、标签、面板等基础控件统一视觉基线
 
-### 不要做
+AI 不要做：
 
 - 不要在页面里散落大量颜色值
 - 不要用页面 CSS 大面积覆盖 `.p-button`、`.p-inputtext`、`.p-select`、`.p-tag`
 - 不要让同一页面出现两套圆角、边框、阴影体系
+- 不要对 `.p-inputtextarea`、`.p-card`、`.p-dialog` 做大面积基础视觉重写
 
-## 6. 组件、目录与拆分规则
+## 5. 组件、目录与拆分规则
 
 ### 目录与职责
 
-- `components/base`：基础组件
-- `components/business`：业务语义组件
-- `views`：页面组装
-- `stores`：领域状态
-- `router/modules`：路由模块
-- `api/modules`：接口模块
-- `types`：公共类型
+AI 默认按以下路径级结构生成，不得只写抽象职责、不落具体目录：
+
+```txt
+src/
+  api/
+    client.ts
+    interceptors.ts
+    types.ts
+    modules/
+  assets/
+  components/
+    base/
+    business/
+    layout/
+  composables/
+  constants/
+  directives/
+  i18n/
+  layouts/
+  pages/ 或 views/
+  plugins/
+  router/
+    index.ts
+    modules/
+  stores/
+  styles/
+    reset.css
+    variables.css
+    main.css
+  theme.ts
+  transform/
+  types/
+  utils/
+  App.vue
+  main.ts
+```
+
+AI 必须同时遵守以下硬约束：
+
+- 新项目默认生成 `pages/`，不要同时新建 `pages/` 和 `views/`；历史项目若已经使用 `views/`，则沿用原命名，不再额外引入 `pages/`
+- `components/base` 只放高复用、无业务语义组件；`components/business` 只放业务语义组件；`components/layout` 只放布局骨架与容器
+- `api/client.ts` 是推荐的唯一 Axios 入口；若历史项目已存在 `api/http.ts`，则只保留一个真实入口，不要双入口并存
+- `api/interceptors.ts` 单独承载拦截器；不要在页面、store 或零散模块里重复写鉴权与错误处理
+- `api/modules/*` 必须按领域拆分；不要在页面里直接拼 URL 或直接散写正式请求实现
+- `router/index.ts` 负责装配；`router/modules/*` 负责分域声明；除极小项目外，不要把全部路由塞进单文件
+- `theme.ts` 是主题预设唯一入口；不要在 `main.ts`、页面样式或业务组件中重复创建主题配置
+- `styles/` 只放 `reset.css`、`variables.css`、`main.css` 与少量全局壳层样式；不要把业务页面样式和大量 PrimeVue 基础重写放到全局样式
+- `types/` 统一收口共享类型；跨模块复用类型不得长期散落在页面、store 或接口文件内部
+- `transform/` 必须承接 DTO 到前端模型的映射；不要把字段转换逻辑散在页面模板和组件渲染层
 
 页面只负责：
 
@@ -189,11 +208,18 @@ export const AppPreset = definePreset(Aura, {
 - 路由参数
 - 权限控制
 
+复杂逻辑必须继续下沉拆分到：
+
+- `stores`
+- `composables`
+- `business components`
+- `domain / rules`
+
 ### `Base / Business / View`
 
 - `Base`：高复用、无业务语义、统一交互与统一外观
 - `Business`：业务语义、状态映射、领域逻辑
-- `View`：页面级组装与调度
+- `View/Page`：页面级组装与调度
 
 ### 高频控件收口
 
@@ -212,27 +238,39 @@ export const AppPreset = definePreset(Aura, {
 - 默认国际化接入方式
 - 统一权限控制
 
-### 拆分要求
+## 6. 状态、表单、接口与国际化
 
+### 状态管理
+
+- 必须使用 `Pinia`
 - 一个领域一个 store
-- store 按领域拆分，例如 `app`、`user`、`permission`、`settings`
-- 路由按 `router/modules` 拆分
-- API 按 `api/modules` 拆分
-- 公共类型统一收口到 `types/`
+- store 按领域拆分
+- 不要继续生成无限膨胀的总 store
+- 异步动作必须显式处理加载态、错误态和空态
 
-### 路由 `meta` 规范
+### 路由 `meta`
 
-推荐 `meta` 字段统一管理：
+推荐统一管理：
 
 - `title`
 - `auth`
 - `keepAlive`
 - `roles`
 
-### API 与类型补充
+### 表单校验
 
-- 接口命名以后台实际契约、生成代码或既有服务层约定为主
-- 优先使用 `unknown`，避免直接使用 `any`
+- 必须使用 `vee-validate + zod`
+- 不要只靠手写 `if/else` 零散校验
+- schema 必须集中定义
+- 错误信息必须接入 i18n 或统一文案层
+
+### 接口分层
+
+- `Axios` 是唯一正式 HTTP 客户端
+- 必须有 `api/client`
+- 必须有 `api/modules/*`
+- 必须有 `types/*`
+- 必须有 DTO 到前端模型的映射层
 - 公共请求/响应类型统一收口到 `types/` 或 `api/types.ts`
 - 若项目存在统一响应包装，应抽象为公共泛型结构，例如：
 
@@ -244,14 +282,15 @@ interface ApiResponse<T> {
 }
 ```
 
-### 不要做
+AI 不要做：
 
+- 不要在页面里直接拼 URL
+- 不要正式实现里继续散写 `fetch`
+- 不要把后端原始响应结构直接灌给所有页面组件
+- 不要只安装 `axios` 却不建立服务层
 - 不要把明显业务语义组件塞进 `Base` 层
-- 不要在页面里长期散落 `primevue/*` 高频控件用法
-- 不要让 `store / router / api / types` 长期堆在单文件
-- 不要继续使用 `global.ts` 这类无限膨胀的总 store
 
-## 7. 标签体系与表单家族规则
+### 标签体系与表单家族
 
 ### 标签必须拆分
 
@@ -264,6 +303,21 @@ interface ApiResponse<T> {
 - `TemplateStatusTag`
 - `TemplateVisibilityTag`
 - `TemplateRiskTag`
+
+### 推荐映射
+
+- `private` -> 中性浅灰胶囊
+- `team` -> 浅蓝灰胶囊
+- `department` -> 浅橙或浅金胶囊
+- `official` -> 品牌蓝浅底胶囊
+- `low` -> `secondary`
+- `medium` -> `info`
+- `high` -> `warn`
+- `critical` -> `danger`
+- `draft` -> `secondary`
+- `review_pending` -> `warn`
+- `published` -> `success`
+- `rejected` -> `danger`
 
 ### 明确禁止
 
@@ -284,21 +338,22 @@ interface ApiResponse<T> {
 - 原生 `input` 与 PrimeVue `InputText` 在同一区域混用
 - 同一表单区中输入框、下拉框、按钮分别维持三套外观
 
-## 8. 国际化规则
+### 国际化
 
-### 核心规则
+- 默认兼容 `vue-i18n`，但不是所有项目都必须首版立即启用多语言
+- 已启用国际化时，不要一部分写裸中文，一部分写 `$i('中文')`
+- 已启用国际化时，用户可见文案应进入 i18n 资源
+- 未启用国际化时，允许先使用稳定中文文案，但要保留后续接入 i18n 的扩展结构
 
-所有用户可见中文文案，开发阶段统一写成：
+### 作者态规则
+
+已启用国际化的项目，用户可见中文文案开发阶段统一写成：
 
 ```vue
 $i('中文')
 ```
 
-不要直接写裸中文。
-
-不要一上来就手写英文 key。
-
-### 必须包 `$i(...)` 的内容
+### 已启用国际化时必须包 `$i(...)` 的内容
 
 - 页面标题
 - 路由 `meta.title`
@@ -308,11 +363,11 @@ $i('中文')
 - 空状态
 - 错误提示
 - 成功提示
-- tooltip
+- `tooltip`
 - 标签文案
 - 表格列标题
 - 弹窗标题
-- tabs 文案
+- `tabs` 文案
 
 ### 不要包 `$i(...)` 的内容
 
@@ -326,87 +381,96 @@ $i('中文')
 
 ### 允许的例外
 
-仅在以下场景允许直接使用稳定 key：
-
 - 项目已经存在统一词典中心
 - 当前改动只是延续既有 key 体系
 - 同一领域术语必须复用既有命名
 
-## 9. ESLint 执行规则
+## 7. Git 初始化与提交链路规则
 
-项目真实配置文件必须以当前前端子项目为准。以下路径是已确认前端子项目的示例，不得作为所有项目的全局硬编码：
+### Git 前置条件
 
-```txt
-apps/prompt-template-center/eslint.config.js
+`husky`、`lint-staged`、`commitlint` 是否“已落地”，不能靠依赖列表判断，必须靠 Git 真实状态判断。
+
+AI 必须遵守：
+
+- 在接入 Git Hook 前，先确认当前目录是否是可用 Git 仓库
+- 若不是，先执行 `git init` 或要求用户提供已初始化仓库
+- 仅存在 `.git` 目录不算通过
+- 必须以 `git rev-parse --is-inside-work-tree` 成功返回为准
+- 若该命令失败，不得宣称 `husky`、`lint-staged`、`commitlint` 已生效
+
+### 推荐脚本
+
+```json
+{
+    "scripts": {
+        "dev": "vite",
+        "build": "vue-tsc --noEmit && vite build",
+        "lint": "eslint . --ext .ts,.vue",
+        "format": "prettier --write .",
+        "test:e2e": "playwright test",
+        "prepare": "husky"
+    }
+}
 ```
 
-### 必须输出的基线
+### ESLint 最低实值
+
+- 若这是某个已存在项目的落地规范，优先写该项目真实配置文件路径和当前实值，不要长期只写通用推荐值
 
 - 基于 `@eslint/js`
 - 基于 `eslint-plugin-vue` 的 `flat/recommended`
 - 使用 `vue-eslint-parser`
 - `script` 部分交给 `@typescript-eslint/parser`
-- 仅校验：
+- 仅校验 `src/**/*.{ts,vue}`
+- 忽略 `dist/**`、`coverage/**`
 
-```txt
-src/**/*.{ts,vue}
-```
+### 关键规则口径
 
-- 忽略：
+- `error`
+  - `no-var`
+  - `prefer-const`
+  - `object-shorthand`
+  - `@typescript-eslint/no-unused-vars`
+  - `@typescript-eslint/consistent-type-imports`
+  - `vue/no-mutating-props`
+- `warn`
+  - `no-console`，但允许 `warn` 和 `error`
+  - `no-debugger`
+  - `@typescript-eslint/no-explicit-any`
 
-```txt
-dist/**
-coverage/**
-```
+- `off`
+  - `no-unused-vars`
+  - `vue/html-self-closing`
+  - `vue/multi-word-component-names`
 
-### 当前规则口径
-
-#### `error`
-
-- `no-var`
-- `prefer-const`
-- `object-shorthand`
-- `@typescript-eslint/no-unused-vars`
-- `@typescript-eslint/consistent-type-imports`
-- `vue/no-mutating-props`
-
-#### `warn`
-
-- `no-console`，但允许 `warn` 和 `error`
-- `no-debugger`
-- `@typescript-eslint/no-explicit-any`
-
-#### `off`
-
-- `no-unused-vars`
-- `vue/html-self-closing`
-- `vue/multi-word-component-names`
-
-### AI 输出要求
+### ESLint AI 输出要求
 
 - 不允许把 `.vue` 文件直接交给 TS parser
 - 不允许省略浏览器全局变量声明后再让前端代码被 `no-undef` 卡死
 - 不允许把当前 `warn` 规则擅自升级成 `error`
 - 不允许把当前已放宽规则重新收紧后却不说明兼容成本
 
-## 10. Prettier 执行规则
+### TypeScript 补充约束
 
-项目真实配置文件必须以当前前端子项目为准。以下路径是已确认前端子项目的示例，不得作为所有项目的全局硬编码：
+- `tsconfig` 应开启 `strict`
+- 优先使用 `unknown`，避免直接使用 `any`
+- 公共类型统一收口到 `types/`
+- 避免在页面内重复声明大量 inline type
 
-```txt
-apps/prompt-template-center/.prettierrc.cjs
-```
-
-### 当前实值
+### Prettier 最低实值
 
 - `printWidth: 120`
 - `tabWidth: 4`
 - `useTabs: false`
 - `semi: true`
 - `singleQuote: true`
+- `trailingComma: 'all'`
+- `vueIndentScriptAndStyle: false`
+- `endOfLine: 'lf'`
+
 - `quoteProps: 'as-needed'`
 - `jsxSingleQuote: false`
-- `trailingComma: 'all'`
 - `bracketSpacing: true`
 - `arrowParens: 'avoid'`
 - `rangeStart: 0`
@@ -415,48 +479,33 @@ apps/prompt-template-center/.prettierrc.cjs
 - `insertPragma: false`
 - `proseWrap: 'preserve'`
 - `htmlWhitespaceSensitivity: 'css'`
-- `vueIndentScriptAndStyle: false`
-- `endOfLine: 'lf'`
 - `embeddedLanguageFormatting: 'auto'`
 
-### AI 输出要求
+### Prettier AI 输出要求
 
 - 不允许把 JSON 版 Prettier 配置和带注释 / `Infinity` 的 JS 配置混用
 - 不允许在未说明的情况下擅自改回 `2` 空格或 `80/100` 行宽
 - 不允许忽略 `LF` 与 `4` 空格这两个已明确收口的格式约束
 
-## 11. Commitlint 执行规则
-
-项目真实配置文件必须以当前前端子项目为准。以下路径是已确认前端子项目的示例，不得作为所有项目的全局硬编码：
-
-```txt
-apps/prompt-template-center/commitlint.config.cjs
-```
-
-### 当前规则来源
+### Commitlint 最低实值
 
 - 继承 `@commitlint/config-conventional`
-
-### 当前显式覆盖值
-
 - `type-enum`
-  - 允许：`feat / fix / docs / style / refactor / perf / test / build / ci / chore / revert`
+  - `feat / fix / docs / style / refactor / perf / test / build / ci / chore / revert`
 - `subject-empty: [2, 'never']`
 - `subject-full-stop: [2, 'never', '.']`
 - `header-max-length: [2, 'always', 100]`
+- 仍需承认 inherited rules 生效：
+  - `type-empty`
+  - `type-case`
+  - `header-trim`
+  - `subject-case`
+  - `body-leading-blank`
+  - `footer-leading-blank`
+  - `body-max-line-length`
+  - `footer-max-line-length`
 
-### 当前继承后仍然生效的限制
-
-- `type-empty: [2, 'never']`
-- `type-case: [2, 'always', 'lower-case']`
-- `header-trim: [2, 'always']`
-- `subject-case: [2, 'never', ['sentence-case', 'start-case', 'pascal-case', 'upper-case']]`
-- `body-leading-blank: [1, 'always']`
-- `footer-leading-blank: [1, 'always']`
-- `body-max-line-length: [2, 'always', 100]`
-- `footer-max-line-length: [2, 'always', 100]`
-
-### AI 输出要求
+### Commitlint AI 输出要求
 
 - 不允许把“未显式配置”误写成“不生效”
 - 如果继承了 `config-conventional`，必须说明继承规则仍然有效
@@ -464,14 +513,13 @@ apps/prompt-template-center/commitlint.config.cjs
 - 不允许生成当前项目不存在的额外本地规则项
 - 不允许在示例里给出标题末尾带 `.` 的提交信息
 
-## 12. 提交链路与验证规则
-
-项目真实提交链路必须以当前前端子项目为准。以下路径是已确认前端子项目的示例，不得作为所有项目的全局硬编码：
+### 推荐链路
 
 ```txt
-apps/prompt-template-center/.husky/pre-commit
-apps/prompt-template-center/.husky/commit-msg
-apps/prompt-template-center/lint-staged.config.cjs
+.husky/pre-commit
+.husky/commit-msg
+lint-staged.config.cjs
+commitlint.config.cjs
 ```
 
 ### `pre-commit`
@@ -490,7 +538,7 @@ pnpm exec lint-staged
 pnpm exec commitlint --edit "$1"
 ```
 
-### `lint-staged` 当前作用域
+### `lint-staged` 建议作用域
 
 ```js
 module.exports = {
@@ -501,18 +549,46 @@ module.exports = {
 
 AI 必须理解：
 
-- 这是“前端子项目独立提交链路”
-- 不是整个宿主工作区默认全部受控
 - 代码文件先 `eslint --fix` 再 `prettier`
 - 其余配置和文档只做 `prettier`
+- 这是提交链路，不等于项目全部质量保证
 
-### 提交粒度与可读性
+### 最低门禁
 
-- 不要把格式化噪音和业务改动混成一次不可读提交
-- 不要把无关的大范围格式化改动塞进一次功能提交
-- `commit message` 不仅要合规，还要可快速追溯本次真实意图
+提交前至少满足：
 
-### 测试与验证
+- `git rev-parse --is-inside-work-tree` 通过
+- `pnpm lint` 通过
+- `pnpm build` 通过
+- 关键 E2E 用例可执行
+- Git 提交信息符合 `commitlint` 规则
+
+### 推荐安装依赖
+
+运行依赖：
+
+```bash
+pnpm add vue-router pinia axios primevue primeicons @primeuix/themes
+pnpm add vee-validate zod vue-i18n @vueuse/core dayjs
+```
+
+开发依赖：
+
+```bash
+pnpm add -D typescript vite unocss eslint prettier playwright
+pnpm add -D husky lint-staged @commitlint/cli @commitlint/config-conventional
+```
+
+### 推荐开发原则
+
+- 先组合，不要先封装
+- 先原子化，不要先写大量 CSS
+- 先拆组件，不要写巨型页面
+- 页面只负责“组装”
+- 先统一视觉家族，再做局部点缀
+- 先收口主题，再谈页面补丁
+
+## 8. 测试与验证
 
 - `Playwright` 用于关键页面与关键交互回归
 - 若项目存在单测体系，则行为变更时补齐对应测试
@@ -523,41 +599,42 @@ AI 必须理解：
 - 主题是否生效
 - 表单控件是否同族
 - 标签映射是否统一
-- 国际化作者态是否一致
-- 深色信息块是否被错误用在普通卡片、筛选容器或常规信息分组
+- 若项目已启用国际化，国际化作者态是否一致
+- `pre-commit` 和 `commit-msg` 是否真实生效
 
-## 13. AI 禁令
+## 9. AI 禁令
 
+- 不要把“企业后台 / 中后台 / 管理台 / 表单 / 表格 / 审批流 / 工作台”误判为 Vue2 信号
 - 不要只改导航，不同步页头、badge、标签、筛选器
 - 不要一边统一按钮风格，一边放任标签和输入框继续使用旧风格
 - 不要为了省事回退到原生表单控件
 - 不要把主题问题继续下放给页面 CSS 兜底
-- 不要把深色信息块滥用到普通卡片、筛选容器和常规信息分组
-- 不要一部分写裸中文，一部分写 `$i('中文')`
+- 已启用国际化时，不要一部分写裸中文，一部分写 `$i('中文')`
 - 不要把所有标签继续散落在页面局部写 `severity`
 - 不要让 `store / router / api / types` 长期堆在单文件
 - 不要继续生成 `global.ts` 这类无限膨胀的总 store
 - 不要只写“建议接入 ESLint / Prettier / Commitlint”，必须写出当前实值
+- 不要把“装了依赖”写成“已经落地”
+- 不要在 `git rev-parse --is-inside-work-tree` 失败时宣称 hook 生效
 - 不要把宿主仓库约束与前端子项目约束混为一谈
-- 不要把继承值写成显式配置值
 - 不要在 JSON 文件中添加注释
 - 不要为了补文档而虚构当前项目不存在的规则项
-- 不要把格式化噪音和业务改动混成一次不可读提交说明
 
-## 14. 输出口径
+## 10. 输出口径
 
 如果用户让你更新规范文档：
 
-- 先以当前真实配置为准
+- 先以当前真实配置与真实前置条件为准
 - 再把规则提炼成文档条目
 - 明确写出作用域、工具文件路径、规则级别、限制值
 
 如果用户让你实现前端项目：
 
 - 先按本规范输出工程化基线
+- 先确认默认方案选择
+- 先确认 Git 是否已初始化可用
 - 主题先收口到 `theme.ts`
-- 国际化先用 `$i('中文')`
+- 若项目已启用国际化，国际化实现先统一接入
 - 高频基础控件优先进入 `Base` 层
-- 高频标签优先进入业务标签组件
 - 再输出页面实现
 - 不允许先写业务代码、后补工程约束

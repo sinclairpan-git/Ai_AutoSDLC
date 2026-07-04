@@ -189,8 +189,16 @@ def test_validate_frontend_theme_token_governance_reports_public_primevue_warnin
         "raw-visible-enum-label": "raw-visible-enum-label",
         "raw-visible-chinese-without-$i": "表格标题",
         "severity=contrast": 'severity="contrast"',
+        "missing-theme-primary-token": "missing-theme-primary-token",
         "missing-theme-surface-token": "missing-theme-surface-token",
         "missing-theme-highlight-token": "missing-theme-highlight-token",
+        "duplicate-pages-views-roots": "duplicate-pages-views-roots",
+        "multiple-api-client-entries": "multiple-api-client-entries",
+        "missing-dto-transform-layer": "missing-dto-transform-layer",
+        "global-business-css-primevue-rewrite": "global-business-css-primevue-rewrite",
+        "missing-normative-advisory-landed-separation": (
+            "missing-normative-advisory-landed-separation"
+        ),
         "missing-router-meta-contract": "missing-router-meta-contract",
         "missing-api-response-generic": "missing-api-response-generic",
         "dark-block-on-ordinary-surface": "dark-block-on-ordinary-surface",

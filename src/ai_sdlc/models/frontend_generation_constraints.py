@@ -299,6 +299,42 @@ def build_mvp_frontend_generation_constraints(
                     ),
                 ),
                 GenerationHardRule(
+                    rule_id="theme-entry-single-source",
+                    category="absolute",
+                    description=(
+                        "src/theme.ts is the single PrimeVue preset entry; main.ts, "
+                        "page styles, and business components cannot recreate theme "
+                        "configuration"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="path-level-directory-contract",
+                    category="absolute",
+                    description=(
+                        "Vue3 generation must emit concrete path-level structure, use "
+                        "src/pages for new projects, avoid simultaneous pages/views roots, "
+                        "and include api, i18n, styles, theme, transform, types, router, "
+                        "stores, and component layer boundaries"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="normative-advisory-landed-output-boundary",
+                    category="absolute",
+                    description=(
+                        "AI output must clearly separate normative rules, optional "
+                        "recommendations, and already landed project facts"
+                    ),
+                ),
+                GenerationHardRule(
+                    rule_id="ordinary-css-exception-boundary",
+                    category="absolute",
+                    description=(
+                        "ordinary CSS is limited to special animations, complex "
+                        "structures, small shell supplements, and third-party exceptions; "
+                        "it cannot become a broad PrimeVue base visual rewrite layer"
+                    ),
+                ),
+                GenerationHardRule(
                     rule_id="scoped-frontend-engineering-boundary",
                     category="absolute",
                     description=(
@@ -380,8 +416,14 @@ def build_mvp_frontend_generation_constraints(
                 "raw-visible-enum-label",
                 "raw-visible-chinese-without-$i",
                 "severity=contrast",
+                "missing-theme-primary-token",
                 "missing-theme-surface-token",
                 "missing-theme-highlight-token",
+                "duplicate-pages-views-roots",
+                "multiple-api-client-entries",
+                "missing-dto-transform-layer",
+                "global-business-css-primevue-rewrite",
+                "missing-normative-advisory-landed-separation",
                 "missing-router-meta-contract",
                 "missing-api-response-generic",
                 "dark-block-on-ordinary-surface",

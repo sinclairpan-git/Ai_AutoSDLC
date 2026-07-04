@@ -468,11 +468,19 @@ def test_verify_constraint_report_runtime_objects_canonicalize_lists() -> None:
 def test_public_primevue_import_boundary_reports_business_direct_imports(
     tmp_path: Path,
 ) -> None:
-    view_path = tmp_path / "managed" / "frontend" / "src" / "views" / "BadView.vue"
+    page_path = tmp_path / "managed" / "frontend" / "src" / "pages" / "BadPage.vue"
+    legacy_view_path = (
+        tmp_path / "managed" / "frontend" / "src" / "views" / "BadView.vue"
+    )
     business_path = tmp_path / "src" / "components" / "business" / "BadWidget.ts"
-    view_path.parent.mkdir(parents=True, exist_ok=True)
+    page_path.parent.mkdir(parents=True, exist_ok=True)
+    legacy_view_path.parent.mkdir(parents=True, exist_ok=True)
     business_path.parent.mkdir(parents=True, exist_ok=True)
-    view_path.write_text(
+    page_path.write_text(
+        '<script setup lang="ts">\nimport Button from "primevue/button";\n</script>\n',
+        encoding="utf-8",
+    )
+    legacy_view_path.write_text(
         '<script setup lang="ts">\nimport Button from "primevue/button";\n</script>\n',
         encoding="utf-8",
     )
@@ -488,8 +496,9 @@ def test_public_primevue_import_boundary_reports_business_direct_imports(
     context = build_verification_gate_context(tmp_path)
 
     assert report.gate_result == "WARN"
-    assert report.scanned_file_count == 2
-    assert len(report.warnings) == 2
+    assert report.scanned_file_count == 3
+    assert len(report.warnings) == 3
+    assert any("managed/frontend/src/pages/BadPage.vue" in item for item in report.warnings)
     assert any("managed/frontend/src/views/BadView.vue" in item for item in report.warnings)
     assert any("src/components/business/BadWidget.ts" in item for item in report.warnings)
     assert "frontend_public_primevue_import_boundary" in context[
@@ -2253,40 +2262,40 @@ def test_release_docs_consistency_blocks_when_release_entry_docs_drift(
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
     _write_verification_profile_docs(tmp_path)
     (tmp_path / "README.md").write_text(
-        "# AI-SDLC\n\n`v0.9.4`\n\n"
+        "# AI-SDLC\n\n`v0.9.5`\n\n"
         "## Start The Framework\n\n"
         "```bash\nai-sdlc init .\n```\n\n"
         "`init` automatically runs the safe startup rehearsal, then tells you "
         "to switch to the AI chat and prints one next command in Chinese and English.\n\n"
         "`python -m ai_sdlc run --dry-run` remains available for troubleshooting. "
         "It is not a beginner-path setup step.\n\n"
-        "- Windows offline bundle: `ai-sdlc-offline-0.9.4-windows-amd64.zip`\n"
-        "- macOS offline bundle: `ai-sdlc-offline-0.9.4-macos-arm64.tar.gz`\n"
-        "- Linux offline bundle: `ai-sdlc-offline-0.9.4-linux-amd64.tar.gz`\n"
-        "- Release notes: `docs/releases/v0.9.4.md`\n",
+        "- Windows offline bundle: `ai-sdlc-offline-0.9.5-windows-amd64.zip`\n"
+        "- macOS offline bundle: `ai-sdlc-offline-0.9.5-macos-arm64.tar.gz`\n"
+        "- Linux offline bundle: `ai-sdlc-offline-0.9.5-linux-amd64.tar.gz`\n"
+        "- Release notes: `docs/releases/v0.9.5.md`\n",
         encoding="utf-8",
     )
     release_notes = tmp_path / "docs" / "releases"
     release_notes.mkdir(parents=True, exist_ok=True)
-    (release_notes / "v0.9.4.md").write_text("# AI-SDLC v0.9.4 Release Notes\n", encoding="utf-8")
-    (tmp_path / "USER_GUIDE.zh-CN.md").write_text("v0.9.4\nWindows\nzip\nmacOS\nLinux\ntar.gz\n", encoding="utf-8")
+    (release_notes / "v0.9.5.md").write_text("# AI-SDLC v0.9.5 Release Notes\n", encoding="utf-8")
+    (tmp_path / "USER_GUIDE.zh-CN.md").write_text("v0.9.5\nWindows\nzip\nmacOS\nLinux\ntar.gz\n", encoding="utf-8")
     offline_dir = tmp_path / "packaging" / "offline"
     offline_dir.mkdir(parents=True, exist_ok=True)
     (offline_dir / "README.md").write_text(
-        "v0.9.4\nai-sdlc-offline-0.9.4-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz\n",
+        "v0.9.5\nai-sdlc-offline-0.9.5-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz\n",
         encoding="utf-8",
     )
     (tmp_path / "docs" / "框架自迭代开发与发布约定.md").write_text(
-        "README.md\ndocs/releases/v0.9.4.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
-        "ai-sdlc-offline-0.9.4-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz\n",
+        "README.md\ndocs/releases/v0.9.5.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
+        "ai-sdlc-offline-0.9.5-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz\n",
         encoding="utf-8",
     )
     (tmp_path / "docs" / "pull-request-checklist.zh.md").write_text(
-        "README.md\ndocs/releases/v0.9.4.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n",
+        "README.md\ndocs/releases/v0.9.5.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n",
         encoding="utf-8",
     )
 
@@ -2322,42 +2331,42 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
         encoding="utf-8",
     )
     (tmp_path / "README.md").write_text(
-        "# AI-SDLC\n\n`v0.9.4`\n\n"
+        "# AI-SDLC\n\n`v0.9.5`\n\n"
         "## Start The Framework\n\n"
         "```bash\nai-sdlc init .\n```\n\n"
         "`init` automatically runs the safe startup rehearsal, then tells you "
         "to switch to the AI chat and prints one next command in Chinese and English.\n\n"
         "`python -m ai_sdlc run --dry-run` remains available for troubleshooting. "
         "It is not a beginner-path setup step.\n\n"
-        "- Windows offline bundle: `ai-sdlc-offline-0.9.4-windows-amd64.zip`\n"
-        "- macOS offline bundle: `ai-sdlc-offline-0.9.4-macos-arm64.tar.gz`\n"
-        "- Linux offline bundle: `ai-sdlc-offline-0.9.4-linux-amd64.tar.gz`\n"
-        "- Release notes: `docs/releases/v0.9.4.md`\n"
+        "- Windows offline bundle: `ai-sdlc-offline-0.9.5-windows-amd64.zip`\n"
+        "- macOS offline bundle: `ai-sdlc-offline-0.9.5-macos-arm64.tar.gz`\n"
+        "- Linux offline bundle: `ai-sdlc-offline-0.9.5-linux-amd64.tar.gz`\n"
+        "- Release notes: `docs/releases/v0.9.5.md`\n"
         "No such command 'install'\n"
         "ai-sdlc self-update check\n"
         "--upgrade-existing\n"
         "-AddToPath\n"
         "--add-to-path\n"
-        "releases/download/v0.9.4\n",
+        "releases/download/v0.9.5\n",
         encoding="utf-8",
     )
     release_notes = tmp_path / "docs" / "releases"
     release_notes.mkdir(parents=True, exist_ok=True)
-    (release_notes / "v0.9.4.md").write_text(
-        "# AI-SDLC v0.9.4 Release Notes\n\n"
+    (release_notes / "v0.9.5.md").write_text(
+        "# AI-SDLC v0.9.5 Release Notes\n\n"
         "No such command 'install'\n"
         "ai-sdlc self-update check\n"
         "--upgrade-existing\n"
         "-AddToPath\n"
         "--add-to-path\n"
         "python -m ai_sdlc\n"
-        "releases/download/v0.9.4\n"
+        "releases/download/v0.9.5\n"
         "Windows `.zip`\nmacOS / Linux `.tar.gz`\n"
         "release-build.yml\nrelease-artifact-smoke.yml\n",
         encoding="utf-8",
     )
     (tmp_path / "USER_GUIDE.zh-CN.md").write_text(
-        "v0.9.4\nWindows\n.zip\nmacOS\nLinux\n.tar.gz\n"
+        "v0.9.5\nWindows\n.zip\nmacOS\nLinux\n.tar.gz\n"
         "No such command 'install'\n"
         "ai-sdlc self-update check\n"
         "--upgrade-existing\n"
@@ -2365,10 +2374,10 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
         "--add-to-path\n"
         "ai-sdlc --help\n"
         "python -m ai_sdlc\n"
-        "releases/download/v0.9.4\n"
-        "ai-sdlc-offline-0.9.4-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz\n"
+        "releases/download/v0.9.5\n"
+        "ai-sdlc-offline-0.9.5-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz\n"
         "脚本只检查当前目录，不扫描其他目录\n"
         "The script checks only the current directory\n"
         "请把 zip 放到当前目录，并先 cd 到该目录后重试\n"
@@ -2379,16 +2388,16 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
         "Direct shim\n"
         "D:\\work\\ui-test-platform 是示例路径；请替换成你的真实项目根目录\n"
         "cd D:\\work\\ui-test-platform\n"
-        "& \"D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.4-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe\" init . --agent-target codex --shell powershell\n"
+        "& \"D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.5-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe\" init . --agent-target codex --shell powershell\n"
         "D:\\work\\my-existing-project 是示例路径；请替换成你的真实项目根目录\n"
         "cd D:\\work\\my-existing-project\n"
-        "& \"D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.4-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe\" init . --agent-target codex --shell powershell\n"
+        "& \"D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.5-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe\" init . --agent-target codex --shell powershell\n"
         "~/work/my-existing-project 是示例路径；请替换成你的真实项目根目录\n"
         "cd ~/work/my-existing-project\n"
         "ai-sdlc init .\n"
         "如果 `ai-sdlc` 不在 PATH\n"
         "把 `--help` 换成 `init .`\n"
-        "当前正式发布版：`v0.9.4`\n"
+        "当前正式发布版：`v0.9.5`\n"
         "## 第一章：全新用户 + 全新空项目\n"
         "## 第二章：全新用户 + 已有项目\n"
         "## 第三章：老用户升级\n"
@@ -2403,9 +2412,9 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     offline_dir = tmp_path / "packaging" / "offline"
     offline_dir.mkdir(parents=True, exist_ok=True)
     (offline_dir / "README.md").write_text(
-        "v0.9.4\nai-sdlc-offline-0.9.4-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz\n"
+        "v0.9.5\nai-sdlc-offline-0.9.5-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz\n"
         "-AddToPath\n"
         "--add-to-path\n"
         "ai-sdlc --help\n"
@@ -2413,20 +2422,20 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
         encoding="utf-8",
     )
     (tmp_path / "docs" / "框架自迭代开发与发布约定.md").write_text(
-        "README.md\ndocs/releases/v0.9.4.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
-        "docs/pull-request-checklist.zh.md\nv0.9.4\n"
+        "README.md\ndocs/releases/v0.9.5.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
+        "docs/pull-request-checklist.zh.md\nv0.9.5\n"
         "普通用户主路径\nlive host evidence\nmaterialized only\n"
-        "ai-sdlc-offline-0.9.4-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz\n",
+        "ai-sdlc-offline-0.9.5-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz\n",
         encoding="utf-8",
     )
     (tmp_path / "docs" / "pull-request-checklist.zh.md").write_text(
-        "README.md\ndocs/releases/v0.9.4.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
-        "v0.9.4\nai-sdlc-offline-0.9.4-windows-amd64.zip\n"
+        "README.md\ndocs/releases/v0.9.5.md\nUSER_GUIDE.zh-CN.md\npackaging/offline/README.md\n"
+        "v0.9.5\nai-sdlc-offline-0.9.5-windows-amd64.zip\n"
         "普通用户主路径\nmaterialized only\n"
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz\n"
         "docs-only\nrules-only\ntruth-only\ncode-change\nuv run ai-sdlc verify constraints\n"
         "python -m ai_sdlc program truth sync --dry-run\n"
         "uv run pytest\nuv run ruff check\n"
@@ -2436,19 +2445,19 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
     workflows_dir = tmp_path / ".github" / "workflows"
     workflows_dir.mkdir(parents=True, exist_ok=True)
     (workflows_dir / "release-build.yml").write_text(
-        "workflow_dispatch:\n  inputs:\n    tag:\n      default: v0.9.4\n",
+        "workflow_dispatch:\n  inputs:\n    tag:\n      default: v0.9.5\n",
         encoding="utf-8",
     )
     (workflows_dir / "release-artifact-smoke.yml").write_text(
-        "workflow_dispatch:\n  inputs:\n    tag:\n      default: v0.9.4\n",
+        "workflow_dispatch:\n  inputs:\n    tag:\n      default: v0.9.5\n",
         encoding="utf-8",
     )
     (workflows_dir / "windows-offline-smoke.yml").write_text(
         "Legacy Artifact Probe\n"
         "recover --reconcile\n"
         "ai-sdlc run --dry-run reported repo-state reconciliation diagnostics; treating this as smoke pass.\n"
-        "expected upgraded ai-sdlc version 0.9.4\n"
-        "$upgradedVersion -notmatch \"0\\.9\\.4\"\n",
+        "expected upgraded ai-sdlc version 0.9.5\n"
+        "$upgradedVersion -notmatch \"0\\.9\\.5\"\n",
         encoding="utf-8",
     )
 
@@ -2461,7 +2470,7 @@ def test_release_docs_consistency_blocks_stale_windows_upgrade_smoke_version(
     mem = tmp_path / ".ai-sdlc" / "memory"
     mem.mkdir(parents=True)
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
-    (tmp_path / "README.md").write_text("v0.9.4\n", encoding="utf-8")
+    (tmp_path / "README.md").write_text("v0.9.5\n", encoding="utf-8")
     workflows_dir = tmp_path / ".github" / "workflows"
     workflows_dir.mkdir(parents=True, exist_ok=True)
     (workflows_dir / "windows-offline-smoke.yml").write_text(
@@ -2502,7 +2511,7 @@ def test_beginner_guide_blocks_stale_release_guidance_wording(tmp_path: Path) ->
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
     (tmp_path / "USER_GUIDE.zh-CN.md").write_text(
         "# AI-SDLC 小白实操手册\n\n"
-        "当前正式发布版：`v0.9.4`\n"
+        "当前正式发布版：`v0.9.5`\n"
         "## 第一章：全新用户 + 全新空项目\n"
         "## 第二章：全新用户 + 已有项目\n"
         "## 第三章：老用户升级\n"
@@ -2512,12 +2521,12 @@ def test_beginner_guide_blocks_stale_release_guidance_wording(tmp_path: Path) ->
         "执行成功以后，你应该看到\n"
         "如果失败\n"
         "切换到 AI 对话\n"
-        "ai-sdlc-offline-0.9.4-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz\n"
         "No such command 'install'\n"
         "--upgrade-existing\n"
-        "这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.9.4`** 为准。\n"
+        "这份手册现在默认以**当前仓库源码版 / 当前发布版 `v0.9.5`** 为准。\n"
         "优先在目标项目的虚拟环境里执行 `pip install -e <Ai_AutoSDLC 本地源码目录>`。\n"
         "如果异常排查时 `status` 仍显示 `materialized only` 或 `unsupported`。\n"
         "AI-SDLC 识别的是项目里的 IDE 标记目录。\n",
@@ -2537,7 +2546,7 @@ def test_beginner_guide_blocks_existing_project_init_without_cd_back(
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
     (tmp_path / "USER_GUIDE.zh-CN.md").write_text(
         "# AI-SDLC 小白实操手册\n\n"
-        "当前正式发布版：`v0.9.4`\n"
+        "当前正式发布版：`v0.9.5`\n"
         "## 第一章：全新用户 + 全新空项目\n"
         "## 第二章：全新用户 + 已有项目\n"
         "## 第三章：老用户升级\n"
@@ -2547,14 +2556,14 @@ def test_beginner_guide_blocks_existing_project_init_without_cd_back(
         "执行成功以后，你应该看到\n"
         "如果失败\n"
         "切换到 AI 对话\n"
-        "ai-sdlc-offline-0.9.4-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz\n"
         "No such command 'install'\n"
         "--upgrade-existing\n"
-        "..\\ai-sdlc-offline-0.9.4-windows-amd64\\.venv\\Scripts\\python.exe -m ai_sdlc init .\n"
-        "../ai-sdlc-offline-0.9.4-macos-arm64/.venv/bin/python -m ai_sdlc init .\n"
-        "../ai-sdlc-offline-0.9.4-linux-amd64/.venv/bin/python -m ai_sdlc init .\n",
+        "..\\ai-sdlc-offline-0.9.5-windows-amd64\\.venv\\Scripts\\python.exe -m ai_sdlc init .\n"
+        "../ai-sdlc-offline-0.9.5-macos-arm64/.venv/bin/python -m ai_sdlc init .\n"
+        "../ai-sdlc-offline-0.9.5-linux-amd64/.venv/bin/python -m ai_sdlc init .\n",
         encoding="utf-8",
     )
 
@@ -2569,7 +2578,7 @@ def test_beginner_guide_accepts_single_init_next_action_path(tmp_path: Path) -> 
     (mem / "constitution.md").write_text("# C\n", encoding="utf-8")
     (tmp_path / "USER_GUIDE.zh-CN.md").write_text(
         "# AI-SDLC 小白实操手册\n\n"
-        "当前正式发布版：`v0.9.4`\n"
+        "当前正式发布版：`v0.9.5`\n"
         "## 第一章：全新用户 + 全新空项目\n"
         "## 第二章：全新用户 + 已有项目\n"
         "## 第三章：老用户升级\n"
@@ -2579,9 +2588,9 @@ def test_beginner_guide_accepts_single_init_next_action_path(tmp_path: Path) -> 
         "执行成功以后，你应该看到\n"
         "如果失败\n"
         "现在切换到 AI 对话中输入你的需求即可。\n"
-        "ai-sdlc-offline-0.9.4-windows-amd64.zip\n"
-        "ai-sdlc-offline-0.9.4-macos-arm64.tar.gz\n"
-        "ai-sdlc-offline-0.9.4-linux-amd64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-windows-amd64.zip\n"
+        "ai-sdlc-offline-0.9.5-macos-arm64.tar.gz\n"
+        "ai-sdlc-offline-0.9.5-linux-amd64.tar.gz\n"
         "脚本只检查当前目录，不扫描其他目录\n"
         "The script checks only the current directory\n"
         "请把 zip 放到当前目录，并先 cd 到该目录后重试\n"
@@ -2592,7 +2601,7 @@ def test_beginner_guide_accepts_single_init_next_action_path(tmp_path: Path) -> 
         "Direct shim\n"
         "D:\\work\\ui-test-platform 是示例路径；请替换成你的真实项目根目录\n"
         "cd D:\\work\\ui-test-platform\n"
-        "& \"D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.4-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe\" init . --agent-target codex --shell powershell\n"
+        "& \"D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.5-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe\" init . --agent-target codex --shell powershell\n"
         "No such command 'install'\n"
         "--upgrade-existing\n"
         "-AddToPath\n"
@@ -2601,7 +2610,7 @@ def test_beginner_guide_accepts_single_init_next_action_path(tmp_path: Path) -> 
         "python -m ai_sdlc\n"
         "D:\\work\\my-existing-project 是示例路径；请替换成你的真实项目根目录\n"
         "cd D:\\work\\my-existing-project\n"
-        "& \"D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.4-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe\" init . --agent-target codex --shell powershell\n"
+        "& \"D:\\work\\.ai-sdlc-install\\ai-sdlc-offline-0.9.5-windows-amd64\\.venv\\Scripts\\ai-sdlc.exe\" init . --agent-target codex --shell powershell\n"
         "~/work/my-existing-project 是示例路径；请替换成你的真实项目根目录\n"
         "cd ~/work/my-existing-project\n"
         "ai-sdlc init .\n"
@@ -2644,7 +2653,7 @@ def test_readme_blocks_stale_release_guidance_wording(tmp_path: Path) -> None:
         "`init` automatically runs the safe startup rehearsal, tells you to "
         "switch to the AI chat, and prints one next command in Chinese and English.\n"
         "It is not a beginner-path setup step.\n"
-        "`v0.9.4` is the current staged framework release.\n"
+        "`v0.9.5` is the current staged framework release.\n"
         "After `pip install` or the offline installer, the `ai-sdlc.exe` shim lives under your venv.\n"
         "Create and activate the venv.\n",
         encoding="utf-8",
@@ -2980,6 +2989,7 @@ def test_frontend_solution_confirmation_instruction_blocks_missing_pipeline_guar
     assert any("provider_id=public-primevue" in x for x in blockers)
     assert any("企业后台" in x for x in blockers)
     assert any("高级可选方案" in x for x in blockers)
+    assert any("规范正文" in x for x in blockers)
     assert any("program solution-confirm --dry-run --mode advanced" in x for x in blockers)
     assert any("--provider-id" in x for x in blockers)
 
@@ -3004,6 +3014,10 @@ def test_frontend_solution_confirmation_instruction_accepts_required_pipeline_gu
         "Vite + TypeScript + UnoCSS + CSS Variables、"
         "Pinia + Vue Router + Axios + vee-validate + zod + vue-i18n、"
         "Playwright + ESLint + Prettier + husky + lint-staged + commitlint。"
+        "前端规范输出必须区分规范正文、可选建议、已经落地。"
+        "主题必须同时覆盖 primary / surface / highlight，"
+        "theme.ts 是主题预设唯一入口，新项目默认使用 pages/，"
+        "不得同时新建 pages/ 和 views/。"
         "企业后台、中后台、管理台、表格、表单、审批流、工作台等场景词"
         "不得被当成 Vue2 信号。"
         "方案建议必须保留高级可选方案，覆盖 data-console、high-clarity、"
@@ -3039,6 +3053,10 @@ def test_frontend_solution_confirmation_instruction_blocks_stale_vitest_default_
         "Vite + TypeScript + UnoCSS + CSS Variables、"
         "Pinia + Vue Router + Axios + vee-validate + zod + vue-i18n、"
         "Vitest + Playwright + ESLint + Prettier + husky + lint-staged + commitlint。"
+        "前端规范输出必须区分规范正文、可选建议、已经落地。"
+        "主题必须同时覆盖 primary / surface / highlight，"
+        "theme.ts 是主题预设唯一入口，新项目默认使用 pages/，"
+        "不得同时新建 pages/ 和 views/。"
         "企业后台、中后台、管理台、表格、表单、审批流、工作台等场景词"
         "不得被当成 Vue2 信号。"
         "方案建议必须保留高级可选方案，覆盖 data-console、high-clarity、"
@@ -3907,7 +3925,56 @@ def test_188_frontend_solution_confirmation_blocks_missing_public_template_files
 
     assert report.coverage_gaps == ("frontend_solution_confirmation_consistency",)
     assert any("template missing required file src/main.ts" in blocker for blocker in report.blockers)
+    assert any("template missing required file src/api/client.ts" in blocker for blocker in report.blockers)
+    assert any("missing required smoke page file" in blocker for blocker in report.blockers)
     assert any("index.html missing Vite module entry" in blocker for blocker in report.blockers)
+
+
+def test_188_frontend_solution_confirmation_ignores_missing_empty_template_dirs(
+    tmp_path: Path,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(tmp_path)
+    managed_frontend = tmp_path / "managed" / "frontend"
+    for required_file in verify_constraints_module.FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_FILES:
+        target = managed_frontend / required_file
+        target.parent.mkdir(parents=True, exist_ok=True)
+        content = "placeholder\n"
+        if required_file == Path("index.html"):
+            content = '<script type="module" src="/src/main.ts"></script>\n'
+        target.write_text(content, encoding="utf-8")
+    smoke_page = managed_frontend / "src" / "pages" / "ManagedDeliverySmoke.vue"
+    smoke_page.parent.mkdir(parents=True, exist_ok=True)
+    smoke_page.write_text("<template>smoke</template>\n", encoding="utf-8")
+
+    report = build_constraint_report(tmp_path)
+
+    assert not any("template missing required file" in blocker for blocker in report.blockers)
+    assert not any(
+        "template missing required directory" in blocker for blocker in report.blockers
+    )
+
+
+def test_188_frontend_solution_confirmation_accepts_legacy_views_smoke_page(
+    tmp_path: Path,
+) -> None:
+    _write_073_checkpoint(tmp_path)
+    _write_073_solution_confirmation_artifacts(tmp_path)
+    managed_frontend = tmp_path / "managed" / "frontend"
+    for required_file in verify_constraints_module.FRONTEND_PUBLIC_PRIMEVUE_REQUIRED_TEMPLATE_FILES:
+        target = managed_frontend / required_file
+        target.parent.mkdir(parents=True, exist_ok=True)
+        content = "placeholder\n"
+        if required_file == Path("index.html"):
+            content = '<script type="module" src="/src/main.ts"></script>\n'
+        target.write_text(content, encoding="utf-8")
+    legacy_smoke_page = managed_frontend / "src" / "views" / "ManagedDeliverySmoke.vue"
+    legacy_smoke_page.parent.mkdir(parents=True, exist_ok=True)
+    legacy_smoke_page.write_text("<template>legacy smoke</template>\n", encoding="utf-8")
+
+    report = build_constraint_report(tmp_path)
+
+    assert not any("missing required smoke page file" in blocker for blocker in report.blockers)
 
 
 def test_073_frontend_solution_confirmation_verification_rejects_string_false_override_flag(

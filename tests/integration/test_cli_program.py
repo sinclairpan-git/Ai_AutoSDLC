@@ -2472,9 +2472,11 @@ class TestCliProgram:
             "src/components/base",
             "src/components/business",
             "src/components/layout",
+            "src/i18n",
             "src/router/modules",
             "src/styles",
-            "src/views",
+            "src/pages",
+            "src/transform",
         ]:
             assert (root / "managed" / "frontend" / rel_path).is_dir()
         index_html = (root / "managed" / "frontend" / "index.html").read_text(
@@ -2490,6 +2492,18 @@ class TestCliProgram:
         )
         assert "definePreset" in theme_ts
         assert "#1770e6" in theme_ts
+        assert 'color: "{primary.500}"' in theme_ts
+        assert "surface:" in theme_ts
+        assert "highlight:" in theme_ts
+        assert (root / "managed" / "frontend" / "src" / "api" / "client.ts").is_file()
+        assert (
+            root / "managed" / "frontend" / "src" / "api" / "interceptors.ts"
+        ).is_file()
+        assert (root / "managed" / "frontend" / "src" / "api" / "types.ts").is_file()
+        assert (root / "managed" / "frontend" / "src" / "i18n" / "index.ts").is_file()
+        assert (
+            root / "managed" / "frontend" / "src" / "transform" / "index.ts"
+        ).is_file()
         primevue_plugin = (
             root / "managed" / "frontend" / "src" / "plugins" / "primevue.ts"
         ).read_text(encoding="utf-8")
@@ -2501,7 +2515,7 @@ class TestCliProgram:
             root / "managed" / "frontend" / "src" / "stores" / "app.ts"
         ).is_file()
         smoke_view = (
-            root / "managed" / "frontend" / "src" / "views" / "ManagedDeliverySmoke.vue"
+            root / "managed" / "frontend" / "src" / "pages" / "ManagedDeliverySmoke.vue"
         ).read_text(encoding="utf-8")
         assert '$i("PrimeVue adapter 已落地")' in smoke_view
         assert 'severity="contrast"' not in smoke_view

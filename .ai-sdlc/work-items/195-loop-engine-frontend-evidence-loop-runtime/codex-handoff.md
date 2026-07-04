@@ -1,50 +1,32 @@
 # Continuity Handoff
 
-- Updated: 2026-07-03T10:52:03+00:00
-- Reason: after full pytest for v0.9.4 release
-- Goal: 发布 AI-SDLC v0.9.4，包含 Vue3 v1.6.1 前端规范刷新
-- State: v0.9.4 发布分支本地验证已完成，diff 仅集中在 release truth surfaces、测试期望、uv.lock 与 handoff。
+- Updated: 2026-07-04T06:56:17+00:00
+- Reason: address second Codex PR review feedback for v0.9.5
+- Goal: 发布 AI-SDLC v0.9.5，包含 Vue3 public-primevue v1.7.1 视觉规范刷新
+- State: 已修复第二轮 Codex review P2：verify constraints 对 smoke page 改为接受 src/pages/ManagedDeliverySmoke.vue 或 legacy src/views/ManagedDeliverySmoke.vue，避免历史 v0.9.4 managed frontend 在未 re-apply 前被强制失败。
 - Stage: execute
 - Work Item: 195-loop-engine-frontend-evidence-loop-runtime
-- Branch: codex/release-v0.9.4-vue3-standard
+- Branch: codex/release-v0.9.5-vue3-v1.7.1
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/195-loop-engine-frontend-evidence-loop-runtime/codex-handoff.md
-- M .github/workflows/release-artifact-smoke.yml
-- M .github/workflows/release-build.yml
-- M .github/workflows/windows-offline-smoke.yml
-- M .github/workflows/windows-update-prompt-e2e.yml
-- M .github/workflows/windows-user-guide-e2e.yml
-- M README.md
-- M USER_GUIDE.zh-CN.md
-- M docs/pull-request-checklist.zh.md
-- M "docs/\346\241\206\346\236\266\350\207\252\350\277\255\344\273\243\345\274\200\345\217\221\344\270\216\345\217\221\345\270\203\347\272\246\345\256\232.md"
-- M packaging/offline/README.md
-- M pyproject.toml
-- M src/ai_sdlc/__init__.py
 - M src/ai_sdlc/core/verify_constraints.py
-- M tests/integration/test_github_workflows.py
-- M tests/integration/test_offline_bundle_scripts.py
 - M tests/unit/test_verify_constraints.py
-- M uv.lock
-- ?? docs/releases/v0.9.4.md
 
 ## Key Decisions
-- none
+- v0.9.5 apply 会清理 legacy views smoke 文件；verify constraints 兼容历史 views smoke 文件，保持升级前后路径都可被客观门禁接受。
 
 ## Commands / Tests
-- uv run pytest -q => 3142 passed, 3 skipped in 500.01s
-- uv run ruff check src tests => passed
+- uv run pytest smoke page compatibility targets -q => 3 passed
+- uv run pytest tests/unit/test_managed_delivery_apply.py tests/unit/test_program_service.py tests/unit/test_verify_constraints.py managed delivery integration targets -q => 566 passed, 2 skipped
+- uv run ruff check src tests => All checks passed
 - uv run ai-sdlc verify constraints => no BLOCKERs
-- git diff --check => clean
+- git diff --check => pass
 
 ## Blockers / Risks
-- none
+- After pushing this fix, PR checks and Codex review must be rerun on the new commit before merge/release.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- stage/commit/push，创建 PR 并请求 Codex review 与 CI。
+- Commit and push smoke-page compatibility fix, reply to Codex inline comment, request another Codex review, then continue PR heartbeat.

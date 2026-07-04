@@ -92,6 +92,10 @@ def test_solution_confirmation_artifacts_preserve_style_strategy_and_snapshot_tr
     assert modern_saas["design_tokens"]["surface_mode"] == "light-enterprise"
     assert modern_saas["design_tokens"]["primary_color"] == "#1770e6"
     assert modern_saas["design_tokens"]["theme_api"] == "definePreset"
+    assert modern_saas["design_tokens"]["required_semantic_tokens"] == (
+        "primary,surface,highlight"
+    )
+    assert modern_saas["design_tokens"]["shell_visual_family"] == "light-brand-surface"
     assert enterprise_install["private_package_required"] is True
     assert enterprise_install["registry_url"] == "http://npm.uedc.sangfor.com.cn/"
     assert enterprise_install["registry_requirements"] == ["company-registry-network"]
@@ -120,6 +124,10 @@ def test_solution_confirmation_artifacts_preserve_style_strategy_and_snapshot_tr
         "primary_color": "#1770e6",
         "dark_mode_selector": "false",
         "theme_entry": "src/theme.ts",
+        "required_semantic_tokens": "primary,surface,highlight",
+        "style_owner": "primevue-theme-token",
+        "shell_visual_family": "light-brand-surface",
+        "theme_entry_singleton": "true",
     }
     assert latest_snapshot["style_fidelity_status"] == "partial"
     assert latest_snapshot["style_degradation_reason_codes"] == [

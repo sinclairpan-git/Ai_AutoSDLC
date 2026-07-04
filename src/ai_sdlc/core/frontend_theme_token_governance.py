@@ -40,6 +40,14 @@ _V161_MARKER_TOKENS = {
     "dark-block-on-ordinary-surface",
     "mixed-formatting-and-business-change",
 }
+_V171_MARKER_TOKENS = {
+    "missing-theme-primary-token",
+    "duplicate-pages-views-roots",
+    "multiple-api-client-entries",
+    "missing-dto-transform-layer",
+    "global-business-css-primevue-rewrite",
+    "missing-normative-advisory-landed-separation",
+}
 _ALLOWED_OVERRIDE_NAMESPACES = {
     "surface",
     "accent",
@@ -238,6 +246,8 @@ def _classify_naked_value(value: str) -> str | None:
     ):
         return "severity=contrast"
     if stripped in _V161_MARKER_TOKENS:
+        return stripped
+    if stripped in _V171_MARKER_TOKENS:
         return stripped
     if _NATIVE_INPUT_TAG_PATTERN.search(stripped):
         return "native-input"

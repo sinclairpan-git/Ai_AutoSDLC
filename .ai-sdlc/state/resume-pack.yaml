@@ -9,13 +9,15 @@ working_set_snapshot:
   plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/plan.md
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
-  context_summary: 'Goal: 发布 AI-SDLC v0.9.4，包含 Vue3 v1.6.1 前端规范刷新 | State: v0.9.4
-    发布分支本地验证已完成，diff 仅集中在 release truth surfaces、测试期望、uv.lock 与 handoff。 | Next: stage/commit/push，创建
-    PR 并请求 Codex review 与 CI。'
+  context_summary: 'Goal: 发布 AI-SDLC v0.9.5，包含 Vue3 public-primevue v1.7.1 视觉规范刷新
+    | State: 已修复第二轮 Codex review P2：verify constraints 对 smoke page 改为接受 src/pages/ManagedDeliverySmoke.vue
+    或 legacy src/views/ManagedDeliverySmoke.vue，避免历史 v0.9.4 managed frontend 在未 re-apply
+    前被强制失败。 | Next: Commit and push smoke-page compatibility fix, reply to Codex inline
+    comment, request another Codex review, then continue PR heartbeat.'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-07-02T05:14:14+00:00'
+timestamp: '2026-07-04T06:43:41+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-01T18:38:26+00:00'
 checkpoint_fingerprint: d0621f0754b464938fd42308e8a83a7b37782d50842366665b6d1a44a378ddf3
