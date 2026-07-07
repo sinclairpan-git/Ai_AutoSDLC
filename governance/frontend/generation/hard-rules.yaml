@@ -53,6 +53,24 @@ rules:
   category: absolute
   description: PrimeVue definePreset themes must define primary, surface, and highlight
     semantics instead of leaving visual family alignment to page CSS
+- rule_id: theme-entry-single-source
+  category: absolute
+  description: src/theme.ts is the single PrimeVue preset entry; main.ts, page styles,
+    and business components cannot recreate theme configuration
+- rule_id: path-level-directory-contract
+  category: absolute
+  description: Vue3 generation must emit concrete path-level structure, use src/pages
+    for new projects, avoid simultaneous pages/views roots, and include api, i18n,
+    styles, theme, transform, types, router, stores, and component layer boundaries
+- rule_id: normative-advisory-landed-output-boundary
+  category: absolute
+  description: AI output must clearly separate normative rules, optional recommendations,
+    and already landed project facts
+- rule_id: ordinary-css-exception-boundary
+  category: absolute
+  description: ordinary CSS is limited to special animations, complex structures, small
+    shell supplements, and third-party exceptions; it cannot become a broad PrimeVue
+    base visual rewrite layer
 - rule_id: scoped-frontend-engineering-boundary
   category: absolute
   description: frontend lint, format, commit, and hook constraints must be scoped to
@@ -80,6 +98,11 @@ rules:
   description: dark high-contrast blocks are reserved for code, output, preview, or
     reading surfaces and must not be used as ordinary cards, filters, navigation, or
     routine information groups
+- rule_id: light-surface-information-carrier-consistency
+  category: absolute
+  description: ordinary information carriers in light pages must remain in the same
+    visual family as the page body instead of introducing a separate card, panel,
+    filter, or badge visual system
 - rule_id: commit-granularity-readability
   category: controlled_exception
   description: frontend changes must keep formatting noise separate from business changes

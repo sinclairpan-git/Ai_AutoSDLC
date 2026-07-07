@@ -114,6 +114,7 @@ def test_build_mvp_frontend_generation_constraints_adds_primevue_rules_only_for_
         "shared-api-response-contract",
         "typescript-strict-unknown-first",
         "dark-information-block-boundary",
+        "light-surface-information-carrier-consistency",
         "commit-granularity-readability",
     ]
     assert constraints.token_rules.disallowed_naked_values == [
@@ -149,6 +150,7 @@ def test_build_mvp_frontend_generation_constraints_adds_primevue_rules_only_for_
         "missing-router-meta-contract",
         "missing-api-response-generic",
         "dark-block-on-ordinary-surface",
+        "ordinary-carrier-visual-family-drift",
         "mixed-formatting-and-business-change",
     ]
 

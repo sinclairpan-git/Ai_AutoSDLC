@@ -386,6 +386,15 @@ def build_mvp_frontend_generation_constraints(
                     ),
                 ),
                 GenerationHardRule(
+                    rule_id="light-surface-information-carrier-consistency",
+                    category="absolute",
+                    description=(
+                        "ordinary information carriers in light pages must remain in "
+                        "the same visual family as the page body instead of introducing "
+                        "a separate card, panel, filter, or badge visual system"
+                    ),
+                ),
+                GenerationHardRule(
                     rule_id="commit-granularity-readability",
                     category="controlled_exception",
                     description=(
@@ -427,6 +436,7 @@ def build_mvp_frontend_generation_constraints(
                 "missing-router-meta-contract",
                 "missing-api-response-generic",
                 "dark-block-on-ordinary-surface",
+                "ordinary-carrier-visual-family-drift",
                 "mixed-formatting-and-business-change",
             ]
         )

@@ -9,11 +9,11 @@ working_set_snapshot:
   plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/plan.md
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
   active_files: []
-  context_summary: 'Goal: 发布 AI-SDLC v0.9.5，包含 Vue3 public-primevue v1.7.1 视觉规范刷新
-    | State: 已修复第二轮 Codex review P2：verify constraints 对 smoke page 改为接受 src/pages/ManagedDeliverySmoke.vue
-    或 legacy src/views/ManagedDeliverySmoke.vue，避免历史 v0.9.4 managed frontend 在未 re-apply
-    前被强制失败。 | Next: Commit and push smoke-page compatibility fix, reply to Codex inline
-    comment, request another Codex review, then continue PR heartbeat.'
+  context_summary: 'Goal: 发布 AI-SDLC v0.9.6，包含 Vue3 public-primevue v1.8 视觉规范刷新 |
+    State: 已在 codex/release-v0.9.6-vue3-v1.8 分支完成版本 bump 与 release truth 同步：pyproject/src
+    version、uv.lock、README、USER_GUIDE、offline docs/checklist、workflow defaults、verify_constraints、tests、docs/releases/v0.9.6.md，以及
+    v1.8 provider/generation/adapters 变更。 | Next: 提交分支、push、创建 PR，评论 @codex review，进入
+    heartbeat 等待 review/checks。'
 current_branch: codex/189-loop-engine-complete-pr-review
 docs_baseline_ref: ''
 docs_baseline_at: ''

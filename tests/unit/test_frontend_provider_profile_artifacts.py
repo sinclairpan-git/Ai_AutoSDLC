@@ -153,7 +153,7 @@ def test_materialize_builtin_frontend_provider_profile_artifacts_writes_public_p
         "install_strategy_ids": ["public-primevue-default"],
         "availability_prerequisites": [],
         "default_style_pack_id": "modern-saas",
-        "visual_contract_version": "v1.7.1",
+        "visual_contract_version": "v1.8",
         "theme_required_semantics": ["primary", "surface", "highlight"],
         "theme_entry": "src/theme.ts",
         "default_page_root": "src/pages",
