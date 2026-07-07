@@ -19,10 +19,17 @@ warning_naked_values:
 - raw-visible-enum-label
 - raw-visible-chinese-without-$i
 - severity=contrast
+- missing-theme-primary-token
 - missing-theme-surface-token
 - missing-theme-highlight-token
+- duplicate-pages-views-roots
+- multiple-api-client-entries
+- missing-dto-transform-layer
+- global-business-css-primevue-rewrite
+- missing-normative-advisory-landed-separation
 - missing-router-meta-contract
 - missing-api-response-generic
 - dark-block-on-ordinary-surface
+- ordinary-carrier-visual-family-drift
 - mixed-formatting-and-business-change
 forbid_inline_core_style: true

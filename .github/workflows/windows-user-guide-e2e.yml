@@ -6,7 +6,7 @@ on:
       tag:
         description: Published release tag to verify against the user guide.
         required: true
-        default: v0.9.5
+        default: v0.9.6
   pull_request:
     paths:
       - ".github/workflows/windows-user-guide-e2e.yml"
@@ -26,7 +26,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
-      RELEASE_TAG: ${{ inputs.tag || 'v0.9.5' }}
+      RELEASE_TAG: ${{ inputs.tag || 'v0.9.6' }}
       PYTHONUTF8: "1"
       PYTHONIOENCODING: utf-8
 
@@ -115,12 +115,12 @@ jobs:
           # USER_GUIDE.zh-CN.md Chapter 2, Scenario B: online download from Release.
           Push-Location $projectRoot
           cd ..
-          $BundleName = "ai-sdlc-offline-0.9.5-windows-amd64"
+          $BundleName = "ai-sdlc-offline-0.9.6-windows-amd64"
           $PackageName = "$BundleName.zip"
           $PackageDir = (Get-Location).Path
           $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
-          if ($env:RELEASE_TAG -ne "v0.9.5") {
-            throw "This guide replay intentionally follows the current USER_GUIDE.zh-CN.md v0.9.5 Windows commands."
+          if ($env:RELEASE_TAG -ne "v0.9.6") {
+            throw "This guide replay intentionally follows the current USER_GUIDE.zh-CN.md v0.9.6 Windows commands."
           }
           $packagePath = Join-Path $PackageDir $PackageName
           if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
@@ -131,7 +131,7 @@ jobs:
             }
             Copy-Item -LiteralPath $localPackage.FullName -Destination $packagePath -Force
           } else {
-            Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.9.5/$PackageName" -OutFile $packagePath
+            Invoke-WebRequest -Uri "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/v0.9.6/$PackageName" -OutFile $packagePath
           }
           New-Item -ItemType Directory -Path $ExtractRoot -Force | Out-Null
           Write-Host "正在解压安装包；如果已经解压过，会安静覆盖同名文件。"

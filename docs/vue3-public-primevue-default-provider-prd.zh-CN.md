@@ -2,7 +2,7 @@
 
 **文档状态**：已归档，三轮对抗评审通过  
 **创建日期**：2026-06-22  
-**最近更新**：2026-07-04，吸收 `Vue3企业级前端开发规范方案 v1.7.1（AI 执行版）`
+**最近更新**：2026-07-07，吸收 `Vue3企业级前端开发规范方案 v1.8（AI 执行版）`
 **适用仓库**：Ai_AutoSDLC  
 **输入文档**：`docs/Vue3企业级前端开发规范方案.md`  
 **目标版本**：下一轮前端治理版本  
@@ -20,7 +20,7 @@
 3. 保留 `enterprise-vue2` 作为企业私有组件库兼容路径，但不再作为普通默认首推路径。
 4. 让 `program solution-confirm`、managed delivery、provider profile、生成模板和验证面使用同一套 Vue3 默认口径。
 5. 将样式职责边界固化为：组件逻辑由 PrimeVue 承担，页面布局由 UnoCSS 承担，视觉统一由 CSS Variables 承担，复杂业务样式由少量普通 CSS 承担。
-6. 将 v1.7.1 规范中的视觉家族、Base/Business/Page 分层、开发期 `$i('中文')` 国际化、前端子项目工程化边界、路径级目录结构、路由 meta、公共 API 响应类型、TypeScript unknown 优先、规范正文 / 可选建议 / 已经落地三态口径和提交粒度规则沉淀为可执行治理约束。
+6. 将 v1.8 规范中的视觉家族、浅色页面普通信息载体一致性、Base/Business/Page 分层、开发期 `$i('中文')` 国际化、前端子项目工程化边界、路径级目录结构、路由 meta、公共 API 响应类型、TypeScript unknown 优先、规范正文 / 可选建议 / 已经落地三态口径和提交粒度规则沉淀为可执行治理约束。
 
 ## 3. 非目标
 
@@ -145,7 +145,7 @@ Vue3 默认模板运行依赖必须覆盖：
 
 husky、lint-staged、commitlint 必须进入多人协作项目的默认工程化建议和依赖清单，但验证等级仍为 advisory；不得替代默认 Web/视觉测试与基础 lint/format 依赖，也不得作为普通生成的首版 blocker。
 
-v1.7.1 面向用户的默认验证口径以 Playwright、ESLint、Prettier、husky、lint-staged、commitlint 为主；若托管 scaffold、带单测模板或既有项目保留 Vitest，行为变更必须补齐对应单测，但不得把“必须引入 Vitest”作为所有普通生成项目的硬约束或默认展示文案。
+v1.8 面向用户的默认验证口径以 Playwright、ESLint、Prettier、husky、lint-staged、commitlint 为主；若托管 scaffold、带单测模板或既有项目保留 Vitest，行为变更必须补齐对应单测，但不得把“必须引入 Vitest”作为所有普通生成项目的硬约束或默认展示文案。
 
 ### FR-004 UnoCSS 默认集成
 
@@ -281,7 +281,8 @@ Vue3 默认模板必须支持 vue-i18n。框架新增用户可见中文文案时
 6. 业务 `pages/`、历史 `views/` 和 `components/business/` 中的 `primevue/*` 直接 import 可被 scan 发现。
 7. 新增可见中文未使用 `$i('中文')` 或稳定 i18n key 时可被治理规则识别为风险。
 8. 原生 `select` 与 PrimeVue 输入框在同一筛选/表单面混用、黑色 `contrast` 标签滥用、导航与内容区视觉割裂必须进入 warning 证据。
-9. 缺失 `primary/surface/highlight` 主题语义、`theme.ts` 唯一入口、路径级目录结构、DTO transform 层、路由 `meta.title/auth/keepAlive/roles`、公共 API 响应泛型、Base 层权限职责、深色信息块边界或提交粒度说明时，必须进入可观测治理证据。
+9. 浅色页面中的普通信息载体与页面主体不属于同一视觉体系时，必须进入 warning 证据。
+10. 缺失 `primary/surface/highlight` 主题语义、`theme.ts` 唯一入口、路径级目录结构、DTO transform 层、路由 `meta.title/auth/keepAlive/roles`、公共 API 响应泛型、Base 层权限职责、深色信息块边界或提交粒度说明时，必须进入可观测治理证据。
 
 ### FR-013 验证等级
 
@@ -299,8 +300,9 @@ Vue3 默认模板必须支持 vue-i18n。框架新增用户可见中文文案时
 | 基础键盘焦点、Dialog 开关、表单 label / aria 存在缺口 | warning | 首版纳入可访问性证据，不阻断普通生成 |
 | `src/pages/`、历史 `src/views/` 或 `src/components/business/` 直接 import `primevue/*` | warning，后续可升级为 targeted blocker | 本轮先作为可观测治理边界，避免首版过度拦截 |
 | 新增可见中文未使用 `$i('中文')` 或稳定 i18n key | warning，后续可升级为 targeted blocker | 开发期先保留中文语义，避免 AI 伪造 key |
-| 原生 `select` 与 PrimeVue 输入框混用、`contrast` 标签滥用、导航/内容区视觉割裂 | warning | v1.3 起作为视觉一致性证据，v1.7.1 继续保留，不阻断普通生成 |
+| 原生 `select` 与 PrimeVue 输入框混用、`contrast` 标签滥用、导航/内容区视觉割裂 | warning | v1.3 起作为视觉一致性证据，v1.8 继续保留，不阻断普通生成 |
 | 原生 `input` 与 PrimeVue 输入框混用、缺失主题 `primary/surface/highlight` 语义、缺失路由 meta 或公共响应泛型、深色信息块误用于普通卡片/筛选区 | warning | v1.7.1 可观测治理项，先进入证据而不阻断普通生成 |
+| 浅色页面普通信息载体与页面主体视觉体系割裂 | warning | v1.8 新增页面信息载体一致性证据，先进入治理报告 |
 | 同时生成 `pages/` 与 `views/`、API 双入口、缺失 DTO transform、业务 CSS 大面积改写 PrimeVue 基础组件、未区分规范正文 / 可选建议 / 已经落地 | warning | v1.7.1 新增执行偏差证据，先进入治理报告 |
 | ESLint、Prettier、Playwright、husky、lint-staged、commitlint 未配置 | advisory | 工程增强项不阻断普通生成 |
 
@@ -402,6 +404,10 @@ Given AI 新增 Vue3 页面、组件或表单，When 输出用户可见中文，
 ### AC-012 视觉家族一致性
 
 Given AI 生成企业后台、管理台、工作台、表格、表单或审批流页面，When 页面包含导航、页头、badge、按钮、标签、筛选器或表单控件，Then 它们必须共享 `#1770e6` 语义高亮和同一 PrimeVue token 家族；原生 `select` 与 PrimeVue 控件混用、黑色 `contrast` 标签大面积同屏使用必须至少进入 warning 证据。
+
+### AC-013 浅色页面信息载体一致性
+
+Given AI 生成浅色品牌页面，When 页面包含普通卡片、面板、筛选区、统计块、标签组或信息分组，Then 这些普通信息载体必须与页面主体保持同一视觉体系；若引入独立的深色、黑色 contrast、大面积异质圆角/边框/阴影体系，必须至少进入 warning 证据。
 
 ## 8. 迁移与兼容
 

@@ -19,6 +19,7 @@ from ai_sdlc.models.frontend_solution_confirmation import (
 BUILTIN_FRONTEND_PROVIDER_PROFILE_IDS = frozenset(
     {"enterprise-vue2", "public-primevue"}
 )
+PUBLIC_PRIMEVUE_VISUAL_CONTRACT_VERSION = "v1.8"
 
 
 def _dedupe_paths(paths: list[Path]) -> list[Path]:
@@ -60,7 +61,7 @@ def materialize_frontend_provider_profile_artifacts(
     if profile.provider_id == "public-primevue":
         manifest_payload.update(
             {
-                "visual_contract_version": "v1.7.1",
+                "visual_contract_version": PUBLIC_PRIMEVUE_VISUAL_CONTRACT_VERSION,
                 "theme_required_semantics": ["primary", "surface", "highlight"],
                 "theme_entry": "src/theme.ts",
                 "default_page_root": "src/pages",
@@ -163,6 +164,7 @@ def _write_yaml(path: Path, payload: dict[str, object]) -> Path:
 
 __all__ = [
     "BUILTIN_FRONTEND_PROVIDER_PROFILE_IDS",
+    "PUBLIC_PRIMEVUE_VISUAL_CONTRACT_VERSION",
     "frontend_provider_profile_root",
     "materialize_builtin_frontend_provider_profile_artifacts",
     "materialize_frontend_provider_profile_artifacts",

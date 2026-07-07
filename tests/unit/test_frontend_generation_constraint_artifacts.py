@@ -117,6 +117,7 @@ def test_generation_constraint_artifacts_preserve_constraint_payloads(tmp_path) 
         "shared-api-response-contract",
         "typescript-strict-unknown-first",
         "dark-information-block-boundary",
+        "light-surface-information-carrier-consistency",
         "commit-granularity-readability",
     ]
     assert token_rules["disallowed_naked_values"] == [
@@ -152,6 +153,7 @@ def test_generation_constraint_artifacts_preserve_constraint_payloads(tmp_path) 
         "missing-router-meta-contract",
         "missing-api-response-generic",
         "dark-block-on-ordinary-surface",
+        "ordinary-carrier-visual-family-drift",
         "mixed-formatting-and-business-change",
     ]
     assert "override-ui-kernel-standard-body" in exceptions["forbidden_overrides"]
