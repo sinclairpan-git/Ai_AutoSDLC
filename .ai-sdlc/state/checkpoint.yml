@@ -1,12 +1,12 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-07-13T05:35:18+00:00'
+pipeline_last_updated: '2026-07-13T15:07:53+00:00'
 current_stage: execute
 feature:
-  id: 196-ai-sdlc-lean-code-self-reduction-governance
-  spec_dir: specs/196-ai-sdlc-lean-code-self-reduction-governance
-  design_branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
-  feature_branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
-  current_branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
+  id: 197-adapter-preflight-order
+  spec_dir: specs/197-adapter-preflight-order
+  design_branch: feature/197-adapter-preflight-order-docs
+  feature_branch: feature/197-adapter-preflight-order
+  current_branch: feature/197-adapter-preflight-order-docs
   docs_baseline_ref: ''
   docs_baseline_at: ''
 multi_agent:
@@ -38,6 +38,6 @@ completed_stages:
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 196-ai-sdlc-lean-code-self-reduction-governance
-linked_plan_uri: specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
-last_synced_at: '2026-07-13T05:35:18+00:00'
+linked_wi_id: 197-adapter-preflight-order
+linked_plan_uri: specs/197-adapter-preflight-order/plan.md
+last_synced_at: '2026-07-13T15:07:53+00:00'

@@ -1884,12 +1884,15 @@ specs:
 - id: 196-ai-sdlc-lean-code-self-reduction-governance
   path: specs/196-ai-sdlc-lean-code-self-reduction-governance
   depends_on: []
+- id: 197-adapter-preflight-order
+  path: specs/197-adapter-preflight-order
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-13T05:51:23Z'
+  generated_at: '2026-07-13T15:18:24Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: c6234c48
-  authoring_hash: 3da19026b644af98f2ace05dda0d2a111c6c76d98ee6bd1242f619b0a0b9ea33
+  repo_revision: 4dd0f1c9
+  authoring_hash: cf2b22d84dc27f96b181098995e1ff1dd386e332f809a18adde739b3352a4899
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1928,7 +1931,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: e1957a827d1d736759ec932fd85d8d2b7bfc093e9fa54adc33d784be7311028a
+  snapshot_hash: fe1186b8f5615ad4e31e3d4d571872cf1e7b01265bb3dc8402279a4f2af78181
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1945,31 +1948,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: incomplete
-    total_sources: 1041
-    mapped_sources: 1008
+    total_sources: 1046
+    mapped_sources: 1013
     unmapped_sources: 33
     missing_sources: 11
     phase_signal_count: 3544
-    deferred_signal_count: 6383
-    non_goal_signal_count: 354
+    deferred_signal_count: 6385
+    non_goal_signal_count: 355
     layer_totals:
       blueprint: 1
-      spec: 197
-      plan: 197
-      tasks: 197
-      execution: 197
-      close: 197
+      spec: 198
+      plan: 198
+      tasks: 198
+      execution: 198
+      close: 198
       requirements: 2
       defect: 3
       design: 8
       release: 42
     layer_materialized:
       blueprint: 1
-      spec: 197
-      plan: 197
-      tasks: 197
-      execution: 197
-      close: 186
+      spec: 198
+      plan: 198
+      tasks: 198
+      execution: 198
+      close: 187
       requirements: 2
       defect: 3
       design: 8
@@ -10846,6 +10849,51 @@ truth_snapshot:
       mapped: true
       exists: false
       mapping_ref: 196-ai-sdlc-lean-code-self-reduction-governance
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/197-adapter-preflight-order/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 197-adapter-preflight-order
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 1
+    - path: specs/197-adapter-preflight-order/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 197-adapter-preflight-order
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/197-adapter-preflight-order/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 197-adapter-preflight-order
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/197-adapter-preflight-order/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 197-adapter-preflight-order
+      phase_signal_count: 0
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/197-adapter-preflight-order/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 197-adapter-preflight-order
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0
