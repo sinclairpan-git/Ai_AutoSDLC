@@ -32,7 +32,9 @@
 
 ## 3. 统一问题台账
 
-所有证据默认对应基线 revision；`program-manifest.yaml` 证据对应当前 snapshot hash `6e9b0aa2284aa9a4a612f4e739f3d248a9e5758789182a761edbfcd27651ba4f`。
+所有证据默认对应基线 revision；`program-manifest.yaml` 证据必须以目标提交内的 `truth_snapshot.repo_revision`、`generated_at`、`snapshot_hash` 三元组为准，并通过 `uv run ai-sdlc program truth audit` 复核。规范不得硬编码会随 truth sync 变化的 snapshot hash。
+
+复核必须在目标 commit/PR checkout 上执行并记录目标 commit、三元组、audit 输出与退出码。`snapshot_state` 必须为 `fresh`，manifest 必须无 `missing/invalid/stale`、validation error 或新增 blocker。整体 state 非 `ready` 仅可由已在本台账登记的 GAP-09～GAP-11 引起，且当前提交允许的 capability blocking refs 与 source inventory 计数必须作为精确集合记录在 execution log；集合发生增减均 fail-closed，不能把任意非零退出码当成已复核。
 
 | 编号 | 类别 | 事实证据 / 复现入口 | 目标与责任 | 减重关键路径 |
 |---|---|---|---|---|

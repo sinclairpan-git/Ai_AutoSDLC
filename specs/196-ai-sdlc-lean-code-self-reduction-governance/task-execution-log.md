@@ -306,3 +306,37 @@
 - `git diff --check`：PASS。
 - `uv run ai-sdlc verify constraints`：首次因本次 Markdown 结构减重缺删除说明而 BLOCKED；Batch 11 补充逐文件理由和摘要后重跑为 `no BLOCKERs`。
 - `program truth sync --execute --yes`：当前 snapshot 无新增 manifest diff；既有 GAP-09～GAP-11 外部债务保持原值，不伪造关闭。
+
+## 13. Batch 2026-07-13-012：PR Codex Review 修订
+
+- PR：`#120`；reviewed commit：`04e9364e286d198e8d2140e0057de7f0570ecf73`。
+- Codex finding：`spec.md` 将 program truth 证据硬编码为旧 snapshot hash，和提交内 `program-manifest.yaml` 的最终 truth snapshot 不一致。
+- 核验：成立。truth sync 会更新 `generated_at`、`repo_revision` 和 `snapshot_hash`，固定 hash 会让 GAP-09～GAP-11 证据在后续同步后立即陈旧。
+- 处置：规范改为引用目标提交内 `truth_snapshot.repo_revision + generated_at + snapshot_hash` 三元组，并要求使用 `uv run ai-sdlc program truth audit` 复核；禁止在规范中硬编码动态 snapshot hash。
+- 修订后 review target hash：`624f62bc07955866a592790d49395b8600ee26266c23980838d27399935735d6`。
+- 原 `dcd223...` 双 PASS 因 target 变化失效；必须由 Chandrasekhar 与 Mencius 对新哈希重新评审并双 PASS 后推送。
+
+### 13.1 第七轮对抗评审
+
+- `compat_safety_review` / Chandrasekhar：`FAIL`；要求把 audit 绑定到目标 commit，并冻结 `fresh`、可接受非 ready 状态和 fail-closed 条件。
+- `lean_efficiency_review` / Mencius：`FAIL`；要求在 T43 提交后实际执行既有 audit，不新增工作包、脚本或 artifact。
+- 两个 Agent 独立收敛到同一问题：仅替换动态引用仍不足以形成可执行的提交后门禁。
+
+### 13.2 处置与第八轮目标
+
+- `spec.md` 增加目标 commit/PR checkout 绑定、三元组/output/exit code 记录、`snapshot_state=fresh` 和非预期状态 fail-closed 规则。
+- `tasks.md` 在 T43 增加提交后 audit；退出码 1 只有在非 ready 状态精确等于已登记 GAP-09～GAP-11 集合时才是 `PASS_WITH_REGISTERED_DEBT`。
+- 本提交允许的 capability blocking refs 精确集合：`frontend_inheritance:generation`、`frontend_inheritance:quality`、`adapter_canonical_consumption:unverified`。
+- 本提交允许的 GAP-11 source inventory 精确计数：`total=1041`、`mapped=1008`、`unmapped=33`、`missing=11`；validation error 不在允许集合内。
+- 当前持久化三元组：`repo_revision=9d991958`、`generated_at=2026-07-13T05:02:55Z`、`snapshot_hash=91922c5e3b54c819155376423ca15a06b650c3f59d7b8d98970e119f18fb6395`。目标 commit 在提交后写入 PR audit 证据，避免提交内容自引用。
+- 第八轮 review target hash：`afddacf905876355b8c46725f6d82cf83daa556fc730199f0084ed5800a46cb3`。
+
+### 13.3 第八轮同哈希双 PASS
+
+| agent_id | dimension | findings | disposition | verdict | review_target_hash |
+|---|---|---|---|---|---|
+| `compat_safety_review` / Chandrasekhar | 兼容、安全、回退、状态与审计可证性 | 未发现可操作问题 | 第七轮 finding 已关闭 | `PASS` | `afddacf905876355b8c46725f6d82cf83daa556fc730199f0084ed5800a46cb3` |
+| `lean_efficiency_review` / Mencius | YAGNI、减重力度、直接性、预算、关键路径与治理成本 | 未发现可操作问题 | 第七轮 finding 已关闭 | `PASS` | `afddacf905876355b8c46725f6d82cf83daa556fc730199f0084ed5800a46cb3` |
+
+- 两位 Agent 独立复算的组合哈希一致；原 Codex finding 与第七轮共同 finding 均已闭环。
+- 本轮只修改 audit 证据绑定与判定，不新增工作包、脚本、artifact 或运行时代码。

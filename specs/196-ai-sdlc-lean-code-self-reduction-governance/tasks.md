@@ -79,6 +79,8 @@
 
 - **依赖**：T42。
 - **完成**：提交只包含治理文档和合法 truth/handoff；随后按仓库 mainline PR 协议交付。
+- **提交后验证**：在目标 commit/PR checkout 上运行 `uv run ai-sdlc program truth audit`，把目标 commit、`repo_revision + generated_at + snapshot_hash`、audit 输出、退出码和 blocking refs/source inventory 精确集合写入 execution log/PR 证据。
+- **判定**：`snapshot_state=fresh` 且无 `missing/invalid/stale`、validation error 或新增 blocker 才可继续。退出码 0 为 ready；退出码 1 只有在非 ready 状态精确等于 execution log 中已登记的 GAP-09～GAP-11 集合时才标记 `PASS_WITH_REGISTERED_DEBT`。其他非零、集合增减或证据缺失一律停止交付，返回 T41 同步并重新提交。
 - **回退**：revert WI-196 文档提交，不影响产品运行时。
 
 ## Batch 5：独立实现子项目录
