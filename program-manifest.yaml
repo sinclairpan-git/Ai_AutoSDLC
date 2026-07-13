@@ -1881,6 +1881,9 @@ specs:
   path: specs/195-loop-engine-frontend-evidence-loop-runtime
   depends_on: []
   frontend_evidence_class: framework_capability
+- id: 196-ai-sdlc-lean-code-self-reduction-governance
+  path: specs/196-ai-sdlc-lean-code-self-reduction-governance
+  depends_on: []
 truth_snapshot:
   generated_at: '2026-07-01T23:39:25Z'
   generated_by: ai-sdlc program truth sync

@@ -3,21 +3,19 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/spec.md
-  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/plan.md
-  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
+  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
   active_files: []
-  context_summary: 'Goal: 发布 AI-SDLC v0.9.6，包含 Vue3 public-primevue v1.8 视觉规范刷新 |
-    State: 已在 codex/release-v0.9.6-vue3-v1.8 分支完成版本 bump 与 release truth 同步：pyproject/src
-    version、uv.lock、README、USER_GUIDE、offline docs/checklist、workflow defaults、verify_constraints、tests、docs/releases/v0.9.6.md，以及
-    v1.8 provider/generation/adapters 变更。 | Next: 提交分支、push、创建 PR，评论 @codex review，进入
-    heartbeat 等待 review/checks。'
-current_branch: codex/189-loop-engine-complete-pr-review
+  context_summary: 'Goal: 完成 Work Item 196 精简代码治理与框架自身减重立项 | State: 已创建独立 worktree/feature
+    docs 分支，完成四件套原则、兼容契约、风险模型与 WP-01 至 WP-08 路线图；未修改产品运行时代码 | Next: 提交治理四件套后在新 revision
+    上运行 truth-check、program truth sync、constraints 与独立只读评审'
+current_branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-07-04T06:43:41+00:00'
+timestamp: '2026-07-13T03:23:08+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-07-01T18:38:26+00:00'
-checkpoint_fingerprint: d0621f0754b464938fd42308e8a83a7b37782d50842366665b6d1a44a378ddf3
+checkpoint_last_updated: '2026-07-13T03:23:08+00:00'
+checkpoint_fingerprint: fc0fa516b1951cbfad4739f13f9bbb54a69c448c13ade52bb6a79725a8817c39
