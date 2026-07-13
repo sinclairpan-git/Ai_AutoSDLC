@@ -165,3 +165,21 @@
 - 第一版修订哈希 `6f194ae700229aad207e4956584df18ad55b71b142e83f7b06e1462edca5c506` 被精简 Agent 判定 FAIL：测试文件“运行范围”与“修改范围”文字歧义。
 - 消除歧义后，冻结 `spec.md + plan.md + tasks.md` bytes 拼接 SHA-256 为 `7627839c93ba3c227790a9df57b288baaef32a5368790e7d3746c2c2ad356633`；兼容安全与精简效率 Agent 均独立复算并给出 PASS，无可操作 finding。
 - 最终边界只允许修改 3 个既有产品文件和 `tests/integration/test_cli_workitem_init.py`；两个 unit 文件只回归运行。第五个产品或测试修改文件触发 stop gate。
+
+### 6.3 remediation RED/GREEN 与独立 task reviews
+
+- RED commit `4c7b35a3` 只增强既有 duplicate integration test：首次 init 后删除 proof 并清空调用记录，第二次同 ID 调用要求 adapter 零次且 proof 不重建。
+- 当前生产代码下精确测试稳定 RED：`1 failed`，失败点为期望 `calls == []`、实际 `['adapter']`；首次 init 与 fixture 正常，失败原因精确指向第二次 adapter 副作用。
+- RED task reviewer 独立复跑后给出 `Spec compliant: Yes / Task quality: Approved`；累计测试 numstat 为 `+80/-5`，gross additions 恰好满足 80 行上限。
+- GREEN commit `3940723e` 只修改 `workitem_scaffold.py`：增加 module-private `_CANONICAL_DOC_NAMES`，scaffold 由该清单生成 paths，preview 在返回 id 前使用同一清单拒绝重复目标；原错误文本保持。
+- GREEN 精确测试 `1 passed`；三个 focused 文件 `26 passed`；core ruff 与 diff-check PASS。
+- GREEN task reviewer 独立复跑并给出 `Spec compliant: Yes / Task quality: Approved`，无 Critical、Important 或 Minor finding。
+- 最终产品 numstat 为 `main.py +5/-1`、`workitem_cmd.py +17/-0`、`workitem_scaffold.py +10/-12`，合计 `+32/-13 = net +19`；无新产品文件、公共抽象、依赖、配置或相邻重构。
+
+### 6.4 remediation fresh full verification
+
+- `uv run pytest -q` → `3149 passed, 3 skipped in 383.10s`。
+- `uv run ruff check src tests` → `All checks passed!`。
+- `uv run ai-sdlc verify constraints` → `no BLOCKERs`；`git diff --check` → PASS。
+- `uv run ai-sdlc program truth audit`：snapshot `fresh`；source inventory 仍为 `1013/1046 mapped`、`33 unmapped`、`11 missing`；blocker 仍且仅为 `frontend_inheritance:generation`、`frontend_inheritance:quality`、`adapter_canonical_consumption:unverified`，因此返回预期 exit 1。
+- full suite 与 truth audit 均触发现有 Cursor adapter 安装副作用；`.cursor/rules/ai-sdlc.mdc` 已用 `apply_patch` 恢复到测试前 SHA-256 `d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a`，无测试副作用进入提交。
