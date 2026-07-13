@@ -461,12 +461,9 @@ class TestCliWorkitemInit:
         assert state.next_work_item_seq == 2
 
     def test_workitem_init_rejects_duplicate_initialization(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+        self, adapter_receipt: tuple[Path, list[str]]
     ) -> None:
-        root = tmp_path / "repo"
-        root.mkdir()
-        init_project(root)
-        monkeypatch.chdir(root)
+        root, calls = adapter_receipt
 
         first = runner.invoke(
             app,
@@ -480,6 +477,10 @@ class TestCliWorkitemInit:
             ],
         )
         assert first.exit_code == 0
+        assert calls == ["adapter"]
+
+        (root / "adapter-proof.txt").unlink()
+        calls.clear()
 
         second = runner.invoke(
             app,
@@ -494,6 +495,8 @@ class TestCliWorkitemInit:
         )
         assert second.exit_code == 1
         assert "already exist" in second.output.lower()
+        assert calls == []
+        assert not (root / "adapter-proof.txt").exists()
 
     def test_workitem_init_materializes_program_manifest_entry_and_guides_truth_sync(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
