@@ -328,7 +328,7 @@
 - `tasks.md` 在 T43 增加提交后 audit；退出码 1 只有在非 ready 状态精确等于已登记 GAP-09～GAP-11 集合时才是 `PASS_WITH_REGISTERED_DEBT`。
 - 本提交允许的 capability blocking refs 精确集合：`frontend_inheritance:generation`、`frontend_inheritance:quality`、`adapter_canonical_consumption:unverified`。
 - 本提交允许的 GAP-11 source inventory 精确计数：`total=1041`、`mapped=1008`、`unmapped=33`、`missing=11`；validation error 不在允许集合内。
-- 当前持久化三元组：`repo_revision=9d991958`、`generated_at=2026-07-13T05:02:55Z`、`snapshot_hash=91922c5e3b54c819155376423ca15a06b650c3f59d7b8d98970e119f18fb6395`。目标 commit 在提交后写入 PR audit 证据，避免提交内容自引用。
+- 动态 truth 三元组不在版本化 execution log 中硬编码；目标 commit 的三元组、audit 输出和退出码只记录在对应 PR target evidence，目标提交内的 `program-manifest.yaml` 是复核真值源。旧 PR target 的三元组一律视为历史证据，不得用于后续 T43 判定。
 - 第八轮 review target hash：`afddacf905876355b8c46725f6d82cf83daa556fc730199f0084ed5800a46cb3`。
 
 ### 13.3 第八轮同哈希双 PASS
