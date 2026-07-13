@@ -104,3 +104,16 @@
 - 精简效率 Agent：PASS；哈希一致；`未发现可操作问题`。确认 expected pack 至多构建一次且 mismatch 直接复用，20/140 LOC 预算现实，unit/handoff/recover 分层无过度测试。
 - 一致结论：Round 4 同哈希双 PASS，设计 admission gate 关闭；允许提交 docs baseline 并进入 runtime branch 的严格 RED→GREEN。
 - 任一 finding 成立即修订并重算；两个 Agent 对同一哈希 PASS 前不进入 runtime branch。
+
+## 5. Batch 2026-07-13-002：T21 RED characterization
+
+- docs baseline commit：`30bcbf89`；已 fast-forward 到 runtime branch `codex/198-linked-wi-resume`。
+- RED test commit：`a0196fd2`；只修改三个获准测试文件，`+140/-1`，无产品代码。
+- 最终 RED：
+  - `uv run pytest tests/unit/test_context_state.py tests/integration/test_cli_handoff.py tests/integration/test_cli_recover.py -q`
+  - 结果：`4 failed, 34 passed in 1.44s`。
+  - 四个失败分别证明 linked build 仍读取历史 docs、完整 overlay 下历史 branch 未自愈、handoff pack 历史路径泄漏、recover legacy-fresh pack 未进入 semantic-stale rebuild；均非 fixture/解析错误。
+- 兼容 GREEN 已覆盖：corrupt working-set/runtime、invalid UTF-8 latest-summary、patched `OSError` 仍返回正确 fresh pack；无 linked 非标准 `feature.spec_dir`、linked runtime branch、linked missing/partial 和既有 31 项相关回归均通过。
+- 跨平台断言使用解析后的 `Path` 三元组精确比较 spec/plan/tasks；不搜索 raw YAML 分隔符。
+- `uv run ruff check` 三文件：PASS；`git diff --check`：PASS；Cursor adapter 测试副作用已用 `apply_patch` 精确恢复。
+- 独立 RED reviewer 首轮/二轮 findings 全部修订；最终 verdict：`PASS / Spec compliant: Yes / RED quality: Approved / 未发现测试内容的可操作问题`。

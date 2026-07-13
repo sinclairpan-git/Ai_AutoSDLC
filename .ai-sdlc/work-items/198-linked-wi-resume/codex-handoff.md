@@ -1,34 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-13T18:58:02+00:00
-- Reason: Round 4 同哈希双 Agent admission 通过
+- Updated: 2026-07-13T19:30:31+00:00
+- Reason: T21 RED characterization 通过独立评审
 - Goal: 完成 WI-196 GAP-08/T52：linked WI resume working set/branch 一致性与旧版 fresh pack 自愈，独立 PR 交付
-- State: WI-198 Round 4 同哈希 8ac337e615eb0f1f6bc626515a9be72fec1acb379ab01994611be4cbe0cd5118 已获兼容安全与精简效率双 Agent 一致 PASS；准备提交 docs baseline
+- State: WI-198 RED commit a0196fd2 已由独立 reviewer PASS；4 个预期失败、34 个兼容回归通过；准备最小 GREEN
 - Stage: execute
 - Work Item: 198-linked-wi-resume
-- Branch: feature/198-linked-wi-resume-docs
+- Branch: codex/198-linked-wi-resume
 
 ## Changed Files
-- M .ai-sdlc/project/config/project-state.yaml
-- M .ai-sdlc/state/checkpoint.yml
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M program-manifest.yaml
-- M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-- ?? .ai-sdlc/work-items/198-linked-wi-resume/
-- ?? specs/198-linked-wi-resume/
+- M specs/198-linked-wi-resume/task-execution-log.md
 
 ## Key Decisions
-- semantic expected pack 窄比较 spec/plan/tasks/current_branch，至多构建一次；semantic-only optional read errors 保持旧 fresh 成功合同；四函数单文件、产品≤20/test≤140
+- 产品只改 state.py 冻结四函数；expected pack至多构建一次；semantic-only optional read errors跳过迁移；产品净新增≤20
 
 ## Commands / Tests
-- 双 Agent PASS；constraints PASS；diff check PASS；before artifact Work Item=198 但 docs/branch 仍历史
+- RED 4 failed/34 passed；test additions=140；Ruff/diff PASS；Spec compliant Yes/RED quality Approved
 
 ## Blockers / Risks
-- 无设计 blocker；runtime 必须严格 RED 后才可修改产品代码
+- 无 RED blocker；GREEN 不得改测试/文档/状态，不得超20产品LOC
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交 docs baseline；切换 codex/198-linked-wi-resume；委派 RED tests 并独立 review；随后最小 GREEN
+- 委派最小 GREEN实现；运行三文件+五文件 focused；独立 spec/code review；修订至通过
