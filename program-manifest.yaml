@@ -1887,12 +1887,15 @@ specs:
 - id: 197-adapter-preflight-order
   path: specs/197-adapter-preflight-order
   depends_on: []
+- id: 198-linked-wi-resume
+  path: specs/198-linked-wi-resume
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-13T17:00:54Z'
+  generated_at: '2026-07-13T19:03:10Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: f2ba31de
-  authoring_hash: cf2b22d84dc27f96b181098995e1ff1dd386e332f809a18adde739b3352a4899
+  repo_revision: 4802596f
+  authoring_hash: a31492173d6b6f1675add55c62ea0108876a88dc70e191831df6197527b9140a
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1931,7 +1934,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 92112bbf449b81b41360dc7e455c88ae3f8395f767848797719435b07ecaa6f0
+  snapshot_hash: 4ebccc688a879827a081eb74b34e6f61441b7865eb69311962a782cc7b629cad
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1948,30 +1951,30 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: incomplete
-    total_sources: 1046
-    mapped_sources: 1013
+    total_sources: 1051
+    mapped_sources: 1018
     unmapped_sources: 33
-    missing_sources: 11
-    phase_signal_count: 3544
-    deferred_signal_count: 6385
-    non_goal_signal_count: 355
+    missing_sources: 12
+    phase_signal_count: 3545
+    deferred_signal_count: 6386
+    non_goal_signal_count: 356
     layer_totals:
       blueprint: 1
-      spec: 198
-      plan: 198
-      tasks: 198
-      execution: 198
-      close: 198
+      spec: 199
+      plan: 199
+      tasks: 199
+      execution: 199
+      close: 199
       requirements: 2
       defect: 3
       design: 8
       release: 42
     layer_materialized:
       blueprint: 1
-      spec: 198
-      plan: 198
-      tasks: 198
-      execution: 198
+      spec: 199
+      plan: 199
+      tasks: 199
+      execution: 199
       close: 187
       requirements: 2
       defect: 3
@@ -10894,6 +10897,51 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 197-adapter-preflight-order
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/198-linked-wi-resume/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 198-linked-wi-resume
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 1
+    - path: specs/198-linked-wi-resume/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 198-linked-wi-resume
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/198-linked-wi-resume/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 198-linked-wi-resume
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/198-linked-wi-resume/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 198-linked-wi-resume
+      phase_signal_count: 1
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/198-linked-wi-resume/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 198-linked-wi-resume
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0

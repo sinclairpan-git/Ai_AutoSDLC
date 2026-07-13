@@ -169,7 +169,7 @@
 | GAP-04 | planned | T67 | `program_cmd.py`、33 命令、相似度审计 | family matrix、surface/shadow/deletion receipts |
 | GAP-05 | planned | T63/T64 | `models/frontend_*`、`telemetry/*`、store/test 候选 | duplicate family before/after |
 | GAP-06 | planned | T65 | 6 个 `build_p*_baseline` builder | consumer graph、Go/No-Go receipt |
-| GAP-07 | planned-first | T51 | `cli/main.py`、`cli/cli_hooks.py`、首批执行记录 | red/green CLI test、clean-tree snapshot |
+| GAP-07 | closed | T51 / WI-197 | `specs/197-adapter-preflight-order/task-execution-log.md` §6.3～6.7、PR `#121`、merge `4802596f` | RED/GREEN、full/CI、双 Agent、Codex、mainline targeted/truth |
 | GAP-08 | planned-second | T52 | `context/state.py`、当前 resume-pack 风险 | red/green continuity tests、artifact diff |
 | GAP-09 | planned-independent | T53A | `program-manifest.yaml` truth snapshot | blocker closure snapshot |
 | GAP-10 | planned-independent | T53B | `program-manifest.yaml` truth snapshot | consumption evidence、closure snapshot |
@@ -350,3 +350,13 @@
 - 关联 branch/worktree disposition 计划：merge
 - 当前批次 worktree disposition 状态：保留至 PR 合并完成
 - 该修订只改变 continuity 状态与执行日志，不修改 `spec.md + plan.md + tasks.md`；第八轮双 PASS 哈希 `afddacf905876355b8c46725f6d82cf83daa556fc730199f0084ed5800a46cb3` 保持有效。
+
+## 15. Batch 2026-07-13-014：GAP-07/T51 mainline 关闭与 GAP-08 启动
+
+- WI-197 PR `#121` 在 Codex review 当前 HEAD 无问题、22 项 GitHub checks 全绿后 squash merge；merge commit 为 `4802596f9ef2fda8c27717c25d6760ed09136811`。
+- `origin/main` 与 WI-197 已验收 branch tree hash 均为 `90da33d6ac6b0c911b2bf0ce91c8b04b90a12e04`，证明 squash 合并内容无漂移。
+- mainline-equivalent targeted：`tests/integration/test_cli_workitem_init.py + tests/unit/test_cli_hooks.py + tests/unit/test_workitem_scaffold.py` → `26 passed in 11.79s`。
+- mainline truth audit：snapshot `fresh`；inventory 保持 `1013/1046 mapped`、`33 unmapped`、`11 missing`，既有三个 frontend/adapter blocker 未扩大，预期 exit 1。
+- GAP-07/T51 状态更新为 `closed`；权威实现/评审/回退证据位于 WI-197 execution log §6.3～6.7 与 PR `#121`。
+- GAP-08/T52 进入独立 WI-198：`specs/198-linked-wi-resume/`；docs branch `feature/198-linked-wi-resume-docs`，runtime branch 预留 `codex/198-linked-wi-resume`。
+- T51/T52 barrier 尚未关闭；只有 WI-198 独立 PR 合并并完成 mainline truth 后才允许进入 WP-01A。
