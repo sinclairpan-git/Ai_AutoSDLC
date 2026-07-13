@@ -149,3 +149,19 @@
 - `uv run ruff check src tests` → `All checks passed!`；`uv run ai-sdlc verify constraints` → `no BLOCKERs`；`git diff --check` → PASS。
 - 验证未生成额外 tracked/untracked 文件；continuity 文件在 focused tests 前后 hash 不变。
 - 环境 concern：本机 `pwsh` 在仓库命令执行前因 `System.Text.RegularExpressions, Version=10.0.0.0` assembly `FileLoadException` 退出，因此沿用已记录的 zsh fallback；项目命令结果不受影响。
+
+## 6. PR Codex review remediation
+
+### 6.1 Finding 与根因
+
+- PR `#121` 的 Codex inline comment `3572707130` 指出：重复执行已存在 canonical docs 的 `workitem init` 时，CLI 在 `scaffold()` 拒绝前先运行 adapter，使 exit 1 路径仍可写 proof。
+- 根因确认：`workitem_init` 的顺序为 `preview_work_item_id` → Git preflight → adapter → `scaffold`，而 duplicate validation 只存在于 `scaffold` 内。
+- 旧 HEAD 的 final review 与验证结论因此失效，WI-197 重新进入设计门禁与 RED→GREEN。
+
+### 6.2 对抗方案评审与重新冻结
+
+- 兼容安全 Agent 与精简效率 Agent 均拒绝在 CLI 复制 canonical 文件清单；两者一致选择把既有 duplicate validation 前移到 `WorkitemScaffolder.preview_work_item_id`，并以 module-private canonical 名称清单供 preview/scaffold 复用。
+- 该方案不新增公共抽象、依赖或产品文件，预计 `workitem_scaffold.py` 净减少约 3 LOC，使全部产品净增从 21 降至约 18；唯一必要边界扩展是允许修改第三个既有产品文件。
+- 第一版修订哈希 `6f194ae700229aad207e4956584df18ad55b71b142e83f7b06e1462edca5c506` 被精简 Agent 判定 FAIL：测试文件“运行范围”与“修改范围”文字歧义。
+- 消除歧义后，冻结 `spec.md + plan.md + tasks.md` bytes 拼接 SHA-256 为 `7627839c93ba3c227790a9df57b288baaef32a5368790e7d3746c2c2ad356633`；兼容安全与精简效率 Agent 均独立复算并给出 PASS，无可操作 finding。
+- 最终边界只允许修改 3 个既有产品文件和 `tests/integration/test_cli_workitem_init.py`；两个 unit 文件只回归运行。第五个产品或测试修改文件触发 stop gate。

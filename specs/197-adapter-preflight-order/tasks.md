@@ -30,6 +30,7 @@ related_doc:
 
 - [ ] 扩展 `tests/integration/test_cli_workitem_init.py` 的 root/group/init hook 隔离范围。
 - [ ] 新增 `adapter_before_clean_tree_preflight`，并增强脏树→干净重试 proof 场景。
+- [ ] 增强既有 duplicate-init 用例，证明第二次调用不消费 adapter 且不重建 proof。
 - [ ] 新增缺失 `--title` 零 adapter 场景与非 `init` handler 前一次场景。
 - [ ] 运行测试并确认因 self-dirty 或无效调用先执行 adapter 而 RED，不接受 fixture/patch 错误。
 - [ ] 把 RED 命令与关键输出写入 execution log。
@@ -38,9 +39,10 @@ related_doc:
 
 - [ ] `src/ai_sdlc/cli/main.py` 把 `workitem` 组委托给子应用，不读取 `sys.argv`。
 - [ ] `workitem_app` callback 对非 `init` 在 handler 前执行 hook；`init` 在 preflight 成功后执行。
+- [ ] `WorkitemScaffolder.preview_work_item_id` 用私有 canonical 文件名清单拒绝重复目标，`scaffold` 复用同一清单，不复制 CLI 校验。
 - [ ] 合法路径 adapter 恰好一次；脏树/无效 `init` 为零次，干净重试正常持久化 proof。
 - [ ] 不修改其他顶层 command、proof 校验/schema、输出或退出码。
-- [ ] 单测试与两个 focused 文件全部 GREEN。
+- [ ] 单测试与三个 focused 文件全部 GREEN。
 
 ### T23 预算和兼容复核
 
@@ -53,7 +55,7 @@ related_doc:
 
 ### T31 完整验证
 
-- [ ] `uv run pytest tests/integration/test_cli_workitem_init.py tests/unit/test_cli_hooks.py -q`。
+- [ ] `uv run pytest tests/integration/test_cli_workitem_init.py tests/unit/test_cli_hooks.py tests/unit/test_workitem_scaffold.py -q`。
 - [ ] `uv run pytest -q`。
 - [ ] `uv run ruff check src tests`。
 - [ ] `uv run ai-sdlc verify constraints`。

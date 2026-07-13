@@ -58,7 +58,7 @@
 | 合同 | 冻结内容 |
 |---|---|
 | NC-01 | observed/expected、基线 revision 与复现测试按 §2 冻结 |
-| NC-02 | 受影响 CC 为 CC-01、CC-02、CC-05、CC-06、CC-07；只触及 root callback、workitem group callback 与 init 顺序 |
+| NC-02 | 受影响 CC 为 CC-01、CC-02、CC-05、CC-06、CC-07；只触及 root callback、workitem group callback、init 顺序与 `WorkitemScaffolder` 的无写入重复目标校验 |
 | NC-03 | 最多新增 25 行手写产品代码、80 行测试代码；0 个新产品文件、0 个公共抽象、0 个依赖 |
 | NC-04 | 严格 RED→GREEN；定向、全量、ruff、constraints、diff check 全部通过 |
 | NC-05 | 独立提交可 `git revert`；失败时恢复原 hook 顺序，owner 为 framework maintainer |
@@ -68,7 +68,7 @@
 
 - **CC-01**：参数、帮助、成功/失败文本保持；缺失必填参数或非法 option 仍在解析层失败，但不再先执行 adapter。
 - **CC-02**：真实用户脏树继续 exit 1；合法干净 docs branch 继续/恢复 exit 0。
-- **CC-05**：adapter 仍是唯一受管写入来源；preflight 不忽略任何用户预存改动；脏树或无效 `init` 为零写入。
+- **CC-05**：adapter 仍是唯一受管写入来源；preflight 不忽略任何用户预存改动；脏树、重复 canonical docs 或其他无效 `init` 为零 adapter 写入。
 - **CC-06**：合法 `init` 与非 `init` workitem 子命令的 adapter 均恰好一次；脏树/无效 `init` 不消费新 proof，恢复干净后重试才持久化 proof；既有 idempotence 不变。
 - **CC-07**：实现不得依赖 POSIX shell、文件锁或平台特定路径。
 
@@ -88,18 +88,18 @@ T51 触及 adapter 入口和 proof 的持久化时机，但不改变 canonical c
 
 - **FR-197-01**：根 callback 必须把整个 `workitem` 组委托给 `workitem_app` callback，不能依赖 `sys.argv` 猜测二级命令。
 - **FR-197-02**：合法非 `init` workitem 子命令必须仍在 handler 前执行 adapter 恰好一次。
-- **FR-197-03**：`init` 的 clean-tree preflight 必须在 adapter hook 之前完成；通过后 hook 恰好一次。
-- **FR-197-04**：preflight 或参数解析失败时 adapter 不得运行，不得持久化新 proof，目标 spec 目录不得创建。
+- **FR-197-03**：`init` 的重复目标校验与 clean-tree preflight 必须在 adapter hook 之前完成；通过后 hook 恰好一次。
+- **FR-197-04**：重复 canonical docs、preflight 或参数解析失败时 adapter 不得运行，不得持久化新 proof，不得改写既有 spec 目录。
 - **FR-197-05**：不得新增“忽略 adapter 路径”的脏树白名单。
 - **FR-197-06**：现有 adapter PermissionError/异常传播、proof 校验和 blocker 合同保持。
-- **FR-197-07**：新增测试必须覆盖 clean/dirty 重试、缺失必填参数和非 `init` 子命令，且至少一个用例在修复前因调用顺序失败。
+- **FR-197-07**：新增测试必须覆盖 clean/dirty 重试、重复 canonical docs、缺失必填参数和非 `init` 子命令，且至少一个用例在修复前因调用顺序失败。
 - **FR-197-08**：提交必须包含 TDD、全量回归、回退和 GAP-10 expected-delta 证据。
 
 ## 7. 成功标准
 
 - **SC-197-01**：新 characterization test 在生产修复前稳定失败，失败原因为 adapter 写入先于 preflight。
-- **SC-197-02**：修复后 clean/dirty、缺失参数、非 `init` 黑盒测试及两个 focused 文件全绿。
-- **SC-197-03**：真实用户脏树测试证明 adapter/proof 零写入且 exit 1，恢复干净后重试一次成功。
+- **SC-197-02**：修复后 clean/dirty、重复 canonical docs、缺失参数、非 `init` 黑盒测试及三个 focused 文件全绿。
+- **SC-197-03**：真实用户脏树测试证明 adapter/proof 零写入且 exit 1，恢复干净后重试一次成功；duplicate-init 测试证明第二次调用不增加 adapter 计数且不重建 proof。
 - **SC-197-04**：产品新增 LOC ≤25，测试新增 LOC ≤80，无新公共抽象或依赖。
 - **SC-197-05**：`uv run pytest -q`、ruff、constraints、diff check 全部通过。
 - **SC-197-06**：兼容安全与精简效率 Agent 对同一 `spec.md + plan.md + tasks.md` 哈希均 PASS。

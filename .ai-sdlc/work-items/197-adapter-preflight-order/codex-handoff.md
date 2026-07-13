@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-13T16:35:38+00:00
-- Reason: WI-197 evidence 与 fresh delivery gate 已完成，准备 whole-branch review 和 PR
-- Goal: 完成 WI-197 adapter/preflight 顺序修复并独立交付 GAP-07
-- State: RED b89203c4 与最小 GREEN c644884e 已提交；RED/GREEN 独立 task reviews 均 Approved；交付准备验证通过；PR pending
+- Updated: 2026-07-13T17:32:03+00:00
+- Reason: duplicate-init remediation 设计门禁完成，进入严格 TDD
+- Goal: 关闭 PR #121 duplicate-init adapter 零副作用缺口并重新完成交付闭环
+- State: 冻结三件套已修订；最终 bytes 拼接 SHA-256 7627839c93ba3c227790a9df57b288baaef32a5368790e7d3746c2c2ad356633 已由兼容安全与精简效率两个 Agent 独立复算并一致 PASS；尚未修改测试或实现
 - Stage: execute
 - Work Item: 197-adapter-preflight-order
 - Branch: feature/197-adapter-preflight-order
@@ -12,21 +12,22 @@
 - M .ai-sdlc/state/codex-handoff.md
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/197-adapter-preflight-order/codex-handoff.md
-- M program-manifest.yaml
-- M specs/197-adapter-preflight-order/development-summary.md
+- M specs/197-adapter-preflight-order/plan.md
+- M specs/197-adapter-preflight-order/spec.md
 - M specs/197-adapter-preflight-order/task-execution-log.md
+- M specs/197-adapter-preflight-order/tasks.md
 
 ## Key Decisions
-- 采用 strict Click ctx.meta composition：唯一 private dotted key，root 注入当次 hook 后 return，child strict index，无 fallback
+- 采用 preview_work_item_id 前移 duplicate validation + module-private canonical names；不在 CLI 复制规则；仅增强现有 integration duplicate test，两个 unit 仅回归运行
 
 ## Commands / Tests
-- fresh delivery gate：focused 三文件 58 passed；ruff src/tests PASS；verify constraints 无 BLOCKER；diff-check PASS；truth counts 1013/1046、33、11 不漂移
+- uv run ai-sdlc verify constraints -> no BLOCKERs；git diff --check -> PASS；双 Agent 最新哈希 PASS
 
 ## Blockers / Risks
-- 既有 33 unmapped、11 missing 与 frontend/adapter 三个 blocker 不得扩大；whole-branch review、PR/Codex review/checks/merge/main truth close 未完成
+- 旧 HEAD 验证与 CI 已失效；必须新增 RED、最小 GREEN并重新全量验收/评审/推送
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 运行 final whole-branch review；通过后创建 PR、请求 Codex review 并监控 required checks
+- 提交冻结设计修订；增强 duplicate integration test 并确认 RED；独立评审 RED 后再实现 core 最小 GREEN

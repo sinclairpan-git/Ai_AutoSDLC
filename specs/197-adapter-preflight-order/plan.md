@@ -8,7 +8,7 @@ related_doc:
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to execute this plan task-by-task.
 
 **Goal:** 修复 WI-196 GAP-07，使 `workitem init` 先判断真实用户工作树，再执行同一自动 adapter hook，保持其他 CLI 行为不变。
-**Architecture:** 根 callback 对整个 `workitem` 组不执行 hook；`workitem_app` callback 对合法非 `init` 子命令在 handler 前执行原 hook，`init` 则在 `_ensure_workitem_init_git_preflight` 成功后执行。无效 `init` 和脏树 `init` 均 fail-closed 为零 adapter 写入。
+**Architecture:** 根 callback 对整个 `workitem` 组不执行 hook；`workitem_app` callback 对合法非 `init` 子命令在 handler 前执行原 hook，`init` 则先通过 `WorkitemScaffolder.preview_work_item_id` 的无写入重复目标校验和 `_ensure_workitem_init_git_preflight`，再执行 hook。无效 `init` 和脏树 `init` 均 fail-closed 为零 adapter 写入。
 **Tech Stack:** Python 3.11、Typer/Click、pytest、`unittest.mock`、GitClient、uv、Ruff。
 
 ## Global Constraints
@@ -34,14 +34,22 @@ src/ai_sdlc/cli/workitem_cmd.py
   workitem_init(...) -> None
   _ensure_workitem_init_git_preflight(root, work_item_id) -> None
 
+src/ai_sdlc/core/workitem_scaffold.py
+  WorkitemScaffolder.preview_work_item_id(...) -> str
+  复用私有 canonical 文件名清单，在返回 id 前拒绝重复目标
+
 tests/integration/test_cli_workitem_init.py
   真实 callback → adapter 写入 → preflight 的 characterization
 
-tests/unit/test_cli_hooks.py
-  既有 adapter 异常与 PermissionError 合同，仅回归不扩展范围
+回归运行但不允许修改：
+  tests/unit/test_cli_hooks.py
+    既有 adapter 异常与 PermissionError 合同
+
+  tests/unit/test_workitem_scaffold.py
+    既有 scaffold duplicate 合同
 ```
 
-允许修改的产品文件只有 `main.py` 与 `workitem_cmd.py`；允许修改的测试文件只有上述两个。若需要第五个文件，先停止并重新做 NC-02 影响分析。
+允许修改的产品文件只有 `main.py`、`workitem_cmd.py` 与 `workitem_scaffold.py`；允许修改的测试文件只有 `tests/integration/test_cli_workitem_init.py`。两个 unit 文件只运行、不修改。这是针对 GitHub Codex duplicate-init finding 重做 NC-02 后的唯一边界扩展；若需要修改第五个产品或测试文件，先停止并再做影响分析。
 
 ## 2. Task 1：冻结文档与设计门禁
 
@@ -65,14 +73,15 @@ git diff --check
 1. 扩展 autouse patch，使常规用例同时隔离 root hook 与 workitem group/init hook。
 2. 新增 clean→dirty preflight characterization：fake adapter 写入 Git 可见 proof receipt；首次合法 clean 调用期望成功，当前实现应因 adapter 先写而 RED。
 3. 增强真实用户脏树场景：exit 1、adapter/proof 零写入；清理用户脏文件后重试，adapter 一次并成功。
-4. 新增缺失 `--title` 场景：保持解析错误/退出码，adapter 零次；当前实现会先调用而 RED。
-5. 新增一个非 `init` workitem 子命令场景：adapter 在 handler 前恰好一次，防止整个组被静默跳过。
-6. 记录完整 RED 命令、关键失败输出和失败原因；fixture/patch 错误不算 RED。
+4. 增强既有 duplicate-init 用例：首次成功后再调用必须 exit 1，adapter 调用计数不增加、proof 不重建；当前实现会先调用而 RED。
+5. 新增缺失 `--title` 场景：保持解析错误/退出码，adapter 零次；当前实现会先调用而 RED。
+6. 新增一个非 `init` workitem 子命令场景：adapter 在 handler 前恰好一次，防止整个组被静默跳过。
+7. 记录完整 RED 命令、关键失败输出和失败原因；fixture/patch 错误不算 RED。
 
 RED 命令：
 
 ```bash
-uv run pytest tests/integration/test_cli_workitem_init.py -k "adapter_before_clean_tree_preflight or missing_title or non_init" -q
+uv run pytest tests/integration/test_cli_workitem_init.py -k "adapter_before_clean_tree_preflight or duplicate_initialization or missing_title or non_init" -q
 ```
 
 ## 4. Task 3：最小 GREEN
@@ -80,19 +89,20 @@ uv run pytest tests/integration/test_cli_workitem_init.py -k "adapter_before_cle
 1. 在 `main.py` 把整个 `workitem` 组标记为子应用自主管理；不得用 `sys.argv` 或进程全局状态识别二级命令。
 2. 在 `workitem_cmd.py` 增加私有 group callback：合法非 `init` 子命令在 handler 前调用现有 hook，`init` 路径跳过。
 3. 在 `workitem_init` 的 clean-tree preflight 成功后立即调用同一 hook，再进入 scaffold。
-4. 保持参数/handler/preflight exit code 与文本；只采用已冻结的零写入 expected delta。
-5. 运行全部 RED 用例和两个 focused 文件，确认 GREEN。
+4. 在 `workitem_scaffold.py` 用 module-private canonical 文件名清单同时生成 scaffold paths 与执行 preview duplicate validation；不增加公共 helper。
+5. 保持参数/handler/preflight exit code 与文本；只采用已冻结的零写入 expected delta。
+6. 运行全部 RED 用例和三个 focused 文件，确认 GREEN。
 
 GREEN 命令：
 
 ```bash
-uv run pytest tests/integration/test_cli_workitem_init.py -k "adapter_before_clean_tree_preflight or missing_title or non_init" -q
-uv run pytest tests/integration/test_cli_workitem_init.py tests/unit/test_cli_hooks.py -q
+uv run pytest tests/integration/test_cli_workitem_init.py -k "adapter_before_clean_tree_preflight or duplicate_initialization or missing_title or non_init" -q
+uv run pytest tests/integration/test_cli_workitem_init.py tests/unit/test_cli_hooks.py tests/unit/test_workitem_scaffold.py -q
 ```
 
 ## 5. Task 4：兼容补强与重构检查
 
-1. 确认真实用户脏树和无效 `init` 都在 adapter 调用前失败，干净重试才持久化 proof。
+1. 确认真实用户脏树、重复 canonical docs 和其他无效 `init` 都在 adapter 调用前失败，干净重试才持久化 proof。
 2. 确认合法 `init` 与非 `init` workitem 子命令各调用一次，其他顶层命令没有 diff。
 3. 检查 GAP-10 proof carrier、digest/path 校验、persisted field schema 与 release blocker 均未改动。
 4. 统计产品/测试新增 LOC，超过预算即停止并缩小实现。
@@ -103,7 +113,7 @@ uv run pytest tests/integration/test_cli_workitem_init.py tests/unit/test_cli_ho
 依次运行：
 
 ```bash
-uv run pytest tests/integration/test_cli_workitem_init.py tests/unit/test_cli_hooks.py -q
+uv run pytest tests/integration/test_cli_workitem_init.py tests/unit/test_cli_hooks.py tests/unit/test_workitem_scaffold.py -q
 uv run pytest -q
 uv run ruff check src tests
 uv run ai-sdlc verify constraints
