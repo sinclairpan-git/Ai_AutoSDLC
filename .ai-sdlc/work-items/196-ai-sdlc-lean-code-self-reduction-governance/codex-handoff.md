@@ -1,32 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-07-13T03:23:08+00:00
-- Reason: Work Item 196 立项文档完成首批改写
+- Updated: 2026-07-13T03:28:31+00:00
+- Reason: Work Item 196 revision truth 与 program truth 验证完成
 - Goal: 完成 Work Item 196 精简代码治理与框架自身减重立项
-- State: 已创建独立 worktree/feature docs 分支，完成四件套原则、兼容契约、风险模型与 WP-01 至 WP-08 路线图；未修改产品运行时代码
+- State: 治理四件套已提交并通过 revision truth-check；program truth 已登记 196，当前只剩 truth snapshot 提交与用户书面审核，未进入产品代码实现
 - Stage: execute
 - Work Item: 196-ai-sdlc-lean-code-self-reduction-governance
 - Branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
 
 ## Changed Files
-- M .ai-sdlc/project/config/project-state.yaml
-- M .ai-sdlc/state/checkpoint.yml
 - M program-manifest.yaml
-- ?? specs/196-ai-sdlc-lean-code-self-reduction-governance/
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
 
 ## Key Decisions
-- 采用治理总项加独立子工作项，不做单分支大重写；先 Golden Master，再低风险去重，再 L3 双跑切换
-- 公共 CLI、artifact、状态迁移、dry-run/execute/yes 和跨平台发布行为冻结
+- program truth 的既有 frontend inheritance、adapter consumption 和 source inventory blocker 不在 196 docs-only 分支顺带修复
 
 ## Commands / Tests
-- uv run pytest => 3145 passed, 3 skipped in 443.28s
-- uv run ai-sdlc verify constraints => no BLOCKERs
+- workitem truth-check => HEAD 4b572c28 四件套完整，ahead 2 behind 0
+- program truth sync --execute --yes => 196 四层映射已登记，state=migration_pending（既有外部 blocker）
 
 ## Blockers / Risks
-- workitem/program CLI adapter hook 会先改写 Cursor 规则并触发 clean-tree 冲突；本轮仅抑制无关 hook，未混入 adapter 更新
+- none
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交治理四件套后在新 revision 上运行 truth-check、program truth sync、constraints 与独立只读评审
+- 提交最终 truth/handoff 变更并请用户审核 Work Item 196；批准前不启动 WP-01

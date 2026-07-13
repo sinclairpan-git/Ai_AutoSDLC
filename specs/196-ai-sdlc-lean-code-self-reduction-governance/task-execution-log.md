@@ -93,6 +93,8 @@
 - 提交前 `workitem truth-check --wi ...`：按预期返回未在 HEAD 找到四件套；该命令只读取 revision，不读取未提交文件，提交后必须重跑。
 - `workitem link`：checkpoint 的 `linked_wi_id` / `linked_plan_uri` 已关联到 196。
 - `handoff update`：canonical 与 scoped handoff 已生成；resume-pack 的旧 feature 派生指针已纠正为 196。
+- 提交后 `workitem truth-check --wi ...`：PASS；HEAD `4b572c28` 中四件套完整，分支相对 main 为 ahead 2 / behind 0，分类为 `branch_only_implemented`。
+- `program truth sync --execute --yes`：成功写入 `program-manifest.yaml`；196 的 spec/plan/tasks/execution/close inventory 已登记，snapshot state 为 `migration_pending`。
 
 ### 4.3 自审结论
 
@@ -101,3 +103,10 @@
 - 范围：保持 docs-only，没有产品实现。
 - 兼容：没有删除或改变公共功能。
 - 当前结论：允许提交治理基线；提交后继续 revision truth/program truth 验证。
+
+### 4.4 Program Truth 外部风险
+
+- `frontend-mainline-delivery` audit 因既有 `frontend_inheritance:generation` / `frontend_inheritance:quality` 阻断。
+- `agent-adapter-verified-host-ingress` audit 因既有 `adapter_canonical_consumption:unverified` 阻断。
+- source inventory 为 1008/1041 mapped，包含历史 release/source 映射缺口。
+- 以上均不由 Work Item 196 引入，也不在本 docs-only 治理分支修复；196 的四件套映射已 materialized。
