@@ -25,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 runner = CliRunner()
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+_INIT_ARGS = ["workitem", "init", "--title=Direct Formal Entry", "--wi-id=008-direct-formal-entry"]
 
 
 def _plain_cli_output(output: str) -> str:
@@ -33,8 +34,33 @@ def _plain_cli_output(output: str) -> str:
 
 @pytest.fixture(autouse=True)
 def _no_ide_adapter_hook() -> None:
-    with patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"):
+    with (
+        patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"),
+        patch("ai_sdlc.cli.workitem_cmd.run_ide_adapter_if_initialized", create=True),
+    ):
         yield
+
+
+@pytest.fixture
+def adapter_receipt(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    _no_ide_adapter_hook: None,
+) -> tuple[Path, list[str]]:
+    root = tmp_path / "repo"
+    root.mkdir()
+    init_project(root)
+    monkeypatch.chdir(root)
+    calls: list[str] = []
+
+    def _write(*, console: object) -> None:
+        _ = console
+        calls.append("adapter")
+        (root / "adapter-proof.txt").write_text("consumed\n", encoding="utf-8")
+
+    monkeypatch.setattr("ai_sdlc.cli.main.run_ide_adapter_if_initialized", _write)
+    monkeypatch.setattr("ai_sdlc.cli.workitem_cmd.run_ide_adapter_if_initialized", _write)
+    return root, calls
 
 
 def _venv_executable(venv_dir: Path, name: str) -> Path:
@@ -364,6 +390,56 @@ class TestCliWorkitemInit:
         assert "clean working tree" in result.output.lower()
         assert "feature/008-direct-formal-entry-docs" in result.output
         assert not (root / "specs" / "008-direct-formal-entry").exists()
+
+    @pytest.mark.parametrize("dirty_tree", [False, True])
+    def test_workitem_init_adapter_before_clean_tree_preflight(
+        self, dirty_tree: bool, adapter_receipt: tuple[Path, list[str]]
+    ) -> None:
+        root, calls = adapter_receipt
+        _init_git_repo(root)
+        _checkout_branch(root, "feature/008-direct-formal-entry-docs")
+        dirty_path = root / "dirty.txt"
+        if dirty_tree:
+            dirty_path.write_text("pending\n", encoding="utf-8")
+
+        result = runner.invoke(app, _INIT_ARGS)
+
+        if dirty_tree:
+            assert result.exit_code == 1
+            assert calls == []
+            assert not (root / "adapter-proof.txt").exists()
+            dirty_path.unlink()
+            result = runner.invoke(app, _INIT_ARGS)
+
+        assert result.exit_code == 0
+        assert calls == ["adapter"]
+        assert (root / "specs" / "008-direct-formal-entry" / "spec.md").is_file()
+
+    def test_workitem_init_missing_title_does_not_run_adapter(
+        self, adapter_receipt: tuple[Path, list[str]]
+    ) -> None:
+        root, calls = adapter_receipt
+
+        result = runner.invoke(app, ["workitem", "init"])
+
+        assert result.exit_code == 2
+        assert calls == []
+        assert not (root / "adapter-proof.txt").exists()
+
+    def test_workitem_non_init_runs_adapter_before_handler_once(
+        self, adapter_receipt: tuple[Path, list[str]]
+    ) -> None:
+        root, calls = adapter_receipt
+        plan = root / ".cursor" / "plans" / "p.md"
+        plan.parent.mkdir(parents=True)
+        plan.write_text("---\ntodos:\n  - id: x\n    content: Work\n    status: pending\n---\n", encoding="utf-8")
+        _init_git_repo(root)
+
+        result = runner.invoke(app, ["workitem", "plan-check", "--plan", str(plan)])
+
+        assert result.exit_code == 1
+        assert calls == ["adapter"]
+        assert "adapter-proof.txt" in result.output
 
     def test_workitem_init_auto_generated_id_updates_project_state(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
