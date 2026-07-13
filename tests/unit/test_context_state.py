@@ -310,9 +310,9 @@ class TestResumePack:
         save_working_set(tmp_path, LINKED_WI, overlay)
         legacy_pack = build_resume_pack(tmp_path)
         assert legacy_pack is not None
+        legacy_pack.current_branch = "main"
         save_resume_pack(tmp_path, legacy_pack)
         events: list[str] = []
-
         loaded = load_resume_pack(tmp_path, event_log=events)
 
         snapshot = loaded.working_set_snapshot

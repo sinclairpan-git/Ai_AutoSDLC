@@ -47,6 +47,8 @@ def _seed_project(root: Path, linked_wi_id: str | None = None) -> None:
     )
     pack = build_resume_pack(root)
     assert pack is not None
+    pack.working_set_snapshot.spec_path, pack.working_set_snapshot.plan_path, pack.working_set_snapshot.tasks_path = str(spec_dir / "spec.md"), "", ""
+    pack.current_branch = "feature/182-continuity"
     save_resume_pack(root, pack)
 
 
@@ -124,10 +126,8 @@ def test_handoff_update_show_and_check(tmp_path: Path) -> None:
 def test_handoff_update_prefers_linked_work_item_working_set(tmp_path: Path) -> None:
     linked = "198-linked-resume"
     _seed_project(tmp_path, linked)
-
     with patch("ai_sdlc.cli.handoff_cmd.find_project_root", return_value=tmp_path):
         result = runner.invoke(app, ["handoff", "update", "--goal", "Resume linked WI"])
-
     handoff = (tmp_path / HANDOFF_PATH).read_text(encoding="utf-8")
     scoped_dir = tmp_path / ".ai-sdlc" / "work-items" / linked
     snapshot = context_state.load_resume_pack(tmp_path).working_set_snapshot

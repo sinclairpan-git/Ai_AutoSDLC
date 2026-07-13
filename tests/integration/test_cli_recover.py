@@ -103,11 +103,11 @@ class TestCliRecover:
         )
         legacy_pack = build_resume_pack(tmp_path)
         assert legacy_pack is not None
+        legacy_pack.working_set_snapshot.spec_path, legacy_pack.working_set_snapshot.plan_path, legacy_pack.working_set_snapshot.tasks_path = tuple(str(tmp_path / "specs" / historical / name) for name in ("spec.md", "plan.md", "tasks.md"))
+        legacy_pack.current_branch = f"feature/{historical}"
         save_resume_pack(tmp_path, legacy_pack)
-
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path), patch("ai_sdlc.cli.commands.detect_reconcile_hint", return_value=None):
             result = runner.invoke(app, ["recover"])
-
         scoped = tmp_path / ".ai-sdlc" / "work-items" / linked / "resume-pack.yaml"
         snapshot = load_resume_pack(tmp_path).working_set_snapshot
         root_pack = (tmp_path / ".ai-sdlc/state/resume-pack.yaml").read_text()
