@@ -3,21 +3,19 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/spec.md
-  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/plan.md
-  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/specs/189-loop-engine-local-adversarial-pr-review/tasks.md
+  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
   active_files: []
-  context_summary: 'Goal: 发布 AI-SDLC v0.9.6，包含 Vue3 public-primevue v1.8 视觉规范刷新 |
-    State: 已在 codex/release-v0.9.6-vue3-v1.8 分支完成版本 bump 与 release truth 同步：pyproject/src
-    version、uv.lock、README、USER_GUIDE、offline docs/checklist、workflow defaults、verify_constraints、tests、docs/releases/v0.9.6.md，以及
-    v1.8 provider/generation/adapters 变更。 | Next: 提交分支、push、创建 PR，评论 @codex review，进入
-    heartbeat 等待 review/checks。'
-current_branch: codex/189-loop-engine-complete-pr-review
+  context_summary: 'Goal: 完成 WI-196 框架缺口修复与自身减重治理双 Agent 对抗评审并交付 PR | State: PR #120
+    第二个 Codex finding 已按最小范围修复：checkpoint feature 与 linked WI 统一为 WI-196；第八轮双 PASS
+    哈希保持不变，待验证、提交和复审 | Next: 运行 handoff/resume 回归测试、constraints 与 truth sync/audit'
+current_branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-07-04T06:43:41+00:00'
+timestamp: '2026-07-13T05:36:03+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-07-01T18:38:26+00:00'
-checkpoint_fingerprint: d0621f0754b464938fd42308e8a83a7b37782d50842366665b6d1a44a378ddf3
+checkpoint_last_updated: '2026-07-13T05:35:18+00:00'
+checkpoint_fingerprint: 71bd3551e66693b7454fee405966319af0c0e7f63bf2034810f0cc5e9925f931

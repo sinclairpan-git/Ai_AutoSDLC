@@ -1,12 +1,12 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-07-01T18:38:26+00:00'
+pipeline_last_updated: '2026-07-13T05:35:18+00:00'
 current_stage: execute
 feature:
-  id: 189-loop-engine-local-adversarial-pr-review
-  spec_dir: specs/189-loop-engine-local-adversarial-pr-review
-  design_branch: codex/189-loop-engine-complete-pr-review
-  feature_branch: codex/189-loop-engine-complete-pr-review
-  current_branch: codex/189-loop-engine-complete-pr-review
+  id: 196-ai-sdlc-lean-code-self-reduction-governance
+  spec_dir: specs/196-ai-sdlc-lean-code-self-reduction-governance
+  design_branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
+  feature_branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
+  current_branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
   docs_baseline_ref: ''
   docs_baseline_at: ''
 multi_agent:
@@ -38,6 +38,6 @@ completed_stages:
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 195-loop-engine-frontend-evidence-loop-runtime
-linked_plan_uri: specs/195-loop-engine-frontend-evidence-loop-runtime/plan.md
-last_synced_at: '2026-07-01T18:38:26+00:00'
+linked_wi_id: 196-ai-sdlc-lean-code-self-reduction-governance
+linked_plan_uri: specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+last_synced_at: '2026-07-13T05:35:18+00:00'
