@@ -9,6 +9,7 @@ from unittest.mock import patch
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
+from ai_sdlc.context import state as context_state
 from ai_sdlc.context.state import build_resume_pack, save_checkpoint, save_resume_pack
 from ai_sdlc.core.handoff import HANDOFF_PATH
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
@@ -20,11 +21,16 @@ def _squashed_output(output: str) -> str:
     return "".join(output.split())
 
 
-def _seed_project(root: Path) -> None:
+def _seed_project(root: Path, linked_wi_id: str | None = None) -> None:
     (root / ".ai-sdlc").mkdir(exist_ok=True)
     spec_dir = root / "specs" / "182-continuity"
     spec_dir.mkdir(parents=True, exist_ok=True)
     (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    if linked_wi_id:
+        linked_dir = root / "specs" / linked_wi_id
+        linked_dir.mkdir(parents=True)
+        for name in ("spec.md", "plan.md", "tasks.md"):
+            (linked_dir / name).write_text(f"# Linked {name}\n", encoding="utf-8")
     save_checkpoint(
         root,
         Checkpoint(
@@ -36,6 +42,7 @@ def _seed_project(root: Path) -> None:
                 feature_branch="feature/182-continuity",
                 current_branch="feature/182-continuity",
             ),
+            linked_wi_id=linked_wi_id,
         ),
     )
     pack = build_resume_pack(root)
@@ -112,6 +119,24 @@ def test_handoff_update_show_and_check(tmp_path: Path) -> None:
     assert "ai-sdlc pr-review close --require-no-blockers" in show.output
     assert check.exit_code == 0
     assert "ready" in check.output.lower()
+
+
+def test_handoff_update_prefers_linked_work_item_working_set(tmp_path: Path) -> None:
+    linked = "198-linked-resume"
+    _seed_project(tmp_path, linked)
+
+    with patch("ai_sdlc.cli.handoff_cmd.find_project_root", return_value=tmp_path):
+        result = runner.invoke(app, ["handoff", "update", "--goal", "Resume linked WI"])
+
+    handoff = (tmp_path / HANDOFF_PATH).read_text(encoding="utf-8")
+    scoped_dir = tmp_path / ".ai-sdlc" / "work-items" / linked
+    snapshot = context_state.load_resume_pack(tmp_path).working_set_snapshot
+    root_pack = (tmp_path / ".ai-sdlc/state/resume-pack.yaml").read_text()
+    assert result.exit_code == 0
+    assert f"Work Item: {linked}" in handoff
+    assert handoff == (scoped_dir / "codex-handoff.md").read_text(encoding="utf-8")
+    assert tuple(Path(path) for path in (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path)) == tuple(tmp_path / "specs" / linked / name for name in ("spec.md", "plan.md", "tasks.md"))
+    assert root_pack == (scoped_dir / "resume-pack.yaml").read_text()
 
 
 def test_handoff_check_missing_fails_with_action_item(tmp_path: Path) -> None:
