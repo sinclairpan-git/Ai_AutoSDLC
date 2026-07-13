@@ -340,3 +340,13 @@
 
 - 两位 Agent 独立复算的组合哈希一致；原 Codex finding 与第七轮共同 finding 均已闭环。
 - 本轮只修改 audit 证据绑定与判定，不新增工作包、脚本、artifact 或运行时代码。
+
+## 14. Batch 2026-07-13-013：PR Codex Review 连续性状态修订
+
+- reviewed commit：`3414a2aaaf27b40067f56f46475c3bfdf5395733`。
+- Codex finding：checkpoint 的 `linked_wi_id` 已指向 WI-196，但 `feature.id/spec_dir/branch` 仍指向 WI-189；resume-pack 重建会把已纠正路径覆盖回 WI-189。
+- 核验：成立。root resume-pack 虽正确，但 scoped resume-pack 由旧 checkpoint 派生，当前提交状态不能稳定重建。
+- 处置：将 checkpoint feature 五字段统一绑定 WI-196 和当前分支，再通过 `uv run ai-sdlc handoff update` 重建 canonical/scoped resume-pack；重建后路径和分支必须保持 WI-196。
+- 关联 branch/worktree disposition 计划：merge
+- 当前批次 worktree disposition 状态：保留至 PR 合并完成
+- 该修订只改变 continuity 状态与执行日志，不修改 `spec.md + plan.md + tasks.md`；第八轮双 PASS 哈希 `afddacf905876355b8c46725f6d82cf83daa556fc730199f0084ed5800a46cb3` 保持有效。

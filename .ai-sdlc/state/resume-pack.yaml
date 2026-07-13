@@ -10,13 +10,12 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-code-self-reduction-governance/specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
   active_files: []
   context_summary: 'Goal: 完成 WI-196 框架缺口修复与自身减重治理双 Agent 对抗评审并交付 PR | State: PR #120
-    Codex finding 已修复；第八轮对抗评审在 afddacf905876355b8c46725f6d82cf83daa556fc730199f0084ed5800a46cb3
-    上双 PASS；156 项测试与 constraints 已通过，待提交推送和复审 | Next: 提交并推送 PR #120 修订，重新请求 Codex
-    review'
+    第二个 Codex finding 已按最小范围修复：checkpoint feature 与 linked WI 统一为 WI-196；第八轮双 PASS
+    哈希保持不变，待验证、提交和复审 | Next: 运行 handoff/resume 回归测试、constraints 与 truth sync/audit'
 current_branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
 docs_baseline_ref: ''
 docs_baseline_at: ''
-timestamp: '2026-07-13T05:21:34+00:00'
+timestamp: '2026-07-13T05:36:03+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-07-13T03:23:08+00:00'
-checkpoint_fingerprint: fc0fa516b1951cbfad4739f13f9bbb54a69c448c13ade52bb6a79725a8817c39
+checkpoint_last_updated: '2026-07-13T05:35:18+00:00'
+checkpoint_fingerprint: 71bd3551e66693b7454fee405966319af0c0e7f63bf2034810f0cc5e9925f931
