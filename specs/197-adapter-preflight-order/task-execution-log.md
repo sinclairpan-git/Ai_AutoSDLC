@@ -127,17 +127,17 @@
 
 ### 5.4 预算、范围、非影响与回退
 
-- 产品净新增 21 LOC；WI-197 测试累计 72 additions / 0 deletions。
+- 产品代码 numstat 为 `main.py 5 additions / 1 deletion`、`workitem_cmd.py 17 additions / 0 deletions`，即 `22 insertions - 1 deletion = net +21 LOC`；WI-197 测试累计 72 additions / 0 deletions。
 - 新增产品文件、公共抽象、依赖、配置均为 0；最终 runtime diff 仅 `src/ai_sdlc/cli/main.py`、`src/ai_sdlc/cli/workitem_cmd.py`、`tests/integration/test_cli_workitem_init.py` 三个授权文件。
 - GAP-10 proof carrier/schema/校验/blocker 未修改；其他顶层命令继续沿用既有 root hook 路径。
-- adapter、Git、scaffold 与 strict composition 异常均原样传播，不捕获、不吞掉。
+- 既有 preflight 将 `GitError` 包装为 `WorkitemScaffoldError`，既有 CLI handler 再将 `WorkitemScaffoldError` 映射为 exit 1；adapter 非 special-case 异常与 strict-meta composition 异常继续传播；本变更未新增异常吞没或映射。
 - rollback：revert `c644884e`；如需继续保留缺陷 characterization，可保留 RED 测试提交 `b89203c4`。
 
 ### 5.5 Branch disposition 与未完成项
 
 - 当前 `feature/197-adapter-preflight-order` 是 PR merge carrier。
 - 当前仅能确认 runtime implemented 且 RED/GREEN task reviews approved。
-- final whole-branch review、PR、Codex review/required checks、merge、main program truth 同步与 GAP-07 close 均尚未完成；不得提前声明 mainline 已交付。
+- final whole-branch review 已发现两项 Minor evidence-precision findings，本批已修正文档；final re-review、PR、Codex review/required checks、merge、main program truth 同步与 GAP-07 close 均尚未完成；不得提前声明 mainline 已交付。
 
 ### 5.6 Continuity、program truth 与交付准备验证
 

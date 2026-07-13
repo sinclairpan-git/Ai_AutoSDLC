@@ -12,12 +12,12 @@
 - RED 与 GREEN task reviewer 均给出 `Spec compliant + Task quality: Approved`；GREEN 无 Critical、Important 或 Minor 问题。
 - 实现边界为 root → workitem group callback 委托；合法 `init` 在 clean-tree preflight 后执行 adapter，脏树/无效 `init` 零写入，合法非 `init` 子命令仍在 handler 前执行一次。
 - GAP-10 只接受已冻结的 proof 持久化时序 expected delta，不修改 proof schema、校验或 blocker。
-- 产品净新增 21 LOC；WI 测试累计 72 additions / 0 deletions；无新增产品文件、公共抽象、依赖或配置，最终 runtime diff 为 3 个授权文件。
-- 当前 `feature/197-adapter-preflight-order` 是 PR merge carrier；异常保持原样传播，runtime rollback 为 revert `c644884e`。
+- 产品代码 numstat 为 `main.py 5 additions / 1 deletion`、`workitem_cmd.py 17 additions / 0 deletions`，即 `22 insertions - 1 deletion = net +21 LOC`；WI 测试累计 72 additions / 0 deletions；无新增产品文件、公共抽象、依赖或配置，最终 runtime diff 为 3 个授权文件。
+- 当前 `feature/197-adapter-preflight-order` 是 PR merge carrier；既有 preflight 将 `GitError` 包装为 `WorkitemScaffoldError`，既有 CLI handler 再将 `WorkitemScaffoldError` 映射为 exit 1；adapter 非 special-case 异常与 strict-meta composition 异常继续传播，本变更未新增异常吞没或映射；runtime rollback 为 revert `c644884e`。
 - 交付准备 fresh verification：focused 三文件 `58 passed`，全量 ruff PASS，constraints 无 BLOCKER，diff-check PASS；truth audit fresh 且 inventory/blocker 集合未漂移。
 
 ## 未完成
 
-- final whole-branch review 尚未执行。
+- final whole-branch review 已发现两项 Minor evidence-precision findings，本批已修正文档；final re-review 尚未完成。
 - PR、Codex review、required checks 与 merge 尚未执行。
 - main program truth 同步与 GAP-07 close 尚未执行；不得把当前 branch runtime 状态视为 mainline 已交付。
