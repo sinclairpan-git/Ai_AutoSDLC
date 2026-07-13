@@ -40,6 +40,8 @@ from ai_sdlc.core.workitem_truth import (
 from ai_sdlc.telemetry.display import summarize_frontend_delivery_scope_for_display
 from ai_sdlc.utils.helpers import find_project_root, is_git_repo, now_iso
 
+_WORKITEM_ADAPTER_HOOK_META_KEY = "ai_sdlc.cli.workitem.adapter_hook"
+
 workitem_app = typer.Typer(
     help=(
         "Work item canonical docs, plan reconciliation (FR-087), "
@@ -47,6 +49,19 @@ workitem_app = typer.Typer(
     ),
 )
 console = Console()
+
+
+def _run_workitem_adapter(ctx: typer.Context) -> None:
+    """调用 root 为当前请求注入的 adapter hook。"""
+    ctx.meta[_WORKITEM_ADAPTER_HOOK_META_KEY](console=console)
+
+
+@workitem_app.callback()
+def _workitem_before_command(ctx: typer.Context) -> None:
+    """由子应用在参数解析后管理 adapter 调用时机。"""
+    if ctx.invoked_subcommand in (None, "init"):
+        return
+    _run_workitem_adapter(ctx)
 
 
 def _dedupe_cli_text_items(values: object) -> list[str]:
@@ -126,6 +141,7 @@ def _ensure_workitem_init_git_preflight(root: Path, work_item_id: str) -> None:
     ),
 )
 def workitem_init(
+    ctx: typer.Context,
     title: str = typer.Option(
         ...,
         "--title",
@@ -166,6 +182,7 @@ def workitem_init(
             wi_id=wi_id,
         )
         _ensure_workitem_init_git_preflight(root, work_item_id)
+        _run_workitem_adapter(ctx)
         result = scaffolder.scaffold(
             root=root,
             title=title,
