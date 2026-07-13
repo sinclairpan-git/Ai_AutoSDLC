@@ -6,9 +6,9 @@ feature:
   spec_dir: specs/197-adapter-preflight-order
   design_branch: feature/197-adapter-preflight-order-docs
   feature_branch: feature/197-adapter-preflight-order
-  current_branch: feature/197-adapter-preflight-order-docs
-  docs_baseline_ref: ''
-  docs_baseline_at: ''
+  current_branch: feature/197-adapter-preflight-order
+  docs_baseline_ref: f89e517683dbec737eb103852ed66ede42858f64
+  docs_baseline_at: '2026-07-13T11:19:51-04:00'
 multi_agent:
   supported: true
   max_parallel: 3

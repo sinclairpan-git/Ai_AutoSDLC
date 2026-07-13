@@ -1,32 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-13T15:10:01+00:00
-- Reason: 长任务 continuity checkpoint：设计准入完成，进入首个原子实现项
+- Updated: 2026-07-13T15:21:25+00:00
+- Reason: docs baseline 已固化并切换 runtime 实现分支
 - Goal: 完成 WI-197 adapter/preflight 顺序修复并独立交付 GAP-07
-- State: 双 Agent 设计准入已通过；docs baseline 待提交；运行时代码未修改
+- State: docs baseline f89e5176 已提交；已进入 feature/197-adapter-preflight-order；准备执行 TDD RED
 - Stage: execute
 - Work Item: 197-adapter-preflight-order
-- Branch: feature/197-adapter-preflight-order-docs
+- Branch: feature/197-adapter-preflight-order
 
 ## Changed Files
-- M .ai-sdlc/project/config/project-state.yaml
 - M .ai-sdlc/state/checkpoint.yml
-- M program-manifest.yaml
-- ?? specs/197-adapter-preflight-order/
 
 ## Key Decisions
-- 冻结 root 到 workitem group callback 委托方案；init 在 clean-tree preflight 后运行 adapter，非 init 保持 handler 前运行一次
+- 冻结设计哈希 0c97361ef27901ef3d207cc1c21980e2cc9cb64c633d4c03caa1e43db74a9236；产品 LOC<=25、测试 LOC<=80
 
 ## Commands / Tests
-- uv run pytest -q => 3145 passed, 3 skipped
-- uv run pytest tests/integration/test_repo_program_manifest.py tests/integration/test_cli_workitem_init.py tests/unit/test_verify_constraints.py -q => 161 passed
-- uv run ai-sdlc verify constraints => no blockers
+- docs gate: 161 passed; verify constraints no BLOCKERs; truth snapshot fresh with registered debt only
 
 ## Blockers / Risks
-- 既有 frontend inheritance 与 adapter canonical proof 债务仍由 WI-196 后续独立子项处理；本项不得放宽其 blocker
+- 既有 33 unmapped、11 missing 与 frontend/adapter blockers 不得在本项扩大或放宽
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交 WI-197 docs baseline；切换 feature/197-adapter-preflight-order；按 TDD 执行 T21 RED、T22 GREEN、T23 回归
+- 生成 T21-T23 原子任务 brief；派发单一实现 Agent，严格记录 RED/GREEN；随后独立 task review
