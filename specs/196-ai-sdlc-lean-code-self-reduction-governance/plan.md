@@ -1,233 +1,184 @@
-# 实施计划：AI-SDLC 精简代码治理与框架自身减重计划
+# 实施计划：AI-SDLC 框架缺口修复与自身减重
 
 **编号**：`196-ai-sdlc-lean-code-self-reduction-governance`
-**日期**：2026-07-12
 **规格**：`specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md`
-**计划性质**：治理总项路线图；本分支不执行产品代码减重。
+**性质**：治理总项路线图；运行时改动在独立子 work item 执行。
 
-## 1. 总体方案
+## 1. 执行策略
 
-采用“兼容契约先行、观测先行、低风险先行、双跑切换、延迟删除”的渐进式方案。Work Item 196 只冻结原则、基线、工作包和门禁；每个实现工作包必须在独立 work item、独立分支和独立 PR 中完成。
+采用“原子基础缺陷 → 切片级行为基线 → 低风险去重与高价值分域并行 → 单切片双跑 → 稳定后删除”的路径。
 
-不采用以下方案：
+不采用：
 
-- **单分支重写**：变更面过大，无法将行为差异定位到一个责任边界。
-- **仅增加 LOC 限制**：会误伤必要的安全、兼容和测试代码，也无法处理结构复制。
-- **先拆巨型文件再补保护**：文件移动不能证明行为等价，且会扩大 merge/review 噪音。
+- 单分支大重写；
+- 先建设全仓通用 Golden 平台再开始减重；
+- 为满足 LOC 指标删除测试、安全和审计证据；
+- 把无关历史 truth 债务串到减重关键路径；
+- 只移动文件、不删除重复或降低复杂度的“伪减重”。
 
-## 2. 技术背景
-
-- **语言/运行时**：Python 3.11+。
-- **主要依赖**：Typer、Pydantic、PyYAML、Jinja2、Rich。
-- **测试**：pytest、现有集成/flow/unit 测试、后续 Characterization/Differential Tests。
-- **质量工具**：Ruff、mypy、AI-SDLC constraints、git diff checks；复杂度/重复工具必须先通过依赖评估再引入。
-- **目标平台**：macOS、Linux、Windows 离线发布链。
-- **核心约束**：公共 CLI、artifact、状态迁移、授权边界和发布行为保持兼容。
-
-## 3. 宪章检查
-
-| 宪章门禁 | 计划响应 |
-|---|---|
-| MVP 优先、范围严控 | 196 只做治理文档；实现拆为独立工作包 |
-| 关键路径可验证 | 先建立 Characterization、Golden Master 和差异测试 |
-| 声明范围、验证和回退 | 每个工作包强制独立范围、验证矩阵和 revert/fallback |
-| 状态落盘 | 基线、差异、豁免、review 和 handoff 均落盘 |
-| 产品与开发框架隔离 | 196 不写产品代码；子工作项分别管理 |
-| 单文件/单函数约束 | 先作为现状基线和增量门禁，不一次性阻断历史债务 |
-
-## 4. 文档结构
+## 2. 依赖图
 
 ```text
-specs/196-ai-sdlc-lean-code-self-reduction-governance/
-├── spec.md                 # 原则、兼容契约、需求、成功标准
-├── plan.md                 # 分阶段路线图、风险和验证策略
-├── tasks.md                # 本治理分支任务与后续工作包定义
-└── task-execution-log.md   # 命令、证据、决策和评审归档
+双 Agent 同内容哈希 PASS
+  ├─ T51 GAP-07 adapter/preflight 缺陷（独立 WI）
+  ├─ T52 GAP-08 linked-WI resume 缺陷（独立 WI）
+  └─ Barrier：T51 与 T52 都关闭
+            └─ WP-01A 目标切片旧行为基线
+                 ├─ WP-02 Lean Gate：report → warning → blocking
+                 ├─ WP-03 helper/DTO/test 重复族
+                 ├─ WP-04 Loop Store 重复族
+                 ├─ WP-05 baseline 候选 go/no-go
+                 ├─ WP-06 ProgramService 单领域切片
+                 └─ WP-07 Program Stage 单 family 切片
+
+关联治理债务（独立推进，不是总前置）
+  ├─ T53A frontend inheritance truth
+  ├─ T53B adapter consumption truth
+  └─ T54 source inventory
 ```
 
-本工作项不创建第二套 canonical design/plan 文档，避免与 `specs/<wi>/` 四件套形成双轨真值。
+WP-03～WP-07 不互相强制串行。只有代码重叠、契约重叠或同一重复族才形成真实依赖；依赖必须在子项 spec 中用文件/符号和测试证明。
 
-## 5. 治理架构
+## 3. 统一子项合同
 
-```text
-Work Item 196 治理总项
-  ├─ Lean 原则与兼容冻结
-  ├─ 当前基线与度量定义
-  ├─ 风险/豁免/停止/回退规则
-  └─ Reduction Work Package 路线图
-       ├─ WP-01 兼容观测与 Golden Master
-       ├─ WP-02 Lean Gate report-only
-       ├─ WP-03 低风险 helper 与测试去重
-       ├─ WP-04 Loop Store 收敛
-       ├─ WP-05 静态 baseline 配置化
-       ├─ WP-06 ProgramService 分域
-       ├─ WP-07 Program Stage Engine 双跑收敛
-       └─ WP-08 增量门禁强化与旧实现删除
-```
+每个子 work item 的 spec/plan/tasks 必须包含以下通用字段，并按 `spec.md` §6.3 选择 NC/CC/RC：
 
-每个 WP 只表示路线图中的工作包名称，不占用正式 work item 编号。正式编号在用户批准启动时分配。
+1. gap/WP 编号、目标切片、风险等级和明确非目标；
+2. 代码/契约影响边界及依赖依据；
+3. 适用的 NC/CC/RC 基线、预算和阈值；
+4. 进入条件、验证命令、完成条件和 evidence URI；
+5. 停止条件、回退命令/适配路径和 owner；
+6. mainline PR 证据；L3 再增加本地独立 reviewer 证据。
 
-## 6. 基线与度量模型
+缺少任一字段时，子项只能处于 design，不得进入 execute。合同 admission gate 只有在 `active + verified` 时替代人工评审；其他状态自动恢复风险分层 reviewer：L1/L2 普通项一个独立合同 reviewer，L3 或影响 CC-05/CC-06 的高风险项两个 Agent。
 
-### 6.1 基线维度
+所有子项的最低验证命令为 `uv run pytest`、`uv run ruff check src tests`、`uv run ai-sdlc verify constraints` 和 `git diff --check`；子 WI 必须在其 `tasks.md` 再冻结具体 targeted test 命令。证据统一写入 `specs/{child-wi}/task-execution-log.md`，结构化 differential/rollback receipt 写入 `.ai-sdlc/work-items/{child-wi}/`。
 
-1. **规模**：产品 LOC、测试 LOC、文件数、新增/删除/复用 LOC。
-2. **结构**：超限文件、超长函数、顶层类/方法数、模块 fan-out/fan-in。
-3. **复杂度**：圈复杂度或等价分支复杂度、嵌套深度。
-4. **重复**：完全重复 helper、结构重复 DTO/CLI/test、重复规则常量。
-5. **行为**：CLI surface、退出码、artifact、状态迁移、副作用边界。
-6. **效率**：CLI 启动、`verify constraints`、关键 workflow 运行耗时。
-7. **质量**：全量测试、Ruff、mypy、release smoke 和独立 review。
+## 4. 基础缺陷子项
 
-### 6.2 评价规则
+### T51：GAP-07 adapter mutation / clean-tree preflight
 
-- LOC 下降但复杂度、耦合或行为差异上升：FAIL。
-- LOC 不明显下降但职责边界、依赖方向和可测试性显著改善：允许作为结构准备批次，但必须说明后续删除路径。
-- 测试 LOC 下降只在场景数、断言强度和平台覆盖不下降时成立。
-- 生成/fixture/vendored 代码单独统计，不参与手写产品代码预算。
+- **风险/范围**：L1/L2；只处理 adapter hook 与 mutation preflight 的执行顺序。
+- **非目标**：不重写 adapter，不改变普通用户自动适配语义。
+- **进入**：先用 canonical CLI fixture 复现 `.cursor` 写入导致 clean-tree 阻断。
+- **验证/完成**：红测能复现；修复后 `workitem init` 不因无关 adapter 写入自阻断，正常 adapter 路径保持绿色。
+- **停止**：需要关闭自动适配或改变用户入口时升级为功能项。
+- **回退**：revert 独立提交；旧 hook 行为恢复。
+- **证据**：characterization test、clean-tree 前后快照、targeted CLI tests。
 
-## 7. 工作包路线图
+### T52：GAP-08 linked work item continuity
 
-### WP-01：兼容观测与 Golden Master（L1/L2）
+- **风险/范围**：L2；只修复 resume working set 与 current branch/spec/plan/tasks 派生。
+- **非目标**：不改历史 checkpoint 阶段语义，不迁移 schema。
+- **进入**：fixture 同时设置历史 `feature` 与新的 `linked_wi_id`，红测证明工作集仍指向历史 spec。
+- **验证/完成**：linked WI 优先；canonical/scoped handoff、resume-pack 重建和 recover 使用同一工作集。
+- **停止**：需要改变 checkpoint schema 时转 L4 迁移项。
+- **回退**：revert 独立提交；保留现有手工恢复路径。
+- **证据**：unit + CLI recover/handoff 回归、重建前后 artifact diff。
 
-**目标**：建立后续减重的行为保险，不改现有实现。
+T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 
-**产物**：
+## 5. WP-01：最小充分 Characterization / Golden / Differential
 
-- CLI surface manifest。
-- 代表性命令 fixture 和退出码基线。
-- artifact 规范化器与 Golden Snapshot。
-- 状态迁移、dry-run 无写入和幂等重放测试。
-- 代表性兄弟项目 smoke 清单。
+- **范围**：只覆盖下一目标切片实际影响的 CC；优先复用现有测试、release smoke 和 fixture。
+- **非目标**：不创建全仓通用 executor、数据库或新的测试 DSL。
+- **Phase A 进入**：T51、T52 关闭；目标切片和 CC 影响矩阵已冻结。
+- **Phase A 完成**：固定基线 revision、Python/OS/toolchain、fixture 选择理由和 normalizer allowlist；旧实现重复采样确定。
+- **Phase B 验证**：作为每个候选 WI/PR 内的强制 pre-merge gate，绑定精确 candidate commit/tree hash；旧/新并行比较 CLI transcript、退出码、artifact、状态和授权副作用，零未批准语义差异。Phase B 与 rollback receipt 未通过，候选 PR 不得合并、WI 不得关闭。
+- **完成**：回退演练通过，受影响平台/兄弟项目 smoke 通过；保护代码满足 RC-06。
+- **停止**：harness 预计超过 RC-06 或需要覆盖无关表面时，缩小切片。
+- **回退**：删除该切片新增 fixture/adapter，不接入产品入口。
+- **证据**：版本化 surface manifest、normalizer、GoldenSnapshot、DifferentialResult 和 rollback receipt。
 
-**进入条件**：196 通过用户评审。
-**完成条件**：同一 revision 重复采样零非语义漂移。
-**回退**：删除新增观测代码和 fixture，不影响产品路径。
+## 6. 减重工作包
 
-### WP-02：Lean Code Gate report-only（L1/L2）
+### WP-02：Lean Gate 生命周期（L1/L2）
 
-**目标**：机器化采集规模、复杂度、重复和增量预算，但不阻断历史债务。
+- **范围**：两个独立规则族：代码分类/changed-code 预算/waiver，以及 NC/CC/RC 适用矩阵/合同字段/admission。
+- **非目标**：不追补或一次性阻断历史债务，不引入与 changed-code 无关的全仓重写。
+- **进入**：WP-01A 完成；分类器在当前仓库零误分类样本通过。
+- **阶段**：T62A 两个规则族 report-only → T62B 两个规则族 warning → T62C 两个规则族 blocking；每阶段独立 PR，两个规则族使用独立状态和开关，可单独降级。
+- **兼容**：强制 CC-01/02/03/05/06/07；新增报告、warning/blocker 与退出行为必须写入版本化 expected-delta artifact，未列入差异为 BLOCKER。
+- **完成**：历史未改代码不阻断；新增超限和缺合同字段 fixture 分别经历 report/warning/blocker；所有 waiver 有 owner、理由、路径和到期日；合同 admission 健康检查、状态转换和 execute BLOCKER 通过。
+- **停止/回退**：任一规则族误判时只降级该规则族；合同 admission 不处于 `active + verified` 时自动恢复 FR-08 风险分层 reviewer，不追补历史债务。
+- **预算/证据**：计入 RC-06；结构化报告、blocking fixture、降级演练。
 
-**产物**：结构化报告、changed-code 分类、waiver schema、CLI/verify 接入的报告模式。
+### WP-03：稳定 helper / DTO / 镜像测试重复族（L1）
 
-**完成条件**：在本仓库稳定报告且无误把生成资产计入手写产品代码。
-**回退**：关闭 gate profile 或移除 report-only 接入。
+- **范围**：一次只选一个经语义审查的重复族。
+- **非目标**：不跨不同错误语义合并，不建设通用 utility framework。
+- **进入**：WP-01A 完成；至少三处当前调用者、失败模式一致、RC 预测达标。
+- **完成**：选定重复族 100% 消除，目标切片净 LOC 至少下降 10%，场景/断言/平台不减少。
+- **停止/回退**：错误语义不同或抽象需要分支特判时停止；按重复族提交 revert。
+- **证据**：候选清单、call-site 比较、before/after、Golden diff、全量测试。
 
-### WP-03：低风险 helper 与测试去重（L1）
+### WP-04：Loop Store 稳定公共逻辑（L2）
 
-**目标**：处理完全相同 dedupe、路径、YAML/JSON helper，并参数化纯镜像测试。
+- **范围**：一次一个 store family 的 ID、路径、pointer、JSON/Pydantic 读取等稳定逻辑。
+- **非目标**：不合并各 loop 的 close/error 规则，不创建依赖 loop 类型分支的公共基类。
+- **进入**：WP-01A 完成；至少三个 store 的成功与失败语义一致。
+- **完成**：重复族消除、目标切片净 LOC 至少下降 10%，各 loop close/error 规则仍独立。
+- **停止/回退**：需要公共基类特判 loop 类型或改变恢复语义时停止；原 store adapter 可逐个切回。
+- **证据**：store differential、损坏输入、恢复、幂等和全量测试。
 
-**限制**：不改变公共模型、异常文本和 artifact。
-**验证**：定向测试、Golden diff、全量测试。
-**回退**：按重复族逐 commit revert。
+### WP-05：静态 baseline 候选 go/no-go（L2，条件性）
 
-### WP-04：Loop Store 收敛（L2）
+- **范围**：一次审计一个 `build_p*_baseline` 及真实消费者；候选全集固定为 `spec.md` GAP-06 列出的 6 个 builder。
+- **非目标**：不预设 YAML/JSON，不为单一消费者新增 schema/loader。
+- **进入**：WP-01A 完成；至少两个真实消费者，重复真值可定位。
+- **Go**：数据化后预测满足 RC，且 schema/loader/fixture 总成本低于删除量；格式由审计决定，不预设 YAML/JSON。
+- **No-Go**：预测不达标即停止候选，不写 loader/schema，状态记为 `cancelled_no_go`。
+- **完成**：Go 路径保持字段、顺序、默认值和 provider 行为并以 `completed_reduction` 关闭。单项 No-Go receipt 只关闭本次评估；六项均为 No-Go 时以 `closed_no_viable_reduction` 关闭 GAP-06，不计减重成果，除非基线或消费者实质变化不得重开。
+- **停止/回退**：loader 分支比 builder 更复杂时停止；Go 路径保留旧 builder 适配直到差异通过。
+- **证据**：consumer graph、成本测算、schema/serialization diff 或 No-Go receipt。
 
-**目标**：复用 loop ID、路径、pointer、JSON/Pydantic 读取等稳定公共逻辑。
+### WP-06：ProgramService 单领域切片（L3）
 
-**限制**：不同 loop 的错误语义和 close 规则保持独立。
-**验证**：旧/新 store 差异测试、恢复和损坏输入测试。
-**回退**：保留原 store adapter，按 loop 逐个切回。
+- **范围**：每个子 WI 只迁移一个领域；`ProgramService` 暂作薄 facade。
+- **非目标**：不同时迁移第二领域，不改变公共调用方、CLI 或 artifact 合同。
+- **进入**：WP-01A 完成；只依赖与该领域真实重叠的 WP-03～WP-05 子项，不等待无关低风险任务。
+- **切换**：旧/新 shadow → 单入口切换 → 受影响 smoke → 一个稳定发布周期 → 独立删旧 PR。
+- **完成**：迁移职责在原文件的 LOC/方法数下降至少 90%，并达到 RC-04 至少一项结构改善阈值；新文件/函数符合 RC-07，纯移动 No-Go。
+- **停止/回退**：跨两个领域、差异不为零或临时膨胀超 RC-05 时缩小切片；删旧前 facade 指回旧实现，删旧后 revert legacy-deletion PR 并回滚对应发布。rollback receipt 必须覆盖最终删除状态。
+- **终态**：逐切片推进，直到 `program_service.py` 符合 400 行约束。
+- **证据**：domain map、dependency diff、shadow result、release smoke、legacy deletion receipt。
 
-### WP-05：静态 baseline 配置化（L2）
+### WP-07：Program Stage 单 family 切片（L3）
 
-**目标**：将大段静态 Python baseline 迁移为版本化 YAML/JSON，并由 Pydantic 校验。
+- **范围**：每个子 WI 只处理一个同语义 stage family；33 个公共命令全部保留。
+- **非目标**：不删除/改名公共命令，不用 family 特判堆出新的通用 executor。
+- **进入**：WP-01A 完成；stage family 的输入、失败和 artifact 语义已证明一致。
+- **切换**：dry-run 双跑 → artifact 双跑 → 单 family 切换 → 稳定发布 → 独立删旧 PR。
+- **完成**：目标 family 镜像实现 LOC 至少下降 70%，产品 LOC 净下降，CLI surface/退出码/提示零未批准差异。
+- **停止/回退**：executor 出现 family 特判、语义差异或超 RC-05 时停止；删旧前命令路由切回旧 handler，删旧后 revert legacy-deletion PR 并回滚对应发布。rollback receipt 必须覆盖最终删除状态。
+- **终态**：逐 family 推进，直到 `program_cmd.py` 符合 400 行约束。
+- **证据**：family matrix、33 命令 surface、shadow diff、release smoke、legacy deletion receipt。
 
-**限制**：字段、顺序语义、默认值和 provider 行为不变。
-**验证**：序列化快照、provider/frontend targeted tests。
-**回退**：loader 回到原 Python builder。
+## 7. 关联治理债务
 
-### WP-06：ProgramService 分域（L3）
+T53A、T53B、T54 分别使用独立 WI/branch/PR。它们必须修复并产出 truth snapshot，但不自动阻断所有减重包。每个目标切片必须先落盘 impact analysis；分析缺失或结论不确定时 fail-closed，只有肯定的非影响证据才允许排除对应依赖。T51 涉及 adapter 入口，必须在 execute 前明确评估 GAP-10/T53B。
 
-**目标**：将 manifest、solution、delivery、browser、governance、archive 职责拆为内聚服务；`ProgramService` 暂保留 facade。
+- T53A 关闭 frontend inheritance blockers。
+- T53B 关闭 adapter canonical consumption blocker。
+- T54 将 33 unmapped/11 missing source 逐项修复；无法修复者必须有 owner、原因和到期日。
 
-**限制**：不删除 facade，不改变调用方。
-**验证**：每移动一个领域运行 Golden diff、全量测试和依赖图比较。
-**回退**：facade 重新指向原方法。
+## 8. 停止与回退总则
 
-### WP-07：Program Stage Engine 双跑收敛（L3）
+任一条件成立即停止当前切片：
 
-**目标**：将经过证明的镜像治理阶段收敛为数据驱动 stage spec、通用 executor 和 renderer。
+1. 未批准的 CLI、artifact、状态、配置优先级或授权副作用差异；
+2. Reduction Contract 预测或实测不达标；
+3. 需要同时修改两个独立领域；
+4. 测试场景、关键断言、平台覆盖下降；
+5. 无法通过 facade、route 或 revert 恢复旧实现；
+6. targeted/full tests、受影响 release smoke 或兄弟项目 smoke 失败；
+7. 为减少 LOC 引入更深继承、更多特判或少于三个调用者的公共抽象。
 
-**限制**：所有现有 33 个 `program` 命令继续存在；新引擎先 shadow，不负责用户结果。
+兼容/安全差异不能 waiver。L4 变更停止减重并请求用户批准独立迁移项。
 
-**切换顺序**：
+## 9. 评审、提交与完成
 
-1. dry-run 结果双跑。
-2. artifact 生成双跑。
-3. 单个低风险命令切换。
-4. 每次只切换一个 stage family。
-5. 稳定发布后才允许删除旧实现。
-
-### WP-08：增量门禁强化与旧实现删除（L2/L3）
-
-**目标**：将 report-only 升级为 changed-code warning/blocking，并删除已稳定替换的旧实现。
-
-**进入条件**：相关新实现至少经过一个稳定发布周期，无未批准差异和兄弟项目回归。
-**回退**：恢复兼容 adapter，并将门禁降级为 warning。
-
-## 8. Lean Gate 渐进策略
-
-### 阶段 A：Report Only
-
-- 记录全仓债务和 changed-code 指标。
-- 永不因历史债务阻断。
-- 校准生成代码、fixture 和 vendored 排除规则。
-
-### 阶段 B：Changed-Code Warning
-
-- 新文件、显著增长文件、新增长函数和新抽象触发 warning。
-- 每条 warning 必须处理或形成有期限 waiver。
-
-### 阶段 C：Changed-Code Blocking
-
-- 无豁免的新超限文件、超长函数、重复实现和超预算扩展触发 BLOCKER。
-- 旧文件只有被显著修改的区域进入硬门禁。
-- 阈值必须按语言和任务类型配置，不使用全语言统一绝对 LOC。
-
-## 9. 验证矩阵
-
-| 验证层 | L1 | L2 | L3 |
-|---|---:|---:|---:|
-| 定向单元测试 | 必须 | 必须 | 必须 |
-| CLI/Artifact Golden diff | 按影响 | 必须 | 必须 |
-| 旧/新差异双跑 | 可选 | 按影响 | 必须 |
-| 全量 pytest | 必须 | 必须 | 必须 |
-| Ruff / constraints / diff-check | 必须 | 必须 | 必须 |
-| mypy 基线不得恶化 | 必须 | 必须 | 必须 |
-| 本地独立只读 review | 建议 | 必须 | 必须 |
-| 跨平台 release smoke | 按影响 | 按影响 | 必须 |
-| 兄弟项目 smoke | 按影响 | 按影响 | 必须 |
-
-## 10. 停止条件
-
-任一条件成立时，当前工作包必须停止，不得用修测试掩盖差异：
-
-1. 公共命令、参数、默认值或退出码发生未批准变化。
-2. artifact schema、路径或状态迁移出现未批准差异。
-3. `--dry-run` 出现新写入或授权边界弱化。
-4. 测试场景、平台覆盖或关键断言下降。
-5. 新实现无法通过开关或 facade 快速回退。
-6. 全量测试、release smoke 或代表性兄弟项目 smoke 失败。
-7. 为减少 LOC 引入更高耦合、更深继承或更难理解的泛型抽象。
-8. 工作包需要同时修改两个以上独立领域且无法拆分。
-
-## 11. 提交与 PR 策略
-
-- 196 只提交治理文档、manifest/project-state/handoff 等合法治理状态。
-- 每个后续 WP 使用独立正式 work item、独立分支和独立 PR。
-- 减重 PR 不混入新功能、发布 bump 或无关格式化。
-- 每批提交包含代码、测试、before/after 指标和 execution log，能够单独 revert。
-- L3 PR 必须经过本地专职只读 reviewer；进入 mainline 时继续遵守仓库 PR review、checks、heartbeat 和 merge 协议。
-
-## 12. 当前工作项完成标准
-
-1. `spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md` 内容完整且互相一致。
-2. 无占位符、无开放设计决策。
-3. `program-manifest.yaml` 和 project state 正确登记 Work Item 196。
-4. 全量测试基线、constraints、文档检查和 diff-check 有新鲜证据。
-5. 用户审核本工作项后，再决定是否启动 WP-01。
-
-## 13. 开放问题
-
-无。本治理总项不预先冻结具体语言阈值；阈值校准属于 WP-02，必须根据 report-only 数据决定。
+- 当前治理文档的 review target 为 `spec.md + plan.md + tasks.md`。在 worktree 根运行：`base=specs/196-ai-sdlc-lean-code-self-reduction-governance; for f in "$base/spec.md" "$base/plan.md" "$base/tasks.md"; do shasum -a 256 "$f"; done | LC_ALL=C sort | shasum -a 256`；相对路径文本属于哈希输入。
+- review record 包含 agent、维度、review target hash、时间、findings、处置、verdict；任一目标文件变化使两个 PASS 同时失效。
+- 所有运行时工作包与 WI-196 mainline PR 均遵守 `AGENTS.md` 的 push、PR、Codex review、checks、heartbeat 和 merge 协议；L3 额外要求本地只读 reviewer。
+- 本治理项完成条件：双 Agent 对同一目标哈希 PASS、文档/constraints/diff/path 验证通过、handoff 指向 GAP-07 首个子项。

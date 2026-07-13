@@ -1,229 +1,169 @@
-# 功能规格：AI-SDLC 精简代码治理与框架自身减重计划
+# 功能规格：AI-SDLC 框架缺口修复与自身减重
 
 **功能编号**：`196-ai-sdlc-lean-code-self-reduction-governance`
 **创建日期**：2026-07-12
-**状态**：待评审
-**工作项类型**：治理总项 / 子工作项规划
-**实施边界**：本工作项只冻结原则、兼容契约、度量基线和分批路线图，不修改产品运行时代码。
+**状态**：双 Agent 评审门禁
+**类型**：治理总项 / 独立实现子项路线图
+**当前分支边界**：只修改治理文档和 AI-SDLC 真值文件；运行时代码、测试和规则由后续独立 work item 修改。
 
-## 1. 背景与问题陈述
+## 1. 问题与基线
 
-AI-SDLC 已具备需求冻结、设计合同、实现证据、前端证据、本地对抗评审和发布验证能力，但框架自身的实现复杂度已经超过现有宪章约束。2026-07-12 的只读审计显示：
+基线 revision：`c0f333c82c6f096ea8e74e57378eb7d7368f276c`。
 
-- `src/ai_sdlc/` 有 215 个 Python 文件、107,482 行；61 个文件超过 400 行，51 个文件超过 500 行，15 个文件不少于 1,000 行。
-- 3,348 个函数中有 357 个超过 50 行，159 个不少于 100 行。
-- `src/ai_sdlc/core/program_service.py` 为 17,369 行，`ProgramService` 有 249 个方法；`src/ai_sdlc/cli/program_cmd.py` 为 7,062 行。
-- `tests/` 有 189 个 Python 文件、109,872 行；最大单测文件 18,077 行，最大 CLI 集成测试文件 10,942 行。
-- 结构归一化审计识别到 13 个同形 `RequestStep`、11 个同形 `Result`、77 对高度相似长 CLI 命令，以及大量重复 dedupe、路径、YAML/JSON helper。
-- 宪章已要求单文件不超过 400 行、单函数不超过 50 行，但 `uv run ai-sdlc verify constraints` 仍可返回无 BLOCKER，说明“发现复杂度”和“阻断复杂度”之间存在缺口。
+- `src/ai_sdlc/`：215 个 Python 文件、107,482 物理行；61 个文件超过 400 行，15 个不少于 1,000 行。
+- 3,348 个函数中，357 个超过 50 行，159 个不少于 100 行。
+- `program_service.py`：17,369 行，`ProgramService` 249 个方法；`program_cmd.py`：7,062 行。
+- `tests/`：189 个 Python 文件、109,872 物理行；55 个文件超过 400 行，21 个不少于 1,000 行。
+- 只读结构审计识别到 13 个同形 `RequestStep`、11 个同形 `Result`、77 对高度相似长 CLI 命令，以及多组 dedupe、路径、YAML/JSON helper 候选。
+- 当前统计只覆盖仓库中的 Python 产品代码和测试代码，不包含 `.venv`、缓存、worktree 与发布包。`src/ai_sdlc/` 未标记 vendored Python；生成资产和测试 fixture 必须由 WP-02 的路径分类器独立统计，不得混入手写代码预算。
+- 基线全量测试：`3145 passed, 3 skipped in 443.28s`。
 
-本工作项不把代码行数当作唯一质量指标，也不假设人工实现天然更短更好。目标是在功能、兼容和证据完整性不下降的前提下，减少重复实现、镜像结构和维护认知成本。
+行数和相似度只用于发现候选，不直接证明可以删除。任何减重都必须同时满足兼容契约和 Reduction Contract。
 
-## 2. 目标
+## 2. 目标与范围
 
-1. 冻结一套适用于 AI 生成代码和 AI-SDLC 自身的 Lean Code 原则。
-2. 冻结框架减重期间不可破坏的公共兼容契约。
-3. 建立以行为等价为前提的度量、Golden Master、差异双跑、停止和回退规则。
-4. 将框架自身减重拆为独立、可回退、可审查的子工作项，不在一个分支内大规模重写。
-5. 规定 Lean Code Gate 从报告模式到增量阻断模式的上线顺序，禁止用新门禁一次性阻断全部历史技术债。
+1. 将已证实的框架功能缺口、结构性臃肿和关联治理债务放在同一台账中管理。
+2. 冻结 Lean Code 原则、公共兼容契约、量化减重合同和停止/回退条件。
+3. 先修复会破坏后续实施的基础缺陷，再按目标切片建立最小充分的行为基线。
+4. 每个缺陷或减重切片使用独立 work item、分支、PR 和回退，不做大爆炸重写。
+5. 由两个本地独立只读 Agent 分别从兼容安全与精简效率维度评审同一内容哈希，双方 PASS 后启动首个实现子项。
 
-## 3. 范围
+当前治理总项不删除公共命令，不改变参数、默认值、退出码、artifact schema、状态语义或授权边界，不发布版本，也不更新全局 CLI。
 
-### 3.1 本工作项包含
+## 3. 统一问题台账
 
-- 精简代码原则与反过度实现准则。
-- 当前产品代码、测试代码、CLI 面、artifact 面和质量门的度量基线。
-- 公共行为兼容冻结清单。
-- 风险等级、批次预算、豁免和退出条件。
-- Characterization Tests、Golden Master、差异双跑和回退设计。
-- 后续子工作项的顺序、依赖、入口条件和验收条件。
-- 框架自身 dogfooding 与后续向普通用户项目推广的边界。
+所有证据默认对应基线 revision；`program-manifest.yaml` 证据对应当前 snapshot hash `6e9b0aa2284aa9a4a612f4e739f3d248a9e5758789182a761edbfcd27651ba4f`。
 
-### 3.2 本工作项明确不包含
+| 编号 | 类别 | 事实证据 / 复现入口 | 目标与责任 | 减重关键路径 |
+|---|---|---|---|---|
+| GAP-01 | 治理缺口 | 宪章规定 400 行/50 行，但当前 `uv run ai-sdlc verify constraints` 对历史超限无 BLOCKER | WP-02：report → warning → changed-code blocking | 是 |
+| GAP-02 | 兼容缺口 | 现有测试分散，缺少目标切片统一的 CLI/artifact/状态/副作用 differential 基线 | WP-01：最小充分 Characterization/Golden | 是 |
+| GAP-03 | 结构臃肿 | `src/ai_sdlc/core/program_service.py` 17,369 行、249 方法 | WP-06：逐领域切片、保留 facade、稳定后删旧实现 | 是 |
+| GAP-04 | 结构臃肿 | `src/ai_sdlc/cli/program_cmd.py` 7,062 行；33 个公共 program 命令与 77 对相似长命令候选 | WP-07：逐 stage family 双跑与收敛 | 是 |
+| GAP-05 | 重复实现 | `models/frontend_*`、`telemetry/*`、`generators/frontend_*_artifacts.py` 中存在大量 `_dedupe*`；多个 store 与镜像测试存在重复候选 | WP-03/WP-04：只合并语义和失败模式一致的重复族 | 是 |
+| GAP-06 | 单一真值源候选 | `frontend_page_ui_schema.py`、`frontend_cross_provider_consistency.py`、`frontend_quality_platform.py`、`frontend_provider_expansion.py`、`frontend_provider_runtime_adapter.py`、`frontend_theme_token_governance.py` 的 6 个 `build_p*_baseline` builder | WP-05：对该有限候选集逐项 go/no-go；只有净减重合同成立才实施 | 条件性 |
+| GAP-07 | 工作流缺陷 | `cli/main.py` 在非只读命令前调用 adapter；adapter 写入与 `workitem init` clean-tree preflight 冲突 | T51：独立缺陷 WI，先写定向 characterization test | 基础前置 |
+| GAP-08 | 连续性缺陷 | `context/state.py::_build_resume_working_set_from_filesystem` 从历史 `checkpoint.feature.spec_dir` 派生，而 active WI 优先 `linked_wi_id` | T52：独立缺陷 WI，修复 linked WI 工作集派生 | 基础前置 |
+| GAP-09 | 关联治理债务 | `frontend-mainline-delivery` 被 `frontend_inheritance:generation/quality` 阻断 | T53A：独立 truth 修复 WI | 否；仅在证明影响目标 fixture 时阻断该切片 |
+| GAP-10 | 关联治理债务 | `agent-adapter-verified-host-ingress` 被 `adapter_canonical_consumption:unverified` 阻断 | T53B：独立 truth 修复 WI | 否；仅在证明影响目标 fixture 时阻断该切片 |
+| GAP-11 | 关联治理债务 | source inventory 为 1008/1041 mapped，33 unmapped、11 missing | T54：独立 inventory 修复 WI | 否；不得作为减重总前置 |
 
-- 不修改 `src/ai_sdlc/`、`tests/`、`rules/` 或 runtime artifact 生成逻辑。
-- 不删除、重命名或合并现有公共 CLI 命令。
-- 不改变 CLI 参数、默认值、退出码或 `--dry-run/--execute/--yes` 边界。
-- 不迁移或升级现有 artifact schema。
-- 不删除测试来换取行数下降。
-- 不发布新版本，不更新全局安装的 `ai-sdlc`。
-- 不承诺一次性达到全仓 400 行/50 行限制。
+每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
 
 ## 4. Lean Code 原则
 
-### LP-01：行为与兼容优先于行数
+- **LP-01 行为优先**：净行数下降不能抵消功能、错误处理、审计证据或兼容损失。
+- **LP-02 稳定重复才抽取**：至少三个当前调用者且语义、失败模式一致，才允许新增公共抽象。
+- **LP-03 不为未来造扩展点**：无当前调用者和验收依据的接口、工厂、策略、配置默认拒绝。
+- **LP-04 数据替代镜像代码**：只有字段差异且类型/失败语义不弱化时才采用数据驱动。
+- **LP-05 公共入口薄**：CLI 只解析、调用领域服务、渲染；领域服务按责任内聚。
+- **LP-06 单一真值源**：版本、schema、路径、阶段定义和规则 token 只能有一个 canonical source。
+- **LP-07 低风险先行但不强制串行**：只处理与目标切片真实相关的前置，不用小收益任务拖延高收益切片。
+- **LP-08 测试验证行为**：镜像测试可参数化，但场景、断言、平台和错误路径不得减少。
+- **LP-09 增量治理**：历史债务报告化；硬门禁只约束新增或显著修改的代码。
+- **LP-10 每包可量化减重**：每个实现包必须满足 Reduction Contract，不允许无限期“结构准备”。
+- **LP-11 功能与减重分批**：出现公共行为需求时转为独立功能/迁移工作项。
+- **LP-12 切换后删除**：L3 切片在同一工作包内完成 shadow、切换、稳定期和旧实现删除后才能关闭。
 
-任何减重必须先证明公共行为等价。净行数下降不能抵消功能、错误处理、审计证据或跨平台兼容损失。
+## 5. 公共兼容契约
 
-### LP-02：只删除已经证明重复的实现
-
-只有出现至少三次、语义和失败模式一致的稳定重复，才允许提取公共实现。相似但语义不同的代码不得为追求 DRY 强行合并。
-
-### LP-03：不为未来假设创建扩展点
-
-新增抽象必须有当前调用者和当前验收依据。单一调用者的接口、工厂、策略层和配置项默认视为需要说明的过度设计候选。
-
-### LP-04：数据优先于镜像代码
-
-同一状态机、校验器或 renderer 仅因阶段名称、字段标签不同而复制时，应优先采用经过校验的数据定义；数据驱动不能弱化类型、安全和可读性。
-
-### LP-05：公共入口薄、领域实现内聚
-
-CLI 只负责参数解析、调用领域服务和渲染结果。领域服务不得同时承担 manifest、前端生成、治理、发布和归档等不相干职责。
-
-### LP-06：单一真值源
-
-版本、规则 token、schema、路径和阶段定义只能有一个 canonical source；其他表面通过生成、解析或验证消费，不手工复制常量。
-
-### LP-07：先收敛低风险重复，再拆高风险状态机
-
-helper、读写器和测试参数化先行；`ProgramService`、program CLI 和治理阶段引擎必须在 Golden Master 与双跑能力完成后处理。
-
-### LP-08：测试是兼容契约，不是实现镜像
-
-测试应验证外部行为和领域不变量。只替换阶段名、对象名或字段名的镜像测试应参数化，但不得降低场景覆盖。
-
-### LP-09：增量基线，不追杀历史债务
-
-Lean Code Gate 首先只报告全仓现状；硬门禁仅约束新增文件、新增函数和被显著修改的旧代码。历史超限通过独立子工作项偿还。
-
-### LP-10：每批净减少且职责更清晰
-
-减重批次必须同时满足：产品代码净减少或复杂度明确下降、公共行为等价、依赖方向不恶化、回退路径可用。
-
-### LP-11：禁止减重与功能开发混批
-
-同一提交和 PR 不得同时引入新业务能力与结构性减重；发现必要行为变更时，必须升级为独立功能工作项。
-
-### LP-12：删除延迟于切换
-
-高风险新实现先 shadow 双跑，再逐入口切换，最后经过至少一个稳定发布周期才删除旧实现。
-
-## 5. 公共兼容冻结契约
-
-后续所有子工作项必须维护以下契约：
-
-| 契约编号 | 冻结内容 | 比较方式 |
+| 编号 | 冻结内容 | 比较方式 |
 |---|---|---|
-| CC-01 | 公共 CLI 命令、子命令、参数、默认值和帮助入口 | CLI surface manifest |
-| CC-02 | 成功、业务阻断、输入错误的退出码 | Characterization Tests |
-| CC-03 | JSON/YAML/Markdown artifact 路径、schema 版本、必填字段和语义 | 规范化结构 diff |
-| CC-04 | checkpoint、work item、loop 和 review 的合法状态迁移 | 状态转换矩阵测试 |
-| CC-05 | `--dry-run` 无写入，`--execute` 与 `--yes` 的授权边界 | 文件系统前后快照 |
-| CC-06 | 幂等、重试、恢复和中断续跑行为 | 重放测试 |
-| CC-07 | Windows、macOS、Linux 离线安装与 release smoke | 平台矩阵验证 |
-| CC-08 | 兄弟项目通过共享 CLI 运行的用户路径 | 代表性项目 smoke |
+| CC-01 | CLI 命令、参数、默认值、help、stdout/stderr、交互提示和 JSON envelope | surface manifest + transcript fixture |
+| CC-02 | 成功、业务阻断和输入错误退出码 | characterization test |
+| CC-03 | artifact 路径、schema 版本、字段、顺序语义和错误文本 | 版本化 normalizer + 结构 diff |
+| CC-04 | checkpoint、work item、loop、review 的合法状态迁移 | 状态矩阵测试 |
+| CC-05 | `--dry-run` 无写入，`--execute/--yes` 授权边界 | 工作区、`.git`、外部路径、子进程和网络副作用观测 |
+| CC-06 | 配置/环境变量优先级、幂等、重试、恢复和中断续跑 | 环境矩阵 + 重放测试 |
+| CC-07 | Windows、macOS、Linux 与离线发布路径 | 受影响平台 smoke |
+| CC-08 | 代表性兄弟项目共享 CLI 路径 | 有选择理由的项目清单 + smoke |
 
-动态时间、绝对 worktree 路径、临时文件名等非语义字段必须在 Golden Master 比较前规范化，不允许为了追求字节完全一致冻结随机值。
+Golden normalizer 必须版本化，只允许显式列入 allowlist 的时间、绝对临时路径、随机 ID 等非语义字段变化。确定性不等于等价；完成判定必须是旧/新实现零未批准语义差异。
 
-## 6. 风险模型
+## 6. 变更合同与 Reduction Contract
 
-| 等级 | 典型改动 | 允许的切换方式 |
+### 6.1 非减重变更合同
+
+T51、T52、T53A、T53B、T54 属于缺陷/truth 修复，使用 NC-01～NC-06，不强迫承担减重阈值：
+
+- **NC-01**：冻结可复现的 observed/expected behavior 和基线 revision。
+- **NC-02**：列出受影响 CC、文件/符号、truth/fixture 影响分析；缺失或不确定时 fail-closed。
+- **NC-03**：冻结最大新增手写产品/测试 LOC、文件数和公共抽象数，只允许修复所需最小变更。
+- **NC-04**：先红后绿；定向、全量和受影响 smoke 通过。
+- **NC-05**：提供 revert/配置回退、artifact 恢复和 owner。
+- **NC-06**：不混入结构减重、功能扩展或无关 truth 清仓。
+
+### 6.2 Reduction Contract
+
+WP-03～WP-07 的每个减重候选在编码前冻结以下字段；缺一项不得进入 execute：
+
+- **RC-01 目标切片**：文件、符号、命令/状态族、重复族和影响契约。
+- **RC-02 基线**：手写产品 LOC、测试 LOC、复杂度、重复族、fan-out/fan-in、运行耗时；生成/fixture/vendored 单列。
+- **RC-03 预算**：最大新增手写 LOC、模块和公共抽象数量，以及预计删除量。
+- **RC-04 结果阈值**：重复类切片必须消除选定重复族且目标切片净 LOC 至少下降 10%。结构类切片除原文件中被迁移职责 LOC/方法数下降至少 90% 外，还必须满足以下至少一项：切片产品 LOC 净下降 10%、聚合圈复杂度下降 15%、跨领域依赖边下降 20%、选定重复分支 100% 消除；纯移动一律 No-Go。
+- **RC-05 临时膨胀**：shadow 期间最多增加目标切片基线的 15% 或 1,000 行手写产品代码，取较小值；超出则缩小切片。旧实现删除前工作包不得关闭。
+- **RC-06 保护成本**：WP-01/WP-02 新增的手写产品、test/harness/normalizer LOC 合计不得超过已通过候选审查并纳入具体 RC 的预计删除代码 25%，且路线图累计绝对上限 1,500 行；fixture/snapshot 文件每个冻结 CC 场景最多 2 个，版本库内规范化 snapshot 累计不超过 2 MiB。超限时缩小范围或复用现有测试，不得扩大预算分母。
+- **RC-07 文件约束**：新增手写文件不超过 400 行、新增函数不超过 50 行；无三个当前调用者不得新增公共抽象。
+- **RC-08 总体终态**：仅用于路线图组合终态，不作为单个子项关闭条件。路线图关闭时手写产品 LOC 相对基线净下降至少 10%；选定重复族全部关闭；`program_service.py` 与 `program_cmd.py` 均降到 400 行以内。
+- **RC-09 停止投资**：预测或实测不能达到该子项适用的 RC-04～RC-07，或会使 RC-08 组合终态不可达，或保护成本超过收益时，停止该方案并保留旧实现，不得以结构准备续投。校验器只解析适用矩阵声明的字段。
+- **RC-10 证据**：PR 必须给出 before/after、预算消耗、差异结果、回退演练和未解决风险。
+
+门禁、兼容 harness 和 facade 不是减重成果；它们的新增必须计入预算。
+
+### 6.3 适用矩阵
+
+| 子项 | 强制合同 |
+|---|---|
+| T51/T52/T53A/T53B/T54 | NC-01～NC-06 + 受影响 CC；RC 不适用 |
+| WP-01 | RC-01～RC-03、RC-06、RC-07、RC-09、RC-10 + impact analysis 选出的 CC；Phase A/B 落实 CC |
+| WP-02 | RC-01～RC-03、RC-06、RC-07、RC-09、RC-10 + CC-01/02/03/05/06/07；代码指标与合同 admission 两个规则族都经历 report/warning/blocking，使用独立状态/回退开关 |
+| WP-03/WP-04/WP-05 | RC-01～RC-07、RC-09、RC-10 + impact analysis 选出的 CC；RC-04 按重复/候选类型解释 |
+| WP-06/WP-07 | RC-01～RC-07、RC-09、RC-10 + impact analysis 选出的 CC；RC-04 按结构类型解释，T61A/B 为 pre-merge gate |
+| 路线图关闭 | RC-08 + 所有 Gap Evidence Index |
+
+## 7. 风险与执行边界
+
+| 等级 | 典型改动 | 必要保护 |
 |---|---|---|
-| L1 低风险 | 完全相同 helper、测试参数化、模块移动 | 定向测试 + 全量回归 |
-| L2 中风险 | loop store 公共基类、静态 baseline 配置化、constraint registry | Golden Master + 差异测试 + 可回退适配层 |
-| L3 高风险 | `ProgramService` 分域、program CLI 通用 stage executor | shadow 双跑 + 分入口切换 + 旧实现保留 |
-| L4 禁止直接执行 | 删除公共命令、改变 schema、合并状态、改变安全边界 | 必须另立功能/迁移工作项并由用户批准 |
+| L1 | 完全相同 helper、测试参数化 | 定向 characterization + 全量回归 |
+| L2 | store 公共逻辑、baseline 候选、Lean Gate | 目标切片 Golden/differential + 回退适配 |
+| L3 | ProgramService 分域、stage engine | shadow 双跑、单切片切换、稳定发布、独立删旧 PR |
+| L4 | 删除公共命令、改变 schema/状态/安全边界 | 不属于减重；另立迁移/功能项并由用户批准 |
 
-## 7. 用户故事与验收场景
+GAP-07、GAP-08 的缺陷修复可独立或并行启动，但每个缺陷必须先写能复现原行为的定向 characterization test。两项都关闭后，WP-03～WP-07 才能进入 WP-01A 基线捕获。
 
-### US-01：冻结可执行的减重原则（P0）
-
-作为框架维护者，我希望每个减重批次使用同一套原则，以便防止“为了少代码而损失质量”或“为了抽象而继续膨胀”。
-
-**独立测试**：从本规格中可以唯一定位 LP-01 至 LP-12，并能把每条原则映射到任务验收或 review 问题。
-
-1. **Given** 一个候选公共抽象只有一个调用方，**When** 进行 Lean Review，**Then** 除非存在当前需求依据，否则必须拒绝该抽象。
-2. **Given** 一个批次减少了代码但改变 CLI 退出码，**When** 执行兼容检查，**Then** 该批次必须阻断。
-
-### US-02：冻结现有功能和兼容面（P0）
-
-作为现有用户，我希望框架内部减重后原有命令、artifact 和恢复流程继续可用。
-
-**独立测试**：CC-01 至 CC-08 均有机器可执行的比较方式和失败处理。
-
-1. **Given** 同一 fixture 分别运行旧实现和候选实现，**When** 对输出规范化后比较，**Then** 未批准的语义差异必须为零。
-2. **Given** 候选实现发生异常，**When** 切换开关回到旧实现，**Then** 原公共入口无需用户改命令即可恢复。
-
-### US-03：建立增量 Lean Code Gate（P0）
-
-作为项目负责人，我希望门禁先报告历史问题、只阻断新增问题，以便不因一次治理升级使框架无法继续交付。
-
-**独立测试**：历史超限不阻断；新增超限文件、函数或无依据抽象按策略产生 WARNING/BLOCKER。
-
-1. **Given** 一个未修改的 1,000 行历史文件，**When** 运行增量门禁，**Then** 记录债务但不阻断。
-2. **Given** 一个新文件超过冻结阈值且无豁免，**When** 运行增量门禁，**Then** 产生 BLOCKER。
-
-### US-04：将自身减重拆为独立子工作项（P0）
-
-作为维护团队，我希望每个风险边界有单独分支、PR、测试和回退，以便避免大规模重写。
-
-**独立测试**：路线图中每个工作包具有风险等级、前置条件、明确非目标、验证和回退方式。
-
-1. **Given** 高风险 `ProgramService` 拆分尚无 Golden Master，**When** 评估是否启动，**Then** 必须保持未启动状态。
-2. **Given** 一个低风险 helper 去重包已通过行为比较，**When** 合并，**Then** 不得顺带修改功能。
-
-### US-05：用框架自身验证治理规则（P1）
-
-作为 AI-SDLC 产品负责人，我希望先在本仓库 dogfood，再推广给普通用户项目。
-
-**独立测试**：Lean Code Gate 在本仓库经历 report-only、changed-code warning、changed-code blocking 三阶段，并保留项目级配置入口。
+兼容、安全或授权边界不得用 waiver 绕过。GAP-09～GAP-11 只有在逐项证明不影响当前目标切片时才可不阻断该切片；证明和 owner 必须落盘。
 
 ## 8. 功能需求
 
-- **FR-001**：必须保留 LP-01 至 LP-12 作为本项目规范正文。
-- **FR-002**：必须建立 CC-01 至 CC-08 兼容冻结契约。
-- **FR-003**：必须记录产品代码、测试代码、超限文件、超长函数和重复结构基线。
-- **FR-004**：必须区分物理 LOC、产品 LOC、测试 LOC、生成资产和 vendored 代码。
-- **FR-005**：不得用 LOC 单指标决定 PASS/BLOCKER。
-- **FR-006**：必须建立 Characterization Tests 和 Golden Master 后才能启动 L2/L3 子工作项。
-- **FR-007**：高风险替换必须支持旧/新实现双跑和结果差异报告。
-- **FR-008**：高风险切换必须保留无需用户改命令的回退路径。
-- **FR-009**：每个子工作项只覆盖一个可独立回退的责任边界。
-- **FR-010**：每个减重 PR 必须与功能开发分离。
-- **FR-011**：每个减重 PR 必须报告 before/after 指标和未解决风险。
-- **FR-012**：测试参数化不得减少场景、平台或错误路径覆盖。
-- **FR-013**：Lean Gate 必须采用 report-only → warning → changed-code blocking 的渐进模式。
-- **FR-014**：历史债务必须通过 baseline/waiver 管理，豁免需要 owner、原因和到期条件。
-- **FR-015**：发生未批准行为差异、发布 smoke 失败或兄弟项目回归时必须立即停止并回退。
-- **FR-016**：本工作项不得修改产品运行时代码。
-- **FR-017**：后续 L3 工作项必须经过本地独立只读 review agent 评审。
-- **FR-018**：旧实现删除必须晚于新实现切换，并至少经过一个稳定发布周期。
+- **FR-01**：GAP-01～GAP-11 必须有证据、边界、责任子项和关闭证据索引。
+- **FR-02**：实现子项必须按 §6.3 适用矩阵 fail-closed 校验 NC、CC 与 RC；不允许伪造 N/A 绕门。
+- **FR-03**：GAP-07、GAP-08 每项使用独立 WI/branch/PR，先红后绿验证原始缺陷。
+- **FR-04**：WP-01 只覆盖目标切片实际影响的契约；Phase A 在编码前捕获旧基线，Phase B 必须绑定候选 commit/tree hash 并作为同一候选 PR 的 pre-merge gate。
+- **FR-05**：WP-02 的代码指标与 NC/CC/RC admission 两个规则族都按 report-only、warning、blocking 演进，状态和回退独立；每阶段冻结 versioned expected delta，未列入 delta 的兼容差异仍为 BLOCKER。
+- **FR-06**：WP-05 必须先做 go/no-go；预测不满足 RC 时直接取消，不预设 YAML/JSON 是答案。
+- **FR-07**：WP-06、WP-07 每次只处理一个领域或 stage family，并在同一工作包完成稳定期与旧实现删除。
+- **FR-08**：每个子 WI 进入 execute 前必须具备进入、非目标、具体验证命令、完成、停止、回退和 evidence URI 合同。只有合同 admission gate 处于 `active + verified` 时才替代人工评审；未激活、禁用、降级、回退或健康检查失败时，L1/L2 普通项自动恢复一个独立合同 reviewer，L3 或影响 CC-05/CC-06 的高风险项自动恢复两个 Agent。
+- **FR-09**：所有实现 PR 均遵守仓库 mainline PR/check/review/heartbeat 协议；L3 额外经过本地专职只读 reviewer。
+- **FR-10**：双 Agent 评审记录必须包含 agent、维度、目标哈希、时间、findings、处置和 verdict；内容变化使旧 PASS 失效。
+- **FR-11**：双 PASS 只替代治理文档逐条人工评审，不替代 L4 的用户批准。
+- **FR-12**：本治理分支不得修改 `src/ai_sdlc/`、`tests/`、runtime rules、provider 或 workflow。
 
-## 9. 关键实体
+## 9. 成功标准
 
-- **LeanBaseline**：某一 Git revision 的规模、复杂度、重复、依赖和性能基线。
-- **CompatibilitySurface**：需要冻结并比较的 CLI、artifact、状态和平台行为。
-- **BehaviorFixture**：可重复执行的输入、环境和预期语义。
-- **GoldenSnapshot**：经过非语义字段规范化的现有行为快照。
-- **DifferentialResult**：旧实现与候选实现的差异及批准状态。
-- **ReductionWorkPackage**：具有独立风险、验证和回退的减重子工作项。
-- **LeanWaiver**：临时豁免，包含 owner、理由、适用路径和到期条件。
+- **SC-01**：四件套无未决占位、互相矛盾或无责任人的开放项。
+- **SC-02**：GAP、LP、NC、CC、RC、FR 均在 `tasks.md` 有直接追踪。
+- **SC-03**：路线图冻结统一合同模板；按 FR-08 取得风险分层 reviewer PASS，或取得 `active + verified` 机器 admission PASS，否则子 WI 不得进入 execute。
+- **SC-04**：治理分支相对 main 无产品代码、测试和 runtime rule 变更。
+- **SC-05**：文档合同检查、`verify constraints`、`git diff --check` 与路径白名单检查通过。
+- **SC-06**：兼容安全 Agent 与精简效率 Agent 对同一 `spec.md + plan.md + tasks.md` 内容哈希均明确 PASS。
+- **SC-07**：双 PASS 后 GAP-07 与 GAP-08 作为两个独立首批实现项推进；二者都关闭后进入 WP-01A。
+- **SC-08**：后续减重工作包只有满足适用 Reduction Contract 才能以 `completed_reduction` 关闭。WP-05 单项 No-Go 用 `cancelled_no_go`；六个冻结候选均完成评估且全部 No-Go 时，GAP-06 可用 `closed_no_viable_reduction` 关闭，但不计减重成果。只有基线或消费者发生实质变化才允许重新打开。
 
-## 10. 成功标准
+## 10. 冻结决策
 
-- **SC-001**：本工作项四件套无 `TODO`、`TBD`、`待补充` 或未决开放问题。
-- **SC-002**：LP-01 至 LP-12、CC-01 至 CC-08、FR-001 至 FR-018 均能映射到 `tasks.md`。
-- **SC-003**：路线图中所有工作包均有风险等级、前置条件、验证、停止和回退方式。
-- **SC-004**：治理分支相对基线没有 `src/ai_sdlc/`、`tests/` 和 runtime rules 变更。
-- **SC-005**：基线全量测试保持 `3145 passed, 3 skipped` 或后续 revision 的等价绿色结果。
-- **SC-006**：`uv run ai-sdlc verify constraints`、`git diff --check` 和文档占位符扫描通过。
-- **SC-007**：本地独立评审结论为无 BLOCKER；任何 WARNING 都有明确处置。
-- **SC-008**：用户审核并批准本工作项后，才允许创建第一个减重实现子工作项。
-
-## 11. 边界情况
-
-- 生成代码或测试 fixture 物理行数较大但不增加维护认知成本时，必须单独分类，不得与手写产品代码混算。
-- 安全、兼容、错误处理或审计证据导致的必要行数增长，不得为达到预算而删除。
-- 两段代码结构相似但失败语义不同，不得合并。
-- 类型抽象导致调用更难理解时，即使 LOC 下降也不得通过。
-- 工作包发现必须改变公共行为时，立即停止减重并升级为功能/迁移工作项。
-- 全量测试本身存在不稳定项时，必须先建立可复现基线，不得把 flaky 忽略为减重噪音。
-
-## 12. 冻结决策
-
-1. 采用“治理总项 + 独立子工作项”，不采用单分支大重写。
-2. 本工作项为 docs-only，产品代码实现需要用户再次批准。
-3. 不预先占用后续数字编号；创建子工作项时使用当时的下一可用编号。
-4. 第一实现子工作项必须是兼容观测与 Golden Master，不直接拆 `ProgramService`。
-5. Lean Code Gate 在本仓库通过后，是否推广到普通用户项目另行决策。
+1. 采用“统一台账 + 原子子项”，不采用单分支重写或多领域打包。
+2. GAP-09～GAP-11 保留在同一台账并修复，但不作为所有减重工作的总前置。
+3. 取消混合型 WP-00 和 WP-08：基础缺陷各自立项；门禁升级归 WP-02；旧实现删除归 WP-06/WP-07。
+4. 不预占正式 WI 编号；双 PASS 后使用当时下一可用编号。
+5. Lean Gate 是否推广到普通用户项目另行决策。

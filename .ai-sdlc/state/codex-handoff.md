@@ -1,29 +1,37 @@
 # Continuity Handoff
 
-- Updated: 2026-07-13T03:28:31+00:00
-- Reason: Work Item 196 revision truth 与 program truth 验证完成
-- Goal: 完成 Work Item 196 精简代码治理与框架自身减重立项
-- State: 治理四件套已提交并通过 revision truth-check；program truth 已登记 196，当前只剩 truth snapshot 提交与用户书面审核，未进入产品代码实现
+- Updated: 2026-07-13T04:58:53+00:00
+- Reason: 双 Agent 同哈希 PASS 与最终验证完成
+- Goal: 完成 WI-196 框架缺口修复与自身减重治理双 Agent 对抗评审
+- State: 第六轮同哈希双 PASS；最终定向测试、文档合同、YAML、路径白名单和 constraints 已通过，准备提交
 - Stage: execute
 - Work Item: 196-ai-sdlc-lean-code-self-reduction-governance
 - Branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
 
 ## Changed Files
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/196-ai-sdlc-lean-code-self-reduction-governance/codex-handoff.md
 - M program-manifest.yaml
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
 - M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
 
 ## Key Decisions
-- program truth 的既有 frontend inheritance、adapter consumption 和 source inventory blocker 不在 196 docs-only 分支顺带修复
+- Chandrasekhar 与 Mencius 对 dcd2231b3a075b7ce0d5afe51e1129a0e4356662a7f61f326cb3c7d7c472e67b 均 PASS
+- 后续首批为 GAP-07 与 GAP-08 两个独立子项；任何 review target 变化使双 PASS 失效
 
 ## Commands / Tests
-- workitem truth-check => HEAD 4b572c28 四件套完整，ahead 2 behind 0
-- program truth sync --execute --yes => 196 四层映射已登记，state=migration_pending（既有外部 blocker）
+- 156 targeted tests passed in 11.07s
+- document contract/YAML/path whitelist/git diff PASS；verify constraints no BLOCKERs
 
 ## Blockers / Risks
-- none
+- GAP-08 未修复前，resume-pack 重建仍可能从历史 feature 派生错误指针；本分支已手工纠正
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交最终 truth/handoff 变更并请用户审核 Work Item 196；批准前不启动 WP-01
+- 提交 WI-196 最终双 PASS 收敛结果
+- 按仓库 mainline PR 协议交付；合并后创建 GAP-07/GAP-08 独立实现 work item
