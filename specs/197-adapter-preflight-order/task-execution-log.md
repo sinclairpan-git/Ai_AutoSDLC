@@ -2,7 +2,7 @@
 
 **功能编号**：`197-adapter-preflight-order`
 **创建日期**：2026-07-13
-**状态**：design admission
+**状态**：runtime implemented and task reviews approved；PR pending
 
 ## 1. 固定合同
 
@@ -97,3 +97,55 @@
 - 兼容安全 Agent：独立复算一致，`PASS`，无可操作问题。
 - 精简效率 Agent：独立复算一致，`PASS`，无可操作问题。
 - 结论：格式修复未改变设计语义；以新哈希重新冻结三目标文件并进入提交门禁。
+
+## 5. Batch 2026-07-13-003：RED/GREEN 实现证据与任务评审
+
+### 5.1 RED characterization
+
+- RED commit：`b89203c4`（`test(workitem): characterize adapter preflight order`）。
+- focused 命令：`uv run pytest tests/integration/test_cli_workitem_init.py -k "adapter_before_clean_tree_preflight or missing_title or non_init" -q`。
+- focused 结果：预期 RED，`3 failed, 1 passed, 13 deselected`：
+  - clean 合法 `init` 被 adapter 自身的 Git-visible 写入变成 self-dirty；
+  - 用户脏树在 clean-tree preflight 拒绝前已先执行 adapter 写入；
+  - 缺失 `--title` 在 Typer 返回 exit 2 前已先执行 adapter 写入；
+  - 合法非 `init` 的 `workitem plan-check` 通过，证明没有误跳过整个 workitem group。
+- 既有非 RED 命令：`uv run pytest tests/integration/test_cli_workitem_init.py -k "not adapter_before_clean_tree_preflight and not missing_title and not non_init" -q`；结果 `13 passed, 4 deselected`。
+- 独立 RED task reviewer：`Spec compliant + Task quality: Approved`，无可操作问题。
+
+### 5.2 首版 GREEN 诊断与对抗裁决
+
+- 首版 direct child import 使 focused 用例转绿，但 full suite 为 `13 failed, 3136 passed, 3 skipped`；独立 `test_cli_workitem_close_check.py` 为 `13 failed, 25 passed`。
+- 根因：child-bound hook 绕过既有 root composition/patch seam，真实 adapter 输出污染 JSON，并生成 Git-visible tree 写入。
+- 兼容安全与精简效率两个对抗 Agent 对 strict Click `ctx.meta` 修订方案统一 `PASS`：使用唯一 private dotted key；root 注入调用当下的 hook 后立即 return；child 只做 strict key index；不增加 fallback、不把写操作冒充 read-only，并删除失效 child patch。
+
+### 5.3 最小 GREEN 与独立复核
+
+- GREEN commit：`c644884e`（`fix(workitem): defer adapter until clean preflight`）。
+- 实现 Agent 验证：focused `4 passed, 13 deselected`；init/hooks 两文件 `20 passed`；close-check `38 passed`；full suite `3149 passed, 3 skipped`；`ruff check src tests`、`verify constraints`、`git diff --check` 均 PASS。
+- 主 Agent 独立复核：focused 4、init/hooks 两文件 20、close-check 38、focused ruff 均 PASS。
+- 独立 GREEN task reviewer：`Spec compliant + Task quality: Approved`，无 Critical、Important 或 Minor 问题。
+
+### 5.4 预算、范围、非影响与回退
+
+- 产品净新增 21 LOC；WI-197 测试累计 72 additions / 0 deletions。
+- 新增产品文件、公共抽象、依赖、配置均为 0；最终 runtime diff 仅 `src/ai_sdlc/cli/main.py`、`src/ai_sdlc/cli/workitem_cmd.py`、`tests/integration/test_cli_workitem_init.py` 三个授权文件。
+- GAP-10 proof carrier/schema/校验/blocker 未修改；其他顶层命令继续沿用既有 root hook 路径。
+- adapter、Git、scaffold 与 strict composition 异常均原样传播，不捕获、不吞掉。
+- rollback：revert `c644884e`；如需继续保留缺陷 characterization，可保留 RED 测试提交 `b89203c4`。
+
+### 5.5 Branch disposition 与未完成项
+
+- 当前 `feature/197-adapter-preflight-order` 是 PR merge carrier。
+- 当前仅能确认 runtime implemented 且 RED/GREEN task reviews approved。
+- final whole-branch review、PR、Codex review/required checks、merge、main program truth 同步与 GAP-07 close 均尚未完成；不得提前声明 mainline 已交付。
+
+### 5.6 Continuity、program truth 与交付准备验证
+
+- `uv run ai-sdlc handoff update` 已把 canonical/scoped handoff 对齐到两个逻辑提交、task reviews approved 与 PR pending；next step 固定为 final verification、whole-branch review 与 PR。
+- patched canonical `program truth sync --execute --yes` 成功；snapshot state 保持 `migration_pending`。
+- source inventory 保持 `1013/1046 mapped`、`33 unmapped`、`11 missing`；既有 blocker 仍且仅为 `frontend_inheritance:generation`、`frontend_inheritance:quality`、`adapter_canonical_consumption:unverified`。
+- patched `program truth audit`：snapshot `fresh`；仅因上述已登记 migration/blockers 返回预期 exit 1。
+- fresh focused verification：`uv run pytest tests/integration/test_cli_workitem_init.py tests/unit/test_cli_hooks.py tests/integration/test_cli_workitem_close_check.py -q` → `58 passed`。
+- `uv run ruff check src tests` → `All checks passed!`；`uv run ai-sdlc verify constraints` → `no BLOCKERs`；`git diff --check` → PASS。
+- 验证未生成额外 tracked/untracked 文件；continuity 文件在 focused tests 前后 hash 不变。
+- 环境 concern：本机 `pwsh` 在仓库命令执行前因 `System.Text.RegularExpressions, Version=10.0.0.0` assembly `FileLoadException` 退出，因此沿用已记录的 zsh fallback；项目命令结果不受影响。
