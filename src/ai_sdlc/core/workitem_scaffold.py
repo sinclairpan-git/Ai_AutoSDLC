@@ -14,6 +14,7 @@ from ai_sdlc.utils.helpers import AI_SDLC_DIR, PROJECT_STATE_PATH, slugify
 
 _WI_ID_RE = re.compile(r"^(?P<seq>\d{3})-[a-z0-9]+(?:-[a-z0-9]+)*$")
 _PLACEHOLDER_RE = re.compile(r"\[[^\[\]\n]+\]")
+_CANONICAL_DOC_NAMES = ("spec.md", "plan.md", "tasks.md", "task-execution-log.md")
 
 
 class WorkitemScaffoldError(Exception):
@@ -72,16 +73,7 @@ class WorkitemScaffolder:
         state = load_project_state(root)
         created_date = date.today().isoformat()
         spec_dir = root / "specs" / work_item_id
-        canonical_paths = (
-            spec_dir / "spec.md",
-            spec_dir / "plan.md",
-            spec_dir / "tasks.md",
-            spec_dir / "task-execution-log.md",
-        )
-        if any(path.exists() for path in canonical_paths):
-            raise WorkitemScaffoldError(
-                f"canonical formal docs already exist for {work_item_id}: {spec_dir}"
-            )
+        canonical_paths = tuple(spec_dir / name for name in _CANONICAL_DOC_NAMES)
 
         spec_dir.mkdir(parents=True, exist_ok=True)
 
@@ -156,7 +148,7 @@ class WorkitemScaffolder:
         title: str,
         wi_id: str | None = None,
     ) -> str:
-        """Resolve the canonical work item id without writing files."""
+        """Resolve and validate the canonical work item id without writing files."""
         title_clean = title.strip()
         if not title_clean:
             raise WorkitemScaffoldError("title is required for direct-formal init")
@@ -165,12 +157,18 @@ class WorkitemScaffolder:
             raise WorkitemScaffoldError(self._missing_bootstrap_message(root))
 
         state = load_project_state(root)
-        return self._resolve_work_item_id(
+        work_item_id = self._resolve_work_item_id(
             root=root,
             title=title_clean,
             wi_id=wi_id,
             next_work_item_seq=state.next_work_item_seq,
         )
+        spec_dir = root / "specs" / work_item_id
+        if any((spec_dir / name).exists() for name in _CANONICAL_DOC_NAMES):
+            raise WorkitemScaffoldError(
+                f"canonical formal docs already exist for {work_item_id}: {spec_dir}"
+            )
+        return work_item_id
 
     def _missing_bootstrap_message(self, root: Path) -> str:
         if (root / AI_SDLC_DIR).is_dir():
