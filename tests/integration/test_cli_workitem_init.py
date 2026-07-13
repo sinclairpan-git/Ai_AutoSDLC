@@ -34,10 +34,7 @@ def _plain_cli_output(output: str) -> str:
 
 @pytest.fixture(autouse=True)
 def _no_ide_adapter_hook() -> None:
-    with (
-        patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"),
-        patch("ai_sdlc.cli.workitem_cmd.run_ide_adapter_if_initialized", create=True),
-    ):
+    with patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized"):
         yield
 
 
@@ -59,7 +56,6 @@ def adapter_receipt(
         (root / "adapter-proof.txt").write_text("consumed\n", encoding="utf-8")
 
     monkeypatch.setattr("ai_sdlc.cli.main.run_ide_adapter_if_initialized", _write)
-    monkeypatch.setattr("ai_sdlc.cli.workitem_cmd.run_ide_adapter_if_initialized", _write)
     return root, calls
 
 

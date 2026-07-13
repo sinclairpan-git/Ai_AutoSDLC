@@ -33,7 +33,7 @@ from ai_sdlc.cli.sub_apps import gate_app, rules_app, studio_app
 from ai_sdlc.cli.telemetry_cmd import telemetry_app
 from ai_sdlc.cli.trace_cmd import trace_app
 from ai_sdlc.cli.verify_cmd import verify_app
-from ai_sdlc.cli.workitem_cmd import workitem_app
+from ai_sdlc.cli.workitem_cmd import _WORKITEM_ADAPTER_HOOK_META_KEY, workitem_app
 
 app = typer.Typer(
     name="ai-sdlc",
@@ -91,6 +91,10 @@ def _global_before_command(
         and "--show-completion" not in sys.argv
     ):
         maybe_render_update_notice()
+    if ctx.invoked_subcommand == "workitem":
+        # 子应用按参数校验与 clean-tree preflight 边界管理 adapter 副作用。
+        ctx.meta[_WORKITEM_ADAPTER_HOOK_META_KEY] = run_ide_adapter_if_initialized
+        return
     # Read-only and analysis surfaces must not trigger adapter writes.
     if ctx.invoked_subcommand in _READ_ONLY_SUBCOMMANDS:
         return
