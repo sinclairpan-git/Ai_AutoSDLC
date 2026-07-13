@@ -109,4 +109,5 @@ T51 触及 adapter 入口和 proof 的持久化时机，但不改变 canonical c
 
 出现以下任一情况立即停止：需要关闭自动 adapter、放宽 clean-tree、改变 proof/授权边界、修改第二个业务领域、超出 NC-03，或出现跨平台差异。
 
-回退方式为 revert 本项实现提交；四件套与测试证据保留，运行时恢复原顺序。发布后若出现回归，先回滚包含本项的版本，再 revert 实现提交。
+- mainline 或已发布版本出现回归时，revert PR `#121` 的完整 merge/squash commit 或回退整个包含 WI-197 的版本。
+- 未合并源码分支手工回退时，必须将 `3940723e`+`4c7b35a3`、`c644884e`+`b89203c4` 两组 GREEN 与对应 RED test 成对撤销；禁止只撤 runtime 而保留必失败的 RED tests。

@@ -191,3 +191,10 @@
 - 已把固定合同更新为当前 feature branch、3 个产品文件、唯一可修改 integration test；两个 unit 仅回归运行。
 - 已把回退拆为完整 PR/版本回退与 GREEN+RED 成对源码回退，禁止 runtime-only rollback；canonical tasks 同步为当前已完成状态。三件套哈希因此失效，必须重新计算并双审。
 - 修订后的 `spec.md + plan.md + tasks.md` bytes 拼接 SHA-256 为 `8e049df689d117c937b42f7b272046630550d3f14292ecb85d7888ee075170f4`；旧哈希 `7627839c...` 失效。
+
+### 6.6 第二轮 final re-review findings
+
+- 两个对抗 Agent 再次一致判定 FAIL：`spec.md` 仍遗留 runtime-only rollback；同时 hashed `tasks.md` 在实际 verdict 前预宣布双 PASS/ready-to-merge，形成自引用哈希循环。
+- `spec.md` 已与 plan/log/summary 统一为完整 PR/版本回退或 GREEN+RED 成对源码回退。
+- `tasks.md` 明确哈希文件不勾选 T12/T32 最终 reviewer verdict；权威结果只记录在不参与哈希的 execution log/handoff，防止未通过先宣称和状态自引用。
+- 最终候选 `spec.md + plan.md + tasks.md` bytes 拼接 SHA-256 为 `e5b1c1b004e6efd84b96e096b626ed44b801d37b146c515a24baf82f36efc9a9`；旧哈希 `8e049df...` 失效。

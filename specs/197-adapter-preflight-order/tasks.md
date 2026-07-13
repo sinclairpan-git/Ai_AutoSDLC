@@ -7,6 +7,8 @@ related_doc:
 
 **编号**：`197-adapter-preflight-order` | **父项**：WI-196 `GAP-07 / T51`
 
+**评审状态口径**：为避免 reviewer 结果改写参与哈希的文件并形成自引用循环，T12 双 Agent verdict 与 T32 final branch verdict 始终保持未勾选；最终 PASS/FAIL 以不参与哈希的 `task-execution-log.md` 与 continuity handoff 为准。
+
 ## Batch 1：设计与 admission
 
 ### T11 冻结正式合同
@@ -20,8 +22,8 @@ related_doc:
 ### T12 同哈希双 Agent 设计评审
 
 - [x] 计算 `spec.md + plan.md + tasks.md` 组合 SHA-256。
-- [x] 兼容安全 Agent 对该哈希明确 PASS。
-- [x] 精简效率 Agent 对同一哈希明确 PASS。
+- [ ] 兼容安全 Agent 对该哈希明确 PASS（verdict 见 execution log/handoff）。
+- [ ] 精简效率 Agent 对同一哈希明确 PASS（verdict 见 execution log/handoff）。
 - [x] 所有成立 findings 已修订；目标变化后旧 PASS 失效并重跑。
 
 ## Batch 2：TDD 实现
@@ -66,8 +68,8 @@ related_doc:
 
 - [x] 实现者自审完成并提交一个逻辑 commit。
 - [x] task reviewer 给出 spec compliant + task quality approved。
-- [x] 完整 branch reviewer 给出 ready to merge。
-- [x] Critical/Important findings 全部修复并复审通过。
+- [ ] 完整 branch reviewer 给出 ready to merge（verdict 见 execution log/handoff）。
+- [ ] Critical/Important findings 全部修复并复审通过（verdict 见 execution log/handoff）。
 
 ### T33 PR、mainline 与关闭
 
