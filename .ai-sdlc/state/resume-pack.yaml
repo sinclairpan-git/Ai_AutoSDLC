@@ -10,9 +10,9 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/197-adapter-preflight-order/specs/197-adapter-preflight-order/tasks.md
   active_files: []
   context_summary: 'Goal: 关闭 PR #121 duplicate-init adapter 零副作用缺口并重新完成交付闭环 | State:
-    RED 4c7b35a3 与 GREEN 3940723e task reviews Approved；fresh full 3149 passed/3 skipped；ruff/constraints/diff
-    PASS；truth fresh且只含既有登记债务；evidence docs 已更新 | Next: 让兼容安全与精简效率两个 Agent 对完整 branch
-    同时 PASS；提交 evidence/continuity；推送并进入 PR heartbeat'
+    首轮 final 双评审均确认实现通过但证据包 FAIL；旧边界、runtime-only rollback 与 task 状态已修复；新三件套 hash
+    8e049df689d117c937b42f7b272046630550d3f14292ecb85d7888ee075170f4 待 exact re-review
+    | Next: 提交 final-review findings 修订；两个 Agent 对精确 HEAD/新哈希复审，任一 finding 继续修复'
 current_branch: feature/197-adapter-preflight-order
 docs_baseline_ref: f89e517683dbec737eb103852ed66ede42858f64
 docs_baseline_at: '2026-07-13T11:19:51-04:00'

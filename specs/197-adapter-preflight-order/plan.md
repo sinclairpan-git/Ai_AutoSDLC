@@ -130,6 +130,6 @@ git diff --check
 
 ## 7. 回退与完成判定
 
-- 本项通过单独 revert 实现提交回退，不修改 adapter proof 或 work item schema。
-- 文档、RED test 与执行证据可保留用于重新实现。
+- mainline 或已发布版本紧急回退时，必须 revert PR `#121` 的完整 merge/squash commit 或回退整个包含 WI-197 的版本，不得只撤 runtime 而保留必失败的 RED tests。
+- 若在未合并源码分支上手工回退，两个 GREEN 与各自 RED test 必须成对撤销：`3940723e` 对应 `4c7b35a3`，`c644884e` 对应 `b89203c4`；设计与执行证据可保留用于重新实现。
 - 只有 PR 合并、main 验证、program truth fresh 且 WI-196 GAP Evidence Index 指向本项证据后，T51 才关闭。

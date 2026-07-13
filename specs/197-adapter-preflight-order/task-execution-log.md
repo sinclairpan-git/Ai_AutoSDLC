@@ -2,17 +2,17 @@
 
 **功能编号**：`197-adapter-preflight-order`
 **创建日期**：2026-07-13
-**状态**：runtime implemented and task reviews approved；PR pending
+**状态**：remediation implemented and verified；final branch re-review pending
 
 ## 1. 固定合同
 
 - 父项：WI-196 `GAP-07 / T51`。
 - 基线：`origin/main@4dd0f1c9cdcc26a359dd0d724f365a3168d66fe8`。
-- 分支/worktree：`feature/197-adapter-preflight-order-docs` / `.worktrees/197-adapter-preflight-order`。
+- 分支/worktree：`feature/197-adapter-preflight-order` / `.worktrees/197-adapter-preflight-order`。
 - 实现前置：`spec.md + plan.md + tasks.md` 同哈希双 Agent PASS。
-- 允许产品文件：`src/ai_sdlc/cli/main.py`、`src/ai_sdlc/cli/workitem_cmd.py`。
-- 允许测试文件：`tests/integration/test_cli_workitem_init.py`、`tests/unit/test_cli_hooks.py`。
-- 回退 owner：framework maintainer；实现提交必须可独立 revert。
+- 允许产品文件：`src/ai_sdlc/cli/main.py`、`src/ai_sdlc/cli/workitem_cmd.py`、`src/ai_sdlc/core/workitem_scaffold.py`。
+- 唯一允许修改的测试文件：`tests/integration/test_cli_workitem_init.py`；`tests/unit/test_cli_hooks.py` 与 `tests/unit/test_workitem_scaffold.py` 只回归运行、不修改。
+- 回退 owner：framework maintainer；mainline/发布回退必须 revert 整个 PR/版本，分支源码回退必须成对撤销 GREEN 与对应 RED test。
 
 ## 2. Batch 2026-07-13-001：现状审计与未改代码基线
 
@@ -183,3 +183,11 @@
 - `uv run ai-sdlc verify constraints` → `no BLOCKERs`；`git diff --check` → PASS。
 - `uv run ai-sdlc program truth audit`：snapshot `fresh`；source inventory 仍为 `1013/1046 mapped`、`33 unmapped`、`11 missing`；blocker 仍且仅为 `frontend_inheritance:generation`、`frontend_inheritance:quality`、`adapter_canonical_consumption:unverified`，因此返回预期 exit 1。
 - full suite 与 truth audit 均触发现有 Cursor adapter 安装副作用；`.cursor/rules/ai-sdlc.mdc` 已用 `apply_patch` 恢复到测试前 SHA-256 `d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a`，无测试副作用进入提交。
+
+### 6.5 首轮 final whole-branch review findings
+
+- 兼容安全 Agent 判定 FAIL：日志顶部仍保留 remediation 前的 docs branch 与文件边界；实现本身和 focused `26 passed` 均通过。
+- 精简效率 Agent 判定 FAIL：runtime-only rollback 会留下必失败的 RED tests；同时指出旧边界与 task 状态不一致。实现的 DRY、范围、LOC 与回归均通过。
+- 已把固定合同更新为当前 feature branch、3 个产品文件、唯一可修改 integration test；两个 unit 仅回归运行。
+- 已把回退拆为完整 PR/版本回退与 GREEN+RED 成对源码回退，禁止 runtime-only rollback；canonical tasks 同步为当前已完成状态。三件套哈希因此失效，必须重新计算并双审。
+- 修订后的 `spec.md + plan.md + tasks.md` bytes 拼接 SHA-256 为 `8e049df689d117c937b42f7b272046630550d3f14292ecb85d7888ee075170f4`；旧哈希 `7627839c...` 失效。

@@ -2,7 +2,7 @@
 
 **状态**：PR review finding fixed，fresh verification passed，final branch reviews pending
 **父项**：WI-196 `GAP-07 / T51`
-**设计哈希**：`7627839c93ba3c227790a9df57b288baaef32a5368790e7d3746c2c2ad356633`
+**设计哈希**：`8e049df689d117c937b42f7b272046630550d3f14292ecb85d7888ee075170f4`
 
 ## 当前结论
 
@@ -13,7 +13,7 @@
 - 实现边界为 root → workitem group callback 委托；合法 `init` 在 duplicate-target validation 与 clean-tree preflight 后执行 adapter，脏树/重复目标/其他无效 `init` 零 adapter 写入，合法非 `init` 子命令仍在 handler 前执行一次。
 - GAP-10 只接受已冻结的 proof 持久化时序 expected delta，不修改 proof schema、校验或 blocker。
 - 产品代码累计 numstat 为 `main.py +5/-1`、`workitem_cmd.py +17/-0`、`workitem_scaffold.py +10/-12`，合计 `+32/-13 = net +19 LOC`；WI 测试累计 `+80/-5`；无新增产品文件、公共抽象、依赖或配置，最终 runtime/test diff 为 4 个授权文件。
-- 当前 `feature/197-adapter-preflight-order` 是 PR merge carrier；duplicate 错误文本与 `WorkitemScaffoldError`→exit 1 映射不变；adapter 非 special-case 异常与 strict-meta composition 异常继续传播，本变更未新增异常吞没或映射；runtime rollback 依次 revert `3940723e` 与 `c644884e`。
+- 当前 `feature/197-adapter-preflight-order` 是 PR merge carrier；duplicate 错误文本与 `WorkitemScaffoldError`→exit 1 映射不变；adapter 非 special-case 异常与 strict-meta composition 异常继续传播，本变更未新增异常吞没或映射。mainline/发布回退必须 revert 整个 PR/版本；未合并源码回退必须将 `3940723e`+`4c7b35a3`、`c644884e`+`b89203c4` 成对撤销，禁止只撤 runtime 留下必失败 RED tests。
 - remediation fresh verification：三个 focused 文件 `26 passed`；full suite `3149 passed, 3 skipped`；全量 ruff PASS，constraints 无 BLOCKER，diff-check PASS；truth audit snapshot fresh，inventory/blocker 集合未漂移。
 
 ## 未完成

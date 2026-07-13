@@ -1,31 +1,31 @@
 # Continuity Handoff
 
-- Updated: 2026-07-13T17:53:23+00:00
-- Reason: fresh full verification 完成，准备最终双对抗 branch review
+- Updated: 2026-07-13T17:59:49+00:00
+- Reason: final branch review 发现证据治理不一致，已优化后重新进入双审
 - Goal: 关闭 PR #121 duplicate-init adapter 零副作用缺口并重新完成交付闭环
-- State: RED 4c7b35a3 与 GREEN 3940723e task reviews Approved；fresh full 3149 passed/3 skipped；ruff/constraints/diff PASS；truth fresh且只含既有登记债务；evidence docs 已更新
+- State: 首轮 final 双评审均确认实现通过但证据包 FAIL；旧边界、runtime-only rollback 与 task 状态已修复；新三件套 hash 8e049df689d117c937b42f7b272046630550d3f14292ecb85d7888ee075170f4 待 exact re-review
 - Stage: execute
 - Work Item: 197-adapter-preflight-order
 - Branch: feature/197-adapter-preflight-order
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/197-adapter-preflight-order/codex-handoff.md
 - M specs/197-adapter-preflight-order/development-summary.md
+- M specs/197-adapter-preflight-order/plan.md
+- M specs/197-adapter-preflight-order/spec.md
 - M specs/197-adapter-preflight-order/task-execution-log.md
+- M specs/197-adapter-preflight-order/tasks.md
 
 ## Key Decisions
-- 最终产品 +32/-13 净增19，测试 +80/-5；无新文件/公共抽象/依赖；Cursor adapter 测试副作用已用 apply_patch 精确恢复
+- 回退必须是完整 PR/版本，或将每个 GREEN 与对应 RED test 成对撤销；固定合同为3产品文件+唯一integration修改，两个unit只回归
 
 ## Commands / Tests
-- focused 26 passed；full 3149 passed,3 skipped；ruff PASS；verify constraints no BLOCKERs；truth 1013/1046 mapped,33 unmapped,11 missing,既有3 blockers
+- 修订后 verify constraints no BLOCKERs；git diff --check PASS；fresh full 3149 passed/3 skipped 证据保持
 
 ## Blockers / Risks
-- 需完成 remediation 后双维度 final branch reviews；通过后提交 evidence、推送 PR、回复 inline、重请求 Codex review并等待新 checks
+- 新哈希与完整 branch 尚需兼容安全/精简效率两个 Agent 一致 PASS；随后才可推送
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 让兼容安全与精简效率两个 Agent 对完整 branch 同时 PASS；提交 evidence/continuity；推送并进入 PR heartbeat
+- 提交 final-review findings 修订；两个 Agent 对精确 HEAD/新哈希复审，任一 finding 继续修复
