@@ -1,7 +1,7 @@
 # 任务执行日志：AI-SDLC 精简代码治理与框架自身减重计划
 
-**功能编号**：`196-ai-sdlc-lean-code-self-reduction-governance`  
-**创建日期**：2026-07-12  
+**功能编号**：`196-ai-sdlc-lean-code-self-reduction-governance`
+**创建日期**：2026-07-12
 **状态**：进行中
 
 ## 1. 归档规则

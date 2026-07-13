@@ -1,8 +1,8 @@
 # 任务分解：AI-SDLC 精简代码治理与框架自身减重计划
 
-**编号**：`196-ai-sdlc-lean-code-self-reduction-governance`  
-**日期**：2026-07-12  
-**来源**：`spec.md` + `plan.md`  
+**编号**：`196-ai-sdlc-lean-code-self-reduction-governance`
+**日期**：2026-07-12
+**来源**：`spec.md` + `plan.md`
 **执行边界**：本工作项所有任务均为治理文档与真值同步，不修改产品运行时代码。
 
 ## 任务路径约束

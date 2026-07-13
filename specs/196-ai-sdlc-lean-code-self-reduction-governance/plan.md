@@ -1,8 +1,8 @@
 # 实施计划：AI-SDLC 精简代码治理与框架自身减重计划
 
-**编号**：`196-ai-sdlc-lean-code-self-reduction-governance`  
-**日期**：2026-07-12  
-**规格**：`specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md`  
+**编号**：`196-ai-sdlc-lean-code-self-reduction-governance`
+**日期**：2026-07-12
+**规格**：`specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md`
 **计划性质**：治理总项路线图；本分支不执行产品代码减重。
 
 ## 1. 总体方案
@@ -100,8 +100,8 @@ Work Item 196 治理总项
 - 状态迁移、dry-run 无写入和幂等重放测试。
 - 代表性兄弟项目 smoke 清单。
 
-**进入条件**：196 通过用户评审。  
-**完成条件**：同一 revision 重复采样零非语义漂移。  
+**进入条件**：196 通过用户评审。
+**完成条件**：同一 revision 重复采样零非语义漂移。
 **回退**：删除新增观测代码和 fixture，不影响产品路径。
 
 ### WP-02：Lean Code Gate report-only（L1/L2）
@@ -110,39 +110,39 @@ Work Item 196 治理总项
 
 **产物**：结构化报告、changed-code 分类、waiver schema、CLI/verify 接入的报告模式。
 
-**完成条件**：在本仓库稳定报告且无误把生成资产计入手写产品代码。  
+**完成条件**：在本仓库稳定报告且无误把生成资产计入手写产品代码。
 **回退**：关闭 gate profile 或移除 report-only 接入。
 
 ### WP-03：低风险 helper 与测试去重（L1）
 
 **目标**：处理完全相同 dedupe、路径、YAML/JSON helper，并参数化纯镜像测试。
 
-**限制**：不改变公共模型、异常文本和 artifact。  
-**验证**：定向测试、Golden diff、全量测试。  
+**限制**：不改变公共模型、异常文本和 artifact。
+**验证**：定向测试、Golden diff、全量测试。
 **回退**：按重复族逐 commit revert。
 
 ### WP-04：Loop Store 收敛（L2）
 
 **目标**：复用 loop ID、路径、pointer、JSON/Pydantic 读取等稳定公共逻辑。
 
-**限制**：不同 loop 的错误语义和 close 规则保持独立。  
-**验证**：旧/新 store 差异测试、恢复和损坏输入测试。  
+**限制**：不同 loop 的错误语义和 close 规则保持独立。
+**验证**：旧/新 store 差异测试、恢复和损坏输入测试。
 **回退**：保留原 store adapter，按 loop 逐个切回。
 
 ### WP-05：静态 baseline 配置化（L2）
 
 **目标**：将大段静态 Python baseline 迁移为版本化 YAML/JSON，并由 Pydantic 校验。
 
-**限制**：字段、顺序语义、默认值和 provider 行为不变。  
-**验证**：序列化快照、provider/frontend targeted tests。  
+**限制**：字段、顺序语义、默认值和 provider 行为不变。
+**验证**：序列化快照、provider/frontend targeted tests。
 **回退**：loader 回到原 Python builder。
 
 ### WP-06：ProgramService 分域（L3）
 
 **目标**：将 manifest、solution、delivery、browser、governance、archive 职责拆为内聚服务；`ProgramService` 暂保留 facade。
 
-**限制**：不删除 facade，不改变调用方。  
-**验证**：每移动一个领域运行 Golden diff、全量测试和依赖图比较。  
+**限制**：不删除 facade，不改变调用方。
+**验证**：每移动一个领域运行 Golden diff、全量测试和依赖图比较。
 **回退**：facade 重新指向原方法。
 
 ### WP-07：Program Stage Engine 双跑收敛（L3）
@@ -163,7 +163,7 @@ Work Item 196 治理总项
 
 **目标**：将 report-only 升级为 changed-code warning/blocking，并删除已稳定替换的旧实现。
 
-**进入条件**：相关新实现至少经过一个稳定发布周期，无未批准差异和兄弟项目回归。  
+**进入条件**：相关新实现至少经过一个稳定发布周期，无未批准差异和兄弟项目回归。
 **回退**：恢复兼容 adapter，并将门禁降级为 warning。
 
 ## 8. Lean Gate 渐进策略
