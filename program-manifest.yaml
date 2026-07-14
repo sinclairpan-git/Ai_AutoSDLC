@@ -2008,10 +2008,10 @@ specs:
   path: specs/201-source-inventory-convergence
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-14T15:52:23Z'
+  generated_at: '2026-07-14T16:40:59Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 2eb6c7fe
+  repo_revision: 4a154cca
   authoring_hash: 3498cd22981a058eb3700b51bf1698d02cce727022c7ca9b1ce7d672f4b508dd
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -2054,7 +2054,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 32135ebbd73775863f5b35265083ce6d9ff7725beca2ec61aaf2d0f5a1996835
+  snapshot_hash: b2fb9921085441b705e427941e08be54395f2dd6d68f22a26b62f8a0c269352a
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2072,8 +2072,8 @@ truth_snapshot:
     mapped_sources: 1066
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3562
-    deferred_signal_count: 6414
+    phase_signal_count: 3564
+    deferred_signal_count: 6416
     non_goal_signal_count: 363
     layer_totals:
       blueprint: 1
@@ -11185,8 +11185,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 201-source-inventory-convergence
-      phase_signal_count: 0
-      deferred_signal_count: 1
+      phase_signal_count: 1
+      deferred_signal_count: 2
       non_goal_signal_count: 0
     - path: specs/201-source-inventory-convergence/development-summary.md
       source_type: development_summary
@@ -11194,8 +11194,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 201-source-inventory-convergence
-      phase_signal_count: 0
-      deferred_signal_count: 0
+      phase_signal_count: 1
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
