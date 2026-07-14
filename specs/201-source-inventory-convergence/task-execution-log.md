@@ -105,3 +105,27 @@
 1. 提交 RED test/evidence。
 2. T22 逐项新增 33 个 `release_doc/release` registry entry。
 3. T23/T24 新增 11 个历史 summary 与 WI-201 summary，不先执行持久化 truth sync。
+
+## 4. Batch 2026-07-14-003 | T22-T24 最小 GREEN
+
+### 4.1 改动
+
+- `program-manifest.yaml.source_registry` 新增且仅新增 33 个三字段 release entry；release 文档正文未修改。
+- 新增 10 个已交付/带延后边界的追溯 summary、1 个 active WI-196 parent summary、1 个 WI-201 当前 summary。
+- 12 个 summary 各为 10～11 个非空正文行，低于 25 行预算；未新增模板、generator、helper、schema 或产品代码。
+
+### 4.2 GREEN 与 truth dry-run
+
+- targeted：`1 passed in 70.58s`。
+- `uv run ai-sdlc program validate`：PASS。
+- `uv run ai-sdlc program truth sync --dry-run`：exit 0，state=`ready`，snapshot hash=`00fbefc1e52d5511a15ebd2b8bab3afac9d071e8ebbc7c970c8a9dd836e26604`。
+- source：`1066/1066 mapped, unmapped=0, missing=0`；close=`202/202`；release=`42/42`。
+- capabilities：`frontend-mainline-delivery` 与 `agent-adapter-verified-host-ingress` 均为 `closed/ready`。
+- 持久化 sync：未执行。
+- Cursor：CLI 写入后已用 `apply_patch` 恢复，当前与 HEAD 零 diff。
+
+### 4.3 下一步
+
+1. 提交 T22-T24 实现与当前证据。
+2. 完成唯一一次 full pytest/Ruff、constraints、预算与 diff check。
+3. 更新全部仓库内证据并形成 evidence-freeze commit；随后只跑冻结后定向门禁。
