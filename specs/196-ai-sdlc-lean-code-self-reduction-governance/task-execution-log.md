@@ -360,3 +360,14 @@
 - GAP-07/T51 状态更新为 `closed`；权威实现/评审/回退证据位于 WI-197 execution log §6.3～6.7 与 PR `#121`。
 - GAP-08/T52 进入独立 WI-198：`specs/198-linked-wi-resume/`；docs branch `feature/198-linked-wi-resume-docs`，runtime branch 预留 `codex/198-linked-wi-resume`。
 - T51/T52 barrier 尚未关闭；只有 WI-198 独立 PR 合并并完成 mainline truth 后才允许进入 WP-01A。
+
+## 16. Batch 2026-07-13-015：GAP-08/T52 mainline 关闭与 GAP-09 启动
+
+- WI-198 PR `#122` 经 Codex review 修订、双 Agent 当前 HEAD 复审和 22 项 required checks 后 squash merge；merge commit 为 `68150d3f5ba128c0e4b44b11b13bc8ad60cc0d63`。
+- branch 与 `origin/main` tree hash 均为 `6acaf28f22c6c59c4e751b5900387fd4478e1389`；mainline-equivalent focused tests 为 `94 passed in 34.44s`。
+- mainline truth audit snapshot fresh；inventory 为 `1018/1051 mapped`、`33 unmapped`、`11 missing`，只保留 GAP-09～GAP-11 已登记 debt。
+- GAP-08/T52 状态更新为 `closed`；权威实现、双 Agent、Codex finding 修订与回退证据位于 WI-198 execution log §3～§8 和 PR `#122`。
+- T51/T52 barrier 已关闭。WP-01A 获得进入资格；统一路线当前选择先推进独立 WI-199 GAP-09/T53A，不把该选择解释为所有减重包的全局前置。
+- WI-199 工作树：`.worktrees/199-frontend-inheritance-truth`；canonical branch：`feature/199-frontend-inheritance-truth-docs`。CLI 拒绝非 canonical docs branch 后已切换到要求的 branch 并完成 formal init/link。
+- GAP-09 before truth：generation/quality handoff 均因 `frontend_solution_snapshot_missing` blocked；release capability 附加 `frontend_inheritance:generation` 与 `frontend_inheritance:quality`。
+- 根因初判：`frontend-mainline-delivery` 的 16 个 carrier 全部显式为 `framework_capability`，release gate 却要求框架仓库具备消费项目 solution snapshot。WI-199 将在双 Agent 同哈希设计 PASS 后以 fail-closed 分类修复，不运行 frontend solution execute。

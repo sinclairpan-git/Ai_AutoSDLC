@@ -1890,6 +1890,10 @@ specs:
 - id: 198-linked-wi-resume
   path: specs/198-linked-wi-resume
   depends_on: []
+- id: 199-frontend-inheritance-truth
+  path: specs/199-frontend-inheritance-truth
+  depends_on: []
+  frontend_evidence_class: framework_capability
 truth_snapshot:
   generated_at: '2026-07-14T01:06:03Z'
   generated_by: ai-sdlc program truth sync
