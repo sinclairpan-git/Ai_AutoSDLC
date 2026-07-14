@@ -371,3 +371,11 @@
 - WI-199 工作树：`.worktrees/199-frontend-inheritance-truth`；canonical branch：`feature/199-frontend-inheritance-truth-docs`。CLI 拒绝非 canonical docs branch 后已切换到要求的 branch 并完成 formal init/link。
 - GAP-09 before truth：generation/quality handoff 均因 `frontend_solution_snapshot_missing` blocked；release capability 附加 `frontend_inheritance:generation` 与 `frontend_inheritance:quality`。
 - 根因初判：`frontend-mainline-delivery` 的 16 个 carrier 全部显式为 `framework_capability`，release gate 却要求框架仓库具备消费项目 solution snapshot。WI-199 将在双 Agent 同哈希设计 PASS 后以 fail-closed 分类修复，不运行 frontend solution execute。
+
+## 17. Batch 2026-07-13-016：GAP-09/T53A branch truth-ready
+
+- WI-199 已完成实现与分层验证：定向/CLI status `399 passed`，全量 `3172 passed, 3 skipped`，Ruff、constraints、diff check PASS。
+- 产品净新增 52 LOC，测试 raw additions 160；未新增模块、公共 API、依赖、config 或 schema。
+- branch truth exact delta 仅移除 `frontend_inheritance:generation` 与 `frontend_inheritance:quality`；`frontend-mainline-delivery` 为 `audit=ready`，原始 handoff/status 仍保留 missing snapshot 的 blocked 诊断。
+- GAP-10 保留 `adapter_canonical_consumption:unverified`；GAP-11 保留 `33 unmapped / 11 missing`。WI-199 五件套使 mapped/source 总数同步增加 5，不属于债务清仓。
+- GAP-09 当前标记为 `branch truth-ready / PR-mainline pending`；只有 WI-199 PR 合并并在 `origin/main` 重跑证据后才更新为 closed。

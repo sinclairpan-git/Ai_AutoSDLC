@@ -34,6 +34,9 @@ tests/unit/test_program_service.py
 tests/unit/test_frontend_quality_platform.py
   public validator 的 `None` 负向禁止合同 + 既有 project validator 非回归
 
+tests/integration/test_cli_status.py
+  consumer generation/quality 非 inherited blocker 的 status JSON 精确集合
+
 specs/199-frontend-inheritance-truth/
   spec.md / plan.md / tasks.md / task-execution-log.md / development-summary.md
 ```
@@ -67,6 +70,7 @@ specs/199-frontend-inheritance-truth/
 - 新增 public quality validator 传 `None` 必须失败的负向用例，确保私有 helper 提取不产生运行时旁路。
 - 将现有 drift fixture 明确改成 `consumer_adoption`，并覆盖 unknown/not-inherited/blocked 都 release-blocked。
 - 新增缺失 ref、混合分类、canonical footer missing/empty/malformed、mirror conflict fail-closed 与 raw inheritance status 不变断言。
+- 更新既有 CLI status consumer fixture 的精确 blocker 集合，使其同时包含 quality `not_inherited`；不得改 fixture 为 framework waiver 来规避安全收紧。
 - 仅测试变更时运行定向命令，确认失败原因来自缺失 requirement 判定而非 fixture 错误。
 
 ### Phase 2：最小 GREEN
@@ -80,6 +84,7 @@ specs/199-frontend-inheritance-truth/
 ### Phase 3：验证、truth closure 与最终评审
 
 - 定向：`uv run pytest tests/unit/test_program_service.py tests/unit/test_frontend_quality_platform.py -q`；必要时加 blocker map integration test。
+- CLI status：`uv run pytest tests/integration/test_cli_status.py::test_status_json_blocks_frontend_inheritance_drift_in_truth_ledger -q`。
 - 全量：`uv run pytest -q`。
 - 静态：`uv run ruff check src tests`、`uv run ai-sdlc verify constraints`、`git diff --check`。
 - truth：在目标 commit 上执行 sync/audit，记录 snapshot 三元组、exact blocker delta、GAP-10/GAP-11 保留状态。

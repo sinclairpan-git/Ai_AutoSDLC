@@ -96,7 +96,7 @@
 
 - 风险等级：L2（发布真值语义修复，无外部运行时 API 变更）。
 - 产品 allowlist：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/frontend_quality_platform.py`；合计净新增不超过 55 LOC。
-- 测试 allowlist：`tests/unit/test_program_service.py`、`tests/unit/test_frontend_quality_platform.py`；后者只新增一个负向用例，断言 public validator 传 `None` 必须失败，用于锁死禁止合同而非支持 bypass。如 repo-level truth map 必须调整，可增加 `tests/integration/test_frontend_mainline_blocker_execution_map.py`；合计新增不超过 160 LOC。
+- 测试 allowlist：`tests/unit/test_program_service.py`、`tests/unit/test_frontend_quality_platform.py`；后者只新增一个负向用例，断言 public validator 传 `None` 必须失败，用于锁死禁止合同而非支持 bypass。允许在 `tests/integration/test_cli_status.py` 更新既有 status JSON 的 blocker 精确集合，以反映 consumer quality `not_inherited` 的冻结 fail-closed 收紧；如 repo-level truth map 必须调整，可增加 `tests/integration/test_frontend_mainline_blocker_execution_map.py`；全部测试文件合计新增不超过 160 LOC。
 - 禁止新增产品/测试文件；文档、manifest truth 与 handoff 不计产品 LOC，但必须可追踪。
 - 若需要 frontend solution execute、改 schema、改 handoff 语义、增加公共模块，或无法在预算内保持 consumer fail-closed，则停止并重新设计。
 - 回退：revert 整个 WI-199 closure（产品、测试、manifest snapshot 与本项/父项 closure 文档），将 WI-196 GAP-09 重新标为 open，再同步/audit truth；不依赖数据迁移、双写或 feature flag。

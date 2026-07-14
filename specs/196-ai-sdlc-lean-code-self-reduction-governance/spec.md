@@ -46,7 +46,7 @@
 | GAP-06 | 单一真值源候选 | `frontend_page_ui_schema.py`、`frontend_cross_provider_consistency.py`、`frontend_quality_platform.py`、`frontend_provider_expansion.py`、`frontend_provider_runtime_adapter.py`、`frontend_theme_token_governance.py` 的 6 个 `build_p*_baseline` builder | WP-05：对该有限候选集逐项 go/no-go；只有净减重合同成立才实施 | 条件性 |
 | GAP-07 | 工作流缺陷 | `cli/main.py` 在非只读命令前调用 adapter；adapter 写入与 `workitem init` clean-tree preflight 冲突 | T51：独立缺陷 WI，先写定向 characterization test | 基础前置 |
 | GAP-08 | 连续性缺陷 | `context/state.py::_build_resume_working_set_from_filesystem` 从历史 `checkpoint.feature.spec_dir` 派生，而 active WI 优先 `linked_wi_id` | T52：独立缺陷 WI，修复 linked WI 工作集派生 | 基础前置 |
-| GAP-09 | 关联治理债务 | `frontend-mainline-delivery` 被 `frontend_inheritance:generation/quality` 阻断 | T53A：独立 truth 修复 WI | 否；仅在证明影响目标 fixture 时阻断该切片 |
+| GAP-09 | 关联治理债务 | WI-199 分支 truth-ready：`frontend-mainline-delivery` 已移除 `frontend_inheritance:generation/quality` blocker，待 PR/mainline 关闭 | T53A：WI-199 独立 truth 修复 | 否；仅在证明影响目标 fixture 时阻断该切片 |
 | GAP-10 | 关联治理债务 | `agent-adapter-verified-host-ingress` 被 `adapter_canonical_consumption:unverified` 阻断 | T53B：独立 truth 修复 WI | 否；仅在证明影响目标 fixture 时阻断该切片 |
 | GAP-11 | 关联治理债务 | source inventory 为 1008/1041 mapped，33 unmapped、11 missing | T54：独立 inventory 修复 WI | 否；不得作为减重总前置 |
 

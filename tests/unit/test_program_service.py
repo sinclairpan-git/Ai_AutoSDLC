@@ -234,8 +234,7 @@ specs:
 
 
 def _write_frontend_framework_artifacts(
-    root: Path,
-    *,
+    root: Path, *,
     delivery_entry_id: str = "vue3-public-primevue",
     page_schema_ids: list[str] | None = None,
     quality_page_schema_id: str | None = None,
@@ -247,16 +246,15 @@ def _write_frontend_framework_artifacts(
             delivery_entry_id=delivery_entry_id,
             component_library_packages=["primevue", "@primeuix/themes"],
             provider_theme_adapter_id="public-primevue-theme-bridge",
-            page_schema_ids=page_schema_ids
-            or ["dashboard-workspace", "search-list-workspace", "wizard-workspace"],
+            page_schema_ids=page_schema_ids or ["dashboard-workspace", "search-list-workspace", "wizard-workspace"],
         ),
     )
+    materialize_frontend_page_ui_schema_artifacts(root, build_p2_frontend_page_ui_schema_baseline())
+    materialize_frontend_theme_token_governance_artifacts(root, governance=build_p2_frontend_theme_token_governance_baseline())
     platform = build_p2_frontend_quality_platform_baseline()
     if quality_page_schema_id is not None:
         matrix = list(platform.coverage_matrix)
-        matrix[0] = matrix[0].model_copy(
-            update={"page_schema_id": quality_page_schema_id}
-        )
+        matrix[0] = matrix[0].model_copy(update={"page_schema_id": quality_page_schema_id})
         platform = platform.model_copy(update={"coverage_matrix": matrix})
     materialize_frontend_quality_platform_artifacts(root, platform=platform)
 
@@ -2366,6 +2364,7 @@ def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
     (tmp_path / "src").mkdir(parents=True)
     (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
     _write_truth_ledger_manifest(tmp_path)
+    _write_frontend_framework_artifacts(tmp_path)
     payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
     payload["capability_closure_audit"] = {
         "reviewed_at": "2026-04-18T08:00:00Z",
@@ -2440,7 +2439,7 @@ def test_build_truth_ledger_surface_attaches_frontend_delivery_summary_when_cont
     spec_dir = tmp_path / "specs" / "082-frontend-example"
     spec_dir.mkdir(parents=True)
     (spec_dir / "spec.md").write_text(
-        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        "# Spec\n\n---\nfrontend_evidence_class: \"consumer_adoption\"\n---\n",
         encoding="utf-8",
     )
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
@@ -2451,7 +2450,7 @@ def test_build_truth_ledger_surface_attaches_frontend_delivery_summary_when_cont
     )
     (tmp_path / "src").mkdir(parents=True)
     (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
-    _write_truth_ledger_manifest(tmp_path)
+    _write_truth_ledger_manifest(tmp_path, frontend_evidence_class="consumer_adoption")
     _write_builtin_delivery_truth(
         tmp_path,
         snapshot=build_mvp_solution_snapshot(
@@ -3060,6 +3059,7 @@ def test_build_spec_truth_readiness_reuses_fresh_persisted_snapshot_for_unrelate
         encoding="utf-8",
     )
     _write_truth_ledger_manifest(tmp_path)
+    _write_frontend_framework_artifacts(tmp_path)
     payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
     payload["capability_closure_audit"] = {
         "reviewed_at": "2026-04-18T08:00:00Z",

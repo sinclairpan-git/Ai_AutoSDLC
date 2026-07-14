@@ -33,7 +33,7 @@ related_doc:
 ### T21 RED characterization
 
 - **依赖**：T13
-- **文件**：`tests/unit/test_program_service.py`、`tests/unit/test_frontend_quality_platform.py`；后者只新增 public validator 传 `None` 必须失败的负向禁止测试；只有 repo map 必须随 truth blocker 集合变化时才允许修改 `tests/integration/test_frontend_mainline_blocker_execution_map.py`。
+- **文件**：`tests/unit/test_program_service.py`、`tests/unit/test_frontend_quality_platform.py`；后者只新增 public validator 传 `None` 必须失败的负向禁止测试；允许 `tests/integration/test_cli_status.py` 仅更新既有 consumer status fixture 的 blocker 精确集合；只有 repo map 必须随 truth blocker 集合变化时才允许修改 `tests/integration/test_frontend_mainline_blocker_execution_map.py`。
 - **fixtures**：framework-only 健康 artifacts 无 snapshot；generation/quality missing/malformed/cross-ref 损坏与 truth path/reason guidance；schema-valid generation page/provider/packages semantic drift、delivery entry empty；consumer unknown/not-inherited/blocked；missing ref、mixed class、canonical footer missing/empty/malformed、mirror conflict；public quality validator `None` 禁止；raw handoff status。
 - **完成**：旧实现因缺 requirement/health 判定、consumer 非 inherited 映射不足或 validator 不接受 framework context 而失败；失败均来自冻结合同而非 fixture 错误。
 - **验证**：`uv run pytest tests/unit/test_program_service.py tests/unit/test_frontend_quality_platform.py -q`，并记录目标失败集合。
@@ -52,11 +52,12 @@ related_doc:
 - **依赖**：T22
 - **命令**：
   1. `uv run pytest tests/unit/test_program_service.py tests/unit/test_frontend_quality_platform.py -q`
-  2. `uv run pytest tests/integration/test_frontend_mainline_blocker_execution_map.py -q`（如受影响）
-  3. `uv run pytest -q`
-  4. `uv run ruff check src tests`
-  5. `uv run ai-sdlc verify constraints`
-  6. `git diff --check`
+  2. `uv run pytest tests/integration/test_cli_status.py::test_status_json_blocks_frontend_inheritance_drift_in_truth_ledger -q`
+  3. `uv run pytest tests/integration/test_frontend_mainline_blocker_execution_map.py -q`（如受影响）
+  4. `uv run pytest -q`
+  5. `uv run ruff check src tests`
+  6. `uv run ai-sdlc verify constraints`
+  7. `git diff --check`
 - **完成**：全部通过；Cursor adapter 等非授权副作用已核对并精确恢复。
 
 ### T32 Truth closure 与父项同步

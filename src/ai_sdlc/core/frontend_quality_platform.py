@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from ai_sdlc.models.frontend_page_ui_schema import FrontendPageUiSchemaSet
 from ai_sdlc.models.frontend_quality_platform import FrontendQualityPlatformSet
@@ -53,14 +53,13 @@ class FrontendQualityPlatformValidationResult:
         )
 
 
-def validate_frontend_quality_platform(
+def _validate_frontend_quality_platform_internal(
     platform: FrontendQualityPlatformSet,
     *,
     page_ui_schema: FrontendPageUiSchemaSet,
     theme_governance: FrontendThemeTokenGovernanceSet,
-    solution_snapshot: FrontendSolutionSnapshot,
 ) -> FrontendQualityPlatformValidationResult:
-    """Validate Track C quality truth against 147 and 148 upstream inputs."""
+    """Validate Track C internal coherence against 147 and 148 inputs."""
 
     blockers: list[str] = []
     warnings: list[str] = []
@@ -93,12 +92,6 @@ def validate_frontend_quality_platform(
         if verdict.gate_state == "advisory":
             warnings.append(f"advisory quality verdict: {verdict.verdict_id}")
 
-    if solution_snapshot.effective_style_pack_id not in known_style_pack_ids:
-        blockers.append(
-            "effective style pack outside theme governance: "
-            f"{solution_snapshot.effective_style_pack_id}"
-        )
-
     return FrontendQualityPlatformValidationResult(
         passed=not blockers,
         blockers=_dedupe_text_items(blockers),
@@ -119,6 +112,22 @@ def validate_frontend_quality_platform(
             )
         ),
     )
+
+
+def validate_frontend_quality_platform(
+    platform: FrontendQualityPlatformSet,
+    *,
+    page_ui_schema: FrontendPageUiSchemaSet,
+    theme_governance: FrontendThemeTokenGovernanceSet,
+    solution_snapshot: FrontendSolutionSnapshot,
+) -> FrontendQualityPlatformValidationResult:
+    """Validate Track C quality truth against project solution truth."""
+
+    result = _validate_frontend_quality_platform_internal(platform, page_ui_schema=page_ui_schema, theme_governance=theme_governance)
+    if solution_snapshot.effective_style_pack_id in set(theme_governance.style_pack_ids):
+        return result
+    blocker = f"effective style pack outside theme governance: {solution_snapshot.effective_style_pack_id}"
+    return replace(result, passed=False, blockers=[*result.blockers, blocker])
 
 
 __all__ = [
