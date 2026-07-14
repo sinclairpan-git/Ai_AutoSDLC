@@ -2,7 +2,7 @@
 
 **功能编号**：`198-linked-wi-resume`
 **创建日期**：2026-07-13
-**状态**：GREEN 与完整回归通过，待 final branch 双 Agent 评审
+**状态**：final branch 双 Agent 一致 PASS，待 PR
 
 ## 1. 固定合同
 
@@ -133,3 +133,12 @@
 - 预算复核：产品 `+19/-3`（净 +16，≤20）；三个获准测试文件合计 `+140/-1`（新增 140，≤140）；其余产品/测试文件无 diff。
 - CC-03/04/06/07 after artifact 的 approved delta 仅为三件套从 `specs/197-adapter-preflight-order/` 切到 `specs/198-linked-wi-resume/`，以及 linked WI 无 runtime branch 时从历史 feature branch 切为空；`timestamp` 由完整测试的 rebuild 更新，显式 context summary 由最终 handoff 刷新，二者不纳入语义漂移。
 - 完整测试按预期刷新 root resume pack，并改写非本工作项的 Cursor adapter；adapter 已用 `apply_patch` 精确恢复，resume pack 由最终 continuity handoff 补齐 summary 后作为 after evidence 保存。
+
+## 7. Batch 2026-07-13-004：T32 final branch 双 Agent 评审
+
+- 固定 review HEAD：`dd6fd99dffc1fed4f3ab033a5dc8eb4afb572f51`；工作树在启动评审时 clean。
+- 兼容安全 Agent：`PASS / Spec compliant: Yes / 未发现可操作问题`；复跑三个直接相关测试文件为 `38 passed in 1.50s`，确认 root/scoped resume pack 与 handoff 分别字节相等，三件套均指向 WI-198 且 branch 为空。
+- 精简效率 Agent：`PASS / Lean compliant: Yes / 未发现可操作问题`；确认产品净增 16 LOC、测试新增 140 LOC，expected pack 最多构建一次并复用既有 stale rebuild，无第二真值源、公共抽象、依赖、配置或 schema。
+- 两个 Agent 复算设计三件套拼接 SHA-256 均为 `8ac337e615eb0f1f6bc626515a9be72fec1acb379ab01994611be4cbe0cd5118`，与 admission 冻结哈希一致。
+- safety 复跑测试再次触发 `.cursor/rules/ai-sdlc.mdc` 已知副作用；该未提交差异已由主 Agent 用 `apply_patch` 精确恢复，未进入 review HEAD 或证据提交。
+- 一致结论：同一 HEAD 双 PASS，T32 admission gate 关闭；本段与 development summary 作为 evidence-only 提交后，再由原两名 Agent 对新 HEAD 做快速同提交复核，确保 PR HEAD 无评审歧义。
