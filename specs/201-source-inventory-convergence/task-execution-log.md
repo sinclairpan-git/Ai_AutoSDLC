@@ -129,3 +129,30 @@
 1. 提交 T22-T24 实现与当前证据。
 2. 完成唯一一次 full pytest/Ruff、constraints、预算与 diff check。
 3. 更新全部仓库内证据并形成 evidence-freeze commit；随后只跑冻结后定向门禁。
+
+## 5. Batch 2026-07-14-004 | T31 pre-sync evidence freeze
+
+### 5.1 验证结果
+
+- targeted：`1 passed in 70.58s`。
+- full（本候选唯一一次）：`3186 passed, 3 skipped in 505.79s`。
+- `uv run ruff check src tests`：PASS，`All checks passed!`。
+- `uv run ai-sdlc program validate`：PASS。
+- `uv run ai-sdlc verify constraints`：PASS，`no BLOCKERs`。
+- truth dry-run：ready，source=`1066/1066/0/0`，close=`202/202`，release=`42/42`，两个 capability=`closed/ready`。
+- `git diff --check`：PASS；Cursor 副作用已用 `apply_patch` 恢复，零 diff。
+
+### 5.2 预算与范围
+
+- `src/**` 相对冻结基线：0 个文件、0 LOC；公共抽象/schema：0。
+- `program-manifest.yaml`：registry payload 恰好 33 entries/99 行；另有 workitem init 的 3 行 WI-201 spec entry。
+- 测试：只改 1 个现有文件，`+22/-0`，其中新增 assertion statement=6；无 fixture/helper。
+- summary：11 个历史 + 1 个当前；10 个为 10 个非空正文行，1 个为 11 行，1 个为 12 行，均低于 25 行预算。
+- release 正文、历史 spec/plan/tasks/log/status、WP-01～WP-07：零修改。
+- 持久化 truth sync：仍未执行。
+
+### 5.3 Evidence-freeze 规则
+
+1. 本节、development summary 和 handoff 写入后形成 evidence-freeze commit。
+2. clean HEAD 只复跑 targeted、validate、constraints、truth dry-run、预算、diff/Cursor；不重复 full/Ruff。
+3. 全部通过后执行唯一 execute sync 并提交 snapshot-only finalization；此后分支零写入。
