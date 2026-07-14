@@ -165,3 +165,21 @@
 - 任务/计划同步状态：T21～T32 已按真实证据完成；T33/T34 保持未勾选，等待本地终审、GitHub Codex/CI、PR merge 与 mainline smoke。
 - **已完成 git 提交**：是（实现提交 A/B 已独立完成；本批 evidence/truth 随后固化）
 - **提交哈希**：`f384f20f`（Commit B；Commit A 为 `68ff711e`）
+
+## 15. Batch 2026-07-14-014：clean-HEAD 双审 findings
+
+- 审查目标：`4d96459003ef9f14a8055f0c760f701993703971`；两个 agent 均独立读取同一 clean HEAD，并返回 FAIL。
+- 安全 finding 成立：`adapter status --json` 未获准新增 `adapter_canonical_consumption_detail`，且为该字段二次调用 evaluation 会产生非原子状态；最小修复为删除新增字段与第二次 evaluation，以既有 result/evidence/consumed_at 表达边界。
+- 精简 findings 成立：T31/T32 勾选后 formal 三件套当前 hash 已变化，旧 `edd7d503...` verdict 失效；三个测试名仍描述旧行为；两份 handoff 在 evidence commit 后仍写 pending。
+- 处置：不新增 schema/抽象/路径；删除 2 行产品字段暴露，测试改为明确断言字段不存在并重命名，同步 continuity；验证、truth sync 与证据提交后重新执行同 HEAD 双审。
+- formal 三件套按冻结算法独立复算为 `d37fe1c548323ced601d4583ea81129cb2ffbcb3cdec63e5303e30978970bed7`；该 hash 在复审前不再变更。
+
+## 16. Batch 2026-07-14-015：review remediation GREEN
+
+- 已删除治理 surface 的新增 detail 字段和第二次 canonical evaluation；既有 JSON 字段集合恢复不变，runtime 仍由 `unverified`、transport evidence、空 consumed_at 表达可信度边界。
+- 三个反向命名测试已改为当前语义；CLI 测试明确断言 `adapter_canonical_consumption_detail` 不存在；未新增 schema、抽象或执行分支。
+- targeted：`9 passed, 452 deselected`；adapter unit+CLI：`55 passed`；全量：`3186 passed, 3 skipped in 426.60s`；相关 Ruff 与 `git diff --check`：PASS。
+- 最终预算：产品 `+4/-74`，净 `-70 LOC`；测试 `+30/-38`，净 `-8 LOC`；2 product files、4 test files、0 public abstractions/fixtures/schema。
+- formal target 独立复算仍为 `d37fe1c548323ced601d4583ea81129cb2ffbcb3cdec63e5303e30978970bed7`；旧 clean-HEAD verdicts 保持失效，等待修复提交后的同 HEAD 双审。
+- **已完成 git 提交**：是（截至本批已有 evidence commit `4d964590`；本轮 focused repair 待固化）
+- **提交哈希**：`4d96459003ef9f14a8055f0c760f701993703971`

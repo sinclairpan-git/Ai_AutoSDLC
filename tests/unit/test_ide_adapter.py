@@ -338,7 +338,7 @@ class TestEnsureIdeAdaptation:
         assert cfg.adapter_verification_evidence == "env:OPENAI_CODEX"
         assert cfg.adapter_canonical_consumption_result == "unverified"
 
-    def test_explicit_target_records_verified_canonical_consumption_when_digest_matches(
+    def test_digest_match_keeps_canonical_consumption_unverified(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("OPENAI_CODEX", "1")
@@ -353,13 +353,8 @@ class TestEnsureIdeAdaptation:
 
         cfg = load_project_config(tmp_path)
         assert cfg.adapter_canonical_consumption_result == "unverified"
-        assert (
-            cfg.adapter_canonical_consumption_evidence
-            == "transport:env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
-        )
+        assert cfg.adapter_canonical_consumption_evidence == "transport:env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
         assert cfg.adapter_canonical_consumed_at == ""
-        surface = build_adapter_governance_surface(tmp_path, detected_ide=IDEKind.CODEX)
-        assert surface["adapter_canonical_consumption_detail"] == "Canonical adapter digest transport matched the current file; this does not prove that the host or current session consumed the canonical content."
         save_project_config(tmp_path, cfg.model_copy(update={"adapter_canonical_consumption_result": "verified"}))
         monkeypatch.delenv("AI_SDLC_ADAPTER_CANONICAL_SHA256")
         monkeypatch.delenv("AI_SDLC_ADAPTER_CANONICAL_PATH")

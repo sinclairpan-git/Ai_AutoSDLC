@@ -715,7 +715,6 @@ def build_adapter_governance_surface(
     support_tier = cfg.adapter_support_tier or _default_support_tier(activation_state)
     env = environ or dict(os.environ)
     ingress = _ingress_metadata(root, cfg, target=target, environ=env)
-    canonical_detail = _evaluate_canonical_consumption(root, cfg, target=target, environ=env).detail
     ingress_state = ingress["adapter_ingress_state"]
 
     if ingress_state == AdapterIngressState.VERIFIED_LOADED.value:
@@ -784,7 +783,6 @@ def build_adapter_governance_surface(
         "adapter_activation_evidence": cfg.adapter_activation_evidence,
         "adapter_activated_at": cfg.adapter_activated_at,
         **ingress,
-        "adapter_canonical_consumption_detail": canonical_detail,
         "governance_activation_state": governance_state,
         "governance_activation_verifiable": verifiable,
         "governance_activation_mode": governance_mode,

@@ -282,7 +282,7 @@ class TestCliAdapter:
         assert payload["governance_activation_verifiable"] is True
         assert payload["governance_activation_mode"] == "verified_loaded"
 
-    def test_adapter_status_json_reports_verified_canonical_consumption_when_digest_matches(
+    def test_status_keeps_canonical_consumption_unverified_on_digest_match(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setenv("OPENAI_CODEX", "1")
@@ -393,7 +393,7 @@ class TestCliAdapter:
             == "transport:env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
         )
         assert payload["adapter_canonical_consumed_at"] == ""
-        assert payload["adapter_canonical_consumption_detail"] == "Canonical adapter digest transport matched the current file; this does not prove that the host or current session consumed the canonical content."
+        assert "adapter_canonical_consumption_detail" not in payload
 
         after = runner.invoke(app, ["adapter", "status", "--json"])
         assert after.exit_code == 0

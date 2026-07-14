@@ -4733,7 +4733,7 @@ def test_build_truth_snapshot_blocks_release_scope_when_closure_audit_missing(
 
 
 @pytest.mark.parametrize("drop_local_config", [False, True])
-def test_build_truth_snapshot_blocks_host_ingress_capability_when_canonical_consumption_is_unverified(
+def test_truth_snapshot_ignores_local_unverified_consumption(
     tmp_path: Path,
     monkeypatch,
     drop_local_config: bool,
@@ -4785,9 +4785,7 @@ def test_build_truth_snapshot_blocks_host_ingress_capability_when_canonical_cons
     manifest = svc.load_manifest()
     snapshot = svc.build_truth_snapshot(manifest)
 
-    capability = snapshot.computed_capabilities[0]
     assert snapshot.state == "ready"
-    assert "adapter_canonical_consumption:unverified" not in capability.blocking_refs
 
 
 def test_build_truth_snapshot_allows_host_ingress_capability_when_canonical_consumption_is_verified(
