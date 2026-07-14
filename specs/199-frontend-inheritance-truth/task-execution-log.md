@@ -91,3 +91,16 @@
 - 该字节变化使 Round 5 hash 失效；新 target hash 为 `2fe77e6464824383ecff9c91d1cf98ad3b23be5a461187dcd2363b4910e37067`。
 - 兼容安全 Agent 与精简效率 Agent 均独立复算新 hash 并给出 `PASS`、未发现可操作问题；确认仅 whitespace 变化，全部设计合同、预算和回退语义不变。
 - Round 6 为当前有效 admission 记录；后续三件套不得变化。
+
+## 9. Batch 2026-07-13-009：T21 RED characterization
+
+- docs baseline commit：`b9543cc4`；runtime branch：`codex/199-frontend-inheritance-truth`。
+- 仅修改两个获准测试文件，无产品代码；相对 baseline 为 `+160/-42`，新增 160 LOC，等于冻结上限。
+- RED 命令：`uv run pytest tests/unit/test_program_service.py tests/unit/test_frontend_quality_platform.py -q`。
+- RED 结果：`16 failed, 382 passed in 31.73s`。
+- 十六个失败精确覆盖：1 个 framework healthy waiver、3 个 generation/quality semantic artifact blocker/path/reason、6 个 canonical/mirror/ref/mixed 分类边界、6 个 consumer `generation/quality × unknown/not_inherited/blocked` release 映射。
+- public quality validator 的 `None` 负向禁止用例在旧实现即通过，作为未来私有 helper 重构的非回归保护，不伪造 RED。
+- fixture 隔离修订：semantic artifact 用例 mock 现有 truth/close/verify refs，防止无关 closure/truth debt 混入目标失败；复跑后失败集合与数量稳定。
+- 独立兼容安全 RED reviewer 复核当前补丁并给出 `PASS`、未发现可操作问题；确认上轮提出的 consumer quality 维度、mirror/ref/mixed 边界、path+reason 与空 delivery entry 覆盖全部关闭，且 16 个失败均非 fixture/test API 错误。
+- `uv run ruff check tests/unit/test_program_service.py tests/unit/test_frontend_quality_platform.py`：PASS；`git diff --check`：PASS。
+- 下一步：提交已通过独立复审的 RED 测试基线，再实现 ≤55 net LOC 的最小 GREEN。

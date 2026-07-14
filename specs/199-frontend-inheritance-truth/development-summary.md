@@ -1,6 +1,6 @@
 # Development Summary：WI-199 Frontend Inheritance Truth Closure
 
-**状态**：design dual review passed，RED pending
+**状态**：RED reproduced，GREEN pending
 **父项**：WI-196 `GAP-09 / T53A`
 
 ## 当前结论
@@ -14,6 +14,6 @@
 
 ## 下一步
 
-1. 从 docs baseline 创建 runtime branch，严格 RED → 最小 GREEN。
-2. 执行分层验证和 truth exact-delta 审计。
+1. 提交已由兼容安全 Agent PASS 的 `16 failed / 382 passed` RED 测试基线。
+2. 实现最小 GREEN，执行分层验证和 truth exact-delta 审计。
 3. 最终同 HEAD 双 PASS 后进入 PR/Codex/heartbeat/mainline closure。

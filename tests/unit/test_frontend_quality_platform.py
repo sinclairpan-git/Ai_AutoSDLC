@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from ai_sdlc.core.frontend_quality_platform import (
     FrontendQualityPlatformValidationResult,
     validate_frontend_quality_platform,
@@ -49,6 +51,16 @@ def test_validate_frontend_quality_platform_passes_for_builtin_baseline() -> Non
     assert result.blockers == []
     assert result.matrix_coverage_count == 3
     assert result.page_schema_ids == ["dashboard-workspace", "search-list-workspace"]
+
+
+def test_validate_frontend_quality_platform_rejects_missing_project_snapshot() -> None:
+    with pytest.raises((AttributeError, TypeError)):
+        validate_frontend_quality_platform(
+            build_p2_frontend_quality_platform_baseline(),
+            page_ui_schema=build_p2_frontend_page_ui_schema_baseline(),
+            theme_governance=build_p2_frontend_theme_token_governance_baseline(),
+            solution_snapshot=None,  # type: ignore[arg-type]
+        )
 
 
 def test_validate_frontend_quality_platform_blocks_unknown_page_schema_and_theme_pack() -> None:
