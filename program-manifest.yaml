@@ -1905,6 +1905,9 @@ specs:
   - runtime_carrier
   capability_refs:
   - agent-adapter-verified-host-ingress
+- id: 201-source-inventory-convergence
+  path: specs/201-source-inventory-convergence
+  depends_on: []
 truth_snapshot:
   generated_at: '2026-07-14T13:34:11Z'
   generated_by: ai-sdlc program truth sync
