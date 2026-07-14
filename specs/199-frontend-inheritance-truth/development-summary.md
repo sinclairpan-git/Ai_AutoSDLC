@@ -16,7 +16,7 @@
 - PR Codex review 发现 generation 子制品可 schema-valid weakening；当前补丁已让 `execution_order`、`recipe`、`whitelist`、`hard_rules`、`token_rules`、`exceptions` 与 provider-context builder baseline 精确对账，并修复 canonical `#1770e6` YAML 截断。
 - 当前 P2 修订定向结果：`412 passed`；提交 `b130a86c` 全量 `3185 passed, 3 skipped in 417.02s`；全仓 Ruff、constraints、program validate 与 `git diff --check` PASS。
 - 预算结果：产品净新增 150 LOC ≤151；三个测试文件 raw additions 合计 289 ≤290；各留 1 LOC，正常多行格式，无伪 snapshot、公共 API、新模块、依赖、config 或 schema。
-- truth snapshot `67460b64...` 已 fresh：`frontend-mainline-delivery` 保持 `closure=closed`、`audit=ready`；GAP-10 的 `adapter_canonical_consumption:unverified`、33 unmapped 与 11 missing source 原样保留。
+- truth snapshot `91cc3bba...` 已 fresh：`frontend-mainline-delivery` 保持 `closure=closed`、`audit=ready`；GAP-10 的 `adapter_canonical_consumption:unverified`、33 unmapped 与 11 missing source 原样保留。
 
 ## 下一步
 
