@@ -3448,6 +3448,22 @@ class ProgramService:
         issues: dict[str, str] = {}
         try:
             constraints = load_frontend_generation_constraint_artifacts(self.root)
+            baseline = build_mvp_frontend_generation_constraints(
+                effective_provider_id=constraints.effective_provider_id
+            )
+            for artifact_name, field_name in (
+                ("generation.manifest.yaml", "execution_order"),
+                ("recipe.yaml", "recipe"),
+                ("whitelist.yaml", "whitelist"),
+                ("hard-rules.yaml", "hard_rules"),
+                ("token-rules.yaml", "token_rules"),
+                ("exceptions.yaml", "exceptions"),
+            ):
+                if getattr(constraints, field_name) != getattr(baseline, field_name):
+                    raise ValueError(
+                        f"governance/frontend/generation/{artifact_name} "
+                        "differs from provider baseline"
+                    )
             pages = load_frontend_page_ui_schema_artifacts(self.root)
             page_ids = [item.page_schema_id for item in pages.page_schemas]
             provider_path = (

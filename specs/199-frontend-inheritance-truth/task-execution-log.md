@@ -166,3 +166,16 @@
 - retained inventory：`1023/1056 mapped`、`33 unmapped`、`11 missing`；audit exit 1 来自父计划明确保留的 GAP-10/GAP-11，不是 WI-199 回归。
 - 全量/CLI 再次改写 `.cursor/rules/ai-sdlc.mdc`；最终提交前必须用精确逆补丁恢复并确认零 diff。
 - 下一步：提交最终证据并重跑 truth sync/audit，恢复 Cursor side effect，形成 clean HEAD 后执行最终同 HEAD 双 Agent 终审。
+
+## 16. Batch 2026-07-13-016：PR #123 Codex P2 remediation
+
+- 首轮 clean HEAD `7ba1a88b` 经两个本地对抗 Agent 双 PASS 后推送并创建 PR #123；21 个跨平台、兼容、离线与 verify checks 启动，`@codex review` 提交 review comment `discussion_r3576229360`。
+- Codex P2 成立：schema-valid 的 `hard-rules.yaml`、`whitelist.yaml`、`recipe.yaml` 可被弱化而 loader/health 仍返回健康。两个本地 Agent 独立复现；安全侧进一步证明同根问题覆盖 `token-rules.yaml`、`exceptions.yaml` 与 `execution_order`。
+- 方案收敛：只在私有 framework health 中用现有 provider-context generation builder baseline 精确对账六个治理面；不改公共 loader/model/API，不新增 validator/模块/第二真值源。canonical `hard-rules.yaml` 中未引用的 `#1770e6` 被 YAML 当注释截断，获准以 folded scalar 恢复 builder baseline 原文。
+- 设计 admission hash `61bfe44d60b41be4b139406bc360ffd6120458813b671d205fb6685d7738e373` 经兼容安全与精简效率 Agent 同 hash 双 PASS 后进入 RED。
+- RED：只新增六个 schema-valid weakening case，每个删除一个有效条目；结果 `6 failed, 9 passed`，精确证明旧 health 漏检。
+- GREEN：六类 artifact 逐字段 baseline 对账；artifact case `15 passed`，完整定向 `412 passed in 31.25s`；当前仓库 `_frontend_framework_artifact_issues()` 返回 `{}`；Ruff 与 `git diff --check` PASS。
+- 首轮补丁复审安全 Agent `FAIL`：weakening reason 只含 artifact basename，固定 generation manifest 前缀不能满足完整 canonical path 合同。修订为 reason 公开完整 `governance/frontend/generation/<artifact>`，corruption helper 返回同一路径供六类 case 精确断言；复跑 `412 passed in 31.21s`。
+- 最终设计 hash：`772a92b3ec7009ee9e550779edd6e028dbb799d6cf22e9e3ad02366e32476599`。预算实测产品净新增 150 LOC ≤151；测试 raw additions 289 ≤290；各留 1 LOC，正常多行格式。
+- 最终同 hash/实际补丁复审：兼容安全 Agent 与精简效率 Agent 均 `PASS，未发现可操作问题`；确认 fail-closed、完整 canonical guidance、六字段 baseline 对账与 150/289 精简预算同时成立，无新公共 API、模块或第二真值源。
+- 下一步：更新 continuity 并提交；重跑 full/constraints/validate/truth，再推送并重新请求 Codex review。

@@ -51,7 +51,7 @@ specs/199-frontend-inheritance-truth/
 | Fail closed | 只有 frontend-mainline 的 footer/mirror 全量肯定且 schema/semantic artifacts 健康时放行；consumer 非 inherited 状态全部阻断 |
 | 用户前端确认 | 本项不选择前端方案、不 execute solution-confirm、不生成前端实现 |
 | 兼容优先 | 原始 handoff/status 与 consumer blocker 合同冻结，先 RED 后 GREEN |
-| 精简治理 | 两个既有产品文件内窄改动，135/270 LOC 上限（合规实测产品 134、测试 268，分别留 1/2 LOC 余量），正常多行格式，无伪 snapshot、新模块/依赖/config/schema |
+| 精简治理 | 两个既有产品文件内窄改动，151/290 LOC 上限（PR P2 后实测 150/289，各留 1 LOC）；正常多行格式，无伪 snapshot、新模块/依赖/config/schema |
 | 可回退 | 整个 WI closure revert、父项 reopen、truth resync；无迁移和不可逆副作用 |
 
 ## 4. 阶段计划
@@ -66,7 +66,7 @@ specs/199-frontend-inheritance-truth/
 ### Phase 1：TDD RED
 
 - 新增 framework-only 无 snapshot 且 artifacts 健康 fixture，期待 release audit 不含两个 inheritance blockers 且公开 waiver。
-- 新增 generation/quality canonical manifest missing/malformed/cross-ref 损坏 fixture，并覆盖 canonical provider manifest missing、declared install strategy missing、schema-valid generation page/provider/packages semantic drift 及 delivery entry empty，期待专用 framework artifact blocker 与含 path/reason 的 truth guidance。
+- 新增 generation/quality canonical manifest missing/malformed/cross-ref 损坏 fixture，并覆盖 canonical provider manifest missing、declared install strategy missing、schema-valid generation page/provider/packages semantic drift及 delivery entry empty；为 `execution_order`、`recipe`、`whitelist`、`hard_rules`、`token_rules`、`exceptions` 各加入一个 schema-valid weakening case，期待专用 framework artifact blocker 与含 path/reason 的 truth guidance。
 - 新增 public quality validator 传 `None` 必须失败的负向用例，确保私有 helper 提取不产生运行时旁路。
 - 将现有 drift fixture 明确改成 `consumer_adoption`，并覆盖 unknown/not-inherited/blocked 都 release-blocked。
 - 新增缺失 ref、混合分类、canonical footer missing/empty/malformed、mirror conflict fail-closed 与 raw inheritance status 不变断言；增加 framework waiver 下非 inheritance readiness/remediation 仍可见的回归测试。
@@ -75,7 +75,7 @@ specs/199-frontend-inheritance-truth/
 
 ### Phase 2：最小 GREEN
 
-- 在 `ProgramService` 增加一个仅限 frontend-mainline、直接读取 footer+mirror 的私有全称判定 helper，以及一个复用既有 loaders/validator/provider/install strategy 的 framework artifact health helper；provider/strategy loader 前必须先验证 canonical 文件存在，禁止 builtin fallback 掩盖缺失。
+- 在 `ProgramService` 增加一个仅限 frontend-mainline、直接读取 footer+mirror 的私有全称判定 helper，以及一个复用既有 loaders/validator/provider/install strategy 的 framework artifact health helper；provider/strategy loader 前必须先验证 canonical 文件存在，禁止 builtin fallback 掩盖缺失。generation 子制品复用现有 provider-context builder baseline 做局部字段循环精确对账，不新增公共 validator 或第二真值源。
 - `frontend_quality_platform.py` 从现有 public validator 提取私有 internal-coherence helper；public signature 与 snapshot 强制条件不变。
 - release blocker、guidance 与 surface 使用同一 requirement；禁止复制三套分类逻辑。consumer 状态只有 `inherited` 放行；framework waiver 先保留既有 per-spec remediation 汇总，再仅跳过 inheritance status 消息。
 - waiver 只跳过不适用的项目实例 inheritance gate，不跳过 framework artifact health 或其他 required evidence。
@@ -105,7 +105,7 @@ specs/199-frontend-inheritance-truth/
 | fail-closed classification | ref/footer missing、footer malformed、mixed、mirror conflict | 获得 waiver 或 surface 同时显示错误 waiver |
 | raw handoff compatibility | status/handoff assertions | missing snapshot 被伪造成 inherited/unknown |
 | repo truth closure | fresh snapshot + audit exact delta | 新 blocker、validation error、GAP-10/11 被误改 |
-| lean budget | numstat/allowlist/可读性复核 | 产品 >135、测试 >270、伪 snapshot、物理压行或新增模块/依赖/schema |
+| lean budget | numstat/allowlist/可读性复核 | 产品 >151、测试 >290、伪 snapshot、物理压行或新增模块/依赖/schema |
 
 ## 6. 停止与回退
 

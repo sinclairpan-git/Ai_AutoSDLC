@@ -1,27 +1,34 @@
 # Continuity Handoff
 
-- Updated: 2026-07-14T04:48:02+00:00
-- Reason: Correct stale continuity state after final evidence commit and truth refresh
-- Goal: Close WI-196 GAP-09/T53A through WI-199 without weakening consumer frontend inheritance gates
-- State: Final code, tests, verification evidence and truth refresh are committed; 3179 passed, 3 skipped; truth fresh; frontend-mainline ready; Cursor side effect restored
+- Updated: 2026-07-14T06:08:57+00:00
+- Reason: PR review remediation reached adversarial-review convergence before full verification
+- Goal: Close WI-199 / GAP-09 on PR #123 without consumer regression or governance bloat
+- State: Codex P2 remediation is GREEN: six generation governance fields now match the provider-context builder baseline; canonical hard-rules YAML preserves #1770e6; final design hash 772a92b3... received safety and lean PASS with no actionable issues.
 - Stage: execute
 - Work Item: 199-frontend-inheritance-truth
 - Branch: codex/199-frontend-inheritance-truth
 
 ## Changed Files
-- none (clean worktree; no uncommitted files)
+- M governance/frontend/generation/hard-rules.yaml
+- M specs/199-frontend-inheritance-truth/development-summary.md
+- M specs/199-frontend-inheritance-truth/plan.md
+- M specs/199-frontend-inheritance-truth/spec.md
+- M specs/199-frontend-inheritance-truth/task-execution-log.md
+- M specs/199-frontend-inheritance-truth/tasks.md
+- M src/ai_sdlc/core/program_service.py
+- M tests/unit/test_program_service.py
 
 ## Key Decisions
-- Framework repositories keep raw inheritance blocked without a project snapshot and waive only release applicability after canonical classification and artifact health; GAP-10/GAP-11 remain retained
+- Keep the fix private and fail-closed; expose full governance/frontend/generation/<artifact> guidance; freeze budgets at product 150/151 and tests 289/290; no public API, new module, schema, or second truth source.
 
 ## Commands / Tests
-- targeted 406 passed; full 3179 passed, 3 skipped; Ruff PASS; constraints no BLOCKERs; validate PASS with 33 known warnings; truth fresh; git diff check PASS
+- RED 6 failed/9 passed; artifact matrix 15 passed; complete targeted 412 passed; root artifact issues {}; Ruff and diff check PASS; final same-hash dual-agent PASS.
 
 ## Blockers / Risks
-- Final same-HEAD dual review, PR Codex review/checks, merge and mainline evidence remain
+- Full repository regression, constraints, validate, truth refresh, renewed Codex PR review, and CI heartbeat remain pending; GAP-10 and GAP-11 are intentionally retained.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Obtain final same-HEAD safety and lean PASS, then push and open the WI199 PR
+- Commit the reviewed P2 patch, run the full verification matrix from that commit, restore any generated Cursor-rule side effect, update evidence, push, request Codex review, and monitor PR #123 to merge.

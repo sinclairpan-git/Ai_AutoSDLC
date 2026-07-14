@@ -81,7 +81,7 @@
 - **FR-07**：现有 truth-check、close-check、verify refs、capability closure 与 manifest validation 仍必须全部参与 release audit。
 - **FR-08**：实现必须复用 `ProgramManifest` / `ProgramCapabilityRef` / `ProgramSpecRef`，不得新增第二 evidence registry。
 - **FR-09**：`frontend_quality_platform.py` 必须提取私有 internal-coherence helper，覆盖 matrix/page/style/browser/viewport/flow/verdict；公开 `validate_frontend_quality_platform()` 继续要求非空 solution snapshot 并叠加 effective-style 检查，不能暴露 framework bypass API。只有已确认 waiver 的 `ProgramService` 私有路径可调用 internal helper。
-- **FR-10**：generation framework health 必须校验完整 artifact load、page schema ID 精确集合、canonical provider manifest 与每个 declared install strategy 文件真实存在、至少一个 strategy 的 provider/packages 一致、delivery entry 非空且 theme adapter 非空；不得依赖 loader builtin fallback、硬编码 provider/entry、猜 suffix 或新建映射表。至少一个 schema-valid semantic drift fixture必须阻断。
+- **FR-10**：generation framework health 必须校验完整 artifact load、page schema ID 精确集合、canonical provider manifest 与每个 declared install strategy 文件真实存在、至少一个 strategy 的 provider/packages 一致、delivery entry 非空且 theme adapter 非空；`execution_order`、`recipe`、`whitelist`、`hard_rules`、`token_rules`、`exceptions` 必须与当前 provider 对应的 generation builder baseline 精确一致，不能只检查非空。不得依赖 loader builtin fallback、硬编码 provider/entry、猜 suffix 或新建映射表；六类 schema-valid weakening fixture 必须分别阻断并返回具体 artifact/reason。
 
 ### 兼容与非回归合同
 
@@ -95,8 +95,9 @@
 ## 6. 预算、停止与回退
 
 - 风险等级：L2（发布真值语义修复，无外部运行时 API 变更）。
-- 产品 allowlist：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/frontend_quality_platform.py`；合计净新增不超过 135 LOC。该上限来自双代理否决伪 snapshot 路径后，恢复私有 internal-coherence helper 与正常多行格式的合规实现实测 134 LOC，只保留 1 LOC 余量；预算禁止通过伪造项目 snapshot、压缩函数签名、多参数调用、嵌套映射或长断言达标。
-- 测试 allowlist：`tests/unit/test_program_service.py`、`tests/unit/test_frontend_quality_platform.py`；后者只新增一个负向用例，断言 public validator 传 `None` 必须失败，用于锁死禁止合同而非支持 bypass。允许在 `tests/integration/test_cli_status.py` 更新既有 status JSON 的 blocker 精确集合，以反映 consumer quality `not_inherited` 的冻结 fail-closed 收紧；如 repo-level truth map 必须调整，可增加 `tests/integration/test_frontend_mainline_blocker_execution_map.py`；全部测试文件合计新增不超过 270 LOC，该上限来自无 snapshot framework fixture、quality malformed 状态面回归和完整负向矩阵的去重后实测 268 LOC，只保留 2 LOC 余量，并覆盖 canonical generation/quality missing/malformed、provider/strategy missing、footer empty 与 waiver 下非 inheritance remediation 保留。
+- 产品 allowlist：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/frontend_quality_platform.py`；合计净新增不超过 151 LOC。PR P2 完整 canonical path 修复后合规实测 150 LOC，只保留 1 LOC 余量；预算禁止通过伪造项目 snapshot、压缩函数签名、多参数调用、嵌套映射或长断言达标。
+- Canonical artifact allowlist：只允许修正 `governance/frontend/generation/hard-rules.yaml` 中被 YAML 注释语义截断的 `#1770e6 semantic highlight` 描述，使其与 builder baseline 一致；不得借机改规则集合或新增治理文件。
+- 测试 allowlist：`tests/unit/test_program_service.py`、`tests/unit/test_frontend_quality_platform.py`；后者只新增一个负向用例，断言 public validator 传 `None` 必须失败，用于锁死禁止合同而非支持 bypass。允许在 `tests/integration/test_cli_status.py` 更新既有 status JSON 的 blocker 精确集合，以反映 consumer quality `not_inherited` 的冻结 fail-closed 收紧；如 repo-level truth map 必须调整，可增加 `tests/integration/test_frontend_mainline_blocker_execution_map.py`；全部测试文件合计新增不超过 290 LOC，六类 weakening case 复用 corruption helper 返回的 canonical path 后实测 289 LOC，只保留 1 LOC 余量。
 - 禁止新增产品/测试文件；文档、manifest truth 与 handoff 不计产品 LOC，但必须可追踪。
 - 若需要 frontend solution execute、改 schema、改 handoff 语义、增加公共模块，或无法在预算内保持 consumer fail-closed，则停止并重新设计。
 - 回退：revert 整个 WI-199 closure（产品、测试、manifest snapshot 与本项/父项 closure 文档），将 WI-196 GAP-09 重新标为 open，再同步/audit truth；不依赖数据迁移、双写或 feature flag。
@@ -107,7 +108,7 @@
 - **SC-02**：定向测试证明 framework-only 分类加 schema/semantic health、framework artifact 损坏阻断、consumer 三种非 inherited 状态、canonical footer missing/empty/malformed、mirror conflict 与 missing/mixed fail-closed、原始 handoff 状态不变。
 - **SC-03**：完整 pytest、Ruff、constraints、`git diff --check` 全部通过。
 - **SC-04**：truth snapshot fresh；frontend release capability 不再包含两个 GAP-09 refs，且没有新增 blocker/validation error。
-- **SC-05**：产品净新增 ≤135 LOC、测试新增 ≤270 LOC，保持正常多行格式，无伪 snapshot、无新模块/依赖/config/schema。
+- **SC-05**：产品净新增 ≤151 LOC、测试新增 ≤290 LOC，保持正常多行格式，无伪 snapshot、无新模块/依赖/config/schema。
 - **SC-06**：PR Codex review 无可操作问题，required checks 全绿，合并后在 `origin/main` 重跑定向测试与 truth audit。
 
 ---

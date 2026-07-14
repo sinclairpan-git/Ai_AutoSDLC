@@ -19,7 +19,7 @@ related_doc:
 ### T12 冻结原子合同
 
 - **文件**：`spec.md`、`plan.md`、`tasks.md`
-- **动作**：冻结 scope/non-goal、方案/拒绝方案、NC/CC、135/270 LOC（合规实测产品 134、测试 268，分别留 1/2 LOC 余量）、正常多行格式、无伪 snapshot、allowlist、entry/done/stop/rollback 与 exact truth delta。
+- **动作**：冻结 scope/non-goal、方案/拒绝方案、NC/CC、151/290 LOC（PR P2 后实测 150/289，各留 1 LOC）、正常多行格式、无伪 snapshot、allowlist、entry/done/stop/rollback 与 exact truth delta。
 - **完成**：三件套无 placeholder、无第二真值源、无前端实现授权扩张。
 
 ### T13 双 Agent 同哈希评审
@@ -34,7 +34,7 @@ related_doc:
 
 - **依赖**：T13
 - **文件**：`tests/unit/test_program_service.py`、`tests/unit/test_frontend_quality_platform.py`；后者只新增 public validator 传 `None` 必须失败的负向禁止测试；允许 `tests/integration/test_cli_status.py` 仅更新既有 consumer status fixture 的 blocker 精确集合；只有 repo map 必须随 truth blocker 集合变化时才允许修改 `tests/integration/test_frontend_mainline_blocker_execution_map.py`。
-- **fixtures**：framework-only 健康 artifacts 无 snapshot；generation/quality canonical manifest missing/malformed/cross-ref 损坏与 truth path/reason guidance；canonical provider manifest missing、declared install strategy missing；schema-valid generation page/provider/packages semantic drift、delivery entry empty；consumer unknown/not-inherited/blocked；missing ref、mixed class、canonical footer missing/empty/malformed、mirror conflict；framework waiver 下非 inheritance remediation 保留；public quality validator `None` 禁止；raw handoff status。
+- **fixtures**：framework-only 健康 artifacts 无 snapshot；generation/quality canonical manifest missing/malformed/cross-ref 损坏与 truth path/reason guidance；canonical provider manifest missing、declared install strategy missing；schema-valid generation page/provider/packages semantic drift、delivery entry empty；`execution_order`、`recipe`、`whitelist`、`hard_rules`、`token_rules`、`exceptions` 六类 weakening；consumer unknown/not-inherited/blocked；missing ref、mixed class、canonical footer missing/empty/malformed、mirror conflict；framework waiver 下非 inheritance remediation 保留；public quality validator `None` 禁止；raw handoff status。
 - **完成**：旧实现因缺 requirement/health 判定、consumer 非 inherited 映射不足或 validator 不接受 framework context 而失败；失败均来自冻结合同而非 fixture 错误。
 - **验证**：`uv run pytest tests/unit/test_program_service.py tests/unit/test_frontend_quality_platform.py -q`，并记录目标失败集合。
 
@@ -42,8 +42,8 @@ related_doc:
 
 - **依赖**：T21
 - **文件**：`src/ai_sdlc/core/program_service.py`、`src/ai_sdlc/core/frontend_quality_platform.py`
-- **动作**：实现 frontend-mainline-only 的 footer+mirror 全称判定和 schema/semantic framework artifact health；canonical provider/strategy 文件存在性必须在 fallback loader 前验证；quality 内部一致性只走私有 helper，公开 validator 不变；让 release blocker、guidance、surface 复用 requirement；framework waiver 保留非 inheritance remediation；原始 inheritance status/handoff 不变。
-- **完成**：T21 全绿；产品净新增 ≤135 LOC、测试新增 ≤270 LOC；正常多行格式，无伪 snapshot、无物理压行；无新文件/公共 API/依赖/config/schema。
+- **动作**：实现 frontend-mainline-only 的 footer+mirror 全称判定和 schema/semantic framework artifact health；canonical provider/strategy 文件存在性必须在 fallback loader 前验证；generation 六类治理面与 provider-context builder baseline 精确对账；quality 内部一致性只走私有 helper，公开 validator 不变；让 release blocker、guidance、surface 复用 requirement；framework waiver 保留非 inheritance remediation；原始 inheritance status/handoff 不变。
+- **完成**：T21 全绿；产品净新增 ≤151 LOC、测试新增 ≤290 LOC；正常多行格式，无伪 snapshot、无物理压行；除获准 canonical YAML 修正外无新文件/公共 API/依赖/config/schema。
 
 ## Batch 3：验证、审计与独立复审
 

@@ -280,7 +280,26 @@ def _write_frontend_framework_artifacts(
     materialize_frontend_quality_platform_artifacts(root, platform=platform)
 
 
-def _corrupt_frontend_framework_artifact(root: Path, case: str) -> None:
+def _corrupt_frontend_framework_artifact(root: Path, case: str) -> str | None:
+    weakening_fields = {
+        "execution_order_weakened": ("generation.manifest.yaml", "execution_order"),
+        "recipe_weakened": ("recipe.yaml", "allowed_recipe_ids"),
+        "whitelist_weakened": ("whitelist.yaml", "default_component_ids"),
+        "hard_rules_weakened": ("hard-rules.yaml", "rules"),
+        "token_rules_weakened": ("token-rules.yaml", "disallowed_naked_values"),
+        "exceptions_weakened": ("exceptions.yaml", "forbidden_overrides"),
+    }
+    if case in weakening_fields:
+        filename, field = weakening_fields[case]
+        artifact_path = root / "governance/frontend/generation" / filename
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        payload[field] = payload[field][1:]
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False),
+            encoding="utf-8",
+        )
+        return artifact_path.relative_to(root).as_posix()
+
     relative_paths = {
         "generation_missing": "governance/frontend/generation/generation.manifest.yaml",
         "generation_malformed": "governance/frontend/generation/generation.manifest.yaml",
@@ -291,12 +310,13 @@ def _corrupt_frontend_framework_artifact(root: Path, case: str) -> None:
     }
     relative_path = relative_paths.get(case)
     if relative_path is None:
-        return
+        return None
     artifact_path = root / relative_path
     if case.endswith("_missing"):
         artifact_path.unlink()
     else:
         artifact_path.write_text("[]\n", encoding="utf-8")
+    return relative_path
 
 
 def _write_adapter_ingress_truth_ledger_manifest(root: Path) -> None:
@@ -2891,6 +2911,12 @@ def test_build_truth_ledger_surface_waives_project_inheritance_for_framework_cap
         "quality_malformed",
         "provider_missing",
         "strategy_missing",
+        "execution_order_weakened",
+        "recipe_weakened",
+        "whitelist_weakened",
+        "hard_rules_weakened",
+        "token_rules_weakened",
+        "exceptions_weakened",
     ],
 )
 def test_framework_capability_blocks_semantically_invalid_artifacts(
@@ -2909,24 +2935,19 @@ def test_framework_capability_blocks_semantically_invalid_artifacts(
         "quality_cross_ref": {"quality_page_schema_id": "missing-page"},
     }.get(case, {})
     _write_frontend_framework_artifacts(tmp_path, **artifact_kwargs)
-    _corrupt_frontend_framework_artifact(tmp_path, case)
+    corrupted_path = _corrupt_frontend_framework_artifact(tmp_path, case)
     service = ProgramService(tmp_path)
     manifest = service.load_manifest()
     family = "quality" if case.startswith("quality") else "generation"
     expected_blocker = f"frontend_framework_artifact:{family}"
-    expected_path = {
-        "quality_missing": "quality-platform.manifest.yaml",
-        "quality_malformed": "quality-platform.manifest.yaml",
-        "provider_missing": "providers/frontend/public-primevue/provider.manifest.yaml",
-        "strategy_missing": "install-strategies/public-primevue-default.yaml",
-    }.get(case, f"governance/frontend/{family}")
+    expected_path = corrupted_path or f"governance/frontend/{family}"
     expected_reason = {
         "page_drift": "page schema",
         "delivery_empty": "delivery entry",
         "quality_cross_ref": "unknown page schema",
         "generation_malformed": "expected mapping",
         "quality_malformed": "expected mapping",
-    }.get(case, "missing")
+    }.get(case, "provider baseline" if case.endswith("_weakened") else "missing")
     blockers = service._release_gate_frontend_inheritance_blockers(
         manifest,
         capability_id="frontend-mainline-delivery",
