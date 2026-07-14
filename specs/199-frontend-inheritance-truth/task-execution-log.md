@@ -179,5 +179,7 @@
 - 最终设计 hash：`772a92b3ec7009ee9e550779edd6e028dbb799d6cf22e9e3ad02366e32476599`。预算实测产品净新增 150 LOC ≤151；测试 raw additions 289 ≤290；各留 1 LOC，正常多行格式。
 - 最终同 hash/实际补丁复审：兼容安全 Agent 与精简效率 Agent 均 `PASS，未发现可操作问题`；确认 fail-closed、完整 canonical guidance、六字段 baseline 对账与 150/289 精简预算同时成立，无新公共 API、模块或第二真值源。
 - 修复提交：`b130a86c`。提交后完整回归 `3185 passed, 3 skipped in 417.02s`，相对上一 clean HEAD 净增加六个 schema-valid weakening case；全仓 Ruff PASS、constraints `no BLOCKERs`、program validate PASS（33 条既有 migration warning）、`git diff --check` PASS。
-- truth sync 写入 snapshot `67460b645e6c9e3ee9cbb1f808e817db060cf04e771670a56862947708f7d09a`；audit 为 `fresh`。`frontend-mainline-delivery` 保持 `closure=closed`、`audit=ready`；GAP-10 的 adapter blocker 及 GAP-11 的 `1023/1056 mapped`、`33 unmapped`、`11 missing` 原样保留。
-- 下一步：更新 continuity、提交最终证据，形成 clean HEAD 后推送并重新请求 Codex review。
+- 最终 continuity-aligned truth sync 写入 snapshot `91cc3bba0f0082a2b30635b02076ae9534e0599bc387c2df13f0a499c5d0501b`；audit 为 `fresh`。`frontend-mainline-delivery` 保持 `closure=closed`、`audit=ready`；GAP-10 的 adapter blocker 及 GAP-11 的 `1023/1056 mapped`、`33 unmapped`、`11 missing` 原样保留。
+- 首次最终 clean-HEAD 安全复审只发现 continuity 文本仍描述已完成的 Cursor 恢复/证据提交动作；产品、fail-closed、truth 与预算均通过。最小修正两份 handoff、resume pack 和摘要，使下一步只保留双 Agent 复审、push、Codex review 与 heartbeat。
+- comment deletion reason：`.ai-sdlc/state/resume-pack.yaml` 原折行中的 `#123 until merge or an actionable blocker.` 是 YAML scalar 内的 PR 编号文本，不是源代码注释；continuity 去除已完成动作时重排该 scalar，并在新文本中完整保留 PR #123 heartbeat 语义，没有删除维护说明。
+- 下一步：对 continuity 修正后的新 clean HEAD 双复审，通过后推送并重新请求 Codex review。

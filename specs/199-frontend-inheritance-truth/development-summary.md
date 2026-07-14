@@ -20,5 +20,5 @@
 
 ## 下一步
 
-1. 提交最终验证与 truth 证据，形成 clean HEAD。
-2. 推送、重新请求 Codex review 并继续 heartbeat/mainline closure。
+1. 最终 clean-HEAD 双 Agent 复审通过后推送。
+2. 重新请求 Codex review 并继续 heartbeat/mainline closure。
