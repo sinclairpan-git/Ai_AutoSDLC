@@ -1,38 +1,30 @@
 # Continuity Handoff
 
-- Updated: 2026-07-14T15:22:05+00:00
-- Reason: Formal v6 same-hash dual review passed
+- Updated: 2026-07-14T15:26:14+00:00
+- Reason: T21 RED verified after formal baseline commit
 - Goal: Close WI-196 GAP-11/T54 with exact source inventory convergence
-- State: WI-201 formal v6 hash 435ecfac independently passed safety and lean review; ready to commit and start T21 RED
+- State: T21 credible RED captured on branch feature/201-source-inventory-convergence: actual 1066/1033/33/12
 - Stage: execute
 - Work Item: 201-source-inventory-convergence
-- Branch: feature/201-source-inventory-convergence-docs
+- Branch: feature/201-source-inventory-convergence
 
 ## Changed Files
-- M  .ai-sdlc/project/config/project-state.yaml
-- M  .ai-sdlc/state/checkpoint.yml
-- MM .ai-sdlc/state/codex-handoff.md
-- MM .ai-sdlc/state/resume-pack.yaml
-- AM .ai-sdlc/work-items/201-source-inventory-convergence/codex-handoff.md
-- M  program-manifest.yaml
-- A  specs/201-source-inventory-convergence/plan.md
-- A  specs/201-source-inventory-convergence/spec.md
-- AM specs/201-source-inventory-convergence/task-execution-log.md
-- A  specs/201-source-inventory-convergence/tasks.md
+- M specs/201-source-inventory-convergence/task-execution-log.md
+- M tests/integration/test_repo_program_manifest.py
 
 ## Key Decisions
-- Formal v6 is frozen; any byte change invalidates both PASS verdicts
+- Keep one repository integration test and six assertions; no fixture/helper/runtime expansion
 
 ## Commands / Tests
-- Safety PASS no actionable findings; lean PASS no actionable findings; staged diff check PASS; constraints no BLOCKERs
+- Targeted test exit 1: expected complete 1066/1066/0/0, actual incomplete 1066/1033/33/12; 1 failed in 57.77s
 
 ## Blockers / Risks
-- None; next gate is expected repository integration RED at 33 unmapped and 12 missing
+- Expected RED remains until 33 registry entries and 12 summaries are materialized
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Restage all intended formal/handoff files and commit baseline
-- Rename branch to feature/201-source-inventory-convergence
-- Add exact source inventory assertions and capture T21 RED
+- Commit RED test and evidence
+- Add exactly 33 release_doc/release registry triples
+- Add 11 historical and WI-201 honest summaries before any execute truth sync

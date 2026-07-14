@@ -83,3 +83,25 @@
 
 1. 同步 handoff，复核 Cursor 零 diff、staged diff check，提交 formal baseline。
 2. 切换 runtime 分支，在现有仓库集成测试加入精确 inventory/三元组断言并取得 T21 RED。
+
+## 3. Batch 2026-07-14-002 | T21 RED
+
+### 3.1 改动
+
+- 分支：`feature/201-source-inventory-convergence`；formal baseline commit=`d6467aa2`。
+- 仅修改现有 `tests/integration/test_repo_program_manifest.py`，新增最终 inventory、close layer、33 个 registry 三元组、unmapped warning 与 capability differential 断言。
+- 新增 6 条 assertion statement，未新增 fixture、helper、schema 或产品代码。
+
+### 3.2 RED 证据
+
+- 命令：`uv run pytest tests/integration/test_repo_program_manifest.py::test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence -q`
+- 结果：exit 1，`1 failed in 57.77s`。
+- 实际：`('incomplete', 1066, 1033, 33, 12)`。
+- 期望：`('complete', 1066, 1066, 0, 0)`。
+- 判定：PASS（可信 RED）；失败由精确 33 unmapped + 12 missing debt 引起，不是语法、依赖或环境错误。
+
+### 3.3 下一步
+
+1. 提交 RED test/evidence。
+2. T22 逐项新增 33 个 `release_doc/release` registry entry。
+3. T23/T24 新增 11 个历史 summary 与 WI-201 summary，不先执行持久化 truth sync。
