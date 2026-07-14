@@ -182,3 +182,29 @@
 1. 将本节、development summary、handoff 与测试形成 remediation evidence-freeze commit。
 2. clean HEAD 复跑 targeted/validate/constraints/dry-run/diff/Cursor。
 3. 执行 replacement sync 并提交 snapshot-only commit；随后重做 rollback 与双终审。
+
+## 7. Batch 2026-07-14-006 | PR compatibility remediation
+
+### 7.1 PR finding 与根因
+
+- PR `#125` 的 Codex review 对 reviewed HEAD `c9ceeb23` 报告无重大问题；core-smoke、PR verify、Windows pwsh/cmd smoke 均 PASS。
+- 四个已结束的 Linux/macOS matrix 各为 `3185 passed, 3 skipped, 1 failed`；唯一失败是新增 capability 动态状态断言。
+- GitHub Actions 检出 PR synthetic merge commit，truth snapshot 会按设计把 required truth refs 标为 blocked；把该上下文状态断言为 `ready/[]` 不可移植，不代表 registry、summary 或 runtime 回归。
+- 最小修复只将该断言收窄为两个 capability 的稳定 `closure_state=closed`；clean branch/mainline 的 `audit_state=ready` 与空 blocker 仍由 truth audit、rollback drill 和 merge smoke 强制验证。
+- reviewed HEAD `c9ceeb23`、旧 replacement snapshot 与旧双审结论因此全部失效；PR 保持打开但不得合并。
+
+### 7.2 新 candidate 验证
+
+- targeted：`1 passed in 56.45s`。
+- full：`3186 passed, 3 skipped in 480.66s`。
+- `uv run ruff check src tests`：PASS。
+- `uv run ai-sdlc program validate`：PASS。
+- `uv run ai-sdlc verify constraints`：PASS，`no BLOCKERs`。
+- truth dry-run：ready，snapshot hash=`46926c30fde906fa7ad5d5e588d9a1dc17e8c7149e2701ded4291352277e4947`；source=`1066/1066/0/0`，close=`202/202`，release=`42/42`，两个 capability=`closed/ready`。
+- 产品/runtime/schema/公共抽象仍为 0；测试仍只改 1 个既有文件、7 条 assertion、0 fixture/helper。
+
+### 7.3 下一步
+
+1. 将兼容性修复与本批 evidence/handoff 形成新的 evidence-freeze commit。
+2. clean HEAD 复跑 targeted/validate/constraints/dry-run/diff/Cursor，再执行 replacement sync。
+3. 重做 rollback 与双终审；双 PASS 后推送同一 PR，重新请求 Codex review 并等待全矩阵 PASS。

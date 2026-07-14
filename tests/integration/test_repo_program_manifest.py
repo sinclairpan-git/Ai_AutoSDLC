@@ -26,8 +26,8 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
         for item in manifest.source_registry
         if item.path in release_paths
     }
-    capability_states = {
-        item.capability_id: (item.closure_state, item.audit_state, item.blocking_refs)
+    capability_closure_states = {
+        item.capability_id: item.closure_state
         for item in snapshot.computed_capabilities
     }
 
@@ -43,7 +43,7 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
     assert (inventory.layer_totals["close"], inventory.layer_materialized["close"]) == (202, 202)
     assert release_registry == {(path, "release_doc", "release") for path in release_paths}
     assert not any(warning.startswith("migration_pending: truth source unmapped for ") for warning in validation.warnings)
-    assert capability_states == {"frontend-mainline-delivery": ("closed", "ready", []), "agent-adapter-verified-host-ingress": ("closed", "ready", [])}
+    assert capability_closure_states == {"frontend-mainline-delivery": "closed", "agent-adapter-verified-host-ingress": "closed"}
     assert missing_entry_warnings == []
     assert (tuple(capability.required_evidence.truth_check_refs), tuple(capability.required_evidence.close_check_refs)) == (("specs/121-agent-adapter-verified-host-ingress-truth-baseline", "specs/122-agent-adapter-verified-host-ingress-runtime-baseline", "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline", "specs/200-adapter-canonical-consumption-truth"), ("specs/121-agent-adapter-verified-host-ingress-truth-baseline", "specs/122-agent-adapter-verified-host-ingress-runtime-baseline", "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline"))
     assert all(any(ref.startswith(f"{work_item}-") for ref in capability.spec_refs) for work_item in range(160, 164))
