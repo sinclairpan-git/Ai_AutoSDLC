@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -13,9 +14,27 @@ from ai_sdlc.context.state import (
     load_resume_pack,
     save_checkpoint,
     save_resume_pack,
+    save_runtime_state,
+    save_working_set,
     update_stage,
 )
+from ai_sdlc.models import state as state_models
 from ai_sdlc.models.state import Checkpoint, ExecuteProgress, FeatureInfo
+
+LINKED_WI = "198-linked-wi-resume"
+
+
+def _seed_linked_checkpoint(tmp_path: Path) -> tuple[str, str, str]:
+    for work_item_id in ("001", LINKED_WI):
+        spec_dir = tmp_path / "specs" / work_item_id
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        for filename in ("spec.md", "plan.md", "tasks.md"):
+            (spec_dir / filename).write_text(f"# {work_item_id}\n", encoding="utf-8")
+    checkpoint = _make_checkpoint()
+    checkpoint.linked_wi_id = LINKED_WI
+    save_checkpoint(tmp_path, checkpoint)
+    linked_dir = tmp_path / "specs" / LINKED_WI
+    return tuple(str(linked_dir / name) for name in ("spec.md", "plan.md", "tasks.md"))
 
 
 def _make_checkpoint() -> Checkpoint:
@@ -260,6 +279,75 @@ class TestResumePack:
         assert "stale" in messages
         assert "rebuilding from checkpoint" in messages
         assert "rebuilt successfully" in messages
+
+    def test_build_resume_pack_prefers_linked_work_item_docs(
+        self, tmp_path: Path
+    ) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+
+        pack = build_resume_pack(tmp_path)
+
+        assert pack is not None
+        snapshot = pack.working_set_snapshot
+        assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == expected_paths
+        assert pack.current_branch == ""
+        save_runtime_state(tmp_path, LINKED_WI, state_models.RuntimeState(current_branch="runtime/198"))
+        assert build_resume_pack(tmp_path).current_branch == "runtime/198"
+        Path(expected_paths[1]).unlink()
+        assert build_resume_pack(tmp_path).working_set_snapshot.plan_path == ""
+        Path(expected_paths[0]).unlink()
+        Path(expected_paths[2]).unlink()
+        snapshot = build_resume_pack(tmp_path).working_set_snapshot
+        assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
+        legacy = _make_checkpoint()
+        legacy.feature.id = "nonstandard"
+        save_checkpoint(tmp_path, legacy)
+        assert Path(build_resume_pack(tmp_path).working_set_snapshot.spec_path).parent.name == "001"
+
+    def test_load_resume_pack_rebuilds_fresh_legacy_linked_working_set(self, tmp_path: Path) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+        overlay = state_models.WorkingSet(spec_path=expected_paths[0], plan_path=expected_paths[1], tasks_path=expected_paths[2])
+        save_working_set(tmp_path, LINKED_WI, overlay)
+        legacy_pack = build_resume_pack(tmp_path)
+        assert legacy_pack is not None
+        legacy_pack.current_branch = "main"
+        save_resume_pack(tmp_path, legacy_pack)
+        events: list[str] = []
+        loaded = load_resume_pack(tmp_path, event_log=events)
+
+        snapshot = loaded.working_set_snapshot
+        assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == expected_paths
+        assert loaded.current_branch == ""
+        assert any("stale" in event for event in events)
+
+    @pytest.mark.parametrize(
+        ("name", "payload"),
+        [
+            ("working-set.yaml", b": bad {{"),
+            ("runtime.yaml", b": bad {{"),
+            ("latest-summary.md", b"\xff\xfe"),
+        ],
+    )
+    def test_load_resume_pack_keeps_fresh_pack_when_optional_artifact_is_unreadable(
+        self, tmp_path: Path, name: str, payload: bytes
+    ) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+        fresh_pack = build_resume_pack(tmp_path)
+        assert fresh_pack is not None
+        snapshot = fresh_pack.working_set_snapshot
+        snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path = expected_paths
+        fresh_pack.current_branch = ""
+        save_resume_pack(tmp_path, fresh_pack)
+        assert load_resume_pack(tmp_path).model_dump(mode="json") == fresh_pack.model_dump(mode="json")
+        artifact = tmp_path / ".ai-sdlc" / "work-items" / LINKED_WI / name
+        artifact.write_bytes(payload)
+        events: list[str] = []
+        loaded = load_resume_pack(tmp_path, event_log=events)
+
+        assert loaded.model_dump(mode="json") == fresh_pack.model_dump(mode="json")
+        assert events == []
+        with patch("ai_sdlc.context.state.load_latest_summary", side_effect=OSError):
+            assert load_resume_pack(tmp_path).model_dump(mode="json") == fresh_pack.model_dump(mode="json")
 
     def test_load_resume_pack_incompatible_checkpoint_fails(
         self, tmp_path: Path

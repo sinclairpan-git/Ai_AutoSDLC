@@ -150,6 +150,8 @@ def _build_resume_pack_from_checkpoint(root: Path, cp: Checkpoint) -> ResumePack
         current_branch=(
             runtime.current_branch
             if runtime and runtime.current_branch
+            else ""
+            if (cp.linked_wi_id or "").strip()
             else (cp.feature.current_branch if cp.feature else "")
         ),
         docs_baseline_ref=cp.feature.docs_baseline_ref if cp.feature else "",
@@ -199,13 +201,26 @@ def load_resume_pack(
             scoped_issue = "stale"
 
     issue = root_issue or scoped_issue
+    expected_pack = None
+    if issue is None and checkpoint.linked_wi_id and checkpoint.linked_wi_id.strip():
+        try:
+            expected_pack = _build_resume_pack_from_checkpoint(root, checkpoint)
+            fields = ("spec_path", "plan_path", "tasks_path")
+            actual = root_pack.working_set_snapshot
+            expected = expected_pack.working_set_snapshot
+            if root_pack.current_branch != expected_pack.current_branch or any(
+                getattr(actual, field) != getattr(expected, field) for field in fields
+            ):
+                issue = "stale"
+        except (YamlStoreError, UnicodeError, OSError):
+            expected_pack = None
     if issue is not None:
         _emit_resume_pack_event(
             f"resume-pack {issue}; rebuilding from checkpoint",
             observer=observer,
             event_log=event_log,
         )
-        pack = _build_resume_pack_from_checkpoint(root, checkpoint)
+        pack = expected_pack or _build_resume_pack_from_checkpoint(root, checkpoint)
         _write_resume_pack_files(root, pack, work_item_id)
         _emit_resume_pack_event(
             "resume-pack rebuilt successfully",
@@ -447,7 +462,7 @@ def _build_resume_working_set(
     work_item_id: str,
     summary: str,
 ) -> WorkingSet:
-    working_set = _build_resume_working_set_from_filesystem(root, checkpoint)
+    working_set = _build_resume_working_set_from_filesystem(root, checkpoint, work_item_id)
     artifact = load_working_set(root, work_item_id) if work_item_id else None
     if artifact is not None:
         for field in (
@@ -474,10 +489,11 @@ def _build_resume_working_set(
 def _build_resume_working_set_from_filesystem(
     root: Path,
     checkpoint: Checkpoint,
+    work_item_id: str,
 ) -> WorkingSet:
     ws = WorkingSet()
     if checkpoint.feature:
-        spec_dir = root / checkpoint.feature.spec_dir
+        spec_dir = root / "specs" / work_item_id if (checkpoint.linked_wi_id or "").strip() else root / checkpoint.feature.spec_dir
         if (spec_dir / "spec.md").exists():
             ws.spec_path = str(spec_dir / "spec.md")
         if (spec_dir / "plan.md").exists():

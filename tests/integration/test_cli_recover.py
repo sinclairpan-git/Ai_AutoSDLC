@@ -11,6 +11,7 @@ from ai_sdlc.cli.main import app
 from ai_sdlc.context.state import (
     build_resume_pack,
     load_checkpoint,
+    load_resume_pack,
     save_checkpoint,
     save_resume_pack,
 )
@@ -90,6 +91,31 @@ def _write_direct_formal_placeholder_artifacts(root: Path, work_item_id: str) ->
 
 
 class TestCliRecover:
+    def test_recover_rebuilds_resume_pack_for_linked_work_item(self, tmp_path: Path) -> None:
+        historical = "197-historical"
+        linked = "198-linked-resume"
+        for work_item_id in (historical, linked):
+            _write_direct_formal_artifacts(tmp_path, work_item_id)
+        feature = FeatureInfo(id=historical, spec_dir=f"specs/{historical}", design_branch="", feature_branch="", current_branch=f"feature/{historical}")
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(current_stage="execute", feature=feature, linked_wi_id=linked),
+        )
+        legacy_pack = build_resume_pack(tmp_path)
+        assert legacy_pack is not None
+        legacy_pack.working_set_snapshot.spec_path, legacy_pack.working_set_snapshot.plan_path, legacy_pack.working_set_snapshot.tasks_path = tuple(str(tmp_path / "specs" / historical / name) for name in ("spec.md", "plan.md", "tasks.md"))
+        legacy_pack.current_branch = f"feature/{historical}"
+        save_resume_pack(tmp_path, legacy_pack)
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path), patch("ai_sdlc.cli.commands.detect_reconcile_hint", return_value=None):
+            result = runner.invoke(app, ["recover"])
+        scoped = tmp_path / ".ai-sdlc" / "work-items" / linked / "resume-pack.yaml"
+        snapshot = load_resume_pack(tmp_path).working_set_snapshot
+        root_pack = (tmp_path / ".ai-sdlc/state/resume-pack.yaml").read_text()
+        assert result.exit_code == 0
+        assert "rebuilding from checkpoint" in result.output.lower()
+        assert tuple(Path(path) for path in (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path)) == tuple(tmp_path / "specs" / linked / name for name in ("spec.md", "plan.md", "tasks.md"))
+        assert root_pack == scoped.read_text()
+
     def test_recover_surfaces_continuity_handoff_next_steps(
         self, tmp_path: Path
     ) -> None:
