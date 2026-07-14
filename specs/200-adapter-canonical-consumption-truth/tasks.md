@@ -17,13 +17,13 @@
 
 ## Batch 2 — TDD truth correction
 
-- [ ] **T21 RED：repository truth 不得依赖 local adapter state**
+- [x] **T21 RED：repository truth 不得依赖 local adapter state**
   - 依赖：T12
   - 文件：`tests/unit/test_program_service.py`、`tests/integration/test_repo_program_manifest.py`
   - 验收：missing/unverified/verified local config 得到相同 repository capability；required evidence 为 121/122/159/200
   - 验证：`uv run pytest tests/unit/test_program_service.py -k "host_ingress and canonical" tests/integration/test_repo_program_manifest.py -q`
 
-- [ ] **T22 RED：digest transport 不得自证 consumption**
+- [x] **T22 RED：digest transport 不得自证 consumption**
   - 依赖：T12
   - 文件：`tests/unit/test_ide_adapter.py`、`tests/integration/test_cli_adapter.py`
   - 验收：env match、旧 persisted verified、adapter exec child 均不能产生 trusted consumption verified；transport detail 必须精确等于 spec 冻结的否定式文案，并禁止旧 `Canonical adapter content consumption is recorded from machine-verifiable evidence` 肯定式文案

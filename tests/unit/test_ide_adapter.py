@@ -352,15 +352,21 @@ class TestEnsureIdeAdaptation:
         from ai_sdlc.core.config import load_project_config
 
         cfg = load_project_config(tmp_path)
-        assert cfg.adapter_ingress_state == "verified_loaded"
-        assert cfg.adapter_verification_result == "verified"
-        assert cfg.adapter_canonical_content_digest == digest
-        assert cfg.adapter_canonical_consumption_result == "verified"
+        assert cfg.adapter_canonical_consumption_result == "unverified"
         assert (
             cfg.adapter_canonical_consumption_evidence
-            == "env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
+            == "transport:env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
         )
-        assert cfg.adapter_canonical_consumed_at != ""
+        assert cfg.adapter_canonical_consumed_at == ""
+        surface = build_adapter_governance_surface(tmp_path, detected_ide=IDEKind.CODEX)
+        assert surface["adapter_canonical_consumption_detail"] == "Canonical adapter digest transport matched the current file; this does not prove that the host or current session consumed the canonical content."
+        save_project_config(tmp_path, cfg.model_copy(update={"adapter_canonical_consumption_result": "verified"}))
+        monkeypatch.delenv("AI_SDLC_ADAPTER_CANONICAL_SHA256")
+        monkeypatch.delenv("AI_SDLC_ADAPTER_CANONICAL_PATH")
+        ensure_ide_adaptation(tmp_path, agent_target=IDEKind.CODEX)
+        after = load_project_config(tmp_path)
+        assert after.adapter_canonical_consumption_result == "unverified"
+        assert after.adapter_canonical_consumption_evidence == ""
 
     def test_explicit_target_keeps_canonical_consumption_unverified_on_digest_mismatch(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

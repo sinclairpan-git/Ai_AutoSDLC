@@ -303,15 +303,12 @@ class TestCliAdapter:
 
         assert result.exit_code == 0
         payload = json.loads(result.output)
-        assert payload["adapter_ingress_state"] == "verified_loaded"
-        assert payload["adapter_verification_result"] == "verified"
-        assert payload["adapter_canonical_content_digest"] == digest
-        assert payload["adapter_canonical_consumption_result"] == "verified"
+        assert payload["adapter_canonical_consumption_result"] == "unverified"
         assert (
             payload["adapter_canonical_consumption_evidence"]
-            == "env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
+            == "transport:env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
         )
-        assert payload["adapter_canonical_consumed_at"] != ""
+        assert payload["adapter_canonical_consumed_at"] == ""
 
     def test_adapter_status_json_keeps_acknowledgement_out_of_ingress_truth(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -390,14 +387,13 @@ class TestCliAdapter:
 
         assert result.exit_code == 0
         payload = json.loads(result.output)
-        assert payload["adapter_ingress_state"] == "verified_loaded"
-        assert payload["adapter_verification_result"] == "verified"
-        assert payload["adapter_canonical_path"] == "AGENTS.md"
-        assert payload["adapter_canonical_consumption_result"] == "verified"
+        assert payload["adapter_canonical_consumption_result"] == "unverified"
         assert (
             payload["adapter_canonical_consumption_evidence"]
-            == "env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
+            == "transport:env:AI_SDLC_ADAPTER_CANONICAL_SHA256"
         )
+        assert payload["adapter_canonical_consumed_at"] == ""
+        assert payload["adapter_canonical_consumption_detail"] == "Canonical adapter digest transport matched the current file; this does not prove that the host or current session consumed the canonical content."
 
         after = runner.invoke(app, ["adapter", "status", "--json"])
         assert after.exit_code == 0

@@ -98,3 +98,19 @@
 - 最终冻结 review target：`02b86ed28feea46ed3e2cec893a79d997ccc20cbf58945ca88fb5ee3ad85dfe6`。
 - 安全 agent 独立复算：PASS；精简 agent 独立复算：PASS。
 - `git diff --cached --check`：PASS。后续不再修改 formal target 三件套，直接提交 docs baseline。
+
+## 8. Batch 2026-07-14-007：T21/T22 RED
+
+- docs baseline：`dc5cd531`；已 fast-forward 到 `feature/200-adapter-canonical-consumption-truth`。
+- 测试预算：4 个获准文件，`30 additions / 30 deletions`，净增长 0，无新 fixture/snapshot。
+- T21 RED：missing/unverified local config 均错误返回 repository `blocked`，root manifest required evidence 仍缺 159/200；`3 failed, 1 passed`。
+- T22 RED：env digest match、CLI status、adapter exec child 均错误返回 consumption `verified`；`3 failed, 3 passed`。
+- 失败均命中冻结根因；未出现无关测试错误。下一步先实现并独立提交 Commit A runtime 安全底线。
+
+## 9. Batch 2026-07-14-008：Commit A GREEN（提交前）
+
+- 产品变更仅 `src/ai_sdlc/integrations/ide_adapter.py`：`6 additions / 45 deletions`，删除 persisted verified helper/分支；新增量低于 12 LOC，净 `-39 LOC`。
+- digest/path match 固定为 `unverified` + `transport:env:AI_SDLC_ADAPTER_CANONICAL_SHA256` + 空 `consumed_at`；detail 精确为冻结的否定式文案。
+- `adapter exec` surface、env 注入、timeout、退出码未改；detail 仅加入既有 status/governance JSON 输出，不写回 ProjectConfig schema。
+- T22 targeted：`6 passed, 49 deselected`；adapter unit+CLI full：`55 passed`；相关 Ruff：PASS；`git diff --check`：PASS。
+- 下一步：提交独立 Commit A；随后只做 repository truth Commit B。
