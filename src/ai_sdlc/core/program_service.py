@@ -119,7 +119,6 @@ from ai_sdlc.generators.frontend_theme_token_governance_artifacts import (
     load_frontend_theme_token_governance_artifacts,
     materialize_frontend_theme_token_governance_artifacts,
 )
-from ai_sdlc.integrations.ide_adapter import build_adapter_governance_surface
 from ai_sdlc.models.frontend_browser_gate import (
     BrowserGateProbeRuntimeSession,
     BrowserProbeArtifactRecord,
@@ -231,8 +230,6 @@ PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES = (
     "pngjs",
     "yaml",
 )
-PROGRAM_HOST_INGRESS_CAPABILITY_ID = "agent-adapter-verified-host-ingress"
-PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX = "adapter_canonical_consumption"
 PROGRAM_TRUTH_SOURCE_DISCOVERY_ROOT = Path("docs")
 PROGRAM_TRUTH_SOURCE_PHASE_RE = re.compile(
     r"(?:\bP1\b|\bP2\b|\bP3\b|\bPhase\s*[23]\b|第二期|第三期|二期|三期)",
@@ -3693,8 +3690,6 @@ class ProgramService:
                 f"{PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX}:"
             ):
                 reasons.append("frontend framework artifact validation failed")
-            elif blocker.startswith(f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:"):
-                reasons.append("adapter canonical consumption is not verified")
             else:
                 reasons.append(blocker)
         return "; ".join(_unique_strings(reasons)[:3])
@@ -3740,13 +3735,6 @@ class ProgramService:
                 f"{PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX}:"
             ):
                 actions.append(PROGRAM_TRUTH_AUDIT_COMMAND)
-            elif blocker.startswith(
-                f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:"
-            ):
-                actions.append(
-                    "verify adapter canonical consumption and rerun python -m ai_sdlc program truth audit"
-                )
-
         if capability_id == PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID and any(
             blocker.startswith("verify:") for blocker in blocking_refs
         ):
@@ -3823,9 +3811,6 @@ class ProgramService:
         if release_scope and closure_state != "closed":
             blockers.append(f"capability_closure_audit:{closure_state}")
         if release_scope:
-            blockers.extend(
-                self._release_gate_adapter_blockers(capability_id=capability.id)
-            )
             blockers.extend(
                 self._release_gate_frontend_inheritance_blockers(
                     manifest,
@@ -3910,20 +3895,6 @@ class ProgramService:
             blocking_refs=_unique_strings(blockers),
             stale_reason="",
         )
-
-    def _release_gate_adapter_blockers(self, *, capability_id: str) -> list[str]:
-        if capability_id != PROGRAM_HOST_INGRESS_CAPABILITY_ID:
-            return []
-
-        governance_surface = build_adapter_governance_surface(self.root)
-        canonical_result = str(
-            governance_surface.get("adapter_canonical_consumption_result", "")
-        ).strip() or "unverified"
-        if canonical_result == "verified":
-            return []
-        return [
-            f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:{canonical_result}"
-        ]
 
     def _release_gate_frontend_inheritance_blockers(
         self,

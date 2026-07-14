@@ -416,35 +416,6 @@ def _recorded_verified_ingress(
     }
 
 
-def _recorded_verified_canonical_consumption(
-    cfg: Any,
-    target: IDEKind,
-    current_digest: str,
-) -> CanonicalConsumptionState | None:
-    canonical_path = _canonical_path(target)
-    if cfg.agent_target != target.value:
-        return None
-    if getattr(cfg, "adapter_canonical_consumption_result", "") != "verified":
-        return None
-    if getattr(cfg, "adapter_canonical_content_digest", "") != current_digest:
-        return None
-    if cfg.adapter_canonical_path and cfg.adapter_canonical_path != canonical_path:
-        return None
-    evidence = getattr(cfg, "adapter_canonical_consumption_evidence", "")
-    if not evidence:
-        return None
-    return CanonicalConsumptionState(
-        content_digest=current_digest,
-        result="verified",
-        evidence=evidence,
-        consumed_at=getattr(cfg, "adapter_canonical_consumed_at", ""),
-        detail=(
-            "Canonical adapter content consumption is recorded from "
-            f"machine-verifiable evidence: {evidence}."
-        ),
-    )
-
-
 def _evaluate_canonical_consumption(
     root: Path,
     cfg: Any,
@@ -477,29 +448,17 @@ def _evaluate_canonical_consumption(
     path_matches = not provided_path or provided_path == canonical_path
 
     if provided_digest and provided_digest == current_digest and path_matches:
-        evidence = f"env:{_CANONICAL_DIGEST_ENV_KEY}"
-        preserved = _recorded_verified_canonical_consumption(
-            cfg,
-            target,
-            current_digest,
-        )
-        if preserved is not None and preserved.evidence == evidence:
-            return preserved
         return CanonicalConsumptionState(
             content_digest=current_digest,
-            result="verified",
-            evidence=evidence,
-            consumed_at=now_iso(),
+            result="unverified",
+            evidence=f"transport:env:{_CANONICAL_DIGEST_ENV_KEY}",
             detail=(
-                "Canonical adapter content consumption is recorded from "
-                f"machine-verifiable evidence: {evidence}."
+                "Canonical adapter digest transport matched the current file; this does "
+                "not prove that the host or current session consumed the canonical content."
             ),
         )
 
     if not has_explicit_proof:
-        preserved = _recorded_verified_canonical_consumption(cfg, target, current_digest)
-        if preserved is not None:
-            return preserved
         return CanonicalConsumptionState(
             content_digest=current_digest,
             result="unverified",
