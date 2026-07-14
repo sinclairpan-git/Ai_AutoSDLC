@@ -1,6 +1,6 @@
 # Development Summary：WI-199 Frontend Inheritance Truth Closure
 
-**状态**：PR #123 Codex P2 已完成 RED/GREEN、最终同哈希双 PASS 与全量验证，待推送复审
+**状态**：PR #123 Codex P2 与 Windows canonical-path 修复均已全量验证，待最终同 HEAD 双复审
 **父项**：WI-196 `GAP-09 / T53A`
 
 ## 当前结论
@@ -14,11 +14,12 @@
 - 首轮实现与 PR P2 修订均完成兼容安全、精简效率双 Agent 同哈希评审；最终设计 hash 为 `772a92b3ec7009ee9e550779edd6e028dbb799d6cf22e9e3ad02366e32476599`，两个维度均 `PASS，未发现可操作问题`。
 - 最终方案同时要求 canonical footer+mirror 全量明确、framework generation/quality schema+semantic health；consumer 非 inherited 状态全部 release-block，公开 quality validator 不提供 `None` bypass。
 - PR Codex review 发现 generation 子制品可 schema-valid weakening；当前补丁已让 `execution_order`、`recipe`、`whitelist`、`hard_rules`、`token_rules`、`exceptions` 与 provider-context builder baseline 精确对账，并修复 canonical `#1770e6` YAML 截断。
-- 当前 P2 修订定向结果：`412 passed`；提交 `b130a86c` 全量 `3185 passed, 3 skipped in 417.02s`；全仓 Ruff、constraints、program validate 与 `git diff --check` PASS。
+- PR 旧轮 Windows 3.11/3.12 CI 证明 provider/strategy missing guidance 直接渲染绝对 `Path` 会产生反斜杠并破坏 canonical path 合同；提交 `b7c4127e` 改为仓库相对路径加 `as_posix()`，零净新增 LOC、无新分支或抽象。
+- 当前修订定向结果：`411 + 2 passed`；全量 `3185 passed, 3 skipped in 413.74s`；全仓 Ruff、constraints、program validate 与 `git diff --check` PASS。
 - 预算结果：产品净新增 150 LOC ≤151；三个测试文件 raw additions 合计 289 ≤290；各留 1 LOC，正常多行格式，无伪 snapshot、公共 API、新模块、依赖、config 或 schema。
-- truth snapshot `91cc3bba...` 已 fresh：`frontend-mainline-delivery` 保持 `closure=closed`、`audit=ready`；GAP-10 的 `adapter_canonical_consumption:unverified`、33 unmapped 与 11 missing source 原样保留。
+- truth snapshot `c722ccfe...` 已 fresh：`frontend-mainline-delivery` 保持 `closure=closed`、`audit=ready`；GAP-10 的 `adapter_canonical_consumption:unverified`、33 unmapped 与 11 missing source 原样保留。
 
 ## 下一步
 
-1. 最终 clean-HEAD 双 Agent 复审通过后推送。
+1. 提交 Windows CI 修复证据；最终 clean-HEAD 双 Agent 复审通过后推送。
 2. 重新请求 Codex review 并继续 heartbeat/mainline closure。

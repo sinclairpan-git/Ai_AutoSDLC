@@ -183,3 +183,11 @@
 - 首次最终 clean-HEAD 安全复审只发现 continuity 文本仍描述已完成的 Cursor 恢复/证据提交动作；产品、fail-closed、truth 与预算均通过。最小修正两份 handoff、resume pack 和摘要，使下一步只保留双 Agent 复审、push、Codex review 与 heartbeat。
 - comment deletion reason：`.ai-sdlc/state/resume-pack.yaml` 原折行中的 `#123 until merge or an actionable blocker.` 是 YAML scalar 内的 PR 编号文本，不是源代码注释；continuity 去除已完成动作时重排该 scalar，并在新文本中完整保留 PR #123 heartbeat 语义，没有删除维护说明。
 - 下一步：对 continuity 修正后的新 clean HEAD 双复审，通过后推送并重新请求 Codex review。
+
+## 17. Batch 2026-07-13-017：Windows canonical guidance closure
+
+- PR 旧轮 Compatibility Gate 在 Windows Python 3.11/3.12 均 RED：既有 provider/strategy missing case 期望 canonical `/` 路径，但产品错误消息直接渲染绝对 `Path`，得到带 runner 临时目录和反斜杠的文本；两环境均为同样 2 个失败，排除随机环境噪声。
+- 最小修复提交 `b7c4127e`：provider/strategy path 在逻辑中保持仓库相对 `Path`，存在性检查时才与 root 拼接，guidance 统一用 `as_posix()`；无新测试、分支、helper、模块或公共 API，产品净新增仍为 150 LOC、测试新增仍为 289 LOC。
+- 现有跨平台失败测试即 RED 合同；本地 GREEN 为 unit `411 passed`、两项集成 `2 passed`。提交后完整回归 `3185 passed, 3 skipped in 413.74s`；全仓 Ruff PASS、constraints `no BLOCKERs`、program validate PASS（33 条既有 migration warning）、`git diff --check` PASS。
+- truth snapshot `c722ccfe2481f89074d4e5ce426e5655016e9290a4c8aebc1332ce2d4ed96c25` 为 `fresh`；frontend-mainline 仍 ready，GAP-10 adapter blocker 与 GAP-11 inventory 原样保留。
+- 下一步：提交验证证据，对最终 clean HEAD 做兼容安全与精简效率双 Agent 复审。
