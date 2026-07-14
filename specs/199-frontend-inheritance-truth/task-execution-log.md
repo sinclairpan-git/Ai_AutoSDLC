@@ -178,4 +178,6 @@
 - 首轮补丁复审安全 Agent `FAIL`：weakening reason 只含 artifact basename，固定 generation manifest 前缀不能满足完整 canonical path 合同。修订为 reason 公开完整 `governance/frontend/generation/<artifact>`，corruption helper 返回同一路径供六类 case 精确断言；复跑 `412 passed in 31.21s`。
 - 最终设计 hash：`772a92b3ec7009ee9e550779edd6e028dbb799d6cf22e9e3ad02366e32476599`。预算实测产品净新增 150 LOC ≤151；测试 raw additions 289 ≤290；各留 1 LOC，正常多行格式。
 - 最终同 hash/实际补丁复审：兼容安全 Agent 与精简效率 Agent 均 `PASS，未发现可操作问题`；确认 fail-closed、完整 canonical guidance、六字段 baseline 对账与 150/289 精简预算同时成立，无新公共 API、模块或第二真值源。
-- 下一步：更新 continuity 并提交；重跑 full/constraints/validate/truth，再推送并重新请求 Codex review。
+- 修复提交：`b130a86c`。提交后完整回归 `3185 passed, 3 skipped in 417.02s`，相对上一 clean HEAD 净增加六个 schema-valid weakening case；全仓 Ruff PASS、constraints `no BLOCKERs`、program validate PASS（33 条既有 migration warning）、`git diff --check` PASS。
+- truth sync 写入 snapshot `67460b645e6c9e3ee9cbb1f808e817db060cf04e771670a56862947708f7d09a`；audit 为 `fresh`。`frontend-mainline-delivery` 保持 `closure=closed`、`audit=ready`；GAP-10 的 adapter blocker 及 GAP-11 的 `1023/1056 mapped`、`33 unmapped`、`11 missing` 原样保留。
+- 下一步：更新 continuity、提交最终证据，形成 clean HEAD 后推送并重新请求 Codex review。

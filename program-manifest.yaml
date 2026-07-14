@@ -1895,10 +1895,10 @@ specs:
   depends_on: []
   frontend_evidence_class: framework_capability
 truth_snapshot:
-  generated_at: '2026-07-14T04:39:25Z'
+  generated_at: '2026-07-14T06:24:00Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: ab8a58ad
+  repo_revision: b130a86c
   authoring_hash: 10a8900bfcc604b86ea63ccbd981a25322767fb4d8ede1891e109c4668c41ca4
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -1938,7 +1938,7 @@ truth_snapshot:
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: b3b383d7fb371f464a1ac86cae183939a77fd37feca8f9d15201dff1f9be6245
+  snapshot_hash: 67460b645e6c9e3ee9cbb1f808e817db060cf04e771670a56862947708f7d09a
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1957,8 +1957,8 @@ truth_snapshot:
     mapped_sources: 1023
     unmapped_sources: 33
     missing_sources: 11
-    phase_signal_count: 3549
-    deferred_signal_count: 6393
+    phase_signal_count: 3559
+    deferred_signal_count: 6403
     non_goal_signal_count: 358
     layer_totals:
       blueprint: 1
@@ -10953,8 +10953,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 199-frontend-inheritance-truth
-      phase_signal_count: 0
-      deferred_signal_count: 1
+      phase_signal_count: 1
+      deferred_signal_count: 2
       non_goal_signal_count: 2
     - path: specs/199-frontend-inheritance-truth/plan.md
       source_type: plan_doc
@@ -10962,8 +10962,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 199-frontend-inheritance-truth
-      phase_signal_count: 2
-      deferred_signal_count: 2
+      phase_signal_count: 3
+      deferred_signal_count: 3
       non_goal_signal_count: 0
     - path: specs/199-frontend-inheritance-truth/tasks.md
       source_type: tasks_doc
@@ -10971,8 +10971,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 199-frontend-inheritance-truth
-      phase_signal_count: 0
-      deferred_signal_count: 0
+      phase_signal_count: 1
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: specs/199-frontend-inheritance-truth/task-execution-log.md
       source_type: execution_log
@@ -10980,8 +10980,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 199-frontend-inheritance-truth
-      phase_signal_count: 1
-      deferred_signal_count: 3
+      phase_signal_count: 3
+      deferred_signal_count: 5
       non_goal_signal_count: 0
     - path: specs/199-frontend-inheritance-truth/development-summary.md
       source_type: development_summary
@@ -10989,8 +10989,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 199-frontend-inheritance-truth
-      phase_signal_count: 0
-      deferred_signal_count: 0
+      phase_signal_count: 5
+      deferred_signal_count: 5
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
