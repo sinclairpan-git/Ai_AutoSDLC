@@ -37,6 +37,7 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
         if warning.startswith("migration_pending: manifest entry missing for specs/")
     ]
 
+    assert validation.valid, validation.errors
     assert inventory is not None
     assert (inventory.state, inventory.total_sources, inventory.mapped_sources, inventory.unmapped_sources, inventory.missing_sources) == ("complete", 1066, 1066, 0, 0)
     assert (inventory.layer_totals["close"], inventory.layer_materialized["close"]) == (202, 202)

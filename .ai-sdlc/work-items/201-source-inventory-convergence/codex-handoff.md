@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-14T15:45:16+00:00
-- Reason: Single full verification and all pre-sync budgets completed
+- Updated: 2026-07-14T16:31:21+00:00
+- Reason: Safety final review duplicate-registry false-green finding remediated
 - Goal: Close WI-196 GAP-11/T54 with exact source inventory convergence
-- State: T31 pre-sync evidence complete; full/Ruff/constraints/validate/dry-run and budgets PASS; ready for evidence-freeze commit
+- State: Final safety review P2 fixed with validation.valid assertion; remediation candidate full/Ruff/constraints/validate/dry-run PASS; replacement snapshot pending
 - Stage: execute
 - Work Item: 201-source-inventory-convergence
 - Branch: feature/201-source-inventory-convergence
@@ -11,21 +11,22 @@
 ## Changed Files
 - M specs/201-source-inventory-convergence/development-summary.md
 - M specs/201-source-inventory-convergence/task-execution-log.md
+- M tests/integration/test_repo_program_manifest.py
 
 ## Key Decisions
-- Product/runtime/schema delta is zero; registry payload is exactly 33 entries/99 lines; summaries stay 10-11 nonempty lines
-- Full pytest and Ruff have completed once and will not be repeated after freeze
+- Old HEAD 5bd71af9, old snapshot 32135ebb and both old final verdicts are invalidated
+- Registry regression now checks both exact triples and validator uniqueness; total assertions 7 within budget
 
 ## Commands / Tests
-- Full 3186 passed, 3 skipped in 505.79s; Ruff PASS; constraints no BLOCKERs; dry-run 1066/1066/0/0 close 202/202 capabilities closed/ready
+- Remediation targeted 1 passed in 55.56s; full 3186 passed,3 skipped in 479.07s; Ruff PASS; constraints no BLOCKERs; dry-run 1066/1066/0/0
 
 ## Blockers / Risks
-- None before evidence freeze; execute sync is forbidden until clean-HEAD targeted gates re-pass
+- Replacement evidence-freeze/snapshot, rollback and dual final review remain
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit all remaining repo evidence as evidence-freeze commit
-- On clean HEAD rerun targeted/validate/constraints/dry-run/budget/diff/Cursor only
-- Execute the sole persistent truth sync and create snapshot-only commit
+- Commit remediation test and repo evidence as a new evidence-freeze commit
+- Rerun clean-HEAD targeted gates and execute replacement truth sync
+- Repeat rollback drill and both adversarial final reviews

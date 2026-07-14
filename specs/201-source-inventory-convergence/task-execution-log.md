@@ -156,3 +156,29 @@
 1. 本节、development summary 和 handoff 写入后形成 evidence-freeze commit。
 2. clean HEAD 只复跑 targeted、validate、constraints、truth dry-run、预算、diff/Cursor；不重复 full/Ruff。
 3. 全部通过后执行唯一 execute sync 并提交 snapshot-only finalization；此后分支零写入。
+
+## 6. Batch 2026-07-14-005 | Final review P2 remediation
+
+### 6.1 终审 finding
+
+- final candidate `5bd71af9`：lean=`PASS`；safety=`FAIL`。
+- finding：测试用 `set` 比较 33 个 registry 三元组，会折叠完全相同的重复 entry；validator 虽能报告 duplicate，但测试未断言 `validation.valid`。
+- 处置：在同一现有测试增加 `assert validation.valid, validation.errors`；assertion statement 由 6 增至 7，仍低于 12 行预算。
+- 旧 HEAD 双审与 snapshot hash `32135ebb...` 全部失效；旧 rollback receipt 仅保留历史，不作为最终 candidate 证据。
+
+### 6.2 新 candidate 验证
+
+- targeted：`1 passed in 55.56s`。
+- full（remediation candidate 唯一一次）：`3186 passed, 3 skipped in 479.07s`。
+- `uv run ruff check src tests`：PASS。
+- `uv run ai-sdlc verify constraints`：PASS，`no BLOCKERs`。
+- `uv run ai-sdlc program validate`：PASS。
+- truth dry-run：ready，source=`1066/1066/0/0`，close=`202/202`，release=`42/42`，两个 capability=`closed/ready`。
+- 产品/runtime/schema/公共抽象仍为 0；测试仍只改 1 个既有文件，现为 `+23/-0`、7 条 assertion、0 fixture/helper。
+- Cursor 已用 `apply_patch` 恢复；diff check 待 remediation evidence-freeze commit 前复核。
+
+### 6.3 下一步
+
+1. 将本节、development summary、handoff 与测试形成 remediation evidence-freeze commit。
+2. clean HEAD 复跑 targeted/validate/constraints/dry-run/diff/Cursor。
+3. 执行 replacement sync 并提交 snapshot-only commit；随后重做 rollback 与双终审。
