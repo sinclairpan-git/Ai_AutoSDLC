@@ -11,13 +11,13 @@ working_set_snapshot:
   active_files: []
   context_summary: 'Goal: Close WI200/GAP-10 with deterministic repository capability
     truth and honest per-session adapter consumption semantics | State: Formal spec/plan/tasks
-    Commit A runtime floor is GREEN before commit; product diff is 6 additions / 45
-    deletions; T22 targeted has 6 passes and full adapter slice has 55 passes | Next:
-    Commit A files and evidence while leaving T21 tests unstaged for Commit B'
+    Commit A 68ff711e is committed and Commit B is GREEN before commit; cumulative
+    product diff is 6 additions / 74 deletions and tests are 30 additions / 31
+    deletions | Next: Commit B, then run probe, rollback rehearsal and full verification'
 current_branch: feature/200-adapter-canonical-consumption-truth
 docs_baseline_ref: f89e517683dbec737eb103852ed66ede42858f64
 docs_baseline_at: '2026-07-13T11:19:51-04:00'
-timestamp: '2026-07-14T11:36:50+00:00'
+timestamp: '2026-07-14T11:46:44+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-14T10:16:34+00:00'
 checkpoint_fingerprint: 7dd064239a7cd5d661f51c817e719a9227f3cb4138f8b01781536135ca34902c

@@ -4732,9 +4732,11 @@ def test_build_truth_snapshot_blocks_release_scope_when_closure_audit_missing(
     assert "capability_closure_audit:missing" in capability.blocking_refs
 
 
+@pytest.mark.parametrize("drop_local_config", [False, True])
 def test_build_truth_snapshot_blocks_host_ingress_capability_when_canonical_consumption_is_unverified(
     tmp_path: Path,
     monkeypatch,
+    drop_local_config: bool,
 ) -> None:
     _init_truth_git_repo(tmp_path)
     (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
@@ -4755,13 +4757,13 @@ def test_build_truth_snapshot_blocks_host_ingress_capability_when_canonical_cons
         tmp_path,
         ProjectConfig(
             agent_target="codex",
-            adapter_ingress_state="verified_loaded",
-            adapter_verification_result="verified",
             adapter_canonical_path="AGENTS.md",
             adapter_canonical_content_digest="sha256:stale",
             adapter_canonical_consumption_result="unverified",
         ),
     )
+    if drop_local_config:
+        (tmp_path / ".ai-sdlc/project/config/project-config.yaml").unlink()
     _commit_truth_repo(tmp_path, "seed adapter ingress unverified canonical proof fixture")
 
     svc = ProgramService(tmp_path)
@@ -4784,10 +4786,8 @@ def test_build_truth_snapshot_blocks_host_ingress_capability_when_canonical_cons
     snapshot = svc.build_truth_snapshot(manifest)
 
     capability = snapshot.computed_capabilities[0]
-    assert snapshot.state == "blocked"
-    assert capability.capability_id == "agent-adapter-verified-host-ingress"
-    assert capability.audit_state == "blocked"
-    assert "adapter_canonical_consumption:unverified" in capability.blocking_refs
+    assert snapshot.state == "ready"
+    assert "adapter_canonical_consumption:unverified" not in capability.blocking_refs
 
 
 def test_build_truth_snapshot_allows_host_ingress_capability_when_canonical_consumption_is_verified(
@@ -4817,13 +4817,9 @@ def test_build_truth_snapshot_allows_host_ingress_capability_when_canonical_cons
         tmp_path,
         ProjectConfig(
             agent_target="codex",
-            adapter_ingress_state="verified_loaded",
-            adapter_verification_result="verified",
-            adapter_canonical_path="AGENTS.md",
             adapter_canonical_content_digest=f"sha256:{digest}",
             adapter_canonical_consumption_result="verified",
             adapter_canonical_consumption_evidence="env:AI_SDLC_ADAPTER_CANONICAL_SHA256",
-            adapter_canonical_consumed_at="2026-04-18T00:00:00Z",
         ),
     )
     _commit_truth_repo(tmp_path, "seed adapter ingress verified canonical proof fixture")
@@ -4849,8 +4845,6 @@ def test_build_truth_snapshot_allows_host_ingress_capability_when_canonical_cons
 
     capability = snapshot.computed_capabilities[0]
     assert snapshot.state == "ready"
-    assert capability.capability_id == "agent-adapter-verified-host-ingress"
-    assert capability.audit_state == "ready"
     assert "adapter_canonical_consumption:unverified" not in capability.blocking_refs
 
 

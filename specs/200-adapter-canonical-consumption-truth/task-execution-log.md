@@ -114,3 +114,13 @@
 - `adapter exec` surface、env 注入、timeout、退出码未改；detail 仅加入既有 status/governance JSON 输出，不写回 ProjectConfig schema。
 - T22 targeted：`6 passed, 49 deselected`；adapter unit+CLI full：`55 passed`；相关 Ruff：PASS；`git diff --check`：PASS。
 - 下一步：提交独立 Commit A；随后只做 repository truth Commit B。
+
+## 10. Batch 2026-07-14-009：Commit B GREEN（提交前）
+
+- Commit A：`68ff711e`，独立包含 runtime fail-closed 安全底线及对应测试。
+- Commit B 产品变更：`src/ai_sdlc/core/program_service.py` 为 `0 additions / 29 deletions`；删除 local adapter gate、专用常量/提示/import。`program-manifest.yaml` 将 goal 与 required evidence 收口为 121/122/159/200，160-163 保留 provenance，并补齐 WI200 release-scope role/capability ref。
+- 累计产品代码预算：`6 additions / 74 deletions`，净 `-68 LOC`；2 个产品文件，0 公共抽象。
+- 累计测试预算：`30 additions / 31 deletions`，净 `-1 LOC`；4 个文件，0 fixture/snapshot。
+- T21：`4 passed, 402 deselected`；T21+T22 combined：`10 passed, 451 deselected`；相关 Ruff 与 constraints：PASS。
+- 首次 `program validate` 准确拦截 WI200 manifest entry 缺 role/capability ref；补齐后复跑 PASS，仅保留 33 条历史 release migration warning。两次 CLI Cursor 副作用均已精确恢复，当前零 diff。
+- 下一步：提交独立 Commit B，然后进入脱敏 probe、选择性回退演练和全量验证。

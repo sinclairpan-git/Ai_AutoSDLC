@@ -29,7 +29,7 @@
   - 验收：env match、旧 persisted verified、adapter exec child 均不能产生 trusted consumption verified；transport detail 必须精确等于 spec 冻结的否定式文案，并禁止旧 `Canonical adapter content consumption is recorded from machine-verifiable evidence` 肯定式文案
   - 验证：`uv run pytest tests/unit/test_ide_adapter.py tests/integration/test_cli_adapter.py -k "canonical_consumption or adapter_exec" -q`
 
-- [ ] **T23A GREEN Commit A：runtime 安全底线**
+- [x] **T23A GREEN Commit A：runtime 安全底线**
   - 依赖：T22
   - 文件：`src/ai_sdlc/integrations/ide_adapter.py`、对应 adapter tests
   - 验收：self-generated/manual env 永不产生 consumption verified；detail 无可信度升级；公共 carrier surface 不变
