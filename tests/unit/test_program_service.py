@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
 import yaml
 
 import ai_sdlc.core.program_service as program_service_module
@@ -230,6 +232,91 @@ specs:
       - "frontend-mainline-delivery"
 """,
     )
+
+
+def _write_frontend_framework_artifacts(
+    root: Path,
+    *,
+    delivery_entry_id: str = "vue3-public-primevue",
+    page_schema_ids: list[str] | None = None,
+    quality_page_schema_id: str | None = None,
+) -> None:
+    materialize_frontend_generation_constraint_artifacts(
+        root,
+        build_mvp_frontend_generation_constraints(
+            effective_provider_id="public-primevue",
+            delivery_entry_id=delivery_entry_id,
+            component_library_packages=["primevue", "@primeuix/themes"],
+            provider_theme_adapter_id="public-primevue-theme-bridge",
+            page_schema_ids=page_schema_ids
+            or [
+                "dashboard-workspace",
+                "search-list-workspace",
+                "wizard-workspace",
+            ],
+        ),
+    )
+    materialize_frontend_page_ui_schema_artifacts(
+        root,
+        build_p2_frontend_page_ui_schema_baseline(),
+    )
+    materialize_frontend_theme_token_governance_artifacts(
+        root,
+        governance=build_p2_frontend_theme_token_governance_baseline(),
+    )
+    source_root = Path(__file__).parents[2]
+    for relative_path in (
+        Path("providers/frontend/public-primevue"),
+        Path("governance/frontend/solution/install-strategies"),
+    ):
+        shutil.copytree(source_root / relative_path, root / relative_path)
+    platform = build_p2_frontend_quality_platform_baseline()
+    if quality_page_schema_id is not None:
+        matrix = list(platform.coverage_matrix)
+        matrix[0] = matrix[0].model_copy(
+            update={"page_schema_id": quality_page_schema_id}
+        )
+        platform = platform.model_copy(update={"coverage_matrix": matrix})
+    materialize_frontend_quality_platform_artifacts(root, platform=platform)
+
+
+def _corrupt_frontend_framework_artifact(root: Path, case: str) -> str | None:
+    weakening_fields = {
+        "execution_order_weakened": ("generation.manifest.yaml", "execution_order"),
+        "recipe_weakened": ("recipe.yaml", "allowed_recipe_ids"),
+        "whitelist_weakened": ("whitelist.yaml", "default_component_ids"),
+        "hard_rules_weakened": ("hard-rules.yaml", "rules"),
+        "token_rules_weakened": ("token-rules.yaml", "disallowed_naked_values"),
+        "exceptions_weakened": ("exceptions.yaml", "forbidden_overrides"),
+    }
+    if case in weakening_fields:
+        filename, field = weakening_fields[case]
+        artifact_path = root / "governance/frontend/generation" / filename
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        payload[field] = payload[field][1:]
+        artifact_path.write_text(
+            yaml.safe_dump(payload, sort_keys=False),
+            encoding="utf-8",
+        )
+        return artifact_path.relative_to(root).as_posix()
+
+    relative_paths = {
+        "generation_missing": "governance/frontend/generation/generation.manifest.yaml",
+        "generation_malformed": "governance/frontend/generation/generation.manifest.yaml",
+        "quality_missing": "governance/frontend/quality-platform/quality-platform.manifest.yaml",
+        "quality_malformed": "governance/frontend/quality-platform/quality-platform.manifest.yaml",
+        "provider_missing": "providers/frontend/public-primevue/provider.manifest.yaml",
+        "strategy_missing": "governance/frontend/solution/install-strategies/public-primevue-default.yaml",
+    }
+    relative_path = relative_paths.get(case)
+    if relative_path is None:
+        return None
+    artifact_path = root / relative_path
+    if case.endswith("_missing"):
+        artifact_path.unlink()
+    else:
+        artifact_path.write_text("[]\n", encoding="utf-8")
+    return relative_path
 
 
 def _write_adapter_ingress_truth_ledger_manifest(root: Path) -> None:
@@ -2337,6 +2424,7 @@ def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
     (tmp_path / "src").mkdir(parents=True)
     (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
     _write_truth_ledger_manifest(tmp_path)
+    _write_frontend_framework_artifacts(tmp_path)
     payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
     payload["capability_closure_audit"] = {
         "reviewed_at": "2026-04-18T08:00:00Z",
@@ -2411,7 +2499,7 @@ def test_build_truth_ledger_surface_attaches_frontend_delivery_summary_when_cont
     spec_dir = tmp_path / "specs" / "082-frontend-example"
     spec_dir.mkdir(parents=True)
     (spec_dir / "spec.md").write_text(
-        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        "# Spec\n\n---\nfrontend_evidence_class: \"consumer_adoption\"\n---\n",
         encoding="utf-8",
     )
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
@@ -2422,7 +2510,7 @@ def test_build_truth_ledger_surface_attaches_frontend_delivery_summary_when_cont
     )
     (tmp_path / "src").mkdir(parents=True)
     (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
-    _write_truth_ledger_manifest(tmp_path)
+    _write_truth_ledger_manifest(tmp_path, frontend_evidence_class="consumer_adoption")
     _write_builtin_delivery_truth(
         tmp_path,
         snapshot=build_mvp_solution_snapshot(
@@ -2726,7 +2814,7 @@ def test_build_frontend_inheritance_status_surface_reports_unknown_without_snaps
     }
 
 
-def test_build_truth_ledger_surface_blocks_frontend_inheritance_drift(
+def test_build_truth_ledger_surface_waives_project_inheritance_for_framework_capability(
     tmp_path: Path,
 ) -> None:
     _init_truth_git_repo(tmp_path)
@@ -2749,36 +2837,7 @@ def test_build_truth_ledger_surface_blocks_frontend_inheritance_drift(
         encoding="utf-8",
     )
     _write_truth_ledger_manifest(tmp_path)
-    _write_builtin_delivery_truth(
-        tmp_path,
-        snapshot=build_mvp_solution_snapshot(
-            project_id="082-frontend-example",
-            requested_frontend_stack="vue3",
-            effective_frontend_stack="vue3",
-            recommended_frontend_stack="vue3",
-            requested_provider_id="public-primevue",
-            effective_provider_id="public-primevue",
-            recommended_provider_id="public-primevue",
-            requested_style_pack_id="modern-saas",
-            effective_style_pack_id="modern-saas",
-            recommended_style_pack_id="modern-saas",
-            style_fidelity_status="full",
-        ),
-    )
-    materialize_frontend_generation_constraint_artifacts(
-        tmp_path,
-        build_mvp_frontend_generation_constraints(
-            effective_provider_id="public-primevue",
-            delivery_entry_id="drifted-delivery-entry",
-            component_library_packages=["primevue", "@primeuix/themes"],
-            provider_theme_adapter_id="public-primevue-theme-bridge",
-            page_schema_ids=[
-                "dashboard-workspace",
-                "search-list-workspace",
-                "wizard-workspace",
-            ],
-        ),
-    )
+    _write_frontend_framework_artifacts(tmp_path)
     payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
     payload["capability_closure_audit"] = {
         "reviewed_at": "2026-04-18T08:00:00Z",
@@ -2792,6 +2851,10 @@ def test_build_truth_ledger_surface_blocks_frontend_inheritance_drift(
 
     svc = ProgramService(tmp_path)
     manifest = svc.load_manifest()
+    remediation = SimpleNamespace(
+        plain_language_blockers=["browser gate evidence is still missing"],
+        recommended_next_steps=["materialize browser gate evidence"],
+    )
     with (
         patch.object(
             ProgramService,
@@ -2808,24 +2871,184 @@ def test_build_truth_ledger_surface_blocks_frontend_inheritance_drift(
                 "warnings": [],
             },
         ),
+        patch.object(ProgramService, "_build_frontend_readiness", return_value=object()),
+        patch.object(
+            ProgramService,
+            "_build_frontend_remediation_input",
+            return_value=remediation,
+        ),
     ):
         surface = svc.build_truth_ledger_surface(manifest)
 
     assert surface is not None
     capability = surface["release_capabilities"][0]
-    assert capability["audit_state"] == "blocked"
+    assert capability["audit_state"] == "ready"
+    assert capability["frontend_inheritance_requirement"] == (
+        "waived_for_framework_capability"
+    )
     assert capability["frontend_inheritance_status"] == {
         "generation": "blocked",
-        "quality": "not_inherited",
+        "quality": "blocked",
     }
-    assert capability["blocking_refs"] == ["frontend_inheritance:generation"]
-    assert (
-        capability["blocking_reason_summary"]
-        == "frontend code generation inheritance is blocked"
-    )
-    assert capability["capability_next_actions"] == [
-        "python -m ai_sdlc program generation-constraints-handoff"
+    assert capability["blocking_refs"] == []
+    assert capability["plain_language_blockers"] == [
+        "browser gate evidence is still missing"
     ]
+    assert capability["recommended_next_steps"] == [
+        "materialize browser gate evidence"
+    ]
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "page_drift",
+        "delivery_empty",
+        "quality_cross_ref",
+        "generation_missing",
+        "generation_malformed",
+        "quality_missing",
+        "quality_malformed",
+        "provider_missing",
+        "strategy_missing",
+        "execution_order_weakened",
+        "recipe_weakened",
+        "whitelist_weakened",
+        "hard_rules_weakened",
+        "token_rules_weakened",
+        "exceptions_weakened",
+    ],
+)
+def test_framework_capability_blocks_semantically_invalid_artifacts(
+    tmp_path: Path,
+    case: str,
+) -> None:
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel="specs/082-frontend-example",
+        frontend_evidence_class="framework_capability",
+    )
+    _write_truth_ledger_manifest(tmp_path)
+    artifact_kwargs = {
+        "page_drift": {"page_schema_ids": ["missing-page"]},
+        "delivery_empty": {"delivery_entry_id": ""},
+        "quality_cross_ref": {"quality_page_schema_id": "missing-page"},
+    }.get(case, {})
+    _write_frontend_framework_artifacts(tmp_path, **artifact_kwargs)
+    corrupted_path = _corrupt_frontend_framework_artifact(tmp_path, case)
+    service = ProgramService(tmp_path)
+    manifest = service.load_manifest()
+    family = "quality" if case.startswith("quality") else "generation"
+    expected_blocker = f"frontend_framework_artifact:{family}"
+    expected_path = corrupted_path or f"governance/frontend/{family}"
+    expected_reason = {
+        "page_drift": "page schema",
+        "delivery_empty": "delivery entry",
+        "quality_cross_ref": "unknown page schema",
+        "generation_malformed": "expected mapping",
+        "quality_malformed": "expected mapping",
+    }.get(case, "provider baseline" if case.endswith("_weakened") else "missing")
+    blockers = service._release_gate_frontend_inheritance_blockers(
+        manifest,
+        capability_id="frontend-mainline-delivery",
+    )
+    issue = service._frontend_framework_artifact_issues()[family]
+    if case == "quality_malformed":
+        status = service.build_frontend_inheritance_status_surface()
+        assert status["quality"] == "blocked"
+
+    assert expected_blocker in blockers
+    assert expected_path in issue
+    assert expected_reason in issue
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "missing",
+        "empty",
+        "malformed",
+        "conflict",
+        "mirror_empty",
+        "ref_missing",
+        "mixed",
+    ],
+)
+def test_framework_waiver_requires_canonical_footer_and_manifest_mirror(
+    tmp_path: Path,
+    case: str,
+) -> None:
+    spec_rel = "specs/082-frontend-example"
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel=spec_rel,
+        frontend_evidence_class="framework_capability",
+    )
+    footer_value = {
+        "empty": "''",
+        "malformed": "invalid",
+        "conflict": "consumer_adoption",
+    }.get(case)
+    if case == "missing" or footer_value is not None:
+        spec_text = "# Spec\n"
+        if footer_value is not None:
+            spec_text += f"\n---\nfrontend_evidence_class: {footer_value}\n---\n"
+        (tmp_path / spec_rel / "spec.md").write_text(spec_text, encoding="utf-8")
+    _write_truth_ledger_manifest(tmp_path)
+    service = ProgramService(tmp_path)
+    manifest = service.load_manifest()
+    if case == "mirror_empty":
+        manifest.specs[0].frontend_evidence_class = ""
+    elif case == "ref_missing":
+        manifest.capabilities[0].spec_refs.append("083-frontend-missing")
+    elif case == "mixed":
+        _write_frontend_evidence_class_spec(
+            tmp_path,
+            spec_rel="specs/083-frontend-consumer",
+            frontend_evidence_class="consumer_adoption",
+        )
+        manifest.capabilities[0].spec_refs.append("083-frontend-consumer")
+        manifest.specs.append(
+            ProgramSpecRef(
+                id="083-frontend-consumer",
+                path="specs/083-frontend-consumer",
+                frontend_evidence_class="consumer_adoption",
+            )
+        )
+
+    assert service._frontend_inheritance_requirement_for_capability(
+        manifest,
+        capability_id="frontend-mainline-delivery",
+    ) == "project_instance_required"
+
+
+@pytest.mark.parametrize(
+    ("dimension", "state"),
+    [
+        (dimension, state)
+        for dimension in ("generation", "quality")
+        for state in ("unknown", "not_inherited", "blocked")
+    ],
+)
+def test_consumer_release_gate_blocks_every_non_inherited_state(
+    tmp_path: Path,
+    dimension: str,
+    state: str,
+) -> None:
+    _write_truth_ledger_manifest(tmp_path, frontend_evidence_class="consumer_adoption")
+    service = ProgramService(tmp_path)
+    with patch.object(
+        service,
+        "_truth_ledger_frontend_inheritance_status",
+        return_value={"generation": "inherited", "quality": "inherited"}
+        | {dimension: state},
+    ):
+        blockers = service._release_gate_frontend_inheritance_blockers(
+            service.load_manifest(),
+            capability_id="frontend-mainline-delivery",
+        )
+
+    assert blockers == [f"frontend_inheritance:{dimension}"]
 
 
 def test_build_spec_truth_readiness_blocks_on_frontend_inheritance_drift(
@@ -2841,7 +3064,7 @@ def test_build_spec_truth_readiness_blocks_on_frontend_inheritance_drift(
     spec_dir = tmp_path / "specs" / "082-frontend-example"
     spec_dir.mkdir(parents=True)
     (spec_dir / "spec.md").write_text(
-        "# Spec\n\n---\nfrontend_evidence_class: \"framework_capability\"\n---\n",
+        "# Spec\n\n---\nfrontend_evidence_class: \"consumer_adoption\"\n---\n",
         encoding="utf-8",
     )
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
@@ -2850,7 +3073,7 @@ def test_build_spec_truth_readiness_blocks_on_frontend_inheritance_drift(
         "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
         encoding="utf-8",
     )
-    _write_truth_ledger_manifest(tmp_path)
+    _write_truth_ledger_manifest(tmp_path, frontend_evidence_class="consumer_adoption")
     _write_builtin_delivery_truth(
         tmp_path,
         snapshot=build_mvp_solution_snapshot(
@@ -2928,6 +3151,7 @@ def test_build_spec_truth_readiness_blocks_on_frontend_inheritance_drift(
         "quality": "not_inherited",
     }
     assert "python -m ai_sdlc program generation-constraints-handoff" in readiness.next_required_actions
+    assert "python -m ai_sdlc program quality-platform-handoff" in readiness.next_required_actions
     assert "python -m ai_sdlc program truth audit" in readiness.next_required_actions
 
 
@@ -2954,6 +3178,7 @@ def test_build_spec_truth_readiness_reuses_fresh_persisted_snapshot_for_unrelate
         encoding="utf-8",
     )
     _write_truth_ledger_manifest(tmp_path)
+    _write_frontend_framework_artifacts(tmp_path)
     payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
     payload["capability_closure_audit"] = {
         "reviewed_at": "2026-04-18T08:00:00Z",

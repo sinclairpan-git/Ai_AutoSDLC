@@ -58,6 +58,7 @@ from ai_sdlc.core.frontend_provider_runtime_adapter import (
     validate_frontend_provider_runtime_adapter,
 )
 from ai_sdlc.core.frontend_quality_platform import (
+    _validate_frontend_quality_platform_internal,
     validate_frontend_quality_platform,
 )
 from ai_sdlc.core.frontend_theme_token_governance import (
@@ -220,6 +221,9 @@ PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND = "python -m ai_sdlc program truth sync --exe
 PROGRAM_TRUTH_AUDIT_COMMAND = "python -m ai_sdlc program truth audit"
 PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID = "frontend-mainline-delivery"
 PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX = "frontend_inheritance"
+PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX = "frontend_framework_artifact"
+PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_PROJECT = "project_instance_required"
+PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_WAIVED = "waived_for_framework_capability"
 PROGRAM_FRONTEND_BROWSER_GATE_SMOKE_RUNTIME_PACKAGES = ("playwright",)
 PROGRAM_FRONTEND_VISUAL_REGRESSION_RUNTIME_PACKAGES = (
     "playwright",
@@ -3234,6 +3238,12 @@ class ProgramService:
             frontend_inheritance_status = self._truth_ledger_frontend_inheritance_status(
                 capability_id=item.capability_id
             )
+            frontend_inheritance_requirement = (
+                self._frontend_inheritance_requirement_for_capability(
+                    manifest,
+                    capability_id=item.capability_id,
+                )
+            )
             if frontend_delivery_status:
                 capability_surface["frontend_delivery_status"] = (
                     frontend_delivery_status
@@ -3245,6 +3255,10 @@ class ProgramService:
                 capability_surface["frontend_inheritance_status"] = (
                     frontend_inheritance_status
                 )
+            if frontend_inheritance_requirement:
+                capability_surface[
+                    "frontend_inheritance_requirement"
+                ] = frontend_inheritance_requirement
             frontend_delivery_summary = self._truth_ledger_frontend_delivery_summary(
                 capability_id=item.capability_id,
                 status_surface=frontend_delivery_status,
@@ -3401,6 +3415,105 @@ class ProgramService:
             }
         )
 
+    def _frontend_inheritance_requirement_for_capability(
+        self, manifest: ProgramManifest, *, capability_id: str
+    ) -> str:
+        if capability_id != PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID:
+            return ""
+        capability = next(
+            (item for item in manifest.capabilities if item.id == capability_id),
+            None,
+        )
+        specs = {item.id: item for item in manifest.specs}
+        if capability is None or not capability.spec_refs:
+            return PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_PROJECT
+        for ref in capability.spec_refs:
+            spec = specs.get(ref)
+            if (
+                spec is None
+                or spec.frontend_evidence_class.strip() != "framework_capability"
+            ):
+                return PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_PROJECT
+            try:
+                canonical = _load_frontend_evidence_class_from_spec(
+                    self._resolve_spec_dir(spec.path) / "spec.md"
+                )
+            except ValueError:
+                canonical = None
+            if canonical != "framework_capability":
+                return PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_PROJECT
+        return PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_WAIVED
+
+    def _frontend_framework_artifact_issues(self) -> dict[str, str]:
+        issues: dict[str, str] = {}
+        try:
+            constraints = load_frontend_generation_constraint_artifacts(self.root)
+            baseline = build_mvp_frontend_generation_constraints(
+                effective_provider_id=constraints.effective_provider_id
+            )
+            for artifact_name, field_name in (
+                ("generation.manifest.yaml", "execution_order"),
+                ("recipe.yaml", "recipe"),
+                ("whitelist.yaml", "whitelist"),
+                ("hard-rules.yaml", "hard_rules"),
+                ("token-rules.yaml", "token_rules"),
+                ("exceptions.yaml", "exceptions"),
+            ):
+                if getattr(constraints, field_name) != getattr(baseline, field_name):
+                    raise ValueError(
+                        f"governance/frontend/generation/{artifact_name} "
+                        "differs from provider baseline"
+                    )
+            pages = load_frontend_page_ui_schema_artifacts(self.root)
+            page_ids = [item.page_schema_id for item in pages.page_schemas]
+            provider_path = (
+                Path("providers/frontend")
+                / constraints.effective_provider_id
+                / "provider.manifest.yaml"
+            )
+            if not (self.root / provider_path).is_file():
+                raise ValueError(f"provider manifest missing: {provider_path.as_posix()}")
+            provider = self._load_provider_manifest(constraints.effective_provider_id) or {}
+            strategies = []
+            for strategy_id in _normalize_string_list(
+                provider.get("install_strategy_ids", [])
+            ):
+                strategy_path = (
+                    Path("governance/frontend/solution/install-strategies")
+                    / f"{strategy_id}.yaml"
+                )
+                if not (self.root / strategy_path).is_file():
+                    raise ValueError(f"install strategy missing: {strategy_path.as_posix()}")
+                strategies.append(self._load_install_strategy(strategy_id))
+            if constraints.page_schema_ids != page_ids:
+                raise ValueError("page schema ids do not match generation constraints")
+            if not constraints.delivery_entry_id:
+                raise ValueError("delivery entry is empty")
+            if not constraints.provider_theme_adapter_id:
+                raise ValueError("provider theme adapter is empty")
+            if provider.get("provider_id") != constraints.effective_provider_id or not any(
+                item
+                and item.provider_id == constraints.effective_provider_id
+                and item.packages == constraints.component_library_packages
+                for item in strategies
+            ):
+                raise ValueError("provider install strategy or packages do not match")
+        except Exception as exc:
+            issues["generation"] = f"governance/frontend/generation/generation.manifest.yaml: {exc}"
+        try:
+            validation = _validate_frontend_quality_platform_internal(
+                load_frontend_quality_platform_artifacts(self.root),
+                page_ui_schema=load_frontend_page_ui_schema_artifacts(self.root),
+                theme_governance=load_frontend_theme_token_governance_artifacts(
+                    self.root
+                ),
+            )
+            if validation.blockers:
+                raise ValueError("; ".join(validation.blockers))
+        except Exception as exc:
+            issues["quality"] = f"governance/frontend/quality-platform: {exc}"
+        return issues
+
     def _frontend_generation_inheritance_state(self) -> str:
         handoff = self.build_frontend_generation_constraints_handoff()
         manifest_path = (
@@ -3429,11 +3542,14 @@ class ProgramService:
         return "inherited"
 
     def _frontend_quality_inheritance_state(self) -> str:
-        handoff = self.build_frontend_quality_platform_handoff()
         manifest_path = (
             frontend_quality_platform_root(self.root) / "quality-platform.manifest.yaml"
         )
         manifest_exists = manifest_path.is_file()
+        try:
+            handoff = self.build_frontend_quality_platform_handoff()
+        except Exception:
+            return "blocked" if manifest_exists else "unknown"
         if handoff.state != "ready":
             return "blocked" if manifest_exists else "unknown"
         if not manifest_exists:
@@ -3485,54 +3601,55 @@ class ProgramService:
             plain_language_blockers.extend(remediation.plain_language_blockers)
             recommended_next_steps.extend(remediation.recommended_next_steps)
 
+        if self._frontend_inheritance_requirement_for_capability(
+            manifest,
+            capability_id=capability_id,
+        ) == PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_WAIVED:
+            issues = self._frontend_framework_artifact_issues()
+            for family, reason in issues.items():
+                plain_language_blockers.append(
+                    f"frontend framework {family} artifact {reason}"
+                )
+                recommended_next_steps.append(
+                    f"restore the known-good {family} artifact from its owning work "
+                    f"item or revert, then run {PROGRAM_TRUTH_AUDIT_COMMAND}"
+                )
+            return (
+                _unique_strings(plain_language_blockers),
+                _unique_strings(recommended_next_steps),
+            )
+
         inheritance_status = self._truth_ledger_frontend_inheritance_status(
             capability_id=capability_id
         )
-        generation_state = str(inheritance_status.get("generation", "")).strip()
-        if generation_state == "unknown":
-            plain_language_blockers.append(
-                "frontend code generation inheritance is not clear yet"
-            )
-            recommended_next_steps.append(
-                "python -m ai_sdlc program generation-constraints-handoff"
-            )
-        elif generation_state == "not_inherited":
-            plain_language_blockers.append(
-                "frontend code generation has not inherited the selected component library yet; continuing may generate against the wrong library"
-            )
-            recommended_next_steps.append(
-                "python -m ai_sdlc program generation-constraints-handoff"
-            )
-        elif generation_state == "blocked":
-            plain_language_blockers.append(
-                "frontend code generation inheritance is blocked"
-            )
-            recommended_next_steps.append(
-                "python -m ai_sdlc program generation-constraints-handoff"
-            )
-
-        quality_state = str(inheritance_status.get("quality", "")).strip()
-        if quality_state == "unknown":
-            plain_language_blockers.append(
-                "frontend test inheritance is not clear yet"
-            )
-            recommended_next_steps.append(
-                "python -m ai_sdlc program quality-platform-handoff"
-            )
-        elif quality_state == "not_inherited":
-            plain_language_blockers.append(
-                "frontend test inheritance has not bound the selected component library yet; continuing may validate against the wrong standard"
-            )
-            recommended_next_steps.append(
-                "python -m ai_sdlc program quality-platform-handoff"
-            )
-        elif quality_state == "blocked":
-            plain_language_blockers.append(
-                "frontend test inheritance is blocked"
-            )
-            recommended_next_steps.append(
-                "python -m ai_sdlc program quality-platform-handoff"
-            )
+        messages = {
+            "generation": {
+                "unknown": "frontend code generation inheritance is not clear yet",
+                "not_inherited": (
+                    "frontend code generation has not inherited the selected component "
+                    "library yet; continuing may generate against the wrong library"
+                ),
+                "blocked": "frontend code generation inheritance is blocked",
+            },
+            "quality": {
+                "unknown": "frontend test inheritance is not clear yet",
+                "not_inherited": (
+                    "frontend test inheritance has not bound the selected component "
+                    "library yet; continuing may validate against the wrong standard"
+                ),
+                "blocked": "frontend test inheritance is blocked",
+            },
+        }
+        commands = {
+            "generation": "python -m ai_sdlc program generation-constraints-handoff",
+            "quality": "python -m ai_sdlc program quality-platform-handoff",
+        }
+        for family in ("generation", "quality"):
+            state = str(inheritance_status.get(family, "")).strip()
+            message = messages[family].get(state)
+            if message:
+                plain_language_blockers.append(message)
+                recommended_next_steps.append(commands[family])
 
         return (
             _unique_strings(plain_language_blockers),
@@ -3572,6 +3689,10 @@ class ProgramService:
                 reasons.append("frontend code generation inheritance is blocked")
             elif blocker == f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:quality":
                 reasons.append("frontend test inheritance is blocked")
+            elif blocker.startswith(
+                f"{PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX}:"
+            ):
+                reasons.append("frontend framework artifact validation failed")
             elif blocker.startswith(f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:"):
                 reasons.append("adapter canonical consumption is not verified")
             else:
@@ -3615,6 +3736,10 @@ class ProgramService:
                 )
             elif blocker == f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:quality":
                 actions.append("python -m ai_sdlc program quality-platform-handoff")
+            elif blocker.startswith(
+                f"{PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX}:"
+            ):
+                actions.append(PROGRAM_TRUTH_AUDIT_COMMAND)
             elif blocker.startswith(
                 f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:"
             ):
@@ -3703,6 +3828,7 @@ class ProgramService:
             )
             blockers.extend(
                 self._release_gate_frontend_inheritance_blockers(
+                    manifest,
                     capability_id=capability.id
                 )
             )
@@ -3801,21 +3927,27 @@ class ProgramService:
 
     def _release_gate_frontend_inheritance_blockers(
         self,
+        manifest: ProgramManifest,
         *,
         capability_id: str,
     ) -> list[str]:
         if capability_id != PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID:
             return []
-
+        if self._frontend_inheritance_requirement_for_capability(
+            manifest, capability_id=capability_id
+        ) == PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_WAIVED:
+            return [
+                f"{PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX}:{family}"
+                for family in self._frontend_framework_artifact_issues()
+            ]
         status = self._truth_ledger_frontend_inheritance_status(
             capability_id=capability_id
         )
-        blockers: list[str] = []
-        if status.get("generation") == "blocked":
-            blockers.append(f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:generation")
-        if status.get("quality") == "blocked":
-            blockers.append(f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:quality")
-        return blockers
+        return [
+            f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:{family}"
+            for family in ("generation", "quality")
+            if status.get(family) != "inherited"
+        ]
 
     def _run_truth_check_ref(self, ref: str) -> dict[str, object]:
         path = self._resolve_project_relative_path(ref)

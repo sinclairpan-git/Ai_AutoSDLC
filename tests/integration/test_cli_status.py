@@ -2321,12 +2321,17 @@ def test_status_json_blocks_frontend_inheritance_drift_in_truth_ledger(
     status_payload = json.loads(result.output)
     capability = status_payload["truth_ledger"]["release_capabilities"][0]
     assert capability["audit_state"] == "blocked"
-    assert capability["blocking_refs"] == ["frontend_inheritance:generation"]
+    assert capability["blocking_refs"] == [
+        "frontend_inheritance:generation",
+        "frontend_inheritance:quality",
+    ]
     assert capability["blocking_reason_summary"] == (
-        "frontend code generation inheritance is blocked"
+        "frontend code generation inheritance is blocked; "
+        "frontend test inheritance is blocked"
     )
     assert capability["capability_next_actions"] == [
-        "python -m ai_sdlc program generation-constraints-handoff"
+        "python -m ai_sdlc program generation-constraints-handoff",
+        "python -m ai_sdlc program quality-platform-handoff",
     ]
     assert capability["frontend_inheritance_status"] == {
         "generation": "blocked",

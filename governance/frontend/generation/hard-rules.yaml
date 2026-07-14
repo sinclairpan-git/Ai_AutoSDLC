@@ -35,8 +35,9 @@ rules:
     provider adapter before feature-specific wrappers
 - rule_id: visual-family-consistency
   category: absolute
-  description: navigation, page headers, badges, buttons, tags, cards, and filters must
-    share the same PrimeVue token family and #1770e6 semantic highlight
+  description: >-
+    navigation, page headers, badges, buttons, tags, cards, and filters must share the
+    same PrimeVue token family and #1770e6 semantic highlight
 - rule_id: no-native-form-control-mixing
   category: absolute
   description: native select or form controls cannot be mixed beside PrimeVue inputs

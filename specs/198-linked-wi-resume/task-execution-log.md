@@ -142,3 +142,12 @@
 - 两个 Agent 复算设计三件套拼接 SHA-256 均为 `8ac337e615eb0f1f6bc626515a9be72fec1acb379ab01994611be4cbe0cd5118`，与 admission 冻结哈希一致。
 - safety 复跑测试再次触发 `.cursor/rules/ai-sdlc.mdc` 已知副作用；该未提交差异已由主 Agent 用 `apply_patch` 精确恢复，未进入 review HEAD 或证据提交。
 - 一致结论：同一 HEAD 双 PASS，T32 admission gate 关闭；本段与 development summary 作为 evidence-only 提交后，再由原两名 Agent 对新 HEAD 做快速同提交复核，确保 PR HEAD 无评审歧义。
+
+## 8. Batch 2026-07-13-005：PR 修订、合并与 mainline closure
+
+- PR `#122` 首个 reviewed HEAD 为 `1a442f43`；Codex 提出一个 P2：`development-summary.md` 已存在，但 program truth snapshot 对应 source 仍为 `exists=false`。
+- finding 核验成立；提交 `8150a1b7534a2b5aefd09dc9722d616f26769b1a` 执行 canonical truth sync，snapshot 更新为 `exists=true`，inventory 保持 `missing=11`、close count `188`。
+- 兼容安全与精简效率两个 Agent 均对 `8150a1b7` 复审 PASS；Codex 当前 HEAD 结论为未发现 major issue，22 项 required checks 全绿。
+- PR squash merge commit：`68150d3f5ba128c0e4b44b11b13bc8ad60cc0d63`；合并前 branch 与 `origin/main` tree hash 均为 `6acaf28f22c6c59c4e751b5900387fd4478e1389`。
+- mainline-equivalent targeted：五个 focused 文件合计 `94 passed in 34.44s`；truth audit snapshot fresh，inventory `1018/1051 mapped`、`33 unmapped`、`11 missing`，只保留已登记 frontend inheritance、adapter canonical consumption 与 source inventory debt。
+- GAP-08/T52 关闭；T51/T52 barrier 已关闭，WP-01A 可以独立进入，但统一路线当前继续处理 GAP-09/T53A。
