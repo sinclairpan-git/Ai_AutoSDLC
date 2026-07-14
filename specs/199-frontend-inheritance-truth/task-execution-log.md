@@ -189,5 +189,5 @@
 - PR 旧轮 Compatibility Gate 在 Windows Python 3.11/3.12 均 RED：既有 provider/strategy missing case 期望 canonical `/` 路径，但产品错误消息直接渲染绝对 `Path`，得到带 runner 临时目录和反斜杠的文本；两环境均为同样 2 个失败，排除随机环境噪声。
 - 最小修复提交 `b7c4127e`：provider/strategy path 在逻辑中保持仓库相对 `Path`，存在性检查时才与 root 拼接，guidance 统一用 `as_posix()`；无新测试、分支、helper、模块或公共 API，产品净新增仍为 150 LOC、测试新增仍为 289 LOC。
 - 现有跨平台失败测试即 RED 合同；本地 GREEN 为 unit `411 passed`、两项集成 `2 passed`。提交后完整回归 `3185 passed, 3 skipped in 413.74s`；全仓 Ruff PASS、constraints `no BLOCKERs`、program validate PASS（33 条既有 migration warning）、`git diff --check` PASS。
-- truth snapshot `c722ccfe2481f89074d4e5ce426e5655016e9290a4c8aebc1332ce2d4ed96c25` 为 `fresh`；frontend-mainline 仍 ready，GAP-10 adapter blocker 与 GAP-11 inventory 原样保留。
-- 下一步：提交验证证据，对最终 clean HEAD 做兼容安全与精简效率双 Agent 复审。
+- truth snapshot `e7c4b919b0b4c95315e03b45d5b8627e089a538c7452e56e717956ba31d3336a` 为 `fresh`；frontend-mainline 仍 ready，GAP-10 adapter blocker 与 GAP-11 inventory 原样保留。
+- 下一步：对最终 clean HEAD 做兼容安全与精简效率双 Agent 复审，通过后推送并继续 Codex review/heartbeat。

@@ -15,7 +15,7 @@
 - Exact-compare six generation governance fields to the current provider-context builder baseline, preserve full canonical remediation paths, retain private fail-closed implementation and 150/289 actual budgets.
 
 ## Commands / Tests
-- Windows CI RED on the previous PR head: provider/strategy guidance leaked absolute backslash paths; existing tests failed on Python 3.11 and 3.12. Local focused tests => 411 unit + 2 integration passed; uv run pytest -q => 3185 passed, 3 skipped in 413.74s; Ruff PASS; constraints no BLOCKERs; program validate PASS with 33 retained warnings; truth snapshot c722ccfe... fresh.
+- Windows CI RED on the previous PR head: provider/strategy guidance leaked absolute backslash paths; existing tests failed on Python 3.11 and 3.12. Local focused tests => 411 unit + 2 integration passed; uv run pytest -q => 3185 passed, 3 skipped in 413.74s; Ruff PASS; constraints no BLOCKERs; program validate PASS with 33 retained warnings; truth snapshot e7c4b919... fresh.
 
 ## Blockers / Risks
 - GAP-10 adapter_canonical_consumption:unverified and GAP-11 inventory 1023/1056 mapped, 33 unmapped, 11 missing remain intentionally pending; renewed PR review and CI heartbeat are next.
