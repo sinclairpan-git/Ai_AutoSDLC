@@ -66,8 +66,8 @@ capabilities:
     - uv run ai-sdlc verify constraints
 - id: agent-adapter-verified-host-ingress
   title: Agent Adapter Verified Host Ingress
-  goal: Tracked adapter proof 与 runtime contract 已交付并可审计；不代表当前 host/session
-    已消费 canonical content。
+  goal: Tracked adapter proof 与 runtime contract 已交付并可审计；不代表当前 host/session 已消费 canonical
+    content。
   release_required: true
   spec_refs:
   - 121-agent-adapter-verified-host-ingress-truth-baseline
@@ -89,7 +89,6 @@ capabilities:
     - specs/121-agent-adapter-verified-host-ingress-truth-baseline
     - specs/122-agent-adapter-verified-host-ingress-runtime-baseline
     - specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline
-    - specs/200-adapter-canonical-consumption-truth
     verify_refs:
     - uv run ai-sdlc verify constraints
 capability_closure_audit:
@@ -1907,11 +1906,11 @@ specs:
   capability_refs:
   - agent-adapter-verified-host-ingress
 truth_snapshot:
-  generated_at: '2026-07-14T08:11:23Z'
+  generated_at: '2026-07-14T13:00:38Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: a0ef6e65
-  authoring_hash: 10a8900bfcc604b86ea63ccbd981a25322767fb4d8ede1891e109c4668c41ca4
+  repo_revision: f384f20f
+  authoring_hash: 7d1c9777efc38bb6c67f69ff5b3e2238dddb2b0dd2325a9208038ec50fe92e9b
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -1948,9 +1947,12 @@ truth_snapshot:
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
     truth_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 4dc83697eff99a6a0eb5d52b5352c8fb073736a704a1533370a5521d699cdfbc
     truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
+    truth_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 3b1e1b25496109cf14ae7f6d9717102d80d27debaeb3fa3aa14f61702020d85a
+    truth_check:specs/200-adapter-canonical-consumption-truth: 314aab9d00070db50050b2cd56f2b762a96f666500453f30ba3aaa3d773085af
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: e7c4b919b0b4c95315e03b45d5b8627e089a538c7452e56e717956ba31d3336a
+    close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
+  snapshot_hash: 1efcef79f769745b9c8bae47f2593dbba7426bcc793dc998e26761cc903638e3
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -1959,37 +1961,36 @@ truth_snapshot:
     stale_reason: ''
   - capability_id: agent-adapter-verified-host-ingress
     closure_state: closed
-    audit_state: blocked
-    blocking_refs:
-    - adapter_canonical_consumption:unverified
+    audit_state: ready
+    blocking_refs: []
     stale_reason: ''
   source_inventory:
     state: incomplete
-    total_sources: 1056
-    mapped_sources: 1023
+    total_sources: 1061
+    mapped_sources: 1028
     unmapped_sources: 33
     missing_sources: 11
-    phase_signal_count: 3556
-    deferred_signal_count: 6400
-    non_goal_signal_count: 358
+    phase_signal_count: 3559
+    deferred_signal_count: 6405
+    non_goal_signal_count: 361
     layer_totals:
       blueprint: 1
-      spec: 200
-      plan: 200
-      tasks: 200
-      execution: 200
-      close: 200
+      spec: 201
+      plan: 201
+      tasks: 201
+      execution: 201
+      close: 201
       requirements: 2
       defect: 3
       design: 8
       release: 42
     layer_materialized:
       blueprint: 1
-      spec: 200
-      plan: 200
-      tasks: 200
-      execution: 200
-      close: 189
+      spec: 201
+      plan: 201
+      tasks: 201
+      execution: 201
+      close: 190
       requirements: 2
       defect: 3
       design: 8
@@ -11003,6 +11004,51 @@ truth_snapshot:
       mapping_ref: 199-frontend-inheritance-truth
       phase_signal_count: 2
       deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/200-adapter-canonical-consumption-truth/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 200-adapter-canonical-consumption-truth
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 2
+    - path: specs/200-adapter-canonical-consumption-truth/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 200-adapter-canonical-consumption-truth
+      phase_signal_count: 2
+      deferred_signal_count: 2
+      non_goal_signal_count: 1
+    - path: specs/200-adapter-canonical-consumption-truth/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 200-adapter-canonical-consumption-truth
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/200-adapter-canonical-consumption-truth/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 200-adapter-canonical-consumption-truth
+      phase_signal_count: 1
+      deferred_signal_count: 3
+      non_goal_signal_count: 0
+    - path: specs/200-adapter-canonical-consumption-truth/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 200-adapter-canonical-consumption-truth
+      phase_signal_count: 0
+      deferred_signal_count: 0
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc

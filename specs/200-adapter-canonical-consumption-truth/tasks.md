@@ -20,7 +20,7 @@
 - [x] **T21 RED：repository truth 不得依赖 local adapter state**
   - 依赖：T12
   - 文件：`tests/unit/test_program_service.py`、`tests/integration/test_repo_program_manifest.py`
-  - 验收：missing/unverified/verified local config 得到相同 repository capability；required evidence 为 121/122/159/200
+  - 验收：missing/unverified/verified local config 得到相同 repository capability；truth refs 为 121/122/159/200，close refs 为 121/122/159
   - 验证：`uv run pytest tests/unit/test_program_service.py -k "host_ingress and canonical" tests/integration/test_repo_program_manifest.py -q`
 
 - [x] **T22 RED：digest transport 不得自证 consumption**
@@ -36,7 +36,7 @@
   - 提交/回退：独立提交 A；不得整体 revert 回 self-certified verified，只允许 forward fix 或保留 hard unverified 的局部回退
   - 验证：T22 命令转绿 + `git diff --numstat`
 
-- [ ] **T23B GREEN Commit B：repository truth 分层**
+- [x] **T23B GREEN Commit B：repository truth 分层**
   - 依赖：T21、T23A
   - 文件：`src/ai_sdlc/core/program_service.py`、`program-manifest.yaml`、对应 ProgramService/manifest tests
   - 验收：local config/env 不再影响 repository capability；新增产品总计 ≤12 LOC、净产品总计 ≤-15 LOC、0 公共抽象
@@ -45,14 +45,14 @@
 
 ## Batch 3 — 证据、回归与交付
 
-- [ ] **T31 脱敏 Codex canonical acceptance**
+- [x] **T31 脱敏 Codex canonical acceptance**
   - 依赖：T23B
   - 验收：记录 boolean match、AGENTS digest、Codex version、exit code、duration；prompt 原文不落盘
   - 验证：`codex debug prompt-input` 的流式 JSON 只进入本地布尔/摘要计算
 
-- [ ] **T32 全量验证与 truth 收口**
+- [x] **T32 全量验证与 truth 收口**
   - 依赖：T31
-  - 验收：在隔离临时 worktree 只 revert Commit B 后 runtime 仍 unverified、repository 稳定 blocked；targeted/full pytest、Ruff、constraints、program validate、truth sync/audit、close-check 全通过；Cursor 副作用已精确恢复
+  - 验收：在隔离临时 worktree 只 revert Commit B 后 runtime 仍 unverified、repository 稳定 blocked；targeted/full pytest、Ruff、constraints、program validate、truth sync/audit 与 required close refs 121/122/159 全通过；WI200 direct close-check 的 T33/T34/branch lifecycle 等交付期 blocker 如实记录且不作为 capability 输入；Cursor 副作用已精确恢复
   - 验证：见 execution log 真实命令与结果
 
 - [ ] **T33 最终双 Agent / Codex / CI 评审**

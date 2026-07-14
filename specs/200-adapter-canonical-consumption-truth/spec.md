@@ -37,6 +37,7 @@
 - 不在 `program truth audit`、`status`、`run --dry-run` 中启动 Codex、网络或慢探针。
 - 不把官方契约或可伪造的宿主环境变量单独叙述为当前会话消费证明。
 - 不删除或改名公共 `adapter exec`；其弃用/删除若需要，必须另立 L4 工作项。
+- 不扩大 close-check ephemeral filter，不提前勾选或改写 T33/T34 来制造 self-close ready。
 - 不处理 GAP-11 source inventory，不混入结构减重或其他 truth 清仓。
 
 ## 3. 用户故事与验收
@@ -73,7 +74,7 @@
 
 - **FR-200-001**：repository capability 计算不得读取 adapter local config 或宿主环境生成 canonical consumption blocker。
 - **FR-200-002**：capability ID 保持 `agent-adapter-verified-host-ingress`，但 goal 必须明确其表示 tracked adapter proof/runtime contract 已交付，不代表当前会话消费。
-- **FR-200-003**：required evidence 必须使用 `121/122/159/200` 的 truth-check 与 close-check；`160-163` 仅保留为 `spec_refs` provenance，不形成重复 gate。
+- **FR-200-003**：truth-check refs 必须为 `121/122/159/200`，close-check refs 必须为已闭合的 `121/122/159`；`200` 保留为当前实现 truth 与 `spec_refs` provenance，但不得把自身尚未完成的 close-check 反向作为 capability 前置；`160-163` 仅保留为 `spec_refs` provenance，不形成重复 gate。
 - **FR-200-004**：env digest/path 匹配时，`adapter_canonical_consumption_result` 必须为 `unverified`；允许输出 `transport:env:AI_SDLC_ADAPTER_CANONICAL_SHA256` 作为诊断 evidence，但 `adapter_canonical_consumed_at` 必须为空。detail 必须精确等于 `Canonical adapter digest transport matched the current file; this does not prove that the host or current session consumed the canonical content.`，且不得出现旧的肯定式 `Canonical adapter content consumption is recorded from machine-verifiable evidence`。
 - **FR-200-005**：旧 persisted `verified` consumption 状态不得跨查询保留为可信结果。
 - **FR-200-006**：`adapter exec` 的命令面、参数、透传、timeout 和 exit code 必须保持兼容。

@@ -22,5 +22,5 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
     ]
 
     assert missing_entry_warnings == []
-    assert tuple(capability.required_evidence.truth_check_refs) == tuple(capability.required_evidence.close_check_refs) == ("specs/121-agent-adapter-verified-host-ingress-truth-baseline", "specs/122-agent-adapter-verified-host-ingress-runtime-baseline", "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline", "specs/200-adapter-canonical-consumption-truth")
+    assert (tuple(capability.required_evidence.truth_check_refs), tuple(capability.required_evidence.close_check_refs)) == (("specs/121-agent-adapter-verified-host-ingress-truth-baseline", "specs/122-agent-adapter-verified-host-ingress-runtime-baseline", "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline", "specs/200-adapter-canonical-consumption-truth"), ("specs/121-agent-adapter-verified-host-ingress-truth-baseline", "specs/122-agent-adapter-verified-host-ingress-runtime-baseline", "specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline"))
     assert all(any(ref.startswith(f"{work_item}-") for ref in capability.spec_refs) for work_item in range(160, 164))

@@ -124,3 +124,44 @@
 - T21：`4 passed, 402 deselected`；T21+T22 combined：`10 passed, 451 deselected`；相关 Ruff 与 constraints：PASS。
 - 首次 `program validate` 准确拦截 WI200 manifest entry 缺 role/capability ref；补齐后复跑 PASS，仅保留 33 条历史 release migration warning。两次 CLI Cursor 副作用均已精确恢复，当前零 diff。
 - 下一步：提交独立 Commit B，然后进入脱敏 probe、选择性回退演练和全量验证。
+
+## 11. Batch 2026-07-14-010：Commit B、脱敏 probe 与选择性回退
+
+- Commit B：`f384f20f`；A/B 已保持独立提交边界。
+- 脱敏 Codex acceptance：`embedded_match=true`；`AGENTS.md sha256=20cfaecf63092a2294f0154efddecb1e686a7a38bc569de2d2dc962ef1b9db41`；`codex-cli 0.137.0`；exit `0`；duration `36.573s`；stderr empty。完整 prompt 未输出、未落盘。
+- 首次回退演练返回 repository ready；诊断确认临时进程被 active editable install 劫持，实际加载的是主 worktree 模块，故该结果无效且未计为证据。
+- 修正后显式移除 editable finder、将临时 worktree `src` 置于首位，并验证两个模块均来自 temp。仅 revert B 后：runtime=`unverified`，evidence=`transport:env:AI_SDLC_ADAPTER_CANONICAL_SHA256`，repository=`blocked`，blocker=`adapter_canonical_consumption:unverified`。
+- 临时 worktree 已删除；下一步执行 full pytest/Ruff、truth sync/audit、close-check 与最终预算核验。
+
+## 12. Batch 2026-07-14-011：全量验证与 self-close 依赖修正
+
+- 全量 `uv run pytest -q`：`3186 passed, 3 skipped in 441.50s`；全仓 `uv run ruff check .`：PASS。
+- truth sync 首轮正确发现 `close_check:specs/200-adapter-canonical-consumption-truth` 尚未通过；WI200 direct close-check 进一步显示 T33/T34、log/profile、branch lifecycle 与 program truth 等未完成项。
+- 根因：把当前 WI200 自身 close-check 作为 capability required close evidence，会要求在最终双审、CI、PR merge 前先完成这些动作，形成 self-close 依赖。未扩大 filter、未提前勾选或重定义 T33/T34。
+- 两名原对抗 agent 基于现场证据独立一致推荐 B：truth refs 保留 121/122/159/200，close refs 仅保留已闭合的 121/122/159；拒绝 follow-up closure PR、新 WI、waiver/filter 与假完成。
+- 已按该边界同步 formal docs、manifest 与既有 test；旧 formal verdict 因目标变化失效，下一步重新做同哈希双 Agent review。
+
+## 13. Batch 2026-07-14-012：self-close 修正同哈希双 PASS
+
+- 修订后的 formal review target：`edd7d503ed01beb7bdddd2eb65178b75820d556300e7d6e5f63d76e3f8e046f8`。
+- 安全 agent 独立复算：PASS；确认 fail-closed、B-only rollback、truth 200 保留、T33/T34 不提前完成且未削弱 close-check。
+- 精简 agent 独立复算：PASS；确认未新增 WI、follow-up closure PR、filter、waiver、schema 或产品代码，预算边界不变。
+- 下一步：复跑 targeted、validate、truth sync/audit；capability 应由 121/122/159 close + 121/122/159/200 truth 确定为 ready，WI200 direct close-check 继续如实保持交付期未完成。
+
+## 14. Batch 2026-07-14-013：T32 最终验证画像
+
+- **验证画像**：code-change
+- **改动范围**：`src/ai_sdlc/integrations/ide_adapter.py`、`src/ai_sdlc/core/program_service.py`、`program-manifest.yaml`、4 个既有测试文件、`specs/200-adapter-canonical-consumption-truth/` 与 continuity state。
+- 统一验证命令：
+  - `uv run pytest -q`：`3186 passed, 3 skipped in 441.50s`。
+  - `uv run ruff check .`：PASS。
+  - `uv run ai-sdlc verify constraints`：`no BLOCKERs`。
+  - `uv run ai-sdlc program validate`：PASS，保留 33 条历史 migration warning。
+  - `uv run ai-sdlc program truth sync --execute --yes` + `program truth audit`：snapshot `fresh`；adapter capability `closure=closed`、`audit=ready`；全局 inventory 仍为 migration pending 33。
+  - required close refs `121/122/159` 通过 ProgramService 同一路径逐项复核：全部 `true`。
+- 选择性回退：只 revert B 后 runtime=`unverified`、repository=`blocked`；A 安全底线保留。
+- 预算：产品 `6 additions / 74 deletions`，净 `-68 LOC`；测试 `30 additions / 31 deletions`，净 `-1 LOC`；2 product files、4 test files、0 公共抽象/fixture/schema。
+- 代码审查：self-close 现场 finding 已由两个原维度 agent 一致推荐 B，并对修订 formal hash `edd7d503...` 双 PASS；最终 clean-HEAD 实现复审仍待 T33。
+- 任务/计划同步状态：T21～T32 已按真实证据完成；T33/T34 保持未勾选，等待本地终审、GitHub Codex/CI、PR merge 与 mainline smoke。
+- **已完成 git 提交**：是（实现提交 A/B 已独立完成；本批 evidence/truth 随后固化）
+- **提交哈希**：`f384f20f`（Commit B；Commit A 为 `68ff711e`）
