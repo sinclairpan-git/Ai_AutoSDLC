@@ -3238,8 +3238,11 @@ class ProgramService:
             frontend_inheritance_status = self._truth_ledger_frontend_inheritance_status(
                 capability_id=item.capability_id
             )
-            frontend_inheritance_requirement = self._frontend_inheritance_requirement_for_capability(
-                manifest, capability_id=item.capability_id
+            frontend_inheritance_requirement = (
+                self._frontend_inheritance_requirement_for_capability(
+                    manifest,
+                    capability_id=item.capability_id,
+                )
             )
             if frontend_delivery_status:
                 capability_surface["frontend_delivery_status"] = (
@@ -3253,7 +3256,9 @@ class ProgramService:
                     frontend_inheritance_status
                 )
             if frontend_inheritance_requirement:
-                capability_surface["frontend_inheritance_requirement"] = frontend_inheritance_requirement
+                capability_surface[
+                    "frontend_inheritance_requirement"
+                ] = frontend_inheritance_requirement
             frontend_delivery_summary = self._truth_ledger_frontend_delivery_summary(
                 capability_id=item.capability_id,
                 status_surface=frontend_delivery_status,
@@ -3410,19 +3415,29 @@ class ProgramService:
             }
         )
 
-    def _frontend_inheritance_requirement_for_capability(self, manifest: ProgramManifest, *, capability_id: str) -> str:
+    def _frontend_inheritance_requirement_for_capability(
+        self, manifest: ProgramManifest, *, capability_id: str
+    ) -> str:
         if capability_id != PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID:
             return ""
-        capability = next((item for item in manifest.capabilities if item.id == capability_id), None)
+        capability = next(
+            (item for item in manifest.capabilities if item.id == capability_id),
+            None,
+        )
         specs = {item.id: item for item in manifest.specs}
         if capability is None or not capability.spec_refs:
             return PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_PROJECT
         for ref in capability.spec_refs:
             spec = specs.get(ref)
-            if spec is None or spec.frontend_evidence_class.strip() != "framework_capability":
+            if (
+                spec is None
+                or spec.frontend_evidence_class.strip() != "framework_capability"
+            ):
                 return PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_PROJECT
             try:
-                canonical = _load_frontend_evidence_class_from_spec(self._resolve_spec_dir(spec.path) / "spec.md")
+                canonical = _load_frontend_evidence_class_from_spec(
+                    self._resolve_spec_dir(spec.path) / "spec.md"
+                )
             except ValueError:
                 canonical = None
             if canonical != "framework_capability":
@@ -3435,8 +3450,25 @@ class ProgramService:
             constraints = load_frontend_generation_constraint_artifacts(self.root)
             pages = load_frontend_page_ui_schema_artifacts(self.root)
             page_ids = [item.page_schema_id for item in pages.page_schemas]
+            provider_path = (
+                self.root / "providers/frontend"
+                / constraints.effective_provider_id
+                / "provider.manifest.yaml"
+            )
+            if not provider_path.is_file():
+                raise ValueError(f"provider manifest missing: {provider_path}")
             provider = self._load_provider_manifest(constraints.effective_provider_id) or {}
-            strategies = [self._load_install_strategy(item) for item in _normalize_string_list(provider.get("install_strategy_ids", []))]
+            strategies = []
+            for strategy_id in _normalize_string_list(
+                provider.get("install_strategy_ids", [])
+            ):
+                strategy_path = (
+                    self.root / "governance/frontend/solution/install-strategies"
+                    / f"{strategy_id}.yaml"
+                )
+                if not strategy_path.is_file():
+                    raise ValueError(f"install strategy missing: {strategy_path}")
+                strategies.append(self._load_install_strategy(strategy_id))
             if constraints.page_schema_ids != page_ids:
                 raise ValueError("page schema ids do not match generation constraints")
             if not constraints.delivery_entry_id:
@@ -3444,14 +3476,21 @@ class ProgramService:
             if not constraints.provider_theme_adapter_id:
                 raise ValueError("provider theme adapter is empty")
             if provider.get("provider_id") != constraints.effective_provider_id or not any(
-                item and item.provider_id == constraints.effective_provider_id and item.packages == constraints.component_library_packages for item in strategies
+                item
+                and item.provider_id == constraints.effective_provider_id
+                and item.packages == constraints.component_library_packages
+                for item in strategies
             ):
                 raise ValueError("provider install strategy or packages do not match")
         except Exception as exc:
             issues["generation"] = f"governance/frontend/generation/generation.manifest.yaml: {exc}"
         try:
             validation = _validate_frontend_quality_platform_internal(
-                load_frontend_quality_platform_artifacts(self.root), page_ui_schema=load_frontend_page_ui_schema_artifacts(self.root), theme_governance=load_frontend_theme_token_governance_artifacts(self.root)
+                load_frontend_quality_platform_artifacts(self.root),
+                page_ui_schema=load_frontend_page_ui_schema_artifacts(self.root),
+                theme_governance=load_frontend_theme_token_governance_artifacts(
+                    self.root
+                ),
             )
             if validation.blockers:
                 raise ValueError("; ".join(validation.blockers))
@@ -3487,11 +3526,14 @@ class ProgramService:
         return "inherited"
 
     def _frontend_quality_inheritance_state(self) -> str:
-        handoff = self.build_frontend_quality_platform_handoff()
         manifest_path = (
             frontend_quality_platform_root(self.root) / "quality-platform.manifest.yaml"
         )
         manifest_exists = manifest_path.is_file()
+        try:
+            handoff = self.build_frontend_quality_platform_handoff()
+        except Exception:
+            return "blocked" if manifest_exists else "unknown"
         if handoff.state != "ready":
             return "blocked" if manifest_exists else "unknown"
         if not manifest_exists:
@@ -3524,15 +3566,6 @@ class ProgramService:
         if capability_id != PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID:
             return [], []
 
-        if self._frontend_inheritance_requirement_for_capability(
-            manifest, capability_id=capability_id
-        ) == PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_WAIVED:
-            issues = self._frontend_framework_artifact_issues()
-            return (
-                [f"frontend framework {family} artifact {reason}" for family, reason in issues.items()],
-                [f"restore the known-good {family} artifact from its owning work item or revert, then run {PROGRAM_TRUTH_AUDIT_COMMAND}" for family in issues],
-            )
-
         plain_language_blockers: list[str] = []
         recommended_next_steps: list[str] = []
         for spec in manifest.specs:
@@ -3552,16 +3585,52 @@ class ProgramService:
             plain_language_blockers.extend(remediation.plain_language_blockers)
             recommended_next_steps.extend(remediation.recommended_next_steps)
 
+        if self._frontend_inheritance_requirement_for_capability(
+            manifest,
+            capability_id=capability_id,
+        ) == PROGRAM_FRONTEND_INHERITANCE_REQUIREMENT_WAIVED:
+            issues = self._frontend_framework_artifact_issues()
+            for family, reason in issues.items():
+                plain_language_blockers.append(
+                    f"frontend framework {family} artifact {reason}"
+                )
+                recommended_next_steps.append(
+                    f"restore the known-good {family} artifact from its owning work "
+                    f"item or revert, then run {PROGRAM_TRUTH_AUDIT_COMMAND}"
+                )
+            return (
+                _unique_strings(plain_language_blockers),
+                _unique_strings(recommended_next_steps),
+            )
+
         inheritance_status = self._truth_ledger_frontend_inheritance_status(
             capability_id=capability_id
         )
         messages = {
-            "generation": {"unknown": "frontend code generation inheritance is not clear yet", "not_inherited": "frontend code generation has not inherited the selected component library yet; continuing may generate against the wrong library", "blocked": "frontend code generation inheritance is blocked"},
-            "quality": {"unknown": "frontend test inheritance is not clear yet", "not_inherited": "frontend test inheritance has not bound the selected component library yet; continuing may validate against the wrong standard", "blocked": "frontend test inheritance is blocked"},
+            "generation": {
+                "unknown": "frontend code generation inheritance is not clear yet",
+                "not_inherited": (
+                    "frontend code generation has not inherited the selected component "
+                    "library yet; continuing may generate against the wrong library"
+                ),
+                "blocked": "frontend code generation inheritance is blocked",
+            },
+            "quality": {
+                "unknown": "frontend test inheritance is not clear yet",
+                "not_inherited": (
+                    "frontend test inheritance has not bound the selected component "
+                    "library yet; continuing may validate against the wrong standard"
+                ),
+                "blocked": "frontend test inheritance is blocked",
+            },
         }
-        commands = {"generation": "python -m ai_sdlc program generation-constraints-handoff", "quality": "python -m ai_sdlc program quality-platform-handoff"}
+        commands = {
+            "generation": "python -m ai_sdlc program generation-constraints-handoff",
+            "quality": "python -m ai_sdlc program quality-platform-handoff",
+        }
         for family in ("generation", "quality"):
-            message = messages[family].get(str(inheritance_status.get(family, "")).strip())
+            state = str(inheritance_status.get(family, "")).strip()
+            message = messages[family].get(state)
             if message:
                 plain_language_blockers.append(message)
                 recommended_next_steps.append(commands[family])
@@ -3604,7 +3673,9 @@ class ProgramService:
                 reasons.append("frontend code generation inheritance is blocked")
             elif blocker == f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:quality":
                 reasons.append("frontend test inheritance is blocked")
-            elif blocker.startswith(f"{PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX}:"):
+            elif blocker.startswith(
+                f"{PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX}:"
+            ):
                 reasons.append("frontend framework artifact validation failed")
             elif blocker.startswith(f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:"):
                 reasons.append("adapter canonical consumption is not verified")
@@ -3649,7 +3720,9 @@ class ProgramService:
                 )
             elif blocker == f"{PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX}:quality":
                 actions.append("python -m ai_sdlc program quality-platform-handoff")
-            elif blocker.startswith(f"{PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX}:"):
+            elif blocker.startswith(
+                f"{PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX}:"
+            ):
                 actions.append(PROGRAM_TRUTH_AUDIT_COMMAND)
             elif blocker.startswith(
                 f"{PROGRAM_HOST_INGRESS_CANONICAL_BLOCKER_PREFIX}:"

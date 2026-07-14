@@ -136,3 +136,21 @@
 - retained debt：`agent-adapter-verified-host-ingress` 仍仅含 `adapter_canonical_consumption:unverified`；inventory 为 `1023/1056 mapped`、`33 unmapped`、`11 missing`。相较 before 的 1018/1051，新增 5 个 mapped source 仅来自 WI-199 五件套，GAP-10/GAP-11 未被本项清仓。
 - 所有 CLI 引入的 `.cursor/rules/ai-sdlc.mdc` side effect 在最终验证前必须再次精确恢复并确认零 diff。
 - 下一步：更新 continuity、再次 sync 因本批文档变化而产生的 authoring hash，然后提交最终 review HEAD 并启动双 Agent 终审。
+
+## 13. Batch 2026-07-13-013：首轮实现终审否决与第二次 RED/GREEN
+
+- 首轮实现 review target：`c8145736cc27b8b7c5c01b336f586ab95cd8154b`。精简效率 Agent 与兼容安全 Agent 均 `FAIL`，成立 finding 为：canonical provider/declared strategy 缺失被 builtin fallback 掩盖；waiver 早返回吞掉既有非 inheritance remediation；物理压行破坏可读性；canonical missing/malformed、footer empty 与 quality malformed 状态面负向覆盖不足。
+- 修订设计先冻结 provider/每个 declared strategy 实体文件存在性、waiver 仅跳过 inheritance 状态消息、正常多行格式与完整负向矩阵；旧设计 verdict 全部失效。
+- 第二次 RED：`4 failed, 403 passed`，精确命中 waiver remediation、quality malformed 状态面异常、provider missing fallback 与 strategy missing fallback。
+- 第二次 GREEN：canonical 文件存在性在 fallback loader 前验证；waiver 在 per-spec remediation 后判定；quality status 对 malformed artifact fail-closed 为 `blocked`；测试夹具和矩阵去重后 `406 passed`。
+
+## 14. Batch 2026-07-13-014：预算捷径双重否决与合规设计双 PASS
+
+- 首次预算修订 hash：`87c38cb3df1903b46261b53ad637ce452f5a95bb90d82a8f71d360e40cf98643`。两个 Agent 均 `FAIL`：为维持 110 LOC 临时构造 project snapshot，违反 framework-only 无 snapshot 合同；fixture 也误写 snapshot；quality malformed 状态面未直接锁定；测试 260 LOC 被错误记录为 259，且仍有长行。
+- 接受全部 finding：恢复同文件私有 `_validate_frontend_quality_platform_internal()`；framework fixture 只复制 canonical provider/strategy 目录，不写 solution snapshot；健康用例重新证明 raw generation/quality 均 `blocked` 但 release audit `ready`；quality malformed 直接调用 inheritance status surface 并断言 `blocked`；恢复正常多行格式。
+- 当前设计聚合 hash：`c290b126fb4486128ef9925f53a2a14def497b5505e5f3b01fec10174c6a9e88`。
+- 精简效率 Agent：`PASS`，未发现可操作问题；确认无物理压行、重复测试、过度抽象、第二真值源或伪 snapshot。
+- 兼容安全 Agent：`PASS`，未发现可操作问题；独立定向复跑 `406 passed in 30.44s`，确认 artifact/footer/remediation/consumer fail-closed 矩阵闭合。
+- 当前预算实测：产品 `(28-10) + (169-53) = 134` net LOC ≤135；测试 raw additions `8 + 12 + 248 = 268` ≤270。阈值仅留 1/2 LOC 余量，未以压行换预算。
+- 主代理定向复跑：`406 passed in 32.47s`；Ruff 与 `git diff --check` PASS。
+- 下一步：更新 continuity 后提交修订 HEAD，重跑全量 pytest、Ruff、constraints、validate 与 truth sync/audit；精确恢复 Cursor side effect，再由两个原维度 Agent 对最终 clean HEAD 终审。

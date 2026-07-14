@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from dataclasses import replace
 from pathlib import Path
@@ -234,7 +235,8 @@ specs:
 
 
 def _write_frontend_framework_artifacts(
-    root: Path, *,
+    root: Path,
+    *,
     delivery_entry_id: str = "vue3-public-primevue",
     page_schema_ids: list[str] | None = None,
     quality_page_schema_id: str | None = None,
@@ -246,17 +248,55 @@ def _write_frontend_framework_artifacts(
             delivery_entry_id=delivery_entry_id,
             component_library_packages=["primevue", "@primeuix/themes"],
             provider_theme_adapter_id="public-primevue-theme-bridge",
-            page_schema_ids=page_schema_ids or ["dashboard-workspace", "search-list-workspace", "wizard-workspace"],
+            page_schema_ids=page_schema_ids
+            or [
+                "dashboard-workspace",
+                "search-list-workspace",
+                "wizard-workspace",
+            ],
         ),
     )
-    materialize_frontend_page_ui_schema_artifacts(root, build_p2_frontend_page_ui_schema_baseline())
-    materialize_frontend_theme_token_governance_artifacts(root, governance=build_p2_frontend_theme_token_governance_baseline())
+    materialize_frontend_page_ui_schema_artifacts(
+        root,
+        build_p2_frontend_page_ui_schema_baseline(),
+    )
+    materialize_frontend_theme_token_governance_artifacts(
+        root,
+        governance=build_p2_frontend_theme_token_governance_baseline(),
+    )
+    source_root = Path(__file__).parents[2]
+    for relative_path in (
+        Path("providers/frontend/public-primevue"),
+        Path("governance/frontend/solution/install-strategies"),
+    ):
+        shutil.copytree(source_root / relative_path, root / relative_path)
     platform = build_p2_frontend_quality_platform_baseline()
     if quality_page_schema_id is not None:
         matrix = list(platform.coverage_matrix)
-        matrix[0] = matrix[0].model_copy(update={"page_schema_id": quality_page_schema_id})
+        matrix[0] = matrix[0].model_copy(
+            update={"page_schema_id": quality_page_schema_id}
+        )
         platform = platform.model_copy(update={"coverage_matrix": matrix})
     materialize_frontend_quality_platform_artifacts(root, platform=platform)
+
+
+def _corrupt_frontend_framework_artifact(root: Path, case: str) -> None:
+    relative_paths = {
+        "generation_missing": "governance/frontend/generation/generation.manifest.yaml",
+        "generation_malformed": "governance/frontend/generation/generation.manifest.yaml",
+        "quality_missing": "governance/frontend/quality-platform/quality-platform.manifest.yaml",
+        "quality_malformed": "governance/frontend/quality-platform/quality-platform.manifest.yaml",
+        "provider_missing": "providers/frontend/public-primevue/provider.manifest.yaml",
+        "strategy_missing": "governance/frontend/solution/install-strategies/public-primevue-default.yaml",
+    }
+    relative_path = relative_paths.get(case)
+    if relative_path is None:
+        return
+    artifact_path = root / relative_path
+    if case.endswith("_missing"):
+        artifact_path.unlink()
+    else:
+        artifact_path.write_text("[]\n", encoding="utf-8")
 
 
 def _write_adapter_ingress_truth_ledger_manifest(root: Path) -> None:
@@ -2791,6 +2831,10 @@ def test_build_truth_ledger_surface_waives_project_inheritance_for_framework_cap
 
     svc = ProgramService(tmp_path)
     manifest = svc.load_manifest()
+    remediation = SimpleNamespace(
+        plain_language_blockers=["browser gate evidence is still missing"],
+        recommended_next_steps=["materialize browser gate evidence"],
+    )
     with (
         patch.object(
             ProgramService,
@@ -2807,6 +2851,12 @@ def test_build_truth_ledger_surface_waives_project_inheritance_for_framework_cap
                 "warnings": [],
             },
         ),
+        patch.object(ProgramService, "_build_frontend_readiness", return_value=object()),
+        patch.object(
+            ProgramService,
+            "_build_frontend_remediation_input",
+            return_value=remediation,
+        ),
     ):
         surface = svc.build_truth_ledger_surface(manifest)
 
@@ -2821,39 +2871,31 @@ def test_build_truth_ledger_surface_waives_project_inheritance_for_framework_cap
         "quality": "blocked",
     }
     assert capability["blocking_refs"] == []
-    assert "plain_language_blockers" not in capability
-    assert "recommended_next_steps" not in capability
+    assert capability["plain_language_blockers"] == [
+        "browser gate evidence is still missing"
+    ]
+    assert capability["recommended_next_steps"] == [
+        "materialize browser gate evidence"
+    ]
 
 
 @pytest.mark.parametrize(
-    ("artifact_kwargs", "expected_blocker", "expected_path", "expected_reason"),
+    "case",
     [
-        (
-            {"page_schema_ids": ["missing-page"]},
-            "frontend_framework_artifact:generation",
-            "governance/frontend/generation/generation.manifest.yaml",
-            "page schema",
-        ),
-        (
-            {"delivery_entry_id": ""},
-            "frontend_framework_artifact:generation",
-            "governance/frontend/generation/generation.manifest.yaml",
-            "delivery entry",
-        ),
-        (
-            {"quality_page_schema_id": "missing-page"},
-            "frontend_framework_artifact:quality",
-            "governance/frontend/quality-platform",
-            "unknown page schema",
-        ),
+        "page_drift",
+        "delivery_empty",
+        "quality_cross_ref",
+        "generation_missing",
+        "generation_malformed",
+        "quality_missing",
+        "quality_malformed",
+        "provider_missing",
+        "strategy_missing",
     ],
 )
 def test_framework_capability_blocks_semantically_invalid_artifacts(
     tmp_path: Path,
-    artifact_kwargs: dict[str, object],
-    expected_blocker: str,
-    expected_path: str,
-    expected_reason: str,
+    case: str,
 ) -> None:
     _write_frontend_evidence_class_spec(
         tmp_path,
@@ -2861,36 +2903,76 @@ def test_framework_capability_blocks_semantically_invalid_artifacts(
         frontend_evidence_class="framework_capability",
     )
     _write_truth_ledger_manifest(tmp_path)
+    artifact_kwargs = {
+        "page_drift": {"page_schema_ids": ["missing-page"]},
+        "delivery_empty": {"delivery_entry_id": ""},
+        "quality_cross_ref": {"quality_page_schema_id": "missing-page"},
+    }.get(case, {})
     _write_frontend_framework_artifacts(tmp_path, **artifact_kwargs)
+    _corrupt_frontend_framework_artifact(tmp_path, case)
     service = ProgramService(tmp_path)
     manifest = service.load_manifest()
+    family = "quality" if case.startswith("quality") else "generation"
+    expected_blocker = f"frontend_framework_artifact:{family}"
+    expected_path = {
+        "quality_missing": "quality-platform.manifest.yaml",
+        "quality_malformed": "quality-platform.manifest.yaml",
+        "provider_missing": "providers/frontend/public-primevue/provider.manifest.yaml",
+        "strategy_missing": "install-strategies/public-primevue-default.yaml",
+    }.get(case, f"governance/frontend/{family}")
+    expected_reason = {
+        "page_drift": "page schema",
+        "delivery_empty": "delivery entry",
+        "quality_cross_ref": "unknown page schema",
+        "generation_malformed": "expected mapping",
+        "quality_malformed": "expected mapping",
+    }.get(case, "missing")
+    blockers = service._release_gate_frontend_inheritance_blockers(
+        manifest,
+        capability_id="frontend-mainline-delivery",
+    )
+    issue = service._frontend_framework_artifact_issues()[family]
+    if case == "quality_malformed":
+        status = service.build_frontend_inheritance_status_surface()
+        assert status["quality"] == "blocked"
 
-    with (
-        patch.object(service, "_run_truth_check_ref", return_value={"ok": True}),
-        patch.object(service, "_run_close_check_ref", return_value={"ok": True}),
-        patch.object(service, "_run_verify_ref", return_value={"ok": True}),
-    ):
-        surface = service.build_truth_ledger_surface(manifest)
-
-    assert surface is not None
-    capability = surface["release_capabilities"][0]
-    assert expected_blocker in capability["blocking_refs"]
-    guidance = " ".join(capability["plain_language_blockers"])
-    assert expected_path in guidance
-    assert expected_reason in guidance
+    assert expected_blocker in blockers
+    assert expected_path in issue
+    assert expected_reason in issue
 
 
-@pytest.mark.parametrize("case", ["missing", "malformed", "conflict", "mirror_empty", "ref_missing", "mixed"])
+@pytest.mark.parametrize(
+    "case",
+    [
+        "missing",
+        "empty",
+        "malformed",
+        "conflict",
+        "mirror_empty",
+        "ref_missing",
+        "mixed",
+    ],
+)
 def test_framework_waiver_requires_canonical_footer_and_manifest_mirror(
     tmp_path: Path,
     case: str,
 ) -> None:
-    spec_dir = tmp_path / "specs" / "082-frontend-example"
-    spec_dir.mkdir(parents=True)
-    spec_text = "# Spec\n\n---\nfrontend_evidence_class: framework_capability\n---\n"
-    if case in {"missing", "malformed", "conflict"}:
-        spec_text = {"missing": "# Spec\n", "malformed": "# Spec\n\n---\nfrontend_evidence_class: invalid\n---\n", "conflict": "# Spec\n\n---\nfrontend_evidence_class: consumer_adoption\n---\n"}[case]
-    (spec_dir / "spec.md").write_text(spec_text, encoding="utf-8")
+    spec_rel = "specs/082-frontend-example"
+    _write_frontend_evidence_class_spec(
+        tmp_path,
+        spec_rel=spec_rel,
+        frontend_evidence_class="framework_capability",
+    )
+    footer_value = {
+        "empty": "''",
+        "malformed": "invalid",
+        "conflict": "consumer_adoption",
+    }.get(case)
+    if case == "missing" or footer_value is not None:
+        spec_text = "# Spec\n"
+        if footer_value is not None:
+            spec_text += f"\n---\nfrontend_evidence_class: {footer_value}\n---\n"
+        (tmp_path / spec_rel / "spec.md").write_text(spec_text, encoding="utf-8")
     _write_truth_ledger_manifest(tmp_path)
     service = ProgramService(tmp_path)
     manifest = service.load_manifest()
@@ -2899,11 +2981,19 @@ def test_framework_waiver_requires_canonical_footer_and_manifest_mirror(
     elif case == "ref_missing":
         manifest.capabilities[0].spec_refs.append("083-frontend-missing")
     elif case == "mixed":
-        mixed = tmp_path / "specs" / "083-frontend-consumer" / "spec.md"
-        mixed.parent.mkdir(parents=True)
-        mixed.write_text("# Spec\n\n---\nfrontend_evidence_class: consumer_adoption\n---\n", encoding="utf-8")
+        _write_frontend_evidence_class_spec(
+            tmp_path,
+            spec_rel="specs/083-frontend-consumer",
+            frontend_evidence_class="consumer_adoption",
+        )
         manifest.capabilities[0].spec_refs.append("083-frontend-consumer")
-        manifest.specs.append(ProgramSpecRef(id="083-frontend-consumer", path="specs/083-frontend-consumer", frontend_evidence_class="consumer_adoption"))
+        manifest.specs.append(
+            ProgramSpecRef(
+                id="083-frontend-consumer",
+                path="specs/083-frontend-consumer",
+                frontend_evidence_class="consumer_adoption",
+            )
+        )
 
     assert service._frontend_inheritance_requirement_for_capability(
         manifest,
@@ -2911,7 +3001,14 @@ def test_framework_waiver_requires_canonical_footer_and_manifest_mirror(
     ) == "project_instance_required"
 
 
-@pytest.mark.parametrize(("dimension", "state"), [(dimension, state) for dimension in ("generation", "quality") for state in ("unknown", "not_inherited", "blocked")])
+@pytest.mark.parametrize(
+    ("dimension", "state"),
+    [
+        (dimension, state)
+        for dimension in ("generation", "quality")
+        for state in ("unknown", "not_inherited", "blocked")
+    ],
+)
 def test_consumer_release_gate_blocks_every_non_inherited_state(
     tmp_path: Path,
     dimension: str,
@@ -2922,7 +3019,8 @@ def test_consumer_release_gate_blocks_every_non_inherited_state(
     with patch.object(
         service,
         "_truth_ledger_frontend_inheritance_status",
-        return_value={"generation": "inherited", "quality": "inherited"} | {dimension: state},
+        return_value={"generation": "inherited", "quality": "inherited"}
+        | {dimension: state},
     ):
         blockers = service._release_gate_frontend_inheritance_blockers(
             service.load_manifest(),

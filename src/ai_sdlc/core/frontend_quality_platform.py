@@ -123,10 +123,19 @@ def validate_frontend_quality_platform(
 ) -> FrontendQualityPlatformValidationResult:
     """Validate Track C quality truth against project solution truth."""
 
-    result = _validate_frontend_quality_platform_internal(platform, page_ui_schema=page_ui_schema, theme_governance=theme_governance)
-    if solution_snapshot.effective_style_pack_id in set(theme_governance.style_pack_ids):
+    result = _validate_frontend_quality_platform_internal(
+        platform,
+        page_ui_schema=page_ui_schema,
+        theme_governance=theme_governance,
+    )
+    if solution_snapshot.effective_style_pack_id in set(
+        theme_governance.style_pack_ids
+    ):
         return result
-    blocker = f"effective style pack outside theme governance: {solution_snapshot.effective_style_pack_id}"
+    blocker = (
+        "effective style pack outside theme governance: "
+        f"{solution_snapshot.effective_style_pack_id}"
+    )
     return replace(result, passed=False, blockers=[*result.blockers, blocker])
 
 
