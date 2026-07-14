@@ -1,27 +1,28 @@
 # Continuity Handoff
 
-- Updated: 2026-07-13T19:30:31+00:00
-- Reason: T21 RED characterization 通过独立评审
+- Updated: 2026-07-13T23:40:18+00:00
+- Reason: T22-T31 GREEN 与 fresh verification 完成
 - Goal: 完成 WI-196 GAP-08/T52：linked WI resume working set/branch 一致性与旧版 fresh pack 自愈，独立 PR 交付
-- State: WI-198 RED commit a0196fd2 已由独立 reviewer PASS；4 个预期失败、34 个兼容回归通过；准备最小 GREEN
+- State: WI-198 最小 GREEN commit 6a46fc65 已由独立 reviewer PASS；38/94 focused 与全量 3156 passed、3 skipped 全绿；Ruff/constraints/diff PASS；准备 final branch 双 Agent 评审
 - Stage: execute
 - Work Item: 198-linked-wi-resume
 - Branch: codex/198-linked-wi-resume
 
 ## Changed Files
+- M .ai-sdlc/state/resume-pack.yaml
 - M specs/198-linked-wi-resume/task-execution-log.md
 
 ## Key Decisions
-- 产品只改 state.py 冻结四函数；expected pack至多构建一次；semantic-only optional read errors跳过迁移；产品净新增≤20
+- 只修改 state.py 冻结四函数；linked docs 与 branch fail-closed；legacy fresh semantic migration 复用 expected pack；产品净增16、测试新增140，均在预算内
 
 ## Commands / Tests
-- RED 4 failed/34 passed；test additions=140；Ruff/diff PASS；Spec compliant Yes/RED quality Approved
+- 38/38 RED 文件、94/94 focused、3156 passed+3 skipped full；Ruff src/tests PASS；verify constraints PASS；git diff --check PASS
 
 ## Blockers / Risks
-- 无 RED blocker；GREEN 不得改测试/文档/状态，不得超20产品LOC
+- 无实现 blocker；final branch 必须由兼容安全与精简效率两个独立 Agent 对同一 HEAD 双 PASS 后才可提交 PR
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 委派最小 GREEN实现；运行三文件+五文件 focused；独立 spec/code review；修订至通过
+- 提交 GREEN/验收 evidence；启动两个独立 final branch 对抗评审；关闭全部 findings 后 push、PR、Codex review/checks、merge

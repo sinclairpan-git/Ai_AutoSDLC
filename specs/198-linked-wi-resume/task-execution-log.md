@@ -2,7 +2,7 @@
 
 **功能编号**：`198-linked-wi-resume`
 **创建日期**：2026-07-13
-**状态**：设计门禁通过，待 docs baseline commit
+**状态**：GREEN 与完整回归通过，待 final branch 双 Agent 评审
 
 ## 1. 固定合同
 
@@ -13,7 +13,7 @@
 - 允许产品文件：`src/ai_sdlc/context/state.py`。
 - 允许修改测试：`tests/unit/test_context_state.py`、`tests/integration/test_cli_handoff.py`、`tests/integration/test_cli_recover.py`。
 - 只回归测试：`tests/unit/test_handoff.py`、`tests/integration/test_cli_status.py`。
-- 预算：产品净新增 ≤12 LOC，测试新增 ≤100 LOC；0 新文件/公共抽象/依赖/配置/schema。
+- 预算：产品净新增 ≤20 LOC，测试新增 ≤140 LOC；0 新文件/公共抽象/依赖/配置/schema。
 - 回退 owner：framework maintainer；mainline/发布回退整个 PR/版本，分支源码按 GREEN+RED 成对回退。
 
 ## 2. Batch 2026-07-13-001：mainline 与 child WI admission
@@ -117,3 +117,19 @@
 - 跨平台断言使用解析后的 `Path` 三元组精确比较 spec/plan/tasks；不搜索 raw YAML 分隔符。
 - `uv run ruff check` 三文件：PASS；`git diff --check`：PASS；Cursor adapter 测试副作用已用 `apply_patch` 精确恢复。
 - 独立 RED reviewer 首轮/二轮 findings 全部修订；最终 verdict：`PASS / Spec compliant: Yes / RED quality: Approved / 未发现测试内容的可操作问题`。
+
+## 6. Batch 2026-07-13-003：T22～T31 GREEN 与 fresh verification
+
+- fixture 校正 commit：`bb4e3366`；旧版 fresh pack fixture 显式写入历史 docs/branch，防止产品修复后 fixture 自愈，测试总预算仍为 `+140/-1`。
+- 最小 GREEN commit：`6a46fc65`；产品仅修改 `src/ai_sdlc/context/state.py`，`+19/-3`、净新增 16 LOC，未新增文件、公共抽象、依赖、配置或 schema。
+- 实现结果：filesystem fallback 在 linked WI 下使用 `specs/<linked>`，无 linked 保留 `feature.spec_dir`；linked 无 runtime branch 返回空值；fresh legacy pack 比较 docs/branch 后复用同一 expected pack 进入既有 stale rebuild；semantic-only expected build 对 `YamlStoreError`、`UnicodeError`、`OSError` 保持旧成功合同。
+- 三个 RED 文件：`38 passed`；五个 focused 文件：`94 passed`。
+- 独立 GREEN reviewer verdict：`PASS / Spec compliant: Yes / Code quality: Approved / 未发现可操作问题`。
+- fresh 完整验证：
+  - `uv run pytest -q`：`3156 passed, 3 skipped in 427.01s`；
+  - `uv run ruff check src tests`：PASS；
+  - `uv run ai-sdlc verify constraints`：PASS；
+  - `git diff --check`：PASS。
+- 预算复核：产品 `+19/-3`（净 +16，≤20）；三个获准测试文件合计 `+140/-1`（新增 140，≤140）；其余产品/测试文件无 diff。
+- CC-03/04/06/07 after artifact 的 approved delta 仅为三件套从 `specs/197-adapter-preflight-order/` 切到 `specs/198-linked-wi-resume/`，以及 linked WI 无 runtime branch 时从历史 feature branch 切为空；`timestamp` 由完整测试的 rebuild 更新，显式 context summary 由最终 handoff 刷新，二者不纳入语义漂移。
+- 完整测试按预期刷新 root resume pack，并改写非本工作项的 Cursor adapter；adapter 已用 `apply_patch` 精确恢复，resume pack 由最终 continuity handoff 补齐 summary 后作为 after evidence 保存。
