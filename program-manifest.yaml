@@ -1894,6 +1894,9 @@ specs:
   path: specs/199-frontend-inheritance-truth
   depends_on: []
   frontend_evidence_class: framework_capability
+- id: 200-adapter-canonical-consumption-truth
+  path: specs/200-adapter-canonical-consumption-truth
+  depends_on: []
 truth_snapshot:
   generated_at: '2026-07-14T08:11:23Z'
   generated_by: ai-sdlc program truth sync
