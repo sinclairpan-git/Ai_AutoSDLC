@@ -154,3 +154,15 @@
 - 当前预算实测：产品 `(28-10) + (169-53) = 134` net LOC ≤135；测试 raw additions `8 + 12 + 248 = 268` ≤270。阈值仅留 1/2 LOC 余量，未以压行换预算。
 - 主代理定向复跑：`406 passed in 32.47s`；Ruff 与 `git diff --check` PASS。
 - 下一步：更新 continuity 后提交修订 HEAD，重跑全量 pytest、Ruff、constraints、validate 与 truth sync/audit；精确恢复 Cursor side effect，再由两个原维度 Agent 对最终 clean HEAD 终审。
+
+## 15. Batch 2026-07-13-015：修订 HEAD 全量验证
+
+- 修订 checkpoint：`ab8a58ad`。
+- 全量：`3179 passed, 3 skipped in 413.07s`；相较首轮实现完整套件增加 7 个必要负向 case，无失败或新增 skip。
+- 全仓 `uv run ruff check src tests`：PASS；`git diff --check`：PASS。
+- `uv run ai-sdlc verify constraints`：`no BLOCKERs`。
+- `uv run ai-sdlc program validate`：PASS，保留 33 个已登记 release source migration warning。
+- truth audit：snapshot `fresh`；`frontend-mainline-delivery` closure `closed`、audit `ready`，raw generation/quality 仍为 `blocked`；GAP-10 仍仅含 `adapter_canonical_consumption:unverified`。
+- retained inventory：`1023/1056 mapped`、`33 unmapped`、`11 missing`；audit exit 1 来自父计划明确保留的 GAP-10/GAP-11，不是 WI-199 回归。
+- 全量/CLI 再次改写 `.cursor/rules/ai-sdlc.mdc`；最终提交前必须用精确逆补丁恢复并确认零 diff。
+- 下一步：提交最终证据并重跑 truth sync/audit，恢复 Cursor side effect，形成 clean HEAD 后执行最终同 HEAD 双 Agent 终审。
