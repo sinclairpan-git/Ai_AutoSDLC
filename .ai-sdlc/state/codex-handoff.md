@@ -1,28 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-14T00:40:20+00:00
-- Reason: T32 final branch 双 Agent 一致 PASS
+- Updated: 2026-07-14T01:09:08+00:00
+- Reason: 处理 PR #122 Codex P2 truth snapshot finding
 - Goal: 完成 WI-196 GAP-08/T52：linked WI resume working set/branch 一致性与旧版 fresh pack 自愈，独立 PR 交付
-- State: WI-198 实现、全量验收与 final branch 双 Agent 评审完成；safety/lean 对 dd6fd99d 同一 HEAD 均 PASS 且无可操作问题；准备 evidence-only commit 后同 HEAD 快速复核
+- State: PR #122 所有 22 项 checks 全绿；Codex 对 HEAD 1a442f43 提出 1 个 P2 truth snapshot stale finding；已运行 program truth sync，development-summary inventory exists=true，truth audit snapshot=fresh
 - Stage: execute
 - Work Item: 198-linked-wi-resume
 - Branch: codex/198-linked-wi-resume
 
 ## Changed Files
-- M specs/198-linked-wi-resume/task-execution-log.md
-- ?? specs/198-linked-wi-resume/development-summary.md
+- M program-manifest.yaml
 
 ## Key Decisions
-- final 双评审确认兼容安全与精简预算均满足；证据提交不改运行时或测试，提交后必须由原两 Agent 复核最终 PR HEAD
+- 接受 Codex finding；只更新 canonical program truth snapshot，不改 runtime/tests；既有 33 migration pending 与三个 release blockers 不在 WI-198 范围且集合未扩大
 
 ## Commands / Tests
-- final safety PASS/Spec compliant Yes；final lean PASS/Lean compliant Yes；safety focused 38 passed；完整验证 3156 passed+3 skipped
+- program truth sync 成功；truth audit snapshot fresh，1018/1051 mapped、33 pending、11 missing、close 188/199；预期 exit 1 来自既有 blockers
 
 ## Blockers / Risks
-- 无本地 blocker；GitHub Codex review 与 required checks 尚未执行
+- 无新增 blocker；需提交/推送 snapshot 修复并对新 HEAD 重新请求 Codex review/checks
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交 final review evidence 与 development summary；双 Agent 复核新 HEAD；push、PR、Codex review/check heartbeat、merge
+- 提交 program-manifest 与 continuity evidence；push；@codex review 新 HEAD；等待 checks 全绿与无可操作问题后 merge
