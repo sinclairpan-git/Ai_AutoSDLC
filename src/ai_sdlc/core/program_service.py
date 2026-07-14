@@ -3467,23 +3467,23 @@ class ProgramService:
             pages = load_frontend_page_ui_schema_artifacts(self.root)
             page_ids = [item.page_schema_id for item in pages.page_schemas]
             provider_path = (
-                self.root / "providers/frontend"
+                Path("providers/frontend")
                 / constraints.effective_provider_id
                 / "provider.manifest.yaml"
             )
-            if not provider_path.is_file():
-                raise ValueError(f"provider manifest missing: {provider_path}")
+            if not (self.root / provider_path).is_file():
+                raise ValueError(f"provider manifest missing: {provider_path.as_posix()}")
             provider = self._load_provider_manifest(constraints.effective_provider_id) or {}
             strategies = []
             for strategy_id in _normalize_string_list(
                 provider.get("install_strategy_ids", [])
             ):
                 strategy_path = (
-                    self.root / "governance/frontend/solution/install-strategies"
+                    Path("governance/frontend/solution/install-strategies")
                     / f"{strategy_id}.yaml"
                 )
-                if not strategy_path.is_file():
-                    raise ValueError(f"install strategy missing: {strategy_path}")
+                if not (self.root / strategy_path).is_file():
+                    raise ValueError(f"install strategy missing: {strategy_path.as_posix()}")
                 strategies.append(self._load_install_strategy(strategy_id))
             if constraints.page_schema_ids != page_ids:
                 raise ValueError("page schema ids do not match generation constraints")
