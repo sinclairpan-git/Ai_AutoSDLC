@@ -8,7 +8,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.context.state import (
+    build_resume_pack,
+    load_checkpoint,
+    save_checkpoint,
+    save_resume_pack,
+)
 from ai_sdlc.core.close_check import CloseCheckResult
 from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
@@ -93,7 +98,7 @@ class TestConfirmMode:
         assert result.verdict == GateVerdict.PASS
         assert next(check for check in result.checks if check.name == "summary_exists").passed
 
-    def test_execute_stage_does_not_build_executor_for_zero_parsed_tasks(
+    def test_run_does_not_persist_state_or_build_executor_for_zero_parsed_tasks(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
@@ -107,6 +112,7 @@ class TestConfirmMode:
         )
         checkpoint = Checkpoint(
             current_stage="execute",
+            linked_wi_id="204-no-go",
             feature=FeatureInfo(
                 id="204-no-go",
                 spec_dir="specs/204-no-go",
@@ -118,17 +124,30 @@ class TestConfirmMode:
         build_executor = MagicMock(
             side_effect=AssertionError("must not build executor")
         )
+        save_checkpoint(tmp_path, checkpoint)
+        resume_pack = build_resume_pack(tmp_path)
+        assert resume_pack is not None
+        save_resume_pack(tmp_path, resume_pack)
+        state_dir = tmp_path / ".ai-sdlc/work-items/204-no-go"
+        tracked_state = [
+            tmp_path / ".ai-sdlc/state/checkpoint.yml",
+            tmp_path / ".ai-sdlc/state/resume-pack.yaml",
+            state_dir / "resume-pack.yaml",
+        ]
+        before = {path: path.read_bytes() for path in tracked_state}
         runner = SDLCRunner(tmp_path)
         monkeypatch.setattr(runner, "_build_executor", build_executor)
 
-        result = runner._run_execute_stage(checkpoint)
+        with pytest.raises(PipelineHaltError):
+            runner.run()
 
-        assert result is checkpoint
-        assert result.execute_progress is None
         build_executor.assert_not_called()
-        state_dir = tmp_path / ".ai-sdlc/work-items/204-no-go"
+        assert {path: path.read_bytes() for path in tracked_state} == before
+        assert load_checkpoint(tmp_path).execute_progress is None
         assert not (state_dir / "runtime.yaml").exists()
+        assert not (state_dir / "working-set.yaml").exists()
         assert not (state_dir / "execution-plan.yaml").exists()
+        assert not (spec_dir / "development-summary.md").exists()
 
     def test_close_context_includes_incident_postmortem_and_refresh_entry(
         self, tmp_path: Path

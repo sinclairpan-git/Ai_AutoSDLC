@@ -1531,7 +1531,7 @@
 
 - 日期 (UTC): 2026-06-11
 - 来源: user_report
-- 状态: closed
+- 状态: open
 - owner: codex
 - wi_id: 001-ai-sdlc-framework
 - 现象: 用户在 2026-06-10 反馈：提交前端需求后，LLM 在 SDLC 框架约束下完成需求拆分，但没有先提供技术栈建议、组件库建议或确认卡，就直接开始落地实现；用户没有机会选择前端技术栈和技术组件库。
@@ -1578,7 +1578,7 @@
 
 - 日期 (UTC): 2026-07-15
 - 来源: codex_review, adversarial_review
-- 状态: open
+- 状态: closed
 - owner: codex
 - wi_id: 204-program-finalization-command-family-reduction-candidate
 - related_doc: specs/204-program-finalization-command-family-reduction-candidate/development-summary.md
@@ -1596,5 +1596,5 @@
 - eval: summary 存在但 close 未就绪时的错误推进次数、recover 后 checkpoint 反复跳回 close 的次数、close-pending 正反夹具通过率。
 - 风险等级: 高
 - 可验证成功标准: 给定 execute checkpoint、完整 direct formal 产物和 `stage: close-pending` 的 summary，`detect_reconcile_hint()` 不返回推进到 close 的 hint，`recover` 不改写 checkpoint；去掉标记后保持历史兼容，仍可从相同产物推断到 close。
-- 处置进展 (2026-07-15): `reconcile` 已识别精确 `stage: close-pending` 并保留无/未知 marker 兼容；Runner 在零解析任务时于构建 Executor 前无写入返回。新增 detect/recover/status/summary gate/zero-task 回归，定向 53 项、相关扩大回归 277 项、全量 `3216 passed, 3 skipped`，Ruff、constraints 与 Program Truth ready/fresh 均通过。
+- 处置进展 (2026-07-15): `reconcile` 已识别精确 `stage: close-pending` 并保留无/未知 marker 兼容；Runner 在零解析任务时于 stage-entry checkpoint 保存与构建 Executor 前无写入返回。新增 detect/recover/status/summary gate/真实 run zero-task 回归，相关扩大回归 277 项、全量 `3216 passed, 3 skipped`，Ruff、constraints 与 Program Truth ready/fresh 均通过。
 - 是否需要回归测试补充: 已完成：close-pending、无/未知 marker、status/recover、summary gate 与 zero-task pre-Executor 边界均有自动化覆盖。

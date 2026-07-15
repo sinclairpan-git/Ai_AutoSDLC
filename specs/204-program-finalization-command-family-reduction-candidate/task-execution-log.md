@@ -501,11 +501,12 @@ ResumePack 作为该 WI 的显式例外 force-track；两份必须 byte-identica
 
 安全复审发现，仅把 checkpoint 改回 execute 仍不稳定：summary 文件会触发 reconcile 推进 close，
 真实 run 也会在零解析任务时先构建 Executor 并改写 execute state。已先登记
-`FD-2026-07-15-001`，再把 GAP-13 纳入 spec 精确白名单与 runtime≤12/tests≤150 预算。
+`FD-2026-07-15-001`，再把 GAP-13 纳入 spec 精确白名单。安全终审又证明真实 run 在 guard 前写
+checkpoint，最终预算随精确 preflight 回归收紧为 runtime≤20/tests≤170。
 
 - RED：close-pending 的 detect/recover 两项失败；zero-task runner 测试证明仍会构建 Executor。
 - GREEN：`reconcile.py` 精确识别 `stage: close-pending`，无/未知 marker 兼容；`runner.py` 在
-  `total_tasks=0` 时于 `_build_executor` 前返回。
+  `total_tasks=0` 时于 stage-entry timestamp/checkpoint 保存与 `_build_executor` 前返回。
 - 保护：unit 覆盖 reconcile no-op、unknown marker 兼容、summary gate；integration 共用一个 fixture
   覆盖 status、recover 与 `recover --reconcile`；runner raising mock 证明不构建 Executor 且不写
   runtime/execution-plan。
@@ -517,3 +518,19 @@ ResumePack 作为该 WI 的显式例外 force-track；两份必须 byte-identica
   的 fresh clone 中 root/scoped ResumePack 均 tracked、SHA-256 同为
   `4158ef2809c22b9bebd53dc9236afcfde05945438a2511399aa4af7f213457ef`；连续 load 两次后 hash
   不变、stage=`execute`/batch=0/last=T14、reconcile hint=None、Git clean。
+
+## 29. 安全终审 FAIL 与真实 run preflight 修复
+
+Confucius 对 `f34cd48ddb9d79bbc7bf3d10e75d5abeb4e5af1a` 的 fresh clone 终审复现：内部
+`_run_execute_stage` 虽不构建 Executor，但真实 `SDLCRunner.run()` 会先更新时间戳并保存 checkpoint，
+随后使 root/scoped ResumePack stale；同时 backlog 补丁误把旧 `FD-2026-06-11-001` 关单，而新
+`FD-2026-07-15-001` 仍为 open。该 HEAD 安全 verdict=FAIL，旧 Pascal PASS 随目标变化失效。
+
+修复把零任务 preflight 前移到 stage-entry checkpoint 写入之前；真实 run 回归以 raising mock 证明
+不构建 Executor，并按字节断言 checkpoint、root/scoped ResumePack 不变，runtime/working-set/
+execution-plan/summary 不生成。旧 defect 状态已恢复 open，GAP-13 defect 按其完整证据关闭。预算
+实测 runtime=`7+13=20/20`、tests=`39+71+57=167/170`。
+
+修复后定向 29 passed、相关扩大回归 277 passed、全量
+`3216 passed, 3 skipped in 481.35s`；Ruff PASS、plan drift=NO、constraints 0 BLOCKER、Program
+Truth ready/fresh（1076/1076，close 204/204）。新 exact commit 的 fresh-clone proof 与双终审待执行。

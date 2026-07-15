@@ -206,7 +206,12 @@ class SDLCRunner:
                 if on_stage_start is not None:
                     on_stage_start(stage)
 
-                if not dry_run:
+                zero_task_execute = (
+                    not dry_run
+                    and stage == "execute"
+                    and self._execute_has_no_tasks(cp)
+                )
+                if not dry_run and not zero_task_execute:
                     cp.current_stage = stage
                     cp.pipeline_last_updated = now_iso()
                     save_checkpoint(self.root, cp)
@@ -393,6 +398,13 @@ class SDLCRunner:
         """Build the execute-stage orchestration entrypoint."""
         return Executor(self.root)
 
+    def _execute_has_no_tasks(self, cp: Checkpoint) -> bool:
+        spec_dir = self._resolve_spec_dir(cp)
+        if spec_dir is None:
+            return False
+        tasks_file = spec_dir / "tasks.md"
+        return tasks_file.is_file() and TasksParser().parse(tasks_file).total_tasks == 0
+
     def _run_execute_stage(self, cp: Checkpoint) -> Checkpoint:
         """Run execute-side effects before the execute gate validates artifacts."""
         spec_dir = self._resolve_spec_dir(cp)
@@ -401,9 +413,6 @@ class SDLCRunner:
 
         tasks_file = spec_dir / "tasks.md"
         if not tasks_file.exists():
-            return cp
-        if TasksParser().parse(tasks_file).total_tasks == 0:
-            logger.warning("Execute skipped: no executable tasks in %s", tasks_file)
             return cp
 
         progress = cp.execute_progress

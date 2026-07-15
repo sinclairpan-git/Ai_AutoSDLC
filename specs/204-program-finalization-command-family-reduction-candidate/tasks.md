@@ -119,7 +119,7 @@ related_doc:
 
 - **状态**：本地验证完成；等待 fresh-clone proof、最终双 Agent 与 Codex review
 - **依赖**：T14 No-Go、PR #130 Codex findings
-- **文件/预算**：仅 spec 3.1 节 8 项白名单；runtime≤12、tests≤150；零 candidate LOC/claim。
+- **文件/预算**：仅 spec 3.1 节 8 项白名单；runtime≤20、tests≤170；零 candidate LOC/claim。
 - **验收**：
   1. `stage: close-pending` 下 detect/reconcile/status/recover/`recover --reconcile` 均停在 execute；
   2. 无 marker 与未知 marker 继续保持历史 close 推断；

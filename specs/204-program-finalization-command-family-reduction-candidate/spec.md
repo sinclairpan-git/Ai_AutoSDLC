@@ -165,7 +165,7 @@ GAP-13 实现白名单固定为：
 - `docs/framework-defect-backlog.zh-CN.md`
 - `specs/204-program-finalization-command-family-reduction-candidate/development-summary.md`
 
-新增非空手写行上限为 runtime≤12、tests≤150；文档/state 不计入 candidate LOC/claim。超任一上限、
+新增非空手写行上限为 runtime≤20、tests≤170；文档/state 不计入 candidate LOC/claim。超任一上限、
 增加路径或改变无 marker 兼容行为，必须重新修改 formal 并由两个 reviewer 对同一 tree 再审。
 
 ## 4. Sponsor 与账本
