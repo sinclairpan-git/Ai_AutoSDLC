@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T04:04:46+00:00
-- Reason: Freeze Round 7 double-PASS receipt before terminal truth sync
+- Updated: 2026-07-15T04:14:15+00:00
+- Reason: Record successful terminal truth close-out before final receipt commit
 - Goal: Merge WI203 formal contract PR #126, then resume WI202 Lean Gate
-- State: Round 7 dual PASS frozen on hash cfcd63d7662175e8e9d413b831e582ee81d00958cb8d9c3c8c717de0987dc57f; missing-source remediation ready for target commit
+- State: Round 7 dual PASS frozen on hash cfcd63d7662175e8e9d413b831e582ee81d00958cb8d9c3c8c717de0987dc57f; target 507ece1b; terminal truth snapshot f32f5546 is ready/fresh with 1071/1071 missing 0 close 203/203
 - Stage: execute
 - Work Item: 203-finalization-command-family-reduction-contract
 - Branch: feature/203-finalization-command-family-reduction-contract-docs
@@ -12,24 +12,19 @@
 - M .ai-sdlc/state/codex-handoff.md
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/203-finalization-command-family-reduction-contract/codex-handoff.md
-- M specs/203-finalization-command-family-reduction-contract/plan.md
-- M specs/203-finalization-command-family-reduction-contract/spec.md
-- M specs/203-finalization-command-family-reduction-contract/task-execution-log.md
-- M specs/203-finalization-command-family-reduction-contract/tasks.md
-- M tests/integration/test_repo_program_manifest.py
-- ?? specs/203-finalization-command-family-reduction-contract/development-summary.md
+- M program-manifest.yaml
 
 ## Key Decisions
-- Round 7 is the only valid review receipt; four target files are frozen; preserve strict missing_sources=0 and close 203/203
+- Round 7 is the only valid review receipt; four target files frozen; strict WI201 missing-source guard preserved
 
 ## Commands / Tests
-- repo manifest regression 1 passed in 59.48s; constraints allow with 0 blockers/advisories; both agents independently recomputed cfcd63d and PASS
+- repo manifest regression 1 passed in 59.48s; constraints allow 0/0; terminal truth sync exit 0; terminal truth audit exit 0 ready/fresh
 
 ## Blockers / Risks
-- PR cannot merge until target commit is followed by terminal truth sync/audit fresh, new-head Codex review has no actionable findings, and all required checks pass
+- PR cannot merge until final receipt is committed/pushed, current-head Codex has no actionable findings, and all required checks pass
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit frozen Round 7 remediation; run terminal truth sync and audit; commit truth receipt; push; reply to Codex; request new-head review; heartbeat checks; merge PR #126
+- Commit/push terminal truth receipt; reply/request Codex review; heartbeat required checks; merge PR #126; record sponsor receipt in WI202

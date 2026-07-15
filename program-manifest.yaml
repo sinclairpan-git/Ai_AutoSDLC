@@ -2011,10 +2011,10 @@ specs:
   path: specs/203-finalization-command-family-reduction-contract
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-15T03:43:56Z'
+  generated_at: '2026-07-15T04:10:50Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 81c48b76
+  repo_revision: 507ece1b
   authoring_hash: da9d4d0ef0a5c0c91d1594594a958d8149dbd6dbb202a31559f548e669c2293d
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -2057,7 +2057,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 1d8979309a8842eb4c8f10aedaf2fa71402f2ca05b2c045ba7df5d03c48aa716
+  snapshot_hash: f32f55465c55640b0ceff241dbe3179b9208cc7e0a915e359a0e8abe254bf6fb
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2074,9 +2074,9 @@ truth_snapshot:
     total_sources: 1071
     mapped_sources: 1071
     unmapped_sources: 0
-    missing_sources: 1
+    missing_sources: 0
     phase_signal_count: 3569
-    deferred_signal_count: 6437
+    deferred_signal_count: 6438
     non_goal_signal_count: 364
     layer_totals:
       blueprint: 1
@@ -2095,7 +2095,7 @@ truth_snapshot:
       plan: 203
       tasks: 203
       execution: 203
-      close: 202
+      close: 203
       requirements: 2
       defect: 3
       design: 8
@@ -11240,10 +11240,10 @@ truth_snapshot:
       source_type: development_summary
       truth_layer: close
       mapped: true
-      exists: false
+      exists: true
       mapping_ref: 203-finalization-command-family-reduction-contract
       phase_signal_count: 0
-      deferred_signal_count: 0
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
