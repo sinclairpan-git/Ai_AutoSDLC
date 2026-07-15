@@ -9,11 +9,11 @@ working_set_snapshot:
   plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/203-finalization-command-family-reduction-contract/specs/203-finalization-command-family-reduction-contract/plan.md
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/203-finalization-command-family-reduction-contract/specs/203-finalization-command-family-reduction-contract/tasks.md
   active_files: []
-  context_summary: 'Goal: Merge immutable WI-203 WP-07 sponsor receipt, then return
-    to WI-202 report-only Lean Gate | State: Round 4 dual-agent PASS on canonical
-    hash 9f835a8fe8bdd87acaab072e7df9d7abf66b2298df5e1bdb90a961a9042054d8; formal-only
-    T04 validation and PR delivery in progress | Next: Run final formal validations,
-    commit and truth sync on WI-203 branch'
+  context_summary: 'Goal: Merge WI203 formal contract PR #126, then resume WI202 Lean
+    Gate | State: Focused repository-truth test baseline is fixed; 406 related tests
+    pass; verify constraints allows with zero blockers/advisories; review target hash
+    is unchanged | Next: Commit and push the focused test plus evidence/handoff update,
+    re-request Codex review, then monitor the new head'
 current_branch: ''
 docs_baseline_ref: f89e517683dbec737eb103852ed66ede42858f64
 docs_baseline_at: '2026-07-13T11:19:51-04:00'

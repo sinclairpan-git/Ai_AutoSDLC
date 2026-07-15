@@ -219,3 +219,17 @@ Round 5 是最终有效双 PASS；review target 之后未变化。
 
 待 formal PR 合入后追加 branch、commit、PR、Codex review、checks、merge commit、truth 三元组、
 handoff 和 sponsor activation。未合入前 receipt 不生效。
+
+### 4.1 PR #126 首轮兼容门禁处置
+
+首轮 Compatibility Gate 在 4 个 POSIX matrix job 中均只失败于
+`test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence`：仓库真值断言仍固定为
+WI201 的 `1066/1066/0/0` 与 close `202/202`，而 WI203 正式登记后的实际值为
+`1071/1071/0/1` 与 close `203/202`；唯一 missing 是开放工作项尚未生成的
+`development-summary.md`。首个失败 job 的完整结果为 `3185 passed, 1 failed, 3 skipped`。
+
+处置仅更新该仓库级测试基线，不创建虚假的 completion artifact，也不修改四个 review target。
+修复后相关回归为 `406 passed in 87.31s`，`verify constraints --json` 为 allow、0 blocker、
+0 advisory；canonical review target 仍为
+`15022819f0d526c5a3ec12e1a745a244c805ee341778e2253eaeae59a219f41c`。最终 receipt 仍以修复提交
+上的 Codex Review 与全部 required checks 为准。
