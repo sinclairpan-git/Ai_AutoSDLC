@@ -1,33 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T03:42:26+00:00
-- Reason: Checkpoint validation and the exact terminal truth-sync requirement before committing
+- Updated: 2026-07-15T03:47:45+00:00
+- Reason: Record successful terminal truth close-out before the final truth commit
 - Goal: Merge WI203 formal contract PR #126, then resume WI202 Lean Gate
-- State: Round 6 dual PASS remains valid on hash 45dfaa4a986c3fa4ffbfef6c977ee5a0fb07501ad3978bb1b64c549c0aee66cf; focused regression and constraints pass; truth recompute is ready but persisted snapshot is stale after the new review receipt
+- State: Round 6 dual PASS is frozen on hash 45dfaa4a986c3fa4ffbfef6c977ee5a0fb07501ad3978bb1b64c549c0aee66cf; terminal truth sync wrote snapshot 1d8979309a8842eb4c8f10aedaf2fa71402f2ca05b2c045ba7df5d03c48aa716 and audit is ready/fresh
 - Stage: execute
 - Work Item: 203-finalization-command-family-reduction-contract
 - Branch: feature/203-finalization-command-family-reduction-contract-docs
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/203-finalization-command-family-reduction-contract/codex-handoff.md
-- M specs/203-finalization-command-family-reduction-contract/plan.md
-- M specs/203-finalization-command-family-reduction-contract/spec.md
-- M specs/203-finalization-command-family-reduction-contract/task-execution-log.md
-- M specs/203-finalization-command-family-reduction-contract/tasks.md
+- M program-manifest.yaml
 
 ## Key Decisions
-- Commit the frozen target and review receipt first, then execute the mandated terminal truth sync; do not change target content
+- No further target or truth-source edits before PR review; managed Cursor drift was restored to HEAD
 
 ## Commands / Tests
-- repo manifest regression 1 passed in 61.05s; verify constraints allow with 0 blockers/advisories; truth audit exit 1 stale with recompute ready, inventory 1071/1071, close 202/203
+- truth sync exit 0; truth audit exit 0 ready/fresh; inventory 1071/1071, missing 1 expected open close artifact, signals 3569/6437/364
 
 ## Blockers / Risks
-- Persisted truth snapshot must be refreshed against the committed formal tree before push
+- Final truth manifest commit must be pushed and reviewed; required checks must rerun green
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Verify target hash and diff, commit Round 6 formal correction, run program truth sync --execute --yes, restore managed Cursor drift, rerun truth audit, commit snapshot, then push
+- Verify clean diff/hash, commit program-manifest truth snapshot, push final head, reply to Codex whitelist finding, request review, and heartbeat until merge

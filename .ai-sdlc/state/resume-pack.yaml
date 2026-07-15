@@ -10,11 +10,11 @@ working_set_snapshot:
   tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/203-finalization-command-family-reduction-contract/specs/203-finalization-command-family-reduction-contract/tasks.md
   active_files: []
   context_summary: 'Goal: Merge WI203 formal contract PR #126, then resume WI202 Lean
-    Gate | State: Round 6 dual PASS remains valid on hash 45dfaa4a986c3fa4ffbfef6c977ee5a0fb07501ad3978bb1b64c549c0aee66cf;
-    focused regression and constraints pass; truth recompute is ready but persisted
-    snapshot is stale after the new review receipt | Next: Verify target hash and
-    diff, commit Round 6 formal correction, run program truth sync --execute --yes,
-    restore managed Cursor drift, rerun truth audit, commit snapshot, then push'
+    Gate | State: Round 6 dual PASS is frozen on hash 45dfaa4a986c3fa4ffbfef6c977ee5a0fb07501ad3978bb1b64c549c0aee66cf;
+    terminal truth sync wrote snapshot 1d8979309a8842eb4c8f10aedaf2fa71402f2ca05b2c045ba7df5d03c48aa716
+    and audit is ready/fresh | Next: Verify clean diff/hash, commit program-manifest
+    truth snapshot, push final head, reply to Codex whitelist finding, request review,
+    and heartbeat until merge'
 current_branch: ''
 docs_baseline_ref: f89e517683dbec737eb103852ed66ede42858f64
 docs_baseline_at: '2026-07-13T11:19:51-04:00'

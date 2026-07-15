@@ -2011,10 +2011,10 @@ specs:
   path: specs/203-finalization-command-family-reduction-contract
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-15T02:48:43Z'
+  generated_at: '2026-07-15T03:43:56Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: fd5bbd3c
+  repo_revision: 81c48b76
   authoring_hash: da9d4d0ef0a5c0c91d1594594a958d8149dbd6dbb202a31559f548e669c2293d
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -2057,7 +2057,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 59d9b31d4d09873b104fb600f3643ecbb1a2f618e879396ef595b614e72dc718
+  snapshot_hash: 1d8979309a8842eb4c8f10aedaf2fa71402f2ca05b2c045ba7df5d03c48aa716
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2076,8 +2076,8 @@ truth_snapshot:
     unmapped_sources: 0
     missing_sources: 1
     phase_signal_count: 3569
-    deferred_signal_count: 6435
-    non_goal_signal_count: 365
+    deferred_signal_count: 6437
+    non_goal_signal_count: 364
     layer_totals:
       blueprint: 1
       spec: 203
@@ -11234,8 +11234,8 @@ truth_snapshot:
       exists: true
       mapping_ref: 203-finalization-command-family-reduction-contract
       phase_signal_count: 1
-      deferred_signal_count: 4
-      non_goal_signal_count: 1
+      deferred_signal_count: 6
+      non_goal_signal_count: 0
     - path: specs/203-finalization-command-family-reduction-contract/development-summary.md
       source_type: development_summary
       truth_layer: close
