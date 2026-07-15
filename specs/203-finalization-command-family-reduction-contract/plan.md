@@ -88,10 +88,12 @@ src/ai_sdlc/cli/
 ### Phase 0：Formal admission 与 sponsor receipt
 
 **目标**：冻结 RC/CC/T61/rollback，不授权实现。
-**改动白名单**：本 WI 五个 formal 文件、合法 manifest/project-state/handoff/truth，以及
+**改动白名单**：本 WI 六个 formal 文件（含如实记录设计准入状态的 `development-summary.md`）、
+合法 manifest/project-state/handoff/truth，以及
 `tests/integration/test_repo_program_manifest.py` 中仅把既有 inventory tuple
-`1066/1066/0/0`、close `202/202` 更新为 WI-203 登记后的 `1071/1071/0/1`、close
-`203/202`。不得新增/删除测试逻辑、放宽断言或修改其他 `tests/` 文件。
+`1066/1066/0/0`、close `202/202` 更新为 WI-203 全部 source 物化后的
+`1071/1071/0/0`、close `203/203`。不得新增/删除测试逻辑、放宽断言或修改其他 `tests/`
+文件；summary 不得宣称 candidate 已实现或工作项已关闭。
 **验证**：JSON/Markdown lint、constraints、truth audit、diff/path、同 hash 双 Agent。
 **完成**：docs-only PR 合入 main，记录 merge commit 和 review target hash。
 **回退**：revert formal PR；产品运行时不受影响，所有 sponsor claim 同时失效。

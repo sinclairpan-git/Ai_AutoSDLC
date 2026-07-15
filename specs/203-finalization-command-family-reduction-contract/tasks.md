@@ -87,9 +87,10 @@ T51 → T52 → T53
   1. formal 白名单、constraints、truth audit、diff check 通过；
   2. 单一 formal commit 推送、PR、`@codex review`、heartbeat、required checks；
   3. PR 合入 main 并记录 merge commit；
-  4. 无 `src/`、runtime rule、release 变更；`tests/` 唯一允许
+  4. 无 `src/`、runtime rule、release 变更；新增 `development-summary.md` 只如实总结 formal
+     设计准入与 sponsor receipt 状态，不得虚报 candidate 实现或工作项关闭；`tests/` 唯一允许
      `tests/integration/test_repo_program_manifest.py` 的两个既有 tuple 从
-     `1066/1066/0/0`、close `202/202` 精确更新为 `1071/1071/0/1`、close `203/202`，
+     `1066/1066/0/0`、close `202/202` 精确更新为 `1071/1071/0/0`、close `203/203`，
      不得新增/删除逻辑、放宽断言或修改其他测试文件；
   5. WI-202 只在此后引用 sponsor；登记 `active` owner/handoff/deadline，30 日未进入 T61A
      自动 `revoked`。
