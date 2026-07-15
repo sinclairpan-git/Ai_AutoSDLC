@@ -1,14 +1,14 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-07-15T02:37:29+00:00'
+pipeline_last_updated: '2026-07-15T09:27:40+00:00'
 current_stage: execute
 feature:
-  id: 197-adapter-preflight-order
-  spec_dir: specs/197-adapter-preflight-order
-  design_branch: feature/197-adapter-preflight-order-docs
-  feature_branch: feature/197-adapter-preflight-order
-  current_branch: feature/197-adapter-preflight-order
-  docs_baseline_ref: f89e517683dbec737eb103852ed66ede42858f64
-  docs_baseline_at: '2026-07-13T11:19:51-04:00'
+  id: 196-ai-sdlc-lean-code-self-reduction-governance
+  spec_dir: specs/196-ai-sdlc-lean-code-self-reduction-governance
+  design_branch: codex/196-lean-governance-no-go-audit
+  feature_branch: codex/196-lean-governance-no-go-audit
+  current_branch: codex/196-lean-governance-no-go-audit
+  docs_baseline_ref: 75d3dda5ec8b45d0f9441058da889163d814b717
+  docs_baseline_at: '2026-07-15T09:27:40+00:00'
 multi_agent:
   supported: true
   max_parallel: 3
@@ -38,6 +38,6 @@ completed_stages:
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 203-finalization-command-family-reduction-contract
-linked_plan_uri: specs/203-finalization-command-family-reduction-contract/plan.md
-last_synced_at: '2026-07-15T02:37:29+00:00'
+linked_wi_id: 196-ai-sdlc-lean-code-self-reduction-governance
+linked_plan_uri: specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+last_synced_at: '2026-07-15T09:27:40+00:00'

@@ -3,21 +3,21 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/203-finalization-command-family-reduction-contract/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/203-finalization-command-family-reduction-contract/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/203-finalization-command-family-reduction-contract/specs/203-finalization-command-family-reduction-contract/spec.md
-  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/203-finalization-command-family-reduction-contract/specs/203-finalization-command-family-reduction-contract/plan.md
-  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/203-finalization-command-family-reduction-contract/specs/203-finalization-command-family-reduction-contract/tasks.md
+  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-governance-no-go-audit/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-governance-no-go-audit/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-governance-no-go-audit/specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-governance-no-go-audit/specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-governance-no-go-audit/specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
   active_files: []
-  context_summary: 'Goal: Merge WI203 formal contract PR #126, then resume WI202 Lean
-    Gate | State: Round 7 and final evidence recheck dual PASS on cfcd63d7662175e8e9d413b831e582ee81d00958cb8d9c3c8c717de0987dc57f;
-    target 507ece1b; summary fix 88ac8f16; truth snapshot 9bc58322 ready/fresh | Next:
-    Commit/push truth receipt; reply/request Codex review; heartbeat checks; merge
-    PR #126; record sponsor receipt in WI202'
+  context_summary: 'Goal: Deliver WI196 parent RC-09 No-Go audit without reviving
+    WI202; future reduction requires new sponsor and parent dual PASS | State: Active
+    checkout and resume paths now use 196-lean-governance-no-go-audit; formal dual
+    PASS and truth/full-suite evidence remain valid | Next: Verify resume-pack paths,
+    truth/constraints, commit and push the focused P2 fix'
 current_branch: ''
-docs_baseline_ref: f89e517683dbec737eb103852ed66ede42858f64
-docs_baseline_at: '2026-07-13T11:19:51-04:00'
-timestamp: '2026-07-15T02:37:30+00:00'
+docs_baseline_ref: 75d3dda5ec8b45d0f9441058da889163d814b717
+docs_baseline_at: '2026-07-15T09:27:40+00:00'
+timestamp: '2026-07-15T10:48:26+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-07-15T02:37:29+00:00'
-checkpoint_fingerprint: 4b13448070e0260b4f48881737268d741c1a0d77d7d4906110c8d358bdf422ae
+checkpoint_last_updated: '2026-07-15T09:27:40+00:00'
+checkpoint_fingerprint: 0eceaf1137e891b065409a99582e1ca45de021e19854963b99532d423080c9a0

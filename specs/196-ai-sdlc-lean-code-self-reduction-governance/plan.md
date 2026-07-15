@@ -20,21 +20,21 @@
 
 ```text
 双 Agent 同内容哈希 PASS
-  ├─ T51 GAP-07 adapter/preflight 缺陷（独立 WI）
-  ├─ T52 GAP-08 linked-WI resume 缺陷（独立 WI）
-  └─ Barrier：T51 与 T52 都关闭
+  ├─ T51 GAP-07 adapter/preflight 缺陷（WI-197 / PR #121，已关闭）
+  ├─ T52 GAP-08 linked-WI resume 缺陷（WI-198 / PR #122，已关闭）
+  └─ Barrier：T51 与 T52 已关闭
             └─ WP-01A 目标切片旧行为基线
-                 ├─ WP-02 Lean Gate：report → warning → blocking
+                 ├─ WP-02 Lean Gate：report → warning → blocking（首个 T62A 候选 RC-09 No-Go；仍 open）
                  ├─ WP-03 helper/DTO/test 重复族
                  ├─ WP-04 Loop Store 重复族
                  ├─ WP-05 baseline 候选 go/no-go
                  ├─ WP-06 ProgramService 单领域切片
                  └─ WP-07 Program Stage 单 family 切片
 
-关联治理债务（独立推进，不是总前置）
-  ├─ T53A frontend inheritance truth
-  ├─ T53B adapter consumption truth
-  └─ T54 source inventory
+已关闭的关联治理债务（当前仅保留防回归检查）
+  ├─ T53A frontend inheritance truth（WI-199 / PR #123，已关闭）
+  ├─ T53B adapter consumption truth（WI-200 / PR #124，已关闭）
+  └─ T54 source inventory（WI-201 / PR #125，已关闭）
 ```
 
 WP-03～WP-07 不互相强制串行。只有代码重叠、契约重叠或同一重复族才形成真实依赖；依赖必须在子项 spec 中用文件/符号和测试证明。
@@ -58,6 +58,7 @@ WP-03～WP-07 不互相强制串行。只有代码重叠、契约重叠或同一
 
 ### T51：GAP-07 adapter mutation / clean-tree preflight
 
+- **当前状态**：已由 WI-197 / PR #121 / merge `4802596f` 关闭；以下条款保留为已执行合同与回退依据。
 - **风险/范围**：L1/L2；只处理 adapter hook 与 mutation preflight 的执行顺序。
 - **非目标**：不重写 adapter，不改变普通用户自动适配语义。
 - **进入**：先用 canonical CLI fixture 复现 `.cursor` 写入导致 clean-tree 阻断。
@@ -68,6 +69,7 @@ WP-03～WP-07 不互相强制串行。只有代码重叠、契约重叠或同一
 
 ### T52：GAP-08 linked work item continuity
 
+- **当前状态**：已由 WI-198 / PR #122 / merge `68150d3f` 关闭；以下条款保留为已执行合同与回退依据。
 - **风险/范围**：L2；只修复 resume working set 与 current branch/spec/plan/tasks 派生。
 - **非目标**：不改历史 checkpoint 阶段语义，不迁移 schema。
 - **进入**：fixture 同时设置历史 `feature` 与新的 `linked_wi_id`，红测证明工作集仍指向历史 spec。
@@ -98,9 +100,13 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 - **非目标**：不追补或一次性阻断历史债务，不引入与 changed-code 无关的全仓重写。
 - **进入**：WP-01A 完成；分类器在当前仓库零误分类样本通过。
 - **阶段**：T62A 两个规则族 report-only → T62B 两个规则族 warning → T62C 两个规则族 blocking；每阶段独立 PR，两个规则族使用独立状态和开关，可单独降级。
+- **当前状态**：WI-202 候选在 formatter/真实 Git/closed safety proof 下仍至少为 product 225、
+  candidate 382，超过 170；已按 RC-09 停止，未合入 source 或消费 sponsor。T62A 仍 open。
 - **兼容**：强制 CC-01/02/03/05/06/07；新增报告、warning/blocker 与退出行为必须写入版本化 expected-delta artifact，未列入差异为 BLOCKER。
 - **完成**：历史未改代码不阻断；新增超限和缺合同字段 fixture 分别经历 report/warning/blocker；所有 waiver 有 owner、理由、路径和到期日；合同 admission 健康检查、状态转换和 execute BLOCKER 通过。
 - **停止/回退**：任一规则族误判时只降级该规则族；合同 admission 不处于 `active + verified` 时自动恢复 FR-08 风险分层 reviewer，不追补历史债务。
+- **重启**：必须同时有足额的新/替代 sponsor 与重新冻结、同 hash 双 PASS 的父合同；只满足一项
+  不得复活 WI-202。重启前影响 CC-05/CC-06 的子项继续使用两个独立 reviewer。
 - **预算/证据**：计入 RC-06；结构化报告、blocking fixture、降级演练。
 
 ### WP-03：稳定 helper / DTO / 镜像测试重复族（L1）
@@ -154,13 +160,15 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 - **终态**：逐 family 推进，直到 `program_cmd.py` 符合 400 行约束。
 - **证据**：family matrix、33 命令 surface、shadow diff、release smoke、legacy deletion receipt。
 
-## 7. 关联治理债务
+## 7. 已关闭的关联治理债务与防回归
 
-T53A、T53B、T54 分别使用独立 WI/branch/PR。它们必须修复并产出 truth snapshot，但不自动阻断所有减重包。每个目标切片必须先落盘 impact analysis；分析缺失或结论不确定时 fail-closed，只有肯定的非影响证据才允许排除对应依赖。T51 涉及 adapter 入口，必须在 execute 前明确评估 GAP-10/T53B。
+T53A、T53B、T54 已分别使用独立 WI/branch/PR 关闭，不再是待执行任务或当前总前置：
 
-- T53A 关闭 frontend inheritance blockers。
-- T53B 关闭 adapter canonical consumption blocker。
-- T54 将 33 unmapped/11 missing source 逐项修复；无法修复者必须有 owner、原因和到期日。
+- T53A：WI-199 / PR #123 / merge `208a34c8`，frontend inheritance truth 已关闭。
+- T53B：WI-200 / PR #124 / merge `c737eda0`，adapter canonical consumption truth 已关闭。
+- T54：WI-201 / PR #125 / merge `d19c8b7d`，source inventory 已收敛为 unmapped=0、missing=0。
+
+每个后续目标切片仍须落盘对应 impact analysis，作用是防止上述 truth 回归，而不是重复执行已关闭任务。分析缺失或不确定，或当前 truth 再次出现对应 blocker、unmapped/missing source 时，必须 fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B/T54 重新当作硬依赖。涉及 adapter 入口的切片仍须明确验证 GAP-10 的 consumption 边界未回归。
 
 ## 8. 停止与回退总则
 
@@ -181,4 +189,4 @@ T53A、T53B、T54 分别使用独立 WI/branch/PR。它们必须修复并产出 
 - 当前治理文档的 review target 为 `spec.md + plan.md + tasks.md`。在 worktree 根运行：`base=specs/196-ai-sdlc-lean-code-self-reduction-governance; for f in "$base/spec.md" "$base/plan.md" "$base/tasks.md"; do shasum -a 256 "$f"; done | LC_ALL=C sort | shasum -a 256`；相对路径文本属于哈希输入。
 - review record 包含 agent、维度、review target hash、时间、findings、处置、verdict；任一目标文件变化使两个 PASS 同时失效。
 - 所有运行时工作包与 WI-196 mainline PR 均遵守 `AGENTS.md` 的 push、PR、Codex review、checks、heartbeat 和 merge 协议；L3 额外要求本地只读 reviewer。
-- 本治理项完成条件：双 Agent 对同一目标哈希 PASS、文档/constraints/diff/path 验证通过、handoff 指向 GAP-07 首个子项。
+- 本次父治理审计完成条件：双 Agent 对同一目标哈希 PASS、文档/constraints/diff/path 验证通过、handoff 指向 WI-196，并记录 T62A No-Go、保持 open 的状态与重新启动的双重前置；不得再把 handoff 指向已关闭的 GAP-07/08 或旧 WI-202。

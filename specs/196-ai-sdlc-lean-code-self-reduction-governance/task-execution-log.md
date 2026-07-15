@@ -170,10 +170,10 @@
 | GAP-05 | planned | T63/T64 | `models/frontend_*`、`telemetry/*`、store/test 候选 | duplicate family before/after |
 | GAP-06 | planned | T65 | 6 个 `build_p*_baseline` builder | consumer graph、Go/No-Go receipt |
 | GAP-07 | closed | T51 / WI-197 | `specs/197-adapter-preflight-order/task-execution-log.md` §6.3～6.7、PR `#121`、merge `4802596f` | RED/GREEN、full/CI、双 Agent、Codex、mainline targeted/truth |
-| GAP-08 | planned-second | T52 | `context/state.py`、当前 resume-pack 风险 | red/green continuity tests、artifact diff |
-| GAP-09 | planned-independent | T53A | `program-manifest.yaml` truth snapshot | blocker closure snapshot |
-| GAP-10 | planned-independent | T53B | `program-manifest.yaml` truth snapshot | consumption evidence、closure snapshot |
-| GAP-11 | planned-independent | T54 | source inventory 1008/1041 | per-source resolution/exception ledger |
+| GAP-08 | closed | T52 / WI-198 | `specs/198-linked-wi-resume/task-execution-log.md` §3～§8、PR `#122`、merge `68150d3f` | RED/GREEN、recover/handoff、双 Agent、Codex、mainline truth |
+| GAP-09 | closed | T53A / WI-199 | PR `#123`、merge `208a34c8` | framework capability 与 consumer inheritance 分离、mainline truth |
+| GAP-10 | closed | T53B / WI-200 | PR `#124`、merge `c737eda0` | repository capability 与 session consumption 分离、mainline truth |
+| GAP-11 | closed | T54 / WI-201 | PR `#125`、merge `d19c8b7d` | inventory complete、unmapped=0、missing=0、mainline truth |
 
 ## 6. Batch 2026-07-12-005：第二轮评审与合同适用性修订
 
@@ -379,3 +379,123 @@
 - branch truth exact delta 仅移除 `frontend_inheritance:generation` 与 `frontend_inheritance:quality`；`frontend-mainline-delivery` 为 `audit=ready`，原始 handoff/status 仍保留 missing snapshot 的 blocked 诊断。
 - GAP-10 保留 `adapter_canonical_consumption:unverified`；GAP-11 保留 `33 unmapped / 11 missing`。WI-199 五件套使 mapped/source 总数同步增加 5，不属于债务清仓。
 - GAP-09 当前标记为 `branch truth-ready / PR-mainline pending`；只有 WI-199 PR 合并并在 `origin/main` 重跑证据后才更新为 closed。
+
+## 18. Batch 2026-07-15-017：GAP-09～GAP-11 mainline 关闭与 sponsor receipt
+
+- GAP-09/T53A：WI-199 经双审、Codex/CI 与 mainline smoke 后由 PR #123 squash merge；commit
+  `208a34c82da0474a3cf51f3758934a188758b33d`。Framework capability 与 consumer inheritance
+  fail-closed 语义分离，frontend release truth 不再含两个误报 blocker。
+- GAP-10/T53B：WI-200 由 PR #124 squash merge；commit
+  `c737eda056b2c86a6110ab32db237c417ee19a04`。Repository capability closure 与本机会话 canonical
+  consumption admission 分离，后者仍按 runtime 环境独立 fail-closed。
+- GAP-11/T54：WI-201 由 PR #125 squash merge；commit
+  `d19c8b7df66ca43e4fa55a99a6d05fa2d1219586`。33 个 unmapped 与 11 个 missing source 收敛为 0；
+  inventory=`complete`。
+- WI-203 / PR #126 / merge `75d3dda5ec8b45d0f9441058da889163d814b717` 冻结一个
+  9-handler、预计净删除至少 1,501 LOC 的 WP-07 候选，以及总保护 claim≤353、candidate T61A/B≤180、
+  WI-202 T62A≤170、reserve=3 不可借出的 sponsor receipt。该 receipt 只授权受限保护预算，不代表
+  candidate 实现或删除已发生。
+- 当前 mainline truth 为 source `1071/1071/0/0`、close `203/203`；GAP-07～GAP-11 均已有独立
+  mainline evidence。父项仍未满足 RC-08，不得标记整体完成。
+
+## 19. Batch 2026-07-15-018：WI-202 RC-06/RC-09 No-Go 与零残留处置
+
+### 19.1 失败目标与纠偏
+
+WI-202 最初尝试在 cap 170 内同时实现 WP-02 两个 T62A report-only 规则族。Round 1/2/3/5
+formal 均双 FAIL；Round 4 在 verdict 前主动撤销；Round 6 target
+`06d2764160f4ada12c86f3c8ab958b8fab154aca7203bc49eb751e7677635d2d` 也由 Pascal 与
+Confucius 独立复算后双 FAIL。主要纠偏：不得用 fake Git、物理压行、场景名称、未闭合 parser，
+也不得把 changed-code 与 contract admission 核心语义推迟到 T62B 来换取预算。
+
+### 19.2 两套父合同完整 proof
+
+两套 proof 都覆盖真实 Git、changed-code added/deleted/budget、changed Python 400/50、fixed
+classification、required contract fields、固定 CC/RC、closed waiver、closed deterministic JSON、
+无自由文本回显、invalid/non-project、zero-write 和 actual `verify_app`；所有新增函数≤50。
+
+| proof | 设计 | core | CLI | tests | product | candidate | prior 后 | source-set SHA-256 |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| v6 | exact base/candidate 40hex、完整 object/containment edge | 223 | 28 | 178 | 251 | 429 | 431 | `aeb48490db13ea37708d328399381df442a1a6cf6fa23785189460b1ce8325d8` |
+| v7 | 显式 base + exact HEAD、复用只读 Git、Git-object-only | 205 | 20 | 157 | 225 | 382 | 384 | `981ef703ea36b7d28140bf7ca3b32b36cbd0073bc5703ad3bb755cd5d9de837b` |
+
+Source SHA：v6 core=`32f15140a22c9c4a938f003aafc9182958968c99bbbd27fa16e411b4524818c9`、
+CLI=`d979caee23dbd55b97fdb84ad96baeaffef15b2b155ce110542781d9dd6b24e9`、
+test=`846aa8b86b663cdf9661b702dfeade3d4daffd1a48f615d7ada95b662301041f`；v7
+core=`16c0bbc2e87f641c1bcdd8366ab91bf73fa07f725380054f3597988618edb70c`、
+CLI=`7de0cde5ea86434b4ea7bfa121f9ac7537eb04d38d20683019dee133081b178a`、
+test=`1275d4cc5027278e3bf7ecdf40f0d1559cfaefaf9306077250935e0205dcdbe3`。固定环境复验 UTC
+`2026-07-15T09:20:32Z`：两套均 `4 passed`，`ruff check` PASS，`ruff format --check` 为
+`3 files already formatted`，zero-write PASS。V7 即使完全不计 tests，product 225 + prior 2 =227，
+仍超过 cap 57；超限来自父合同职责，不是 formatter 或测试 setup。
+
+### 19.3 RC-09 决策与双 Agent 策略统一
+
+- RC-06：全部 product/test/harness/normalizer additions 必须合计计费，删除不抵扣；当前 sponsor
+  为 WI-202 开放的 cap 精确为 170，candidate 的 180 不可自动转移。
+- RC-09：继续压缩只能删除父合同语义、安全断言或证据，因此停止该候选；不创建产品代码、
+  不激活 sponsor、不消费 unique key，effective claim=0。
+- Confucius / 兼容安全 / `2026-07-15T09:17:55Z`：GO 仅限删除 WI-202 全部 source/state/truth，
+  在父项留 No-Go 审计；独立 WI 会产生未获 claim 覆盖的 2 行 tests additions，并错误扩张
+  `cancelled_no_go` 生命周期。
+- Pascal / 精简效率 / `2026-07-15T09:24:46Z`：接受上述反例并撤回保留独立 WI 的建议；确认父日志
+  足以防止重复投入，额外 source 只会违反停止投资目的。
+
+最终处置：删除 `specs/202-lean-gate-report-only/**`、scoped handoff、manifest entry、checkpoint/
+resume/handoff 引用和 truth tuple delta；不合入 spike/sidecar/sponsor/T61A 副本。GAP-01/T62A 保持
+open，T62B/T62C 未开始；WP-02 涉及 CC-05/CC-06，FR-08 的两个独立 reviewer fallback 继续生效。
+重启必须同时有足额新/替代 sponsor，以及重新冻结并同 hash 双 PASS 的父合同；不得复活 WI-202。
+
+父文档 PR 的回退为 `git revert --no-edit <parent-no-go-audit-squash-sha>`。由于无 WI-202 runtime/
+source/truth/claim，回退不需要清理命令、模块、测试或预算 ledger。
+
+## 20. Batch 2026-07-15-019：父合同 current-truth 与 sponsor lifecycle 对账
+
+首轮父合同正式复核目标为
+`9684e07fa29cfeeb39dca1359d7aa40f0ab4c047449af4a5f2b3c4bad22d5e16`。Pascal（精简效率，
+`2026-07-15T09:41:16Z`）与 Confucius（证据安全，`2026-07-15T09:41:25Z`）均独立复算一致并
+判定 `FAIL`：formal 仍把已关闭的 GAP-07/08 写成待启动；WI-203 scoped continuity 仍要求恢复
+WI-202；WI-196 handoff 的 Changed Files 仍是候选删除前的旧工作区快照。
+
+处置：
+
+- `spec.md + plan.md + tasks.md` 把 GAP-07/T51、GAP-08/T52 标为已关闭，绑定 WI-197/198、
+  PR #121/#122 与 merge evidence；当前 continuation 改为 WI-196 的 T62A No-Go/restart contract。
+- 不修改 WI-203 已冻结的 `spec.md + plan.md + tasks.md`；仅在其 summary、execution log 与 scoped
+  handoff 对账 sponsor lifecycle：旧 WI-202 allocation effective claim=0 且不可复活/转移。
+- 使用 canonical handoff CLI 刷新 WI-196 continuity，并以最终分支实际路径集合替换旧过程快照。
+
+修订后的 formal review target 为
+`923413a09d945cd211832734d7e1f527f21ba2f07f6c1b6e6f47409d078b005a`；旧哈希的两个 FAIL
+只保留为审计历史，当前目标必须由两个 Agent 从零重新复核。
+
+第二轮复核仍为双 `FAIL`：Pascal（`2026-07-15T09:50:14Z`）与 Confucius
+（`2026-07-15T09:54:03Z`）均独立复算 `923413a0…005a`，共同指出 plan/tasks 仍把已关闭的
+T53A/T53B/T54 表达成待推进硬依赖；Confucius 另以只读 truth surface 证明本批文档变化已使
+deferred signal 从 6439 变为 6441，旧 handoff 的 fresh 声明失效。
+
+再次处置：formal 将 GAP-09～GAP-11 明确为 WI-199～WI-201 已关闭，impact analysis 只承担
+防回归职责；仅当对应 blocker 或 unmapped/missing source 再现时 fail-closed 并重开 GAP，不得
+重复执行已关闭 T53A/T53B/T54。新 formal review target 为
+`0b8ed80a245e8b87221098c752d88f2adfd6734f2b8bf722e86e164f73af91b7`。随后必须执行 terminal
+truth sync/audit 并刷新 handoff；在 fresh 证据产生前不得沿用旧通过结论。
+
+第三轮目标 `0b8ed80a245e8b87221098c752d88f2adfd6734f2b8bf722e86e164f73af91b7`
+由 Pascal 在 `2026-07-15T10:04:09Z` 判定 `PASS`；Confucius 随后指出正式门禁仍允许已关闭的
+GAP-09～GAP-11 以 `PASS_WITH_REGISTERED_DEBT` 解释 non-ready/exit 1，与“回归必须重开 GAP”
+冲突，因此该轮最终为 `FAIL`，Pascal PASS 随目标变化失效。
+
+处置：`spec.md` 与 `tasks.md` 删除 registered-debt 例外；当前交付唯一允许
+`snapshot_state=fresh + state=ready + exit 0 + zero blocker`。任意 non-ready/非零/集合变化均
+fail-closed；对应 truth 债务再现时返回 T41/T22 并重开 GAP。新 formal review target 为
+`096f0feac07596b7aad1c30721a15a46ac29fb54c328ed77251be5473ec72e4b`。
+
+第四轮由两名 Agent 严格从零、只读复核同一 formal hash，当前唯一有效 verdict 如下：
+
+| Agent | 维度 | UTC | Findings | Disposition | Verdict |
+|---|---|---|---|---|---|
+| Pascal / `wi200_lean_design` | 精简设计、治理语义、任务可执行性 | `2026-07-15T10:16:42Z` | none | 独立 hash 一致；确认 GAP07～11 current truth、No-Go、预算隔离、T62/restart、13-path handoff 与 strict truth gate 全闭合 | `PASS` |
+| Confucius / `wi200_proof_safety` | 证据安全、生命周期、零残留 | `2026-07-15T10:17:52Z` | none | 独立 hash 一致；确认 fresh+ready+exit0+zero blocker、WI202 zero residue/claim=0、FR08 fallback 与 manifest 静态证据闭合 | `PASS` |
+
+两者均未运行会写 adapter/ProgramService 的命令，未修改文件。`spec.md + plan.md + tasks.md`
+自此冻结；任一 target 文件变化会同时作废上述两个 PASS。
