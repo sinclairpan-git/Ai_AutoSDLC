@@ -117,7 +117,7 @@ related_doc:
 
 ### T15 GAP-13 pre-close / zero-task 真值修复
 
-- **状态**：第三轮 Codex finding 与双 Agent 扩展 findings 已修复且本地全量验证完成；等待 fresh-clone proof、最终双 Agent 与 Codex review
+- **状态**：已完成；精确 head `c08d4c06...` 通过 fresh-clone proof、双 Agent、Codex review 与全部 required checks，并由 PR #130 合入 main
 - **依赖**：T14 No-Go、PR #130 Codex findings
 - **文件/预算**：仅 spec 3.1 节 10 项白名单；runtime≤125、tests≤400（实测 124/397）；零 candidate LOC/claim。
 - **验收**：
