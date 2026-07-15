@@ -12,8 +12,8 @@ related_doc:
 
 ## 1. 执行规则
 
-- Formal、implementation、candidate PR 使用独立分支节点；formal 合入前只允许 GAP-12 的有界
-  lifecycle 真值代码/测试，不写 candidate 产品代码或 T61A 保护代码。
+- Formal、implementation、candidate PR 使用独立分支节点；formal 合入前只允许 GAP-12，RC-09
+  disposition review 只允许 GAP-13 的精确白名单代码/测试；均不写 candidate 产品代码或 T61A 保护代码。
 - 每个代码批次先红后绿并在同一 commit 更新 RC-05/RC-06 ledger 与 execution log。
 - 两个 reviewer 可并行，但必须独立、只读、对同一 hash/tree 给 verdict。
 - 任一受审目标变化使旧 verdict 失效；任一硬门失败按 RC-09 停止，不以 waiver 继续。
@@ -114,6 +114,19 @@ related_doc:
 - **状态**：已完成；Pascal 与 Confucius 独立一致判定 RC-09 No-Go
 - **依赖**：T13
 - **验收**：两方独立审查相同 T61A evidence；仅共同 `GO` 允许 T21。
+
+### T15 GAP-13 pre-close / zero-task 真值修复
+
+- **状态**：本地验证完成；等待 fresh-clone proof、最终双 Agent 与 Codex review
+- **依赖**：T14 No-Go、PR #130 Codex findings
+- **文件/预算**：仅 spec 3.1 节 8 项白名单；runtime≤12、tests≤150；零 candidate LOC/claim。
+- **验收**：
+  1. `stage: close-pending` 下 detect/reconcile/status/recover/`recover --reconcile` 均停在 execute；
+  2. 无 marker 与未知 marker 继续保持历史 close 推断；
+  3. parser 零任务时 `_build_executor` 不调用，runtime/plan/working-set 不写；
+  4. summary gate 仍通过，但 `merge-pending` final close 继续阻断；
+  5. force-track scoped ResumePack；fresh clone 连续 load 后与 root byte-identical 且 Git clean；
+  6. 两个 reviewer 对同一 tree `PASS`，findings=none。
 
 ## Batch 2：TDD 与 candidate migration
 

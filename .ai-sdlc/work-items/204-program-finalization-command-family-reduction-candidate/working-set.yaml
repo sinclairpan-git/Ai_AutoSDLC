@@ -13,11 +13,21 @@ active_files:
   - specs/204-program-finalization-command-family-reduction-candidate/tasks.md
   - specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
   - specs/204-program-finalization-command-family-reduction-candidate/development-summary.md
+  - docs/framework-defect-backlog.zh-CN.md
+  - src/ai_sdlc/core/reconcile.py
+  - src/ai_sdlc/core/runner.py
+  - src/ai_sdlc/rules/pipeline.md
+  - tests/unit/test_reconcile.py
+  - tests/unit/test_runner_confirm.py
+  - tests/integration/test_cli_recover.py
   - .ai-sdlc/state/codex-handoff.md
   - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
 context_summary: >-
   Goal: close WI-204 through an auditable RC-09 disposition with zero product
   change and retained legacy behavior. State: T61A was rejected by both reviewers;
   T21-T34 are canceled; revocation is pending mainline ancestry; claim remains zero.
-  No executable candidate task remains. Next: carry only the reviewed disposition
-  through PR checks, Codex review, and mainline merge.
+  No executable candidate task remains. T15 is the bounded GAP-13 review fix: the
+  checkpoint stays before close while branch disposition is merge-pending, recover
+  respects close-pending, and zero parsed tasks do not construct Executor. Next: verify
+  and dual-review the exact tree, carry it through PR checks/mainline merge, then run
+  the final close-check.

@@ -71,6 +71,65 @@ def _step_trace_paths(tmp_path: Path) -> tuple[Path, Path]:
 
 
 class TestConfirmMode:
+    def test_close_pending_summary_still_satisfies_summary_gate(
+        self, tmp_path: Path
+    ) -> None:
+        summary = tmp_path / "development-summary.md"
+        summary.write_text(
+            "---\nstage: close-pending\n---\n# Development Summary\n",
+            encoding="utf-8",
+        )
+
+        result = SDLCRunner(tmp_path)._registry.check(
+            "close",
+            {
+                "root": str(tmp_path),
+                "all_tasks_complete": True,
+                "tests_passed": True,
+                "summary_path": str(summary),
+            },
+        )
+
+        assert result.verdict == GateVerdict.PASS
+        assert next(check for check in result.checks if check.name == "summary_exists").passed
+
+    def test_execute_stage_does_not_build_executor_for_zero_parsed_tasks(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "204-no-go"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "tasks.md").write_text(
+            "# Tasks\n\n### T14 Readiness No-Go\n\n- **状态**：已完成\n",
+            encoding="utf-8",
+        )
+        checkpoint = Checkpoint(
+            current_stage="execute",
+            feature=FeatureInfo(
+                id="204-no-go",
+                spec_dir="specs/204-no-go",
+                design_branch="design/204-no-go-docs",
+                feature_branch="feature/204-no-go-dev",
+                current_branch="feature/204-no-go-dev",
+            ),
+        )
+        build_executor = MagicMock(
+            side_effect=AssertionError("must not build executor")
+        )
+        runner = SDLCRunner(tmp_path)
+        monkeypatch.setattr(runner, "_build_executor", build_executor)
+
+        result = runner._run_execute_stage(checkpoint)
+
+        assert result is checkpoint
+        assert result.execute_progress is None
+        build_executor.assert_not_called()
+        state_dir = tmp_path / ".ai-sdlc/work-items/204-no-go"
+        assert not (state_dir / "runtime.yaml").exists()
+        assert not (state_dir / "execution-plan.yaml").exists()
+
     def test_close_context_includes_incident_postmortem_and_refresh_entry(
         self, tmp_path: Path
     ) -> None:

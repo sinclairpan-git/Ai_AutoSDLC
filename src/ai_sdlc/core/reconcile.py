@@ -15,9 +15,10 @@ from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo, MultiA
 from ai_sdlc.utils.helpers import now_iso, slugify
 
 DOC_STAGE_ORDER = ("init", "refine", "design", "decompose", "verify", "execute", "close")
-FORMAL_PLACEHOLDER_STAGES = {
-    "design-placeholder": "design",
-    "decompose-placeholder": "decompose",
+FORMAL_STAGE_MARKERS = {
+    "design-placeholder",
+    "decompose-placeholder",
+    "close-pending",
 }
 DOC_FILES = (
     "spec.md",
@@ -271,7 +272,8 @@ def _infer_completed_stages(root: Path, spec_dir_abs: Path) -> list[str]:
 
         if _has_execution_evidence(spec_dir_abs):
             completed.append("verify")
-        if (spec_dir_abs / "development-summary.md").is_file():
+        summary = spec_dir_abs / "development-summary.md"
+        if summary.is_file() and _formal_doc_stage(summary) != "close-pending":
             completed.append("execute")
         return completed
 
@@ -449,7 +451,7 @@ def _formal_doc_stage(path: Path) -> str:
 
 def _normalized_formal_stage(value: Any) -> str:
     stage = str(value or "").strip().lower()
-    if stage not in FORMAL_PLACEHOLDER_STAGES:
+    if stage not in FORMAL_STAGE_MARKERS:
         return ""
     return stage
 

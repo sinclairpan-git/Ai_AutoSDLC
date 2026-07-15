@@ -2,7 +2,7 @@
 
 **功能编号**：`204-program-finalization-command-family-reduction-candidate`
 **创建日期**：2026-07-15
-**当前状态**：RC-09 No-Go disposition；产品代码未实现，legacy 保留
+**当前状态**：RC-09 No-Go disposition；candidate 产品代码未实现，legacy 保留
 
 ## 1. Batch 2026-07-15-001：候选选择与 current baseline 复算
 
@@ -481,3 +481,36 @@ SHA-256=`48d80f8e2204a30668076045b7043e8db16e045e05bbfe9861c96f858776414a`。
 Confucius 在一次性 clone 中补跑 context/recover=`35 passed`；fresh clone 首次按 canonical truth
 重建 ignored scoped ResumePack，后续连续 load 无事件、无漂移。Review receipt 只记录该结果，
 不改变 No-Go 决策或产品边界；其 resulting commit 仍需双 final-head confirmation。
+
+## 27. PR #130 Codex review findings 与 pre-close 修复
+
+Codex 对 reviewed head `2e465c7f...` 提出两个 actionable finding：checkpoint 提前写为
+`close`，但当前 branch disposition=`merge-pending`，close-check 在 PR 合入前必然阻断；同时 scoped
+ResumePack 被 `.gitignore` 排除，fresh clone 首次 load 会重建 scoped 并改写已跟踪 root pack。
+
+实测框架 `TasksParser` 对当前 canonical tasks 返回 `total_tasks=0,total_batches=0`；因此把 canonical
+checkpoint/runtime 保持在 `execute/batch0/T14/dev branch` 不会执行 candidate task，Execute Gate
+会因零执行批次 fail-closed，也不会提前进入 Close Gate。Working-set 明确 T21-T34 canceled、无
+candidate next task；PR 合入并把 branch disposition 更新为 final 后，才允许执行最终 close-check。
+
+为消除 fresh-clone 派生脏树，root ResumePack 由 checkpoint/runtime/working-set 重建，匹配的 scoped
+ResumePack 作为该 WI 的显式例外 force-track；两份必须 byte-identical，fresh clone 连续 load 不得
+产生 rebuild event 或 tracked diff。修订后须重新双 Agent review、push、重新请求 Codex review。
+
+## 28. GAP-13 TDD：pre-close reconcile 与零任务执行无写入
+
+安全复审发现，仅把 checkpoint 改回 execute 仍不稳定：summary 文件会触发 reconcile 推进 close，
+真实 run 也会在零解析任务时先构建 Executor 并改写 execute state。已先登记
+`FD-2026-07-15-001`，再把 GAP-13 纳入 spec 精确白名单与 runtime≤12/tests≤150 预算。
+
+- RED：close-pending 的 detect/recover 两项失败；zero-task runner 测试证明仍会构建 Executor。
+- GREEN：`reconcile.py` 精确识别 `stage: close-pending`，无/未知 marker 兼容；`runner.py` 在
+  `total_tasks=0` 时于 `_build_executor` 前返回。
+- 保护：unit 覆盖 reconcile no-op、unknown marker 兼容、summary gate；integration 共用一个 fixture
+  覆盖 status、recover 与 `recover --reconcile`；runner raising mock 证明不构建 Executor 且不写
+  runtime/execution-plan。
+- 范围：candidate 9 handler、ProgramService、activation receipt、T61A rejected code 均未改变；
+  当前结论是零 candidate 产品代码，而非整个仓库零产品变化。
+- 验证：定向 53 passed；recover/status/runner/context/close 扩大回归 277 passed；全量
+  `3216 passed, 3 skipped in 488.66s`；Ruff PASS、plan drift=NO、constraints 0 BLOCKER、Program
+  Truth ready/fresh（1076/1076，close 204/204）。Fresh-clone ResumePack proof 在精确提交后执行。

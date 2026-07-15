@@ -35,6 +35,7 @@ from ai_sdlc.gates.pipeline_gates import (
 )
 from ai_sdlc.gates.registry import GateRegistry
 from ai_sdlc.gates.task_ac_checks import next_pending_task_ref
+from ai_sdlc.generators.doc_gen import TasksParser
 from ai_sdlc.knowledge.engine import load_refresh_log
 from ai_sdlc.models.gate import GateResult, GateVerdict
 from ai_sdlc.models.state import (
@@ -400,6 +401,9 @@ class SDLCRunner:
 
         tasks_file = spec_dir / "tasks.md"
         if not tasks_file.exists():
+            return cp
+        if TasksParser().parse(tasks_file).total_tasks == 0:
+            logger.warning("Execute skipped: no executable tasks in %s", tasks_file)
             return cp
 
         progress = cp.execute_progress

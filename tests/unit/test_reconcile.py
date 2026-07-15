@@ -282,7 +282,11 @@ def test_detect_reconcile_hint_prefers_current_branch_direct_formal_work_item(
     (tmp_path / ".git").mkdir()
     init_project(tmp_path)
     _write_specs_dir_legacy_artifacts(tmp_path, "001-ai-sdlc-framework")
-    _write_direct_formal_artifacts(tmp_path, work_item_id)
+    spec_dir = _write_direct_formal_artifacts(tmp_path, work_item_id)
+    (spec_dir / "development-summary.md").write_text(
+        "---\nstage: unknown-marker\n---\n# Development Summary\n",
+        encoding="utf-8",
+    )
     save_checkpoint(
         tmp_path,
         Checkpoint(
@@ -489,3 +493,41 @@ def test_reconcile_checkpoint_refreshes_stale_feature_branches_when_spec_is_alre
     assert loaded.feature.spec_dir == f"specs/{work_item_id}"
     assert loaded.feature.design_branch == f"design/{work_item_id}-docs"
     assert loaded.feature.feature_branch == f"feature/{work_item_id}-dev"
+
+
+def test_reconcile_does_not_advance_close_pending_summary(
+    tmp_path: Path,
+) -> None:
+    from ai_sdlc.core.reconcile import detect_reconcile_hint, reconcile_checkpoint
+
+    work_item_id = "204-program-finalization-reduction-candidate"
+    (tmp_path / ".git").mkdir()
+    init_project(tmp_path)
+    spec_dir = _write_direct_formal_artifacts(tmp_path, work_item_id)
+    (spec_dir / "development-summary.md").write_text(
+        "---\nstage: close-pending\n---\n# Development Summary\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="execute",
+            feature=FeatureInfo(
+                id=work_item_id,
+                spec_dir=f"specs/{work_item_id}",
+                design_branch=f"design/{work_item_id}-docs",
+                feature_branch=f"feature/{work_item_id}-dev",
+                current_branch=f"feature/{work_item_id}-dev",
+            ),
+            completed_stages=[
+                CompletedStage(stage=stage, completed_at="2026-01-01T00:00:00+00:00")
+                for stage in ("init", "refine", "design", "decompose", "verify")
+            ],
+        ),
+    )
+
+    assert detect_reconcile_hint(tmp_path) is None
+    assert reconcile_checkpoint(tmp_path) is None
+    loaded = load_checkpoint(tmp_path)
+    assert loaded is not None
+    assert loaded.current_stage == "execute"

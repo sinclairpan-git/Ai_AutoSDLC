@@ -1,6 +1,6 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-07-15T18:02:42+00:00'
-current_stage: close
+pipeline_last_updated: '2026-07-15T18:59:17+00:00'
+current_stage: execute
 feature:
   id: 204-program-finalization-command-family-reduction-candidate
   spec_dir: specs/204-program-finalization-command-family-reduction-candidate
