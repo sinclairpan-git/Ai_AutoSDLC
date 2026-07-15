@@ -1,28 +1,28 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T14:28:43+00:00
-- Reason: Same-commit dual adversarial code review passed
+- Updated: 2026-07-15T14:30:49+00:00
+- Reason: Correct stale post-receipt continuation step from final-head safety review
 - Goal: Merge WI204 formal plus GAP-12 safely, then create activation-only mainline receipt before any T61A write
-- State: Implementation HEAD 145af82d passed Pascal lean review and Confucius safety review with findings none; recording review receipt before final-head signoff
+- State: Review receipt is committed; Pascal final-head signoff passed and Confucius found only a stale handoff next-step P2; product code, tests, formal, lifecycle semantics, and budgets remain clean
 - Stage: execute
 - Work Item: 204-program-finalization-command-family-reduction-candidate
 - Branch: feature/204-program-finalization-command-family-reduction-candidate-docs
 
 ## Changed Files
-- M specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
+- none
 
 ## Key Decisions
-- Require both reviewers to sign the final receipt-only HEAD so GitHub evidence and repository audit trail point to one commit
+- Correct continuity metadata only, then require both reviewers to sign the resulting exact HEAD before push
 
 ## Commands / Tests
-- Pascal: PASS, 41 targeted tests, Ruff and diff check; Confucius: PASS, 41-case matrix plus layered targeted tests; budgets 79/80 production, 171/180 tests, total 250/260
+- Final-head signoff on 271d5cb1: Pascal PASS; Confucius FAIL only because handoff still requested already-completed receipt commit; all product and safety checks clean
 
 ## Blockers / Risks
-- none
+- none after this continuity metadata correction
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit the review receipt, obtain Pascal plus Confucius final-head signoff, then push PR #128
-- Request current-head Codex review, monitor required checks, and merge only when clean
+- Obtain Pascal plus Confucius final-head signoff on the resulting continuity-fix commit
+- Push PR #128, request current-head Codex review, monitor required checks, and merge only when clean
