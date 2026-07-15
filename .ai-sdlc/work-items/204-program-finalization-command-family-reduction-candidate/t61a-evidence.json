@@ -1,0 +1,382 @@
+{
+  "activation": {
+    "legacy_source_sha256": "6a101662f01e11f3e6f9963860b0589a1dabd2ec604d82ad1cfc2d6636729bed",
+    "mainline_commit": "c78414b969bcb3eb4b2ac10fccc7da2e64059e64",
+    "origin_main_ancestor": true,
+    "receipt_git_blob": "df2f9501ea3eb249a9ef637e9a506c154e0e3d9c",
+    "receipt_sha256": "79d07b2d39af7e9a4f36252ca594a67fe7bec6eb363bc30b94378cdcba75c1be",
+    "record_head": "0348b6cd74111a90a9f808f4526569a55214f36a"
+  },
+  "actual_protection_loc": 175,
+  "candidate_product_code_authorized": false,
+  "capture": {
+    "external_sentinel_sha256": "df83340cd2b4e68d092dc9016e86a5ed327fd1f6741a1b89e2b0ff3f7955f1ac",
+    "git_entries": 18,
+    "network_calls": [],
+    "ordered_events": 36,
+    "report_entries": 9,
+    "stages": 9,
+    "stdout_stderr_separate": true,
+    "subprocess_calls": [],
+    "tree_entries": 53,
+    "tree_fields": [
+      "relative_path",
+      "mode",
+      "normalized_length",
+      "sha256"
+    ]
+  },
+  "chain_digest": "eeff3a96e064f2fd98a768f762a4d5a1856ffa094f969f839b247b27e1c3e516",
+  "claim_key": "wi204:t61ab:program-finalization-family:v1",
+  "environment": {
+    "color_mode": "off",
+    "console_widths": [
+      40,
+      80,
+      120
+    ],
+    "fixed_clock": "2026-07-15T17:30:00Z",
+    "implementation": "CPython",
+    "locale": "C/C.UTF-8/C/C/C/C",
+    "machine": "arm64",
+    "platform": "macOS-27.0-arm64-arm-64bit",
+    "preferred_encoding": "UTF-8",
+    "python": "3.11.15",
+    "pyyaml": "6.0.3",
+    "rich": "14.3.3",
+    "typer": "0.24.1",
+    "update_check_disabled": true,
+    "uv": "0.10.12"
+  },
+  "existing_tests": {
+    "cli": 59,
+    "execution": "disposable local clone",
+    "inventoried_diff": [
+      ".cursor/rules/ai-sdlc.mdc"
+    ],
+    "nodeid_sha256": "25b6993978449be08ef35c20f0b3c3625f8c268c0662bd75cdbc3df70bc622b2",
+    "result": "165 passed, 469 deselected in 4.21s",
+    "service": 106,
+    "total": 165
+  },
+  "fault_matrix": {
+    "expected_prefix_order": true,
+    "parameterized_cases": 27,
+    "points": [
+      "executor",
+      "writer",
+      "renderer"
+    ],
+    "process_termination": {
+      "exit": 77,
+      "final_tree_sha256": "a2ec42efbc2c0d1edb6d3d259d5399a9c675005d489ea5ae3902f08e6a5a3782",
+      "point": "report-write",
+      "remaining_tree_sha256": "ee9c84fa3ef8d242f4188320c625148997bab2b5ab88fd630202fb6f6dd59dd8",
+      "retry_exit": 0
+    },
+    "report_failure": {
+      "events": [
+        "executor",
+        "writer",
+        "renderer",
+        "report"
+      ],
+      "exception": "OSError",
+      "exit": 1,
+      "retry_exit": 0
+    },
+    "same_command_retry_exit": 0,
+    "signals": [
+      "RuntimeError",
+      "KeyboardInterrupt",
+      "SystemExit"
+    ]
+  },
+  "fresh_until": "2026-07-29T17:23:02Z",
+  "generated_at": "2026-07-15T17:23:02Z",
+  "hard_protection_cap_loc": 180,
+  "last_evidence_at": "2026-07-15T17:23:02Z",
+  "legacy_ast": {
+    "handlers": 9,
+    "loc": 2020,
+    "retained": 216
+  },
+  "normalizer_allowlist": [
+    "temporary-clone-absolute-root",
+    "mapping-value-whose-exact-key-is-generated_at"
+  ],
+  "normalizer_forbidden": [
+    "yaml-key-or-list-sorting",
+    "global-dedupe",
+    "whitespace-or-newline-folding",
+    "global-path-separator-replacement",
+    "warning-or-blocker-removal",
+    "generic-time-pattern-redaction"
+  ],
+  "outer_hook": {
+    "disposable_clone_managed_write": {
+      "after_blob": "5836d9e2f4ad6f363bee032eb814d1b7200dd1aa",
+      "before_blob": "ec0ed427a1db1d14370e1518a0c0fd2b8880384b",
+      "numstat": "18 insertions, 6 deletions",
+      "path": ".cursor/rules/ai-sdlc.mdc"
+    },
+    "handler_order": [
+      "update",
+      "adapter",
+      "handler"
+    ],
+    "help_handler_bypassed": true,
+    "help_order": [
+      "adapter"
+    ],
+    "help_update_bypassed": true
+  },
+  "path_encoding": {
+    "absolute_report_exit": 0,
+    "cp1252_subprocess": {
+      "exception": "UnicodeEncodeError",
+      "exit": 1,
+      "result": "failure",
+      "stderr_bytes": 7026,
+      "stderr_sha256": "c07894c3b6dccca16e4938502aa2fa5fb9926827bca095d63356f1e7e3b538a5",
+      "stdout_bytes": 0
+    },
+    "manifest": "配置/程序清单.yaml",
+    "parent_report_exit": 0,
+    "posix_surrogate": {
+      "detail": "Illegal byte sequence",
+      "errno": 92,
+      "exception": "OSError",
+      "result": "failure"
+    },
+    "project_root": "项目-é-測試",
+    "report": "报告/result-é.md",
+    "spec_path": "specs/001-课程-é"
+  },
+  "planned_protection_loc": 175,
+  "protected_blobs": {
+    "cli_tests": "27bc60ac78453dc8e9708c508ccbcd829c6392be",
+    "program_service": "2c5860ff3a78e096b2150a70dfcdf2ee80055c0b",
+    "service_tests": "845c1334505b49578099a0e4361c784b0868a495"
+  },
+  "protection_file": {
+    "git_blob": "08c6a19d20b34128e6f3f1667c114c993da8b47d",
+    "nonempty_loc": 175,
+    "path": "tests/integration/test_program_finalization_t61a.py",
+    "sha256": "cbb76c744c6d42c710fad1acb58361bb41e253359bb7c6f913feddc8bf184479"
+  },
+  "protection_tests": {
+    "execution": "disposable local clone",
+    "result": "5 passed in 2.55s"
+  },
+  "random_id_inventory": [],
+  "renderers": {
+    "broader-governance": {
+      "source": "1ea2458905d3a52404ffa63339fecf7f4b45b669288962022df88e65aede985b",
+      "widths": {
+        "40": [
+          215,
+          "acdd2da4b34d45404d6a8effa1cbe3a256b96de40043d0ec2f24d8d0cf3b680b"
+        ],
+        "80": [
+          215,
+          "acdd2da4b34d45404d6a8effa1cbe3a256b96de40043d0ec2f24d8d0cf3b680b"
+        ],
+        "120": [
+          215,
+          "acdd2da4b34d45404d6a8effa1cbe3a256b96de40043d0ec2f24d8d0cf3b680b"
+        ]
+      }
+    },
+    "cross-spec-writeback": {
+      "source": "90b24c171bb9fba44906c77d1d6aad10dd3a64223e4187b59b9a57117ebf18b0",
+      "widths": {
+        "40": [
+          360,
+          "19629e85c98389b212625cd9487736dc8d445aa2776581c3bb36f555898e364c"
+        ],
+        "80": [
+          359,
+          "d4021f4bf2a0e271173df130be2401e5c1e5c0e96c4ce635436c243f499942b5"
+        ],
+        "120": [
+          358,
+          "48214b95c304bc2380def36970b1faa4adc3c2bb58b3e1ba8362030f68ff538b"
+        ]
+      }
+    },
+    "final-governance": {
+      "source": "1cb3b058da18d66cb0c099f03eafe9679e354c3b99dfda6a471c11a1020ed29a",
+      "widths": {
+        "40": [
+          225,
+          "5e5a9ba565fcda48a603c6b76a283500816b43f20d9971fcc1305a53fe8a3f66"
+        ],
+        "80": [
+          225,
+          "5e5a9ba565fcda48a603c6b76a283500816b43f20d9971fcc1305a53fe8a3f66"
+        ],
+        "120": [
+          225,
+          "5e5a9ba565fcda48a603c6b76a283500816b43f20d9971fcc1305a53fe8a3f66"
+        ]
+      }
+    },
+    "final-proof-archive": {
+      "source": "cb7f40bbdefa3f3c54625805ca18ca73ee19b892dfd048241de4e9117d5f68de",
+      "widths": {
+        "40": [
+          210,
+          "40605bf0a78e2a7ea8cff4db1cfb9b2b013833a146fe078cf156226f96e749cd"
+        ],
+        "80": [
+          210,
+          "40605bf0a78e2a7ea8cff4db1cfb9b2b013833a146fe078cf156226f96e749cd"
+        ],
+        "120": [
+          210,
+          "40605bf0a78e2a7ea8cff4db1cfb9b2b013833a146fe078cf156226f96e749cd"
+        ]
+      }
+    },
+    "final-proof-closure": {
+      "source": "eafb7d7e6c7454e81d72eae104200f7185bc4b0ce0d202acf46f42b8d0130a32",
+      "widths": {
+        "40": [
+          210,
+          "12f2175a19dacf79e0a178e4b6db35d19dd45d6bf512589bd514723934eacc35"
+        ],
+        "80": [
+          210,
+          "12f2175a19dacf79e0a178e4b6db35d19dd45d6bf512589bd514723934eacc35"
+        ],
+        "120": [
+          210,
+          "12f2175a19dacf79e0a178e4b6db35d19dd45d6bf512589bd514723934eacc35"
+        ]
+      }
+    },
+    "final-proof-publication": {
+      "source": "67fb334dff61f1f5f1ce2d484c35bcc4b0237fcc7c00ca3463e2813e66ef7f88",
+      "widths": {
+        "40": [
+          222,
+          "47081cbf9d9af5022f75251ec28ace3fc9511432285ff0b62951fe06308a3b5f"
+        ],
+        "80": [
+          222,
+          "47081cbf9d9af5022f75251ec28ace3fc9511432285ff0b62951fe06308a3b5f"
+        ],
+        "120": [
+          222,
+          "47081cbf9d9af5022f75251ec28ace3fc9511432285ff0b62951fe06308a3b5f"
+        ]
+      }
+    },
+    "guarded-registry": {
+      "source": "06593210f371573ef6a7545c35ff8a2e4a1ede88f9aa276855dad11da7483e37",
+      "widths": {
+        "40": [
+          209,
+          "1bb46a801b71c5ff25b235f4d31ff09ec975314d5d71d68f3b3f98fa15d8aefc"
+        ],
+        "80": [
+          209,
+          "1bb46a801b71c5ff25b235f4d31ff09ec975314d5d71d68f3b3f98fa15d8aefc"
+        ],
+        "120": [
+          209,
+          "1bb46a801b71c5ff25b235f4d31ff09ec975314d5d71d68f3b3f98fa15d8aefc"
+        ]
+      }
+    },
+    "persisted-write-proof": {
+      "source": "badf3132accfb655c5834bfca2f7141180fc8d66dbadb7b65b158af16ec13876",
+      "widths": {
+        "40": [
+          208,
+          "b28809c87485c0d1fed0d2264d92b95834a53ad7ea174c7a5d80a99a9a6dae69"
+        ],
+        "80": [
+          208,
+          "b28809c87485c0d1fed0d2264d92b95834a53ad7ea174c7a5d80a99a9a6dae69"
+        ],
+        "120": [
+          208,
+          "b28809c87485c0d1fed0d2264d92b95834a53ad7ea174c7a5d80a99a9a6dae69"
+        ]
+      }
+    },
+    "writeback-persistence": {
+      "source": "c9a0b161169225be982ee78755843f372978badac069f2fcf5bd575132109604",
+      "widths": {
+        "40": [
+          220,
+          "18335f3350f0880f37759c0f2f0f142700a5d3d9830b716347af308f09c173f9"
+        ],
+        "80": [
+          220,
+          "18335f3350f0880f37759c0f2f0f142700a5d3d9830b716347af308f09c173f9"
+        ],
+        "120": [
+          220,
+          "18335f3350f0880f37759c0f2f0f142700a5d3d9830b716347af308f09c173f9"
+        ]
+      }
+    }
+  },
+  "runtime": {
+    "algorithm": "statistics.quantiles-inclusive",
+    "p50_ns": 112430209,
+    "p95_ns": 134945541,
+    "samples": 30,
+    "scope": "fresh seeded full 9-stage chain",
+    "warmup": 5
+  },
+  "schema_version": "ai-sdlc.t61a-evidence.v1",
+  "state": "verified",
+  "surface": {
+    "commands": 33,
+    "help": {
+      "broader-governance": [
+        1805,
+        "462acff1e95e0a75397b353eadb6ff26be0329d979889a6396e9bb042a768000"
+      ],
+      "cross-spec-writeback": [
+        1890,
+        "6e9538ba7cfe70533ab6f89f172bb5d29e3aec39a4ac290c20140858de6f1ab1"
+      ],
+      "final-governance": [
+        1805,
+        "81f0c9e486ef0ad5b2caa4670e2b6149c8f399a46a4ff6cf87d8f9bc64ee9fa2"
+      ],
+      "final-proof-archive": [
+        1805,
+        "31952535a6f90456b9672e9a5f1c8a7b773a5fd9c18b71fad28a4db9be7e10ab"
+      ],
+      "final-proof-closure": [
+        1805,
+        "1a8e8fadbfa1559312281fabbb2548d63e31cf1d6585a4cc11291b4b92c5a7c9"
+      ],
+      "final-proof-publication": [
+        1890,
+        "aefdf3821412cebbecc9376ced6fa705bb0d40118f094a0a5cb5623728aa4a8c"
+      ],
+      "guarded-registry": [
+        1805,
+        "70424b46ec6cb134364e65682007c43fd015afa309636213125a1f4b84eebb73"
+      ],
+      "persisted-write-proof": [
+        1805,
+        "19832194e738f2f006ea07b230015b6962348b3f4c23eea6424cbe0016b93094"
+      ],
+      "writeback-persistence": [
+        1805,
+        "a83cb16e3c7a12482eb6533e9cf031929f5bfa1876088c1a7c93de8ad25319e3"
+      ]
+    },
+    "targets": 9
+  },
+  "t61a_due_at": "2026-08-14T05:58:55Z",
+  "work_item": "204-program-finalization-command-family-reduction-candidate"
+}

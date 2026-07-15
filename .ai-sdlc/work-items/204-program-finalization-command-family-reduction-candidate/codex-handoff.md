@@ -1,30 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T17:24:00+00:00
-- Reason: T61A baseline and dual design review completed; checkpoint before first protection write
+- Updated: 2026-07-15T17:24:01+00:00
+- Reason: T61A RED/GREEN and runtime evidence completed; hand off to dual readiness review
 - Goal: Execute WI-204 T61A protection within 180 LOC, obtain dual readiness GO, then implement the reduction candidate
-- State: Activation is mainline-effective; baseline has no drift; Pascal and Confucius both allow T61A harness implementation but candidate product code remains No-Go
+- State: T61A evidence is verified at actual protection 175/180 and runtime is recorded; candidate product code remains No-Go until both readiness reviewers pass the same committed evidence
 - Stage: execute
 - Work Item: 204-program-finalization-command-family-reduction-candidate
 - Branch: feature/204-program-finalization-command-family-reduction-candidate-dev
 
 ## Changed Files
-- canonical and scoped handoff only; no product, test, or evidence file yet
+- one 175-LOC T61A protection module, generated t61a-evidence.json, execution log, development summary, and both handoffs; src and sponsor receipt unchanged
 
 ## Key Decisions
-- Keep the activation receipt immutable; add one parameterized protection file plus generated evidence, run all side-effecting probes in disposable clones, and stop with RC-09 No-Go above 180 LOC
+- Keep the activation receipt immutable and candidate product code closed; only a common Pascal plus Confucius readiness GO may open candidate TDD
 
 ## Commands / Tests
-- Revalidated c78414b9, exact activation receipt, source/test blobs, 9/2020/216/1804/432 and 33 commands; existing selection is 165 passed, 469 deselected
+- RED 1 failed as expected; committed-clone GREEN 5 passed and existing 165 passed; Ruff PASS; runtime warmup 5/sample 30 p50=112430209ns p95=134945541ns; actual protection=175
 
 ## Blockers / Risks
-- AI_SDLC_DISABLE_UPDATE_CHECK does not disable the adapter; handler probes must patch both hooks and outer-hook/full-suite probes must run in disposable clones
+- Disposable clone inventory proves outer adapter rewrites its managed Cursor rule; this is frozen evidence, while unknown diffs, baseline drift, or any readiness finding remain candidate blockers
 
 ## Local PR Review
-- Pascal: T61A implementation GO, candidate No-Go; one 175-LOC file and generated evidence
-- Confucius: T61A implementation GO, candidate No-Go; require fail-closed activation, raw side effects, platform/runtime evidence
+- Pascal and Confucius implementation-design GO is satisfied; readiness verdict on the exact committed evidence is pending
 
 ## Exact Next Steps
-- Commit this handoff-only checkpoint and confirm a clean tree
-- Run RED for missing T61A evidence, implement the single parameterized protection file within 180 LOC, and capture evidence in disposable clones
-- Obtain Pascal and Confucius readiness GO on the exact evidence before any candidate product code
+- Commit the T61A protection/evidence batch and run it from a disposable clone
+- Have Pascal and Confucius independently review the same commit/evidence hash; address findings without product code until both return GO
+- Only after common readiness GO, start T21 candidate seam RED
