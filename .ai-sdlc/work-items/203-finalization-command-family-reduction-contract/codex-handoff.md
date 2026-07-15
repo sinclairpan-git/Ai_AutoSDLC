@@ -1,31 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T03:07:13+00:00
-- Reason: Checkpoint the verified CI remediation before changing the PR head
+- Updated: 2026-07-15T03:11:15+00:00
+- Reason: Address Codex P2 by making the effective review receipt unambiguous for resume
 - Goal: Merge WI203 formal contract PR #126, then resume WI202 Lean Gate
-- State: Focused repository-truth test baseline is fixed; 406 related tests pass; verify constraints allows with zero blockers/advisories; review target hash is unchanged
+- State: Final effective dual-agent Round 5 review target is 15022819f0d526c5a3ec12e1a745a244c805ee341778e2253eaeae59a219f41c; focused repository-truth test fix passes 406 related tests and verify constraints
 - Stage: execute
 - Work Item: 203-finalization-command-family-reduction-contract
 - Branch: feature/203-finalization-command-family-reduction-contract-docs
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/203-finalization-command-family-reduction-contract/codex-handoff.md
-- M specs/203-finalization-command-family-reduction-contract/task-execution-log.md
-- M tests/integration/test_repo_program_manifest.py
+- none
 
 ## Key Decisions
-- Record the CI failure and remediation outside the immutable review target; do not synthesize the open WI203 development summary
+- Round 4 hash 9f835a8fe8bdd87acaab072e7df9d7abf66b2298df5e1bdb90a961a9042054d8 is invalidated; only Round 5 hash 15022819f0d526c5a3ec12e1a745a244c805ee341778e2253eaeae59a219f41c may activate the sponsor receipt
 
 ## Commands / Tests
-- uv run pytest repo-manifest + program-service: 406 passed in 87.31s; verify constraints JSON: allow, 0 blocker, 0 advisory
+- Codex old-head P2 confirmed and addressed by explicitly pinning the final Round 5 hash in canonical and scoped handoff; 406 tests pass; constraints allow
 
 ## Blockers / Risks
-- PR #126 still requires a new pushed head, a fresh Codex review result, and all rerun checks green
+- PR #126 requires the corrected handoff commit, fresh Codex review on that head, and all checks green
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit and push the focused test plus evidence/handoff update, re-request Codex review, then monitor the new head
+- Commit and push the explicit Round 5 handoff correction, reply to the Codex thread, request review on the new head, and restart the heartbeat
