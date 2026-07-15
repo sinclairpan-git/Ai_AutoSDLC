@@ -1,37 +1,33 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T23:37:12+00:00
-- Reason: PR #130 merged; post-merge truth payload normalized
+- Updated: 2026-07-16T00:08:02+00:00
+- Reason: Correct stale post-C continuity instructions before push
 - Goal: Close WI-204 as an auditable RC-09 No-Go with zero candidate product code
-- State: PR #130 merged; sponsor revocation effective; local lifecycle branch deleted; checkpoint/runtime/dual ResumePack normalized to close
+- State: A 121c8625 carries closeout truth; B 5b6e9ae4 carries the immutable receipt and fresh Program Truth snapshot; current HEAD carries the final continuity envelope; exact-head dual review is pending
 - Stage: close
 - Work Item: 204-program-finalization-command-family-reduction-candidate
 - Branch: codex/program-finalization-closeout
 
 ## Changed Files
-- M .ai-sdlc/state/checkpoint.yml
+- M .ai-sdlc/state/codex-handoff.md
 - M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
 - M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/resume-pack.yaml
-- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/runtime.yaml
-- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/sponsor-revocation.yaml
 - M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml
-- M specs/204-program-finalization-command-family-reduction-candidate/development-summary.md
-- M specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
-- M specs/204-program-finalization-command-family-reduction-candidate/tasks.md
 
 ## Key Decisions
-- Use commit A for substantive truth/state and commit B for A exact SHA plus final Program Truth snapshot
-- Keep legacy Program Finalization handlers; candidate authorization remains canceled and claim remains zero
+- Keep the continuity envelope limited to root/scoped handoff, root/scoped ResumePack, and scoped working-set
+- Do not change log, manifest, checkpoint, runtime, formal artifacts, product code, tests, activation receipt, or revocation evidence
 
 ## Commands / Tests
-- PR #130 merge 063b1571 verified; receipt carrier 07a736df is an ancestor
-- recover reconciled checkpoint to close; state API normalized runtime and dual ResumePack to close/batch0 with double-load events empty
+- Latest exact-tree verification: core close-check 13 PASS; constraints 0/0; Truth ready/fresh 1076/1076; state no-op and hash-stable
+- tests/unit/test_close_check.py: 71 passed in 14.58s; no further tests are required for state-only continuity correction
 
 ## Blockers / Risks
-- Closeout payload and receipt envelope are not committed, reviewed, or merged yet
+- Exact-head dual PASS and closeout PR lifecycle are still pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit closeout truth payload A, freeze A SHA in receipt envelope B, run final read-only checks and dual-agent review
+- Obtain exact-head dual PASS, push the closeout PR, monitor Codex review and required checks, merge, and verify the final state on main

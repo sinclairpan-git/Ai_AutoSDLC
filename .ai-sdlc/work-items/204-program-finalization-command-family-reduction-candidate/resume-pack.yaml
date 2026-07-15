@@ -29,10 +29,11 @@ working_set_snapshot:
   - .ai-sdlc/state/codex-handoff.md
   - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
   context_summary: 'Goal: Close WI-204 as an auditable RC-09 No-Go with zero candidate
-    product code | State: PR #130 merged; sponsor revocation effective; local lifecycle
-    branch deleted; checkpoint/runtime/dual ResumePack normalized to close | Next:
-    Commit closeout truth payload A, freeze A SHA in receipt envelope B, run final
-    read-only checks and dual-agent review'
+    product code | State: A 121c8625 carries closeout truth; B 5b6e9ae4 carries the
+    immutable receipt and fresh Program Truth snapshot; current HEAD carries the final
+    continuity envelope; exact-head dual review is pending | Next: Obtain exact-head
+    dual PASS, push the closeout PR, monitor Codex review and required checks, merge,
+    and verify the final state on main'
 current_branch: codex/program-finalization-closeout
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'

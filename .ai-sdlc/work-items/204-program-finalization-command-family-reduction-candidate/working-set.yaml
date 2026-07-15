@@ -26,7 +26,8 @@ active_files:
   - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
 context_summary: >-
   Goal: close WI-204 through an auditable RC-09 No-Go disposition with zero candidate
-  product change. State: PR #130 is merged, sponsor revocation is effective, legacy
-  handlers remain, and checkpoint/runtime/ResumePack are being normalized to close.
-  Next: commit the truth payload, freeze its exact hash in the receipt envelope,
-  pass read-only close-check and dual-agent final review, then merge the closeout PR.
+  product change. State: PR #130 is merged, sponsor revocation is effective, A carries
+  the truth payload, B carries the immutable receipt and Program Truth snapshot, and
+  current HEAD carries the final continuity envelope. Next: obtain exact-head dual
+  PASS, push the closeout PR, monitor Codex review and required checks, merge, and
+  verify the final state on main.
