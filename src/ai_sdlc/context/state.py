@@ -202,16 +202,32 @@ def load_resume_pack(
 
     issue = root_issue or scoped_issue
     expected_pack = None
-    if issue is None and checkpoint.linked_wi_id and checkpoint.linked_wi_id.strip():
+    if issue is None and work_item_id:
         try:
             expected_pack = _build_resume_pack_from_checkpoint(root, checkpoint)
-            fields = ("spec_path", "plan_path", "tasks_path")
-            actual = root_pack.working_set_snapshot
-            expected = expected_pack.working_set_snapshot
-            if root_pack.current_branch != expected_pack.current_branch or any(
-                getattr(actual, field) != getattr(expected, field) for field in fields
+            pack_fields = (
+                "current_stage",
+                "current_batch",
+                "last_committed_task",
+            )
+            if any(
+                getattr(root_pack, field) != getattr(expected_pack, field)
+                for field in pack_fields
             ):
                 issue = "stale"
+            if (
+                issue is None
+                and checkpoint.linked_wi_id
+                and checkpoint.linked_wi_id.strip()
+            ):
+                actual = root_pack.working_set_snapshot
+                expected = expected_pack.working_set_snapshot
+                fields = ("spec_path", "plan_path", "tasks_path")
+                if root_pack.current_branch != expected_pack.current_branch or any(
+                    getattr(actual, field) != getattr(expected, field)
+                    for field in fields
+                ):
+                    issue = "stale"
         except (YamlStoreError, UnicodeError, OSError):
             expected_pack = None
     if issue is not None:

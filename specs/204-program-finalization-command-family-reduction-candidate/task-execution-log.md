@@ -576,3 +576,31 @@ Pascal 与 Confucius 对 `189b31c1541514807ee993721bcdebe8ad679988` 的精确 tr
   constraints blocker/advisory=0；Program validate PASS；Program Truth 1076/1076、close 204/204，
   同步后 audit=`ready/fresh`。
 - 待办：commit/fresh-clone 与最终双 Agent exact-head PASS，然后 push、Codex review、CI/merge。
+
+## 32. PR #130 第三轮 Codex runtime-only 污染 finding
+
+Codex 对 `2574fa4f210c2fcb8ab9aecfb5fc59865f97609c` 复审发现一项 P2：checkpoint 已正确为
+`execute` 且 completed stages 只到 verify 时，若 scoped runtime 与双 ResumePack 仍残留 `close/batch1/T001`，
+`_needs_reconcile()` 会 no-op，既有 runtime reset 路径不可达。
+
+- RED：在正确 execute checkpoint 上单独写入 close runtime/packs，`recover --reconcile` 后 runtime
+  仍为 close。
+- GREEN：仅在既有 `close-pending` 分支检查 runtime 的 stage/batch/current task/last committed task；
+  发现污染才进入原有 checkpoint/runtime 重建路径，干净状态继续 no-op。
+- 双 Agent preliminary review 继续复现 pack-only P2：runtime 已干净但两份 pack 同步为
+  close/batch1/T001 且 fingerprint 有效时，loader 只比较 branch/working-set，事件为空且不重建。
+- GREEN：既有 expected-pack 比较增加 stage/batch/last committed task 三项语义字段；只读 detect
+  不调用会写入的 loader，双 pack 由原有 stale rebuild 路径统一重建。
+- 双 Agent 第二次 preliminary review 发现该比较仍只对 `linked_wi_id` 生效；参数化 RED 证明
+  `None`/空串时由 feature id 解析的 active work item 仍会返回污染 pack。最终比较以既有
+  `active_work_item_id()` 结果为语义门槛，仅 branch/working-set 保持 linked-only 兼容边界。
+- 边界：无新模块/helper/API/schema/抽象；白名单只增加既有 state 实现与其 unit test 两个路径；
+  原 checkpoint-close 污染与二次 recover 字节幂等场景继续保留。
+- 预算：runtime=`22+87+15=124/125`、tests=`46+93+151+107=397/400`。
+- 验证：runtime-only、pack-only 与 feature-id fallback 精确 RED 均已复现，四个目标变体 `4 passed`；
+  state/reconcile/runner/recover 四文件 `76 passed`；全量 `3219 passed, 3 skipped in 489.01s`；
+  全仓 Ruff 与 diff check PASS。真实 WI-204 状态经受控 recover 规范化后，detect/reconcile 均为
+  `None`，连续两次 load 为 execute/batch0/空任务、events=[]，checkpoint/runtime/双 pack 四份
+  hash 前后不变。plan-check drift=NO、constraints blocker/advisory=0、Program validate PASS；
+  Program Truth 1076/1076、close 204/204，audit=`ready/fresh`。
+- 待办：commit/fresh-clone、最终双 Agent 与新一轮 Codex review/CI/merge。

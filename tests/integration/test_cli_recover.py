@@ -447,13 +447,37 @@ class TestCliRecover:
         assert checkpoint.current_stage == "execute"
         assert "recover --reconcile" not in result.output
 
+        save_runtime_state(
+            tmp_path,
+            work_item_id,
+            RuntimeState(
+                current_stage="close",
+                current_batch=1,
+                current_task="T001",
+                last_committed_task="T001",
+                current_branch=f"feature/{work_item_id}-dev",
+            ),
+        )
+        stale_pack = build_resume_pack(tmp_path)
+        assert stale_pack is not None
+        save_resume_pack(tmp_path, stale_pack)
+
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
             reconcile_result = runner.invoke(app, ["recover", "--reconcile"])
 
         checkpoint = load_checkpoint(tmp_path)
+        runtime = load_runtime_state(tmp_path, work_item_id)
+        pack = load_resume_pack(tmp_path)
         assert reconcile_result.exit_code == 0
         assert checkpoint is not None
         assert checkpoint.current_stage == "execute"
+        assert runtime is not None
+        assert runtime.current_stage == "execute"
+        assert runtime.current_batch == 0
+        assert runtime.current_task == ""
+        assert runtime.last_committed_task == ""
+        assert pack.current_stage == "execute"
+        assert pack.current_batch == 0
         checkpoint.current_stage = "close"
         checkpoint.completed_stages.append(
             CompletedStage(

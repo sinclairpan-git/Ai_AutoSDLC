@@ -394,6 +394,14 @@ def _needs_reconcile(
         != "close-pending"
     ):
         return any(stage not in recorded for stage in completed)
+    runtime = load_runtime_state(root, cp.linked_wi_id or feature_id)
+    if runtime is not None and (
+        runtime.current_stage != "execute"
+        or runtime.current_batch != 0
+        or bool(runtime.current_task)
+        or bool(runtime.last_committed_task)
+    ):
+        return True
     execute_score = _stage_score("execute")
     return (
         current_score > execute_score

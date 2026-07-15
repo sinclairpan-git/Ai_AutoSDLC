@@ -159,9 +159,11 @@ PR #130 的 Codex review 证明两个状态边界仍不完整：`development-sum
 
 GAP-13 实现白名单固定为：
 
+- `src/ai_sdlc/context/state.py`
 - `src/ai_sdlc/core/reconcile.py`
 - `src/ai_sdlc/core/runner.py`
 - `src/ai_sdlc/rules/pipeline.md`
+- `tests/unit/test_context_state.py`
 - `tests/unit/test_reconcile.py`
 - `tests/unit/test_runner_confirm.py`
 - `tests/integration/test_cli_recover.py`
@@ -171,9 +173,12 @@ GAP-13 实现白名单固定为：
 `spec.md` / `plan.md` / `tasks.md` / execution log、handoff/ResumePack 与终态 `program-manifest.yaml`
 Truth snapshot 刷新属于 formal/state/派生证据，不属于 GAP-13 实现白名单或 LOC。
 
-新增非空手写行上限为 runtime≤95、tests≤330；文档/state 不计入 candidate LOC/claim。该上限由
-PR #130 第二轮 Codex review 的历史污染恢复、三入口一致性证明及双 Agent 对 stale branch
-元数据保留的复审重新冻结，实测为 94/328。超任一上限、
+新增非空手写行上限为 runtime≤125、tests≤400；文档/state 不计入 candidate LOC/claim。该上限由
+PR #130 第二轮 Codex review 的历史污染恢复、三入口一致性证明、双 Agent 对 stale branch
+元数据保留的复审，以及第三轮 Codex review 对 checkpoint 已正确但 runtime/packs 仍污染的边界
+重新冻结；双 Agent 进一步复现 runtime 已干净但双 pack 同步污染的崩溃窗口及 feature-id fallback
+后，实测为 124/397。
+超任一上限、
 增加路径或改变无 marker 兼容行为，必须重新修改 formal 并由两个 reviewer 对同一 tree 再审。
 
 ## 4. Sponsor 与账本
