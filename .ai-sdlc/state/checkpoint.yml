@@ -1,5 +1,5 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-07-15T01:25:57+00:00'
+pipeline_last_updated: '2026-07-15T06:04:40+00:00'
 current_stage: execute
 feature:
   id: 197-adapter-preflight-order
@@ -40,4 +40,4 @@ ai_decisions_count: 0
 execution_mode: auto
 linked_wi_id: 202-lean-gate-report-only
 linked_plan_uri: specs/202-lean-gate-report-only/plan.md
-last_synced_at: '2026-07-15T01:25:57+00:00'
+last_synced_at: '2026-07-15T06:04:40+00:00'

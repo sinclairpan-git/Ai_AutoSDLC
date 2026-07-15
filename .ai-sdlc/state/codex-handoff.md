@@ -1,33 +1,31 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T01:36:45+00:00
-- Reason: Both adversarial reviewers rejected WI-202 formal hash 246cbef7
-- Goal: none
-- State: Formal hash 246cbef7 reviewed by both adversarial agents; both FAIL; no RED or product implementation started
+- Updated: 2026-07-15T06:04:40+00:00
+- Reason: Resume WI202 after the reviewed WI203 sponsor receipt merged to main
+- Goal: Rewrite the WI202 Lean Gate formal from the merged receipt and obtain same-hash dual PASS before implementation
+- State: WI203 PR #126 merged at 75d3dda5ec8b45d0f9441058da889163d814b717; rejected WI202 draft hash 246cbef7 was preserved as local audit snapshot b5616af9; origin/main merge conflicts are being resolved
 - Stage: execute
 - Work Item: 202-lean-gate-report-only
 - Branch: feature/202-lean-gate-report-only-docs
 
 ## Changed Files
-- M .ai-sdlc/project/config/project-state.yaml
-- M .ai-sdlc/state/checkpoint.yml
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M program-manifest.yaml
-- ?? .ai-sdlc/work-items/202-lean-gate-report-only/
-- ?? specs/202-lean-gate-report-only/
+- Merge origin/main sponsor receipt into the WI202 formal branch
+- Resolve governance state to make WI202 the active work item
 
 ## Key Decisions
-- Reject theoretical 1400 LOC sponsor; require independent WP-07 candidate RC formal and immutable reviewed receipt before WI-202 protection budget can exceed zero
+- Claim at most 170 total handwritten product, test, harness, fixture, and normalizer LOC; deleted LOC never offsets additions
+- Keep Lean Gate report-only with no waiver or enforcement path and no runtime Markdown parser
+- Recapture T61A from merged mainline receipt 75d3dda5 before RED or implementation
 
 ## Commands / Tests
-- Negative T61A clone: blocker plain/json exit 1; non-project exit 1; invalid option exit 2; blocker session events=3, evidence=1, evaluation=1, violation=1; normalized success/blocker report digests captured
+- PR #126 merged after dual adversarial PASS, current-head Codex PASS, and all required checks passed
+- Both adversarial agents independently rejected the old WI202 draft before implementation started
 
 ## Blockers / Risks
-- WI-202 RC-06 max_protection_loc remains zero until independent sponsor RC is reviewed and merged; expected delta and contract inventory require later rewrite
+- The old formal contract is invalid; no RED test or product implementation may start until the replacement formal reaches same-hash dual PASS
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Create isolated WI-203 WP-07 finalization command family reduction-contract worktree; audit full RC-01..RC-10 and obtain same-hash dual PASS/PR merge
+- Finish the origin/main merge, rewrite spec/plan/tasks/expected-delta, recapture T61A, compute the canonical hash, and request independent same-hash adversarial reviews
