@@ -1,30 +1,43 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T16:18:30+00:00
-- Reason: Clarify PR #129 squash-merge identity without changing the activation receipt
-- Goal: Merge an activation-only WI-204 sponsor receipt without product or test code
-- State: PR #129 carries the exact reviewed activation receipt content; branch, current-head, and synthetic review SHAs are pre-merge carriers only; activation is not mainline-effective
+- Updated: 2026-07-15T22:45:22+00:00
+- Reason: Final precommit checkpoint after working-set and ResumePack normalization
+- Goal: Close WI-204 with zero candidate product code and audited GAP-13 pre-close safety
+- State: Third Codex and dual-agent runtime/pack/fallback findings fixed; actual state and 10-path working set normalized; full local governance and Truth verification complete; runtime 124/125 tests 397/400
 - Stage: execute
 - Work Item: 204-program-finalization-command-family-reduction-candidate
-- Branch: feature/204-program-finalization-command-family-reduction-candidate-activation
+- Branch: feature/204-program-finalization-command-family-reduction-candidate-dev
 
 ## Changed Files
-- none (post-commit state)
+- M .ai-sdlc/state/checkpoint.yml
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
+- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/resume-pack.yaml
+- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/runtime.yaml
+- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml
+- M docs/framework-defect-backlog.zh-CN.md
+- M program-manifest.yaml
+- M specs/204-program-finalization-command-family-reduction-candidate/plan.md
+- M specs/204-program-finalization-command-family-reduction-candidate/spec.md
+- M specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
+- M specs/204-program-finalization-command-family-reduction-candidate/tasks.md
+- M src/ai_sdlc/context/state.py
+- M src/ai_sdlc/core/reconcile.py
+- M tests/integration/test_cli_recover.py
+- M tests/unit/test_context_state.py
 
 ## Key Decisions
-- Keep immutable candidate baseline at 6d2 and explicitly classify the sole 7-of-8 LOC service-test delta as authorized GAP-12 carrier evidence with candidate claim zero
+- ResumePack semantics validate stage batch last task for every active work item; linked-only branch/working-set compatibility remains unchanged; no new helper API schema or abstraction
 
 ## Commands / Tests
-- T11: 9 targets, 9 renderers, 2020/216/1804/432, 33 commands; 165 passed, 469 deselected; formal e29b1c; constraints clean; truth ready/fresh 1076/1076 and close 204/204
+- 4 targets passed; 76 related passed; full 3219 passed 3 skipped; full Ruff/diff PASS; plan drift NO; constraints 0/0; validate PASS; Truth 1076/1076 close204/204 ready/fresh; actual state no-op and hash-stable
 
 ## Blockers / Risks
-- Activation is ineffective until the future PR #129 squash-merge commit containing the exact receipt becomes an origin/main ancestor; do not rewrite the receipt merely to record that merge SHA; candidate and T61A writes remain unauthorized
+- Exact commit fresh-clone dual PASS, Codex rereview and CI/merge remain
 
 ## Local PR Review
-- Activation receipt tree 006423a0: Pascal and Confucius PASS, findings none
-- PR #129 Codex P2 findings for stale pre-commit state and branch-vs-squash identity are addressed without changing the receipt
+- none
 
 ## Exact Next Steps
-- Confirm Pascal and Confucius verdicts match the exact handoff-only refresh tree and remote PR #129 head matches local HEAD
-- Re-request current-head Codex review, monitor all required checks, and squash merge only when review and checks are clean
-- Fetch origin/main; verify the squash commit is an origin/main ancestor and contains the exact receipt Git blob df2f9501ea3eb249a9ef637e9a506c154e0e3d9c / SHA-256 79d07b2d39af7e9a4f36252ca594a67fe7bec6eb363bc30b94378cdcba75c1be, then create the implementation branch from that mainline commit without rewriting the receipt
+- Restore Cursor, commit exact fix, fresh-clone prove, obtain Pascal and Confucius PASS, push and request Codex rereview

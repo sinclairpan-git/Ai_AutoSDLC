@@ -8,7 +8,13 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.context.state import (
+    build_resume_pack,
+    load_checkpoint,
+    load_resume_pack,
+    save_checkpoint,
+    save_resume_pack,
+)
 from ai_sdlc.core.close_check import CloseCheckResult
 from ai_sdlc.core.config import save_project_config
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
@@ -26,7 +32,7 @@ from ai_sdlc.core.state_machine import save_work_item
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.scanner import KnowledgeRefreshLog, RefreshEntry, RefreshLevel
-from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from ai_sdlc.models.state import Checkpoint, ExecuteProgress, FeatureInfo
 from ai_sdlc.models.work import WorkItem, WorkItemSource, WorkItemStatus, WorkType
 from ai_sdlc.telemetry.enums import TelemetryMode, TelemetryProfile
 from ai_sdlc.telemetry.paths import telemetry_local_root, telemetry_manifest_path
@@ -71,6 +77,112 @@ def _step_trace_paths(tmp_path: Path) -> tuple[Path, Path]:
 
 
 class TestConfirmMode:
+    def test_close_pending_summary_still_satisfies_summary_gate(
+        self, tmp_path: Path
+    ) -> None:
+        summary = tmp_path / "development-summary.md"
+        summary.write_text(
+            "---\nstage: close-pending\n---\n# Development Summary\n",
+            encoding="utf-8",
+        )
+
+        result = SDLCRunner(tmp_path)._registry.check(
+            "close",
+            {
+                "root": str(tmp_path),
+                "all_tasks_complete": True,
+                "tests_passed": True,
+                "summary_path": str(summary),
+            },
+        )
+
+        assert result.verdict == GateVerdict.PASS
+        assert next(check for check in result.checks if check.name == "summary_exists").passed
+
+    def test_run_ignores_stale_progress_for_zero_tasks_without_persisting_state(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "204-no-go"
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "tasks.md").write_text(
+            "# Tasks\n\n### T14 Readiness No-Go\n\n- **状态**：已完成\n",
+            encoding="utf-8",
+        )
+        (spec_dir / "task-execution-log.md").write_text(
+            "# Historical execution log\n\nOld completed batch evidence.\n",
+            encoding="utf-8",
+        )
+        checkpoint = Checkpoint(
+            current_stage="execute",
+            linked_wi_id="204-no-go",
+            feature=FeatureInfo(
+                id="204-no-go",
+                spec_dir="specs/204-no-go",
+                design_branch="design/204-no-go-docs",
+                feature_branch="feature/204-no-go-dev",
+                current_branch="feature/204-no-go-dev",
+            ),
+            execute_progress=ExecuteProgress(
+                total_batches=1,
+                completed_batches=1,
+                current_batch=1,
+                last_committed_task="T001",
+                tasks_file="specs/204-no-go/tasks.md",
+                execution_log="specs/204-no-go/task-execution-log.md",
+                last_log_at="2026-01-01T00:00:00+00:00",
+                last_commit_at="2026-01-01T00:01:00+00:00",
+                last_commit_hash="deadbeef",
+            ),
+        )
+        build_executor = MagicMock(
+            side_effect=AssertionError("must not build executor")
+        )
+        save_checkpoint(tmp_path, checkpoint)
+        resume_pack = build_resume_pack(tmp_path)
+        assert resume_pack is not None
+        save_resume_pack(tmp_path, resume_pack)
+        state_dir = tmp_path / ".ai-sdlc/work-items/204-no-go"
+        tracked_state = [
+            tmp_path / ".ai-sdlc/state/checkpoint.yml",
+            tmp_path / ".ai-sdlc/state/resume-pack.yaml",
+            state_dir / "resume-pack.yaml",
+        ]
+        before = {path: path.read_bytes() for path in tracked_state}
+        runner = SDLCRunner(tmp_path)
+        monkeypatch.setattr(runner, "_build_executor", build_executor)
+
+        assert runner.check_gate("execute")["verdict"] == GateVerdict.RETRY
+        dry_run_verdicts: dict[str, str] = {}
+        runner.run(
+            dry_run=True,
+            on_stage_finish=lambda stage, result: dry_run_verdicts.__setitem__(
+                stage,
+                result.verdict.value,
+            ),
+        )
+        assert dry_run_verdicts["execute"] == "RETRY"
+        assert {path: path.read_bytes() for path in tracked_state} == before
+
+        with pytest.raises(PipelineHaltError) as exc_info:
+            runner.run()
+
+        assert exc_info.value.stage == "execute"
+        build_executor.assert_not_called()
+        assert {path: path.read_bytes() for path in tracked_state} == before
+        loaded = load_checkpoint(tmp_path)
+        assert loaded is not None
+        assert loaded.execute_progress == checkpoint.execute_progress
+        assert not (state_dir / "runtime.yaml").exists()
+        assert not (state_dir / "working-set.yaml").exists()
+        assert not (state_dir / "execution-plan.yaml").exists()
+        assert not (spec_dir / "development-summary.md").exists()
+        resume_events: list[str] = []
+        load_resume_pack(tmp_path, event_log=resume_events)
+        assert resume_events == []
+
     def test_close_context_includes_incident_postmortem_and_refresh_entry(
         self, tmp_path: Path
     ) -> None:

@@ -6,7 +6,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
-from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
+from ai_sdlc.models.state import (
+    Checkpoint,
+    CompletedStage,
+    ExecuteProgress,
+    FeatureInfo,
+)
 from ai_sdlc.routers.bootstrap import init_project
 
 
@@ -282,7 +287,11 @@ def test_detect_reconcile_hint_prefers_current_branch_direct_formal_work_item(
     (tmp_path / ".git").mkdir()
     init_project(tmp_path)
     _write_specs_dir_legacy_artifacts(tmp_path, "001-ai-sdlc-framework")
-    _write_direct_formal_artifacts(tmp_path, work_item_id)
+    spec_dir = _write_direct_formal_artifacts(tmp_path, work_item_id)
+    (spec_dir / "development-summary.md").write_text(
+        "---\nstage: unknown-marker\n---\n# Development Summary\n",
+        encoding="utf-8",
+    )
     save_checkpoint(
         tmp_path,
         Checkpoint(
@@ -489,3 +498,91 @@ def test_reconcile_checkpoint_refreshes_stale_feature_branches_when_spec_is_alre
     assert loaded.feature.spec_dir == f"specs/{work_item_id}"
     assert loaded.feature.design_branch == f"design/{work_item_id}-docs"
     assert loaded.feature.feature_branch == f"feature/{work_item_id}-dev"
+
+
+def test_reconcile_does_not_advance_close_pending_summary(
+    tmp_path: Path,
+) -> None:
+    from ai_sdlc.core.reconcile import detect_reconcile_hint, reconcile_checkpoint
+
+    work_item_id = "204-program-finalization-reduction-candidate"
+    (tmp_path / ".git").mkdir()
+    init_project(tmp_path)
+    spec_dir = _write_direct_formal_artifacts(tmp_path, work_item_id)
+    (spec_dir / "development-summary.md").write_text(
+        "---\nstage: close-pending\n---\n# Development Summary\n",
+        encoding="utf-8",
+    )
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="execute",
+            feature=FeatureInfo(
+                id=work_item_id,
+                spec_dir=f"specs/{work_item_id}",
+                design_branch=f"design/{work_item_id}-docs",
+                feature_branch=f"feature/{work_item_id}-dev",
+                current_branch=f"feature/{work_item_id}-dev",
+            ),
+            completed_stages=[
+                CompletedStage(stage=stage, completed_at="2026-01-01T00:00:00+00:00")
+                for stage in ("init", "refine", "design", "decompose", "verify")
+            ],
+        ),
+    )
+
+    assert detect_reconcile_hint(tmp_path) is None
+    assert reconcile_checkpoint(tmp_path) is None
+    loaded = load_checkpoint(tmp_path)
+    assert loaded is not None
+    assert loaded.current_stage == "execute"
+    loaded.current_stage = "close"
+    loaded.pipeline_started_at = "2025-12-31T23:59:00+00:00"
+    loaded.feature.docs_baseline_ref = "baseline-ref"
+    loaded.feature.docs_baseline_at = "2026-01-01T00:00:00+00:00"
+    loaded.feature.design_branch = "design/999-stale"
+    loaded.feature.feature_branch = "feature/999-stale"
+    loaded.completed_stages.append(
+        CompletedStage(
+            stage="execute",
+            completed_at="2026-01-01T00:00:00+00:00",
+            artifacts=["execute.artifact"],
+        )
+    )
+    loaded.execute_progress = ExecuteProgress(
+        total_batches=1,
+        completed_batches=1,
+        current_batch=1,
+        last_committed_task="T001",
+    )
+    loaded.linked_wi_id = work_item_id
+    loaded.linked_plan_uri = "plan://preserve-me"
+    corrupted = loaded.model_copy(deep=True)
+    save_checkpoint(tmp_path, corrupted)
+
+    hint = detect_reconcile_hint(tmp_path)
+    result = reconcile_checkpoint(tmp_path)
+    loaded = load_checkpoint(tmp_path)
+
+    assert hint is not None
+    assert hint.current_stage == "execute"
+    assert result is not None
+    assert loaded is not None
+    assert loaded.current_stage == "execute"
+    assert [stage.stage for stage in loaded.completed_stages] == [
+        "init",
+        "refine",
+        "design",
+        "decompose",
+        "verify",
+    ]
+    assert loaded.execute_progress is None
+    assert loaded.pipeline_started_at == corrupted.pipeline_started_at
+    assert loaded.feature.docs_baseline_ref == corrupted.feature.docs_baseline_ref
+    assert loaded.feature.docs_baseline_at == corrupted.feature.docs_baseline_at
+    assert loaded.feature.design_branch == f"design/{work_item_id}-docs"
+    assert loaded.feature.feature_branch == f"feature/{work_item_id}-dev"
+    assert loaded.feature.current_branch == corrupted.feature.current_branch
+    assert loaded.linked_wi_id == corrupted.linked_wi_id
+    assert loaded.linked_plan_uri == corrupted.linked_plan_uri
+    assert loaded.completed_stages == corrupted.completed_stages[:-1]

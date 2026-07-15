@@ -35,6 +35,7 @@ from ai_sdlc.gates.pipeline_gates import (
 )
 from ai_sdlc.gates.registry import GateRegistry
 from ai_sdlc.gates.task_ac_checks import next_pending_task_ref
+from ai_sdlc.generators.doc_gen import TasksParser
 from ai_sdlc.knowledge.engine import load_refresh_log
 from ai_sdlc.models.gate import GateResult, GateVerdict
 from ai_sdlc.models.state import (
@@ -205,7 +206,12 @@ class SDLCRunner:
                 if on_stage_start is not None:
                     on_stage_start(stage)
 
-                if not dry_run:
+                zero_task_execute = (
+                    not dry_run
+                    and stage == "execute"
+                    and self._execute_has_no_tasks(cp)
+                )
+                if not dry_run and not zero_task_execute:
                     cp.current_stage = stage
                     cp.pipeline_last_updated = now_iso()
                     save_checkpoint(self.root, cp)
@@ -392,6 +398,13 @@ class SDLCRunner:
         """Build the execute-stage orchestration entrypoint."""
         return Executor(self.root)
 
+    def _execute_has_no_tasks(self, cp: Checkpoint) -> bool:
+        spec_dir = self._resolve_spec_dir(cp)
+        if spec_dir is None:
+            return False
+        tasks_file = spec_dir / "tasks.md"
+        return tasks_file.is_file() and TasksParser().parse(tasks_file).total_tasks == 0
+
     def _run_execute_stage(self, cp: Checkpoint) -> Checkpoint:
         """Run execute-side effects before the execute gate validates artifacts."""
         spec_dir = self._resolve_spec_dir(cp)
@@ -441,6 +454,8 @@ class SDLCRunner:
         ctx["tests_passed"] = False
         ctx["committed"] = False
         ctx["logged"] = False
+        if cp is not None and self._execute_has_no_tasks(cp):
+            return
         if spec_dir is not None:
             tasks_file = spec_dir / "tasks.md"
             if tasks_file.exists():

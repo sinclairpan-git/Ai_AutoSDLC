@@ -320,6 +320,55 @@ class TestResumePack:
         assert loaded.current_branch == ""
         assert any("stale" in event for event in events)
 
+    @pytest.mark.parametrize("linked_wi_id", [LINKED_WI, None, ""])
+    def test_load_resume_pack_rebuilds_semantically_stale_pack(
+        self, tmp_path: Path, linked_wi_id: str | None
+    ) -> None:
+        _seed_linked_checkpoint(tmp_path)
+        if linked_wi_id != LINKED_WI:
+            checkpoint = load_checkpoint(tmp_path, strict=True)
+            assert checkpoint is not None
+            checkpoint.linked_wi_id = linked_wi_id
+            checkpoint.feature.id = LINKED_WI
+            checkpoint.feature.spec_dir = f"specs/{LINKED_WI}"
+            save_checkpoint(tmp_path, checkpoint)
+        dirty_runtime = state_models.RuntimeState(
+            current_stage="close",
+            current_batch=1,
+            current_task="T001",
+            last_committed_task="T001",
+            current_branch=f"feature/{LINKED_WI}-dev",
+        )
+        save_runtime_state(tmp_path, LINKED_WI, dirty_runtime)
+        dirty_pack = build_resume_pack(tmp_path)
+        assert dirty_pack is not None
+        save_resume_pack(tmp_path, dirty_pack)
+        save_runtime_state(
+            tmp_path,
+            LINKED_WI,
+            dirty_runtime.model_copy(
+                update={
+                    "current_stage": "execute",
+                    "current_batch": 0,
+                    "current_task": "",
+                    "last_committed_task": "",
+                }
+            ),
+        )
+
+        events: list[str] = []
+        loaded = load_resume_pack(tmp_path, event_log=events)
+
+        assert (loaded.current_stage, loaded.current_batch, loaded.last_committed_task) == (
+            "execute",
+            0,
+            "",
+        )
+        assert any("stale" in event for event in events)
+        events.clear()
+        assert load_resume_pack(tmp_path, event_log=events) == loaded
+        assert events == []
+
     @pytest.mark.parametrize(
         ("name", "payload"),
         [

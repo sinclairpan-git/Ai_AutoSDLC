@@ -1573,3 +1573,28 @@
 - 风险等级: 高
 - 可验证成功标准: `program solution-confirm --dry-run --mode advanced` 输出包含 `vue3/public-primevue` 多 style pack、显式 `vue2/enterprise-vue2` 兼容路径和 `--frontend-stack` / `--provider-id` / `--style-pack-id` 覆盖入口；adapter / pipeline 缺少这些 marker 时 `verify constraints` 报 BLOCKER。
 - 是否需要回归测试补充: 是：补 ProgramService 候选矩阵、CLI advanced 输出、adapter 模板和 init 生成规则断言。
+
+## FD-2026-07-15-001 | recover 仅凭 development-summary 推断 execute 完成并提前推进 close
+
+- 日期 (UTC): 2026-07-15
+- 来源: codex_review, adversarial_review
+- 状态: closed
+- owner: codex
+- wi_id: 204-program-finalization-command-family-reduction-candidate
+- related_doc: specs/204-program-finalization-command-family-reduction-candidate/development-summary.md
+- 现象: WI-204 已生成 RC-09 No-Go 的 `development-summary.md`，但 branch disposition 仍为 `merge-pending`，最终 `close-check` 必须等 exact revocation content 成为 `origin/main` ancestor 后才能通过。checkpoint 如实停在 `execute` 时，`detect_reconcile_hint()` 却只因该文件存在而推断 execute 已完成、下一阶段为 `close`；`recover --reconcile` 会把状态重新写成尚未满足门禁的 `close`。
+- 触发场景: direct formal work item 在 execute 阶段提前生成或更新总结，且 close 所需的分支、worktree、主线祖先或其他终态证据尚未完成。
+- 影响范围: recover/status 的阶段真值、close gate 的 fail-closed 语义、PR 合并前状态、checkpoint 与 resume-pack 一致性，以及自动代理对“文件已存在是否等于阶段已完成”的判断。
+- 根因分类: A, B, D, H
+- 未来杜绝方案摘要: `development-summary.md` 只能作为 execute 完成候选证据，不能无条件越过 close 门禁。允许 formal 通过显式 frontmatter 标记“close 尚未就绪”；reconcile 必须识别该标记并停在 execute，待最终 close 条件满足并移除标记后才能恢复既有推断。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 明确“总结文件存在 != execute 已完成”；PR 合并前的 No-Go/Go disposition 可以有完整总结，但 checkpoint 仍须停在 close 之前。
+- rule / policy: 为 `development-summary.md` 定义显式 `stage: close-pending`；该标记存在时，recover 不得记录 execute 已完成或把 checkpoint 推进到 close。
+- middleware: `core.reconcile` 在 direct formal 推断中读取 development summary frontmatter；识别 `close-pending` 时只保留至 verify 的 completed stages，并以 execute 为当前阶段。
+- workflow: pre-merge 总结使用 `stage: close-pending`；final close 证据满足后移除标记，运行 close-check，再显式完成 close。
+- tool: `src/ai_sdlc/core/reconcile.py`, `tests/unit/test_reconcile.py`, `ai-sdlc recover`, `ai-sdlc status`
+- eval: summary 存在但 close 未就绪时的错误推进次数、recover 后 checkpoint 反复跳回 close 的次数、close-pending 正反夹具通过率。
+- 风险等级: 高
+- 可验证成功标准: 给定 execute checkpoint、完整 direct formal 产物和 `stage: close-pending` 的 summary，`detect_reconcile_hint()` 不返回推进到 close 的 hint，`recover` 不改写 checkpoint；若历史 checkpoint/runtime 已污染为 close/batch1，则 `recover --reconcile` 原地修复为 execute/batch0、保留 baseline/linkage/早期阶段证据并同步 root/scoped ResumePack，第二次 recover 无写入；去掉标记后保持历史兼容。零解析任务在 real run、dry-run、`check_gate` 三入口均不得复用旧进度假绿。
+- 处置进展 (2026-07-15): `reconcile` 已识别精确 `stage: close-pending`，既阻止向前误推，也能修复历史污染状态并保留已有证据；同一 feature id/spec 即使分支名陈旧，也只刷新分支字段而不丢失 `docs_baseline_ref/docs_baseline_at`。即使 checkpoint 已正确停在 execute，只要 scoped runtime 仍残留 close/batch/task，reconcile 也会进入既有 reset 路径；若 runtime 已干净但两份 ResumePack 同步污染，loader 会按 stage/batch/last committed task 的 expected-pack 语义比较进入原有重建路径，并同时覆盖 linked、空/缺 linked id 下的 feature-id fallback。Runner 在统一 execute context 层屏蔽零任务的旧进度，stage-entry checkpoint 保存与 Executor 构建均不会发生。stale-branch、runtime-only、pack-only 与 feature-id fallback RED 均已复现且目标回归转绿；相关四文件 `76 passed`、全量 `3219 passed, 3 skipped`、全仓 Ruff 与 diff check 均通过。真实 WI-204 runtime/packs 已规范化，detect/reconcile no-op、连续加载零事件且状态 hash 不变；plan-check 无漂移、constraints 无 blocker/advisory、Program validate PASS、Truth ready/fresh。fresh-clone 与最终双审待下一批补齐。
+- 是否需要回归测试补充: 已完成：close-pending、无/未知 marker、status/recover、污染 checkpoint/runtime/双 ResumePack、二次恢复幂等、summary gate，以及 real/dry/check_gate 三入口 zero-task 边界均有自动化覆盖。

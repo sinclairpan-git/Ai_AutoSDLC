@@ -12,13 +12,21 @@ from ai_sdlc.context.state import (
     build_resume_pack,
     load_checkpoint,
     load_resume_pack,
+    load_runtime_state,
     save_checkpoint,
     save_resume_pack,
+    save_runtime_state,
 )
 from ai_sdlc.core.config import YamlStore
 from ai_sdlc.core.handoff import update_handoff
 from ai_sdlc.models.gate import GovernanceItem, GovernanceState
-from ai_sdlc.models.state import Checkpoint, ExecuteProgress, FeatureInfo
+from ai_sdlc.models.state import (
+    Checkpoint,
+    CompletedStage,
+    ExecuteProgress,
+    FeatureInfo,
+    RuntimeState,
+)
 from ai_sdlc.routers.bootstrap import init_project
 
 runner = CliRunner()
@@ -388,6 +396,160 @@ class TestCliRecover:
         assert [stage.stage for stage in checkpoint.completed_stages] == ["init", "refine"]
         assert "design" in result.output.lower()
         assert "execute" not in result.output.lower()
+
+    def test_recover_keeps_close_pending_summary_at_execute(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        work_item_id = "204-program-finalization-reduction-candidate"
+        init_project(tmp_path)
+        spec_dir = _write_direct_formal_artifacts(tmp_path, work_item_id)
+        (spec_dir / "development-summary.md").write_text(
+            "---\nstage: close-pending\n---\n# Development Summary\n",
+            encoding="utf-8",
+        )
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="execute",
+                feature=FeatureInfo(
+                    id=work_item_id,
+                    spec_dir=f"specs/{work_item_id}",
+                    design_branch=f"design/{work_item_id}-docs",
+                    feature_branch=f"feature/{work_item_id}-dev",
+                    current_branch=f"feature/{work_item_id}-dev",
+                ),
+                completed_stages=[
+                    CompletedStage(
+                        stage=stage,
+                        completed_at="2026-01-01T00:00:00+00:00",
+                    )
+                    for stage in ("init", "refine", "design", "decompose", "verify")
+                ],
+            ),
+        )
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            status_result = runner.invoke(app, ["status"])
+
+        checkpoint = load_checkpoint(tmp_path)
+        assert status_result.exit_code == 0
+        assert checkpoint is not None
+        assert checkpoint.current_stage == "execute"
+        assert "recover --reconcile" not in status_result.output
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["recover"])
+
+        checkpoint = load_checkpoint(tmp_path)
+        assert result.exit_code == 0
+        assert checkpoint is not None
+        assert checkpoint.current_stage == "execute"
+        assert "recover --reconcile" not in result.output
+
+        save_runtime_state(
+            tmp_path,
+            work_item_id,
+            RuntimeState(
+                current_stage="close",
+                current_batch=1,
+                current_task="T001",
+                last_committed_task="T001",
+                current_branch=f"feature/{work_item_id}-dev",
+            ),
+        )
+        stale_pack = build_resume_pack(tmp_path)
+        assert stale_pack is not None
+        save_resume_pack(tmp_path, stale_pack)
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            reconcile_result = runner.invoke(app, ["recover", "--reconcile"])
+
+        checkpoint = load_checkpoint(tmp_path)
+        runtime = load_runtime_state(tmp_path, work_item_id)
+        pack = load_resume_pack(tmp_path)
+        assert reconcile_result.exit_code == 0
+        assert checkpoint is not None
+        assert checkpoint.current_stage == "execute"
+        assert runtime is not None
+        assert runtime.current_stage == "execute"
+        assert runtime.current_batch == 0
+        assert runtime.current_task == ""
+        assert runtime.last_committed_task == ""
+        assert pack.current_stage == "execute"
+        assert pack.current_batch == 0
+        checkpoint.current_stage = "close"
+        checkpoint.completed_stages.append(
+            CompletedStage(
+                stage="execute",
+                completed_at="2026-01-01T00:00:00+00:00",
+            )
+        )
+        checkpoint.execute_progress = ExecuteProgress(
+            total_batches=1,
+            completed_batches=1,
+            current_batch=1,
+            last_committed_task="T001",
+        )
+        save_checkpoint(tmp_path, checkpoint)
+        save_runtime_state(
+            tmp_path,
+            work_item_id,
+            RuntimeState(
+                current_stage="close",
+                current_batch=1,
+                current_task="T001",
+                last_committed_task="T001",
+                current_branch=f"feature/{work_item_id}-dev",
+            ),
+        )
+        stale_pack = build_resume_pack(tmp_path)
+        assert stale_pack is not None
+        save_resume_pack(tmp_path, stale_pack)
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["recover", "--reconcile"])
+
+        checkpoint = load_checkpoint(tmp_path)
+        runtime = load_runtime_state(tmp_path, work_item_id)
+        pack = load_resume_pack(tmp_path)
+        assert result.exit_code == 0
+        assert checkpoint is not None
+        assert checkpoint.current_stage == "execute"
+        assert [stage.stage for stage in checkpoint.completed_stages] == [
+            "init",
+            "refine",
+            "design",
+            "decompose",
+            "verify",
+        ]
+        assert checkpoint.execute_progress is None
+        assert runtime is not None
+        assert runtime.current_stage == "execute"
+        assert runtime.current_batch == 0
+        assert runtime.current_task == ""
+        assert runtime.last_committed_task == ""
+        assert pack.current_stage == "execute"
+        assert pack.current_batch == 0
+        root_pack_path = tmp_path / ".ai-sdlc/state/resume-pack.yaml"
+        scoped_pack_path = (
+            tmp_path / ".ai-sdlc/work-items" / work_item_id / "resume-pack.yaml"
+        )
+        runtime_path = tmp_path / ".ai-sdlc/work-items" / work_item_id / "runtime.yaml"
+        tracked_state = [
+            tmp_path / ".ai-sdlc/state/checkpoint.yml",
+            root_pack_path,
+            scoped_pack_path,
+            runtime_path,
+        ]
+        assert root_pack_path.read_bytes() == scoped_pack_path.read_bytes()
+        before_second_recover = {path: path.read_bytes() for path in tracked_state}
+
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            second_result = runner.invoke(app, ["recover", "--reconcile"])
+
+        assert second_result.exit_code == 0
+        assert {path: path.read_bytes() for path in tracked_state} == before_second_recover
 
     def test_recover_prompts_and_applies_reconcile_for_legacy_artifacts(
         self, tmp_path: Path
