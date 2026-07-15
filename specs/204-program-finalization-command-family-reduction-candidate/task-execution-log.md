@@ -513,4 +513,7 @@ ResumePack 作为该 WI 的显式例外 force-track；两份必须 byte-identica
   当前结论是零 candidate 产品代码，而非整个仓库零产品变化。
 - 验证：定向 53 passed；recover/status/runner/context/close 扩大回归 277 passed；全量
   `3216 passed, 3 skipped in 488.66s`；Ruff PASS、plan drift=NO、constraints 0 BLOCKER、Program
-  Truth ready/fresh（1076/1076，close 204/204）。Fresh-clone ResumePack proof 在精确提交后执行。
+  Truth ready/fresh（1076/1076，close 204/204）。提交 `45e66ce1b4b76762a8e866099c43cd64a6435aff`
+  的 fresh clone 中 root/scoped ResumePack 均 tracked、SHA-256 同为
+  `4158ef2809c22b9bebd53dc9236afcfde05945438a2511399aa4af7f213457ef`；连续 load 两次后 hash
+  不变、stage=`execute`/batch=0/last=T14、reconcile hint=None、Git clean。

@@ -20,10 +20,10 @@ working_set_snapshot:
   - .ai-sdlc/state/codex-handoff.md
   - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
   context_summary: 'Goal: Close WI-204 with zero candidate product code and audited
-    GAP-13 pre-close safety | State: GAP-13 locally verified; full suite 3216 passed,
-    3 skipped; fresh-clone proof and dual review pending | Next: Commit exact tree,
-    prove tracked root/scoped ResumePacks stay clean across repeated fresh-clone loads,
-    then obtain dual PASS and push PR #130'
+    GAP-13 pre-close safety | State: GAP-13 full verification and fresh-clone ResumePack
+    proof passed; final dual review pending | Next: Commit proof receipt, obtain lean
+    and safety Agent PASS on the exact final head, push, and re-request Codex review
+    on PR #130'
 current_branch: feature/204-program-finalization-command-family-reduction-candidate-dev
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
