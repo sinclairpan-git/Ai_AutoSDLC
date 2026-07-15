@@ -533,4 +533,8 @@ execution-plan/summary 不生成。旧 defect 状态已恢复 open，GAP-13 defe
 
 修复后定向 29 passed、相关扩大回归 277 passed、全量
 `3216 passed, 3 skipped in 481.35s`；Ruff PASS、plan drift=NO、constraints 0 BLOCKER、Program
-Truth ready/fresh（1076/1076，close 204/204）。新 exact commit 的 fresh-clone proof 与双终审待执行。
+Truth ready/fresh（1076/1076，close 204/204）。提交
+`25bb33a296b9a8d364be751a0b6743ca5b66f72e` 的 fresh clone 中，root/scoped ResumePack 均 tracked
+且 SHA-256 同为 `a83838d3769b60f22104e3584d024fda4ff1158c97f40aaf1b5581f59e668bac`；连续 load
+两次与真实 `SDLCRunner.run()` fail-closed 后，checkpoint/packs/runtime/working-set/summary hash
+均不变、execution-plan 不存在、Git clean。最终 proof receipt commit 的双终审待执行。

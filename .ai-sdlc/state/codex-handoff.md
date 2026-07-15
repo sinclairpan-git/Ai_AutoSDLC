@@ -1,34 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T20:07:07+00:00
-- Reason: Address safety Agent FAIL on exact f34cd48d
+- Updated: 2026-07-15T20:08:20+00:00
+- Reason: Fresh-clone real-run safety proof passed
 - Goal: Close WI-204 with zero candidate product code and audited GAP-13 pre-close safety
-- State: Safety FAIL fixed: real zero-task run leaves tracked state byte-identical; second full suite 3216 passed, 3 skipped; new clone proof and dual review pending
+- State: Safety fix and fresh-clone real-run proof passed; exact proof receipt and final dual review pending
 - Stage: execute
 - Work Item: 204-program-finalization-command-family-reduction-candidate
 - Branch: feature/204-program-finalization-command-family-reduction-candidate-dev
 
 ## Changed Files
-- M docs/framework-defect-backlog.zh-CN.md
-- M program-manifest.yaml
-- M specs/204-program-finalization-command-family-reduction-candidate/plan.md
-- M specs/204-program-finalization-command-family-reduction-candidate/spec.md
 - M specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
-- M specs/204-program-finalization-command-family-reduction-candidate/tasks.md
-- M src/ai_sdlc/core/runner.py
-- M tests/unit/test_runner_confirm.py
 
 ## Key Decisions
-- Run zero-task preflight before stage-entry checkpoint save; restore unrelated defect status; preserve close-pending compatibility and final lifecycle blocker
+- Zero-task preflight precedes checkpoint persistence; close-pending remains exact opt-in; unrelated defect status restored
 
 ## Commands / Tests
-- 29 targeted + 277 related + 3216 full passed; Ruff PASS; plan drift=NO; constraints 0 blockers; truth ready/fresh 1076/1076 close 204/204
+- Commit 25bb33a2 fresh clone: two resume loads + real run halt, all tracked state hashes stable, no execution-plan, Git clean; full 3216 passed, 3 skipped
 
 ## Blockers / Risks
-- Revocation remains pending mainline; current final close remains blocked by merge-pending
+- Revocation remains pending mainline and close remains blocked by merge-pending until PR merge
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit safety fix, prove final tracked ResumePacks and zero-task real run stay clean in fresh clone, then rerun both adversarial reviews
+- Commit proof receipt, repeat final clone cleanliness check, obtain both adversarial PASS, then push and re-request Codex review
