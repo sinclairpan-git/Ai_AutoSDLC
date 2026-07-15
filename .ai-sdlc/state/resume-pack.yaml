@@ -3,21 +3,21 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/202-lean-gate-report-only/.ai-sdlc/memory/constitution.md
-  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/202-lean-gate-report-only/.ai-sdlc/profiles/tech-stack.yml
-  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/202-lean-gate-report-only/specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
-  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/202-lean-gate-report-only/specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
-  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/202-lean-gate-report-only/specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-governance-no-go-audit/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-governance-no-go-audit/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-governance-no-go-audit/specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-governance-no-go-audit/specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/196-lean-governance-no-go-audit/specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
   active_files: []
   context_summary: 'Goal: Deliver WI196 parent RC-09 No-Go audit without reviving
-    WI202; future reduction requires new sponsor and parent dual PASS | State: Formal
-    hash 096f0fea dual PASS; truth fresh/ready; full suite PASS; ready for commit
-    and PR review | Next: Commit current 13-path parent audit diff and rerun post-commit
-    truth/constraints checks'
+    WI202; future reduction requires new sponsor and parent dual PASS | State: Active
+    checkout and resume paths now use 196-lean-governance-no-go-audit; formal dual
+    PASS and truth/full-suite evidence remain valid | Next: Verify resume-pack paths,
+    truth/constraints, commit and push the focused P2 fix'
 current_branch: ''
 docs_baseline_ref: 75d3dda5ec8b45d0f9441058da889163d814b717
 docs_baseline_at: '2026-07-15T09:27:40+00:00'
-timestamp: '2026-07-15T09:28:14+00:00'
+timestamp: '2026-07-15T10:48:26+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-15T09:27:40+00:00'
 checkpoint_fingerprint: 0eceaf1137e891b065409a99582e1ca45de021e19854963b99532d423080c9a0
