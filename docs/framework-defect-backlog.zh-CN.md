@@ -1595,6 +1595,6 @@
 - tool: `src/ai_sdlc/core/reconcile.py`, `tests/unit/test_reconcile.py`, `ai-sdlc recover`, `ai-sdlc status`
 - eval: summary 存在但 close 未就绪时的错误推进次数、recover 后 checkpoint 反复跳回 close 的次数、close-pending 正反夹具通过率。
 - 风险等级: 高
-- 可验证成功标准: 给定 execute checkpoint、完整 direct formal 产物和 `stage: close-pending` 的 summary，`detect_reconcile_hint()` 不返回推进到 close 的 hint，`recover` 不改写 checkpoint；去掉标记后保持历史兼容，仍可从相同产物推断到 close。
-- 处置进展 (2026-07-15): `reconcile` 已识别精确 `stage: close-pending` 并保留无/未知 marker 兼容；Runner 在零解析任务时于 stage-entry checkpoint 保存与构建 Executor 前无写入返回。新增 detect/recover/status/summary gate/真实 run zero-task 回归，相关扩大回归 277 项、全量 `3216 passed, 3 skipped`，Ruff、constraints 与 Program Truth ready/fresh 均通过。
-- 是否需要回归测试补充: 已完成：close-pending、无/未知 marker、status/recover、summary gate 与 zero-task pre-Executor 边界均有自动化覆盖。
+- 可验证成功标准: 给定 execute checkpoint、完整 direct formal 产物和 `stage: close-pending` 的 summary，`detect_reconcile_hint()` 不返回推进到 close 的 hint，`recover` 不改写 checkpoint；若历史 checkpoint/runtime 已污染为 close/batch1，则 `recover --reconcile` 原地修复为 execute/batch0、保留 baseline/linkage/早期阶段证据并同步 root/scoped ResumePack，第二次 recover 无写入；去掉标记后保持历史兼容。零解析任务在 real run、dry-run、`check_gate` 三入口均不得复用旧进度假绿。
+- 处置进展 (2026-07-15): `reconcile` 已识别精确 `stage: close-pending`，既阻止向前误推，也能修复历史污染状态并保留已有证据；Runner 在统一 execute context 层屏蔽零任务的旧进度，stage-entry checkpoint 保存与 Executor 构建均不会发生。第二轮定向 3 项、相关三文件 52 项、扩大回归 277 项、全量 `3216 passed, 3 skipped` 与全仓 Ruff 均通过；constraints 无 blocker/advisory，Program Truth 已刷新并审计为 ready/fresh。fresh-clone 与最终双审待下一批补齐。
+- 是否需要回归测试补充: 已完成：close-pending、无/未知 marker、status/recover、污染 checkpoint/runtime/双 ResumePack、二次恢复幂等、summary gate，以及 real/dry/check_gate 三入口 zero-task 边界均有自动化覆盖。

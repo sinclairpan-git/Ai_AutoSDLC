@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
-from ai_sdlc.context.state import load_checkpoint, save_checkpoint
+from ai_sdlc.context.state import (
+    load_checkpoint,
+    load_runtime_state,
+    save_checkpoint,
+    save_runtime_state,
+)
 from ai_sdlc.core.plan_check import parse_markdown_frontmatter
 from ai_sdlc.gates.pipeline_gates import DecomposeGate, DesignGate, InitGate, RefineGate
 from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo, MultiAgentInfo
@@ -144,20 +149,35 @@ def reconcile_checkpoint(root: Path) -> ReconcileHint | None:
         reconciled_feature_id=hint.feature_id,
         default_branch=f"feature/{feature_slug}-dev",
     )
-
-    checkpoint = Checkpoint(
-        pipeline_started_at=(
-            existing.pipeline_started_at if existing and existing.pipeline_started_at else now_iso()
-        ),
-        pipeline_last_updated=now_iso(),
-        current_stage=hint.current_stage,
-        feature=FeatureInfo(
+    preserve_feature = bool(
+        existing
+        and existing.feature.id == hint.feature_id
+        and existing.feature.spec_dir == hint.spec_dir
+        and not _feature_branches_need_refresh(existing.feature, hint.feature_id)
+    )
+    feature = (
+        existing.feature.model_copy(update={"current_branch": current_branch})
+        if existing and preserve_feature
+        else FeatureInfo(
             id=hint.feature_id,
             spec_dir=hint.spec_dir,
             design_branch=design_branch,
             feature_branch=feature_branch,
             current_branch=current_branch,
+        )
+    )
+    existing_completed = {
+        item.stage: item for item in existing.completed_stages
+    } if existing else {}
+    updated_at = now_iso()
+
+    checkpoint = Checkpoint(
+        pipeline_started_at=(
+            existing.pipeline_started_at if existing and existing.pipeline_started_at else now_iso()
         ),
+        pipeline_last_updated=updated_at,
+        current_stage=hint.current_stage,
+        feature=feature,
         multi_agent=existing.multi_agent if existing else MultiAgentInfo(),
         prd_source=(
             existing.prd_source
@@ -165,9 +185,10 @@ def reconcile_checkpoint(root: Path) -> ReconcileHint | None:
             else hint.prd_source
         ),
         completed_stages=[
-            CompletedStage(
+            existing_completed.get(stage)
+            or CompletedStage(
                 stage=stage,
-                completed_at=now_iso(),
+                completed_at=updated_at,
                 artifacts=_artifacts_for_stage(stage, hint.detected_files),
             )
             for stage in hint.completed_stages
@@ -179,6 +200,23 @@ def reconcile_checkpoint(root: Path) -> ReconcileHint | None:
         linked_plan_uri=existing.linked_plan_uri if existing else None,
         last_synced_at=existing.last_synced_at if existing else None,
     )
+    if _formal_doc_stage(root / hint.spec_dir / "development-summary.md") == "close-pending":
+        work_item_id = checkpoint.linked_wi_id or checkpoint.feature.id
+        runtime = load_runtime_state(root, work_item_id)
+        if runtime is not None:
+            save_runtime_state(
+                root,
+                work_item_id,
+                runtime.model_copy(
+                    update={
+                        "current_stage": "execute",
+                        "current_batch": 0,
+                        "current_task": "",
+                        "last_committed_task": "",
+                        "last_updated": updated_at,
+                    }
+                ),
+            )
     save_checkpoint(root, checkpoint)
     return hint
 
@@ -343,9 +381,26 @@ def _needs_reconcile(
     current_score = _stage_score(cp.current_stage)
     if current_score < _stage_score(next_stage):
         return True
-
     recorded = {item.stage for item in cp.completed_stages}
-    return any(stage not in recorded for stage in completed)
+    progress = cp.execute_progress
+    if (
+        next_stage != "execute"
+        or _formal_doc_stage(root / spec_dir_rel / "development-summary.md")
+        != "close-pending"
+    ):
+        return any(stage not in recorded for stage in completed)
+    execute_score = _stage_score("execute")
+    return (
+        current_score > execute_score
+        or "execute" in recorded
+        or bool(
+            progress
+            and progress.total_batches > 0
+            and progress.completed_batches >= progress.total_batches
+            and not progress.halted
+        )
+        or any(stage not in recorded for stage in completed)
+    )
 
 
 def _build_reason(

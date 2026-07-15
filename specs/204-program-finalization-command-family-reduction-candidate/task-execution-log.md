@@ -538,3 +538,23 @@ Truth ready/fresh（1076/1076，close 204/204）。提交
 且 SHA-256 同为 `a83838d3769b60f22104e3584d024fda4ff1158c97f40aaf1b5581f59e668bac`；连续 load
 两次与真实 `SDLCRunner.run()` fail-closed 后，checkpoint/packs/runtime/working-set/summary hash
 均不变、execution-plan 不存在、Git clean。最终 proof receipt commit 的双终审待执行。
+
+## 30. PR #130 第二轮 Codex findings 与 GAP-13 历史污染恢复
+
+Codex 对 `ab23f31166b62fcb1f43cee9bd1b6dbae408292d` 复审发现两项 P2：零任务 preflight
+仍把旧 `execute_progress` 交给 Execute Gate，可能假绿后推进 close；`close-pending` 只阻止向前
+推断，不能把既有 close checkpoint 降回 execute。Pascal 与 Confucius 均独立复现并判 FAIL。
+
+- RED：预置 1/1 batch、commit/log/timestamp 的旧进度后，`check_gate("execute")` 为 PASS，真实
+  run 推进 close；close/batch1 checkpoint/runtime 下 `recover --reconcile` 仍保持污染状态。
+- GREEN：零任务判断在统一 execute context 层屏蔽 progress-derived evidence，real/dry/check_gate
+  均 RETRY；reconcile 复用既有重建路径并保留同 feature 的 baseline 与早期 CompletedStage 证据，
+  同步 runtime 到 execute/batch0，由既有 ResumePack loader 重建 root/scoped pack。
+- 幂等：第二次 `recover --reconcile` 对 checkpoint、runtime、root/scoped ResumePack 字节零改动。
+- 减重约束：未新增模块/API/schema/抽象，8 项白名单不变；新增非空手写 LOC 实测
+  runtime=`74+15=89/90`、tests=`87+128+107=322/325`。原 20/170 预算被第二轮审查证明不足，
+  已在 formal 中显式重新冻结并要求双 Agent 对同一 tree 重审。
+- 验证：新 RED/GREEN 3 passed；reconcile/runner/recover 三文件 52 passed；扩大回归 277 passed；
+  全量 `3216 passed, 3 skipped in 487.70s`；全仓 Ruff PASS；plan-check drift=NO；constraints
+  blocker/advisory=0；Program Truth 1076/1076、close 204/204，刷新后 audit=`ready/fresh`。
+- 待办：fresh-clone proof、最终双 Agent、commit/push、再次 Codex review 与 CI/merge。

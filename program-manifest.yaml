@@ -2016,10 +2016,10 @@ specs:
   - 196-ai-sdlc-lean-code-self-reduction-governance
   - 203-finalization-command-family-reduction-contract
 truth_snapshot:
-  generated_at: '2026-07-15T19:55:09Z'
+  generated_at: '2026-07-15T21:09:50Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: f34cd48d
+  repo_revision: ab23f311
   authoring_hash: 78222f8eada63cd4eba40766bfc262d6f781aa2d9b8c44546d29f1b2afdf9fb3
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
@@ -2062,7 +2062,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 03dc3e9812f49719726c1d47bc4ffba6b6e7fb02223815b5e3ac69b2c1a84bc2
+  snapshot_hash: 480a6d1e5213ce0879e0ff9c1c45116d3a5dd2686afaae528b824be931858d1e
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2080,8 +2080,8 @@ truth_snapshot:
     mapped_sources: 1076
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3573
-    deferred_signal_count: 6458
+    phase_signal_count: 3574
+    deferred_signal_count: 6459
     non_goal_signal_count: 364
     layer_totals:
       blueprint: 1
@@ -11283,8 +11283,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 204-program-finalization-command-family-reduction-candidate
-      phase_signal_count: 1
-      deferred_signal_count: 3
+      phase_signal_count: 2
+      deferred_signal_count: 4
       non_goal_signal_count: 0
     - path: specs/204-program-finalization-command-family-reduction-candidate/development-summary.md
       source_type: development_summary

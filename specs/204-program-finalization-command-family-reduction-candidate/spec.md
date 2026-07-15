@@ -145,9 +145,12 @@ PR #130 的 Codex review 证明两个状态边界仍不完整：`development-sum
 修复只允许：
 
 - `development-summary.md` 以精确 opt-in frontmatter `stage: close-pending` 表示 close 门禁未完成；
-  reconcile 必须停在 `execute`。无 marker 与未知 marker 保持既有推断，不能改变旧项目行为。
+  reconcile 必须停在 `execute`，并能把历史上已错误推进的 checkpoint/runtime/ResumePack 原地修复
+  回 `execute/batch0`，同时保留 feature baseline、linkage 与早期阶段证据。无 marker 与未知 marker
+  保持既有推断，不能改变旧项目行为。
 - Runner 在 parser 返回 `total_tasks=0` 时必须在构建 `Executor` 前返回；不得写 execute state、调用
-  task runner、伪造 `execute_progress` 或让 execute gate 通过。
+  task runner、伪造 `execute_progress` 或让旧 `execute_progress` 在 real run、dry-run、`check_gate`
+  任一入口中使 execute gate 通过。
 - `close-pending` 只影响阶段推断，不绕过 `summary_exists`、branch/worktree disposition、Program
   Truth 或 close-check；`merge-pending` 仍必须阻断 final close。
 - 不新增模块、公共 API、schema 或抽象；candidate 9 个 handler、`program_cmd.py`、ProgramService、
@@ -165,7 +168,11 @@ GAP-13 实现白名单固定为：
 - `docs/framework-defect-backlog.zh-CN.md`
 - `specs/204-program-finalization-command-family-reduction-candidate/development-summary.md`
 
-新增非空手写行上限为 runtime≤20、tests≤170；文档/state 不计入 candidate LOC/claim。超任一上限、
+`spec.md` / `plan.md` / `tasks.md` / execution log、handoff/ResumePack 与终态 `program-manifest.yaml`
+Truth snapshot 刷新属于 formal/state/派生证据，不属于 GAP-13 实现白名单或 LOC。
+
+新增非空手写行上限为 runtime≤90、tests≤325；文档/state 不计入 candidate LOC/claim。该上限由
+PR #130 第二轮 Codex review 的历史污染恢复与三入口一致性证明重新冻结，实测为 89/322。超任一上限、
 增加路径或改变无 marker 兼容行为，必须重新修改 formal 并由两个 reviewer 对同一 tree 再审。
 
 ## 4. Sponsor 与账本

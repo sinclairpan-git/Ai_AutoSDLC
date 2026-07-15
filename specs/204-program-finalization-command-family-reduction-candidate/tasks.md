@@ -117,13 +117,14 @@ related_doc:
 
 ### T15 GAP-13 pre-close / zero-task 真值修复
 
-- **状态**：本地验证完成；等待 fresh-clone proof、最终双 Agent 与 Codex review
+- **状态**：第二轮 Codex findings 已修复且本地全量验证完成；等待 fresh-clone proof、最终双 Agent 与 Codex review
 - **依赖**：T14 No-Go、PR #130 Codex findings
-- **文件/预算**：仅 spec 3.1 节 8 项白名单；runtime≤20、tests≤170；零 candidate LOC/claim。
+- **文件/预算**：仅 spec 3.1 节 8 项白名单；runtime≤90、tests≤325（实测 89/322）；零 candidate LOC/claim。
 - **验收**：
-  1. `stage: close-pending` 下 detect/reconcile/status/recover/`recover --reconcile` 均停在 execute；
+  1. `stage: close-pending` 下 detect/reconcile/status/recover/`recover --reconcile` 均停在 execute，
+     已污染 close checkpoint/runtime/packs 可原地回退且第二次 recover 不写入；
   2. 无 marker 与未知 marker 继续保持历史 close 推断；
-  3. parser 零任务时 `_build_executor` 不调用，runtime/plan/working-set 不写；
+  3. parser 零任务时 real/dry/check_gate 均 RETRY，`_build_executor` 不调用，runtime/plan/working-set 不写；
   4. summary gate 仍通过，但 `merge-pending` final close 继续阻断；
   5. force-track scoped ResumePack；fresh clone 连续 load 后与 root byte-identical 且 Git clean；
   6. 两个 reviewer 对同一 tree `PASS`，findings=none。

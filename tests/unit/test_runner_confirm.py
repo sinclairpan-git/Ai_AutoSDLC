@@ -11,6 +11,7 @@ import pytest
 from ai_sdlc.context.state import (
     build_resume_pack,
     load_checkpoint,
+    load_resume_pack,
     save_checkpoint,
     save_resume_pack,
 )
@@ -31,7 +32,7 @@ from ai_sdlc.core.state_machine import save_work_item
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
 from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.scanner import KnowledgeRefreshLog, RefreshEntry, RefreshLevel
-from ai_sdlc.models.state import Checkpoint, FeatureInfo
+from ai_sdlc.models.state import Checkpoint, ExecuteProgress, FeatureInfo
 from ai_sdlc.models.work import WorkItem, WorkItemSource, WorkItemStatus, WorkType
 from ai_sdlc.telemetry.enums import TelemetryMode, TelemetryProfile
 from ai_sdlc.telemetry.paths import telemetry_local_root, telemetry_manifest_path
@@ -98,7 +99,7 @@ class TestConfirmMode:
         assert result.verdict == GateVerdict.PASS
         assert next(check for check in result.checks if check.name == "summary_exists").passed
 
-    def test_run_does_not_persist_state_or_build_executor_for_zero_parsed_tasks(
+    def test_run_ignores_stale_progress_for_zero_tasks_without_persisting_state(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
@@ -110,6 +111,10 @@ class TestConfirmMode:
             "# Tasks\n\n### T14 Readiness No-Go\n\n- **状态**：已完成\n",
             encoding="utf-8",
         )
+        (spec_dir / "task-execution-log.md").write_text(
+            "# Historical execution log\n\nOld completed batch evidence.\n",
+            encoding="utf-8",
+        )
         checkpoint = Checkpoint(
             current_stage="execute",
             linked_wi_id="204-no-go",
@@ -119,6 +124,17 @@ class TestConfirmMode:
                 design_branch="design/204-no-go-docs",
                 feature_branch="feature/204-no-go-dev",
                 current_branch="feature/204-no-go-dev",
+            ),
+            execute_progress=ExecuteProgress(
+                total_batches=1,
+                completed_batches=1,
+                current_batch=1,
+                last_committed_task="T001",
+                tasks_file="specs/204-no-go/tasks.md",
+                execution_log="specs/204-no-go/task-execution-log.md",
+                last_log_at="2026-01-01T00:00:00+00:00",
+                last_commit_at="2026-01-01T00:01:00+00:00",
+                last_commit_hash="deadbeef",
             ),
         )
         build_executor = MagicMock(
@@ -138,16 +154,34 @@ class TestConfirmMode:
         runner = SDLCRunner(tmp_path)
         monkeypatch.setattr(runner, "_build_executor", build_executor)
 
-        with pytest.raises(PipelineHaltError):
+        assert runner.check_gate("execute")["verdict"] == GateVerdict.RETRY
+        dry_run_verdicts: dict[str, str] = {}
+        runner.run(
+            dry_run=True,
+            on_stage_finish=lambda stage, result: dry_run_verdicts.__setitem__(
+                stage,
+                result.verdict.value,
+            ),
+        )
+        assert dry_run_verdicts["execute"] == "RETRY"
+        assert {path: path.read_bytes() for path in tracked_state} == before
+
+        with pytest.raises(PipelineHaltError) as exc_info:
             runner.run()
 
+        assert exc_info.value.stage == "execute"
         build_executor.assert_not_called()
         assert {path: path.read_bytes() for path in tracked_state} == before
-        assert load_checkpoint(tmp_path).execute_progress is None
+        loaded = load_checkpoint(tmp_path)
+        assert loaded is not None
+        assert loaded.execute_progress == checkpoint.execute_progress
         assert not (state_dir / "runtime.yaml").exists()
         assert not (state_dir / "working-set.yaml").exists()
         assert not (state_dir / "execution-plan.yaml").exists()
         assert not (spec_dir / "development-summary.md").exists()
+        resume_events: list[str] = []
+        load_resume_pack(tmp_path, event_log=resume_events)
+        assert resume_events == []
 
     def test_close_context_includes_incident_postmortem_and_refresh_entry(
         self, tmp_path: Path

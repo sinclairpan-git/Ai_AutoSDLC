@@ -6,7 +6,12 @@ from pathlib import Path
 from unittest.mock import patch
 
 from ai_sdlc.context.state import load_checkpoint, save_checkpoint
-from ai_sdlc.models.state import Checkpoint, CompletedStage, FeatureInfo
+from ai_sdlc.models.state import (
+    Checkpoint,
+    CompletedStage,
+    ExecuteProgress,
+    FeatureInfo,
+)
 from ai_sdlc.routers.bootstrap import init_project
 
 
@@ -531,3 +536,47 @@ def test_reconcile_does_not_advance_close_pending_summary(
     loaded = load_checkpoint(tmp_path)
     assert loaded is not None
     assert loaded.current_stage == "execute"
+    loaded.current_stage = "close"
+    loaded.pipeline_started_at = "2025-12-31T23:59:00+00:00"
+    loaded.feature.docs_baseline_ref = "baseline-ref"
+    loaded.feature.docs_baseline_at = "2026-01-01T00:00:00+00:00"
+    loaded.completed_stages.append(
+        CompletedStage(
+            stage="execute",
+            completed_at="2026-01-01T00:00:00+00:00",
+            artifacts=["execute.artifact"],
+        )
+    )
+    loaded.execute_progress = ExecuteProgress(
+        total_batches=1,
+        completed_batches=1,
+        current_batch=1,
+        last_committed_task="T001",
+    )
+    loaded.linked_wi_id = work_item_id
+    loaded.linked_plan_uri = "plan://preserve-me"
+    corrupted = loaded.model_copy(deep=True)
+    save_checkpoint(tmp_path, corrupted)
+
+    hint = detect_reconcile_hint(tmp_path)
+    result = reconcile_checkpoint(tmp_path)
+    loaded = load_checkpoint(tmp_path)
+
+    assert hint is not None
+    assert hint.current_stage == "execute"
+    assert result is not None
+    assert loaded is not None
+    assert loaded.current_stage == "execute"
+    assert [stage.stage for stage in loaded.completed_stages] == [
+        "init",
+        "refine",
+        "design",
+        "decompose",
+        "verify",
+    ]
+    assert loaded.execute_progress is None
+    assert loaded.pipeline_started_at == corrupted.pipeline_started_at
+    assert loaded.feature == corrupted.feature
+    assert loaded.linked_wi_id == corrupted.linked_wi_id
+    assert loaded.linked_plan_uri == corrupted.linked_plan_uri
+    assert loaded.completed_stages == corrupted.completed_stages[:-1]

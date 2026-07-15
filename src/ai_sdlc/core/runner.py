@@ -454,6 +454,8 @@ class SDLCRunner:
         ctx["tests_passed"] = False
         ctx["committed"] = False
         ctx["logged"] = False
+        if cp is not None and self._execute_has_no_tasks(cp):
+            return
         if spec_dir is not None:
             tasks_file = spec_dir / "tasks.md"
             if tasks_file.exists():
