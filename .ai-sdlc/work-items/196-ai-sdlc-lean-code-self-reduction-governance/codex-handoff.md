@@ -1,32 +1,42 @@
 # Continuity Handoff
 
-- Updated: 2026-07-13T05:36:03+00:00
-- Reason: 修复 PR Codex review 指出的 checkpoint/resume 状态不一致
-- Goal: 完成 WI-196 框架缺口修复与自身减重治理双 Agent 对抗评审并交付 PR
-- State: PR #120 第二个 Codex finding 已按最小范围修复：checkpoint feature 与 linked WI 统一为 WI-196；第八轮双 PASS 哈希保持不变，待验证、提交和复审
+- Updated: 2026-07-15T09:28:14+00:00
+- Reason: 首个 T62A 候选 RC-09 No-Go 后回到父治理项
+- Goal: 继续 WI196 框架缺口修复与自身减重；合入首个 T62A 候选 RC-09 No-Go 审计后推进实际减重
+- State: 两套父合同完整 proof 均远超 cap170；T62A仍open，GAP07-11已closed，候选零运行时残留
 - Stage: execute
 - Work Item: 196-ai-sdlc-lean-code-self-reduction-governance
-- Branch: feature/196-ai-sdlc-lean-code-self-reduction-governance-docs
+- Branch: codex/196-lean-governance-no-go-audit
 
 ## Changed Files
 - M .ai-sdlc/state/checkpoint.yml
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/196-ai-sdlc-lean-code-self-reduction-governance/codex-handoff.md
+- D .ai-sdlc/work-items/202-lean-gate-report-only/codex-handoff.md
+- M program-manifest.yaml
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
 - M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+- D specs/202-lean-gate-report-only/expected-delta.json
+- D specs/202-lean-gate-report-only/plan.md
+- D specs/202-lean-gate-report-only/spec.md
+- D specs/202-lean-gate-report-only/task-execution-log.md
+- D specs/202-lean-gate-report-only/tasks.md
 
 ## Key Decisions
-- checkpoint feature.id/spec_dir/design_branch/feature_branch/current_branch 必须与 linked_wi_id=WI-196 一致
-- core review target 未变化，Chandrasekhar 与 Mencius 对 afddacf905876355b8c46725f6d82cf83daa556fc730199f0084ed5800a46cb3 的双 PASS 保持有效
+- 失败候选不合入 source/state/truth/claim；重启需新 sponsor 与父合同重新双审同时成立
 
 ## Commands / Tests
-- post-commit program truth audit => snapshot_state=fresh, exit 1, exact registered GAP-09～GAP-11 debt only
-- PR #120 second Codex review finding verified as valid and fixed in checkpoint continuity state
+- v6 429 LOC、v7 382 LOC；两套4 tests、Ruff check/format、zero-write PASS；策略复议双 Agent 统一
 
 ## Blockers / Risks
-- GAP-08 运行时派生缺陷仍由后续独立 work item 修复；本 PR 只确保 WI-196 当前状态可稳定重建
+- T62A 自动化在现有 sponsor 下不可实施；CC05/06 继续 FR08 双 reviewer fallback
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 运行 handoff/resume 回归测试、constraints 与 truth sync/audit
-- 提交推送并第三次请求 Codex review
-- Codex 无可操作问题且 checks 全绿后合并 main
+- 验证零候选残留、truth/constraints/full；对 WI196 新 formal hash 双审，通过后提交父审计 PR

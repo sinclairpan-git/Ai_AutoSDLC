@@ -379,3 +379,72 @@
 - branch truth exact delta 仅移除 `frontend_inheritance:generation` 与 `frontend_inheritance:quality`；`frontend-mainline-delivery` 为 `audit=ready`，原始 handoff/status 仍保留 missing snapshot 的 blocked 诊断。
 - GAP-10 保留 `adapter_canonical_consumption:unverified`；GAP-11 保留 `33 unmapped / 11 missing`。WI-199 五件套使 mapped/source 总数同步增加 5，不属于债务清仓。
 - GAP-09 当前标记为 `branch truth-ready / PR-mainline pending`；只有 WI-199 PR 合并并在 `origin/main` 重跑证据后才更新为 closed。
+
+## 18. Batch 2026-07-15-017：GAP-09～GAP-11 mainline 关闭与 sponsor receipt
+
+- GAP-09/T53A：WI-199 经双审、Codex/CI 与 mainline smoke 后由 PR #123 squash merge；commit
+  `208a34c82da0474a3cf51f3758934a188758b33d`。Framework capability 与 consumer inheritance
+  fail-closed 语义分离，frontend release truth 不再含两个误报 blocker。
+- GAP-10/T53B：WI-200 由 PR #124 squash merge；commit
+  `c737eda056b2c86a6110ab32db237c417ee19a04`。Repository capability closure 与本机会话 canonical
+  consumption admission 分离，后者仍按 runtime 环境独立 fail-closed。
+- GAP-11/T54：WI-201 由 PR #125 squash merge；commit
+  `d19c8b7df66ca43e4fa55a99a6d05fa2d1219586`。33 个 unmapped 与 11 个 missing source 收敛为 0；
+  inventory=`complete`。
+- WI-203 / PR #126 / merge `75d3dda5ec8b45d0f9441058da889163d814b717` 冻结一个
+  9-handler、预计净删除至少 1,501 LOC 的 WP-07 候选，以及总保护 claim≤353、candidate T61A/B≤180、
+  WI-202 T62A≤170、reserve=3 不可借出的 sponsor receipt。该 receipt 只授权受限保护预算，不代表
+  candidate 实现或删除已发生。
+- 当前 mainline truth 为 source `1071/1071/0/0`、close `203/203`；GAP-07～GAP-11 均已有独立
+  mainline evidence。父项仍未满足 RC-08，不得标记整体完成。
+
+## 19. Batch 2026-07-15-018：WI-202 RC-06/RC-09 No-Go 与零残留处置
+
+### 19.1 失败目标与纠偏
+
+WI-202 最初尝试在 cap 170 内同时实现 WP-02 两个 T62A report-only 规则族。Round 1/2/3/5
+formal 均双 FAIL；Round 4 在 verdict 前主动撤销；Round 6 target
+`06d2764160f4ada12c86f3c8ab958b8fab154aca7203bc49eb751e7677635d2d` 也由 Pascal 与
+Confucius 独立复算后双 FAIL。主要纠偏：不得用 fake Git、物理压行、场景名称、未闭合 parser，
+也不得把 changed-code 与 contract admission 核心语义推迟到 T62B 来换取预算。
+
+### 19.2 两套父合同完整 proof
+
+两套 proof 都覆盖真实 Git、changed-code added/deleted/budget、changed Python 400/50、fixed
+classification、required contract fields、固定 CC/RC、closed waiver、closed deterministic JSON、
+无自由文本回显、invalid/non-project、zero-write 和 actual `verify_app`；所有新增函数≤50。
+
+| proof | 设计 | core | CLI | tests | product | candidate | prior 后 | source-set SHA-256 |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| v6 | exact base/candidate 40hex、完整 object/containment edge | 223 | 28 | 178 | 251 | 429 | 431 | `aeb48490db13ea37708d328399381df442a1a6cf6fa23785189460b1ce8325d8` |
+| v7 | 显式 base + exact HEAD、复用只读 Git、Git-object-only | 205 | 20 | 157 | 225 | 382 | 384 | `981ef703ea36b7d28140bf7ca3b32b36cbd0073bc5703ad3bb755cd5d9de837b` |
+
+Source SHA：v6 core=`32f15140a22c9c4a938f003aafc9182958968c99bbbd27fa16e411b4524818c9`、
+CLI=`d979caee23dbd55b97fdb84ad96baeaffef15b2b155ce110542781d9dd6b24e9`、
+test=`846aa8b86b663cdf9661b702dfeade3d4daffd1a48f615d7ada95b662301041f`；v7
+core=`16c0bbc2e87f641c1bcdd8366ab91bf73fa07f725380054f3597988618edb70c`、
+CLI=`7de0cde5ea86434b4ea7bfa121f9ac7537eb04d38d20683019dee133081b178a`、
+test=`1275d4cc5027278e3bf7ecdf40f0d1559cfaefaf9306077250935e0205dcdbe3`。固定环境复验 UTC
+`2026-07-15T09:20:32Z`：两套均 `4 passed`，`ruff check` PASS，`ruff format --check` 为
+`3 files already formatted`，zero-write PASS。V7 即使完全不计 tests，product 225 + prior 2 =227，
+仍超过 cap 57；超限来自父合同职责，不是 formatter 或测试 setup。
+
+### 19.3 RC-09 决策与双 Agent 策略统一
+
+- RC-06：全部 product/test/harness/normalizer additions 必须合计计费，删除不抵扣；当前 sponsor
+  为 WI-202 开放的 cap 精确为 170，candidate 的 180 不可自动转移。
+- RC-09：继续压缩只能删除父合同语义、安全断言或证据，因此停止该候选；不创建产品代码、
+  不激活 sponsor、不消费 unique key，effective claim=0。
+- Confucius / 兼容安全 / `2026-07-15T09:17:55Z`：GO 仅限删除 WI-202 全部 source/state/truth，
+  在父项留 No-Go 审计；独立 WI 会产生未获 claim 覆盖的 2 行 tests additions，并错误扩张
+  `cancelled_no_go` 生命周期。
+- Pascal / 精简效率 / `2026-07-15T09:24:46Z`：接受上述反例并撤回保留独立 WI 的建议；确认父日志
+  足以防止重复投入，额外 source 只会违反停止投资目的。
+
+最终处置：删除 `specs/202-lean-gate-report-only/**`、scoped handoff、manifest entry、checkpoint/
+resume/handoff 引用和 truth tuple delta；不合入 spike/sidecar/sponsor/T61A 副本。GAP-01/T62A 保持
+open，T62B/T62C 未开始；WP-02 涉及 CC-05/CC-06，FR-08 的两个独立 reviewer fallback 继续生效。
+重启必须同时有足额新/替代 sponsor，以及重新冻结并同 hash 双 PASS 的父合同；不得复活 WI-202。
+
+父文档 PR 的回退为 `git revert --no-edit <parent-no-go-audit-squash-sha>`。由于无 WI-202 runtime/
+source/truth/claim，回退不需要清理命令、模块、测试或预算 ledger。

@@ -1,31 +1,42 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T06:04:40+00:00
-- Reason: Resume WI202 after the reviewed WI203 sponsor receipt merged to main
-- Goal: Rewrite the WI202 Lean Gate formal from the merged receipt and obtain same-hash dual PASS before implementation
-- State: WI203 PR #126 merged at 75d3dda5ec8b45d0f9441058da889163d814b717; rejected WI202 draft hash 246cbef7 was preserved as local audit snapshot b5616af9; origin/main merge conflicts are being resolved
+- Updated: 2026-07-15T09:28:14+00:00
+- Reason: 首个 T62A 候选 RC-09 No-Go 后回到父治理项
+- Goal: 继续 WI196 框架缺口修复与自身减重；合入首个 T62A 候选 RC-09 No-Go 审计后推进实际减重
+- State: 两套父合同完整 proof 均远超 cap170；T62A仍open，GAP07-11已closed，候选零运行时残留
 - Stage: execute
-- Work Item: 202-lean-gate-report-only
-- Branch: feature/202-lean-gate-report-only-docs
+- Work Item: 196-ai-sdlc-lean-code-self-reduction-governance
+- Branch: codex/196-lean-governance-no-go-audit
 
 ## Changed Files
-- Merge origin/main sponsor receipt into the WI202 formal branch
-- Resolve governance state to make WI202 the active work item
+- M .ai-sdlc/state/checkpoint.yml
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/196-ai-sdlc-lean-code-self-reduction-governance/codex-handoff.md
+- D .ai-sdlc/work-items/202-lean-gate-report-only/codex-handoff.md
+- M program-manifest.yaml
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+- D specs/202-lean-gate-report-only/expected-delta.json
+- D specs/202-lean-gate-report-only/plan.md
+- D specs/202-lean-gate-report-only/spec.md
+- D specs/202-lean-gate-report-only/task-execution-log.md
+- D specs/202-lean-gate-report-only/tasks.md
 
 ## Key Decisions
-- Claim at most 170 total handwritten product, test, harness, fixture, and normalizer LOC; deleted LOC never offsets additions
-- Keep Lean Gate report-only with no waiver or enforcement path and no runtime Markdown parser
-- Recapture T61A from merged mainline receipt 75d3dda5 before RED or implementation
+- 失败候选不合入 source/state/truth/claim；重启需新 sponsor 与父合同重新双审同时成立
 
 ## Commands / Tests
-- PR #126 merged after dual adversarial PASS, current-head Codex PASS, and all required checks passed
-- Both adversarial agents independently rejected the old WI202 draft before implementation started
+- v6 429 LOC、v7 382 LOC；两套4 tests、Ruff check/format、zero-write PASS；策略复议双 Agent 统一
 
 ## Blockers / Risks
-- The old formal contract is invalid; no RED test or product implementation may start until the replacement formal reaches same-hash dual PASS
+- T62A 自动化在现有 sponsor 下不可实施；CC05/06 继续 FR08 双 reviewer fallback
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Finish the origin/main merge, rewrite spec/plan/tasks/expected-delta, recapture T61A, compute the canonical hash, and request independent same-hash adversarial reviews
+- 验证零候选残留、truth/constraints/full；对 WI196 新 formal hash 双审，通过后提交父审计 PR

@@ -2007,9 +2007,6 @@ specs:
 - id: 201-source-inventory-convergence
   path: specs/201-source-inventory-convergence
   depends_on: []
-- id: 202-lean-gate-report-only
-  path: specs/202-lean-gate-report-only
-  depends_on: []
 - id: 203-finalization-command-family-reduction-contract
   path: specs/203-finalization-command-family-reduction-contract
   depends_on: []

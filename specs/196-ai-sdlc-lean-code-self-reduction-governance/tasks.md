@@ -91,12 +91,12 @@
 |---|---|---|---:|---|---|
 | T51 修复 adapter mutation/preflight 顺序 | standalone | GAP-07 | L1/L2 | T43 + GAP-10 impact analysis | NC、红绿 characterization、clean-tree 快照、CLI tests |
 | T52 修复 linked-WI resume/handoff 派生 | standalone | GAP-08 | L2 | T43 | NC、红绿 fixture、recover/handoff tests、artifact diff |
-| T53A 关闭 frontend inheritance truth | standalone | GAP-09 | L2 | T43 | NC、snapshot 无对应 blockers |
-| T53B 关闭 adapter consumption truth | standalone | GAP-10 | L2 | T43 | NC、canonical consumption evidence + snapshot |
-| T54 收敛 source inventory | standalone | GAP-11 | L2 | T43 | NC、逐项修复；例外有 owner/原因/到期日 |
+| T53A 关闭 frontend inheritance truth（已完成） | standalone | GAP-09 | L2 | T43 | WI-199 / PR #123 / merge `208a34c8` |
+| T53B 关闭 adapter consumption truth（已完成） | standalone | GAP-10 | L2 | T43 | WI-200 / PR #124 / merge `c737eda0` |
+| T54 收敛 source inventory（已完成） | standalone | GAP-11 | L2 | T43 | WI-201 / PR #125 / merge `d19c8b7d`；0 unmapped / 0 missing |
 | T61A 捕获目标切片旧行为 | embedded gate | GAP-02/WP-01A | L1/L2 | T51、T52 + fail-closed impact analysis | 固定环境、allowlist、surface/Golden 基线 |
 | T61B 候选实现 differential 与回退演练 | embedded pre-merge gate | GAP-02/WP-01B | L1～L3 | T61A + candidate hash | 零未批准差异、rollback receipt；未通过不得 merge/close |
-| T62A code + contract report-only | standalone | GAP-01/WP-02 | L1 | T61A | 分类/合同缺口报告、历史零误阻断、RC-06 预算 |
+| T62A code + contract report-only（open） | standalone | GAP-01/WP-02 | L1/L2 | T61A + 新/替代 sponsor + 父合同重新双审 | WI-202 候选 RC-09 No-Go；重启项须分类/合同缺口报告、历史零误阻断、RC-06 预算 |
 | T62B code + contract warning | standalone | GAP-01/WP-02 | L2 | T62A 稳定 | 两规则族 warning fixture、waiver schema、独立开关 |
 | T62C code + contract blocking | standalone | GAP-01/WP-02 | L2 | T62B 稳定 | 两规则族 blocker、admission `active + verified`、独立降级与 reviewer fallback 测试 |
 | T63 单个 helper/DTO/test 重复族 | standalone + T61A/B | GAP-05/WP-03 | L1 | T51、T52 | 重复族清零、目标切片 LOC -10%、全量测试 |

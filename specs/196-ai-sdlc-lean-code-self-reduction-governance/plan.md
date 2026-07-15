@@ -24,7 +24,7 @@
   ├─ T52 GAP-08 linked-WI resume 缺陷（独立 WI）
   └─ Barrier：T51 与 T52 都关闭
             └─ WP-01A 目标切片旧行为基线
-                 ├─ WP-02 Lean Gate：report → warning → blocking
+                 ├─ WP-02 Lean Gate：report → warning → blocking（首个 T62A 候选 RC-09 No-Go；仍 open）
                  ├─ WP-03 helper/DTO/test 重复族
                  ├─ WP-04 Loop Store 重复族
                  ├─ WP-05 baseline 候选 go/no-go
@@ -98,9 +98,13 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 - **非目标**：不追补或一次性阻断历史债务，不引入与 changed-code 无关的全仓重写。
 - **进入**：WP-01A 完成；分类器在当前仓库零误分类样本通过。
 - **阶段**：T62A 两个规则族 report-only → T62B 两个规则族 warning → T62C 两个规则族 blocking；每阶段独立 PR，两个规则族使用独立状态和开关，可单独降级。
+- **当前状态**：WI-202 候选在 formatter/真实 Git/closed safety proof 下仍至少为 product 225、
+  candidate 382，超过 170；已按 RC-09 停止，未合入 source 或消费 sponsor。T62A 仍 open。
 - **兼容**：强制 CC-01/02/03/05/06/07；新增报告、warning/blocker 与退出行为必须写入版本化 expected-delta artifact，未列入差异为 BLOCKER。
 - **完成**：历史未改代码不阻断；新增超限和缺合同字段 fixture 分别经历 report/warning/blocker；所有 waiver 有 owner、理由、路径和到期日；合同 admission 健康检查、状态转换和 execute BLOCKER 通过。
 - **停止/回退**：任一规则族误判时只降级该规则族；合同 admission 不处于 `active + verified` 时自动恢复 FR-08 风险分层 reviewer，不追补历史债务。
+- **重启**：必须同时有足额的新/替代 sponsor 与重新冻结、同 hash 双 PASS 的父合同；只满足一项
+  不得复活 WI-202。重启前影响 CC-05/CC-06 的子项继续使用两个独立 reviewer。
 - **预算/证据**：计入 RC-06；结构化报告、blocking fixture、降级演练。
 
 ### WP-03：稳定 helper / DTO / 镜像测试重复族（L1）
