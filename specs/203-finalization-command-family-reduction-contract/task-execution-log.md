@@ -293,3 +293,21 @@ Codex 对 `1b1e3955` 指出：把 missing source 固定为 1、close materialize
 WI-201 已关闭的缺失来源回归。意见成立，触发 §2.16 的 target 修订和 Round 7 双 Agent 重审。
 修复新增如实的 `development-summary.md`，恢复 `missing_sources == 0` 与 close `203/203`；不再用
 测试白名单容忍缺失文件。
+
+### 4.5 Codex summary review-state finding 处置
+
+Codex 对 `61866429` 指出：新 summary 已物化 close source，但仍把 Round 7 双 Agent PASS 列为
+待完成，与 execution log 的有效 receipt 冲突。意见成立。Summary 已改为“formal 双审通过、
+mainline delivery 进行中”，把 Round 7 移入当前结论，并只保留 Codex/check/merge、WI-202 与
+后续 candidate 工作为待完成。四个 review target 未变化，canonical hash 仍为
+`cfcd63d7662175e8e9d413b831e582ee81d00958cb8d9c3c8c717de0987dc57f`。
+
+最终非 target evidence 修正经双方只读复核：
+
+| Agent | 维度 | UTC | Findings | Verdict |
+|---|---|---|---|---|
+| Confucius / `wi200_proof_safety` | 兼容、安全、回退、证据 | 2026-07-15T04:25:31Z | 无可操作问题 | `PASS` |
+| Pascal / `wi200_lean_design` | 精简效率、预算、最小改动 | 2026-07-15T04:25:21.318782Z | 无可操作问题 | `PASS` |
+
+双方均确认 target/runtime/tests 未变化，summary 未虚报 sponsor 激活、candidate、release 或 closure；
+同一 canonical hash 继续有效。
