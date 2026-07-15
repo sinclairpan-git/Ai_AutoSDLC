@@ -2007,6 +2007,9 @@ specs:
 - id: 201-source-inventory-convergence
   path: specs/201-source-inventory-convergence
   depends_on: []
+- id: 203-finalization-command-family-reduction-contract
+  path: specs/203-finalization-command-family-reduction-contract
+  depends_on: []
 truth_snapshot:
   generated_at: '2026-07-14T18:08:35Z'
   generated_by: ai-sdlc program truth sync

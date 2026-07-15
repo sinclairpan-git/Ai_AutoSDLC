@@ -1,5 +1,5 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-07-14T15:01:05+00:00'
+pipeline_last_updated: '2026-07-15T02:37:29+00:00'
 current_stage: execute
 feature:
   id: 197-adapter-preflight-order
@@ -38,6 +38,6 @@ completed_stages:
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 201-source-inventory-convergence
-linked_plan_uri: specs/201-source-inventory-convergence/plan.md
-last_synced_at: '2026-07-14T15:01:05+00:00'
+linked_wi_id: 203-finalization-command-family-reduction-contract
+linked_plan_uri: specs/203-finalization-command-family-reduction-contract/plan.md
+last_synced_at: '2026-07-15T02:37:29+00:00'
