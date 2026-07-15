@@ -58,6 +58,15 @@ independent_reviews:
     minimum_maintainable_protection_loc: 356
     compressed_lower_bound_loc: 285
 
+exact_disposition_review:
+  reviewed_commit: 323ae62361566898fbf5fc3eedcfd2f74d36ab09
+  reviewed_tree: b7e92adcdc7dc3f500dba50fdbbfc563ee24c652
+  reviewed_resume_sha256: 48d80f8e2204a30668076045b7043e8db16e045e05bbfe9861c96f858776414a
+  recorded_at: "2026-07-15T18:15:36Z"
+  lean_efficiency: PASS
+  compatibility_safety: PASS
+  findings: none
+
 restart_conditions:
   - new-or-replacement-sponsor-formal
   - protection-budget-rejustified-above-complete-maintainable-proof

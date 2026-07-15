@@ -464,3 +464,20 @@ canonical checkpoint 仍指向 execute/docs branch，且 WI-204 缺少 runtime t
 `close/batch1/T14/dev branch`，并以 `working-set.yaml` 固定 No-Go terminal context。通过框架
 `build_resume_pack/save_resume_pack/load_resume_pack` 重建 root+scoped 两份 pack 后，两份字节一致，
 连续两次 load 不再重建漂移，terminal tuple 与 context 均保持稳定。
+
+## 26. RC-09 disposition exact-commit 双 PASS
+
+**Reviewed target**：commit=`323ae62361566898fbf5fc3eedcfd2f74d36ab09`，
+tree=`b7e92adcdc7dc3f500dba50fdbbfc563ee24c652`，root/scoped ResumePack
+SHA-256=`48d80f8e2204a30668076045b7043e8db16e045e05bbfe9861c96f858776414a`。
+
+| Reviewer | UTC | Verdict | Findings |
+|---|---|---|---|
+| Pascal / 精简效率 | 2026-07-15T18:15:36Z | PASS | none |
+| Confucius / 兼容安全 | 2026-07-15T18:15:36Z | PASS | none |
+
+两方独立复算 commit/tree、rejected target、revocation lifecycle、claim=0、canonical/derived resume
+稳定性，以及相对 `origin/main` 的 `src/`、既有 tests、activation receipt、Cursor rule 零差异。
+Confucius 在一次性 clone 中补跑 context/recover=`35 passed`；fresh clone 首次按 canonical truth
+重建 ignored scoped ResumePack，后续连续 load 无事件、无漂移。Review receipt 只记录该结果，
+不改变 No-Go 决策或产品边界；其 resulting commit 仍需双 final-head confirmation。

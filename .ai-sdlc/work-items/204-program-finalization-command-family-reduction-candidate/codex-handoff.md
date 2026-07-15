@@ -1,7 +1,7 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T18:03:20+00:00
-- Reason: Canonical checkpoint/runtime now rebuild terminal No-Go resume state stably; prepare exact-commit dual review
+- Updated: 2026-07-15T18:15:36+00:00
+- Reason: Exact disposition commit received independent dual PASS; record review receipt and prepare final-head confirmation
 - Goal: Close WI-204 safely with zero product change, retained legacy behavior, and an auditable RC-09 disposition
 - State: Candidate stopped; rejected T61A test/evidence removed from branch final tree; sponsor revocation remains pending until its exact content reaches origin/main; claim stays 0
 - Stage: close
@@ -21,10 +21,9 @@
 - Do not retain or regenerate the rejected evidence. Revocation is not effective until mainline ancestry; any restart needs a new sponsor/formal/claim key and a rejustified protection budget; current claim is non-transferable/non-reactivatable
 
 ## Local PR Review
-- Pascal: RC-09 No-Go at 222-LOC maintainable lower bound; third precommit disposition review PASS
-- Confucius: RC-09 No-Go at 356-LOC complete lower bound (285 aggressively compressed); third-round canonical-state finding closed, exact-commit final review pending
+- Pascal: exact commit 323ae623 / tree b7e92adc PASS, findings none
+- Confucius: exact commit 323ae623 / tree b7e92adc PASS, findings none; disposable-clone context/recover 35 passed
 
 ## Exact Next Steps
-- Commit the verified disposition tree and obtain independent Pascal plus Confucius PASS on that exact commit
-- Record the review receipt without changing disposition semantics and obtain final-head confirmation
+- Commit this review receipt without changing disposition semantics and obtain dual final-head confirmation
 - Open the No-Go PR, complete Codex review/check heartbeat, and merge only when current-head clean
