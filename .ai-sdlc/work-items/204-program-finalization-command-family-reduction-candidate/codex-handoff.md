@@ -1,30 +1,30 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T16:18:30+00:00
-- Reason: Clarify PR #129 squash-merge identity without changing the activation receipt
-- Goal: Merge an activation-only WI-204 sponsor receipt without product or test code
-- State: PR #129 carries the exact reviewed activation receipt content; branch, current-head, and synthetic review SHAs are pre-merge carriers only; activation is not mainline-effective
+- Updated: 2026-07-15T17:24:00+00:00
+- Reason: T61A baseline and dual design review completed; checkpoint before first protection write
+- Goal: Execute WI-204 T61A protection within 180 LOC, obtain dual readiness GO, then implement the reduction candidate
+- State: Activation is mainline-effective; baseline has no drift; Pascal and Confucius both allow T61A harness implementation but candidate product code remains No-Go
 - Stage: execute
 - Work Item: 204-program-finalization-command-family-reduction-candidate
-- Branch: feature/204-program-finalization-command-family-reduction-candidate-activation
+- Branch: feature/204-program-finalization-command-family-reduction-candidate-dev
 
 ## Changed Files
-- none (post-commit state)
+- canonical and scoped handoff only; no product, test, or evidence file yet
 
 ## Key Decisions
-- Keep immutable candidate baseline at 6d2 and explicitly classify the sole 7-of-8 LOC service-test delta as authorized GAP-12 carrier evidence with candidate claim zero
+- Keep the activation receipt immutable; add one parameterized protection file plus generated evidence, run all side-effecting probes in disposable clones, and stop with RC-09 No-Go above 180 LOC
 
 ## Commands / Tests
-- T11: 9 targets, 9 renderers, 2020/216/1804/432, 33 commands; 165 passed, 469 deselected; formal e29b1c; constraints clean; truth ready/fresh 1076/1076 and close 204/204
+- Revalidated c78414b9, exact activation receipt, source/test blobs, 9/2020/216/1804/432 and 33 commands; existing selection is 165 passed, 469 deselected
 
 ## Blockers / Risks
-- Activation is ineffective until the future PR #129 squash-merge commit containing the exact receipt becomes an origin/main ancestor; do not rewrite the receipt merely to record that merge SHA; candidate and T61A writes remain unauthorized
+- AI_SDLC_DISABLE_UPDATE_CHECK does not disable the adapter; handler probes must patch both hooks and outer-hook/full-suite probes must run in disposable clones
 
 ## Local PR Review
-- Activation receipt tree 006423a0: Pascal and Confucius PASS, findings none
-- PR #129 Codex P2 findings for stale pre-commit state and branch-vs-squash identity are addressed without changing the receipt
+- Pascal: T61A implementation GO, candidate No-Go; one 175-LOC file and generated evidence
+- Confucius: T61A implementation GO, candidate No-Go; require fail-closed activation, raw side effects, platform/runtime evidence
 
 ## Exact Next Steps
-- Confirm Pascal and Confucius verdicts match the exact handoff-only refresh tree and remote PR #129 head matches local HEAD
-- Re-request current-head Codex review, monitor all required checks, and squash merge only when review and checks are clean
-- Fetch origin/main; verify the squash commit is an origin/main ancestor and contains the exact receipt Git blob df2f9501ea3eb249a9ef637e9a506c154e0e3d9c / SHA-256 79d07b2d39af7e9a4f36252ca594a67fe7bec6eb363bc30b94378cdcba75c1be, then create the implementation branch from that mainline commit without rewriting the receipt
+- Commit this handoff-only checkpoint and confirm a clean tree
+- Run RED for missing T61A evidence, implement the single parameterized protection file within 180 LOC, and capture evidence in disposable clones
+- Obtain Pascal and Confucius readiness GO on the exact evidence before any candidate product code
