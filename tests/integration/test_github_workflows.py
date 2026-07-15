@@ -18,6 +18,10 @@ def test_github_workflows_are_valid_yaml() -> None:
     for workflow_path in workflow_paths:
         yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
 
+    pr_checks = (_WORKFLOWS_DIR / "pr-checks.yml").read_text(encoding="utf-8")
+    required = ("fetch-depth: 0", "persist-credentials: false", "git branch --force main HEAD^1", 'git switch --create "$GITHUB_HEAD_REF" HEAD^2')
+    assert all(token in pr_checks for token in required) and pr_checks.index("Pytest smoke") < pr_checks.index(required[2]) < pr_checks.index(required[3]) < pr_checks.index("uv run ai-sdlc verify constraints")
+
 
 def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_checks() -> None:
     workflow_path = _WORKFLOWS_DIR / "windows-offline-smoke.yml"

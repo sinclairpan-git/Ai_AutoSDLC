@@ -32,7 +32,7 @@ related_doc:
 
 ### T02 Formal 双 Agent 对抗评审
 
-- **状态**：执行中；Round 10 compatibility design gate 待重审
+- **状态**：执行中；Round 11 CI proof design gate 待重审
 - **依赖**：T01
 - **维度 A**：精简收益、预算数学、直接性、无过度抽象。
 - **维度 B**：功能等价、副作用、回退、sponsor 生命周期与零重复计算。
@@ -40,12 +40,13 @@ related_doc:
 
 ### T03 GAP-12 branch disposition 真值修复
 
-- **状态**：待执行
+- **状态**：执行中；产品修复已验证，CI checkout topology 待修
 - **依赖**：T02
-- **文件**：仅允许 spec GAP-12 所列 16 个精确路径；不得新建模块或公共类型。
-- **预算**：runtime/scaffold/rule/template 新增≤80 行、tests 新增≤180 行、合计≤260 行；删除
-  不抵扣；`test_program_service.py` 仅可给既有 ephemeral drift 测试新增≤8 个非空行；超任一门槛
-  先修改 formal 并重新双审。
+- **文件**：仅允许 spec GAP-12/CI proof 所列 18 个精确路径；不得新建模块或公共类型。
+- **预算**：Round 10 已用 production/tests/total=`79/171/250`；Round 11 仅允许 workflow≤7、
+  workflow test≤3，最终 production=`79/80`、tests≤`174/180`、workflow≤7、total≤260；删除不抵扣；
+  `test_program_service.py` 仍仅可给既有 ephemeral drift 测试新增≤8 个非空行；超任一门槛先修改
+  formal 并重新双审。
 - **验收**：
   1. RED 证明自由文本可假绿、pending 与 final 无法区分；
   2. branch allowlist 只接受 `merge-pending/merged/archived(<非空原因>)/deleted/待最终收口`，
@@ -58,7 +59,10 @@ related_doc:
      均阻断；unknown branch/worktree token fail closed；
   6. lifecycle blocker 保留稳定 namespace；historical Program Truth normalization 过滤该瞬态分类，
      但 direct close 仍 BLOCK，且任一 non-lifecycle close blocker 仍保留；
-  7. 两个 reviewer 对同一代码 HEAD `PASS`、findings=none。
+  7. PR CI 保留默认 merge checkout 跑 Ruff/Pytest；checkout 为完整历史且不持久化凭据；仅在
+     constraints 前用 `HEAD^1`/`HEAD^2` 固定本地 main/current head，顺序断言完整；保持唯一
+     `pull_request` + `contents: read`、不用 PAT/secrets，head ref=main 必须 collision fail closed；
+  8. 两个 reviewer 对同一代码 HEAD `PASS`、findings=none。
 
 ### T04 Formal 验证与 mainline receipt
 

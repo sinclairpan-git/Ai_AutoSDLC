@@ -94,6 +94,13 @@ blob 漂移、范围变化或需要修改排除项，当前 receipt 与 verdict 
   unknown fail-closed、pending verify PASS、pending close BLOCK、pending/Git 反例、final branch
   missing/multiple、final worktree unresolved/mismatch、historical raw-block/normalized-pass 与
   non-lifecycle blocker 保留七组测试证明。
+- PR required CI 必须保留默认 synthetic merge checkout 供 Ruff/Pytest 验证 merge result；仅在
+  constraints 前，以该 event merge commit 的 `HEAD^1`/`HEAD^2` 固定本地 `main` 与真实 head
+  current branch，再验证 divergence。Checkout 必须 `fetch-depth: 0`、
+  `persist-credentials: false`；workflow 必须保持唯一 `pull_request` trigger、
+  `permissions: contents: read`，不得增权、使用 PAT/secrets、改成 head-only checkout 或
+  `pull_request_target`。`GITHUB_HEAD_REF == main` 必须因 local-main collision fail closed，不得
+  force-create/重映射；不得让产品代码读取 `GITHUB_*`、构造 synthetic inventory 或放宽 lifecycle。
 
 GAP-12 路径白名单固定为：
 
@@ -113,13 +120,17 @@ GAP-12 路径白名单固定为：
 - `tests/integration/test_cli_workitem_close_check.py`
 - `tests/integration/test_cli_verify_constraints.py`
 - `tests/integration/test_cli_workitem_init.py`
+- `.github/workflows/pr-checks.yml`
+- `tests/integration/test_github_workflows.py`
 
 `tests/unit/test_program_service.py` 只允许在既有 ephemeral close-check drift 测试中新增≤8 个非空行，
 不得修改 ProgramService 产品代码、snapshot 算法或其他测试逻辑。
 
-预算按新增非空手写行数计，不以删除抵扣：runtime/scaffold/rule/template 合计≤80，tests 合计≤180，
-总计≤260。任一路径超白名单、任一分项/总预算超限或需要新模块/公共类型，设计 PASS 立即失效，
-必须先修改 formal 并重新双审，不能边写边扩范围。
+预算按新增非空手写行数计，不以删除抵扣。Round 10 已用
+runtime/scaffold/rule/template=`79`、tests=`171`、总计=`250`；Round 11 仅允许 workflow 新增≤7 行、
+`test_github_workflows.py` 新增≤3 行。最终累计必须为 production=`79/80`、tests≤`174/180`、
+workflow≤`7`、总计≤`260`。任一路径超 18 项白名单、任一分项/总预算超限或需要产品代码、
+新模块/公共类型，设计 PASS 立即失效，必须先修改 formal 并重新双审，不能边写边扩范围。
 
 该缺口由 Round 6 对抗复审发现。新 formal target 先获两个 reviewer 的设计 PASS，随后才允许
 GAP-12 TDD；代码树变化后两位 reviewer 必须再次对同一 HEAD PASS，才可合并 formal PR。
