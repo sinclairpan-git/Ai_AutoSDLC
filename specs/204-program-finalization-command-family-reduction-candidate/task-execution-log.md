@@ -641,4 +641,4 @@ Codex 对 `2574fa4f210c2fcb8ab9aecfb5fc59865f97609c` 复审发现一项 P2：che
 #### 33.5 Git close-out
 
 - **已完成 git 提交**：是（closeout truth payload 由提交 A 独立承载；本 receipt envelope 只固定 A 的不可变引用与 Program Truth 快照）
-- **提交哈希**：待提交 A 后由 receipt envelope 固化
+- **提交哈希**：`121c8625867675bcda84d646a9015b21d8392531`（closeout truth payload A；本 Batch 33 receipt envelope 不自引用自身）
