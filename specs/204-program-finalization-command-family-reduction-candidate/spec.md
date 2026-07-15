@@ -2,7 +2,7 @@
 
 **功能编号**：`204-program-finalization-command-family-reduction-candidate`
 **创建日期**：2026-07-15
-**状态**：对抗复审修订中；candidate/T61A 产品与保护代码仍未授权
+**状态**：RC-09 No-Go；candidate 未实现，T61A 保护被拒绝，legacy 保留
 **类型**：WP-07 / GAP-04 / GAP-12 / L3 candidate implementation
 **父合同**：`specs/203-finalization-command-family-reduction-contract/`
 **治理来源**：`specs/196-ai-sdlc-lean-code-self-reduction-governance/`

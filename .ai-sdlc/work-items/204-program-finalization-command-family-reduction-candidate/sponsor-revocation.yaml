@@ -1,0 +1,65 @@
+schema_version: ai-sdlc.sponsor-disposition.v1
+work_item: 204-program-finalization-command-family-reduction-candidate
+disposition: revocation-pending-mainline
+decision: RC-09-no-go
+mainline_disposition: pending
+reason_code: RC-09
+decided_at: "2026-07-15T17:38:35Z"
+
+mainline_effect:
+  condition: exact-revocation-content-commit-is-origin-main-ancestor
+  state_before_effect: active
+  state_after_effect: revoked
+
+activation_receipt:
+  path: .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/sponsor-activation.yaml
+  immutable_git_blob: df2f9501ea3eb249a9ef637e9a506c154e0e3d9c
+  immutable_sha256: 79d07b2d39af7e9a4f36252ca594a67fe7bec6eb363bc30b94378cdcba75c1be
+  historical_state: active
+
+claim:
+  key: wi204:t61ab:program-finalization-family:v1
+  planned_protection_loc: 175
+  hard_protection_cap_loc: 180
+  effective_claim_loc: 0
+  transferable: false
+  reusable: false
+  reactivatable: false
+  settleable: false
+  replacement_requires_new_unique_key: true
+
+t61a_disposition:
+  readiness: no-go
+  rejected_protection_loc: 175
+  protection_code: absent-from-mainline-and-removed-from-branch-final-tree
+  evidence: rejected-and-removed-from-branch-final-tree
+  local_cleanup: complete
+  mainline_cleanup: not-required-artifacts-never-entered-mainline
+  candidate_product_authorized: false
+  candidate_product_changes: 0
+  legacy_retained: true
+
+independent_reviews:
+  rejected_target:
+    commit: 03134e5fcd5d2a8586547134bb8315664fdad71a
+    six_file_composite_sha256: 2bfcf37c1bfbf598fc1821be1862192c29a316b7010eea099fd22510e9d60fc1
+    protection_git_blob: 08c6a19d20b34128e6f3f1667c114c993da8b47d
+    protection_sha256: cbb76c744c6d42c710fad1acb58361bb41e253359bb7c6f913feddc8bf184479
+    evidence_git_blob: d1d579136dff588a14a6314f3af4e830fce386b1
+    evidence_sha256: cf9a892659fb1b8a2e20c3e27f551c36295bdadeaa7b0fadc13c1c0c4924ca2f
+  lean_efficiency:
+    reviewer: Pascal
+    verdict: RC-09-NO-GO
+    minimum_maintainable_protection_loc: 222
+    hard_cap_excess_loc: 42
+  compatibility_safety:
+    reviewer: Confucius
+    verdict: RC-09-NO-GO
+    minimum_maintainable_protection_loc: 356
+    compressed_lower_bound_loc: 285
+
+restart_conditions:
+  - new-or-replacement-sponsor-formal
+  - protection-budget-rejustified-above-complete-maintainable-proof
+  - parent-contract-refrozen-and-dual-reviewed
+  - new-activation-receipt-and-unique-claim-key

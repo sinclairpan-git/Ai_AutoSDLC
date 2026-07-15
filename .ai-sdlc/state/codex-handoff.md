@@ -1,29 +1,30 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T17:24:01+00:00
-- Reason: T61A RED/GREEN and runtime evidence completed; hand off to dual readiness review
-- Goal: Execute WI-204 T61A protection within 180 LOC, obtain dual readiness GO, then implement the reduction candidate
-- State: T61A evidence is verified at actual protection 175/180 and runtime is recorded; candidate product code remains No-Go until both readiness reviewers pass the same committed evidence
-- Stage: execute
+- Updated: 2026-07-15T18:03:20+00:00
+- Reason: Canonical checkpoint/runtime now rebuild terminal No-Go resume state stably; prepare exact-commit dual review
+- Goal: Close WI-204 safely with zero product change, retained legacy behavior, and an auditable RC-09 disposition
+- State: Candidate stopped; rejected T61A test/evidence removed from branch final tree; sponsor revocation remains pending until its exact content reaches origin/main; claim stays 0
+- Stage: close
 - Work Item: 204-program-finalization-command-family-reduction-candidate
 - Branch: feature/204-program-finalization-command-family-reduction-candidate-dev
 
 ## Changed Files
-- one 175-LOC T61A protection module, generated t61a-evidence.json, execution log, development summary, and both handoffs; src and sponsor receipt unchanged
+- remove rejected T61A module/evidence; add pending sponsor-revocation and scoped runtime/working-set; close checkpoint/spec/tasks/log/summary/resume/handoffs; src, activation receipt, and existing tests unchanged from origin/main
 
 ## Key Decisions
-- Keep the activation receipt immutable and candidate product code closed; only a common Pascal plus Confucius readiness GO may open candidate TDD
+- Preserve the activation receipt as immutable history, retain legacy code, and stop the candidate because complete maintainable protection cannot fit the frozen 180-LOC cap
 
 ## Commands / Tests
-- RED 1 failed as expected; committed-clone GREEN 5 passed and existing 165 passed; Ruff PASS; runtime warmup 5/sample 30 p50=112430209ns p95=134945541ns; actual protection=175
+- Final existing selection: 165 passed, 469 deselected; governance/handoff selection: 19 passed; full suite: 3212 passed, 3 skipped; canonical root+scoped resume rebuild/load twice is stable at close/batch1/T14/dev branch
 
 ## Blockers / Risks
-- Disposable clone inventory proves outer adapter rewrites its managed Cursor rule; this is frozen evidence, while unknown diffs, baseline drift, or any readiness finding remain candidate blockers
+- Do not retain or regenerate the rejected evidence. Revocation is not effective until mainline ancestry; any restart needs a new sponsor/formal/claim key and a rejustified protection budget; current claim is non-transferable/non-reactivatable
 
 ## Local PR Review
-- Pascal and Confucius implementation-design GO is satisfied; readiness verdict on the exact committed evidence is pending
+- Pascal: RC-09 No-Go at 222-LOC maintainable lower bound; third precommit disposition review PASS
+- Confucius: RC-09 No-Go at 356-LOC complete lower bound (285 aggressively compressed); third-round canonical-state finding closed, exact-commit final review pending
 
 ## Exact Next Steps
-- Commit the T61A protection/evidence batch and run it from a disposable clone
-- Have Pascal and Confucius independently review the same commit/evidence hash; address findings without product code until both return GO
-- Only after common readiness GO, start T21 candidate seam RED
+- Commit the verified disposition tree and obtain independent Pascal plus Confucius PASS on that exact commit
+- Record the review receipt without changing disposition semantics and obtain final-head confirmation
+- Open the No-Go PR, complete Codex review/check heartbeat, and merge only when current-head clean

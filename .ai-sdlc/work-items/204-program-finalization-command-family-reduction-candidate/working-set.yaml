@@ -1,0 +1,23 @@
+prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
+constitution_path: .ai-sdlc/memory/constitution.md
+tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
+spec_path: specs/204-program-finalization-command-family-reduction-candidate/spec.md
+plan_path: specs/204-program-finalization-command-family-reduction-candidate/plan.md
+tasks_path: specs/204-program-finalization-command-family-reduction-candidate/tasks.md
+active_files:
+  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/sponsor-revocation.yaml
+  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/runtime.yaml
+  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml
+  - .ai-sdlc/state/checkpoint.yml
+  - .ai-sdlc/state/resume-pack.yaml
+  - specs/204-program-finalization-command-family-reduction-candidate/tasks.md
+  - specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
+  - specs/204-program-finalization-command-family-reduction-candidate/development-summary.md
+  - .ai-sdlc/state/codex-handoff.md
+  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
+context_summary: >-
+  Goal: close WI-204 through an auditable RC-09 disposition with zero product
+  change and retained legacy behavior. State: T61A was rejected by both reviewers;
+  T21-T34 are canceled; revocation is pending mainline ancestry; claim remains zero.
+  No executable candidate task remains. Next: carry only the reviewed disposition
+  through PR checks, Codex review, and mainline merge.

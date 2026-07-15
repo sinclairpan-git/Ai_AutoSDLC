@@ -18,11 +18,11 @@ related_doc:
 - 两个 reviewer 可并行，但必须独立、只读、对同一 hash/tree 给 verdict。
 - 任一受审目标变化使旧 verdict 失效；任一硬门失败按 RC-09 停止，不以 waiver 继续。
 
-## Batch 0：Formal admission（当前 docs branch）
+## Batch 0：Formal admission（历史阶段，已完成）
 
 ### T01 冻结 current baseline 与 claim
 
-- **状态**：进行中
+- **状态**：已完成；formal baseline 与 claim 已冻结
 - **文件**：`spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`、manifest/state
 - **验收**：
   1. baseline=`6d2dc47fa57b589ecafaff9872a395684e535018`，WI-203 receipt/hash 可复算；
@@ -32,7 +32,7 @@ related_doc:
 
 ### T02 Formal 双 Agent 对抗评审
 
-- **状态**：执行中；Round 11 CI proof design gate 待重审
+- **状态**：已完成；Round 11 修订 target 双 PASS
 - **依赖**：T01
 - **维度 A**：精简收益、预算数学、直接性、无过度抽象。
 - **维度 B**：功能等价、副作用、回退、sponsor 生命周期与零重复计算。
@@ -40,7 +40,7 @@ related_doc:
 
 ### T03 GAP-12 branch disposition 真值修复
 
-- **状态**：执行中；产品修复已验证，CI checkout topology 待修
+- **状态**：已完成；产品修复与 CI checkout topology 已验证并合入
 - **依赖**：T02
 - **文件**：仅允许 spec GAP-12/CI proof 所列 18 个精确路径；不得新建模块或公共类型。
 - **预算**：Round 10 已用 production/tests/total=`79/171/250`；Round 11 仅允许 workflow≤7、
@@ -66,7 +66,7 @@ related_doc:
 
 ### T04 Formal 验证与 mainline receipt
 
-- **状态**：待执行
+- **状态**：已完成；PR #128 已合入 main
 - **依赖**：T03
 - **验收**：constraints/truth/path whitelist/diff check 通过；授权 GAP-12 窄修、
   docs/state/manifest 与
@@ -78,7 +78,7 @@ related_doc:
 
 ### T11 Activation-only mainline receipt
 
-- **状态**：未开始
+- **状态**：已完成；PR #129 已合入 main，implementation branch 从 activation merge 创建
 - **依赖**：T04
 - **验收**：
   1. 从 formal merge 后 main 建立 activation-only branch/worktree，不含产品/测试代码；
@@ -93,7 +93,7 @@ related_doc:
 
 ### T12 实现最小参数化保护 harness
 
-- **状态**：未开始
+- **状态**：RC-09 No-Go；首版 175 LOC harness 被 readiness 拒绝，分支终态零保留
 - **依赖**：T11
 - **验收**：覆盖 raw transcript/tree/bytes、failure/order/renderer、interrupt/retry、path/encoding、
   outer hook、AST ledger；不复制九套 snapshot；首份 evidence 将 active 转 verified；actual
@@ -103,7 +103,7 @@ related_doc:
 
 ### T13 捕获 runtime 与 T61A receipt
 
-- **状态**：未开始
+- **状态**：未通过；首版 runtime/evidence 已执行，但被 readiness 拒绝并移除
 - **依赖**：T12
 - **验收**：warmup、采样命令、p50/p95、normalizer allowlist、side-effect inventory、9-stage chain
   完整；verified `last_evidence_at`、14 日 freshness、3 blocked stale、stale 后 7 日缩减/revert、
@@ -111,7 +111,7 @@ related_doc:
 
 ### T14 Readiness 双 Agent `GO/No-Go`
 
-- **状态**：未开始
+- **状态**：已完成；Pascal 与 Confucius 独立一致判定 RC-09 No-Go
 - **依赖**：T13
 - **验收**：两方独立审查相同 T61A evidence；仅共同 `GO` 允许 T21。
 
@@ -119,27 +119,27 @@ related_doc:
 
 ### T21 建立 candidate seam 红灯
 
-- **状态**：未开始
+- **状态**：已取消；T14 No-Go，禁止进入 candidate seam
 - **依赖**：T14
 - **验收**：legacy 全绿、candidate seam 失败；不修改 public surface 或保护区。
 
 ### T22 单 stage private runner
 
-- **状态**：未开始
+- **状态**：已取消；RC-09 停止 candidate
 - **依赖**：T21
 - **验收**：仅迁 `cross-spec-writeback`；runner≤230、helper≤50、公共抽象=0、产品软目标≤285
   可达；selector 默认 legacy。
 
 ### T23 逐 stage 迁移剩余 8 个 handler
 
-- **状态**：未开始
+- **状态**：已取消；RC-09 停止 candidate
 - **依赖**：T22
 - **验收**：每个切片 targeted/differential/ledger 绿；9 adapters+selector≤70、glue≤3、聚合
   product≤303；renderer/ProgramService/DTO hash 不变。
 
 ### T24 切换 candidate route
 
-- **状态**：未开始
+- **状态**：已取消；RC-09 停止 candidate
 - **依赖**：T23
 - **验收**：
   1. 无 public flag；candidate+route 产品新增与 shadow peak≤303；完整 legacy route/body 仍存在；
@@ -152,26 +152,26 @@ related_doc:
 
 ### T31 完整 T61B differential
 
-- **状态**：未开始
+- **状态**：已取消；RC-09 停止 candidate
 - **依赖**：T24
 - **验收**：隔离 clone 零未批准差异；p95≤10%；targeted/full/Ruff/constraints/truth/platform
   全绿。
 
 ### T32 删除前 route rollback rehearsal
 
-- **状态**：未开始
+- **状态**：已取消；RC-09 停止 candidate
 - **依赖**：T31
 - **验收**：selector-only 切回 legacy 后 9 transcript/artifact/tree 恢复，再恢复 candidate。
 
 ### T33 Candidate tree 双 Agent 与 Codex review
 
-- **状态**：未开始
+- **状态**：已取消；RC-09 停止 candidate
 - **依赖**：T32
 - **验收**：两个维度同 tree PASS；actionable findings 全处置并重审。
 
 ### T34 Candidate PR mainline merge
 
-- **状态**：未开始
+- **状态**：已取消；RC-09 停止 candidate
 - **依赖**：T33
 - **验收**：required checks clean、heartbeat 到 merge；保留 legacy body；状态仅写为
   `candidate_merged_awaiting_stable_release`，不得写 `completed_reduction/settled`。
