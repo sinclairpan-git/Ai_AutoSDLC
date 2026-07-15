@@ -1,27 +1,28 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T04:31:08+00:00
-- Reason: Record corrected summary and terminal truth close-out
-- Goal: Merge WI203 formal contract PR #126, then resume WI202 Lean Gate
-- State: Round 7 and final evidence recheck dual PASS on cfcd63d7662175e8e9d413b831e582ee81d00958cb8d9c3c8c717de0987dc57f; target 507ece1b; summary fix 88ac8f16; truth snapshot 9bc58322 ready/fresh
+- Updated: 2026-07-15T09:45:00+00:00
+- Reason: Reconcile PR #126 mainline receipt with the WI-202 RC-09 No-Go
+- Goal: Preserve the WI-203 sponsor receipt audit without reviving or funding the stopped WI-202 candidate
+- State: PR #126 merged; old WI-202 allocation revoked with effective claim=0; WI-203 candidate allocation remains separate and unclaimed; candidate/release/settlement not complete
 - Stage: execute
 - Work Item: 203-finalization-command-family-reduction-contract
 - Branch: feature/203-finalization-command-family-reduction-contract-docs
 
 ## Changed Files
-- M program-manifest.yaml
+- none (historical scoped handoff; active work item is WI-196)
 
 ## Key Decisions
-- Summary accurately marks formal dual review complete while mainline receipt, candidate implementation, release, and closure remain pending
+- Old WI-202 allocation is revoked and non-transferable; new T62A requires a new/replacement sponsor plus a newly frozen parent contract with dual PASS
+- WI-203 candidate allocation is separate, currently unclaimed, and does not enlarge the T62A budget
 
 ## Commands / Tests
-- targeted regression 1 passed; constraints allow 0/0; final dual-agent recheck PASS; terminal truth sync/audit exit 0 with 1071/1071 missing 0 close 203/203
+- PR #126 merge 75d3dda5; formal hash cfcd63d7; mainline truth 1071/1071 missing 0 close 203/203
 
 ## Blockers / Risks
-- PR cannot merge until receipt is committed/pushed, current-head Codex has no actionable findings, and all required checks pass
+- Candidate implementation, legacy deletion, release, rollback rehearsal, and sponsor settlement remain incomplete
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit/push truth receipt; reply/request Codex review; heartbeat checks; merge PR #126; record sponsor receipt in WI202
+- No action in WI-202; any new T62A or WP-07 candidate must start from its own authorized contract and current sponsor lifecycle

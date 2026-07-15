@@ -2,7 +2,7 @@
 
 **功能编号**：`203-finalization-command-family-reduction-contract`
 **创建日期**：2026-07-14
-**当前状态**：Round 7 同 hash 双 PASS；T04 formal mainline delivery 进行中
+**当前状态**：Round 7 同 hash 双 PASS；PR #126 已合入并形成 sponsor receipt；candidate、release、settlement 未完成
 
 ## 1. 归档与哈希规则
 
@@ -311,3 +311,18 @@ mainline delivery 进行中”，把 Round 7 移入当前结论，并只保留 C
 
 双方均确认 target/runtime/tests 未变化，summary 未虚报 sponsor 激活、candidate、release 或 closure；
 同一 canonical hash 继续有效。
+
+### 4.6 PR #126 mainline receipt 与旧 WI-202 allocation 对账
+
+- PR #126 已 squash merge；mainline merge commit 为
+  `75d3dda5ec8b45d0f9441058da889163d814b717`，formal hash 仍为
+  `cfcd63d7662175e8e9d413b831e582ee81d00958cb8d9c3c8c717de0987dc57f`。
+- 后续 WI-202 T62A proof 的最小父合同完整实现为 382 candidate LOC，超过 ≤170 allocation；父项
+  WI-196 已按 RC-09 判定 No-Go，未激活 claim、未消费 unique key，effective claim=0。
+- 面向旧 WI-202 的 ≤170 allocation 因 RC-09 No-Go 撤销且不可复活或转移；candidate 未用额度
+  不能自动扩大 T62A。新的 T62A 必须取得新的/替代 sponsor 与父合同重新同哈希双审。
+- WI-203 candidate 的 ≤180 allocation 独立保留，当前没有 candidate claim，effective claim=0；
+  只有新的独立 candidate 合同登记 owner/baseline/handoff 后才能按原生命周期使用。reserve=3
+  继续不可 claim。
+- 本节仅同步 sponsor lifecycle/mainline handoff，不修改已冻结的 WI-203 `spec.md + plan.md +
+  tasks.md`，不虚报 candidate 实现、legacy 删除、release、rollback 或 `settled`。
