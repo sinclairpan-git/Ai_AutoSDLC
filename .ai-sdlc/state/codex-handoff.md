@@ -1,28 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T15:10:44+00:00
-- Reason: Round 11 dual-review receipt committed; prepare non-stale conditional handoff
-- Goal: Close PR #128 CI proof gap without weakening GAP-12, then merge and create activation-only mainline receipt
-- State: Round 11 implementation and review receipt are committed through c2e4fead; product, formal, workflow, tests, and budgets are clean; resulting continuity commit requires Pascal plus Confucius final-head signoff
+- Updated: 2026-07-15T15:55:40+00:00
+- Reason: T11 activation receipt drafted and repository gates passed
+- Goal: Merge an activation-only WI-204 sponsor receipt without product or test code
+- State: Activation receipt and dual-baseline evidence drafted from origin/main 4f61498d; schema, schedule, formal hash, branch lifecycle, constraints, Program validation, and Program Truth all pass; receipt is not mainline-effective
 - Stage: execute
 - Work Item: 204-program-finalization-command-family-reduction-candidate
-- Branch: feature/204-program-finalization-command-family-reduction-candidate-docs
+- Branch: feature/204-program-finalization-command-family-reduction-candidate-activation
 
 ## Changed Files
-- none
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
+- ?? .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/sponsor-activation.yaml
 
 ## Key Decisions
-- Use a conditional idempotent next step so handoff remains correct before and after final-head verdicts
+- Keep immutable candidate baseline at 6d2 and explicitly classify the sole 7-of-8 LOC service-test delta as authorized GAP-12 carrier evidence with candidate claim zero
 
 ## Commands / Tests
-- Implementation 2b4b6caf dual PASS; receipt c2e4fead committed; no code changed after review
+- T11: 9 targets, 9 renderers, 2020/216/1804/432, 33 commands; 165 passed, 469 deselected; formal e29b1c; constraints clean; truth ready/fresh 1076/1076 and close 204/204
 
 ## Blockers / Risks
-- none
+- Activation is ineffective until the commit containing the exact receipt becomes an origin/main ancestor; candidate and T61A writes remain unauthorized
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Check Pascal plus Confucius final-head verdicts for the resulting continuity commit; push PR #128 only when both are PASS
-- Request current-head Codex review, monitor required checks, and merge only when clean
+- Obtain Pascal and Confucius PASS on the exact activation tree, commit without further changes, push/open PR, request Codex review, wait for all checks, and merge

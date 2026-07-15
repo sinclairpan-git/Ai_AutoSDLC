@@ -1,0 +1,119 @@
+schema_version: ai-sdlc.sponsor-activation.v1
+work_item: 204-program-finalization-command-family-reduction-candidate
+receipt_type: activation-only
+state: active
+
+mainline_effect:
+  condition: exact-receipt-content-commit-is-origin-main-ancestor
+  candidate_baseline_rebased: false
+
+claim:
+  key: wi204:t61ab:program-finalization-family:v1
+  planned_protection_loc: 175
+  hard_protection_cap_loc: 180
+  effective_claim_loc: 0
+
+parent_sponsor:
+  work_item: 203-finalization-command-family-reduction-contract
+  receipt_merge: 75d3dda5ec8b45d0f9441058da889163d814b717
+  formal_hash: cfcd63d7662175e8e9d413b831e582ee81d00958cb8d9c3c8c717de0987dc57f
+  active_deadline: "2026-08-14T05:58:55Z"
+
+formal_carrier:
+  pull_request: 128
+  merge_commit: 4f61498d451328d78522558cf3429e6aacbc385a
+  direct_parent: 6d2dc47fa57b589ecafaff9872a395684e535018
+  reviewed_head: 01d67d993e7232c1ecefb0bc601d2b99915719c0
+  merge_tree: 716668251377683a6462442c73287b7900b2b492
+  reviewed_head_tree: 716668251377683a6462442c73287b7900b2b492
+  formal_review_target_hash: e29b1c871756af37b99737d561f751100b5cabd9e30bc4c5f2b30c8cb4c0796c
+  dual_formal_review: PASS
+  dual_code_review: PASS
+
+owner:
+  actor: Codex
+  implementation_branch: feature/204-program-finalization-command-family-reduction-candidate-dev
+  handoff_uri: .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
+  implementation_branch_base: activation-receipt-merge-on-origin-main
+
+schedule:
+  activation_at: "2026-07-15T15:46:37Z"
+  t61a_due_at: "2026-08-14T05:58:55Z"
+  derivation: min(activation_at+30d,parent_sponsor.active_deadline)
+
+baseline:
+  immutable_candidate_revision: 6d2dc47fa57b589ecafaff9872a395684e535018
+  authorized_post_formal_carrier: 4f61498d451328d78522558cf3429e6aacbc385a
+  source_file: src/ai_sdlc/cli/program_cmd.py
+  target_handler_count: 9
+  renderer_count: 9
+  program_command_count: 33
+  handler_loc: 2020
+  retained_loc: 216
+  executable_orchestration_loc: 1804
+  branch_proxy: 432
+  blobs:
+    program_cmd:
+      path: src/ai_sdlc/cli/program_cmd.py
+      candidate: e8aff1d079fb471b0f815dec343348cb0e4afd6e
+      carrier: e8aff1d079fb471b0f815dec343348cb0e4afd6e
+      carrier_sha256: 6a101662f01e11f3e6f9963860b0589a1dabd2ec604d82ad1cfc2d6636729bed
+      status: unchanged
+    program_service:
+      path: src/ai_sdlc/core/program_service.py
+      candidate: 2c5860ff3a78e096b2150a70dfcdf2ee80055c0b
+      carrier: 2c5860ff3a78e096b2150a70dfcdf2ee80055c0b
+      carrier_sha256: 694602e124d6d37ffa7ccf16a2f461db289e9bb32b5964c557c472349e1a8f07
+      status: unchanged
+    cli_tests:
+      path: tests/integration/test_cli_program.py
+      candidate: 27bc60ac78453dc8e9708c508ccbcd829c6392be
+      carrier: 27bc60ac78453dc8e9708c508ccbcd829c6392be
+      carrier_sha256: e675b78555138ff85cbf0d61792de692e2b9ad114f1a87e73dc169721a942401
+      status: unchanged
+    service_tests:
+      path: tests/unit/test_program_service.py
+      candidate: 78347b2bd39df8a80dd69eb330c6cb8ccefcc29b
+      carrier: 845c1334505b49578099a0e4361c784b0868a495
+      candidate_sha256: 7fc34736d75bfed6c1fc3b79cb1b13fd599148aab0dacfce81064e201ba39e6d
+      carrier_sha256: 52bac1acae0b220f0566c6a60a2990edb9c7c3e3c9dbd79d3ad5964bb2b62a91
+      status: authorized-gap12-test-only-carrier-delta
+
+authorized_carrier_delta:
+  path: tests/unit/test_program_service.py
+  function: test_build_truth_ledger_surface_ignores_ephemeral_close_check_drift
+  from_blob: 78347b2bd39df8a80dd69eb330c6cb8ccefcc29b
+  to_blob: 845c1334505b49578099a0e4361c784b0868a495
+  git_numstat: "7 insertions, 1 deletion"
+  added_nonempty_loc: 7
+  authorized_nonempty_loc_max: 8
+  authorization: WI-204 spec section 3 GAP-12 exact-path exception
+  reviewed_code_head: 01d67d993e7232c1ecefb0bc601d2b99915719c0
+  candidate_claim_loc: 0
+  candidate_relevant_test_inventory_changed: false
+
+verification:
+  verified_at: "2026-07-15T15:46:37Z"
+  runtime:
+    python: CPython 3.11.15
+    uv: 0.10.12
+    platform: macOS-27.0-arm64-arm-64bit
+    machine: arm64
+  targeted_existing_tests:
+    command: >-
+      uv run pytest -q tests/integration/test_cli_program.py
+      tests/unit/test_program_service.py -k '(cross_spec_writeback or
+      guarded_registry or broader_governance or final_governance or
+      writeback_persistence or persisted_write_proof or final_proof_publication
+      or final_proof_closure or final_proof_archive) and not thread_archive and
+      not project_cleanup'
+    result: 165 passed, 469 deselected in 4.24s
+
+activation_pr_boundary:
+  allowed_changes:
+    - sponsor-activation.yaml
+    - canonical and scoped codex-handoff.md
+  product_code_changes: 0
+  test_code_changes: 0
+  candidate_product_authorized: false
+  t61a_protection_write_authorized_before_mainline_effect: false
