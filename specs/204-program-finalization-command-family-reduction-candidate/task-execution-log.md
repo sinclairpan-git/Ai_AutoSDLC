@@ -140,3 +140,22 @@ target bytes 变化作废。新 target hash：
 两位 reviewer 均独立证明：只把删除的 13 处行尾双空格加回，即可逐文件复现 Round 4 hash 和
 总 hash；因此正文、数字、白名单、授权与合同语义均未变化。当前三份 target 无 trailing
 whitespace，Round 5 为最终双 PASS。
+
+## 10. PR #128 当前头审查修复
+
+- Codex P2：`linked_wi_id` 已指向 WI204，但 `checkpoint.feature.*` 仍指向 WI196；执行授权等路径
+  继续读取 `feature.spec_dir`，恢复后可能操作错误工作项。
+- 根因：`workitem link` 的合同只写 linked fields，不代表 active feature 切换；当前 docs branch
+  已实际切换到 WI204，却遗漏了 feature binding 的同批更新。
+- 修复：`feature.id/spec_dir/design_branch/current_branch` 全量绑定 WI204；`feature_branch` 预留
+  canonical `-dev` 分支；docs baseline 固定为本分支创建点 `6d2dc47f...5018` 与创建时间。
+- 保护边界：三份冻结 target 未修改，最终 target hash 仍为
+  `069fbc6fd816d0e5dd8f4163ffd5af332444313c887bb41fb750ccb0d2026123`；未写入产品代码或
+  T61A 保护代码。
+- 定向验证：checkpoint/recover/execute authorization/task guard/readiness/branch manager 共
+  `65 passed in 3.55s`。
+- 首次治理验证如实阻断于 branch disposition 尚未登记；本批将当前 docs branch 明确登记为
+  PR #128 的 merge carrier，合并后再复验 mainline ancestor truth。
+- 关联 branch/worktree disposition 计划：`feature/204-program-finalization-command-family-reduction-candidate-docs` 作为 PR #128 merge carrier，合并后由 mainline truth 结算。
+- 当前批次 branch disposition 状态：`PR merge carrier`
+- 当前批次 worktree disposition 状态：`retained through PR #128`
