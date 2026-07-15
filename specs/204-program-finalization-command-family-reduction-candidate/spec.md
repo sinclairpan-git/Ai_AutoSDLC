@@ -171,8 +171,9 @@ GAP-13 实现白名单固定为：
 `spec.md` / `plan.md` / `tasks.md` / execution log、handoff/ResumePack 与终态 `program-manifest.yaml`
 Truth snapshot 刷新属于 formal/state/派生证据，不属于 GAP-13 实现白名单或 LOC。
 
-新增非空手写行上限为 runtime≤90、tests≤325；文档/state 不计入 candidate LOC/claim。该上限由
-PR #130 第二轮 Codex review 的历史污染恢复与三入口一致性证明重新冻结，实测为 89/322。超任一上限、
+新增非空手写行上限为 runtime≤95、tests≤330；文档/state 不计入 candidate LOC/claim。该上限由
+PR #130 第二轮 Codex review 的历史污染恢复、三入口一致性证明及双 Agent 对 stale branch
+元数据保留的复审重新冻结，实测为 94/328。超任一上限、
 增加路径或改变无 marker 兼容行为，必须重新修改 formal 并由两个 reviewer 对同一 tree 再审。
 
 ## 4. Sponsor 与账本

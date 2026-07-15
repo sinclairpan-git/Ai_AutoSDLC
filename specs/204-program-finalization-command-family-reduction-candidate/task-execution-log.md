@@ -551,10 +551,28 @@ Codex 对 `ab23f31166b62fcb1f43cee9bd1b6dbae408292d` 复审发现两项 P2：零
   均 RETRY；reconcile 复用既有重建路径并保留同 feature 的 baseline 与早期 CompletedStage 证据，
   同步 runtime 到 execute/batch0，由既有 ResumePack loader 重建 root/scoped pack。
 - 幂等：第二次 `recover --reconcile` 对 checkpoint、runtime、root/scoped ResumePack 字节零改动。
-- 减重约束：未新增模块/API/schema/抽象，8 项白名单不变；新增非空手写 LOC 实测
-  runtime=`74+15=89/90`、tests=`87+128+107=322/325`。原 20/170 预算被第二轮审查证明不足，
-  已在 formal 中显式重新冻结并要求双 Agent 对同一 tree 重审。
+- 减重约束：未新增模块/API/schema/抽象，8 项白名单不变；新增非空手写 LOC 经后续双 Agent
+  stale-branch 元数据复审后实测 runtime=`79+15=94/95`、tests=`93+128+107=328/330`。
+  原 20/170 与 90/325 预算均被审查证明不足，已在 formal 中显式重新冻结并要求双 Agent
+  对同一 tree 重审。
 - 验证：新 RED/GREEN 3 passed；reconcile/runner/recover 三文件 52 passed；扩大回归 277 passed；
   全量 `3216 passed, 3 skipped in 487.70s`；全仓 Ruff PASS；plan-check drift=NO；constraints
   blocker/advisory=0；Program Truth 1076/1076、close 204/204，刷新后 audit=`ready/fresh`。
 - 待办：fresh-clone proof、最终双 Agent、commit/push、再次 Codex review 与 CI/merge。
+
+## 31. 双 Agent stale branch 元数据保留复审
+
+Pascal 与 Confucius 对 `189b31c1541514807ee993721bcdebe8ad679988` 的精确 tree 独立复核时，
+共同发现 P1：同一 feature id/spec 的 checkpoint 若携带陈旧 design/feature branch，reconcile 会重建
+`FeatureInfo` 并清空 `docs_baseline_ref/docs_baseline_at`，违反 baseline 证据保留约束。
+
+- RED：在既有污染恢复回归中同时设置 baseline 与陈旧分支，baseline 断言失败。
+- GREEN：同一 id/spec 始终复用既有 `FeatureInfo`，仅刷新解析后的 design/feature/current branch；
+  不同 id/spec 仍走原有新建路径。
+- 边界：无新模块/API/schema/抽象，8 项实现白名单不变；只增加针对既有恢复路径的断言。
+- 预算：runtime=`79+15=94/95`、tests=`93+128+107=328/330`。
+- 验证：精确 RED 已复现，最小修复后的目标单测 `1 passed`；reconcile/runner/recover 三文件
+  `52 passed`；全量 `3216 passed, 3 skipped in 484.26s`；全仓 Ruff PASS；plan-check drift=NO；
+  constraints blocker/advisory=0；Program validate PASS；Program Truth 1076/1076、close 204/204，
+  同步后 audit=`ready/fresh`。
+- 待办：commit/fresh-clone 与最终双 Agent exact-head PASS，然后 push、Codex review、CI/merge。

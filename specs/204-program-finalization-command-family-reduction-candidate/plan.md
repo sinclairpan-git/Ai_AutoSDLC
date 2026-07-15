@@ -101,7 +101,7 @@ pending/final 模式，不新建模块或公共类型；ProgramService 测试增
 5. 两个 reviewer 审查 T61A evidence、实际 claim 和拟议产品切片；共同 `GO` 才进 Phase 2。
 6. 若为 RC-09 No-Go，canonical summary 标记 `stage: close-pending`，checkpoint 保持 execute；
    reconcile/status/recover 不得推进 close，零解析任务不得构建 Executor 或写 execute state。
-7. GAP-13 只改 spec 白名单内 8 个路径，runtime≤90、tests≤325；两个 reviewer 对同一 tree
+7. GAP-13 只改 spec 白名单内 8 个路径，runtime≤95、tests≤330；两个 reviewer 对同一 tree
    共同 PASS 后才可继续 PR review。
 
 **停止**：actual protection>180、基线漂移、场景只能靠复制 snapshot 或弱化 normalizer 完成。

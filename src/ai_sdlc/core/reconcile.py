@@ -153,10 +153,15 @@ def reconcile_checkpoint(root: Path) -> ReconcileHint | None:
         existing
         and existing.feature.id == hint.feature_id
         and existing.feature.spec_dir == hint.spec_dir
-        and not _feature_branches_need_refresh(existing.feature, hint.feature_id)
     )
     feature = (
-        existing.feature.model_copy(update={"current_branch": current_branch})
+        existing.feature.model_copy(
+            update={
+                "design_branch": design_branch,
+                "feature_branch": feature_branch,
+                "current_branch": current_branch,
+            }
+        )
         if existing and preserve_feature
         else FeatureInfo(
             id=hint.feature_id,

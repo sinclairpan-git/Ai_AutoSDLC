@@ -20,12 +20,10 @@ working_set_snapshot:
   - .ai-sdlc/state/codex-handoff.md
   - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
   context_summary: 'Goal: Close WI-204 with zero candidate product code and audited
-    GAP-13 pre-close safety | State: Second Codex P2 fixes complete: zero-task stale
-    progress blocked for real/dry/check_gate; close-pending corrupted checkpoint/runtime/packs
-    repaired idempotently with evidence preservation; measured runtime 89/90 tests
-    322/325 | Next: Restore Cursor side effect, refresh truth after final handoff,
-    commit candidate, run fresh-clone proof, obtain Pascal and Confucius PASS, add
-    proof receipt, re-sync truth, final exact-head dual PASS, push and merge PR #130'
+    GAP-13 pre-close safety | State: Stale-branch baseline P1 fixed and fully verified;
+    runtime 94/95, tests 328/330; exact candidate ready to commit | Next: Final truth
+    refresh, commit exact candidate, prove fresh clone, obtain dual PASS, push and
+    merge PR #130'
 current_branch: feature/204-program-finalization-command-family-reduction-candidate-dev
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'

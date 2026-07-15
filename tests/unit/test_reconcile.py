@@ -540,6 +540,8 @@ def test_reconcile_does_not_advance_close_pending_summary(
     loaded.pipeline_started_at = "2025-12-31T23:59:00+00:00"
     loaded.feature.docs_baseline_ref = "baseline-ref"
     loaded.feature.docs_baseline_at = "2026-01-01T00:00:00+00:00"
+    loaded.feature.design_branch = "design/999-stale"
+    loaded.feature.feature_branch = "feature/999-stale"
     loaded.completed_stages.append(
         CompletedStage(
             stage="execute",
@@ -576,7 +578,11 @@ def test_reconcile_does_not_advance_close_pending_summary(
     ]
     assert loaded.execute_progress is None
     assert loaded.pipeline_started_at == corrupted.pipeline_started_at
-    assert loaded.feature == corrupted.feature
+    assert loaded.feature.docs_baseline_ref == corrupted.feature.docs_baseline_ref
+    assert loaded.feature.docs_baseline_at == corrupted.feature.docs_baseline_at
+    assert loaded.feature.design_branch == f"design/{work_item_id}-docs"
+    assert loaded.feature.feature_branch == f"feature/{work_item_id}-dev"
+    assert loaded.feature.current_branch == corrupted.feature.current_branch
     assert loaded.linked_wi_id == corrupted.linked_wi_id
     assert loaded.linked_plan_uri == corrupted.linked_plan_uri
     assert loaded.completed_stages == corrupted.completed_stages[:-1]
