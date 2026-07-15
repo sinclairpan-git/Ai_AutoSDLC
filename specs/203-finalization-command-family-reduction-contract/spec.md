@@ -14,7 +14,11 @@
 519 行，净删除不少于 1,501 行，镜像实现下降约 83%。
 
 本工作项当前只交付设计准入合同。只有以下条件全部成立，才允许后续独立 candidate
-实现工作项进入 T61A；本 PR 本身不得修改 `src/`、`tests/`、runtime rules 或发布配置：
+实现工作项进入 T61A；本 PR 本身不得修改 `src/`、runtime rules 或发布配置。`tests/` 默认
+禁止修改，唯一例外是 `tests/integration/test_repo_program_manifest.py` 中既有仓库真值断言的
+两个精确 tuple 可随 WI-203 已登记 source inventory 从 `1066/1066/0/0`、close `202/202`
+同步为 `1071/1071/0/1`、close `203/202`。该例外不得新增测试逻辑、放宽断言或触及其他
+测试文件，并必须由 full compatibility matrix 证明：
 
 1. 两个本地独立只读 Agent 分别从兼容安全与精简效率维度对同一 review target hash
    明确 `PASS`；
