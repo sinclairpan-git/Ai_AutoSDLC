@@ -431,7 +431,7 @@ class WorkitemScaffolder:
             "- `related_plan`（如存在）同步状态：`已对账` / `存在漂移（BLOCKER）`": (
                 "- `related_plan`（如存在）同步状态：待补充"
             ),
-            "- 关联 branch/worktree disposition 计划：`merged` / `archived` / `deleted` / `待最终收口`": (
+            "- 关联 branch/worktree disposition 计划：`merge-pending` / `merged` / `archived(reason)` / `deleted` / `待最终收口`": (
                 "- 关联 branch/worktree disposition 计划：待最终收口"
             ),
             "- 说明：": "- 说明：待补充",
@@ -443,10 +443,10 @@ class WorkitemScaffolder:
             "- 提交哈希：`xxxxxxx`（**仅在**上述 commit **成功之后** 填写 **一次**；不要求归档草稿中预填哈希后再二次修订）": (
                 "- 提交哈希：待本批提交后生成"
             ),
-            "- 当前批次 branch disposition 状态：`待最终收口` / `merged` / `archived` / `deleted`": (
+            "- 当前批次 branch disposition 状态：`待最终收口` / `merge-pending` / `merged` / `archived(reason)` / `deleted`": (
                 "- 当前批次 branch disposition 状态：待最终收口"
             ),
-            "- 当前批次 worktree disposition 状态：`待最终收口` / `removed` / `retained（原因）`": (
+            "- 当前批次 worktree disposition 状态：`待最终收口` / `removed` / `retained(reason)`": (
                 "- 当前批次 worktree disposition 状态：待最终收口"
             ),
             "- 是否继续下一批：`是` / `阻断`": "- 是否继续下一批：待定",

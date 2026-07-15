@@ -653,6 +653,7 @@ def _build_branch_lifecycle_surface(repo_root: Path) -> dict[str, Any]:
             root=repo_root,
             wi_dir=wi_dir,
             log_text=log_text,
+            _require_final_branch_disposition=False,
         )
     except GitError:
         return _branch_lifecycle_inventory_unavailable(wi_dir)

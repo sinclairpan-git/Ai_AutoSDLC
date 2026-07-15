@@ -20,6 +20,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -50,4 +53,7 @@ jobs:
           -q
 
       - name: Verify constraints
-        run: uv run ai-sdlc verify constraints
+        run: |
+          git branch --force main HEAD^1
+          git switch --create "$GITHUB_HEAD_REF" HEAD^2
+          uv run ai-sdlc verify constraints

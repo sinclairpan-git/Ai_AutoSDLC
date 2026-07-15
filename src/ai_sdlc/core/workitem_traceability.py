@@ -267,6 +267,13 @@ def _normalize_marker_value(value: str | None) -> str | None:
     return normalized or None
 
 
+def _has_reason(value: str | None, prefix: str) -> bool:
+    return bool(
+        value and value.startswith(f"{prefix}(") and value.endswith(")")
+        and value[len(prefix) + 1 : -1].strip()
+    )
+
+
 def _last_marker(pattern: re.Pattern[str], text: str) -> str | None:
     matches = list(pattern.finditer(text))
     if not matches:
@@ -309,6 +316,7 @@ def analyze_work_item_branch_lifecycle(
     inventory: tuple[BranchInventoryEntry, ...],
     wi_name: str,
     log_text: str | None,
+    _require_final_branch_disposition: bool = False,
 ) -> WorkItemBranchLifecycleResult:
     """Evaluate unresolved associated branch/worktree drift for one work item."""
     disposition = (
@@ -318,20 +326,59 @@ def analyze_work_item_branch_lifecycle(
     worktree_disposition = disposition.worktree_status
 
     associated = [entry for entry in inventory if branch_matches_work_item(entry.name, wi_name)]
+    worktrees = [entry for entry in associated if entry.worktree_path is not None]
     entries: list[WorkItemBranchLifecycleEntry] = []
     blockers: list[str] = []
     warnings: list[str] = []
 
-    if not associated:
-        return WorkItemBranchLifecycleResult(
-            ok=True,
-            blockers=[],
-            warnings=[],
-            entries=[],
-            branch_disposition=branch_disposition,
-            worktree_disposition=worktree_disposition,
-            next_required_actions=[],
-        )
+    branch_unresolved = branch_disposition in {None, "", "待最终收口"}
+    worktree_unresolved = worktree_disposition in {None, "", "待最终收口"}
+    worktree_retained = _has_reason(worktree_disposition, "retained")
+    if not (
+        branch_unresolved
+        or branch_disposition in {"merge-pending", "merged", "deleted"}
+        or _has_reason(branch_disposition, "archived")
+    ):
+        blockers.append(f"BLOCKER: branch lifecycle branch disposition invalid: {branch_disposition}")
+    if not (worktree_unresolved or worktree_disposition == "removed" or worktree_retained):
+        blockers.append(f"BLOCKER: branch lifecycle worktree disposition invalid: {worktree_disposition}")
+
+    if branch_disposition == "merge-pending":
+        pending = associated[0] if len(associated) == 1 else None
+        if _require_final_branch_disposition:
+            blockers.append("BLOCKER: branch lifecycle merge-pending cannot satisfy final branch disposition")
+        elif (
+            not pending
+            or not pending.is_current
+            or not pending.worktree_path
+            or pending.ahead_of_main <= 0
+            or pending.behind_of_main
+        ):
+            blockers.append("BLOCKER: branch lifecycle merge-pending requires exactly one current worktree branch ahead of and not behind main")
+    elif branch_disposition == "merged" and (len(associated) != 1 or associated[0].ahead_of_main != 0):
+        blockers.append("BLOCKER: branch lifecycle merged requires exactly one associated branch with ahead_of_main=0")
+    elif branch_disposition == "deleted" and associated:
+        blockers.append("BLOCKER: branch lifecycle deleted requires no associated branch")
+    elif _has_reason(branch_disposition, "archived") and (
+        len(associated) != 1
+        or associated[0].kind.value != "archive"
+        or associated[0].ahead_of_main <= 0
+    ):
+        blockers.append("BLOCKER: branch lifecycle archived(reason) requires exactly one ahead archive branch")
+    elif _require_final_branch_disposition and branch_unresolved:
+        blockers.append("BLOCKER: branch lifecycle final branch disposition is unresolved")
+
+    if worktree_disposition == "removed" and worktrees:
+        blockers.append("BLOCKER: branch lifecycle removed requires no associated worktree")
+    elif worktree_retained and len(worktrees) != 1:
+        blockers.append("BLOCKER: branch lifecycle retained(reason) requires exactly one associated worktree")
+    if _require_final_branch_disposition:
+        if not worktrees and worktree_disposition != "removed":
+            blockers.append("BLOCKER: branch lifecycle final worktree disposition must be removed when no worktree exists")
+        elif len(worktrees) == 1 and not worktree_retained:
+            blockers.append("BLOCKER: branch lifecycle final worktree disposition must be retained(reason) while one worktree exists")
+        elif len(worktrees) > 1:
+            blockers.append("BLOCKER: branch lifecycle final worktree disposition cannot resolve multiple associated worktrees")
 
     for entry in associated:
         status = "ok"
@@ -359,27 +406,11 @@ def analyze_work_item_branch_lifecycle(
                     f"{worktree_note}"
                 )
                 warnings.append(f"WARNING: {detail}")
-        elif branch_disposition == "merged":
-            if entry.ahead_of_main > 0:
-                status = "blocker"
-                detail = (
-                    f"{entry.name} is marked merged but still ahead of main by "
-                    f"{entry.ahead_of_main} commit(s){worktree_note}"
-                )
-                blockers.append(f"BLOCKER: branch lifecycle inconsistent: {detail}")
-        elif branch_disposition == "deleted":
-            status = "blocker"
-            detail = f"{entry.name} is marked deleted but still present in local inventory{worktree_note}"
-            blockers.append(f"BLOCKER: branch lifecycle inconsistent: {detail}")
-        elif branch_disposition == "archived":
+        elif _has_reason(branch_disposition, "archived"):
             detail = f"{entry.name} archived as non-mainline truth carrier{worktree_note}"
 
-        if entry.worktree_path is not None and worktree_disposition == "removed":
+        if blockers:
             status = "blocker"
-            detail = (
-                f"{entry.name} worktree is marked removed but still present at {entry.worktree_path}"
-            )
-            blockers.append(f"BLOCKER: branch lifecycle inconsistent: {detail}")
 
         entries.append(
             WorkItemBranchLifecycleEntry(
@@ -415,6 +446,7 @@ def evaluate_work_item_branch_lifecycle(
     root: Path,
     wi_dir: Path,
     log_text: str | None,
+    _require_final_branch_disposition: bool = False,
 ) -> WorkItemBranchLifecycleResult:
     """Build inventory from Git and evaluate associated branch lifecycle for one WI."""
     try:
@@ -434,6 +466,7 @@ def evaluate_work_item_branch_lifecycle(
         inventory=inventory,
         wi_name=wi_dir.name,
         log_text=log_text,
+        _require_final_branch_disposition=_require_final_branch_disposition,
     )
 
 

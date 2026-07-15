@@ -61,9 +61,9 @@ def _write_execution_log(
         "uv run ai-sdlc verify constraints",
     ),
     changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
-    branch_disposition_plan: str = "待最终收口",
-    branch_disposition_status: str = "待最终收口",
-    worktree_disposition_status: str = "待最终收口",
+    branch_disposition_plan: str = "deleted",
+    branch_disposition_status: str = "deleted",
+    worktree_disposition_status: str = "removed",
 ) -> None:
     committed_text = "是" if git_committed else "否"
     rendered_hash = f"`{commit_hash}`" if commit_hash != "N/A" else "N/A"
@@ -203,9 +203,9 @@ def _setup_repo(
         "uv run ai-sdlc verify constraints",
     ),
     changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
-    branch_disposition_plan: str = "待最终收口",
-    branch_disposition_status: str = "待最终收口",
-    worktree_disposition_status: str = "待最终收口",
+    branch_disposition_plan: str = "deleted",
+    branch_disposition_status: str = "deleted",
+    worktree_disposition_status: str = "removed",
 ) -> None:
     subprocess.run(
         ["git", "init", "--initial-branch=main"],
@@ -784,7 +784,7 @@ class TestCliWorkitemCloseCheck:
             "#### 2.5 任务/计划同步状态（Mandatory）\n"
             "#### 2.8 归档后动作\n"
             "- **已完成 git 提交**：是\n"
-            "- **提交哈希**：`def5678`\n",
+            "- **提交哈希**：`def5678`\n- 当前批次 branch disposition 状态：`deleted`\n- 当前批次 worktree disposition 状态：`removed`\n",
             encoding="utf-8",
         )
         _commit_all(root, "docs: realistic execution headers")
@@ -838,7 +838,7 @@ class TestCliWorkitemCloseCheck:
             "#### 2.5 任务/计划同步状态（Mandatory）\n"
             "#### 2.8 归档后动作\n"
             "- **已完成 git 提交**：是\n"
-            "- **提交哈希**：`def5678`\n",
+            "- **提交哈希**：`def5678`\n- 当前批次 branch disposition 状态：`deleted`\n- 当前批次 worktree disposition 状态：`removed`\n",
             encoding="utf-8",
         )
         _commit_all(root, "docs: generic headers should not count")
@@ -898,7 +898,7 @@ class TestCliWorkitemCloseCheck:
             "- 历史状态：this item was previously in_progress while batch 7 was still running\n"
             "#### 2.8 归档后动作\n"
             "- **已完成 git 提交**：是\n"
-            "- **提交哈希**：`abc1234`\n",
+            "- **提交哈希**：`abc1234`\n- 当前批次 branch disposition 状态：`deleted`\n- 当前批次 worktree disposition 状态：`removed`\n",
             encoding="utf-8",
         )
         _commit_all(root, "docs: historical in_progress note")
@@ -937,7 +937,7 @@ class TestCliWorkitemCloseCheck:
             "- 历史状态：this item was previously in_progress while batch 7 was still running\n"
             "#### 2.8 归档后动作\n"
             "- **已完成 git 提交**：是\n"
-            "- **提交哈希**：`abc1234`\n",
+            "- **提交哈希**：`abc1234`\n- 当前批次 branch disposition 状态：`deleted`\n- 当前批次 worktree disposition 状态：`removed`\n",
             encoding="utf-8",
         )
         _commit_all(root, "docs: 001-style historical note")
@@ -1245,7 +1245,7 @@ class TestCliWorkitemCloseCheck:
         assert result.exit_code == 1
         assert "revise" in result.output.lower()
 
-    def test_exit_1_when_close_check_finds_unresolved_associated_branch(
+    def test_exit_1_when_close_check_finds_merge_pending_branch(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         root = tmp_path / "r10"
@@ -1254,6 +1254,7 @@ class TestCliWorkitemCloseCheck:
             root,
             tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
             plan_status="completed",
+            branch_disposition_status="merge-pending",
         )
         _create_branch_ahead_of_main(root, "codex/001-branch-check-demo")
         monkeypatch.chdir(root)
@@ -1262,11 +1263,9 @@ class TestCliWorkitemCloseCheck:
 
         assert result.exit_code == 1
         assert "branch_lifecycle" in result.output
-        assert "codex/001-branch-check-demo" in result.output
-        assert "Branch Lifecycle Next Actions" in result.output
-        assert "decide whether codex/001-branch-check-demo should be merged" in result.output
+        assert "merge-pending" in result.output
 
-    def test_branch_check_text_surfaces_next_actions_for_unresolved_associated_branch(
+    def test_branch_check_rejects_unknown_disposition(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         root = tmp_path / "r10-branch-text"
@@ -1275,6 +1274,7 @@ class TestCliWorkitemCloseCheck:
             root,
             tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
             plan_status="completed",
+            branch_disposition_status="PR merge carrier",
         )
         _create_branch_ahead_of_main(root, "codex/001-branch-check-demo")
         monkeypatch.chdir(root)
@@ -1282,8 +1282,7 @@ class TestCliWorkitemCloseCheck:
         result = runner.invoke(app, ["workitem", "branch-check", "--wi", "specs/001-wi"])
 
         assert result.exit_code == 1
-        assert "Next Actions" in result.output
-        assert "decide whether codex/001-branch-check-demo should be merged" in result.output
+        assert "invalid" in result.output
 
     def test_branch_check_text_deduplicates_repeated_warnings(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1432,7 +1431,7 @@ class TestCliWorkitemCloseCheck:
         assert "verify constraints" in result.output
         assert "missing_footer_key" in result.output
 
-    def test_branch_check_reports_unresolved_associated_worktree_in_json(
+    def test_branch_check_accepts_valid_merge_pending_in_json(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         root = tmp_path / "r11"
@@ -1441,13 +1440,11 @@ class TestCliWorkitemCloseCheck:
             root,
             tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
             plan_status="completed",
+            branch_disposition_status="merge-pending",
+            worktree_disposition_status="retained(PR review)",
         )
-        worktree_path = tmp_path / "r11-worktree"
-        _create_worktree_branch_ahead_of_main(
-            root,
-            "codex/001-worktree-demo",
-            worktree_path,
-        )
+        _create_branch_ahead_of_main(root, "feature/001-worktree-demo")
+        subprocess.run(["git", "checkout", "feature/001-worktree-demo"], cwd=root, check=True, capture_output=True)
         monkeypatch.chdir(root)
 
         result = runner.invoke(
@@ -1455,13 +1452,9 @@ class TestCliWorkitemCloseCheck:
             ["workitem", "branch-check", "--wi", "specs/001-wi", "--json"],
         )
 
-        assert result.exit_code == 1
-        assert '"ok": false' in result.output
-        assert '"name": "codex/001-worktree-demo"' in result.output
-        assert '"next_required_actions": [' in result.output
-        assert "decide whether codex/001-worktree-demo should be merged" in result.output
-        payload = json.loads(result.output)
-        assert payload["entries"][0]["worktree_path"] == str(worktree_path)
+        assert result.exit_code == 0
+        assert '"ok": true' in result.output
+        assert '"name": "feature/001-worktree-demo"' in result.output
 
     def test_branch_check_ignores_unrelated_historical_branch(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -1771,10 +1771,10 @@ class TestCliVerifyConstraints:
         assert payload["ok"] is True
         assert payload["blockers"] == []
 
-    def test_verify_constraints_reports_branch_lifecycle_blocker_for_active_work_item(
+    def test_verify_constraints_rejects_unknown_branch_disposition(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _write_branch_lifecycle_fixture(tmp_path)
+        _write_branch_lifecycle_fixture(tmp_path, branch_disposition_status="PR merge carrier")
         _create_branch_ahead_of_main(tmp_path, "codex/001-verify-drift")
         monkeypatch.chdir(tmp_path)
 
@@ -1782,14 +1782,14 @@ class TestCliVerifyConstraints:
 
         assert result.exit_code == 1
         payload = json.loads(result.output)
-        assert any("branch lifecycle" in item.lower() for item in payload["blockers"])
-        assert any("codex/001-verify-drift" in item for item in payload["blockers"])
+        assert any("branch disposition invalid" in item.lower() for item in payload["blockers"])
 
-    def test_verify_constraints_does_not_block_on_archived_branch_lifecycle(
+    def test_verify_constraints_accepts_valid_merge_pending_branch_lifecycle(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        _write_branch_lifecycle_fixture(tmp_path, branch_disposition_status="archived")
-        _create_branch_ahead_of_main(tmp_path, "codex/001-verify-archived")
+        _write_branch_lifecycle_fixture(tmp_path, branch_disposition_status="merge-pending")
+        _create_branch_ahead_of_main(tmp_path, "feature/001-verify-pending")
+        subprocess.run(["git", "checkout", "feature/001-verify-pending"], cwd=tmp_path, check=True, capture_output=True)
         monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["verify", "constraints", "--json"])

@@ -4487,7 +4487,10 @@ def test_build_truth_ledger_surface_ignores_ephemeral_close_check_drift(
             return CloseCheckResult(
                 ok=False,
                 blockers=[
-                    "BLOCKER: git close-out verification failed: git working tree has uncommitted changes; close-out is not fully committed"
+                    "BLOCKER: git close-out verification failed: git working tree has uncommitted changes; close-out is not fully committed",
+                    "BLOCKER: branch lifecycle branch disposition invalid: retained",
+                    "BLOCKER: branch lifecycle worktree disposition invalid: retained",
+                    "BLOCKER: branch lifecycle final worktree disposition must be removed when no worktree exists",
                 ],
                 checks=[
                     {
@@ -4500,6 +4503,7 @@ def test_build_truth_ledger_surface_ignores_ephemeral_close_check_drift(
                         "ok": False,
                         "detail": "git working tree has uncommitted changes; close-out is not fully committed",
                     },
+                    {"name": "branch_lifecycle", "ok": False, "detail": "ephemeral local branch drift"},
                     {
                         "name": "done_gate",
                         "ok": False,
@@ -4565,6 +4569,8 @@ def test_build_truth_ledger_surface_ignores_ephemeral_close_check_drift(
     assert surface is not None
     assert surface["snapshot_state"] == "fresh"
     assert surface["state"] == snapshot.state
+    normalized = svc._normalize_close_check_ref_result({"checks": [], "blockers": ["BLOCKER: durable close evidence"]})
+    assert normalized["ok"] is False
 
 
 def test_build_truth_ledger_surface_ignores_truth_check_revision_metadata_drift(
