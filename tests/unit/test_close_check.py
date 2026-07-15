@@ -399,9 +399,9 @@ def _write_execution_log(
         "uv run ai-sdlc verify constraints",
     ),
     changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
-    branch_disposition_plan: str = "待最终收口",
-    branch_disposition_status: str = "待最终收口",
-    worktree_disposition_status: str = "待最终收口",
+    branch_disposition_plan: str = "deleted",
+    branch_disposition_status: str = "deleted",
+    worktree_disposition_status: str = "removed",
 ) -> None:
     committed_text = "是" if git_committed else "否"
     rendered_hash = f"`{commit_hash}`" if commit_hash != "N/A" else "N/A"
@@ -671,9 +671,9 @@ def _setup_repo(
         "uv run ai-sdlc verify constraints",
     ),
     changed_paths: tuple[str, ...] = ("src/example.py", "tests/test_example.py"),
-    branch_disposition_plan: str = "待最终收口",
-    branch_disposition_status: str = "待最终收口",
-    worktree_disposition_status: str = "待最终收口",
+    branch_disposition_plan: str = "deleted",
+    branch_disposition_status: str = "deleted",
+    worktree_disposition_status: str = "removed",
 ) -> None:
     subprocess.run(
         ["git", "init", "--initial-branch=main"],
@@ -1225,6 +1225,7 @@ def test_close_check_blocks_when_associated_branch_is_ahead_and_undisposed(
         root,
         tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
         plan_status="completed",
+        branch_disposition_status="待最终收口",
     )
     _create_branch_ahead_of_main(root, "codex/001-branch-lifecycle-demo")
 
@@ -1248,11 +1249,11 @@ def test_close_check_accepts_archived_associated_branch_without_escalating_to_bl
         root,
         tasks_body="- [x] done\n### Task 1.1\n- **验收标准（AC）**：ok",
         plan_status="completed",
-        branch_disposition_plan="archived",
-        branch_disposition_status="archived",
-        worktree_disposition_status="retained（对照保留）",
+        branch_disposition_plan="archived(non-mainline evidence)",
+        branch_disposition_status="archived(non-mainline evidence)",
+        worktree_disposition_status="removed",
     )
-    _create_branch_ahead_of_main(root, "codex/001-branch-lifecycle-demo")
+    _create_branch_ahead_of_main(root, "archive/001-branch-lifecycle-demo")
 
     r = run_close_check(cwd=root, wi=Path("specs/001-wi"))
 
@@ -1605,7 +1606,7 @@ def test_close_check_passes_when_explicit_execution_batch_range_covers_planned_b
         "#### 2.5 任务/计划同步状态（Mandatory）\n"
         "#### 2.8 归档后动作\n"
         "- **已完成 git 提交**：是\n"
-        "- **提交哈希**：`abc1234`\n",
+        "- **提交哈希**：`abc1234`\n- 当前批次 branch disposition 状态：`deleted`\n- 当前批次 worktree disposition 状态：`removed`\n",
         encoding="utf-8",
     )
     _commit_all(root, "docs: realistic execution headers")
@@ -1645,7 +1646,7 @@ def test_close_check_blocker_when_in_progress_history_is_not_a_reopen_signal(
         "- 历史状态：this item was previously in_progress while batch 7 was still running\n"
         "#### 2.8 归档后动作\n"
         "- **已完成 git 提交**：是\n"
-        "- **提交哈希**：`abc1234`\n",
+        "- **提交哈希**：`abc1234`\n- 当前批次 branch disposition 状态：`deleted`\n- 当前批次 worktree disposition 状态：`removed`\n",
         encoding="utf-8",
     )
     _commit_all(root, "docs: record reopened note")
@@ -1685,7 +1686,7 @@ def test_close_check_passes_for_001_style_history_without_status_correction(
         "- 历史状态：this item was previously in_progress while batch 7 was still running\n"
         "#### 2.8 归档后动作\n"
         "- **已完成 git 提交**：是\n"
-        "- **提交哈希**：`abc1234`\n",
+        "- **提交哈希**：`abc1234`\n- 当前批次 branch disposition 状态：`deleted`\n- 当前批次 worktree disposition 状态：`removed`\n",
         encoding="utf-8",
     )
     _commit_all(root, "docs: 001-style historical note")
@@ -1790,7 +1791,7 @@ def test_close_check_passes_when_generic_archive_headers_do_not_count_as_batches
         "#### 2.5 任务/计划同步状态（Mandatory）\n"
         "#### 2.8 归档后动作\n"
         "- **已完成 git 提交**：是\n"
-        "- **提交哈希**：`def5678`\n",
+        "- **提交哈希**：`def5678`\n- 当前批次 branch disposition 状态：`deleted`\n- 当前批次 worktree disposition 状态：`removed`\n",
         encoding="utf-8",
     )
     _commit_all(root, "docs: generic headers should not count")

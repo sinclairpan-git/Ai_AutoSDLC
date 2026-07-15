@@ -35,13 +35,15 @@
 
 | disposition | 含义 | 是否等于已进入 `main` |
 |-------------|------|------------------------|
+| `merge-pending` | PR 阶段唯一关联分支正等待合并；只证明本地分支状态，不代替远端 PR / checks 真值 | 否 |
 | `merged` | 相关实现已进入 `main` 或项目约定主线 | 是 |
-| `archived` | 分支被有意保留用于追溯/对照，但不作为当前主线兑现真值 | 否 |
+| `archived(reason)` | 分支被有意保留用于追溯/对照，但不作为当前主线兑现真值 | 否 |
 | `deleted` | 本地或远端分支/工作树已移除，不再作为活动执行容器 | 不一定；需结合归档说明 |
 
 约束：
 
-- `archived` 是正式 disposition，但**不等于** `merged`。
+- 只接受表中精确 token；未知自由文本与裸 `archived` 必须 fail closed。
+- close 只接受与 Git inventory 一致的 final token；worktree 同步使用 `removed` 或 `retained(reason)`。
 - `deleted` 也不自动等于 `merged`；若删除前未合主线，必须在归档中写清原因。
 - close-out 时不得只写“已清理分支”而不说明 disposition。
 - `scratch` / `codex/*` / worktree 分支允许存在，但只应作为临时执行容器；在当前 work item 收口前不得保持“未处置”。

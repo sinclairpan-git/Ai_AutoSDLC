@@ -2479,6 +2479,7 @@ def _branch_lifecycle_blockers(root: Path, spec_path: Path) -> list[str]:
             root=root,
             wi_dir=spec_path,
             log_text=log_text,
+            _require_final_branch_disposition=False,
         )
     except GitError:
         return []

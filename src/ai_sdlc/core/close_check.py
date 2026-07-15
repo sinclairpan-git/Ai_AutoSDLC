@@ -571,7 +571,12 @@ def run_branch_check(*, cwd: Path | None, wi: Path) -> BranchCheckResult:
 
     exec_log = wi_dir / "task-execution-log.md"
     log_text = exec_log.read_text(encoding="utf-8") if exec_log.is_file() else None
-    lifecycle = evaluate_work_item_branch_lifecycle(root=root, wi_dir=wi_dir, log_text=log_text)
+    lifecycle = evaluate_work_item_branch_lifecycle(
+        root=root,
+        wi_dir=wi_dir,
+        log_text=log_text,
+        _require_final_branch_disposition=False,
+    )
     return BranchCheckResult(
         ok=lifecycle.ok,
         blockers=lifecycle.blockers,
@@ -775,6 +780,7 @@ def run_close_check(
             root=root,
             wi_dir=wi_dir,
             log_text=log_text,
+            _require_final_branch_disposition=True,
         )
         checks.append(
             {

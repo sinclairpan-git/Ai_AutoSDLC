@@ -5037,8 +5037,8 @@ def test_collect_constraint_blockers_includes_active_work_item_branch_lifecycle_
 def test_collect_constraint_blockers_does_not_escalate_archived_branch_lifecycle(
     tmp_path: Path,
 ) -> None:
-    _write_branch_lifecycle_fixture(tmp_path, branch_disposition_status="archived")
-    _create_branch_ahead_of_main(tmp_path, "codex/001-verify-archived")
+    _write_branch_lifecycle_fixture(tmp_path, branch_disposition_status="archived(non-mainline evidence)")
+    _create_branch_ahead_of_main(tmp_path, "archive/001-verify-archived")
 
     blockers = collect_constraint_blockers(tmp_path)
 

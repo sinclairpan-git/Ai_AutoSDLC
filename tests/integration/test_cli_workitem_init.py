@@ -225,6 +225,7 @@ class TestCliWorkitemInit:
         assert "代码审查结论" in exec_log_text
         assert "任务/计划同步状态" in exec_log_text
         assert "已完成 git 提交：否" in exec_log_text
+        assert all(token in exec_log_text for token in ("merge-pending", "archived(reason)", "retained(reason)"))
 
     def test_workitem_init_deduplicates_manifest_sync_blockers(
         self, tmp_path: Path

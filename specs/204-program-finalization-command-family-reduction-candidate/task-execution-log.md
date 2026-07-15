@@ -154,8 +154,144 @@ whitespace，Round 5 为最终双 PASS。
   T61A 保护代码。
 - 定向验证：checkpoint/recover/execute authorization/task guard/readiness/branch manager 共
   `65 passed in 3.55s`。
-- 首次治理验证如实阻断于 branch disposition 尚未登记；本批将当前 docs branch 明确登记为
-  PR #128 的 merge carrier，合并后再复验 mainline ancestor truth。
-- 关联 branch/worktree disposition 计划：`feature/204-program-finalization-command-family-reduction-candidate-docs` 作为 PR #128 merge carrier，合并后由 mainline truth 结算。
-- 当前批次 branch disposition 状态：`PR merge carrier`
-- 当前批次 worktree disposition 状态：`retained through PR #128`
+- 首次治理验证如实阻断于 branch disposition 尚未登记；当前 docs branch 只处于
+  `merge-pending`，合并后必须再复验 mainline ancestor truth。
+- 关联 branch/worktree disposition 计划：`merge-pending`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`retained(PR #128 review)`
+
+## 11. Formal 对抗评审 Round 6：FAIL 与缺口回填
+
+**受审 HEAD**：`38fd75b72206a6538e49ca390fd08e92b6422b42`
+
+| Reviewer | UTC | Verdict | Findings |
+|---|---|---|---|
+| Pascal / 精简效率 | 2026-07-15T12:47:00Z | FAIL | 任意自由文本 disposition 可使 branch-check 假绿；`-dev` 与冻结 owner 冲突 |
+| Confucius / 兼容安全 | 2026-07-15T12:48:22Z | FAIL | `-dev` 与 owner/activation 分支身份冲突；handoff 下一步已过期 |
+
+处置：Round 5 的 target PASS 因三份 formal 文档变化作废，Round 6 的 HEAD verdict 也不能用于
+新目标。Formal 已把 implementation owner 统一为 BranchManager canonical `-dev`，并新增 GAP-12：
+branch disposition 使用显式 allowlist，`merge-pending` 只能通过 pre-merge branch-check/constraints，
+close-check 必须阻断，unknown/free-text fail closed。新设计 target hash 为
+`e3ce86022eae15c7753f2d9e83e40da4698f405bd10f4a5c8a3f4be7231998ea`；GAP-12 写代码前必须先获
+两位 reviewer 对该同一 target 的设计 PASS。
+
+## 12. Formal 对抗评审 Round 7：FAIL 与矩阵加固
+
+**Target hash**：`e3ce86022eae15c7753f2d9e83e40da4698f405bd10f4a5c8a3f4be7231998ea`
+
+| Reviewer | UTC | Verdict | Findings |
+|---|---|---|---|
+| Pascal / 精简效率 | 2026-07-15T12:52:00Z | FAIL | 缺精确路径/LOC 预算；pending 缺 missing/ahead=0/behind/diverged 反例 |
+| Confucius / 兼容安全 | 2026-07-15T12:53:13Z | FAIL | scalar pending 可覆盖多个 branch；archived/retained/removed 缺双向真值 |
+
+处置：e3ce target 作废。Formal 现冻结 15 个精确路径与新增非空手写 LOC 上限
+80 runtime/scaffold/rule/template + 180 tests = 260 total；`merge-pending` 仅允许唯一、当前 checkout、
+有 worktree、ahead>0、behind=0 的关联 branch。它只证明本地 pre-merge 阶段，GitHub PR/head/base 继续
+由当前 HEAD 的 review/checks 证明，不给本地 constraints 增加网络依赖。Branch final token 改为
+`merged/deleted/archived(<原因>)`，worktree token 改为缺省/`待最终收口`、`removed`、
+`retained(<原因>)`，并要求双向 inventory 一致。新设计 target hash 为
+`0d8d9677e036e4420f7fd89746884b3b1c7f2b3677c415fec7d5b6efeb096604`。
+
+## 13. Formal 对抗评审 Round 8：一方 FAIL
+
+**Target hash**：`0d8d9677e036e4420f7fd89746884b3b1c7f2b3677c415fec7d5b6efeb096604`
+
+| Reviewer | UTC | Verdict | Findings |
+|---|---|---|---|
+| Pascal / 精简效率 | 2026-07-15T13:04:00Z | PASS | none；路径、预算与 pending 反例完整 |
+| Confucius / 兼容安全 | 2026-07-15T13:05:00Z | FAIL | merged 可在 branch missing 时假绿；final worktree 可未决；bare archived token 冲突 |
+
+处置：Round 8 verdict 全部随 target 改动作废。Formal 现要求 `merged` 有且仅有一个关联 branch
+且 ahead=0，`deleted` 才允许 branch 不存在，archive 必须唯一、kind=archive 且带非空原因；
+final/close 下唯一 worktree 必须 `retained(<原因>)`，无 worktree 必须 `removed`，缺省、未决或多个
+均阻断。Tasks 的 archive token 已统一。新设计 target hash 为
+`90c84aef02c4b6d1f59a9919ec3b30a34e4b9157f775c15ab3fe06f41ed3d1c7`。
+
+## 14. Formal 对抗评审 Round 9：写码前双 PASS
+
+**Target hash**：`90c84aef02c4b6d1f59a9919ec3b30a34e4b9157f775c15ab3fe06f41ed3d1c7`
+
+| Reviewer | UTC | Verdict | Findings |
+|---|---|---|---|
+| Pascal / 精简效率 | 2026-07-15T13:13:00Z | PASS | none |
+| Confucius / 兼容安全 | 2026-07-15T13:13:00Z | PASS | none |
+
+双方独立复算 target 与三文件 hash 一致。Round 6～8 的自由文本、owner、路径/预算、pending
+missing/multiple/current/worktree/ahead/behind、merged missing、archive reason 与 final worktree 未决
+问题全部关闭。只授权按 15 路径与 80/180/260 新增行预算进入 GAP-12 TDD；candidate/T61A 仍未授权。
+
+## 15. GAP-12 TDD 与全量回归
+
+- 冻结 target 未变化：spec=`7f96fd8b...36c`、plan=`889a41b2...b5d`、tasks=`d5d4398b...563a`，
+  composite=`90c84aef02c4b6d1f59a9919ec3b30a34e4b9157f775c15ab3fe06f41ed3d1c7`。
+- RED：`uv run pytest -q tests/unit/test_workitem_traceability.py` → `26 failed, 8 passed`；
+  失败均为 final-policy 参数尚未实现。
+- GREEN：同一单元文件 → `34 passed`；六个调用面定向回归 → `360 passed`。
+- 全量：`uv run pytest -q` → `3212 passed, 3 skipped in 482.35s (0:08:02)`。
+- 静态/治理：Ruff PASS、`git diff --check` PASS；WI204 branch-check `ok=true`；
+  `uv run ai-sdlc verify constraints --json` → blockers=0、advisories=0。
+- 新增非空手写 LOC：runtime/scaffold/rule/template=`75/80`，tests=`171/180`，
+  total=`246/260`；删除行未抵扣新增预算。
+- 实现边界：只改冻结的 15 路径；未新增模块、schema、网络 gate 或 T61A/candidate 产品代码。
+- 关联 branch/worktree disposition 计划：`merge-pending`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`retained(PR #128 dual code review)`
+
+## 16. Program Truth 历史兼容回归与修复
+
+- 发现：首次 live `program truth audit` 把 19 个历史 `close_check_refs` 判 blocked；代表性 WI095
+  使用旧 `retained` token，direct close 正确 fail closed，但 Program Truth 不应把当前本地 branch
+  inventory 反向写成历史发布证据失效。
+- 根因：Program Truth 既有 normalizer 只过滤 `BLOCKER: branch lifecycle ...` 瞬态 blocker；
+  GAP-12 新消息遗漏该稳定分类前缀，导致本应被过滤的 lifecycle blocker 泄漏到持久 truth。
+- 修复：仅恢复所有 lifecycle blocker 的既有分类前缀；active branch-check、constraints 与 close
+  仍收到相同 blocker，未知 token 仍 fail closed，pending 仍不能满足 close。
+- 回归：traceability + Program Truth ephemeral contract → `35 passed`；代表性 WI095 direct close
+  `ok=false`，normalized historical evidence `ok=true` 且 blockers=[]。
+- 实时复验：`program truth audit` → `state=ready`、`snapshot=fresh`、两项 capability audit=ready、
+  source inventory 1076/1076、close 204/204。
+- 更新预算：runtime/scaffold/rule/template=`75/80`，tests=`172/180`，total=`247/260`。
+
+## 17. Formal 对抗评审 Round 10 触发
+
+兼容安全 reviewer 指出：稳定 lifecycle namespace 是 Program Truth 历史证据兼容合同，且对应的
+`tests/unit/test_program_service.py` 不在 Round 9 的 15 路径白名单。按 fail-closed 规则，Round 9
+设计 PASS 作废。Formal 已扩为 16 路径，只允许在既有 ephemeral drift 测试新增≤8 个非空行；
+冻结 direct raw-block / historical normalized-pass / non-lifecycle blocker 保留合同，并把 caller policy
+参数固定为 private `_require_final_branch_disposition`。未授权修改 `program_service.py`、兼容旧 token、
+批量改历史日志或新增 legacy mode。
+
+首次声明错误使用固定 spec→plan→tasks 顺序；formal 算法要求完整 hash/path 行按字节序排序。修正后的
+**待审 target hash**：`95f0db6f833344a56fb94c4f8affdc96e2d2b8e07a2f68c0e68b304a6aa2828d`
+
+- spec=`47bbbafe547a2724ae2609895d676515f7cfcb6dc1c996676642c494e1f6eddd`
+- plan=`f3fa9fe5ee4b533415214fa83b317852fb852649afbbae4d2efcde8525a0418d`
+- tasks=`e0568cb64892f469f4b66ef73308b1105ca0584f077d2d98f87571e58f5b465b`
+
+代码继续前必须由 Pascal 与 Confucius 对该同一 target 独立复算并共同 PASS。
+
+## 18. Formal 对抗评审 Round 10：双 PASS
+
+**冻结 target hash**：`95f0db6f833344a56fb94c4f8affdc96e2d2b8e07a2f68c0e68b304a6aa2828d`
+
+| Reviewer | UTC | Verdict | Findings |
+|---|---|---|---|
+| Pascal / 精简效率 | 2026-07-15T14:01:02Z | PASS | none |
+| Confucius / 兼容安全 | 2026-07-15T14:01:02Z | PASS | none |
+
+两位 reviewer 独立复算三文件 hash 与 byte-sorted composite 一致；Round 10 只授权参数私有化及
+ProgramService 既有 ephemeral drift 测试≤8 行增量。代码树变化后仍需同一 HEAD 双 code PASS。
+
+## 19. Round 10 授权实现与最终验证
+
+- caller policy 参数已机械改名为 private `_require_final_branch_disposition`；未改变判断分支。
+- `test_program_service.py` 仅在既有 ephemeral drift 测试新增 `7/8` 个非空行：覆盖三类 lifecycle
+  blocker、`branch_lifecycle` check 过滤，以及 non-lifecycle blocker 继续阻断。
+- 定向：六调用面 + Program Truth compatibility → `361 passed in 51.86s`；Ruff PASS。
+- 最终全量：`3212 passed, 3 skipped in 489.63s (0:08:09)`。
+- 最终治理：branch-check pending=`ok`；verify constraints 无 BLOCKER；Program Truth
+  `ready/fresh`、capabilities ready、1076/1076、close 204/204；program validate PASS；
+  plan-check drift=NO；`git diff --check` PASS。
+- 最终新增非空手写 LOC：runtime/scaffold/rule/template=`79/80`，tests=`171/180`，
+  total=`250/260`；路径白名单无越界。
