@@ -2007,12 +2007,15 @@ specs:
 - id: 201-source-inventory-convergence
   path: specs/201-source-inventory-convergence
   depends_on: []
+- id: 203-finalization-command-family-reduction-contract
+  path: specs/203-finalization-command-family-reduction-contract
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-14T18:08:35Z'
+  generated_at: '2026-07-15T04:27:53Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v1
-  repo_revision: 26fd20c3
-  authoring_hash: 3498cd22981a058eb3700b51bf1698d02cce727022c7ca9b1ce7d672f4b508dd
+  repo_revision: 88ac8f16
+  authoring_hash: da9d4d0ef0a5c0c91d1594594a958d8149dbd6dbb202a31559f548e669c2293d
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
@@ -2054,7 +2057,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 4bf64e4eecd82ffc32a72c95ea659f05abbad0b64159e5db4d5523d40b60746d
+  snapshot_hash: 9bc583221cd51bab5accf613f1070d7c1abfe3918d1c7c2d36eb91490156ad62
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2068,31 +2071,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1066
-    mapped_sources: 1066
+    total_sources: 1071
+    mapped_sources: 1071
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3563
-    deferred_signal_count: 6415
-    non_goal_signal_count: 363
+    phase_signal_count: 3569
+    deferred_signal_count: 6439
+    non_goal_signal_count: 364
     layer_totals:
       blueprint: 1
-      spec: 202
-      plan: 202
-      tasks: 202
-      execution: 202
-      close: 202
+      spec: 203
+      plan: 203
+      tasks: 203
+      execution: 203
+      close: 203
       requirements: 2
       defect: 3
       design: 8
       release: 42
     layer_materialized:
       blueprint: 1
-      spec: 202
-      plan: 202
-      tasks: 202
-      execution: 202
-      close: 202
+      spec: 203
+      plan: 203
+      tasks: 203
+      execution: 203
+      close: 203
       requirements: 2
       defect: 3
       design: 8
@@ -11196,6 +11199,51 @@ truth_snapshot:
       mapping_ref: 201-source-inventory-convergence
       phase_signal_count: 0
       deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/203-finalization-command-family-reduction-contract/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 203-finalization-command-family-reduction-contract
+      phase_signal_count: 0
+      deferred_signal_count: 3
+      non_goal_signal_count: 1
+    - path: specs/203-finalization-command-family-reduction-contract/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 203-finalization-command-family-reduction-contract
+      phase_signal_count: 4
+      deferred_signal_count: 7
+      non_goal_signal_count: 0
+    - path: specs/203-finalization-command-family-reduction-contract/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 203-finalization-command-family-reduction-contract
+      phase_signal_count: 1
+      deferred_signal_count: 6
+      non_goal_signal_count: 0
+    - path: specs/203-finalization-command-family-reduction-contract/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 203-finalization-command-family-reduction-contract
+      phase_signal_count: 1
+      deferred_signal_count: 7
+      non_goal_signal_count: 0
+    - path: specs/203-finalization-command-family-reduction-contract/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 203-finalization-command-family-reduction-contract
+      phase_signal_count: 0
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc

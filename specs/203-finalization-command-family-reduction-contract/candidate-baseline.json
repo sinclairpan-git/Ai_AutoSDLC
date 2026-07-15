@@ -1,0 +1,379 @@
+{
+  "schema_version": "ai-sdlc.reduction-candidate-baseline.v1",
+  "work_item": "203-finalization-command-family-reduction-contract",
+  "candidate_kind": "wp07-program-handler-family",
+  "authorization": "design-only",
+  "baseline": {
+    "repo_revision": "d19c8b7df66ca43e4fa55a99a6d05fa2d1219586",
+    "source_file": "src/ai_sdlc/cli/program_cmd.py",
+    "source_file_loc": 7062,
+    "measurement_scope": "decorator-inclusive physical source segments",
+    "generated_product_loc": 0,
+    "fixture_product_loc": 0,
+    "vendored_product_loc": 0
+  },
+  "selected_handlers": [
+    {
+      "command": "cross-spec-writeback",
+      "symbol": "program_cross_spec_writeback",
+      "lines": [2745, 2966],
+      "loc": 222,
+      "decorator_signature_loc": 23,
+      "body_loc": 199,
+      "branch_proxy": 48
+    },
+    {
+      "command": "guarded-registry",
+      "symbol": "program_guarded_registry",
+      "lines": [2969, 3184],
+      "loc": 216,
+      "decorator_signature_loc": 23,
+      "body_loc": 193,
+      "branch_proxy": 48
+    },
+    {
+      "command": "broader-governance",
+      "symbol": "program_broader_governance",
+      "lines": [3187, 3410],
+      "loc": 224,
+      "decorator_signature_loc": 23,
+      "body_loc": 201,
+      "branch_proxy": 48
+    },
+    {
+      "command": "final-governance",
+      "symbol": "program_final_governance",
+      "lines": [3413, 3655],
+      "loc": 243,
+      "decorator_signature_loc": 23,
+      "body_loc": 220,
+      "branch_proxy": 48
+    },
+    {
+      "command": "writeback-persistence",
+      "symbol": "program_writeback_persistence",
+      "lines": [3658, 3884],
+      "loc": 227,
+      "decorator_signature_loc": 23,
+      "body_loc": 204,
+      "branch_proxy": 48
+    },
+    {
+      "command": "persisted-write-proof",
+      "symbol": "program_persisted_write_proof",
+      "lines": [3887, 4105],
+      "loc": 219,
+      "decorator_signature_loc": 23,
+      "body_loc": 196,
+      "branch_proxy": 48
+    },
+    {
+      "command": "final-proof-publication",
+      "symbol": "program_final_proof_publication",
+      "lines": [4108, 4340],
+      "loc": 233,
+      "decorator_signature_loc": 23,
+      "body_loc": 210,
+      "branch_proxy": 48
+    },
+    {
+      "command": "final-proof-closure",
+      "symbol": "program_final_proof_closure",
+      "lines": [4343, 4560],
+      "loc": 218,
+      "decorator_signature_loc": 23,
+      "body_loc": 195,
+      "branch_proxy": 48
+    },
+    {
+      "command": "final-proof-archive",
+      "symbol": "program_final_proof_archive",
+      "lines": [4563, 4780],
+      "loc": 218,
+      "decorator_signature_loc": 23,
+      "body_loc": 195,
+      "branch_proxy": 48
+    }
+  ],
+  "selected_totals": {
+    "handler_loc": 2020,
+    "decorator_signature_loc": 207,
+    "retained_decorator_signature_docstring_loc": 216,
+    "executable_orchestration_loc_excluding_docstrings": 1804,
+    "branch_proxy": 432
+  },
+  "measurement_method": {
+    "parser": "Python 3.11+ ast.parse over UTF-8 source",
+    "function_start": "minimum of function lineno and all decorator lineno values",
+    "function_end": "FunctionDef.end_lineno inclusive",
+    "decorator_inclusive_loc": "function_end - function_start + 1",
+    "decorator_signature_loc": "first body statement lineno - function_start",
+    "docstring_rule": "first body statement is Expr(Constant(str)); exactly that source line is retained",
+    "executable_orchestration_loc": "decorator-inclusive LOC minus decorator/signature LOC minus retained docstring LOC",
+    "branch_proxy": "base 1 per function; add 1 for each If/For/AsyncFor/While/IfExp/comprehension; for Try add handlers plus presence of else/finally; for BoolOp add len(values)-1; for Match add case count",
+    "similarity_score_used_for_admission": false,
+    "reason_similarity_omitted": "line/token/AST normalization choices produced non-comparable scores; exact scope, LOC, branch proxy and behavioral differential are the admission evidence"
+  },
+  "protected_not_migrated": {
+    "renderer_source_region": [6452, 6687],
+    "renderer_symbol_loc": 220,
+    "renderer_symbols": [
+      "_render_frontend_cross_spec_writeback_result",
+      "_render_frontend_guarded_registry_result",
+      "_render_frontend_broader_governance_result",
+      "_render_frontend_final_governance_result",
+      "_render_frontend_writeback_persistence_result",
+      "_render_frontend_persisted_write_proof_result",
+      "_render_frontend_final_proof_publication_result",
+      "_render_frontend_final_proof_closure_result",
+      "_render_frontend_final_proof_archive_result"
+    ],
+    "program_service_regions": [
+      [1186, 1767],
+      [10275, 13461],
+      [15195, 15633]
+    ],
+    "required_protection": [
+      "source-segment-sha256-unchanged",
+      "dry-run-precondition-executor-writer-failure-call-count-zero",
+      "writer-success-and-report-failure-call-count-one",
+      "executor-writer-renderer-order",
+      "stringio-rich-console-byte-equality-width-40-80-120"
+    ]
+  },
+  "excluded": [
+    {
+      "symbol": "program_final_proof_archive_thread_archive",
+      "reason": "no stage artifact writer; upstream report artifact; materialize_steps dual mode"
+    },
+    {
+      "symbol": "_render_frontend_final_proof_archive_thread_archive_result",
+      "reason": "paired with excluded thread-archive semantics"
+    },
+    {
+      "symbol": "program_final_proof_archive_project_cleanup",
+      "reason": "different stage and reuses thread-archive service execution"
+    }
+  ],
+  "public_surface": {
+    "program_command_count": 33,
+    "target_command_count": 9,
+    "json_option_present": false,
+    "common_options": [
+      {
+        "name": "--manifest",
+        "type": "str",
+        "default": "program-manifest.yaml",
+        "help": "Path to program manifest relative to project root."
+      },
+      {
+        "name": "--dry-run/--execute",
+        "type": "bool",
+        "default": "--dry-run",
+        "help": "command-specific text frozen by T61A"
+      },
+      {
+        "name": "--report",
+        "type": "str",
+        "default": "",
+        "help": "Optional report output path relative to project root."
+      },
+      {
+        "name": "--yes",
+        "type": "bool",
+        "default": false,
+        "help": "command-specific text frozen by T61A"
+      }
+    ],
+    "exit_codes": {
+      "not_project": 1,
+      "manifest_load_error": 2,
+      "manifest_invalid": 1,
+      "dry_run": 0,
+      "execute_without_yes": 2,
+      "execute_passed": 0,
+      "execute_incomplete": 1
+    }
+  },
+  "existing_test_inventory": {
+    "integration": {
+      "file": "tests/integration/test_cli_program.py",
+      "continuous_cluster_lines": [6490, 8938],
+      "continuous_cluster_test_count": 58,
+      "additional_relevant_test_lines": [9457, 9457],
+      "total_relevant_test_count": 59,
+      "approximate_loc": 2482
+    },
+    "service": {
+      "file": "tests/unit/test_program_service.py",
+      "main_cluster_lines": [9291, 13243],
+      "main_cluster_test_count": 104,
+      "additional_archive_test_lines": [15397, 15422],
+      "total_relevant_test_count": 106,
+      "approximate_loc": 3835
+    },
+    "verified_continuous_cli_selection": {
+      "result": "58 passed",
+      "duration_seconds": 2.13,
+      "note": "The additional report-dedupe test is outside the continuous line cluster."
+    },
+    "verified_combined_targeted_selection": {
+      "result": "165 passed, 469 deselected",
+      "duration_seconds": 3.29,
+      "command_scope": "two test files filtered to the nine stages and excluding thread_archive/project_cleanup"
+    }
+  },
+  "reduction_contract": {
+    "final_family_loc_max": 519,
+    "private_module_count_max": 1,
+    "private_module_loc_max": 230,
+    "handler_route_adapter_and_selector_loc_max": 70,
+    "import_glue_loc_max": 3,
+    "new_or_replacement_product_loc_max": 303,
+    "legacy_body_delete_loc_min": 1804,
+    "net_product_delete_loc_min": 1501,
+    "mirror_before_loc": 1813,
+    "mirror_after_loc_max": 312,
+    "mirror_reduction_min_ratio": 0.8279,
+    "migrated_responsibility_after_loc_max": 83,
+    "full_responsibility_handler_after_count": 0,
+    "shadow_coexisting_new_product_loc_max": 303,
+    "public_abstraction_count_max": 0,
+    "new_function_loc_max": 50,
+    "runtime_p95_regression_max_ratio": 0.1,
+    "protection_pool_loc_max": 353,
+    "protection_theoretical_loc_max": 375,
+    "protection_unclaimable_risk_buffer_loc": 22,
+    "protection_claims": {
+      "candidate_t61a_t61b_loc_max": 180,
+      "wi202_t62a_loc_max": 170,
+      "unallocated_loc": 3
+    }
+  },
+  "normalizer_allowlist": [
+    "temporary-clone-absolute-root",
+    "mapping-value-whose-exact-key-is-generated_at",
+    "explicitly-inventoried-random-id-if-present"
+  ],
+  "normalizer_forbidden": [
+    "yaml-key-or-list-sorting",
+    "global-dedupe",
+    "whitespace-or-newline-folding",
+    "global-path-separator-replacement",
+    "warning-or-blocker-removal",
+    "generic-time-pattern-redaction"
+  ],
+  "known_compatibility_decisions": {
+    "dry_run_default": "does not write stage/canonical artifact",
+    "dry_run_with_report": "explicit report path authorizes report write",
+    "report_external_path": "preserve baseline root/report absolute-and-parent-resolution behavior; test only in isolated temp parent",
+    "outer_cli_hooks": "observe adapter and update notice separately from handler differential",
+    "blocked_execute": "writes confirmed blocked canonical result before exit 1",
+    "renderer_debt": "open and excluded from reduction credit"
+  },
+  "renderer_call_contract": {
+    "dry_run": 0,
+    "manifest_or_validation_failure": 0,
+    "execute_without_yes": 0,
+    "executor_failure": 0,
+    "writer_failure": 0,
+    "writer_success_including_incomplete": 1,
+    "report_failure_after_renderer": 1,
+    "success_order": ["executor", "writer", "renderer", "report"]
+  },
+  "manifest_path_matrix": [
+    "default",
+    "project-relative",
+    "nested-relative",
+    "absolute",
+    "parent-relative",
+    "missing",
+    "malformed",
+    "invalid"
+  ],
+  "outer_hook_matrix": [
+    "update-disabled",
+    "uninitialized-adapter-no-op",
+    "initialized-adapter-no-op",
+    "stale-adapter-managed-write",
+    "adapter-permission-warning",
+    "help-bypass",
+    "update-adapter-handler-order"
+  ],
+  "interruption_recovery_matrix": {
+    "signals": ["KeyboardInterrupt", "SystemExit", "isolated-subprocess-termination"],
+    "injection_points": [
+      "before-first-step-write",
+      "after-each-step-write",
+      "before-canonical-artifact-write",
+      "after-canonical-artifact-write",
+      "after-renderer-before-report",
+      "during-report-mkdir",
+      "during-report-write"
+    ],
+    "observations": [
+      "exit-or-exception",
+      "remaining-file-tree-and-mode",
+      "raw-file-bytes",
+      "same-command-retry-result",
+      "final-idempotent-file-set"
+    ]
+  },
+  "path_encoding_matrix": {
+    "project_root": "项目-é-測試",
+    "manifest": "配置/程序清单.yaml",
+    "report": "报告/结果-é.md",
+    "spec_path": "specs/001-课程-é",
+    "posix_only": "surrogate-escaped-byte-component",
+    "windows_only": "non-utf8-console-code-page",
+    "assertion": "freeze legacy success-or-failure, output bytes, path and exit code; candidate must match"
+  },
+  "sponsor_state_machine": {
+    "states": ["provisional", "active", "verified", "stale", "revoked", "settled"],
+    "activation_deadline_days": 30,
+    "verified_evidence_freshness_days": 14,
+    "stale_blocked_checkpoint_count": 3,
+    "claim_remediation_days": 7,
+    "replacement_baseline_requires_new_receipt": true,
+    "settled_requires": [
+      "deletion-release-published",
+      "actual-net-deletion-and-protection-loc-reconciled",
+      "actual-protection-at-most-25-percent-of-actual-deletion",
+      "roadmap-protection-at-most-1500-loc",
+      "post-deletion-rollback-receipt-passed"
+    ],
+    "settled_freshness_timeout_applies": false,
+    "settled_allows_new_claims": false
+  },
+  "release_chain": {
+    "candidate_release": "Vn: candidate route enabled, complete legacy body and route retained",
+    "deletion_gate": {
+      "clean_root_full_chain_runs_per_os": 2,
+      "os_count": 3,
+      "stage_count_per_chain": 9,
+      "total_stage_executions": 54,
+      "independent_release_smoke_jobs": 3,
+      "representative_sibling_projects_min": 2,
+      "unapproved_difference_count_max": 0,
+      "new_violation_count_max": 0,
+      "runtime_p95_regression_max_ratio": 0.1,
+      "truth_snapshot_state": "fresh"
+    },
+    "deletion_release": "Vn+1: legacy body and route deleted",
+    "rollback_source": "installed Vn+1",
+    "deletion_rollback_target": "candidate stable Vn tag, commit and installed artifact; restores legacy code availability but candidate selector remains active",
+    "legacy_active_rehearsal": {
+      "base": "exact Vn tag and commit",
+      "change": "recorded selector-only Rlegacy commit",
+      "artifact": "non-published install artifact identified by source commit, filename and SHA256",
+      "assertion": "selector is legacy-active and nine transcript/artifact/side-effect trees match"
+    },
+    "restore_current": "reinstall and reverify Vn+1 after rollback evidence"
+  },
+  "review_target_files": [
+    "specs/203-finalization-command-family-reduction-contract/spec.md",
+    "specs/203-finalization-command-family-reduction-contract/plan.md",
+    "specs/203-finalization-command-family-reduction-contract/tasks.md",
+    "specs/203-finalization-command-family-reduction-contract/candidate-baseline.json"
+  ]
+}
