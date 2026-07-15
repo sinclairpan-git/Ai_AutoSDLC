@@ -1,28 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-15T04:26:16+00:00
-- Reason: Record Codex summary-state remediation and final dual-agent recheck
+- Updated: 2026-07-15T04:31:08+00:00
+- Reason: Record corrected summary and terminal truth close-out
 - Goal: Merge WI203 formal contract PR #126, then resume WI202 Lean Gate
-- State: Codex summary-state finding fixed; Round 7 dual PASS and final non-target evidence recheck PASS on unchanged hash cfcd63d7662175e8e9d413b831e582ee81d00958cb8d9c3c8c717de0987dc57f
+- State: Round 7 and final evidence recheck dual PASS on cfcd63d7662175e8e9d413b831e582ee81d00958cb8d9c3c8c717de0987dc57f; target 507ece1b; summary fix 88ac8f16; truth snapshot 9bc58322 ready/fresh
 - Stage: execute
 - Work Item: 203-finalization-command-family-reduction-contract
 - Branch: feature/203-finalization-command-family-reduction-contract-docs
 
 ## Changed Files
-- M specs/203-finalization-command-family-reduction-contract/development-summary.md
-- M specs/203-finalization-command-family-reduction-contract/task-execution-log.md
+- M program-manifest.yaml
 
 ## Key Decisions
-- Summary now distinguishes completed formal dual review from pending mainline receipt; candidate remains unauthorized and WI203 remains open
+- Summary accurately marks formal dual review complete while mainline receipt, candidate implementation, release, and closure remain pending
 
 ## Commands / Tests
-- both agents rechecked final summary/log diff and PASS; target hash unchanged; diff check clean
+- targeted regression 1 passed; constraints allow 0/0; final dual-agent recheck PASS; terminal truth sync/audit exit 0 with 1071/1071 missing 0 close 203/203
 
 ## Blockers / Risks
-- PR cannot merge until summary fix and refreshed truth receipt are pushed, current-head Codex has no findings, and all required checks pass
+- PR cannot merge until receipt is committed/pushed, current-head Codex has no actionable findings, and all required checks pass
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit evidence correction; terminal truth sync/audit; commit/push receipt; reply/request Codex review; heartbeat checks; merge PR #126; resume WI202
+- Commit/push truth receipt; reply/request Codex review; heartbeat checks; merge PR #126; record sponsor receipt in WI202
