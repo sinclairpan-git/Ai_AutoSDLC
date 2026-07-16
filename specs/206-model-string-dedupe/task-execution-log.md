@@ -431,3 +431,28 @@ final tree 对抗评审。评审结论回写后将再次冻结并复审最终内
 - 处置：连续性状态统一为稳定终态——terminal sync/audit 完成后，当前冻结目标只执行同哈希双审；
   双 PASS 不再改树并直接 push/PR，FAIL 才修订、sync 与 refreeze。Round 2 目标作废，重新冻结 Round 3。
 - 产品实现、receipt、formal hashes、预算与测试证据均未变化；当前精确 truth 继续只以 manifest 为准。
+
+## 16. Batch 2026-07-16-015：T51 Round 3 同哈希双 PASS
+
+- terminal target：HEAD=`5046f6259720e09c682e50d900a2214dd256258a`，
+  tree=`35fa6f37ad4334ed142dc8e8bad4b1d1c71ed06c`。
+- binary diff SHA-256=`6f27cf69cc2d6d37b8471c68dae1539f32631d0370b8dfc8fa421f6f34e008a8`；
+  raw name-status SHA-256=`507865a5290883b4c35f3b2b17370faaf68c680454483e56d40704e2fcc16319`。
+- receipt/formal hashes与§11.3一致；产品、测试、truth、continuity 在评审前后字节级不变。
+- Pascal / 精简直接性=`PASS`；Confucius / 兼容安全=`PASS`；双方无 Critical、Important 或其他
+  actionable finding，起止 HEAD/tree/diff/receipt/formal hashes 完全一致。
+- 双 PASS 后未修改树，直接进入 push/PR。
+
+## 17. Batch 2026-07-16-016：T52/T53 PR、merge 与 fresh-main
+
+- branch=`feature/206-model-string-dedupe-dev`；PR #137。
+- Codex review 对 reviewed commit `5046f62597` 未发现 major/actionable issue；21 项 required checks 全绿，
+  含 Windows Python 3.11/3.12。
+- PR merge commit=`506e950dee3469248ef7e6b5e1aac664668d18a1`；main tree=
+  `35fa6f37ad4334ed142dc8e8bad4b1d1c71ed06c`，与 reviewed branch tree 一致。
+- fresh detached `origin/main`：19-file `281 passed, 2 skipped in 1.69s`；结构 probe defs=1、calls=100、
+  bindings=18、identity=1；Ruff PASS；root truth exact node `1 passed in 79.18s`；full
+  `3220 passed, 3 skipped in 628.97s`；truth ready/fresh、inventory complete、zero blocker。
+- 验收期间治理命令暴露 Cursor adapter 与 resume-pack 两个副作用；已恢复 acceptance worktree 并把
+  根因分别登记为后续 GAP-12/WI207、GAP-13/WI208，不反向污染 WI206 implementation commit。
+- T52、T53 完成；WI206=`completed_reduction`。T54 由父路线 Batch 22 完成。

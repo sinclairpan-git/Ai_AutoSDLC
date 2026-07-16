@@ -1,6 +1,6 @@
 # WI-206 Development Summary
 
-**状态**：formal review candidate；未授权或实现产品代码
+**状态**：`completed_reduction`；PR #137 已合并并通过 fresh-main acceptance
 
 WI-206 是 WI-196 `T63 / WP-03 / GAP-05` 的第二个原子重复族候选。初始 formal Round 1 补发现
 `state.py::_dedupe_string_items` 属于同一顶层算法族，并计划把18个models helper收敛到一个 private
@@ -47,5 +47,11 @@ Round 2 中 Confucius `PASS`，Pascal `FAIL` 于 stale continuity next step：ha
 sync 已完成后仍要求恢复者再次 sync。现已改为稳定门禁：当前冻结目标仅做同哈希双审，双 PASS 后
 不改树直接 push/PR，只有 FAIL 才修订、sync、refreeze。产品与所有证明证据仍无变化，进入 Round 3。
 
-WI-205 已完成 artifact path family；WI-202、WI-204 保持 RC-09 No-Go。WI-206 完成后也只关闭一个
-T63 family，WI-196 与 RC-08 在其余原子项完成前保持 open。
+Round 3 terminal target 在 HEAD `5046f62597` / tree `35fa6f37ad4` 上取得 Pascal 与 Confucius 同哈希
+双 PASS。PR #137 经 Codex review 和21项 required checks 后 merge 为 `506e950dee`；fresh-main 19-file、
+结构/binding、Ruff、root truth 与 full `3220 passed, 3 skipped` 全绿，worktree clean。
+
+最终实际 product `+37/-246/net -209`、test +2，18个 helper→1、calls=100、complexity72→4；receipt
+SHA-256 保持 `bb654c134fb4460d163f771b7d36da1e58dc898c5631032dcaa206d2e0d7abd8`。
+WI206 只关闭一个 T63 family。WI-205 已完成 artifact path family；WI-202、WI-204 保持 RC-09 No-Go；
+GAP-05、WI-196 与 RC-08 在其余原子项完成前保持 open。

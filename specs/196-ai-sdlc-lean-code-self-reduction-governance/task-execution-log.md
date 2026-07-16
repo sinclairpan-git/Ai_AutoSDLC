@@ -517,3 +517,41 @@ fail-closed；对应 truth 债务再现时返回 T41/T22 并重开 GAP。新 for
 - WI-206 formal branch=`feature/206-model-string-dedupe-docs`，worktree=
   `.worktrees/206-model-string-dedupe`，基线=`origin/main@aa156afe`。只有 formal 同哈希双 PASS 并
   合入 main 后，独立 implementation branch 才允许进入 T61A/TDD。
+
+## 22. Batch 2026-07-16-021：WI-206 mainline 关闭与 GAP-12/GAP-13 分流
+
+### 22.1 WI-206 closing evidence
+
+- WI-206 implementation PR #137 在 Codex review 无 actionable finding、21 项 required checks 全绿后
+  merge；merge commit=`506e950dee3469248ef7e6b5e1aac664668d18a1`。
+- product=`+37/-246/net -209`，test=`+2`；18 个 models string helper 收敛为 1 个 private helper，
+  calls=100、bindings=18、complexity 72→4；选定重复族 100% 消除。
+- differential/rollback receipt SHA-256=
+  `bb654c134fb4460d163f771b7d36da1e58dc898c5631032dcaa206d2e0d7abd8`。
+- fresh detached main：19-file `281 passed, 2 skipped`、Ruff PASS、root truth exact node PASS、full
+  `3220 passed, 3 skipped in 628.97s`；truth ready/fresh、inventory complete、zero blocker，worktree clean。
+- WI-206 以 `completed_reduction` 关闭一个 T63/WP-03 family；不关闭整个 GAP-05、WI-196 或 RC-08。
+
+### 22.2 新问题复现与原子分流
+
+WI-206 acceptance 期间两类无关 tracked state 被治理命令改写。fresh `origin/main@506e950d` 的独立
+复现证明它们不是同一根因：
+
+1. GAP-12：`program validate` 业务 PASS 前由 root callback 调用 adapter hook，把 tracked Cursor
+   rule SHA 从 `d5f04acf...` 改为 `02d9656d...`；program tests 只 patch nested root 时也可能写真实
+   checkout。责任项为 T55 / WI-207。
+2. GAP-13：`status` 通过 `load_resume_pack()` 重建两份 pack，把内部路径变为 worktree absolute，
+   branch/active/context 变空。责任项为 T56 / WI-208；需要先裁决 canonical reconstruction source，
+   不能通过信任旧 pack 绕过 WI-198。
+
+Pascal/精简与 Confucius/兼容继续负责 formal 对抗评审。WI-207 只允许一行 root dispatch 修复和一处
+test isolation；WI-208 独立处理 continuity。两个 gap 都不计减重成果，但会污染验证/恢复证据，因此
+先于新的 T63/T65/WP-06/WP-07 候选关闭。
+
+### 22.3 当前 next step
+
+- active child=`207-program-adapter-side-effect`
+- docs branch=`feature/207-program-adapter-side-effect-docs`
+- formal review target=child 与 parent 两组三文件的组合哈希
+- WI-207 formal 双 PASS/mainline 后进入独立 dev branch；fresh-main 后启动 WI-208。
+- GAP-05、GAP-01/T62A、WP-06、WP-07、WI-196、RC-08 与版本发布仍 open。
