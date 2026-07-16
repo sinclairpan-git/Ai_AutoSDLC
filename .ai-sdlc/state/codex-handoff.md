@@ -1,41 +1,36 @@
 # Continuity Handoff
 
-- Updated: 2026-07-16T10:22:26+00:00
-- Reason: Round 5 双 PASS 和最终本地门禁完成
-- Goal: 完成 WI-206 model string dedupe formal PR mainline receipt
-- State: Round 5 exact hashes 双 Agent PASS；最终本地 tests/truth/constraints/diff 全绿；Program Truth snapshot 0c98c761 fresh/ready；准备 commit。
+- Updated: 2026-07-16T11:53:13+00:00
+- Reason: Round 2 dual adversarial PASS and final local gates completed
+- Goal: none
+- State: Budget amendment Round 2 已在同一 formal hashes 获 Pascal/Confucius 双 PASS；19-file 281/2、root truth 1 passed、validate PASS、constraints no BLOCKER。最终 truth sync 在本 handoff 更新后需再执行一次，然后只暂存 amendment 范围。
 - Stage: close
 - Work Item: 206-model-string-dedupe
-- Branch: feature/206-model-string-dedupe-docs
+- Branch: feature/206-model-string-dedupe-budget-amendment
 
 ## Changed Files
-- M  .ai-sdlc/project/config/project-state.yaml
-- M  .ai-sdlc/state/checkpoint.yml
-- M  .ai-sdlc/state/codex-handoff.md
-- M  .ai-sdlc/state/resume-pack.yaml
-- A  .ai-sdlc/work-items/206-model-string-dedupe/codex-handoff.md
-- A  .ai-sdlc/work-items/206-model-string-dedupe/resume-pack.yaml
-- MM program-manifest.yaml
-- M  specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
-- M  specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-- AM specs/206-model-string-dedupe/development-summary.md
-- A  specs/206-model-string-dedupe/plan.md
-- A  specs/206-model-string-dedupe/spec.md
-- AM specs/206-model-string-dedupe/task-execution-log.md
-- A  specs/206-model-string-dedupe/tasks.md
-- M  tests/integration/test_repo_program_manifest.py
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/206-model-string-dedupe/codex-handoff.md
+- M .ai-sdlc/work-items/206-model-string-dedupe/resume-pack.yaml
+- M program-manifest.yaml
+- M specs/206-model-string-dedupe/development-summary.md
+- M specs/206-model-string-dedupe/plan.md
+- M specs/206-model-string-dedupe/spec.md
+- M specs/206-model-string-dedupe/task-execution-log.md
+- M specs/206-model-string-dedupe/tasks.md
 
 ## Key Decisions
-- spec/plan/tasks 冻结；formal commit 不含 src；implementation 必须等待 formal merge main 后另开 branch/worktree。
+- 最终合同锁定标准顶层 first-party import、禁止 late/mid/noqa/isort/Ruff 配置/压行；product≤37/source≤43，RC-06 cap54 不变。
 
 ## Commands / Tests
-- targeted 281 passed, 2 skipped in 1.43s；root exact nodeid 1 passed in 72.90s；truth ready/fresh 1086/1086；validate PASS；constraints no BLOCKER；working/cached diff-check PASS。
+- 双 Agent PASS exact combined d0e29ec47fbf3582c275e6a0ca6f7ee94acb2ac3efc5669291d70ac619930566；19-file 281 passed, 2 skipped；root truth 1 passed；validate/constraints PASS。
 
 ## Blockers / Risks
-- 仅剩 commit/push/PR、Codex review、required checks、merge 与 fresh-main formal acceptance。
+- 无内容 blocker；剩余 mainline PR、Codex review、required CI 与 merge。
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 更新 staged index，校验 hashes/diff/status，commit；push 并创建 PR，请求 @codex review，五分钟 heartbeat 监控 review/checks 至 merge。
+- 最终 truth sync/audit 后 stage exact amendment files，cached diff-check，commit/push/PR，@codex review，heartbeat 至 merge。

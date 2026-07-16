@@ -3,29 +3,21 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: .ai-sdlc/memory/constitution.md
-  tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/206-model-string-dedupe/spec.md
-  plan_path: specs/206-model-string-dedupe/plan.md
-  tasks_path: specs/206-model-string-dedupe/tasks.md
-  active_files:
-  - specs/206-model-string-dedupe/spec.md
-  - specs/206-model-string-dedupe/plan.md
-  - specs/206-model-string-dedupe/tasks.md
-  - specs/206-model-string-dedupe/task-execution-log.md
-  - specs/206-model-string-dedupe/development-summary.md
-  - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-  - specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
-  - program-manifest.yaml
-  - .ai-sdlc/state/codex-handoff.md
-  context_summary: 'Goal: 完成 WI-206 model string dedupe formal PR mainline receipt
-    | State: Round 5 exact hashes 双 Agent PASS；最终本地 tests/truth/constraints/diff 全绿；Program
-    Truth snapshot 0c98c761 fresh/ready；准备 commit。 | Next: 更新 staged index，校验 hashes/diff/status，commit；push
-    并创建 PR，请求 @codex review，五分钟 heartbeat 监控 review/checks 至 merge。'
-current_branch: feature/206-model-string-dedupe-docs
+  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/206-model-string-dedupe-budget-amendment/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/206-model-string-dedupe-budget-amendment/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/206-model-string-dedupe-budget-amendment/specs/206-model-string-dedupe/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/206-model-string-dedupe-budget-amendment/specs/206-model-string-dedupe/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/206-model-string-dedupe-budget-amendment/specs/206-model-string-dedupe/tasks.md
+  active_files: []
+  context_summary: 'State: Budget amendment Round 2 已在同一 formal hashes 获 Pascal/Confucius
+    双 PASS；19-file 281/2、root truth 1 passed、validate PASS、constraints no BLOCKER。最终
+    truth sync 在本 handoff 更新后需再执行一次，然后只暂存 amendment 范围。 | Next: 最终 truth sync/audit
+    后 stage exact amendment files，cached diff-check，commit/push/PR，@codex review，heartbeat
+    至 merge。'
+current_branch: ''
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-16T10:22:26+00:00'
+timestamp: '2026-07-16T11:38:23+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-16T08:57:35+00:00'
 checkpoint_fingerprint: 3486bdcca321f8b4f933ca38966ba2b185332bce00b3c1b84536f222cae09f94

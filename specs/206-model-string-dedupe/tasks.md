@@ -92,8 +92,10 @@ related_doc:
 
 - **状态**：待执行
 - **依赖**：T32
-- **验收**：算法216→12、complexity72→4；产品 +≤33/-≥216/net≤-183；identity test≤4、root truth
-  additions=2、全部source additions≤39≤54；19产品文件精确、新产品文件=1、公共API/依赖=0。
+- **验收**：算法216→12、complexity72→4；产品 +≤37/-≥216/net≤-179，其中 4 行仅为 Ruff `I001`
+  必需 import-block 分隔；identity test≤4、root truth additions=2、全部source additions≤43≤54；
+  18 条 import 均在标准顶层 first-party import block，禁止 late/mid-file import、分号/多语句压行、
+  noqa/isort/Ruff 配置等 lint suppression；19产品文件精确、新产品文件=1、公共API/依赖=0。
 
 ### T34 证明 order mutation RED 并恢复
 
