@@ -7,19 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-
-def _dedupe_string_items(value: object) -> list[str]:
-    if value is None:
-        return []
-    unique: list[str] = []
-    seen: set[str] = set()
-    for item in value:
-        text = str(item)
-        if text in seen:
-            continue
-        seen.add(text)
-        unique.append(text)
-    return unique
+from ai_sdlc.models._string_lists import _dedupe_strings as _dedupe_string_items
 
 
 def _dedupe_int_pairs(value: object) -> list[tuple[int, int]]:

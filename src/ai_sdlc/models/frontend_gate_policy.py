@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from ai_sdlc.models._string_lists import _dedupe_strings
 from ai_sdlc.models.frontend_generation_constraints import (
     build_mvp_frontend_generation_constraints,
 )
@@ -60,20 +61,6 @@ def _find_unknown_references(values: list[str], known_values: set[str]) -> list[
         if value not in known_values and value not in unknown:
             unknown.append(value)
     return unknown
-
-
-def _dedupe_strings(value: object) -> list[str]:
-    if value is None:
-        return []
-    unique: list[str] = []
-    seen: set[str] = set()
-    for item in value:
-        text = str(item)
-        if text in seen:
-            continue
-        seen.add(text)
-        unique.append(text)
-    return unique
 
 
 def _dedupe_model_items(value: object) -> list[BaseModel]:

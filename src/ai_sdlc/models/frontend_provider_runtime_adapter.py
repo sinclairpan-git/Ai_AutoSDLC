@@ -6,6 +6,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from ai_sdlc.models._string_lists import _dedupe_strings
 from ai_sdlc.models.frontend_provider_expansion import (
     build_p3_frontend_provider_expansion_baseline,
 )
@@ -54,20 +55,6 @@ def _find_duplicates(values: list[str]) -> list[str]:
             duplicates.append(value)
         seen.add(value)
     return duplicates
-
-
-def _dedupe_strings(value: object) -> list[str]:
-    if value is None:
-        return []
-    unique: list[str] = []
-    seen: set[str] = set()
-    for item in value:
-        text = str(item)
-        if text in seen:
-            continue
-        seen.add(text)
-        unique.append(text)
-    return unique
 
 
 class FrontendProviderRuntimeAdapterModel(BaseModel):
