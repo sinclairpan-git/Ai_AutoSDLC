@@ -15,7 +15,7 @@ from typer.testing import CliRunner
 import ai_sdlc.cli.program_cmd as program_cmd_module
 import ai_sdlc.core.program_service as program_service_module
 from ai_sdlc.cli.main import app
-from ai_sdlc.core.config import save_project_config
+from ai_sdlc.core.config import load_project_config, save_project_config
 from ai_sdlc.core.frontend_browser_gate_runtime import (
     BrowserGateInteractionProbeCapture,
     BrowserGateProbeRunnerResult,
@@ -54,6 +54,7 @@ from ai_sdlc.generators.frontend_quality_platform_artifacts import (
 from ai_sdlc.generators.frontend_solution_confirmation_artifacts import (
     materialize_frontend_solution_confirmation_artifacts,
 )
+from ai_sdlc.integrations.ide_adapter import ensure_ide_adaptation
 from ai_sdlc.models.frontend_gate_policy import (
     build_mvp_frontend_gate_policy,
     build_p1_frontend_gate_policy_visual_a11y_foundation,
@@ -82,6 +83,17 @@ from tests.support.managed_delivery import (
 
 runner = CliRunner()
 SAMPLE_FIXTURE_SOURCE_REF = "tests/fixtures/frontend-contract-sample-src/match"
+
+
+@pytest.fixture(autouse=True)
+def _no_ide_adapter_hook(request: pytest.FixtureRequest) -> None:
+    if request.node.get_closest_marker("real_ide_hook") is not None:
+        yield
+        return
+    with patch("ai_sdlc.cli.main.run_ide_adapter_if_initialized") as root_hook, patch(
+        "ai_sdlc.cli.program_cmd.run_ide_adapter_if_initialized", create=True
+    ) as local_hook:
+        yield root_hook, local_hook
 
 
 def _write_manifest(root: Path) -> None:
@@ -1827,6 +1839,26 @@ specs:
     )
 
 
+def _write_program_cursor_adapter_guard_fixture(root: Path) -> tuple[Path, ...]:
+    _init_truth_git_repo(root)
+    _write_program_truth_fixture(root)
+    save_project_config(root, ProjectConfig(detected_ide="cursor", agent_target="cursor"))
+    rules_dir = root / ".cursor" / "rules"
+    rules_dir.mkdir(parents=True, exist_ok=True)
+    legacy_rule = rules_dir / "ai-sdlc.md"
+    canonical_rule = rules_dir / "ai-sdlc.mdc"
+    managed_rule = b"legacy cursor rule\n"
+    legacy_rule.write_bytes(managed_rule)
+    canonical_rule.write_bytes(managed_rule)
+    _commit_truth_repo(root, "test: seed program adapter guard fixture")
+
+    service = program_service_module.ProgramService(root, root / "program-manifest.yaml")
+    manifest = service.load_manifest()
+    validation = service.validate_manifest(manifest)
+    service.write_truth_snapshot(service.build_truth_snapshot(manifest, validation_result=validation))
+    return (legacy_rule, canonical_rule, root / ".ai-sdlc/project/config/project-config.yaml", root / "program-manifest.yaml")
+
+
 def _write_managed_delivery_apply_request(root: Path, *, fingerprint: str = "fp-001") -> str:
     payload = {
         "execution_view": {
@@ -2062,22 +2094,28 @@ def _write_frontend_contract_source_annotation(
 
 
 class TestCliProgram:
-    def test_program_managed_delivery_apply_dry_run_blocks_on_host_ingress(
-        self, initialized_project_dir: Path
+    @pytest.mark.real_ide_hook
+    def test_program_managed_delivery_apply_real_host_verifies_materialized_ingress(
+        self, initialized_project_dir: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         root = initialized_project_dir
-        save_project_config(root, ProjectConfig(adapter_ingress_state="materialized"))
+        for key in ("OPENAI_CODEX", "CODEX_CLI_READY"):
+            monkeypatch.delenv(key, raising=False)
+        ensure_ide_adaptation(root, agent_target="codex")
+        assert load_project_config(root).adapter_ingress_state == "materialized"
         request_rel = _write_managed_delivery_apply_request(root)
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.chdir(root)
 
-        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
-            result = runner.invoke(
-                app,
-                ["program", "managed-delivery-apply", "--request", request_rel, "--dry-run"],
-            )
+        result = runner.invoke(
+            app,
+            ["program", "managed-delivery-apply", "--request", request_rel, "--dry-run"],
+        )
 
-        assert result.exit_code == 1
+        assert result.exit_code == 0, result.output
+        assert load_project_config(root).adapter_ingress_state == "verified_loaded"
         assert "Program Managed Delivery Apply Dry-Run" in result.output
-        assert "host_ingress_below_mutate_threshold" in result.output
+        assert "host_ingress_below_mutate_threshold" not in result.output
 
     def test_program_managed_delivery_apply_execute_surfaces_honest_headline(
         self, initialized_project_dir: Path
@@ -2135,8 +2173,8 @@ class TestCliProgram:
             root / "managed" / "frontend" / "src" / "App.vue"
         ).read_text(encoding="utf-8") == "<template>cli generated</template>\n"
 
-    def test_program_managed_delivery_apply_dry_run_materializes_request_from_truth_when_request_omitted(
-        self, initialized_project_dir: Path
+    def test_program_managed_delivery_apply_materializes_request_after_one_adapter_refresh(
+        self, initialized_project_dir: Path, _no_ide_adapter_hook
     ) -> None:
         root = initialized_project_dir
         save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
@@ -2171,13 +2209,17 @@ class TestCliProgram:
             "ai_sdlc.core.managed_delivery_apply.subprocess.run",
             side_effect=build_dependency_install_subprocess_side_effect(),
         ):
-            result = runner.invoke(app, ["program", "managed-delivery-apply", "--dry-run"])
+            result = runner.invoke(app, ["program", "managed-delivery-apply", "--execute"])
 
-        assert result.exit_code == 0
-        assert "Program Managed Delivery Apply Dry-Run" in result.output
+        assert result.exit_code == 2, result.output
+        assert [hook.call_count for hook in _no_ide_adapter_hook] == [0, 1]
+        assert (root / ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml").is_file()
+        assert not (root / ".ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml").exists()
         assert "request source: .ai-sdlc/memory/frontend-managed-delivery/latest.yaml" in result.output
         assert "selected action types: managed_target_prepare, dependency_install" in result.output
         assert "artifact_generate" in result.output
+        assert "--yes" in result.output
+        assert "Managed Delivery Apply Result" not in result.output
 
     def test_program_managed_delivery_apply_dry_run_truth_derived_surfaces_release_capability_guidance(
         self, initialized_project_dir: Path
@@ -2913,6 +2955,32 @@ class TestCliProgram:
         assert result.exit_code == 0
         assert "PASS" in result.output
 
+    @pytest.mark.real_ide_hook
+    @pytest.mark.parametrize(
+        ("args", "expected_exit_code"),
+        [
+            (["program", "validate"], 0),
+            (["program", "truth", "audit"], 1),
+            (["program", "truth", "sync", "--dry-run"], 0),
+        ],
+    )
+    def test_program_read_only_commands_do_not_mutate_cursor_adapter_files(
+        self,
+        initialized_project_dir: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        args: list[str],
+        expected_exit_code: int,
+    ) -> None:
+        root = initialized_project_dir
+        guarded_paths = _write_program_cursor_adapter_guard_fixture(root)
+        before = {path: path.read_bytes() for path in guarded_paths}
+        monkeypatch.chdir(root)
+
+        result = runner.invoke(app, args, catch_exceptions=False)
+
+        assert result.exit_code == expected_exit_code, result.output
+        assert {path: path.read_bytes() for path in guarded_paths} == before
+
     def test_program_validate_fail_cycle(self, initialized_project_dir: Path) -> None:
         root = initialized_project_dir
         (root / "specs" / "a").mkdir(parents=True)
@@ -3149,12 +3217,13 @@ specs:
         assert result.output.count("003-enroll") >= 1
 
     def test_program_truth_sync_and_audit_surface_blocked_release_state(
-        self, initialized_project_dir: Path
+        self, initialized_project_dir: Path, _no_ide_adapter_hook
     ) -> None:
         root = initialized_project_dir
         _init_truth_git_repo(root)
         _write_program_truth_fixture(root)
         _commit_truth_repo(root, "docs: seed truth ledger fixture")
+        adapter_files = {path: path.read_bytes() if path.exists() else None for path in (root / "AGENTS.md", root / ".ai-sdlc/project/config/project-config.yaml")}
 
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
             sync = runner.invoke(
@@ -3201,6 +3270,9 @@ specs:
         assert status.exit_code == 0, status.output
         assert "Truth Ledger" in status.output
         assert "blocked" in status.output.lower()
+        assert [hook.call_count for hook in _no_ide_adapter_hook] == [0, 0]
+        assert {path: path.read_bytes() if path.exists() else None for path in adapter_files} == adapter_files
+        assert "IDE adapter (" not in sync.output + audit.output + status.output
 
     def test_program_truth_sync_and_audit_surface_exposes_source_inventory_migration(
         self, initialized_project_dir: Path
@@ -5564,7 +5636,7 @@ specs:
         assert "fallback_required: false" in result.output
 
     def test_program_solution_confirm_execute_requires_explicit_confirmation(
-        self, initialized_project_dir: Path
+        self, initialized_project_dir: Path, _no_ide_adapter_hook
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
@@ -5574,13 +5646,15 @@ specs:
 
         assert result.exit_code == 2
         assert "--yes" in result.output
+        assert [hook.call_count for hook in _no_ide_adapter_hook] == [0, 0]
 
     def test_program_solution_confirm_execute_writes_snapshot_without_preview_only_fields(
-        self, initialized_project_dir: Path
+        self, initialized_project_dir: Path, _no_ide_adapter_hook
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
         report_rel = ".ai-sdlc/memory/frontend-solution-confirmation.md"
+        adapter_files = {path: path.read_bytes() if path.exists() else None for path in (root / "AGENTS.md", root / ".ai-sdlc/project/config/project-config.yaml")}
 
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
             result = runner.invoke(
@@ -5677,6 +5751,9 @@ specs:
         report = (root / report_rel).read_text(encoding="utf-8")
         assert "Frontend Solution Confirmation Artifact" in report
         assert ".ai-sdlc/memory/frontend-solution-confirmation/latest.yaml" in report
+        assert [hook.call_count for hook in _no_ide_adapter_hook] == [0, 0]
+        assert {path: path.read_bytes() if path.exists() else None for path in adapter_files} == adapter_files
+        assert "IDE adapter (" not in result.output
 
     def test_program_solution_confirm_execute_accepts_absolute_report_path(
         self, initialized_project_dir: Path
@@ -5720,7 +5797,7 @@ specs:
         )
 
     def test_program_solution_confirm_execute_does_not_persist_blocked_snapshot(
-        self, initialized_project_dir: Path
+        self, initialized_project_dir: Path, _no_ide_adapter_hook
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
@@ -5754,13 +5831,16 @@ specs:
         assert result.exit_code == 1
         assert "Frontend solution confirmation blocked" in result.output
         assert not artifact_path.exists()
+        assert [hook.call_count for hook in _no_ide_adapter_hook] == [0, 0]
 
+    @pytest.mark.parametrize("hook_error", [None, RuntimeError("adapter refresh failed")])
     def test_program_solution_confirm_execute_continue_runs_managed_delivery_apply(
-        self, initialized_project_dir: Path
+        self, initialized_project_dir: Path, _no_ide_adapter_hook, hook_error
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
         save_project_config(root, ProjectConfig(adapter_ingress_state="verified_loaded"))
+        _no_ide_adapter_hook[1].side_effect = hook_error
 
         with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root), patch.object(
             program_service_module,
@@ -5817,6 +5897,13 @@ specs:
             / "frontend-managed-delivery-apply"
             / "latest.yaml"
         )
+        assert [hook.call_count for hook in _no_ide_adapter_hook] == [0, 1]
+        if hook_error is not None:
+            assert isinstance(result.exception, RuntimeError)
+            assert snapshot_path.is_file()
+            assert not (root / ".ai-sdlc/memory/frontend-managed-delivery/latest.yaml").exists()
+            assert not apply_artifact_path.exists()
+            return
         assert result.exit_code == 0
         assert snapshot_path.is_file()
         assert apply_artifact_path.is_file()
@@ -5825,7 +5912,7 @@ specs:
         assert "apply artifact: .ai-sdlc/memory/frontend-managed-delivery-apply/latest.yaml" in result.output
 
     def test_program_solution_confirm_execute_continue_requires_ack_for_effective_change(
-        self, initialized_project_dir: Path
+        self, initialized_project_dir: Path, _no_ide_adapter_hook
     ) -> None:
         root = initialized_project_dir
         _write_manifest(root)
@@ -5876,6 +5963,7 @@ specs:
         assert snapshot_path.is_file()
         assert not apply_artifact_path.exists()
         assert "--ack-effective-change" in result.output
+        assert [hook.call_count for hook in _no_ide_adapter_hook] == [0, 0]
 
     def test_program_solution_confirm_execute_continue_surfaces_registry_blocker_honestly(
         self, initialized_project_dir: Path
