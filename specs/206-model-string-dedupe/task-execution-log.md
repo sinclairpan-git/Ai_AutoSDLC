@@ -358,3 +358,76 @@ Round 2 是本预算 amendment 唯一有效 adversarial receipt；旧 Round 1 ta
   与后文已生效的 amendment `+≤37/net≤-179` 冲突，恢复执行者可能误用旧硬门禁。
 - 处置：首段明确把 `+33/-183` 标为 amendment 前历史预算，并指向当前唯一有效的
   `+37/-≥216/net≤-179、source≤43≤54`；formal spec/plan/tasks hashes 与双 PASS receipt 不变。
+
+## 12. Batch 2026-07-16-011：T61A/T61B implementation、mutation 与 rollback
+
+- Budget amendment PR #136 在处理两个 Codex P2 后，以 merge commit
+  `22f4d32f4e1c4c658a12be66aa128190b0a132fe` 合入 main；fresh-main formal hashes、19-file
+  `281 passed, 2 skipped`、root truth `1 passed`、truth ready/fresh 1086/1086，acceptance worktree clean。
+- implementation branch fast-forward 到该 main；identity legacy RED、candidate GREEN。product-only commit
+  `6c52f03f94f3415d03914e3e03424c1c41de8621` 精确包含 19 个产品文件与既有 test 的 2 行断言。
+- Git raw ledger：product `+37/-246/net -209`，test `+2/0`；累计 WI source additions
+  `37+2+2=41≤43≤54`，RC-06 余量 13；无 suppression、wrapper、public export 或新依赖。
+- candidate probe：defs18→1、calls100、complexity72→4、binding identity18→1，所有模块绑定
+  `ai_sdlc.models._string_lists._dedupe_strings`；body/full/signature digest 满足合同，14类 result/exception/
+  event trace 与 baseline 零差异；raw product LOC 8556→8347，净减209。
+- Ruff：PASS；19-file targeted：`281 passed, 2 skipped in 1.40s`。
+- reverse-order mutation：既有 order assertion 稳定 `1 failed in 0.18s`；apply_patch 恢复后
+  `1 passed in 0.17s`，mutation 未提交。
+- exact rollback disposable worktree：candidate tree
+  `0762c1b3653fd476c75fc515d503c5a26a54d717`；revert commit `fb4d1d32...` 后 tree
+  `c50937d345a4e93dde931b0ed2c1d98d6813081c` 精确等于 amended-main baseline；reapply commit
+  `9be6cbac...` 后精确回到 candidate tree。revert/reapply 两侧 targeted 均 `281 passed, 2 skipped`，
+  corpus/aggregate/top-level helpers 分别与 baseline/candidate 完全一致，不重复 full。
+- candidate full：`3220 passed, 3 skipped in 564.24s`；与 baseline `3220 passed, 3 skipped` 计数一致。
+- 唯一 receipt：`.ai-sdlc/work-items/206-model-string-dedupe/t61-differential-rollback-receipt.json`，
+  SHA-256 `bb654c134fb4460d163f771b7d36da1e58dc898c5631032dcaa206d2e0d7abd8`。
+- full suite 期间连续性 pack 被运行路径再次自动刷新为绝对 worktree path/空 working set；已在证据批次
+  后恢复 repo-relative。该副作用与 `program` 自动 Cursor 刷新一起登记为后续独立原子 gap，不混入产品 commit。
+
+T31、T32、T33、T34、T41、T42 已完成；T43 只剩 root truth 与 final governance，之后进入 T51 双审。
+
+## 13. Batch 2026-07-16-012：T43 final governance
+
+- root Program Truth exact nodeid：`1 passed in 77.14s`；Ruff：PASS；working diff-check：PASS。
+- `program truth sync --execute --yes` 后 audit 为 ready/fresh，inventory `1086/1086`、unmapped=0、
+  missing=0；精确 snapshot/hash 与可变 signal counts 只以最终 `program-manifest.yaml` 为准，避免在
+  truth authoring 输入中自引用当前值。
+- `program validate`：PASS；`verify constraints`：no BLOCKERs；GAP-09～11 未见回归。
+- 治理命令再次自动刷新 `.cursor/rules/ai-sdlc.mdc`；已用 `apply_patch` 精确恢复 HEAD，工作树不含该
+  文件。两份 resume-pack 保持 repo-relative，未出现当前机器绝对路径或 `.worktrees/` 路径。
+- formal spec/plan/tasks hashes 与 combined `d0e29ec47fbf3582c275e6a0ca6f7ee94acb2ac3efc5669291d70ac619930566`
+  稳定；receipt SHA-256 仍为 `bb654c134fb4460d163f771b7d36da1e58dc898c5631032dcaa206d2e0d7abd8`。
+
+T43 完成；下一步冻结同一 HEAD/tree/binary diff/name-status/receipt/formal hashes，执行 T51 双 Agent
+final tree 对抗评审。评审结论回写后将再次冻结并复审最终内容，避免“记录评审结果”改变被评审目标。
+
+## 14. Batch 2026-07-16-013：T51 Round 1 双 FAIL 与证据自引用修复
+
+- Round 1 历史目标：HEAD `d793f6a7ecc61e1c5aea86ed0f837ffe1f4d6828`、tree
+  `2839802c73a9df538c472958d91c9968174dc764`、binary diff
+  `f89b27fe69d791e12530b20726249c6587743d69f5f288c4d23df5ddc0e62437`、name-status
+  `507865a5290883b4c35f3b2b17370faaf68c680454483e56d40704e2fcc16319`；receipt 与 formal hashes 稳定。
+- Pascal / 精简直接性：`FAIL`；Confucius / 兼容证明：`FAIL`。双方独立发现同一 Important：T43
+  authoring 文档与 handoff 把 pre-final sync 的 snapshot/hash 与 signal count 写成当前最终真值；这些
+  文件本身进入 truth inventory，回写后再 sync 会产生新值，造成自引用漂移。
+- 产品实现、ledger `+37/-246/net -209`、source `41≤43≤54`、18→1/calls100、targeted
+  `281 passed, 2 skipped`、Ruff、corpus、mutation、rollback/reapply 均未发现问题。
+- 处置：从 execution summary 与 handoff 删除当前精确 snapshot/hash 和可自增 signal count；只保留
+  ready/fresh、inventory complete、zero blocker 等稳定结论，并规定当前精确 truth 仅以最终
+  `program-manifest.yaml` 为准。终态 sync/audit 后重新冻结 Round 2；Round 1 目标与 verdict 作废。
+
+## 15. Batch 2026-07-16-014：T51 Round 2 continuity 修复
+
+- Round 2 历史目标：HEAD `c9b849a90771a8cf1522a14f004e941904a1e0d2`、tree
+  `e07167f3a9884ec25904e891b7c4ed47195eda9a`、binary diff
+  `33daeb06361eb49a948138fd0441a236294f103e499e0fccaaa9c3c31f845f04`、name-status
+  `507865a5290883b4c35f3b2b17370faaf68c680454483e56d40704e2fcc16319`；receipt 与 formal hashes 稳定。
+- Confucius / 兼容证明：`PASS`，确认 Round 1 自引用 finding 已闭环，产品、corpus、rollback、
+  resume-pack path 与跨平台保护无 finding。
+- Pascal / 精简直接性：`FAIL`，发现 root/scoped handoff 与两份 resume-pack 的 exact next step 仍要求
+  “终态 sync/audit 后冻结 Round 2”，但该动作已经完成；恢复者会重复 sync，改变 generated_at、
+  snapshot 与冻结 diff。
+- 处置：连续性状态统一为稳定终态——terminal sync/audit 完成后，当前冻结目标只执行同哈希双审；
+  双 PASS 不再改树并直接 push/PR，FAIL 才修订、sync 与 refreeze。Round 2 目标作废，重新冻结 Round 3。
+- 产品实现、receipt、formal hashes、预算与测试证据均未变化；当前精确 truth 继续只以 manifest 为准。

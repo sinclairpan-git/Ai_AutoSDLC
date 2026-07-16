@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ai_sdlc.models import frontend_contracts, program, state
 from ai_sdlc.models.program import (
     ProgramManifest,
     ProgramRequiredEvidenceRefs,
@@ -9,6 +10,7 @@ from ai_sdlc.models.program import (
 
 
 def test_program_required_evidence_refs_deduplicates_ref_lists() -> None:
+    assert frontend_contracts._dedupe_strings is program._dedupe_strings is state._dedupe_string_items
     refs = ProgramRequiredEvidenceRefs(
         truth_check_refs=["specs/001", "specs/001", "specs/002"],
         close_check_refs=["close:001", "close:001"],

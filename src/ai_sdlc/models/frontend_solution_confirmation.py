@@ -7,6 +7,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from ai_sdlc.models._string_lists import _dedupe_strings
+
 _SNAPSHOT_ID_PATTERN = re.compile(r"^(?P<prefix>.*?)(?P<number>\d+)$")
 PUBLIC_PRIMEVUE_TEMPLATE_RUNTIME_DEPENDENCIES = (
     "@vueuse/core",
@@ -39,20 +41,6 @@ PUBLIC_PRIMEVUE_TEMPLATE_DEV_DEPENDENCIES = (
     "vitest",
     "vue-tsc",
 )
-
-
-def _dedupe_strings(value: object) -> list[str]:
-    if value is None:
-        return []
-    unique: list[str] = []
-    seen: set[str] = set()
-    for item in value:
-        text = str(item)
-        if text in seen:
-            continue
-        seen.add(text)
-        unique.append(text)
-    return unique
 
 
 class FrontendSolutionConfirmationModel(BaseModel):

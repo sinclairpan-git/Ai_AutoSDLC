@@ -1,0 +1,355 @@
+{
+  "schema_version": "ai-sdlc.t61-differential-rollback-receipt.v1",
+  "work_item_id": "206-model-string-dedupe",
+  "generated_at": "2026-07-16T13:29:25.216Z",
+  "implementation": {
+    "parent_commit": "22f4d32f4e1c4c658a12be66aa128190b0a132fe",
+    "commit": "6c52f03f94f3415d03914e3e03424c1c41de8621",
+    "baseline_tree_oid": "c50937d345a4e93dde931b0ed2c1d98d6813081c",
+    "candidate_tree_oid": "0762c1b3653fd476c75fc515d503c5a26a54d717"
+  },
+  "formal_contract": {
+    "spec_sha256": "b3b4c05b3f957ef5f6cce362d902502a05943240ff072134005b7e3c61352972",
+    "plan_sha256": "2429e3f8d6e9ee276d704cf11ca61566c60e9046fe12f04ee0d57fdbca7c5ab5",
+    "tasks_sha256": "c8c910cb99ac9470fb153f4095b62be85e6112dcebd97c6969b444430c6e1744",
+    "combined_sha256": "d0e29ec47fbf3582c275e6a0ca6f7ee94acb2ac3efc5669291d70ac619930566"
+  },
+  "environment": {
+    "os_name": "posix",
+    "platform": "macOS-27.0-arm64-arm-64bit",
+    "pydantic": "2.12.5",
+    "python": "3.11.15 (main, Mar 10 2026, 18:01:34) [Clang 21.1.4 ]"
+  },
+  "reduction_ledger": {
+    "baseline_product_raw_loc": 8556,
+    "candidate_product_raw_loc": 8347,
+    "raw_loc_delta": -209,
+    "baseline_product_non_empty_loc": 7454,
+    "candidate_product_non_empty_loc": 7269,
+    "non_empty_loc_delta": -185,
+    "git_product_additions": 37,
+    "git_product_deletions": 246,
+    "git_product_net": -209,
+    "identity_test_additions": 2,
+    "formal_root_truth_additions": 2,
+    "cumulative_source_additions": 41,
+    "rc06_cap": 54,
+    "rc06_remaining": 13
+  },
+  "structural_differential": {
+    "baseline": {
+      "definitions": 18,
+      "calls": 100,
+      "complexity_proxy": 72,
+      "binding_identity_count": 18,
+      "function_non_empty_loc": 216,
+      "body_sha256": "3a0faf9ac553d0701610620b2b17ee0dda2fa014442a3eebf0a0c6c11067042d"
+    },
+    "candidate": {
+      "definitions": 1,
+      "calls": 100,
+      "complexity_proxy": 4,
+      "binding_identity_count": 1,
+      "all_bind_same_object": true,
+      "function_non_empty_loc": 12,
+      "body_sha256": "3a0faf9ac553d0701610620b2b17ee0dda2fa014442a3eebf0a0c6c11067042d",
+      "full_function_sha256": "1d9a0a053fb07dcb666d1f78a1b2e3bbae2a01662b55b757a61e40cdd1addefa",
+      "signature_contract_sha256": "c4900c7972a05d3b0542e3fd17d92e2741d7a0cd89d875359e216a148e21a99f"
+    },
+    "modules": [
+      {
+        "module": "frontend_browser_gate",
+        "symbol": "_dedupe_strings",
+        "call_count": 9,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_browser_gate.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_contracts",
+        "symbol": "_dedupe_strings",
+        "call_count": 4,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_contracts.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_cross_provider_consistency",
+        "symbol": "_dedupe_strings",
+        "call_count": 8,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_cross_provider_consistency.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_gate_policy",
+        "symbol": "_dedupe_strings",
+        "call_count": 9,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_gate_policy.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_generation_constraints",
+        "symbol": "_dedupe_strings",
+        "call_count": 5,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_generation_constraints.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_managed_delivery",
+        "symbol": "_dedupe_strings",
+        "call_count": 9,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_managed_delivery.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_page_ui_schema",
+        "symbol": "_dedupe_strings",
+        "call_count": 3,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_page_ui_schema.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_provider_expansion",
+        "symbol": "_dedupe_strings",
+        "call_count": 4,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_provider_expansion.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_provider_profile",
+        "symbol": "_dedupe_strings",
+        "call_count": 6,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_provider_profile.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_provider_runtime_adapter",
+        "symbol": "_dedupe_strings",
+        "call_count": 4,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_provider_runtime_adapter.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_quality_platform",
+        "symbol": "_dedupe_strings",
+        "call_count": 6,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_quality_platform.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_solution_confirmation",
+        "symbol": "_dedupe_strings",
+        "call_count": 4,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_solution_confirmation.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_theme_token_governance",
+        "symbol": "_dedupe_strings",
+        "call_count": 3,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_theme_token_governance.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "frontend_ui_kernel",
+        "symbol": "_dedupe_strings",
+        "call_count": 4,
+        "baseline_definition_path": "src/ai_sdlc/models/frontend_ui_kernel.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "host_runtime_plan",
+        "symbol": "_dedupe_strings",
+        "call_count": 3,
+        "baseline_definition_path": "src/ai_sdlc/models/host_runtime_plan.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "program",
+        "symbol": "_dedupe_strings",
+        "call_count": 7,
+        "baseline_definition_path": "src/ai_sdlc/models/program.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "scanner",
+        "symbol": "_dedupe_strings",
+        "call_count": 4,
+        "baseline_definition_path": "src/ai_sdlc/models/scanner.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      },
+      {
+        "module": "state",
+        "symbol": "_dedupe_string_items",
+        "call_count": 8,
+        "baseline_definition_path": "src/ai_sdlc/models/state.py",
+        "candidate_definition_path": "src/ai_sdlc/models/_string_lists.py",
+        "candidate_binding_module": "ai_sdlc.models._string_lists"
+      }
+    ]
+  },
+  "behavior_event_differential": {
+    "equal": true,
+    "distinct_body_sha256": "3a0faf9ac553d0701610620b2b17ee0dda2fa014442a3eebf0a0c6c11067042d",
+    "cases": {
+      "bare_string": {
+        "events": [],
+        "result": [
+          "a",
+          "b"
+        ]
+      },
+      "empty": {
+        "events": [],
+        "result": []
+      },
+      "empty_whitespace": {
+        "events": [],
+        "result": [
+          "",
+          " "
+        ]
+      },
+      "eq_raises": {
+        "events": [
+          "iter",
+          "next:0",
+          "str:left",
+          "hash:left",
+          "hash:left",
+          "next:1",
+          "str:right",
+          "hash:right",
+          "eq:left:right"
+        ],
+        "exception": "builtins.RuntimeError",
+        "message": "eq boom"
+      },
+      "generator_success": {
+        "events": [
+          "iter",
+          "next:0",
+          "str:a",
+          "next:1",
+          "str:b",
+          "next:2",
+          "str:a2",
+          "next:3"
+        ],
+        "result": [
+          "a",
+          "b"
+        ]
+      },
+      "hash_raises": {
+        "events": [
+          "iter",
+          "next:0",
+          "str:hash",
+          "hash:hash"
+        ],
+        "exception": "builtins.RuntimeError",
+        "message": "hash boom"
+      },
+      "iter_raises": {
+        "events": [
+          "iter"
+        ],
+        "exception": "builtins.RuntimeError",
+        "message": "iter boom"
+      },
+      "mixed_str_collision": {
+        "events": [],
+        "result": [
+          "1",
+          "2"
+        ]
+      },
+      "next_raises_after_partial_yield": {
+        "events": [
+          "iter",
+          "next:0",
+          "str:first",
+          "next:1"
+        ],
+        "exception": "builtins.RuntimeError",
+        "message": "next after boom"
+      },
+      "next_raises_before_yield": {
+        "events": [
+          "iter",
+          "next:0"
+        ],
+        "exception": "builtins.RuntimeError",
+        "message": "next before boom"
+      },
+      "none": {
+        "events": [],
+        "result": []
+      },
+      "repeat_order": {
+        "events": [],
+        "result": [
+          "b",
+          "a"
+        ]
+      },
+      "str_raises": {
+        "events": [
+          "iter",
+          "next:0",
+          "str:str"
+        ],
+        "exception": "builtins.RuntimeError",
+        "message": "str boom"
+      },
+      "tuple": {
+        "events": [],
+        "result": [
+          "2",
+          "1"
+        ]
+      }
+    }
+  },
+  "verification": {
+    "baseline_full": "3220 passed, 3 skipped in 594.40s",
+    "candidate_identity_green": "1 passed in 0.17s",
+    "candidate_targeted": "281 passed, 2 skipped in 1.40s",
+    "candidate_full": "3220 passed, 3 skipped in 564.24s",
+    "ruff": "All checks passed",
+    "reverse_order_mutation": {
+      "mutated": "1 failed in 0.18s",
+      "restored": "1 passed in 0.17s"
+    }
+  },
+  "rollback_rehearsal": {
+    "disposable_worktree": ".worktrees/206-model-string-dedupe-rollback",
+    "candidate_commit_tree_oid": "0762c1b3653fd476c75fc515d503c5a26a54d717",
+    "revert_commit": "fb4d1d3276683e359a8888cc9921b4d13bfb7f5f",
+    "reverted_tree_oid": "c50937d345a4e93dde931b0ed2c1d98d6813081c",
+    "reverted_tree_matches_baseline": true,
+    "reverted_targeted": "281 passed, 2 skipped in 1.14s",
+    "reverted_corpus_equal_baseline": true,
+    "reapply_commit": "9be6cbacbd23eb93ec584ba0f89e17adb45a3342",
+    "reapplied_tree_oid": "0762c1b3653fd476c75fc515d503c5a26a54d717",
+    "reapplied_tree_matches_candidate": true,
+    "reapplied_targeted": "281 passed, 2 skipped in 1.39s",
+    "reapplied_corpus_equal_candidate": true
+  }
+}
