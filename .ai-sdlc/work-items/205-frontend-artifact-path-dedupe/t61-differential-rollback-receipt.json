@@ -1,0 +1,189 @@
+{
+  "schema_version": "wi205-differential-rollback-receipt.v1",
+  "work_item_id": "205-frontend-artifact-path-dedupe",
+  "generated_at": "2026-07-16T06:45:00Z",
+  "surface_manifest": {
+    "version": "wi205-surface-v1",
+    "artifact_test_files": [
+      "tests/unit/test_frontend_contract_artifacts.py",
+      "tests/unit/test_frontend_cross_provider_consistency_artifacts.py",
+      "tests/unit/test_frontend_gate_policy_artifacts.py",
+      "tests/unit/test_frontend_generation_constraint_artifacts.py",
+      "tests/unit/test_frontend_page_ui_schema_artifacts.py",
+      "tests/unit/test_frontend_provider_expansion_artifacts.py",
+      "tests/unit/test_frontend_provider_profile_artifacts.py",
+      "tests/unit/test_frontend_provider_runtime_adapter_artifacts.py",
+      "tests/unit/test_frontend_quality_platform_artifacts.py",
+      "tests/unit/test_frontend_solution_confirmation_artifacts.py",
+      "tests/unit/test_frontend_theme_token_governance_artifacts.py",
+      "tests/unit/test_frontend_ui_kernel_artifacts.py"
+    ],
+    "artifact_tests": 76,
+    "dedupe_tests": 14,
+    "expected_file_set_tests": 12,
+    "expected_paths": 94,
+    "frontend_cli_program_tests": 78,
+    "dedupe_call_sites": 13
+  },
+  "normalizer": {
+    "id": "wi205-git-tree-v1",
+    "renderer_normalizer": null,
+    "allowlist": [],
+    "commands": [
+      "uv run pytest -q <12 artifact test files> --basetemp /tmp/ai-sdlc-wi205-shared",
+      "git -C <shared-temp> --git-dir=<external-git-dir> --work-tree=<shared-temp> -c core.autocrlf=false -c core.attributesFile=<empty-file> add -A -f -- .",
+      "git --git-dir=<external-git-dir> write-tree",
+      "git --git-dir=<external-git-dir> ls-tree -r <tree-oid>",
+      "git --git-dir=<external-git-dir> diff-tree --binary <baseline-tree-oid> <sample-tree-oid>"
+    ]
+  },
+  "revisions": {
+    "baseline": "a76ef8b1b63cc65046bf91e09fad2ebb6f40073d",
+    "candidate": "7b96f96952d2733e3d7969e70e2b9ae24ef0611e",
+    "rollback_revert": "091f5d548dec16d079fa67d879e60fec3493a103",
+    "rollback_restored_candidate": "c1db361be20c016da6a31fd88ed997bbcd8c3b1b",
+    "pre_final_truth_snapshot_revision": "b9218498"
+  },
+  "toolchain": {
+    "platform": "Darwin arm64",
+    "python": "3.11.15",
+    "pytest": "9.0.2",
+    "git": "2.54.0 (Apple Git-157)",
+    "shell": "zsh 5.9",
+    "local_powershell": "unavailable: host .NET assembly mismatch",
+    "ci_powershell_required": true,
+    "git_object_format": "sha1",
+    "core_filemode": true,
+    "core_symlinks": true
+  },
+  "attribute_isolation": {
+    "git_attr_nosystem": true,
+    "core_attributes_file_bytes": 0,
+    "worktree_gitattributes_found": false,
+    "info_attributes_nonempty": false,
+    "core_autocrlf": false,
+    "fresh_index_per_sample": true,
+    "external_git_dir": "/tmp/ai-sdlc-wi205-git-objects/.git",
+    "shared_basetemp": "/tmp/ai-sdlc-wi205-shared"
+  },
+  "samples": {
+    "baseline_five_run_characterization": {
+      "passed_each_run": 76,
+      "pytest_seconds": [1.67, 0.74, 0.72, 0.74, 0.75],
+      "median_seconds": 0.74,
+      "p95_seconds_nearest_rank": 1.67,
+      "warm_run_p95_seconds_nearest_rank": 0.75,
+      "cold_start_included": true
+    },
+    "baseline_tree_1": {
+      "tests_passed": 76,
+      "tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+      "entry_count": 463,
+      "regular_entries": 418,
+      "symlink_entries": 45
+    },
+    "baseline_tree_2": {
+      "tests_passed": 76,
+      "tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+      "entry_count": 463,
+      "regular_entries": 418,
+      "symlink_entries": 45
+    },
+    "candidate": {
+      "tests_passed": 76,
+      "tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+      "entry_count": 463
+    },
+    "rollback_revert": {
+      "tests_passed": 76,
+      "tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+      "entry_count": 463
+    },
+    "rollback_restored_candidate": {
+      "tests_passed": 76,
+      "tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+      "entry_count": 463
+    }
+  },
+  "GoldenSnapshot": {
+    "baseline_tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+    "entry_count": 463,
+    "regular_entries": 418,
+    "symlink_entries": 45,
+    "baseline_stable": true,
+    "candidate_equal": true,
+    "rollback_equal": true,
+    "restored_candidate_equal": true,
+    "binary_diff_empty": true,
+    "verdict": "PASS"
+  },
+  "DifferentialResult": {
+    "artifact_tree_changed": false,
+    "path_or_order_changed": false,
+    "payload_semantics_changed": false,
+    "cli_visible_semantics_changed": false,
+    "writer_or_serialization_changed": false,
+    "unapproved_differences": [],
+    "verdict": "PASS"
+  },
+  "tests": {
+    "mutation_red": "PASS: reversed unique output failed at first != second",
+    "restored_green": "76 passed",
+    "frontend_broad_slice": "67 passed, 208 deselected in 5.59s",
+    "rules_and_exact_solution_confirm": "11 passed in 0.71s",
+    "frontend_cli_program_total": "78 passed",
+    "baseline_full": "3220 passed, 3 skipped in 534.72s",
+    "candidate_full": "3220 passed, 3 skipped in 512.20s",
+    "ruff": "PASS",
+    "git_diff_check": "PASS"
+  },
+  "reduction_contract": {
+    "definitions_before": 12,
+    "definitions_after": 1,
+    "call_sites_after": 13,
+    "module_import_fan_in_after": 12,
+    "algorithm_nonempty_loc_before": 108,
+    "algorithm_nonempty_loc_after": 8,
+    "aggregate_complexity_before": 36,
+    "aggregate_complexity_after": 3,
+    "aggregate_syntactic_fan_out_before": 36,
+    "aggregate_syntactic_fan_out_after": 3,
+    "baseline_body_sha256": "fc689b7af4ea63842b5f23af0e85b3e1d71d9255606baabb679fded9b83be9b4",
+    "candidate_body_sha256": "aec166ee2bb024d3307e2501c63d2b38373207d4e8e355bc73861a2814678c91",
+    "product_raw_additions": 23,
+    "product_raw_deletions": 132,
+    "product_raw_net": -109,
+    "order_test_raw_additions": 2,
+    "root_truth_raw_replacements": {"additions": 2, "deletions": 2},
+    "rc06_source_additions": 27,
+    "verdict": "PASS"
+  },
+  "governance": {
+    "program_validate": "PASS",
+    "verify_constraints": "no BLOCKERs",
+    "program_truth_pre_final_audit": {
+      "state": "ready",
+      "snapshot_state": "fresh",
+      "snapshot_hash": "8a187466ba84d2a89d03faaf810a84c43b34ea8d855b5fc4fb9ccb283af3f5f3",
+      "inventory": "1081/1081",
+      "unmapped": 0,
+      "missing": 0,
+      "blocking_refs": 0
+    },
+    "formal_hashes_unchanged": {
+      "spec": "e90ca209bf567a0d019163d9d0d49f26d74fc4f88d3950f09c9d90a046e751d1",
+      "plan": "a04f18a627d9661b0582fa73c9079b25ef713fcf72de7db196197617dbf02eef",
+      "tasks": "9ec861f4410a17c16de289bde9054778e73d0c75d6d32b16a7bbfc78c4ab1ed7"
+    }
+  },
+  "rollback": {
+    "disposable_clone": "/tmp/ai-sdlc-wi205-rollback",
+    "main_worktree_reset_or_checkout_used": false,
+    "revert_tests_green": true,
+    "revert_tree_equal_baseline": true,
+    "reapply_tests_green": true,
+    "reapply_tree_equal_baseline": true,
+    "verdict": "PASS"
+  },
+  "verdict": "PASS"
+}

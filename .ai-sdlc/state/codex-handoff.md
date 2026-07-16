@@ -1,36 +1,35 @@
 # Continuity Handoff
 
-- Updated: 2026-07-16T05:32:34+00:00
-- Reason: Final local verification completed
-- Goal: Merge WI-205 formal PR #133, then execute isolated TDD implementation
-- State: Round 10 formal is frozen with dual same-hash PASS. Final Program Truth snapshot 8a187466 is ready/fresh at 1081/1081; local full suite passed 3220 with 3 skips. No product implementation started.
-- Stage: close
+- Updated: 2026-07-16T06:35:16+00:00
+- Reason: T61A/T61B implementation and rollback checkpoint
+- Goal: Implement and verify WI-205 on its isolated development branch
+- State: Candidate implementation commit 7b96f969 reduces 12 duplicate helpers to one. T61A mutation RED/GREEN, 76 artifact tests, 78 CLI/Program tests, raw-tree identity, and disposable revert/reapply rehearsal all pass.
+- Stage: execute
 - Work Item: 205-frontend-artifact-path-dedupe
-- Branch: feature/205-frontend-artifact-path-dedupe-docs
+- Branch: feature/205-frontend-artifact-path-dedupe-dev
 
 ## Changed Files
 - M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/205-frontend-artifact-path-dedupe/codex-handoff.md
-- M program-manifest.yaml
-- M specs/205-frontend-artifact-path-dedupe/development-summary.md
-- M specs/205-frontend-artifact-path-dedupe/plan.md
-- M specs/205-frontend-artifact-path-dedupe/spec.md
-- M specs/205-frontend-artifact-path-dedupe/task-execution-log.md
-- M specs/205-frontend-artifact-path-dedupe/tasks.md
-- M tests/integration/test_repo_program_manifest.py
+- Candidate commit 7b96f969 contains the 14-file product/test reduction.
 
 ## Key Decisions
 - Keep formal and implementation as separate atomic branches/PRs. Frozen candidate remains 8-LOC positive-membership helper with RC-06 23+2+2=27.
 
 ## Commands / Tests
-- uv run pytest -q: 3220 passed, 3 skipped in 554.63s; Ruff PASS; program validate PASS; constraints no BLOCKERs; truth audit fresh/ready; diff-check clean.
+- Baseline full suite: 3220 passed, 3 skipped in 534.72s.
+- T61A: five 76-test samples pass; mutation reverses first-occurrence order and fails the strengthened assertion; restored suite passes.
+- Reduction ledger: definitions 12→1, calls 13, imports 12, algorithm LOC 108→8, complexity/fan-out 36→3, candidate digest aec166ee.
+- T61B: candidate tree equals baseline a9b62108 with 463 entries; broad frontend 67 plus CLI/Program 11 equals 78 passed.
+- Rollback: candidate 7b96f969, revert 091f5d54, restored c1db361b all pass 76 tests and produce the same tree.
 
 ## Blockers / Risks
-- Remote PR #133 still points to old b9218498 and old failed checks until the reviewed follow-up commit is pushed.
+- PowerShell startup is unavailable locally because of the host .NET assembly mismatch; local evidence uses zsh while preserving the frozen protocol semantics. Cross-platform PowerShell remains covered by CI.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Audit staged allowlist, commit and push the formal correction, re-request Codex review, heartbeat all required checks, merge when clean, then create a fresh implementation worktree from main.
+- Run candidate full pytest, Ruff, constraints, Program validate/truth, and diff-check.
+- Generate the scoped T61 differential/rollback receipt and update execution evidence.
+- Send the exact final tree/diff hashes to both adversarial agents and iterate until both PASS.
