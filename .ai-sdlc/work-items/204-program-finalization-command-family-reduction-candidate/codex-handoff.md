@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-16T01:31:41+00:00
-- Reason: Record the close-check receipt correction before regenerating the terminal snapshot
+- Updated: 2026-07-16T01:38:00+00:00
+- Reason: Record exact close-check success and loader-canonical continuity semantics before adversarial review
 - Goal: Resolve Program Truth merge-topology self-staleness while preserving the WI-204 RC-09 No-Go
-- State: Implementation payload 6d4a7965ed179aca2247f1f5a9312bce269f7f68 plus the terminal receipt define the root-cause repair and required close markers; the v2 snapshot is generated only from their clean head, and final acceptance is read-only on fresh main
+- State: The immutable repair and terminal receipt are complete; v2 Program Truth and all 13 close checks are ready, while ResumePack retains the closed WI canonical branch and the handoff records the unassociated terminal branch
 - Stage: close
 - Work Item: 204-program-finalization-command-family-reduction-candidate
 - Branch: codex/program-truth-merge-stability
@@ -23,17 +23,17 @@
 ## Key Decisions
 - Normalize only branch_only_implemented and mainline_merged inside the snapshot source-hash projection
 - Keep raw truth-check API, capability gate, RC-09 revocation, claim=0, and all candidate handlers unchanged
-- The terminal receipt must include code-change constraints plus deleted/removed lifecycle markers; no checkpoint or runtime mutation
+- Accept loader-canonical ResumePack branch semantics; do not rewrite checkpoint or runtime for the unassociated terminal branch
 
 ## Commands / Tests
-- RED: 2 failed on projection and real Git branch-to-main topology; GREEN: targeted 2, ProgramService 406, Program CLI plus close-check 300, Ruff and constraints PASS
-- First exact close-check correctly rejected the receipt until constraints and deleted/removed lifecycle markers were explicit
+- Exact feature head: Program Truth ready/fresh v2; close-check 13/13 PASS; constraints and Ruff PASS
+- Full exact code tree: 3220 passed, 3 skipped; ResumePack rebuild diagnosis changed only the two packs and preserved close/batch0/empty task
 
 ## Blockers / Risks
-- Risk control: regenerate the v2 snapshot from the corrected clean receipt head and prove feature, projected-main, and real main freshness
+- Risk control: projected-main and real fresh-main acceptance must remain read-only and must not trigger another continuity write
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Terminal protocol: commit corrected receipt and continuity, regenerate the v2 snapshot from that clean head, run exact-head dual review and CI, then perform read-only fresh-main acceptance without another continuity write
+- Terminal protocol: verify state no-op and projected-main freshness, obtain exact-head dual review and CI, merge, then perform read-only fresh-main acceptance

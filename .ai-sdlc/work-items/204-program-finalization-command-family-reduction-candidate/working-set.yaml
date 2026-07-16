@@ -17,10 +17,8 @@ active_files:
   - tests/unit/test_program_service.py
 context_summary: >-
   Goal: Resolve Program Truth merge-topology self-staleness while preserving the
-  WI-204 RC-09 No-Go. State: Implementation payload
-  6d4a7965ed179aca2247f1f5a9312bce269f7f68 plus the terminal receipt define the
-  root-cause repair and required close markers; the v2 snapshot is generated only
-  from their clean head, and final acceptance is read-only on fresh main. Next:
-  Terminal protocol: commit corrected receipt and continuity, regenerate the v2
-  snapshot from that clean head, run exact-head dual review and CI, then perform
-  read-only fresh-main acceptance without another continuity write.
+  WI-204 RC-09 No-Go | State: The immutable repair and terminal receipt are complete;
+  v2 Program Truth and all 13 close checks are ready, while ResumePack retains the
+  closed WI canonical branch and the handoff records the unassociated terminal branch
+  | Next: Terminal protocol: verify state no-op and projected-main freshness, obtain
+  exact-head dual review and CI, merge, then perform read-only fresh-main acceptance
