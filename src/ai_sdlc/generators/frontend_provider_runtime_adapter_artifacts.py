@@ -7,6 +7,7 @@ from pathlib import Path
 
 import yaml
 
+from ai_sdlc.generators._artifact_paths import _dedupe_paths
 from ai_sdlc.models.frontend_provider_runtime_adapter import (
     AdapterScaffoldContract,
     FrontendProviderRuntimeAdapterSet,
@@ -38,17 +39,6 @@ def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:
         seen.add(key)
         deduped.append(dict(value))
     return deduped
-
-
-def _dedupe_paths(paths: list[Path]) -> list[Path]:
-    unique: list[Path] = []
-    seen: set[Path] = set()
-    for path in paths:
-        if path in seen:
-            continue
-        seen.add(path)
-        unique.append(path)
-    return unique
 
 
 def frontend_provider_runtime_adapter_root(root: Path) -> Path:
