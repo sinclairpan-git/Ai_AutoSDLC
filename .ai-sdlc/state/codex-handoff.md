@@ -1,40 +1,39 @@
 # Continuity Handoff
 
-- Updated: 2026-07-16T00:08:02+00:00
-- Reason: Correct stale post-C continuity instructions and full closeout inventory before push
-- Goal: Close WI-204 as an auditable RC-09 No-Go with zero candidate product code
-- State: A 121c8625 carries closeout truth; B 5b6e9ae4 carries the immutable receipt and fresh Program Truth snapshot; current HEAD carries the final continuity envelope; exact-head dual review is pending
+- Updated: 2026-07-16T01:20:14+00:00
+- Reason: Record the post-close Program Truth root-cause repair and terminal non-recursive verification protocol
+- Goal: Resolve Program Truth merge-topology self-staleness while preserving the WI-204 RC-09 No-Go
+- State: Implementation payload 6d4a7965ed179aca2247f1f5a9312bce269f7f68 is the immutable root-cause repair; the terminal snapshot follows only after receipt sources are fixed, and final acceptance is a read-only fresh-main check
 - Stage: close
 - Work Item: 204-program-finalization-command-family-reduction-candidate
-- Branch: codex/program-finalization-closeout
+- Branch: codex/program-truth-merge-stability
 
 ## Changed Files
-- M .ai-sdlc/state/checkpoint.yml
 - M .ai-sdlc/state/codex-handoff.md
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
 - M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/resume-pack.yaml
-- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/runtime.yaml
-- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/sponsor-revocation.yaml
 - M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml
+- M docs/framework-defect-backlog.zh-CN.md
 - M program-manifest.yaml
-- M specs/204-program-finalization-command-family-reduction-candidate/development-summary.md
 - M specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
-- M specs/204-program-finalization-command-family-reduction-candidate/tasks.md
+- M src/ai_sdlc/core/program_service.py
+- M tests/unit/test_program_service.py
 
 ## Key Decisions
-- Keep the continuity envelope limited to root/scoped handoff, root/scoped ResumePack, and scoped working-set
-- Do not change log, manifest, checkpoint, runtime, formal artifacts, product code, tests, activation receipt, or revocation evidence
+- Normalize only branch_only_implemented and mainline_merged inside the snapshot source-hash projection
+- Keep raw truth-check API, capability gate, RC-09 revocation, claim=0, and all candidate handlers unchanged
+- Use exactly ten PR paths; do not modify checkpoint, runtime, frozen spec, plan, tasks, or development summary
 
 ## Commands / Tests
-- Latest exact-tree verification: core close-check 13 PASS; constraints 0/0; Truth ready/fresh 1076/1076; state no-op and hash-stable
-- tests/unit/test_close_check.py: 71 passed in 14.58s; no further tests are required for state-only continuity correction
+- RED: 2 failed on projection and real Git branch-to-main topology
+- GREEN: targeted 2 passed; ProgramService 406 passed; Program CLI plus close-check 300 passed; Ruff PASS
 
 ## Blockers / Risks
-- Exact-head dual PASS and closeout PR lifecycle are still pending
+- Risk control: generate the v2 snapshot from the clean receipt head and prove feature, projected-main, and real main freshness
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Obtain exact-head dual PASS, push the closeout PR, monitor Codex review and required checks, merge, and verify the final state on main
+- Terminal protocol: commit receipt and continuity, generate the v2 snapshot from that clean head, run exact-head dual review and CI, then perform read-only fresh-main acceptance without another continuity write
