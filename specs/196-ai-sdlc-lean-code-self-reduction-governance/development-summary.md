@@ -11,6 +11,10 @@
 - GAP-07～GAP-11 已分别由 WI-197～WI-201 合入并关闭；当前 truth inventory 为 complete，
   unmapped/missing 均为 0。
 - WI-203 / PR #126 已冻结减重候选和保护预算 sponsor；不等于候选实现或删除完成。
+- WI-205 / PR #134 / merge `aa156afe` 已关闭一个 T63 artifact path 重复族，产品净减少 109 行，
+  fresh-main 全量 `3220 passed, 3 skipped`；这不是 GAP-05 或路线整体关闭。
+- WI-206 已作为下一独立 T63 候选启动 formal：Round 1 审计后的目标是把18个models顶层string
+  helper从216 LOC收敛为一个12 LOC算法，预测产品净减少至少183行；实现尚未授权。
 
 ## 未完成边界
 

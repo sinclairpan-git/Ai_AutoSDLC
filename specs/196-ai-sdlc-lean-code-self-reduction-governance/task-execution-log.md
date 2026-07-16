@@ -499,3 +499,21 @@ fail-closed；对应 truth 债务再现时返回 T41/T22 并重开 GAP。新 for
 
 两者均未运行会写 adapter/ProgramService 的命令，未修改文件。`spec.md + plan.md + tasks.md`
 自此冻结；任一 target 文件变化会同时作废上述两个 PASS。
+
+## 21. Batch 2026-07-16-020：WI-205 mainline 关闭与 WI-206 启动
+
+- WI-205 / PR #134 / merge `aa156afe53534a10b1379348c532eb554ccf9ad3` 已完成
+  frontend artifact path duplicate family：12 个定义收敛为 1 个 private helper，产品净减少 109 行；
+  本地 PowerShell differential/rollback、双 Agent final PASS、Codex review、22 项 CI 与 fresh-main
+  `3220 passed, 3 skipped` 均通过。
+- 该结果关闭 WI-205 选定的 T63 重复族，但不关闭整个 T63、GAP-05、WI-196 或 RC-08；
+  `program_service.py` 与 `program_cmd.py` 仍远高于 400 行。
+- 下一原子项选择 WI-206 `206-model-string-dedupe`：Round 1 对抗审计将范围纠正为18个models
+  顶层helper（含 `state.py::_dedupe_string_items`），基线216 LOC / 100 calls；预测产品
+  新增≤33、删除≥216、净删≥183。
+- 选择理由：该 L1 候选的收益/风险和 RC-06 余量优于 L2 Page/UI baseline；Loop Store 当前
+  39 LOC 候选为 RC-06 No-Go；WI-203/204 Program Finalization candidate 保持 RC-09 No-Go、claim=0；
+  WP-02 仍缺新/替代 sponsor。
+- WI-206 formal branch=`feature/206-model-string-dedupe-docs`，worktree=
+  `.worktrees/206-model-string-dedupe`，基线=`origin/main@aa156afe`。只有 formal 同哈希双 PASS 并
+  合入 main 后，独立 implementation branch 才允许进入 T61A/TDD。
