@@ -1,0 +1,272 @@
+# 任务执行日志：Model String Dedupe Reduction
+
+**功能编号**：`206-model-string-dedupe`
+**创建日期**：2026-07-16
+**当前状态**：formal review candidate；未进入 execute
+
+## 1. 归档与安全规则
+
+- 每个批次记录 revision/tree、范围、命令、结果、RC/CC/GAP、回退和评审结论。
+- formal 内容变化使两个 Agent 的旧 verdict 同时失效；final source 另算 tree/diff hash。
+- mutation 与 rollback 只在可恢复 patch/disposable clone 中执行，不使用 destructive reset/checkout。
+- 产品、测试和日志按逻辑批次提交；日志不预写未知 commit hash。
+- continuity 在方向变化、代码批次、测试/调试后和交接前更新。
+
+## 2. Batch 2026-07-16-001：范围审计与候选选择
+
+### 2.1 父路线状态
+
+- WI-205 / PR #134 / merge `aa156afe53534a10b1379348c532eb554ccf9ad3` 已完成 artifact path
+  helper 减重和 fresh-main 验收，但 WI-196 的 WP-02～WP-07 与 RC-08 总体终态仍未关闭。
+- WI-203 的 9-command WP-07 formal 删除收益高；WI-204 已证明其安全保护最低 222/356 LOC，超过
+  cap 180，按 RC-09 No-Go，claim=0、legacy 保留，当前不得复活。
+- WI-202 T62A 仍缺新/替代 sponsor 与重新双审父合同；WP-02 暂不可启动。
+
+### 2.2 候选排序
+
+只读审计建议顺序：
+
+1. 17-module `_dedupe_strings` T63/WP-03：204→29 replacement slice、净删 175、L1；
+2. Page/UI baseline T65：此前条件 Go，但 L2、净删预测 72～82、保护 cap 18～20；
+3. Loop Store：完全一致切片仅 39 LOC，新增 helper 超 RC-06，当前 No-Go；
+4. ProgramService L3；
+5. Program Stage L3；WI-203 candidate 受 WI-204 No-Go 约束。
+
+因此本项只选择第 1 项，不混入 T65/WP-04/WP-06/WP-07。
+
+### 2.3 fresh-main 事实
+
+- 基线：`origin/main@aa156afe53534a10b1379348c532eb554ccf9ad3`。
+- 17 个 definition 的 AST body digest 全部为
+  `3a0faf9ac553d0701610620b2b17ee0dda2fa014442a3eebf0a0c6c11067042d`。
+- defs=17、calls=92、algorithm non-empty LOC=204、complexity proxy=68。
+- 17 产品文件=8,181 raw / 7,162 non-empty LOC。
+- 17 targeted test files=9,766 raw / 8,955 non-empty LOC。
+- PowerShell 7.5.8 执行 targeted：`236 passed, 2 skipped in 5.64s`。
+- fresh-main full acceptance 已记录：`3220 passed, 3 skipped`。
+
+## 3. Batch 2026-07-16-002：创建 WI-206 formal
+
+### 3.1 canonical scaffold
+
+- branch：`feature/206-model-string-dedupe-docs`
+- worktree：`.worktrees/206-model-string-dedupe`
+- 命令：`uv run ai-sdlc workitem init --wi-id 206-model-string-dedupe ...`
+- 结果：五件套、manifest mapping 与 project-state sequence 创建；未修改产品代码。
+
+### 3.2 冻结设计
+
+- 新增唯一 `src/ai_sdlc/models/_string_lists.py`，原样 12 LOC helper，不 public export。
+- 17 个模块各加一条 import、删除 12 LOC local body；92 个调用和 validator 不变。
+- 预测产品 +29/-204/net -175；算法 204→12，含 imports 204→29；complexity 68→4。
+- RC-06 cap=51；共享身份 test≤4 + root truth additions=2 后全部 source additions≤35，余量≥16。
+- 现有 program order test 承担 reverse mutation；不新增重复行为测试或 harness。
+
+### 3.3 下一步
+
+1. 完成五件套、root truth tuple、parent route index 与 continuity。
+2. 计算 `spec.md + plan.md + tasks.md` exact hashes。
+3. Pascal/Confucius 独立 review 同一 tuple；处置 findings 直至共同 PASS。
+4. 运行 formal gates，提交/PR/merge 后再建立 implementation branch。
+
+## 4. Batch 2026-07-16-003：root truth RED/GREEN 与 formal Round 1
+
+### 4.1 root inventory 精确红绿
+
+- RED：新增 WI-206 五件套后运行 root manifest 精确 nodeid，旧 expectation
+  `1081/1081/0/0` 在实际 `1086/1086/0/0` 上失败；`1 failed in 69.41s`。
+- 修订：只把两个既有 tuple 更新为 inventory `1086/1086/0/0`、close `206/206`。
+- GREEN：同一 nodeid `1 passed in 68.97s`；未新增 test function/file 或放宽其他断言。
+
+### 4.2 Program Truth 与 formal gates
+
+- `program truth sync --execute --yes`：snapshot hash
+  `eb9b25da65542b9f7d58611606ca103f9b8bb378fe5ce24c9e21650046cddccd`；state ready；
+  inventory 1086/1086、unmapped=0、missing=0，各 formal/close layer=206/206。
+- `program truth audit`：fresh + ready；两个 release capability closure=closed/audit=ready。
+- `program validate`：PASS；`verify constraints`：no BLOCKERs；`git diff --check`：PASS。
+- checkpoint 已绑定 `206-model-string-dedupe`；canonical/scoped handoff 已刷新。
+
+### 4.3 Round 1 formal review target
+
+| 文件 | SHA-256 |
+|---|---|
+| `spec.md` | `b733bfdba5bd49607fa8a5646bba568d7989b8e9ba28390d1786af04e2e996de` |
+| `plan.md` | `05b2553d329e278d52e34fb5b76e16cf2b0f85c14ffeadbab7fb8af97d15ef63` |
+| `tasks.md` | `ac3139e00986e561c192a13a6e43f886a9b7f8f17522c7d5895ed9f2472e8ed3` |
+
+固定顺序 path + NUL + 8-byte length + bytes combined SHA-256：
+`90c0895c92b33b15766a869fb9a3d88022888395eb1a6a29d79a0e272689c366`。
+
+Pascal 与 Confucius 已分别从精简效率、兼容安全维度启动只读评审；任何 target 内容变化使本轮
+verdict 失效。
+
+## 5. Batch 2026-07-16-004：Round 1 双 FAIL 与统一修订
+
+### 5.1 Pascal / 精简效率
+
+- `state.py::_dedupe_string_items` 与目标 body digest 完全一致且有8个调用；原17-module边界漏项，
+  正确基线为18 defs、100 calls、216 LOC、complexity72。
+- 定向测试漏 `test_frontend_contract_models.py` 和 state 直接覆盖；正确19-file fresh baseline为
+  `281 passed, 2 skipped in 1.65s`，10,537 raw / 9,646 non-empty LOC。
+- 每模块重复保存同一 corpus 属于证据臃肿；应按 distinct body digest 保存一份，再用 binding matrix关联。
+- verdict=`FAIL`；起止 formal hashes 一致，无文件修改。
+
+### 5.2 Confucius / 兼容安全
+
+- 原定向清单未覆盖 `frontend_contracts` 的 ValidationError/dedupe tests。
+- 9-case corpus漏 bare string、iter/next部分失败、str/hash/equality可达异常与事件顺序。
+- body-only digest不能证明参数名、annotation、defaults、decorators与runtime signature。
+- rollback承诺与计划不一致，且没有 exact tree identity。
+- verdict=`FAIL`；Program Truth fresh/ready、root nodeid PASS、起止formal hashes一致，无文件修改。
+
+### 5.3 Round 2 统一处置
+
+- 纳入 `state.py`，但显式排除带decorator/classmethod/`cls`参数的dispatcher class validator；后者需要
+  wrapper或decorator rebinding，不属于本顶层helper原子项。
+- 新helper保留future annotations；产品预算修订为 +≤33/-≥216/net≤-183，RC-06 source≤39/54。
+- 19-file module→test mapping显式落plan，fresh baseline `281 passed, 2 skipped`。
+- corpus改为每distinct digest一份，增加bare string与iter/next/str/hash/eq event trace；18-module binding表
+  证明适用范围。
+- 结构gate增加full FunctionDef、signature contract、inspect/annotations/default/doc/private consumer。
+- rollback收窄为exact baseline/candidate tree OID + targeted/corpus；full只在baseline/candidate各跑一次。
+
+Round 1 hashes自内容修订后全部失效；必须计算Round 2新target并由双方从零复审。
+
+### 5.4 Round 2 formal review target
+
+修订后 Program Truth sync/audit：snapshot
+`45c6947bcaf9054923a1f20d158901f55d4b7d07fb2fb9cd42f77930e3299834`，fresh/ready，
+inventory 1086/1086、unmapped=0、missing=0；validate PASS、constraints no BLOCKER、diff check PASS。
+
+| 文件 | SHA-256 |
+|---|---|
+| `spec.md` | `0733bd67ad3d0c140056e77a56bc9307dd9dc1173e21882a7d9d64a7a83a4365` |
+| `plan.md` | `b65484542d489eadae8d8424d772c745473cd72313c3d0a03b764da83c0f0e42` |
+| `tasks.md` | `e1e5e1ed0bb06284ea7888d7d6412409d4ee1c8442a82806707d333ef90b703d` |
+
+固定顺序 combined SHA-256：
+`77d3234839a9776b1f274272fffbb87258b6b715c264648d0cee2b0806efa88a`。
+Round 2 只接受双方在结束前重新复算并确认上述 target 未漂移后的 verdict。
+
+## 6. Batch 2026-07-16-005：Round 2 分歧与 Round 3 收敛
+
+### 6.1 Round 2 verdict
+
+- Pascal / 精简效率：`PASS`，未发现可操作问题；起止 hashes 一致，未修改文件。
+- Confucius / 兼容安全：`FAIL`，剩余两项次要但可操作问题：
+  1. introspection allowlist 未显式批准共享函数必然改变的 `__globals__`、`__code__` identity、
+     `co_filename`、`co_firstlineno`、source file 与 traceback frame；
+  2. `tasks.md` 的“四件套”与实际五个 formal 文件不一致。
+- Round 2 target 因处置上述 findings 后失效，不沿用 Pascal 的旧 `PASS`。
+
+### 6.2 Round 3 统一处置
+
+- introspection contract 改为有限枚举 allowlist：显式记录允许变化的 `__module__`、`__globals__`、
+  `__code__` identity/source location 与 traceback frame；保留 signature、annotations、defaults、
+  kwdefaults、doc、argcount、kwonlyargcount、调用结果和 public behavior。
+- 保留 `state.py` 本地 alias 名 `_dedupe_string_items`；共享 callable 的 `__name__` / `__qualname__`
+  统一为 `_dedupe_strings`，并明确 formal 不承诺未枚举的所有 Python introspection observable。
+- formal 文件数量统一为五件套；T12/T14 的 verdict 与完成状态只写 execution log，避免任务正文自证。
+
+### 6.3 Round 3 formal review target
+
+Program Truth sync/audit：snapshot
+`991bdf0c718b657912cc83044aa7c7a3f970a85e90f5c2470275f403d0572a2c`，fresh/ready，
+inventory 1086/1086、unmapped=0、missing=0；validate PASS、constraints no BLOCKER、diff check PASS。
+
+| 文件 | SHA-256 |
+|---|---|
+| `spec.md` | `523fbe634a0dfbfedb38352d8157ab8b3921b8d24d8fad1850204231804d15d5` |
+| `plan.md` | `363b1b2c137634f537baf39481df745866597f57ff00c6cd315d40d3d17fae3e` |
+| `tasks.md` | `e07d0b59aeda795b41393a6e58a1e0e354409b4600e9f079d1cbe692b3111401` |
+
+固定顺序 combined SHA-256：
+`3d6defd4f39b50c378d40ec6118f42109076f2fb1a45221f060a4ff74666c959`。
+Round 3 必须由双方从零复审同一 target，且只在结束前 hashes 仍一致时接受 verdict。
+
+## 7. Batch 2026-07-16-006：Round 3 双 FAIL 与轮次解耦
+
+### 7.1 Round 3 verdict
+
+- Pascal / 精简效率：`FAIL`。`plan.md` 实施顺序仍写已作废的“Round 2 formal 同哈希双 PASS”，
+  可能使执行者错误接受旧 verdict；其余范围、预算、证据和回退未发现可操作问题。
+- Confucius / 兼容安全：旧 target 已被通知作废，仍独立确认同一轮次引用问题；另发现
+  `spec.md` 把 100 个调用表达式误称为 100 个 validator 调用。AST 实际为 99 个
+  `field_validator` 内调用，加 `state.py::_dedupe_dict_string_lists` 中 1 个普通 helper 调用。
+- 双方均保持只读；Round 3 target 内容修订后全部 verdict 失效。
+
+### 7.2 Round 4 统一处置
+
+- 实施门禁改为“当前 formal target 同哈希双 PASS”，不再把执行语义绑定到可能继续增长的评审轮次。
+- US-1 改为“100 个现有调用表达式”，与 AST、其他 formal 位置和 binding ledger 一致。
+- 重新计算 Round 4 exact hashes 后，双方必须再次从零复审。
+
+### 7.3 Round 4 formal review target
+
+| 文件 | SHA-256 |
+|---|---|
+| `spec.md` | `d3a72359b3913e5c28964c021646b1be5e9e56b3c6faf2f6537088d2a90963eb` |
+| `plan.md` | `85d8a38a02bbf9d12e92ce6553ddf9fe75f8cb9c9e365e97320be1f4c14370f0` |
+| `tasks.md` | `e07d0b59aeda795b41393a6e58a1e0e354409b4600e9f079d1cbe692b3111401` |
+
+固定顺序 repo-relative path + NUL + 8-byte big-endian length + bytes combined SHA-256：
+`fb0fbb4d9d5ef4ae3c7beeb299136884fe41327752dd01f9ae368ce655a94bbd`。
+
+### 7.4 Round 4 双 PASS
+
+- Pascal / 精简效率：`PASS`；无 Critical、Important 或其他可操作 finding。
+- Confucius / 兼容安全：`PASS`；无可操作 finding。
+- 双方均在开始与结束独立复算并确认 spec/plan/tasks/combined 等于 §7.3 target，且均未修改文件。
+- 共同确认：18 defs / 100 调用表达式（99 validator + 1 ordinary helper）/ 216 LOC / complexity72；
+  product `+≤33/-≥216/net≤-183`；source additions `39≤54`；19-file `281 passed, 2 skipped`；
+  state alias、dispatcher 排除、event corpus、introspection allowlist、mutation、rollback/full/fresh-main
+  顺序均闭合。
+- `program-manifest.yaml` 的 WI-206 `depends_on` 已与 formal 父项声明对齐到
+  `196-ai-sdlc-lean-code-self-reduction-governance`；未改变 formal target。
+
+T14 完成；下一步进入 T15 formal 最终验证、提交、PR 和 mainline receipt。
+
+## 8. Batch 2026-07-16-007：T15 formal 最终本地门禁
+
+- Round 4 target 结束复算仍为 §7.3 的三个单文件 hashes 与 combined `fb0fbb4d...94bbd`。
+- 19-file targeted：`281 passed, 2 skipped in 1.85s`。
+- root Program Truth exact nodeid：`1 passed in 72.33s`。
+- `program truth sync --execute --yes`、`program truth audit`：ready/fresh，inventory 1086/1086，
+  unmapped=0、missing=0、close 206/206；canonical snapshot 以最终 `program-manifest.yaml` 为准。
+- `program validate`：PASS；`verify constraints`：no BLOCKERs；`git diff --check`：PASS。
+- formal worktree 无 `src/` 产品代码变化；仅 WI-206 formal/continuity、父路线记录、truth manifest 与
+  root inventory 精确 expectation 在提交范围内。
+
+本地 T15 门禁通过；待 commit/push/PR、Codex review、required checks、merge 与 fresh-main receipt。
+
+## 9. Batch 2026-07-16-008：暂存门禁揭示格式漂移与 Round 5
+
+- 首次 `git diff --cached --check` 揭示新 formal Markdown 沿用脚手架行尾双空格，命中
+  `trailing whitespace`；此前未暂存检查未能证明最终 index，§8 的 diff-check 结论因此撤回。
+- 该问题不改变需求语义，但违反 T15 的可提交性门禁；Round 4 target 不能作为最终 receipt。
+- 机械删除 WI-206 五件套所有行尾空白，不修改词句、结构、预算、命令或验收语义。
+- Round 5 target：
+
+| 文件 | SHA-256 |
+|---|---|
+| `spec.md` | `ac0a7137ff6da59ed3a98ba7668f3152e1c49fd3e3cec92887e71811d31d16b3` |
+| `plan.md` | `788626860e3ac811c9a8b0344892d8adca463cbe60e297c493d6e310dab7f766` |
+| `tasks.md` | `55feaf160227b60cdbbddcebc4d07ae7af233667a10e5cd995e63dab81acb345` |
+
+固定顺序 combined：`85ccdca44eccec5faca7baedb98233401059188f6b4bf7b5460a5e21da18c45f`。
+双方必须针对 Round 5 从零复审，旧 PASS 不沿用；最终门禁必须同时检查 working tree 与 staged index。
+
+## 10. Batch 2026-07-16-009：Round 5 双 PASS 与 formal admission
+
+- Pascal / 精简效率：`PASS`；Critical、Important、Other actionable 均无。
+- Confucius / 兼容安全：`PASS`；无可操作 finding。
+- 双方开始/结束均复算并确认 §9 三个单文件 hashes 与 combined 完全一致，评审全程只读。
+- 双方逐行确认 Round 4→Round 5 仅删除行尾空白，未改变合同文字、数字、范围、顺序或验收条件；
+  `git diff --check` 与 `git diff --cached --check` 均 exit 0。
+- 共同复核仍为：18 defs、100 calls（99 validator + 1 ordinary helper）、216 LOC、complexity72，
+  product `+≤33/-≥216/net≤-183`，source additions `39≤54`，19-file `281 passed, 2 skipped`，
+  root truth `1 passed`，Program Truth fresh/ready 1086/1086，constraints 无 BLOCKER，无 `src/` 变化。
+
+Round 5 是当前唯一有效 formal receipt；T14 完成。T15 只剩 commit/push/PR、Codex review、required
+checks、merge 与 fresh-main acceptance。
