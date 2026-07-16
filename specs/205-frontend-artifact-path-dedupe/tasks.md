@@ -22,10 +22,19 @@
   fan-in distribution；14 dedupe tests=280/239；targeted=76、median=.73s/p95=.74s；CLI/Program=78；
   固定 13 产品文件 raw ledger、两行顺序断言、Golden/truth/CC/GAP/RC 均有精确口径；无占位。
 
+### T14 刷新 root inventory truth expectation
+
+- **状态**：已完成，待同哈希双审
+- **依赖**：T12
+- **验收**：WI-205 五件套使 inventory 1076→1081、close layer 204→205；只把
+  `test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence` 的既有 expected tuple
+  更新为 1081/1081/0/0 与 205/205；该 test 从两个 sequential exact RED 恢复 GREEN，无新
+  test/function/file。
+
 ### T13 formal 双 Agent 对抗评审
 
 - **状态**：待执行
-- **依赖**：T12
+- **依赖**：T14
 - **验收**：Pascal/精简直接性与 Confucius/兼容证明性对同一
   `spec.md + plan.md + tasks.md` hash 都为 PASS；findings 全部处置；内容变化后重审。
 
@@ -56,7 +65,7 @@
 - **状态**：待执行
 - **依赖**：T22
 - **验收**：只用 `apply_patch` 恢复临时产品 mutation；被强化 test 与 76-test targeted 重新通过；
-  产品工作树等于基线，测试 diff 只有冻结的两行断言；
+  产品工作树等于基线，测试 diff 精确为 order `+2/0` 与已冻结的 root truth `+2/-2`；
   RED/GREEN 输出写入 execution log。
 
 ## Batch 3：最小产品减重
@@ -66,8 +75,8 @@
 - **状态**：待执行
 - **依赖**：T23
 - **文件**：`src/ai_sdlc/generators/_artifact_paths.py`
-- **验收**：仅保留现有 9 LOC 算法；无 public export、选项、类型转换、路径规范化、读盘或
-  错误包装；函数 <50 LOC、文件 <400 LOC。
+- **验收**：保留 typed `Path` 合同并把反向 continue 等价简化为 8 LOC 正向 membership 算法；
+  无 public export、选项、类型转换、路径规范化、读盘或错误包装；函数 <50 LOC、文件 <400 LOC。
 
 ### T32 删除 12 个本地 body 并复用 helper
 
@@ -75,15 +84,17 @@
 - **依赖**：T31
 - **文件**：spec §1 的 12 个 artifact module
 - **验收**：各 module 只增加一条 import 并删除 local body；调用名不变；实现数 12→1，
-  call sites=13；除冻结的两行断言外，无其他测试、payload 或代码变更。
+  call sites=13；除冻结的 order `+2/0` 与 root truth `+2/-2` 外，无其他测试、payload 或代码变更。
 
 ### T33 复算 Reduction Contract
 
 - **状态**：待执行
 - **依赖**：T32
-- **验收**：Appendix A 输出 defs 12→1、calls=13、AST 108→9、complexity/fan-out 36→3、
-  digest 不变；candidate commit 的 raw ledger 显示产品 additions≤24、deletions≥108、net≤-84，
-  test additions=2/deletions=0，source additions≤26≤27；13 产品 changed-file set 精确、新增产品文件=1、
+- **验收**：Appendix A 输出 defs 12→1、calls=13、AST 108→8、complexity/fan-out 36→3，
+  baseline/candidate digest 分别为 `fc689b7a...be9b4`/`aec166ee...8c91`；candidate commit 的 raw ledger
+  显示产品 additions≤23、deletions≥108、net≤-85，order test additions=2/deletions=0、
+  inventory/close replacements additions=2/deletions=2，纳入 RC-06 的 product/test source
+  additions≤27；formal/truth/continuity 文档不计入该代码预算；13 产品 changed-file set 精确、新增产品文件=1、
   无新 test function/file/harness/fixture/normalizer source、公共抽象=0。任一不满足即 RC-09 No-Go。
 
 ## Batch 4：T61B differential、回退与全量验收
@@ -148,7 +159,7 @@
 |---|---|
 | FR-01～FR-04 | T21～T23、T31～T32、T41 |
 | FR-05～FR-06 | T21～T23、T33、T41～T43 |
-| FR-07 | T31～T33、T43 |
+| FR-07 | T14、T31～T33、T43 |
 | FR-08 | T13、T51 |
 | FR-09 | T52～T53 |
 | SC-01～SC-02 | T32～T33 |
@@ -156,4 +167,4 @@
 | SC-06 | T13、T51 |
 | SC-07 | T53 |
 | CC-03/05/06/07 | T21～T23、T41～T43 |
-| RC-01～07/09/10 | T12、T21～T23、T31～T43 |
+| RC-01～07/09/10 | T12、T14、T21～T23、T31～T43 |

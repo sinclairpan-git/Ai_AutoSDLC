@@ -371,3 +371,101 @@ Round 8 继续执行完整 anti-drift 双审；任一修改使 verdict 失效。
   metadata 行尾字节。
 - Round 8 tuple 成为最终 formal freeze；后续只允许更新 execution log、summary、truth/continuity，
   不再修改 `spec.md/plan.md/tasks.md`。
+
+## 10. Batch 2026-07-16-009：PR #133 CI truth failure 与 Round 9 重算
+
+### 10.1 CI failure 与顺序修复证据
+
+- formal branch 已以 commit `b92184982a3578da4e758bf02e6c68dd45c55e41` 推送并创建 PR #133。
+  `verify` 与 Windows pwsh/cmd smoke 通过；六个 Windows/macOS/Ubuntu × Python 3.11/3.12 full-suite
+  jobs 均只在同一个 root manifest nodeid 失败。macOS/Ubuntu 为 `1 failed, 3219 passed, 3 skipped`；
+  Windows 为 `1 failed, 3218 passed, 4 skipped`。
+- 唯一失败为
+  `tests/integration/test_repo_program_manifest.py::test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence`。
+  WI-205 五件套使 Program Truth inventory 从 1076/1076 增为 1081/1081、close layer 从 204/204
+  增为 205/205；既有 assertion 仍冻结旧值。
+- 本地先只替换 inventory tuple，测试精确 RED 于 close `204 != 205`；再替换 close tuple 后同一
+  nodeid 为 `1 passed in 66.97s`。两处均是既有 assertion line replacement，无新 test/function/file，
+  raw additions=2、deletions=2。
+
+### 10.2 RC-06 No-Go 与最小重新收敛
+
+- Pascal/Confucius 均确认 Git numstat 的 replacement additions 必须计入 RC-06，不能用两条 deletion
+  抵扣。Round 8 的 9 LOC helper 预测为 product 24 + order test 2 + inventory truth 2 = 28，超过
+  cap 27，因此旧 exact-body 方案为 No-Go。
+- 重新候选只把旧反向 `if path in seen: continue` 收敛为正向 `if path not in seen:`；membership、
+  `seen.add`、`unique.append` 的执行条件/顺序、hash/equality 调用与异常传播不变。candidate function
+  为 8 non-empty LOC；新 module 11 raw lines + 12 imports = product additions 23。
+- 独立 AST 复算 candidate body digest 为
+  `aec166ee2bb024d3307e2501c63d2b38373207d4e8e355bc73861a2814678c91`，complexity=3、
+  syntactic fan-out=3。最终冻结预算为 product 23 + order test 2 + inventory truth 2 = 27；
+  product deletions≥108、net≤-85。
+- Program Truth source inventory 只枚举 manifest spec 五层与 discovery/registry 文档，不枚举
+  `src/` Python 文件；因此后续新增 `_artifact_paths.py` 不会再改变 1081/205 assertion。本轮 formal
+  明确把 RC-06 限定为 handwritten product/test source，formal/truth/continuity 文档不冒充代码预算。
+- Round 8 的双 PASS 已因 formal 内容变化失效。Round 9 必须由 Pascal/Confucius 对新的同一完整
+  `spec.md + plan.md + tasks.md` tuple 从头评审并在结束复算无漂移后分别明确 PASS，才允许进入 T61A。
+
+### 10.3 Round 9 formal review target
+
+送审前门禁：root manifest 精确 nodeid `1 passed in 67.47s`；`program validate: PASS`；
+`verify constraints: no BLOCKERs`；`git diff --check` clean。固定顺序 SHA-256 tuple：
+
+- `spec.md`：`8f92edd344c80f49591581fe52b5af62c19e37f4b32492c21e3f5da2813fafd7`
+- `plan.md`：`c9713a59bbdf169ed2d9c892bb2bdc18a2c77153e7b80bbec417a45eb7238676`
+- `tasks.md`：`cb482c11ca7efbd6dcd3eeb56fb1072924fe647d2e9587915b29d9bd0183e3dc`
+
+Round 9 只接受两个 Agent 对上述同一 tuple 的完整只读评审；开始/结束 hash 必须一致。任何 formal
+修改使双方 verdict 同时失效并进入下一轮。
+
+### 10.4 Round 9 双 FAIL 与 finding 处置
+
+- Pascal / 精简直接性：`FAIL`；Confucius / 兼容证明性：`FAIL`。两者开始/结束均复算为 §10.3
+  完整 tuple，无文件漂移。
+- Pascal Important 1：`tasks.md` T23/T32 与 `plan.md` 开放问题仍把最终测试 diff 误写为只有两行，
+  会与已纳入 RC-06 的 root truth `+2/-2` 冲突；RC 追踪也漏列 T14。处置：全量区分 order `+2/0`
+  与 root truth `+2/-2`，追踪矩阵补 T14。
+- Pascal Important 2：验证矩阵写“原算法逐行等价”，但 candidate AST/digest 已变化。处置：改为
+  “正向分支可观察语义等价 + tests”。
+- Confucius Important：spec §1 省略 `ast.Module(..., type_ignores=[])` 与 `.encode()`，按文字复算得到
+  `c12c23a6...cdf48a` 而不是冻结的 baseline digest。处置：spec 改为与 Appendix A.1 完全一致的
+  `hashlib.sha256(...encode()).hexdigest()` serializer。
+- 其余复算无可操作问题：两者均确认 candidate 8 LOC/11 raw module、product additions 23、
+  `23+2+2=27`、正向 membership 非 line-golf。Confucius side-effect probe 覆盖 distinct/equal objects、
+  hash/equality/iterator failure、unhashable 与 mixed hashable non-Path，输出、调用序列和异常一致；
+  artifact 76、CLI broad 67、rules/exact 11 均通过，root manifest `1 passed in 66.43s`。
+
+### 10.5 Round 10 formal review target
+
+定向修订后 `git diff --check` clean。固定顺序 SHA-256 tuple：
+
+- `spec.md`：`e90ca209bf567a0d019163d9d0d49f26d74fc4f88d3950f09c9d90a046e751d1`
+- `plan.md`：`a04f18a627d9661b0582fa73c9079b25ef713fcf72de7db196197617dbf02eef`
+- `tasks.md`：`9ec861f4410a17c16de289bde9054778e73d0c75d6d32b16a7bbfc78c4ab1ed7`
+
+Round 10 仍需 Pascal/Confucius 对上述同一完整 tuple 从头复审、结束复算未漂移并分别明确 PASS。
+
+### 10.6 Round 10 同哈希双 PASS
+
+| agent | dimension | target tuple | findings | verdict |
+|---|---|---|---|---|
+| Pascal / `wi200_lean_design` | 精简、直接性、预算、原子性 | `e90ca209 / a04f18a6 / 9ec861f4` | 无 Critical/Important/其他可操作问题 | `PASS` |
+| Confucius / `wi200_proof_safety` | 兼容、证明、回退、truth、CI | `e90ca209 / a04f18a6 / 9ec861f4` | 无 Critical/Important/其他可操作问题 | `PASS` |
+
+- 两位 Agent 均在开始与结束复算 §10.5 三个完整 SHA-256，结果精确一致；只读评审未修改文件。
+- Pascal 独立确认 baseline 12 defs/108 LOC/13 calls、candidate 8 LOC、11 raw module、product additions
+  23 与 `23+2+2=27`，方案无 line-golf、隐藏 source 或过度实现。
+- Confucius 独立确认 exact serializer、side-effect/exception 轨迹、formal `+5 sources/+1 close` 与后续
+  product file 不进入 truth inventory 的边界、Golden/rollback 及六个跨平台 full-suite job 的职责。
+- Round 10 tuple 成为 formal freeze；后续只更新 summary/log/truth/continuity。若三份 formal 任一字节
+  变化，双 PASS 立即失效并必须重审。
+
+### 10.7 formal post-review Program Truth
+
+- `OPENAI_CODEX=1 uv run ai-sdlc program truth sync --execute --yes`：exit 0；snapshot state=`ready`；
+  snapshot hash=`0a9806010bcfee8d193f4370f18808afc8d96b6bfae2f04c3def40ef584959f5`；
+  inventory=`1081/1081`、unmapped=0、missing=0；spec/plan/tasks/execution/close 均为 `205/205`。
+- `uv run ai-sdlc program truth audit`：exit 0；state=`ready`、snapshot state=`fresh`；两个 release
+  capability closure=`closed`/audit=`ready`，zero blocking refs。
+- 本记录会改变 execution source hash，因此记录后必须再执行一次 sync/audit；只接受第二次 audit
+  的 fresh snapshot 作为提交前最终证据。
