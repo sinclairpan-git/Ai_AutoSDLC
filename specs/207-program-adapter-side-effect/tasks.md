@@ -3,7 +3,7 @@
 **编号**：`207-program-adapter-side-effect`
 **日期**：2026-07-16
 **来源**：`spec.md` + `plan.md`
-**风险**：L1 / GAP-12 基础副作用修复；不计 `completed_reduction`
+**风险**：L2 / GAP-12 基础副作用修复（影响 CC-05）；不计 `completed_reduction`
 
 ## Batch 1：诊断、分流与 formal baseline
 
@@ -62,28 +62,28 @@
 
 ### T22 Pascal 精简直接性评审
 
-- **状态**：已完成（Round 1 FAIL）
+- **状态**：以 execution log 最新 formal 同哈希终态回执为准；历史轮次仅保留在日志
 - **依赖**：T21
-- **验收**：只读复核同一 combined hash；确认一行产品边界、测试最小充分、GAP-13 未混入；记录
+- **验收**：只读复核同一 combined hash；确认四行窄边界、无分类器、测试最小充分、GAP-13 未混入；记录
   findings/disposition/verdict 与起止 HEAD/tree。
 
 ### T23 Confucius 兼容安全评审
 
-- **状态**：已完成（Round 1 FAIL）
+- **状态**：以 execution log 最新 formal 同哈希终态回执为准；历史轮次仅保留在日志
 - **依赖**：T21
 - **验收**：只读复核与 T22 完全相同的 combined hash；确认 execute、adapter、测试隔离、跨平台、
   rollback 与 fresh-main 合同；记录 findings/disposition/verdict 与起止 HEAD/tree。
 
 ### T24 修订直到同哈希双 PASS
 
-- **状态**：进行中
+- **状态**：以 execution log 最新 formal 同哈希终态回执为准；formal 文件不内嵌动态 verdict/hash
 - **依赖**：T22、T23
 - **验收**：任一 FAIL 都先修订、重跑 T14/T21、生成新 combined hash，再让双方从零复审；只有同一
   hash 双 PASS 才结束。用户不承担 formal 逐条评审。
 
 ### T25 Formal PR、Codex review、CI 与 merge
 
-- **状态**：待执行
+- **状态**：进行中；兼容修订 PR #140 已创建并进入 Codex review/required checks
 - **依赖**：T24
 - **验收**：单一 docs commit、push、PR、`@codex review`、heartbeat、required checks 全绿；actionable
   finding 修复后重新双审/重跑；formal PR 合入 main，fresh-main truth/constraints 通过。
@@ -92,45 +92,61 @@
 
 ### T31 创建独立 implementation branch/worktree
 
-- **状态**：待执行
+- **状态**：部分完成；独立 branch/worktree/PR #139 已创建，但 formal merge 后 rebase 尚未执行，T25
+  完成前不得视为 completed
 - **依赖**：T25
 - **验收**：`feature/207-program-adapter-side-effect-dev` 从 formal merge main 创建；formal worktree
   不承载源码；implementation baseline clean。
 
 ### T32 添加 program test autouse 隔离
 
-- **状态**：待执行
+- **状态**：部分完成；root binding 已隔离，需补 program-local binding
 - **依赖**：T31
 - **文件**：`tests/integration/test_cli_program.py`
-- **验收**：普通用例 patch root hook；`real_ide_hook` 明确豁免；不创建新 fixture 文件；测试本身不会写
-  implementation checkout。
+- **验收**：普通用例同时 patch root/program-local hook；naive/pre-import 阶段对 local binding 使用
+  `create=True`，候选阶段确认真实 import；`real_ide_hook` 明确豁免；不创建新 fixture 文件；测试本身
+  不会写 implementation checkout。
 
 ### T33 添加 real-hook byte-stability RED
 
-- **状态**：待执行
+- **状态**：已完成原始基线/naive bypass 两态证据
 - **依赖**：T32
 - **文件**：`tests/integration/test_cli_program.py`
 - **验收**：参数化覆盖 validate、truth audit、truth sync dry-run；临时 Cursor target 同时含 legacy `.md`
   与 `.mdc`；比较 adapter/config/manifest bytes；baseline 稳定失败于 adapter 写入/notice，而非 fixture。
 
-### T34 实施一行 bypass
+### T34 记录 naive bypass 兼容 RED
+
+- **状态**：已完成（PR #139 Codex P2，禁止合并）
+- **依赖**：T33
+- **文件**：`tests/integration/test_cli_program.py`
+- **验收**：无宿主信号 materialize Codex adapter 后设置 `OPENAI_CODEX=1`；naive bypass 下
+  managed-delivery dry-run 仍为 `materialized`、保留 host blocker；solution-confirm continue 未刷新。
+
+### T35 实施四行窄化 gating
 
 - **状态**：待执行
-- **依赖**：T33
-- **文件**：`src/ai_sdlc/cli/main.py`
-- **验收**：只增加 `"program"` tuple member；产品 additions≤1；不改 `ide_adapter.py`、不新增函数/
-  模块/API/config/dependency；T33 同一测试 GREEN。
+- **依赖**：T34、兼容 formal 双 PASS/mainline
+- **文件**：`src/ai_sdlc/cli/main.py`、`src/ai_sdlc/cli/program_cmd.py`
+- **验收**：保留 `"program"` tuple member；新增一个既有 hook import；managed-delivery-apply 在 root
+  resolution 后/request 前调用；solution-confirm 复用现有 early exits，在 yes/preflight/continue/ack
+  全通过且 solution 已持久化后、request 前单行调用。产品 additions≤4；不改 `ide_adapter.py`/
+  ProgramService，不新增函数/模块/API/config/dependency/分类器；只读与 ingress 两轴同时 GREEN。
 
 ## Batch 4：兼容、全量与 final tree
 
 ### T41 运行 focused 与 execute compatibility
 
 - **状态**：待执行
-- **依赖**：T34
+- **依赖**：T35
 - **命令**：
   `uv run pytest tests/integration/test_cli_program.py tests/integration/test_cli_ide_adapter.py tests/unit/test_cli_hooks.py -q`
 - **验收**：full program integration、adapter/hook tests 全绿；truth sync execute 和 managed execute 既有
-  用例通过；没有未批准 transcript/exit/artifact 差异。
+  用例通过；首次 managed ingress 从 materialized 升级为 verified_loaded；solution-confirm 完整授权路径
+  exactly once，missing yes/preflight blocked/no-continue/missing ack 均零调用/零 adapter 写入；无未批准差异。
+- **补充验收**：truth sync execute 与 solution execute/no-continue 无 hook/notice、adapter/config bytes
+  不变且业务 artifact 正常；direct managed execute missing yes 保留 adapter/request preflight、无
+  mutate/apply result；RuntimeError 停止 managed phase，config-lock 继续 warning-and-continue。
 
 ### T42 运行 full、Ruff 与治理门禁
 
@@ -143,18 +159,21 @@
   4. `uv run ai-sdlc program validate`
   5. `uv run ai-sdlc program truth audit`
   6. `git diff --check`
-- **验收**：全部通过；program 命令不改 Cursor；truth fresh/ready、zero blocker；工作树只含 allowlist。
+- **验收**：全部通过；三个只读 program 命令不改 Cursor；managed-delivery 两入口保留兼容刷新；truth
+  fresh/ready、zero blocker；工作树只含 allowlist。
 
 ### T43 生成差分与回退证据
 
 - **状态**：待执行
 - **依赖**：T42
-- **验收**：记录基线/候选命令 transcript、exit、受保护文件 digests；expected delta 仅为 adapter notice/
-  write 消失；`git revert` rehearsal 后基线行为恢复，reapply 后 candidate 行为恢复；不需 schema migration。
+- **验收**：记录原始基线/naive bypass/候选 transcript、exit、受保护 digests 与 ingress state；非两个
+  managed 刷新入口的全部 program 路径移除 root adapter notice/write；direct apply missing yes 的
+  adapter/request preflight 保持；solution-confirm notice/hook 后移，传播异常无 managed request/apply，
+  config-lock 软失败继续；`git revert` rehearsal 后原始行为恢复，reapply 后 candidate 恢复。
 
 ### T44 Final tree 双 Agent 复审
 
-- **状态**：待执行
+- **状态**：待执行；既有 verdict 已因 formal/implementation 变化作废
 - **依赖**：T43
 - **验收**：Pascal/Confucius 对同一 HEAD/tree/binary diff/name-status/formal hash/test evidence 均 PASS，
   无 actionable finding；评审后不再修改树，若修改则 verdict 作废。
@@ -163,7 +182,7 @@
 
 ### T51 Push、PR、Codex review 与 required checks
 
-- **状态**：待执行
+- **状态**：PR #139 draft；Codex P2 已接受，待 formal/实现修订、双审后重请求
 - **依赖**：T44
 - **验收**：单逻辑实现 commit、push、ready PR、`@codex review`、约五分钟 heartbeat；findings focused
   修复并重新验证/复审；required checks 全绿。
@@ -189,10 +208,10 @@
 |---|---|
 | GAP-12 / T55 | T11～T53 |
 | GAP-13 / T56 分流 | T11、T13、T53 |
-| NC-01～NC-06 | T11～T14、T21～T24、T34 |
+| NC-01～NC-06 | T11～T14、T21～T24、T34～T35 |
 | CC-01～CC-03 | T33～T43、T52 |
 | CC-05 / CC-06 | T32～T43、T52 |
 | CC-07 | T33、T41、T51、T52 |
-| FR-001～FR-010 | T14、T21～T53 |
+| FR-001～FR-012 | T14、T21～T53 |
 | SC-001～SC-008 | T21～T53 |
 | WI-196 FR-08 / FR-10 | T13、T21～T25、T44 |
