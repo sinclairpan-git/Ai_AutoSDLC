@@ -5,27 +5,34 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/206-model-string-dedupe/spec.md
-  plan_path: specs/206-model-string-dedupe/plan.md
-  tasks_path: specs/206-model-string-dedupe/tasks.md
+  spec_path: specs/207-program-adapter-side-effect/spec.md
+  plan_path: specs/207-program-adapter-side-effect/plan.md
+  tasks_path: specs/207-program-adapter-side-effect/tasks.md
   active_files:
-  - src/ai_sdlc/models/_string_lists.py
-  - tests/unit/test_program_models.py
-  - specs/206-model-string-dedupe/spec.md
-  - specs/206-model-string-dedupe/plan.md
-  - specs/206-model-string-dedupe/tasks.md
+  - specs/207-program-adapter-side-effect/spec.md
+  - specs/207-program-adapter-side-effect/plan.md
+  - specs/207-program-adapter-side-effect/tasks.md
+  - specs/207-program-adapter-side-effect/task-execution-log.md
+  - specs/207-program-adapter-side-effect/development-summary.md
+  - specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+  - specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+  - specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+  - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+  - specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
   - specs/206-model-string-dedupe/task-execution-log.md
   - specs/206-model-string-dedupe/development-summary.md
   - program-manifest.yaml
+  - tests/integration/test_repo_program_manifest.py
+  - .ai-sdlc/project/config/project-state.yaml
+  - .ai-sdlc/state/checkpoint.yml
   - .ai-sdlc/state/codex-handoff.md
-  - .ai-sdlc/work-items/206-model-string-dedupe/t61-differential-rollback-receipt.json
-  context_summary: 'State: Round 1 自引用已闭环；Round 2 Confucius PASS、Pascal FAIL 于 stale next
-    step，已修复。terminal sync/audit 后的 Round 3 目标只做同哈希双审。 | Next: 双 PASS 后不改树直接
-    push/PR；FAIL 才修订、sync、refreeze。'
-current_branch: feature/206-model-string-dedupe-dev
+  - .ai-sdlc/work-items/207-program-adapter-side-effect/codex-handoff.md
+  context_summary: 'State: WI207 Round 2 scope findings已闭环，terminal sync/Cursor恢复完成。 |
+    Next: 冻结Round 3六文件hash并从零双审；双PASS后不改formal target进入formal PR，FAIL才重新sync。'
+current_branch: feature/207-program-adapter-side-effect-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-16T14:15:54+00:00'
+timestamp: '2026-07-16T15:29:40+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-07-16T08:57:35+00:00'
-checkpoint_fingerprint: 3486bdcca321f8b4f933ca38966ba2b185332bce00b3c1b84536f222cae09f94
+checkpoint_last_updated: '2026-07-16T15:29:26+00:00'
+checkpoint_fingerprint: 88014388a14c101bfdd8173448c7e1422926d1cbcdf7af76809abfed8140dc0b

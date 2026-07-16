@@ -13,12 +13,18 @@
 - WI-203 / PR #126 已冻结减重候选和保护预算 sponsor；不等于候选实现或删除完成。
 - WI-205 / PR #134 / merge `aa156afe` 已关闭一个 T63 artifact path 重复族，产品净减少 109 行，
   fresh-main 全量 `3220 passed, 3 skipped`；这不是 GAP-05 或路线整体关闭。
-- WI-206 已作为下一独立 T63 候选启动 formal：Round 1 审计后的目标是把18个models顶层string
-  helper从216 LOC收敛为一个12 LOC算法，预测产品净减少至少183行；实现尚未授权。
+- WI-206 / PR #137 / merge `506e950d` 已把18个models顶层string helper收敛为一个private helper，
+  product `+37/-246/net -209`；fresh-main full `3220 passed, 3 skipped`，以
+  `completed_reduction` 关闭一个 T63 family。
+- WI-206 验收新发现两个独立基础 gap：WI-207/GAP-12 处理 program implicit adapter write 与测试
+  隔离；WI-208/GAP-13 处理 resume-pack portable/lossless canonical reconstruction。二者先后关闭后
+  再恢复新的减重候选。
 
 ## 未完成边界
 
 - GAP/WP 子项仍按独立 WI/branch/PR 推进；本 summary 不宣称整体减重完成。
 - WI-202 的首个 T62A 候选因完整 proof 明显超过 RC-06 预算，已按 RC-09 停止且未合入；
   GAP-01/T62A 仍 open，T62B/T62C 未开始，FR-08 双 reviewer fallback 继续有效。
+- GAP-12、GAP-13 是验证/连续性可靠性缺口，不计 RC-08 减重收益；WI-207 不得混入 continuity，
+  WI-208 不得混入 adapter dispatch。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
