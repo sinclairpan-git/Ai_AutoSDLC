@@ -25,8 +25,9 @@ active_files:
   - .ai-sdlc/state/codex-handoff.md
   - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
 context_summary: >-
-  Goal: close WI-204 through an auditable RC-09 disposition with zero candidate
-  product change. State: T61A was rejected; GAP-13 now fail-closes zero-task execution
-  and repairs checkpoint, runtime, and ResumePack crash-window pollution while
-  preserving legacy marker behavior. Next: prove the exact commit in a fresh clone,
-  obtain dual-agent and Codex review, pass CI, merge, then run final close-check.
+  Goal: close WI-204 through an auditable RC-09 No-Go disposition with zero candidate
+  product change. State: PR #130 is merged, sponsor revocation is effective, A carries
+  the truth payload, B carries the immutable receipt and Program Truth snapshot, and
+  current HEAD carries the final continuity envelope. Next: obtain exact-head dual
+  PASS, push the closeout PR, monitor Codex review and required checks, merge, and
+  verify the final state on main.

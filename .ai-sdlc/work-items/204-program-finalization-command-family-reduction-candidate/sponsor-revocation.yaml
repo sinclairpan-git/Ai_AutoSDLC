@@ -1,13 +1,18 @@
 schema_version: ai-sdlc.sponsor-disposition.v1
 work_item: 204-program-finalization-command-family-reduction-candidate
-disposition: revocation-pending-mainline
+disposition: revoked
 decision: RC-09-no-go
-mainline_disposition: pending
+mainline_disposition: effective
 reason_code: RC-09
 decided_at: "2026-07-15T17:38:35Z"
 
 mainline_effect:
-  condition: exact-revocation-content-commit-is-origin-main-ancestor
+  condition: immutable-pending-revocation-receipt-is-origin-main-ancestor
+  receipt_git_blob: 7c2b6947a0ad7be794e673d38780fcd1e2368303
+  receipt_carrier_commit: 07a736df5c0a7d0af7735ee9342bbe62029e7f94
+  observed_origin_main_merge_commit: 063b15710c521ce0e698e12406f56b481f0e06b7
+  carrier_is_merge_ancestor: true
+  effective_at: "2026-07-15T23:16:58Z"
   state_before_effect: active
   state_after_effect: revoked
 

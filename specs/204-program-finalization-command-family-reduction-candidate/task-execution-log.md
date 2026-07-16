@@ -604,3 +604,41 @@ Codex 对 `2574fa4f210c2fcb8ab9aecfb5fc59865f97609c` 复审发现一项 P2：che
   hash 前后不变。plan-check drift=NO、constraints blocker/advisory=0、Program validate PASS；
   Program Truth 1076/1076、close 204/204，audit=`ready/fresh`。
 - 待办：commit/fresh-clone、最终双 Agent 与新一轮 Codex review/CI/merge。
+
+### Batch 2026-07-15-033 | PR #130 mainline close-out
+
+- **验证画像**：`truth-only`
+- **改动范围**：`.ai-sdlc/state/checkpoint.yml`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md`、`.ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/resume-pack.yaml`、`.ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/runtime.yaml`、`.ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/sponsor-revocation.yaml`、`.ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml`、`specs/204-program-finalization-command-family-reduction-candidate/development-summary.md`、`specs/204-program-finalization-command-family-reduction-candidate/tasks.md`、`specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md`、`program-manifest.yaml`
+
+#### 33.1 当前结果
+
+- PR #130 已于 `2026-07-15T23:16:58Z` 合入 `main`；reviewed head=`c08d4c064a0dbbe07acdc6042c96ed001e4a44f0`，merge commit=`063b15710c521ce0e698e12406f56b481f0e06b7`。
+- immutable pending revocation receipt blob=`7c2b6947a0ad7be794e673d38780fcd1e2368303`，carrier commit=`07a736df5c0a7d0af7735ee9342bbe62029e7f94`；carrier 已是上述 merge commit 的 ancestor，sponsor revocation 因而生效，claim 仍为 0。
+- Candidate 产品代码从未实现；Program Finalization 9 个 legacy handler 保留。PR #130 只交付 GAP-13 恢复安全修复，不计 candidate LOC/claim。
+- `deleted` 仅表示已合并的本地 WI-204 lifecycle branch 已清理；reviewed head、PR 与 mainline merge commit 继续提供可恢复证据。
+
+#### 33.2 统一验证命令
+
+- `uv run ai-sdlc verify constraints`
+- `uv run ai-sdlc program truth sync --dry-run`
+- `uv run ai-sdlc program truth sync --execute --yes`
+- `uv run ai-sdlc program truth audit`
+- 直接调用只读核心 `run_close_check(cwd=root, wi=wi, all_docs=True, include_program_truth=True)`；不经过会安装 IDE adapter 的 CLI hook。
+
+#### 33.3 代码审查
+
+- Pascal（精简/直接性）与 Confucius（兼容/安全）已对 closeout 计划完成三轮对抗评审并共同 PASS；exact-head 终审在 receipt envelope 提交后执行。
+- 本批不修改 `src/`、`tests/`、Program command、ProgramService 或 activation receipt；只收口已合入事实、生命周期与 continuity state。
+
+#### 33.4 任务/计划同步状态
+
+- T15 更新为已完成；T21～T34 继续保持 RC-09 No-Go 取消，不恢复 candidate 执行授权。
+- `plan.md` 无新增执行阶段；本批只完成既有 post-merge closeout，不扩大 frozen contract。
+- 关联 branch/worktree disposition 计划：`deleted`
+- 当前批次 branch disposition 状态：`deleted`
+- 当前批次 worktree disposition 状态：`removed`
+
+#### 33.5 Git close-out
+
+- **已完成 git 提交**：是（closeout truth payload 由提交 A 独立承载；本 receipt envelope 只固定 A 的不可变引用与 Program Truth 快照）
+- **提交哈希**：`121c8625867675bcda84d646a9015b21d8392531`（closeout truth payload A；本 Batch 33 receipt envelope 不自引用自身）

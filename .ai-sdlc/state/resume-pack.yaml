@@ -1,4 +1,4 @@
-current_stage: execute
+current_stage: close
 current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
@@ -28,16 +28,16 @@ working_set_snapshot:
   - tests/integration/test_cli_recover.py
   - .ai-sdlc/state/codex-handoff.md
   - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
-  context_summary: 'Goal: Close WI-204 with zero candidate product code and audited
-    GAP-13 pre-close safety | State: Third Codex and dual-agent runtime/pack/fallback
-    findings fixed; actual state and 10-path working set normalized; full local governance
-    and Truth verification complete; runtime 124/125 tests 397/400 | Next: Restore
-    Cursor, commit exact fix, fresh-clone prove, obtain Pascal and Confucius PASS,
-    push and request Codex rereview'
-current_branch: feature/204-program-finalization-command-family-reduction-candidate-dev
+  context_summary: 'Goal: Close WI-204 as an auditable RC-09 No-Go with zero candidate
+    product code | State: A 121c8625 carries closeout truth; B 5b6e9ae4 carries the
+    immutable receipt and fresh Program Truth snapshot; current HEAD carries the final
+    continuity envelope; exact-head dual review is pending | Next: Obtain exact-head
+    dual PASS, push the closeout PR, monitor Codex review and required checks, merge,
+    and verify the final state on main'
+current_branch: codex/program-finalization-closeout
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-15T22:45:21+00:00'
+timestamp: '2026-07-15T23:36:58+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-07-15T22:22:23+00:00'
-checkpoint_fingerprint: 2e0395be849ac82b4dcfac104bd44b8cfe9dbdff217df6a93777bcf96890c4e8
+checkpoint_last_updated: '2026-07-15T23:35:16+00:00'
+checkpoint_fingerprint: f29dbd4e0f554fb235e44a536e97281e77abec212e0a37c22c4cbb7046857ae6
