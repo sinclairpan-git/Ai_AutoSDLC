@@ -3150,7 +3150,7 @@ class ProgramService:
         snapshot = ProgramTruthSnapshot(
             generated_at=utc_now_z(),
             generated_by="ai-sdlc program truth sync",
-            generator_version="program_truth_snapshot_v1",
+            generator_version="program_truth_snapshot_v2",
             repo_revision=self._current_repo_revision(),
             authoring_hash=self._truth_authoring_hash(),
             source_hashes=source_hashes,
@@ -4025,10 +4025,12 @@ class ProgramService:
         payload: dict[str, object],
     ) -> dict[str, object]:
         if source_key.startswith("truth_check:"):
+            classification = payload.get("classification")
+            if classification in {"branch_only_implemented", "mainline_merged"}:
+                classification = "execution_implemented"
             return {
                 "ok": bool(payload.get("ok")),
-                "classification": payload.get("classification"),
-                "detail": payload.get("detail"),
+                "classification": classification,
                 "wi_path": payload.get("wi_path"),
                 "formal_docs": payload.get("formal_docs"),
                 "execution_started": payload.get("execution_started"),

@@ -5,29 +5,20 @@ spec_path: specs/204-program-finalization-command-family-reduction-candidate/spe
 plan_path: specs/204-program-finalization-command-family-reduction-candidate/plan.md
 tasks_path: specs/204-program-finalization-command-family-reduction-candidate/tasks.md
 active_files:
-  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/sponsor-revocation.yaml
-  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/runtime.yaml
-  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml
-  - .ai-sdlc/state/checkpoint.yml
-  - .ai-sdlc/state/resume-pack.yaml
-  - specs/204-program-finalization-command-family-reduction-candidate/tasks.md
-  - specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
-  - specs/204-program-finalization-command-family-reduction-candidate/development-summary.md
-  - docs/framework-defect-backlog.zh-CN.md
-  - src/ai_sdlc/context/state.py
-  - src/ai_sdlc/core/reconcile.py
-  - src/ai_sdlc/core/runner.py
-  - src/ai_sdlc/rules/pipeline.md
-  - tests/unit/test_context_state.py
-  - tests/unit/test_reconcile.py
-  - tests/unit/test_runner_confirm.py
-  - tests/integration/test_cli_recover.py
   - .ai-sdlc/state/codex-handoff.md
+  - .ai-sdlc/state/resume-pack.yaml
   - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
+  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/resume-pack.yaml
+  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml
+  - docs/framework-defect-backlog.zh-CN.md
+  - program-manifest.yaml
+  - specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
+  - src/ai_sdlc/core/program_service.py
+  - tests/unit/test_program_service.py
 context_summary: >-
-  Goal: close WI-204 through an auditable RC-09 No-Go disposition with zero candidate
-  product change. State: PR #130 is merged, sponsor revocation is effective, A carries
-  the truth payload, B carries the immutable receipt and Program Truth snapshot, and
-  current HEAD carries the final continuity envelope. Next: obtain exact-head dual
-  PASS, push the closeout PR, monitor Codex review and required checks, merge, and
-  verify the final state on main.
+  Goal: Resolve Program Truth merge-topology self-staleness while preserving the
+  WI-204 RC-09 No-Go | State: The immutable repair and terminal receipt are complete;
+  v2 Program Truth and all 13 close checks are ready, while ResumePack retains the
+  closed WI canonical branch and the handoff records the unassociated terminal branch
+  | Next: Terminal protocol: verify state no-op and projected-main freshness, obtain
+  exact-head dual review and CI, merge, then perform read-only fresh-main acceptance

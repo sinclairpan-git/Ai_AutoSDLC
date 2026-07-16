@@ -9,35 +9,27 @@ working_set_snapshot:
   plan_path: specs/204-program-finalization-command-family-reduction-candidate/plan.md
   tasks_path: specs/204-program-finalization-command-family-reduction-candidate/tasks.md
   active_files:
-  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/sponsor-revocation.yaml
-  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/runtime.yaml
-  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml
-  - .ai-sdlc/state/checkpoint.yml
-  - .ai-sdlc/state/resume-pack.yaml
-  - specs/204-program-finalization-command-family-reduction-candidate/tasks.md
-  - specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
-  - specs/204-program-finalization-command-family-reduction-candidate/development-summary.md
-  - docs/framework-defect-backlog.zh-CN.md
-  - src/ai_sdlc/context/state.py
-  - src/ai_sdlc/core/reconcile.py
-  - src/ai_sdlc/core/runner.py
-  - src/ai_sdlc/rules/pipeline.md
-  - tests/unit/test_context_state.py
-  - tests/unit/test_reconcile.py
-  - tests/unit/test_runner_confirm.py
-  - tests/integration/test_cli_recover.py
   - .ai-sdlc/state/codex-handoff.md
+  - .ai-sdlc/state/resume-pack.yaml
   - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
-  context_summary: 'Goal: Close WI-204 as an auditable RC-09 No-Go with zero candidate
-    product code | State: A 121c8625 carries closeout truth; B 5b6e9ae4 carries the
-    immutable receipt and fresh Program Truth snapshot; current HEAD carries the final
-    continuity envelope; exact-head dual review is pending | Next: Obtain exact-head
-    dual PASS, push the closeout PR, monitor Codex review and required checks, merge,
-    and verify the final state on main'
+  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/resume-pack.yaml
+  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml
+  - docs/framework-defect-backlog.zh-CN.md
+  - program-manifest.yaml
+  - specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
+  - src/ai_sdlc/core/program_service.py
+  - tests/unit/test_program_service.py
+  context_summary: 'Goal: Resolve Program Truth merge-topology self-staleness while
+    preserving the WI-204 RC-09 No-Go | State: The immutable repair and terminal receipt
+    are complete; v2 Program Truth and all 13 close checks are ready, while ResumePack
+    retains the closed WI canonical branch and the handoff records the unassociated
+    terminal branch | Next: Terminal protocol: verify state no-op and projected-main
+    freshness, obtain exact-head dual review and CI, merge, then perform read-only
+    fresh-main acceptance'
 current_branch: codex/program-finalization-closeout
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-15T23:36:58+00:00'
+timestamp: '2026-07-16T01:37:00+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-15T23:35:16+00:00'
 checkpoint_fingerprint: f29dbd4e0f554fb235e44a536e97281e77abec212e0a37c22c4cbb7046857ae6

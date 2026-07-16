@@ -2016,28 +2016,28 @@ specs:
   - 196-ai-sdlc-lean-code-self-reduction-governance
   - 203-finalization-command-family-reduction-contract
 truth_snapshot:
-  generated_at: '2026-07-15T23:42:50Z'
+  generated_at: '2026-07-16T01:33:28Z'
   generated_by: ai-sdlc program truth sync
-  generator_version: program_truth_snapshot_v1
-  repo_revision: 121c8625
+  generator_version: program_truth_snapshot_v2
+  repo_revision: d121f276
   authoring_hash: 78222f8eada63cd4eba40766bfc262d6f781aa2d9b8c44546d29f1b2afdf9fb3
   source_hashes:
-    truth_check:specs/095-frontend-mainline-product-delivery-baseline: 40b5e9332011b0d8941245c0e8e7c3b192e897b2bc4aa4876a3d37a94f9b80f0
-    truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: e4586cf112089fff541fc809f9ba98ad4c4c3d5593de8febfc4e64cb1179ce02
-    truth_check:specs/098-frontend-mainline-posture-detector-baseline: 0346c27c8175616d8a60ed1a28b2edae2831383ceb3dbf2881ee5a1eeb874b5b
-    truth_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: 7212aa0bc9a940975d65adadaa5f70a18aa350340330acdf3a12674f49e5fc29
-    truth_check:specs/100-frontend-mainline-action-plan-binding-baseline: 5b87e0af91f286b5e4f2b14442140964b6ad7229cac42b3e111e6e93f064f6f9
-    truth_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: d58f61073a5c834b9fd7fd4392d80176eb5a330f122987bf6de8b0eef6685a61
-    truth_check:specs/102-frontend-mainline-browser-quality-gate-baseline: b229bf930f9b05b58faee2bc85bc51a16961c67fff223c308a11798682ddbae1
-    truth_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: 26eef88ecc5ea065fc7c961a8273f94f00cc628c6d83749b1699c7dc0273d972
-    truth_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: a60bd304bd1c135d5195150ce88e8d317a1f34860a94617f7f4e6e7126011a40
-    truth_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: aca80dd4c897b163dfb47ca201b607f799601fac0ca2dd2c3a113d0f9db4b3cb
-    truth_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: baadc06823e0bafb26e4a6639e01438faaeb0db9bd431d4e1ca44287be6758fa
-    truth_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: d825679386388bd576c60e5b0172bf7b1618064fb081268055e233738d8eca48
-    truth_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 6a7bfd8a738e66a1b68e71897f5b997ead96850304df62a3bea580a16d0250fd
-    truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: ba13cc26973f403a0030ba803fe07cfb2041ca291f021fd436f7968969c2297e
-    truth_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 814ccfb952dc066fcd569aa6b2e7dd08463fcac2f39c2086a021410bd9869dd3
-    truth_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: c320f9b5986df7b8866f164d99399fd95759a37dd51b3f2a22c68a310099d4b1
+    truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
+    truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 01c3db2eed14ae56d4d4e493386fc2293d4b33c42f54e5a58d115f50127f76ee
+    truth_check:specs/098-frontend-mainline-posture-detector-baseline: 2bc6c269678336b821f8a2d82e2033a45411ef07293faceb6c5214067e53a24c
+    truth_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: 738025eeac7cf11997817ffa0bdf04a22a5d71a45d753fe3874b809b1e35eefb
+    truth_check:specs/100-frontend-mainline-action-plan-binding-baseline: 0cb7326d1a6fe9621a1e853c2b879bf5377c6c3cf6206c9f3c36f0c15ca3c696
+    truth_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: e744c7005f41d3ef8566a6e5413706560e506b01ee3c391816fae6d0e172951f
+    truth_check:specs/102-frontend-mainline-browser-quality-gate-baseline: e3a7262dd0f1e9246b31db2796cfdedbae5f366717958e7b9b4877546b805e67
+    truth_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: c399e0b7aef65ddca1038f5a67d79408ce062c59b4a3709b3a27034f5a7538bd
+    truth_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: 1c56fceaba366581427f64d47d959a0b1ba66dbd12872a251b020090acb466c0
+    truth_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: 469591f27e014069df596b5f5ea992cf4c0f1c341ce8fa90685bbe6961887d0a
+    truth_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: 7959f0fdade77398333c643ea2a60fe875df4381e1be0e1b3b79cc6e1ca5b934
+    truth_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: 29e61aece4be8c817c53d6d988807c35bb43033851bf26fad4f390ad54449405
+    truth_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: fd34350647108380af7a23b159b18a30d4b33545b7d33c66c45221b65cdaa62d
+    truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 28b5818f820176a8322737c23724fe2f94b07d1f9d4bf718a64965819f5df201
+    truth_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 0cd9111a1aae1ce6528397f4b0863e30785d8d93f80c92985a7163f5e0e82458
+    truth_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: a6e4428769fcdbe693233daafce600de050f629be407e7bf4d4dc067b90c45ce
     close_check:specs/095-frontend-mainline-product-delivery-baseline: c3219ffe6f9fabf6ee4ddd490cc923d8717a72cc31127cb0b95d9a81d0093c18
     close_check:specs/096-frontend-mainline-host-runtime-manager-baseline: c3219ffe6f9fabf6ee4ddd490cc923d8717a72cc31127cb0b95d9a81d0093c18
     close_check:specs/098-frontend-mainline-posture-detector-baseline: c3219ffe6f9fabf6ee4ddd490cc923d8717a72cc31127cb0b95d9a81d0093c18
@@ -2055,14 +2055,14 @@ truth_snapshot:
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: c3219ffe6f9fabf6ee4ddd490cc923d8717a72cc31127cb0b95d9a81d0093c18
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: c3219ffe6f9fabf6ee4ddd490cc923d8717a72cc31127cb0b95d9a81d0093c18
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-    truth_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 4dc83697eff99a6a0eb5d52b5352c8fb073736a704a1533370a5521d699cdfbc
-    truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 668bc35f896163f99929da88d733d0de367d996b276b9775d659227fcafcbca7
-    truth_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 3b1e1b25496109cf14ae7f6d9717102d80d27debaeb3fa3aa14f61702020d85a
-    truth_check:specs/200-adapter-canonical-consumption-truth: 314aab9d00070db50050b2cd56f2b762a96f666500453f30ba3aaa3d773085af
+    truth_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: b5999f3bfb2b29fa50299306cd0287459a6c274279ecfe0aed612406ebe33b26
+    truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 1d2e4d2374f9b6d8ee82d4afd25b059233b49d40c6f8dee4224d56a3be0c766d
+    truth_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 0e70bb633146509dbf1491cc850fc76206326eb92f8c0367246989ddeaa934fb
+    truth_check:specs/200-adapter-canonical-consumption-truth: 2ec890f304752558c9e5ca96598462195922836effbd275d3f260bbabf5e01bf
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 50cd1aac382b927f430871517be13152de2c777c8004000e766f5ce5a5f1a52c
+  snapshot_hash: 25537d28c52d6c640e4ba6bad35b59fd47aca43b459446fa3107df73933e2d80
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed

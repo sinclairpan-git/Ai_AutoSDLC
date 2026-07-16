@@ -642,3 +642,49 @@ Codex 对 `2574fa4f210c2fcb8ab9aecfb5fc59865f97609c` 复审发现一项 P2：che
 
 - **已完成 git 提交**：是（closeout truth payload 由提交 A 独立承载；本 receipt envelope 只固定 A 的不可变引用与 Program Truth 快照）
 - **提交哈希**：`121c8625867675bcda84d646a9015b21d8392531`（closeout truth payload A；本 Batch 33 receipt envelope 不自引用自身）
+
+### Batch 2026-07-16-034 | Program Truth merge-topology terminal repair
+
+- **验证画像**：`code-change`
+- **改动范围**：`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md`、`.ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/resume-pack.yaml`、`.ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml`、`docs/framework-defect-backlog.zh-CN.md`、`program-manifest.yaml`、`specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md`、`src/ai_sdlc/core/program_service.py`、`tests/unit/test_program_service.py`
+
+#### 34.1 当前结果
+
+- PR #131 合入后的 fresh-main 验收只剩 Program Truth stale：20 个 `truth_check:*` source hash 变化，authoring hash、computed capabilities、source inventory 与 `ready` 状态均不变。
+- `FD-2026-07-16-001` 确认根因是 `branch_only_implemented` 与 `mainline_merged` 两个 gate-equivalent 终态仍以原始分类及派生 `detail` 进入持久 hash，导致经 PR 合并后自失效。
+- 实现 payload `6d4a7965ed179aca2247f1f5a9312bce269f7f68` 只在 source-hash 投影层归一为 `execution_implemented`、移除环境性 `detail`，并把 generator 升为 `program_truth_snapshot_v2`；raw truth-check API/CLI 与 capability gate 均未改变。
+- 这是 post-close Program Truth 基础设施修复，不是 WI-204 candidate；RC-09 No-Go、sponsor revocation、claim=0 与 9 个 legacy handler 均不变，frozen spec/plan/tasks/development-summary 不重开。
+
+#### 34.2 RED → GREEN
+
+- RED：投影级测试证明 branch/main 两种 implemented 结果不等价；真实 Git branch→fast-forward-main 测试证明同一 executed WI 只有 truth-check source hash 漂移，`2 failed`。
+- GREEN：两种 implemented 拓扑得到相同投影与稳定快照载荷；`formal_freeze_only`、`ok`、`error`、`wi_path`、`formal_docs`、`execution_started` 任一实质变化仍保持不等价，目标测试 `2 passed`。
+- 测试减重：用真实 Git 拓扑替换原有大段 mock revision metadata 夹具；本实现 payload 共 `108 insertions / 70 deletions`，未新增模块、公共 API、schema 或抽象。
+
+#### 34.3 统一验证命令
+
+- `uv run pytest tests/unit/test_program_service.py -k 'truth_snapshot_source_hash_preserves_semantic_truth_changes or build_truth_snapshot_is_stable_across_branch_to_main_topology' -q`：GREEN `2 passed, 404 deselected`。
+- `uv run pytest tests/unit/test_program_service.py -q`：`406 passed`。
+- `uv run pytest tests/integration/test_cli_program.py tests/unit/test_close_check.py -q`：`300 passed`。
+- `uv run ruff check src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py`：PASS。
+- `uv run ai-sdlc verify constraints`：无 BLOCKER。
+- Terminal snapshot 必须从本 receipt 定稿后的 clean HEAD 生成；其后只执行 constraints、Truth audit、close-check、state/hash/Git、projected-main、双 Agent、Codex/CI 与 fresh-main 只读验收，不再改 Truth source。
+
+#### 34.4 代码审查
+
+- Pascal（精简/直接性）与 Confucius（兼容/安全）共同否决“只刷新快照”方案，因为它会在下一次 merge 后复发；二者一致 PASS 根因归一化与 10 路径最小治理范围。
+- 两方共同要求保留 formal-freeze/error/证据字段的 hash 敏感性、真实 Git 拓扑回归、v2 generator、clean-head snapshot、projected-main 与真实 main 验证；exact-head 终审在 terminal snapshot 提交后执行。
+
+#### 34.5 任务/计划同步状态
+
+- `FD-2026-07-16-001` 作为 post-close framework defect 的需求/根因/验收合同；本 terminal batch 作为实现与验证收据。
+- 不新增 task checkbox，不修改 T15，不重开 frozen spec/plan/tasks/development-summary，不修改 checkpoint/runtime；candidate 执行链继续保持取消。
+- Terminal protocol 固定为：不可变实现 payload → receipt/continuity → clean-head snapshot → exact-head 双审/CI → fresh-main 只读验收；最后一步不触发新的 continuity 写入。
+- 关联 branch/worktree disposition 计划：`deleted`
+- 当前批次 branch disposition 状态：`deleted`
+- 当前批次 worktree disposition 状态：`removed`
+
+#### 34.6 Git close-out
+
+- **实现 payload 提交**：`6d4a7965ed179aca2247f1f5a9312bce269f7f68`（只含 defect backlog、ProgramService 投影与回归测试）。
+- **自引用边界**：本 receipt 不写自身哈希；Program Truth snapshot 在 receipt 提交后单独物化，并以其前置 clean HEAD 作为 `repo_revision`。

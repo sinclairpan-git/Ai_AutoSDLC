@@ -1598,3 +1598,28 @@
 - 可验证成功标准: 给定 execute checkpoint、完整 direct formal 产物和 `stage: close-pending` 的 summary，`detect_reconcile_hint()` 不返回推进到 close 的 hint，`recover` 不改写 checkpoint；若历史 checkpoint/runtime 已污染为 close/batch1，则 `recover --reconcile` 原地修复为 execute/batch0、保留 baseline/linkage/早期阶段证据并同步 root/scoped ResumePack，第二次 recover 无写入；去掉标记后保持历史兼容。零解析任务在 real run、dry-run、`check_gate` 三入口均不得复用旧进度假绿。
 - 处置进展 (2026-07-15): `reconcile` 已识别精确 `stage: close-pending`，既阻止向前误推，也能修复历史污染状态并保留已有证据；同一 feature id/spec 即使分支名陈旧，也只刷新分支字段而不丢失 `docs_baseline_ref/docs_baseline_at`。即使 checkpoint 已正确停在 execute，只要 scoped runtime 仍残留 close/batch/task，reconcile 也会进入既有 reset 路径；若 runtime 已干净但两份 ResumePack 同步污染，loader 会按 stage/batch/last committed task 的 expected-pack 语义比较进入原有重建路径，并同时覆盖 linked、空/缺 linked id 下的 feature-id fallback。Runner 在统一 execute context 层屏蔽零任务的旧进度，stage-entry checkpoint 保存与 Executor 构建均不会发生。stale-branch、runtime-only、pack-only 与 feature-id fallback RED 均已复现且目标回归转绿；相关四文件 `76 passed`、全量 `3219 passed, 3 skipped`、全仓 Ruff 与 diff check 均通过。真实 WI-204 runtime/packs 已规范化，detect/reconcile no-op、连续加载零事件且状态 hash 不变；plan-check 无漂移、constraints 无 blocker/advisory、Program validate PASS、Truth ready/fresh。fresh-clone 与最终双审待下一批补齐。
 - 是否需要回归测试补充: 已完成：close-pending、无/未知 marker、status/recover、污染 checkpoint/runtime/双 ResumePack、二次恢复幂等、summary gate，以及 real/dry/check_gate 三入口 zero-task 边界均有自动化覆盖。
+
+## FD-2026-07-16-001 | Program Truth 快照在 PR 合并后因等价拓扑分类变化而自失效
+
+- 日期 (UTC): 2026-07-16
+- 来源: mainline_close_check, adversarial_review
+- 状态: closed
+- owner: codex
+- wi_id: 204-program-finalization-command-family-reduction-candidate
+- related_doc: specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
+- 现象: PR 分支上生成并通过审计的 Program Truth 快照，在相同提交合入 `main` 后变为 stale；稳定载荷只有 `truth_check:*` source hash 变化，authoring、capability、inventory 与 ready 状态均未变化。
+- 触发场景: `run_truth_check(..., rev="HEAD")` 在分支上返回 `branch_only_implemented`，合入后返回 `mainline_merged`；两种分类都被 release gate 视为已有执行证据，但 source-hash 投影仍哈希原始分类与派生 `detail`。
+- 影响范围: Program Truth 终态可收敛性、PR close-out、fresh-main 验收、自动代理重复刷新快照的风险，以及 mainline 证据可信度。
+- 根因分类: B, D, H
+- 未来杜绝方案摘要: 只在 Program Truth source-hash 投影层把两种 gate-equivalent implemented 拓扑归一为 `execution_implemented`，移除环境性派生 `detail`；raw truth-check API、CLI 分类与 capability gate 保持不变。
+- 建议改动层级: rule / policy, middleware, workflow, tool, eval
+- prompt / context: 终态快照刷新必须在 formal/log 定稿后执行；不得把重复 sync 当作 branch-to-main 漂移的修复。
+- rule / policy: `formal_freeze_only`、未知分类、`ok`、`error`、`wi_path`、`formal_docs` 与 `execution_started` 仍须进入 hash，只有 `branch_only_implemented` / `mainline_merged` 可归一。
+- middleware: Program Truth snapshot generator 升级为 `program_truth_snapshot_v2`；旧 v1 继续可加载，并通过一次显式 sync 迁移。
+- workflow: 先在真实 Git branch/main 拓扑上证明稳定载荷等价，再物化 terminal snapshot；feature、projected-main 与真实 main 均须审计 fresh。
+- tool: `src/ai_sdlc/core/program_service.py`, `tests/unit/test_program_service.py`, `ai-sdlc program truth sync`, `ai-sdlc program truth audit`
+- eval: 快照因 branch-only→mainline-merged 单一变化而 stale 的次数、无实质证据变化的重复 sync 次数、真实拓扑回归通过率。
+- 风险等级: 高
+- 可验证成功标准: 同一 executed WI 在 branch-only 与 mainline 两态的 truth-check source hash 和稳定快照载荷相同；formal freeze、错误、文档完整性、执行状态或 WI 路径变化仍产生不同投影；raw truth-check 输出继续区分 branch/main。
+- 是否需要回归测试补充: 已完成：投影级参数化实质差异测试，以及真实 Git branch→fast-forward-main 稳定载荷测试；既有 ProgramService 406 项与 Program CLI/close-check 300 项回归通过。
+- 处置进展 (2026-07-16): RED 同时复现投影不等价与真实拓扑 source hash 漂移；最小 GREEN 仅归一两个 implemented 分类、删除 hash 中的 `detail` 并升级 generator v2。该修复属于 post-close Program Truth 基础设施修复，不是 WI-204 candidate；RC-09、revocation、claim=0 与 9 个 legacy handler 均不变。
