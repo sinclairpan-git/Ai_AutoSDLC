@@ -4573,9 +4573,53 @@ def test_build_truth_ledger_surface_ignores_ephemeral_close_check_drift(
     assert normalized["ok"] is False
 
 
-def test_build_truth_ledger_surface_ignores_truth_check_revision_metadata_drift(
+def test_truth_snapshot_source_hash_preserves_semantic_truth_changes(
     tmp_path: Path,
-    monkeypatch,
+) -> None:
+    svc = ProgramService(tmp_path)
+    branch_result = {
+        "ok": True,
+        "classification": "branch_only_implemented",
+        "detail": "branch topology detail",
+        "wi_path": "specs/082-frontend-example",
+        "formal_docs": {"spec": True, "plan": True, "tasks": True},
+        "execution_started": True,
+        "error": None,
+    }
+    mainline_result = {
+        **branch_result,
+        "classification": "mainline_merged",
+        "detail": "mainline topology detail",
+    }
+
+    branch_payload = svc._truth_snapshot_source_hash_payload(
+        "truth_check:specs/082-frontend-example",
+        branch_result,
+    )
+    mainline_payload = svc._truth_snapshot_source_hash_payload(
+        "truth_check:specs/082-frontend-example",
+        mainline_result,
+    )
+    assert branch_payload == mainline_payload
+
+    semantic_changes = (
+        {"classification": "formal_freeze_only"},
+        {"ok": False},
+        {"wi_path": "specs/083-other"},
+        {"formal_docs": {"spec": True, "plan": False, "tasks": True}},
+        {"execution_started": False},
+        {"error": "truth check failed"},
+    )
+    for change in semantic_changes:
+        changed_payload = svc._truth_snapshot_source_hash_payload(
+            "truth_check:specs/082-frontend-example",
+            {**branch_result, **change},
+        )
+        assert changed_payload != branch_payload
+
+
+def test_build_truth_snapshot_is_stable_across_branch_to_main_topology(
+    tmp_path: Path,
 ) -> None:
     _init_truth_git_repo(tmp_path)
     (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
@@ -4599,77 +4643,44 @@ def test_build_truth_ledger_surface_ignores_truth_check_revision_metadata_drift(
     (tmp_path / "src").mkdir(parents=True)
     (tmp_path / "src" / "app.py").write_text("print('demo')\n", encoding="utf-8")
     _write_truth_ledger_manifest(tmp_path)
-    _commit_truth_repo(tmp_path, "seed truth ledger revision metadata drift fixture")
-
-    base_truth_result = {
-        "ok": True,
-        "classification": "branch_only_implemented",
-        "detail": "requested revision contains execution evidence or implementation changes, but it is not yet contained in main",
-        "requested_revision": "HEAD",
-        "resolved_revision": "abc1234",
-        "head_revision": "abc1234",
-        "current_branch": "feature/truth-sync",
-        "head_matches_revision": True,
-        "contained_in_main": False,
-        "ahead_of_main": 1,
-        "behind_of_main": 0,
-        "wi_path": "specs/082-frontend-example",
-        "formal_docs": {
-            "spec_md": True,
-            "plan_md": True,
-            "tasks_md": True,
-            "task_execution_log_md": True,
-        },
-        "execution_started": True,
-        "changed_paths": [
-            "specs/082-frontend-example/task-execution-log.md",
-            "src/app.py",
-        ],
-        "code_paths": ["src/app.py"],
-        "test_paths": [],
-        "doc_paths": ["specs/082-frontend-example/task-execution-log.md"],
-        "other_paths": [],
-        "error": None,
-    }
-
+    _commit_truth_repo(tmp_path, "seed truth ledger topology fixture")
+    subprocess.run(
+        ["git", "checkout", "-b", "feature/truth-sync"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
+    )
+    (tmp_path / ".ai-sdlc" / "continuity.txt").write_text(
+        "terminal truth sync\n",
+        encoding="utf-8",
+    )
+    _commit_truth_repo(tmp_path, "record terminal truth sync")
     svc = ProgramService(tmp_path)
-    monkeypatch.setattr(
-        svc,
-        "_run_truth_check_ref",
-        lambda ref: dict(base_truth_result),
-    )
     manifest = svc.load_manifest()
-    snapshot = svc.build_truth_snapshot(manifest)
-    svc.write_truth_snapshot(snapshot)
+    branch_truth = svc._run_truth_check_ref("specs/082-frontend-example")
+    branch_snapshot = svc.build_truth_snapshot(manifest)
+    assert branch_truth["classification"] == "branch_only_implemented"
 
-    drifted_truth_result = dict(base_truth_result)
-    drifted_truth_result.update(
-        {
-            "resolved_revision": "def5678",
-            "head_revision": "def5678",
-            "current_branch": "codex/truth-sync",
-            "head_matches_revision": False,
-            "ahead_of_main": 2,
-            "changed_paths": [
-                "program-manifest.yaml",
-                "specs/082-frontend-example/task-execution-log.md",
-                "src/app.py",
-            ],
-            "other_paths": ["program-manifest.yaml"],
-        }
+    subprocess.run(
+        ["git", "checkout", "main"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
     )
-    monkeypatch.setattr(
-        svc,
-        "_run_truth_check_ref",
-        lambda ref: dict(drifted_truth_result),
+    subprocess.run(
+        ["git", "merge", "--ff-only", "feature/truth-sync"],
+        cwd=tmp_path,
+        check=True,
+        capture_output=True,
     )
+    mainline_truth = svc._run_truth_check_ref("specs/082-frontend-example")
+    mainline_snapshot = svc.build_truth_snapshot(svc.load_manifest())
+    assert mainline_truth["classification"] == "mainline_merged"
 
-    updated_manifest = svc.load_manifest()
-    surface = svc.build_truth_ledger_surface(updated_manifest)
-
-    assert surface is not None
-    assert surface["snapshot_state"] == "fresh"
-    assert surface["state"] == snapshot.state
+    assert branch_snapshot.source_hashes == mainline_snapshot.source_hashes
+    assert svc._truth_snapshot_stable_payload(
+        branch_snapshot
+    ) == svc._truth_snapshot_stable_payload(mainline_snapshot)
 
 
 def test_dirty_worktree_paths_parse_porcelain_z_paths_with_spaces(
