@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+from ai_sdlc.generators._artifact_paths import _dedupe_paths
 from ai_sdlc.models.frontend_provider_profile import (
     EnterpriseVue2ProviderProfile,
     build_mvp_enterprise_vue2_provider_profile,
@@ -20,17 +21,6 @@ BUILTIN_FRONTEND_PROVIDER_PROFILE_IDS = frozenset(
     {"enterprise-vue2", "public-primevue"}
 )
 PUBLIC_PRIMEVUE_VISUAL_CONTRACT_VERSION = "v1.8"
-
-
-def _dedupe_paths(paths: list[Path]) -> list[Path]:
-    unique: list[Path] = []
-    seen: set[Path] = set()
-    for path in paths:
-        if path in seen:
-            continue
-        seen.add(path)
-        unique.append(path)
-    return unique
 
 
 def frontend_provider_profile_root(root: Path, provider_id: str) -> Path:

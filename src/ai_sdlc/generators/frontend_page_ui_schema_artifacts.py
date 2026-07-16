@@ -6,6 +6,7 @@ from pathlib import Path
 
 import yaml
 
+from ai_sdlc.generators._artifact_paths import _dedupe_paths
 from ai_sdlc.models.frontend_page_ui_schema import (
     FrontendPageUiSchemaSet,
     PageSchemaDefinition,
@@ -22,17 +23,6 @@ def _dedupe_text_items(values: object) -> list[str]:
         if normalized and normalized not in deduped:
             deduped.append(normalized)
     return deduped
-
-
-def _dedupe_paths(paths: list[Path]) -> list[Path]:
-    unique: list[Path] = []
-    seen: set[Path] = set()
-    for path in paths:
-        if path in seen:
-            continue
-        seen.add(path)
-        unique.append(path)
-    return unique
 
 
 def frontend_page_ui_schema_root(root: Path) -> Path:

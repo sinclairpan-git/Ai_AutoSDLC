@@ -6,22 +6,12 @@ from pathlib import Path
 
 import yaml
 
+from ai_sdlc.generators._artifact_paths import _dedupe_paths
 from ai_sdlc.models.frontend_solution_confirmation import (
     FrontendSolutionSnapshot,
     InstallStrategy,
     StylePackManifest,
 )
-
-
-def _dedupe_paths(paths: list[Path]) -> list[Path]:
-    unique: list[Path] = []
-    seen: set[Path] = set()
-    for path in paths:
-        if path in seen:
-            continue
-        seen.add(path)
-        unique.append(path)
-    return unique
 
 
 def frontend_solution_confirmation_root(root: Path) -> Path:

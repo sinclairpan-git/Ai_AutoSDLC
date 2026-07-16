@@ -216,6 +216,8 @@ def test_materialize_frontend_contract_artifacts_deduplicates_returned_paths(
     )
 
     paths = materialize_frontend_contract_artifacts(tmp_path, contract_set)
+    ordered_paths = [Path("first"), Path("second"), Path("first")]
+    assert frontend_contract_artifacts_module._dedupe_paths(ordered_paths) == ordered_paths[:2]
 
     rel_paths = [path.relative_to(tmp_path).as_posix() for path in paths]
     assert rel_paths == list(dict.fromkeys(rel_paths))
