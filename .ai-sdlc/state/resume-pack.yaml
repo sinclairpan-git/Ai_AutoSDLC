@@ -14,18 +14,15 @@ working_set_snapshot:
   - specs/206-model-string-dedupe/tasks.md
   - specs/206-model-string-dedupe/task-execution-log.md
   - specs/206-model-string-dedupe/development-summary.md
-  - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-  - specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
   - program-manifest.yaml
   - .ai-sdlc/state/codex-handoff.md
-  context_summary: 'Goal: 完成 WI-206 model string dedupe formal PR mainline receipt
-    | State: Round 5 exact hashes 双 Agent PASS；最终本地 tests/truth/constraints/diff 全绿；Program
-    Truth snapshot 0c98c761 fresh/ready；准备 commit。 | Next: 更新 staged index，校验 hashes/diff/status，commit；push
-    并创建 PR，请求 @codex review，五分钟 heartbeat 监控 review/checks 至 merge。'
-current_branch: feature/206-model-string-dedupe-docs
+  context_summary: 'State: Round 2 双 PASS 有效；resume-pack P2 已修复；Codex Round 2 P2 的
+    summary 旧预算已标为历史，当前唯一门禁明确为 +37/-179/source43。 | Next: 重算 truth，提交并推送
+    summary fix，第三次请求 Codex review，heartbeat 至全绿合并。'
+current_branch: feature/206-model-string-dedupe-budget-amendment
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-16T10:22:26+00:00'
+timestamp: '2026-07-16T12:28:22+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-16T08:57:35+00:00'
 checkpoint_fingerprint: 3486bdcca321f8b4f933ca38966ba2b185332bce00b3c1b84536f222cae09f94

@@ -270,3 +270,91 @@ T14 完成；下一步进入 T15 formal 最终验证、提交、PR 和 mainline 
 
 Round 5 是当前唯一有效 formal receipt；T14 完成。T15 只剩 commit/push/PR、Codex review、required
 checks、merge 与 fresh-main acceptance。
+
+## 11. Batch 2026-07-16-010：implementation 探针触发预算 amendment
+
+- Formal PR #135 已合并 main=`1a37e684d82370f0961275840616c109b7a07f87`；fresh-main targeted
+  `281 passed, 2 skipped`、root truth `1 passed`、Program Truth fresh/ready。
+- implementation T61A 基线：Python 3.11.15、Pydantic 2.12.5、macOS arm64；full
+  `3220 passed, 3 skipped in 594.40s`；18 defs、100 calls、216 LOC、complexity72、digest/corpus均复现。
+- identity 断言在 legacy 上稳定 RED，最小 shared helper/import 实验后 GREEN。
+- Ruff `I001` 证明 4 个没有既有 first-party import block 的模块必须各增加 1 条分隔空行；真实最小
+  product raw additions 是 `15 helper + 18 imports + 4 separators = 37`，旧上限33不可满足。
+- 该差异不增加行为、依赖、抽象或测试；保守预算修订为 product +≤37/-≥216/net≤-179，
+  source≤43≤54、余量≥11。当前实现暂停，旧 formal hashes/verdict 对预算内容作废。
+
+预算 amendment 必须在独立 formal branch 由 Pascal/Confucius 对同一新 hashes 从零 PASS、PR 合入 main
+后，implementation branch 才允许合并最新 main 并继续。
+
+### 11.1 Budget amendment formal target
+
+| 文件 | SHA-256 |
+|---|---|
+| `spec.md` | `a614e9a0d76beea69a5a3039aaeb3952831104dc3ee01cabd7b20fd76487dc45` |
+| `plan.md` | `8b16dcf7f3e692f580eadfc1d5b45a3d163079fe77f2530761de9e12ad19ea4e` |
+| `tasks.md` | `d9444b7f66e84bc2d7de842743eb6bd2e40f7dc3616dd2d7a031af6593233b6a` |
+
+固定顺序 repo-relative path + NUL + 8-byte big-endian length + bytes combined：
+`3f036e0ed6f3bdc1eb0cf5496c172f8926103832a91ae6b95768ae66747f04de`。
+
+### 11.2 Budget amendment Round 1 adversarial verdict
+
+- Pascal：`FAIL`。旧文本没有禁止 late import 与 lint suppression；在 helper 原位置使用
+  `# noqa: E402` 可把四个模块压回单条 addition，因此“37 是整洁实现最小值”尚未被合同锁定。
+- Confucius：`FAIL`。独立复现标准顶层、无 suppression candidate 为 product `+37/-246/net -209`、
+  defs=1/imports=18/calls=100、targeted `281 passed, 2 skipped`；除同一合同缺口外未发现安全 blocker。
+- 处置：Round 1 target 作废；spec/plan/tasks 同步要求标准顶层 first-party import block，并禁止
+  late/mid-file import、分号/多语句压行、noqa/isort/Ruff 配置修改及等价 suppression。四个模块的
+  分隔空行由此成为可复验的最小整洁成本，其余 14 个模块复用删除首个 helper 后释放的既有空行。
+
+### 11.3 Budget amendment Round 2 formal target
+
+| 文件 | SHA-256 |
+|---|---|
+| `spec.md` | `b3b4c05b3f957ef5f6cce362d902502a05943240ff072134005b7e3c61352972` |
+| `plan.md` | `2429e3f8d6e9ee276d704cf11ca61566c60e9046fe12f04ee0d57fdbca7c5ab5` |
+| `tasks.md` | `c8c910cb99ac9470fb153f4095b62be85e6112dcebd97c6969b444430c6e1744` |
+
+固定顺序 repo-relative path + NUL + 8-byte big-endian length + bytes combined：
+`d0e29ec47fbf3582c275e6a0ca6f7ee94acb2ac3efc5669291d70ac619930566`。
+
+### 11.4 Round 2 pre-review gates
+
+- `program truth sync --execute --yes`：snapshot
+  `464fa08a63c5bcbd3cab5940c8e39a4dc8272d40e223c234c8b2bd6d5a10cb7b`；audit
+  ready/fresh，inventory 1086/1086、unmapped=0、missing=0、close 206/206。
+- `program validate`：PASS；`verify constraints`：no BLOCKERs；治理命令产生的 Cursor adapter
+  自动刷新已精确恢复，不进入 amendment diff。
+- 19-file targeted：`281 passed, 2 skipped in 2.06s`。
+- root Program Truth exact nodeid：`1 passed in 78.97s`。
+- Round 2 三个 formal hashes 复算稳定；working diff-check PASS；工作树无 `src/` 产品代码变化。
+
+### 11.5 Round 2 双 PASS
+
+- Pascal / 精简直接性：`PASS`；无 Critical、Important 或其他可操作 finding。确认标准顶层、无
+  suppression 的最小成本严格为 `15 helper + 18 imports + 4 separators = 37`；`+37` 上限已被
+  必要成本占满，不存在 padding、wrapper、预算放水或更直接且同等安全的替代方案。
+- Confucius / 兼容证明：`PASS`；无可操作 finding。独立确认 candidate product
+  `+37/-246/net -209`、source `43≤54`、defs 18→1/imports18/calls100、14类事件差分一致、
+  targeted `281 passed, 2 skipped`、Ruff 全绿，rollback/full CI/schema/error 保护完整。
+- 双方开始与结束均复算并确认 §11.3 的 spec/plan/tasks/combined hashes 完全一致，只读且未修改
+  文件；working/cached diff-check 均通过，amendment 无 `src/` 或 `tests/` 变化。
+
+Round 2 是本预算 amendment 唯一有效 adversarial receipt；旧 Round 1 target/verdict 不再有效。
+
+### 11.6 PR #136 Codex P2：resume-pack 可移植性
+
+- Codex review 指出根与 scoped `resume-pack.yaml` 被 handoff 命令写成当前 macOS worktree 绝对路径；
+  换 checkout 后 `load_resume_pack()` 会判 stale，并可能在重建时丢失当前 `context_summary`。
+- 处置：两份 pack 恢复 repo-relative constitution/tech-stack/spec/plan/tasks path，补回本 amendment
+  active files，并记录实际 branch；formal spec/plan/tasks 三文件及 combined hashes 不变。
+- `uv run ai-sdlc handoff show` 前后两份 pack SHA-256 稳定，未触发 stale rebuild；
+  `tests/unit/test_context_state.py tests/integration/test_cli_handoff.py` 为 `27 passed in 0.74s`。
+- 该修复只影响连续性元数据，不改变预算、产品代码、测试代码或 formal 双 PASS receipt。
+
+### 11.7 PR #136 Codex Round 2 P2：summary 预算一致性
+
+- Codex re-review 指出 `development-summary.md` 首段仍把初始 `+≤33/net≤-183` 表述为“当前计划”，
+  与后文已生效的 amendment `+≤37/net≤-179` 冲突，恢复执行者可能误用旧硬门禁。
+- 处置：首段明确把 `+33/-183` 标为 amendment 前历史预算，并指向当前唯一有效的
+  `+37/-≥216/net≤-179、source≤43≤54`；formal spec/plan/tasks hashes 与双 PASS receipt 不变。
