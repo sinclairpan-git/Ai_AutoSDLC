@@ -1,7 +1,7 @@
 {
   "schema_version": "wi205-differential-rollback-receipt.v1",
   "work_item_id": "205-frontend-artifact-path-dedupe",
-  "generated_at": "2026-07-16T06:45:00Z",
+  "generated_at": "2026-07-16T07:25:00Z",
   "surface_manifest": {
     "version": "wi205-surface-v1",
     "artifact_test_files": [
@@ -30,7 +30,7 @@
     "renderer_normalizer": null,
     "allowlist": [],
     "commands": [
-      "uv run pytest -q <12 artifact test files> --basetemp /tmp/ai-sdlc-wi205-shared",
+      "uv run pytest -q <12 artifact test files> --basetemp /tmp/ai-sdlc-wi205-pwsh-shared",
       "git -C <shared-temp> --git-dir=<external-git-dir> --work-tree=<shared-temp> -c core.autocrlf=false -c core.attributesFile=<empty-file> add -A -f -- .",
       "git --git-dir=<external-git-dir> write-tree",
       "git --git-dir=<external-git-dir> ls-tree -r <tree-oid>",
@@ -39,18 +39,22 @@
   },
   "revisions": {
     "baseline": "a76ef8b1b63cc65046bf91e09fad2ebb6f40073d",
-    "candidate": "7b96f96952d2733e3d7969e70e2b9ae24ef0611e",
+    "candidate_implementation": "7b96f96952d2733e3d7969e70e2b9ae24ef0611e",
+    "candidate_power_shell_sample": "737349808e13da9f19605faae8f0f0b4f212b148",
     "rollback_revert": "091f5d548dec16d079fa67d879e60fec3493a103",
     "rollback_restored_candidate": "c1db361be20c016da6a31fd88ed997bbcd8c3b1b",
-    "pre_final_truth_snapshot_revision": "b9218498"
+    "pre_remediation_truth_snapshot_revision": "d439b0ef"
   },
   "toolchain": {
     "platform": "Darwin arm64",
     "python": "3.11.15",
     "pytest": "9.0.2",
     "git": "2.54.0 (Apple Git-157)",
-    "shell": "zsh 5.9",
-    "local_powershell": "unavailable: host .NET assembly mismatch",
+    "shell": "PowerShell 7.5.8",
+    "powershell_path": "/tmp/powershell-7.5.8/pwsh",
+    "powershell_archive": "powershell-7.5.8-osx-arm64.tar.gz",
+    "powershell_archive_sha256": "afac2b812c8187a3ae7e487bc75cbcd6082f0c062a8964ff5e69d4f95a6486c1",
+    "homebrew_powershell": "7.6.1_1 unavailable due host .NET assembly mismatch; official isolated 7.5.8 used",
     "ci_powershell_required": true,
     "git_object_format": "sha1",
     "core_filemode": true,
@@ -63,8 +67,8 @@
     "info_attributes_nonempty": false,
     "core_autocrlf": false,
     "fresh_index_per_sample": true,
-    "external_git_dir": "/tmp/ai-sdlc-wi205-git-objects/.git",
-    "shared_basetemp": "/tmp/ai-sdlc-wi205-shared"
+    "external_git_dir": "/tmp/ai-sdlc-wi205-pwsh-git-objects/.git",
+    "shared_basetemp": "/tmp/ai-sdlc-wi205-pwsh-shared"
   },
   "samples": {
     "baseline_five_run_characterization": {
@@ -77,36 +81,39 @@
     },
     "baseline_tree_1": {
       "tests_passed": 76,
-      "tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+      "tree_oid": "6e1803c945b2bcb954bc6655ad2615b1458619a1",
       "entry_count": 463,
       "regular_entries": 418,
       "symlink_entries": 45
     },
     "baseline_tree_2": {
       "tests_passed": 76,
-      "tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+      "tree_oid": "6e1803c945b2bcb954bc6655ad2615b1458619a1",
       "entry_count": 463,
       "regular_entries": 418,
       "symlink_entries": 45
     },
     "candidate": {
       "tests_passed": 76,
-      "tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+      "revision": "737349808e13da9f19605faae8f0f0b4f212b148",
+      "tree_oid": "6e1803c945b2bcb954bc6655ad2615b1458619a1",
       "entry_count": 463
     },
     "rollback_revert": {
       "tests_passed": 76,
-      "tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+      "revision": "091f5d548dec16d079fa67d879e60fec3493a103",
+      "tree_oid": "6e1803c945b2bcb954bc6655ad2615b1458619a1",
       "entry_count": 463
     },
     "rollback_restored_candidate": {
       "tests_passed": 76,
-      "tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+      "revision": "c1db361be20c016da6a31fd88ed997bbcd8c3b1b",
+      "tree_oid": "6e1803c945b2bcb954bc6655ad2615b1458619a1",
       "entry_count": 463
     }
   },
   "GoldenSnapshot": {
-    "baseline_tree_oid": "a9b62108e4d591bb74ea2947a531085236445333",
+    "baseline_tree_oid": "6e1803c945b2bcb954bc6655ad2615b1458619a1",
     "entry_count": 463,
     "regular_entries": 418,
     "symlink_entries": 45,
@@ -134,6 +141,7 @@
     "frontend_cli_program_total": "78 passed",
     "baseline_full": "3220 passed, 3 skipped in 534.72s",
     "candidate_full": "3220 passed, 3 skipped in 512.20s",
+    "powershell_paired_tree": "5 samples x 76 passed; baseline/candidate/rollback/restored tree identity PASS",
     "ruff": "PASS",
     "git_diff_check": "PASS"
   },
@@ -161,10 +169,12 @@
   "governance": {
     "program_validate": "PASS",
     "verify_constraints": "no BLOCKERs",
-    "program_truth_pre_final_audit": {
+    "program_truth_pre_remediation_audit": {
       "state": "ready",
       "snapshot_state": "fresh",
-      "snapshot_hash": "8a187466ba84d2a89d03faaf810a84c43b34ea8d855b5fc4fb9ccb283af3f5f3",
+      "repo_revision": "d439b0ef",
+      "generated_at": "2026-07-16T06:52:02Z",
+      "snapshot_hash": "e39df819fb289a37c41dce26da5170ec44a14e51831e8e2a977f5bc9a5563b9b",
       "inventory": "1081/1081",
       "unmapped": 0,
       "missing": 0,
@@ -177,7 +187,8 @@
     }
   },
   "rollback": {
-    "disposable_clone": "/tmp/ai-sdlc-wi205-rollback",
+    "disposable_clone": "/tmp/ai-sdlc-wi205-pwsh-rollback",
+    "powershell_runbook": "PASS",
     "main_worktree_reset_or_checkout_used": false,
     "revert_tests_green": true,
     "revert_tree_equal_baseline": true,

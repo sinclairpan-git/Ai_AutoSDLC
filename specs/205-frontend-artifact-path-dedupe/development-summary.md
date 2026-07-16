@@ -24,8 +24,9 @@
   连同 formal root truth=`+2/-2` 后 RC-06 additions 精确为 27。candidate AST 只剩 1 definition、
   13 calls、12 imports、8 LOC、complexity/fan-out=3，body digest 精确为 `aec166ee...8c91`。
 - baseline/candidate full suite 分别为 `3220 passed, 3 skipped in 534.72s` 与
-  `3220 passed, 3 skipped in 512.20s`；candidate/revert/restored 三段均为 76 passed，且同根 raw
-  Git tree 都为 `a9b62108...5333`/463。结构化 receipt SHA-256 为 `3c0269fd...0310`。
+  `3220 passed, 3 skipped in 512.20s`。冻结的 PowerShell 7.5.8 runbook 已实跑：baseline×2、
+  final candidate、rollback、restored candidate 五段均为 76 passed，且同根 raw Git tree 都为
+  `6e1803c9...19a1`/463；allowlist 为空。结构化 receipt SHA-256 为 `ca6a9387...1f4e`。
 - Round 1～3 findings 已处置；Round 4 精简侧 PASS，兼容侧发现 Git attributes 可能掩盖 raw 差异，
   以及三平台 paired-tree 与既有 workflow 不可执行。formal 已增加 attributes fail-closed isolation，
   并把 paired tree 限定为本地 T61A/B、CC-07 复用现有三平台 full pytest。Round 5 双方共同发现
@@ -41,8 +42,8 @@
 ## 未完成边界
 
 - formal PR #133 已在 `a76ef8b1` 合并。T61A mutation RED/GREEN、候选产品实现、T61B
-  differential、rollback、full suite、Ruff、constraints 与 pre-final Program Truth audit 已完成。
-  尚需最终 truth sync/audit、final tree 双 Agent 同目标 PASS、implementation PR/Codex review、
-  跨平台 CI、merge 与 fresh-main acceptance。
+  differential、PowerShell paired-tree、rollback、full suite、Ruff 与 constraints 已完成。最终
+  evidence revision 必须由 fresh/ready Program Truth 覆盖后再送 final tree 双 Agent 同目标评审；
+  交付边界只剩双 PASS、implementation PR/Codex review、跨平台 CI、merge 与 fresh-main acceptance。
 - 本 summary 不宣称 T63、WP-03 或 WI-196 已完成；只有 WI-205 合并并通过 fresh-main acceptance
   后，才能关闭本次重复族。
