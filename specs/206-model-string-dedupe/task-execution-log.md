@@ -351,3 +351,10 @@ Round 2 是本预算 amendment 唯一有效 adversarial receipt；旧 Round 1 ta
 - `uv run ai-sdlc handoff show` 前后两份 pack SHA-256 稳定，未触发 stale rebuild；
   `tests/unit/test_context_state.py tests/integration/test_cli_handoff.py` 为 `27 passed in 0.74s`。
 - 该修复只影响连续性元数据，不改变预算、产品代码、测试代码或 formal 双 PASS receipt。
+
+### 11.7 PR #136 Codex Round 2 P2：summary 预算一致性
+
+- Codex re-review 指出 `development-summary.md` 首段仍把初始 `+≤33/net≤-183` 表述为“当前计划”，
+  与后文已生效的 amendment `+≤37/net≤-179` 冲突，恢复执行者可能误用旧硬门禁。
+- 处置：首段明确把 `+33/-183` 标为 amendment 前历史预算，并指向当前唯一有效的
+  `+37/-≥216/net≤-179、source≤43≤54`；formal spec/plan/tasks hashes 与双 PASS receipt 不变。

@@ -16,13 +16,13 @@ working_set_snapshot:
   - specs/206-model-string-dedupe/development-summary.md
   - program-manifest.yaml
   - .ai-sdlc/state/codex-handoff.md
-  context_summary: 'State: Round 2 双 PASS 与本地门禁有效；PR #136 Codex P2 的绝对 resume-pack
-    path 已改为 repo-relative，handoff show 不重写，相关 27 tests 通过。 | Next: 重算 truth，提交并推送
-    focused fix，重新请求 Codex review，heartbeat 至全绿合并。'
+  context_summary: 'State: Round 2 双 PASS 有效；resume-pack P2 已修复；Codex Round 2 P2 的
+    summary 旧预算已标为历史，当前唯一门禁明确为 +37/-179/source43。 | Next: 重算 truth，提交并推送
+    summary fix，第三次请求 Codex review，heartbeat 至全绿合并。'
 current_branch: feature/206-model-string-dedupe-budget-amendment
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-16T12:10:44+00:00'
+timestamp: '2026-07-16T12:28:22+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-16T08:57:35+00:00'
 checkpoint_fingerprint: 3486bdcca321f8b4f933ca38966ba2b185332bce00b3c1b84536f222cae09f94

@@ -2,9 +2,10 @@
 
 **状态**：formal review candidate；未授权或实现产品代码
 
-WI-206 是 WI-196 `T63 / WP-03 / GAP-05` 的第二个原子重复族候选。Round 1 对抗评审补发现
-`state.py::_dedupe_string_items` 属于同一顶层算法族；当前计划把18个models helper收敛到一个
-private helper，预测产品 +≤33/-≥216/net≤-183。
+WI-206 是 WI-196 `T63 / WP-03 / GAP-05` 的第二个原子重复族候选。初始 formal Round 1 补发现
+`state.py::_dedupe_string_items` 属于同一顶层算法族，并计划把18个models helper收敛到一个 private
+helper；当时预测产品 +≤33/-≥216/net≤-183。该组数字仅是 amendment 前的历史预算，已被实现探针
+证明少算 4 条 Ruff 分隔空行；当前唯一有效门禁是下文的 +≤37/-≥216/net≤-179、source≤43≤54。
 
 当前交付只冻结范围、兼容合同、Reduction Contract、T61、停止/回退和双 Agent 评审规则。Round 1
 为双FAIL，已修订测试映射、event corpus、FunctionDef/inspect gate与tree-OID rollback；Round 2 的
