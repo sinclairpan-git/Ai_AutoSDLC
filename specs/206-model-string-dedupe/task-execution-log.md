@@ -341,3 +341,13 @@ checks、merge 与 fresh-main acceptance。
   文件；working/cached diff-check 均通过，amendment 无 `src/` 或 `tests/` 变化。
 
 Round 2 是本预算 amendment 唯一有效 adversarial receipt；旧 Round 1 target/verdict 不再有效。
+
+### 11.6 PR #136 Codex P2：resume-pack 可移植性
+
+- Codex review 指出根与 scoped `resume-pack.yaml` 被 handoff 命令写成当前 macOS worktree 绝对路径；
+  换 checkout 后 `load_resume_pack()` 会判 stale，并可能在重建时丢失当前 `context_summary`。
+- 处置：两份 pack 恢复 repo-relative constitution/tech-stack/spec/plan/tasks path，补回本 amendment
+  active files，并记录实际 branch；formal spec/plan/tasks 三文件及 combined hashes 不变。
+- `uv run ai-sdlc handoff show` 前后两份 pack SHA-256 稳定，未触发 stale rebuild；
+  `tests/unit/test_context_state.py tests/integration/test_cli_handoff.py` 为 `27 passed in 0.74s`。
+- 该修复只影响连续性元数据，不改变预算、产品代码、测试代码或 formal 双 PASS receipt。

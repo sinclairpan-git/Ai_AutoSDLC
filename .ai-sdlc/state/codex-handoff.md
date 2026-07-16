@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-16T11:53:13+00:00
-- Reason: Round 2 dual adversarial PASS and final local gates completed
-- Goal: none
-- State: Budget amendment Round 2 已在同一 formal hashes 获 Pascal/Confucius 双 PASS；19-file 281/2、root truth 1 passed、validate PASS、constraints no BLOCKER。最终 truth sync 在本 handoff 更新后需再执行一次，然后只暂存 amendment 范围。
+- Updated: 2026-07-16T12:10:44+00:00
+- Reason: Addressed PR #136 Codex portable resume-pack review
+- Goal: 完成 WI-206 budget amendment PR #136 review、CI、merge 后恢复 implementation
+- State: Round 2 双 PASS 与本地门禁保持有效；Codex P2 指出的绝对 resume-pack path 已改为 repo-relative，handoff show 不重写，相关 27 tests 通过。需重算 truth、提交修复并重新请求 review。
 - Stage: close
 - Work Item: 206-model-string-dedupe
 - Branch: feature/206-model-string-dedupe-budget-amendment
@@ -22,15 +22,17 @@
 
 ## Key Decisions
 - 最终合同锁定标准顶层 first-party import、禁止 late/mid/noqa/isort/Ruff 配置/压行；product≤37/source≤43，RC-06 cap54 不变。
+- 连续性 pack 必须保持 repo-relative path；本次不把 handoff 生成器缺陷扩入 WI-206 产品实现。
 
 ## Commands / Tests
 - 双 Agent PASS exact combined d0e29ec47fbf3582c275e6a0ca6f7ee94acb2ac3efc5669291d70ac619930566；19-file 281 passed, 2 skipped；root truth 1 passed；validate/constraints PASS。
+- handoff show 前后两份 resume-pack hashes 稳定；context-state + CLI handoff `27 passed in 0.74s`。
 
 ## Blockers / Risks
-- 无内容 blocker；剩余 mainline PR、Codex review、required CI 与 merge。
+- 无内容 blocker；需完成 focused fix truth sync、push、Codex re-review 与剩余 required CI。
 
 ## Local PR Review
-- none
+- PR #136 Codex P2 portable resume-pack paths：已修复，待 re-review。
 
 ## Exact Next Steps
-- 最终 truth sync/audit 后 stage exact amendment files，cached diff-check，commit/push/PR，@codex review，heartbeat 至 merge。
+- truth sync/audit/validate/constraints，确认 formal hashes 不变；commit/push focused fix，回复并重新请求 Codex review，heartbeat 至全绿合并。
