@@ -1,5 +1,5 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-07-15T23:35:16+00:00'
+pipeline_last_updated: '2026-07-16T03:04:35+00:00'
 current_stage: close
 feature:
   id: 204-program-finalization-command-family-reduction-candidate
@@ -43,6 +43,6 @@ completed_stages:
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 204-program-finalization-command-family-reduction-candidate
-linked_plan_uri: specs/204-program-finalization-command-family-reduction-candidate/plan.md
-last_synced_at: '2026-07-15T11:45:11+00:00'
+linked_wi_id: 205-frontend-artifact-path-dedupe
+linked_plan_uri: specs/205-frontend-artifact-path-dedupe/plan.md
+last_synced_at: '2026-07-16T03:04:35+00:00'

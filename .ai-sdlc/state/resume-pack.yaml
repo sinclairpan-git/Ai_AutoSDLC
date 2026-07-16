@@ -3,33 +3,20 @@ current_batch: 0
 last_committed_task: ''
 working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
-  constitution_path: .ai-sdlc/memory/constitution.md
-  tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/204-program-finalization-command-family-reduction-candidate/spec.md
-  plan_path: specs/204-program-finalization-command-family-reduction-candidate/plan.md
-  tasks_path: specs/204-program-finalization-command-family-reduction-candidate/tasks.md
-  active_files:
-  - .ai-sdlc/state/codex-handoff.md
-  - .ai-sdlc/state/resume-pack.yaml
-  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
-  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/resume-pack.yaml
-  - .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml
-  - docs/framework-defect-backlog.zh-CN.md
-  - program-manifest.yaml
-  - specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
-  - src/ai_sdlc/core/program_service.py
-  - tests/unit/test_program_service.py
-  context_summary: 'Goal: Resolve Program Truth merge-topology self-staleness while
-    preserving the WI-204 RC-09 No-Go | State: The immutable repair and terminal receipt
-    are complete; v2 Program Truth and all 13 close checks are ready, while ResumePack
-    retains the closed WI canonical branch and the handoff records the unassociated
-    terminal branch | Next: Terminal protocol: verify state no-op and projected-main
-    freshness, obtain exact-head dual review and CI, merge, then perform read-only
-    fresh-main acceptance'
-current_branch: codex/program-finalization-closeout
+  constitution_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/205-frontend-artifact-path-dedupe/.ai-sdlc/memory/constitution.md
+  tech_stack_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/205-frontend-artifact-path-dedupe/.ai-sdlc/profiles/tech-stack.yml
+  spec_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/205-frontend-artifact-path-dedupe/specs/205-frontend-artifact-path-dedupe/spec.md
+  plan_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/205-frontend-artifact-path-dedupe/specs/205-frontend-artifact-path-dedupe/plan.md
+  tasks_path: /Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/205-frontend-artifact-path-dedupe/specs/205-frontend-artifact-path-dedupe/tasks.md
+  active_files: []
+  context_summary: 'Goal: 完成 WI-196 剩余减重路线；当前原子项 WI-205 frontend artifact path dedupe
+    | State: WI-205 formal Round 8 相同三 hash 双 PASS；Markdown rendering 与 whitespace
+    gate 均闭合；产品实现未开始；准备 amend docs commit/PR | Next: 末次 truth sync/audit，amend docs
+    commit，push/PR/Codex review/checks/merge'
+current_branch: ''
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-16T01:37:00+00:00'
+timestamp: '2026-07-16T03:50:45+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-07-15T23:35:16+00:00'
-checkpoint_fingerprint: f29dbd4e0f554fb235e44a536e97281e77abec212e0a37c22c4cbb7046857ae6
+checkpoint_last_updated: '2026-07-16T03:04:35+00:00'
+checkpoint_fingerprint: 6804ea879c3cdb92558ca15ca4475af648f396047f9cb05c44e60bfea0a9bc53
