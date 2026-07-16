@@ -1,7 +1,7 @@
 # Continuity Handoff
 
 - Updated: 2026-07-16T00:08:02+00:00
-- Reason: Correct stale post-C continuity instructions before push
+- Reason: Correct stale post-C continuity instructions and full closeout inventory before push
 - Goal: Close WI-204 as an auditable RC-09 No-Go with zero candidate product code
 - State: A 121c8625 carries closeout truth; B 5b6e9ae4 carries the immutable receipt and fresh Program Truth snapshot; current HEAD carries the final continuity envelope; exact-head dual review is pending
 - Stage: close
@@ -9,11 +9,18 @@
 - Branch: codex/program-finalization-closeout
 
 ## Changed Files
+- M .ai-sdlc/state/checkpoint.yml
 - M .ai-sdlc/state/codex-handoff.md
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/codex-handoff.md
 - M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/resume-pack.yaml
+- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/runtime.yaml
+- M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/sponsor-revocation.yaml
 - M .ai-sdlc/work-items/204-program-finalization-command-family-reduction-candidate/working-set.yaml
+- M program-manifest.yaml
+- M specs/204-program-finalization-command-family-reduction-candidate/development-summary.md
+- M specs/204-program-finalization-command-family-reduction-candidate/task-execution-log.md
+- M specs/204-program-finalization-command-family-reduction-candidate/tasks.md
 
 ## Key Decisions
 - Keep the continuity envelope limited to root/scoped handoff, root/scoped ResumePack, and scoped working-set
