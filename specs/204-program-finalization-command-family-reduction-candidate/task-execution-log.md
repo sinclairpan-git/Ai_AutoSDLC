@@ -667,6 +667,7 @@ Codex 对 `2574fa4f210c2fcb8ab9aecfb5fc59865f97609c` 复审发现一项 P2：che
 - `uv run pytest tests/unit/test_program_service.py -q`：`406 passed`。
 - `uv run pytest tests/integration/test_cli_program.py tests/unit/test_close_check.py -q`：`300 passed`。
 - `uv run ruff check src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py`：PASS。
+- `uv run ai-sdlc verify constraints`：无 BLOCKER。
 - Terminal snapshot 必须从本 receipt 定稿后的 clean HEAD 生成；其后只执行 constraints、Truth audit、close-check、state/hash/Git、projected-main、双 Agent、Codex/CI 与 fresh-main 只读验收，不再改 Truth source。
 
 #### 34.4 代码审查
@@ -679,6 +680,9 @@ Codex 对 `2574fa4f210c2fcb8ab9aecfb5fc59865f97609c` 复审发现一项 P2：che
 - `FD-2026-07-16-001` 作为 post-close framework defect 的需求/根因/验收合同；本 terminal batch 作为实现与验证收据。
 - 不新增 task checkbox，不修改 T15，不重开 frozen spec/plan/tasks/development-summary，不修改 checkpoint/runtime；candidate 执行链继续保持取消。
 - Terminal protocol 固定为：不可变实现 payload → receipt/continuity → clean-head snapshot → exact-head 双审/CI → fresh-main 只读验收；最后一步不触发新的 continuity 写入。
+- 关联 branch/worktree disposition 计划：`deleted`
+- 当前批次 branch disposition 状态：`deleted`
+- 当前批次 worktree disposition 状态：`removed`
 
 #### 34.6 Git close-out
 

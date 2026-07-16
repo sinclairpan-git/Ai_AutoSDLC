@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-16T01:20:14+00:00
-- Reason: Record the post-close Program Truth root-cause repair and terminal non-recursive verification protocol
+- Updated: 2026-07-16T01:31:41+00:00
+- Reason: Record the close-check receipt correction before regenerating the terminal snapshot
 - Goal: Resolve Program Truth merge-topology self-staleness while preserving the WI-204 RC-09 No-Go
-- State: Implementation payload 6d4a7965ed179aca2247f1f5a9312bce269f7f68 is the immutable root-cause repair; the terminal snapshot follows only after receipt sources are fixed, and final acceptance is a read-only fresh-main check
+- State: Implementation payload 6d4a7965ed179aca2247f1f5a9312bce269f7f68 plus the terminal receipt define the root-cause repair and required close markers; the v2 snapshot is generated only from their clean head, and final acceptance is read-only on fresh main
 - Stage: close
 - Work Item: 204-program-finalization-command-family-reduction-candidate
 - Branch: codex/program-truth-merge-stability
@@ -23,17 +23,17 @@
 ## Key Decisions
 - Normalize only branch_only_implemented and mainline_merged inside the snapshot source-hash projection
 - Keep raw truth-check API, capability gate, RC-09 revocation, claim=0, and all candidate handlers unchanged
-- Use exactly ten PR paths; do not modify checkpoint, runtime, frozen spec, plan, tasks, or development summary
+- The terminal receipt must include code-change constraints plus deleted/removed lifecycle markers; no checkpoint or runtime mutation
 
 ## Commands / Tests
-- RED: 2 failed on projection and real Git branch-to-main topology
-- GREEN: targeted 2 passed; ProgramService 406 passed; Program CLI plus close-check 300 passed; Ruff PASS
+- RED: 2 failed on projection and real Git branch-to-main topology; GREEN: targeted 2, ProgramService 406, Program CLI plus close-check 300, Ruff and constraints PASS
+- First exact close-check correctly rejected the receipt until constraints and deleted/removed lifecycle markers were explicit
 
 ## Blockers / Risks
-- Risk control: generate the v2 snapshot from the clean receipt head and prove feature, projected-main, and real main freshness
+- Risk control: regenerate the v2 snapshot from the corrected clean receipt head and prove feature, projected-main, and real main freshness
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Terminal protocol: commit receipt and continuity, generate the v2 snapshot from that clean head, run exact-head dual review and CI, then perform read-only fresh-main acceptance without another continuity write
+- Terminal protocol: commit corrected receipt and continuity, regenerate the v2 snapshot from that clean head, run exact-head dual review and CI, then perform read-only fresh-main acceptance without another continuity write

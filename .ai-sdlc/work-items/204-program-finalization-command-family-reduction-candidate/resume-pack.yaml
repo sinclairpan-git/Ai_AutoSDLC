@@ -21,15 +21,16 @@ working_set_snapshot:
   - tests/unit/test_program_service.py
   context_summary: 'Goal: Resolve Program Truth merge-topology self-staleness while
     preserving the WI-204 RC-09 No-Go | State: Implementation payload 6d4a7965ed179aca2247f1f5a9312bce269f7f68
-    is the immutable root-cause repair; the terminal snapshot follows only after receipt
-    sources are fixed, and final acceptance is a read-only fresh-main check | Next:
-    Terminal protocol: commit receipt and continuity, generate the v2 snapshot from
-    that clean head, run exact-head dual review and CI, then perform read-only fresh-main
-    acceptance without another continuity write'
+    plus the terminal receipt define the root-cause repair and required close markers;
+    the v2 snapshot is generated only from their clean head, and final acceptance
+    is read-only on fresh main | Next: Terminal protocol: commit corrected receipt
+    and continuity, regenerate the v2 snapshot from that clean head, run exact-head
+    dual review and CI, then perform read-only fresh-main acceptance without another
+    continuity write'
 current_branch: codex/program-truth-merge-stability
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-16T01:20:14+00:00'
+timestamp: '2026-07-16T01:31:41+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-15T23:35:16+00:00'
 checkpoint_fingerprint: f29dbd4e0f554fb235e44a536e97281e77abec212e0a37c22c4cbb7046857ae6
