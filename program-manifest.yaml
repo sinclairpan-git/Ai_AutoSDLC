@@ -2015,12 +2015,16 @@ specs:
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
   - 203-finalization-command-family-reduction-contract
+- id: 205-frontend-artifact-path-dedupe
+  path: specs/205-frontend-artifact-path-dedupe
+  depends_on:
+  - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
-  generated_at: '2026-07-16T01:33:28Z'
+  generated_at: '2026-07-16T05:19:55Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: d121f276
-  authoring_hash: 78222f8eada63cd4eba40766bfc262d6f781aa2d9b8c44546d29f1b2afdf9fb3
+  repo_revision: b9218498
+  authoring_hash: 9c9138c95666b44edd5a440c87c629268cd9ecdfbf83cec22470261e89478363
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 01c3db2eed14ae56d4d4e493386fc2293d4b33c42f54e5a58d115f50127f76ee
@@ -2062,7 +2066,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 25537d28c52d6c640e4ba6bad35b59fd47aca43b459446fa3107df73933e2d80
+  snapshot_hash: 8a187466ba84d2a89d03faaf810a84c43b34ea8d855b5fc4fb9ccb283af3f5f3
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2076,31 +2080,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1076
-    mapped_sources: 1076
+    total_sources: 1081
+    mapped_sources: 1081
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3577
-    deferred_signal_count: 6463
-    non_goal_signal_count: 364
+    phase_signal_count: 3580
+    deferred_signal_count: 6473
+    non_goal_signal_count: 367
     layer_totals:
       blueprint: 1
-      spec: 204
-      plan: 204
-      tasks: 204
-      execution: 204
-      close: 204
+      spec: 205
+      plan: 205
+      tasks: 205
+      execution: 205
+      close: 205
       requirements: 2
       defect: 3
       design: 8
       release: 42
     layer_materialized:
       blueprint: 1
-      spec: 204
-      plan: 204
-      tasks: 204
-      execution: 204
-      close: 204
+      spec: 205
+      plan: 205
+      tasks: 205
+      execution: 205
+      close: 205
       requirements: 2
       defect: 3
       design: 8
@@ -11294,6 +11298,51 @@ truth_snapshot:
       mapping_ref: 204-program-finalization-command-family-reduction-candidate
       phase_signal_count: 0
       deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/205-frontend-artifact-path-dedupe/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 205-frontend-artifact-path-dedupe
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 2
+    - path: specs/205-frontend-artifact-path-dedupe/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 205-frontend-artifact-path-dedupe
+      phase_signal_count: 3
+      deferred_signal_count: 3
+      non_goal_signal_count: 0
+    - path: specs/205-frontend-artifact-path-dedupe/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 205-frontend-artifact-path-dedupe
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/205-frontend-artifact-path-dedupe/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 205-frontend-artifact-path-dedupe
+      phase_signal_count: 0
+      deferred_signal_count: 5
+      non_goal_signal_count: 1
+    - path: specs/205-frontend-artifact-path-dedupe/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 205-frontend-artifact-path-dedupe
+      phase_signal_count: 0
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
