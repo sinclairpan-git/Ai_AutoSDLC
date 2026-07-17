@@ -1,47 +1,30 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T08:12:58+00:00
-- Reason: Round6 exact-target dual PASS and transition to immutable final gate
-- Goal: 完成 WI208 formal 双对抗评审并交付 formal PR
-- State: Round 6 exact combined aab82d2601bbeb097331865e022b6c2458133bfae62f3afa9c5fc4a1496a18aa 已获 Pascal/Confucius 双 PASS且无 finding；执行 immutable final gates
+- Updated: 2026-07-17T09:21:38+00:00
+- Reason: Record completed terminal gates before the corrected PR-head commit.
+- Goal: Complete WI208 formal PR audit closure and merge before implementation
+- State: Unified full-commit audit defects are corrected. Final truth is ready/fresh with inventory 1096/1096 and the approved six-file formal hash remains unchanged; preparing the focused PR-head correction commit.
 - Stage: close
 - Work Item: 208-resume-pack-portable-lossless-reconstruction
 - Branch: feature/208-resume-pack-portable-lossless-reconstruction-docs
 
 ## Changed Files
-- M  .ai-sdlc/project/config/project-state.yaml
-- M  .ai-sdlc/state/checkpoint.yml
-- MM .ai-sdlc/state/codex-handoff.md
-- AM .ai-sdlc/work-items/208-resume-pack-portable-lossless-reconstruction/codex-handoff.md
-- M  program-manifest.yaml
-- M  specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
-- M  specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
-- M  specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
-- MM specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-- M  specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
-- M  specs/207-program-adapter-side-effect/development-summary.md
-- M  specs/207-program-adapter-side-effect/plan.md
-- M  specs/207-program-adapter-side-effect/spec.md
-- M  specs/207-program-adapter-side-effect/task-execution-log.md
-- M  specs/207-program-adapter-side-effect/tasks.md
-- AM specs/208-resume-pack-portable-lossless-reconstruction/development-summary.md
-- AM specs/208-resume-pack-portable-lossless-reconstruction/plan.md
-- AM specs/208-resume-pack-portable-lossless-reconstruction/spec.md
-- AM specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
-- AM specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
-- M  tests/integration/test_repo_program_manifest.py
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/work-items/208-resume-pack-portable-lossless-reconstruction/codex-handoff.md
+- M program-manifest.yaml
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
 
 ## Key Decisions
-- Round5 whitespace问题已关闭；最终必须 re-stage exact 21路径、worktree-index zero diff、cached diff-check exit0 后提交
+- Use crash-convergent staged-pair terminology; never promise cross-file atomicity. Keep the approved six-file formal target at aab82d2601bbeb097331865e022b6c2458133bfae62f3afa9c5fc4a1496a18aa.
 
 ## Commands / Tests
-- Round6 Pascal PASS；Confucius PASS；start=end exact combined，drift NO；ignore-space-at-eol证明业务正文零变化
+- truth sync/audit PASS snapshot 5aa52d6e29b2b91c3782fc57105f5acd46743177341273894a58388ce481a204; constraints no BLOCKER; program validate PASS; manifest exact 1 passed in 84.48s; diff-check PASS.
 
 ## Blockers / Risks
-- GAP-13 handoff refresh 仍生成 absolute/sparse resume-pack，已在 final baseline 前精确剔除；后续禁止 restore 后假 PASS
+- GitHub Codex connector currently asks the repository owner to connect a Codex account; all PR checks were green on the prior HEAD.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- final truth sync/audit、constraints/validate/manifest exact；re-stage exact；cached check/worktree-index/combined gates；commit/push/PR
+- Stage the exact four-file correction, prove cached/worktree gates, commit and push, then require Pascal and Confucius PASS on the identical new HEAD and re-request Codex review.
