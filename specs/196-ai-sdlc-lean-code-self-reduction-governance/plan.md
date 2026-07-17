@@ -39,6 +39,7 @@
 WI-206 fresh-main 新暴露的验证/连续性缺口（先于下一减重候选）
   └─ T55 GAP-12 program implicit adapter side effect（WI-207）
        └─ T56 GAP-13 portable/lossless resume reconstruction（WI-208）
+            └─ T57 GAP-14 YAML quoted-scalar comment-policy false positive（WI-209）
 ```
 
 WP-03～WP-07 不互相强制串行。只有代码重叠、契约重叠或同一重复族才形成真实依赖；依赖必须在子项 spec 中用文件/符号和测试证明。
@@ -86,8 +87,8 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 
 ### T55：GAP-12 program implicit adapter side effect
 
-- **当前状态**：PR #139 draft；Codex P2 与双 Agent 已确认全族 bypass 的 managed-ingress 回归，formal
-  重新进入设计门禁。
+- **当前状态**：PR #139 已合并为 `8752aa97`；首轮 fresh-main 业务断言全绿但 full suite 污染真实
+  checkout，独立 test-isolation repair active，GAP-12 尚未关闭。
 - **风险/范围**：L2 / CC-05；root `program` bypass + 两个 managed-delivery handler 局部既有 hook +
   `test_cli_program.py` root/local 隔离与双轴 fixture。
 - **非目标**：不修改 adapter 同步算法、ProgramService、第三个 handler、resume-pack 或 verify telemetry。
@@ -113,7 +114,20 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
   revert WI-208 独立提交。
 - **证据**：unit + status/recover/handoff integration + relocation/detached/atomic-write receipt。
 
-T55、T56 必须顺序使用两个 WI/branch/PR；它们均是基础缺陷，不计 Reduction Contract 收益。
+### T57：GAP-14 YAML quoted-scalar comment-policy false positive
+
+- **当前状态**：queued；待 WI-208 fresh-main 后由 WI-209 formal 冻结 parser 边界。
+- **风险/范围**：L2；只处理 unified diff 中 YAML quoted scalar 内容被 `_is_comment_line()` 误判为注释。
+- **非目标**：不豁免真实 YAML comments，不修改 adapter、resume reconstruction 或 verify telemetry。
+- **进入**：用 single/double quoted multiline scalar、plain scalar、真实 comment 和非 YAML source 建立 RED
+  characterization，证明只有 quoted scalar 内容的 `#` 不应进入 removed-comment finding。
+- **验证/完成**：path/syntax-aware 最小实现；现有 Python/Markdown/YAML comment detection 保持；focused/full/
+  constraints/fresh-main clean。
+- **停止/回退**：若方案需要全局关闭 YAML comment detection、引入完整 YAML diff 重写器或 waiver，则回到
+  design；revert WI-209 独立提交。
+- **证据**：comment-policy unit matrix、verify constraints integration、双 Agent、PR/CI/fresh-main。
+
+T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷，不计 Reduction Contract 收益。
 
 ## 5. WP-01：最小充分 Characterization / Golden / Differential
 

@@ -347,3 +347,39 @@ Round 3，新目标只做从零双审。
   与 candidate 完全一致，两个 name-diff 均为 0。
 - 本批次冻结 final-tree 输入；T44 verdict 仅使用外部同 HEAD/tree 双 Agent 回执，评审后不得再修改树。
   双 PASS 后才可更新 PR #139、重请求 Codex review 与 required checks。
+
+## 24. Batch 2026-07-16-023：PR #139 merge 与 fresh-main 污染复现
+
+- Implementation final HEAD=`8bbff9bdbd4a97f2a374928899dafccb63fc4fe1`、tree=
+  `5804ef867bc8bc73d8c466d7c26f98c03da161fe`；Pascal/Confucius 对同一目标双 PASS、findings=`none`。
+- PR #139 current-head Codex review 未发现 major issue，22/22 required checks success；merge commit=
+  `8752aa97253b51d632a645ce8f364dda30e49611`。
+- fresh detached `origin/main@8752aa97`：real-hook `4 passed`、focused `238 passed`、full
+  `3224 passed, 3 skipped`、Ruff PASS；但 full 结束后 `.ai-sdlc/state/resume-pack.yaml` 与
+  `.cursor/rules/ai-sdlc.mdc` 变更，因此 SC-007 未满足，GAP-12/T52 保持 active。
+- pristine diagnostic worktree 单独运行 `verify constraints`、real-hook 和 focused 均直接 clean；verify
+  不是污染源。外部逐测试 teardown guard 依次定位 index-gate、loop、recover、run、self-update、stage、
+  status 中 8 组用例：它们 patch command-local root，却让 root callback 从真实 cwd 解析源码仓。
+- 同一 dirty diff 上 verify 还暴露 YAML quoted scalar 续行 `#139...` 被 comment policy 当作注释的独立
+  false positive。该项登记 GAP-14/WI209，不混入 WI207 repair；GAP-13/WI208 边界不变。
+
+## 25. Batch 2026-07-16-024：test-isolation repair 与 guard 双审收敛
+
+- repair branch=`codex/207-fresh-main-test-isolation`，base=`origin/main@8752aa97`；产品 diff 为空。
+- 7 个 CLI integration 文件将已定位用例/模块切到临时 cwd；self-update 每用例在临时 cwd 执行
+  `init_project`。`tests/conftest.py` 增加显式 opt-in cwd fixture 与 session repository-state guard。
+- guard 允许既有 dirty baseline，只比较会话新增变化：NUL-safe tracked status/index/全部 tracked 内容，
+  非 tracked VS Code/Claude/generic canonical adapter 目标、project config 与动态 scoped resume-pack；
+  teardown 读取失败或变化均 fail，不 restore、不扫描普通 untracked。
+- Pascal 先要求把安全版 `+127` guard 压缩；合并 `ls-files`、删除 tracked 重复 allowlist、改为路径映射与
+  SHA-256 后约 99 行。Pascal/lean 与 Confucius/safety 对精简实现均 PASS、findings=`none`，确认无需产品
+  代码。
+- 受影响 8 文件集合=`195 passed, 1 skipped`；Ruff、format、diff-check PASS。压缩前完整 guard=
+  `3224 passed, 3 skipped`；外部 pre/post diff hash=`7ed42c891ec6508a0f24978a516a5f754e12b02d`、
+  index hash=`f1b3b0c6dd6e68a783c32c61bdb88b10e753e2fd`，3 份 scoped resume 与 project config SHA-256
+  全部逐项相同。
+- 精简 final tree 的 Ruff/format、manifest exact、affected=`196 passed, 1 skipped`、full=
+  `3224 passed, 3 skipped` 全绿；session guard teardown 未报告变化。外部 pre/post diff hash=
+  `365e80a7c0c0dc311dcb3480a16b1349179c9fc2`、index hash=
+  `f1b3b0c6dd6e68a783c32c61bdb88b10e753e2fd`，3 份 scoped resume 与 project config 摘要逐项相同，
+  未执行 restore。下一步仅刷新终态 handoff/truth 并冻结 exact review target。

@@ -97,8 +97,9 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T53A 关闭 frontend inheritance truth（已完成） | standalone | GAP-09 | L2 | 已满足 | WI-199 / PR #123 / merge `208a34c8` |
 | T53B 关闭 adapter consumption truth（已完成） | standalone | GAP-10 | L2 | 已满足 | WI-200 / PR #124 / merge `c737eda0` |
 | T54 收敛 source inventory（已完成） | standalone | GAP-11 | L2 | 已满足 | WI-201 / PR #125 / merge `d19c8b7d`；0 unmapped / 0 missing |
-| T55 隔离 program implicit adapter side effect（active） | standalone | GAP-12 | L2 / CC-05 | WI-206 fresh-main | WI-207；root bypass + 两个 managed 局部 hook + root/local test isolation + 双轴回归 + fresh-main |
+| T55 隔离 program implicit adapter side effect（active） | standalone | GAP-12 | L2 / CC-05 | WI-206 fresh-main | WI-207；PR #139 已合并，test-isolation repair + repository-state guard + final fresh-main 待完成 |
 | T56 建立 portable/lossless resume reconstruction（queued） | standalone | GAP-13 | L2 | T55 fresh-main + WI-198 impact analysis | WI-208；canonical source + status/recover/handoff relocation/detached tests |
+| T57 修复 YAML quoted-scalar comment-policy false positive（queued） | standalone | GAP-14 | L2 | T56 fresh-main | WI-209；quoted/plain/real-comment characterization + path/syntax-aware parser + constraints/full/fresh-main |
 | T61A 捕获目标切片旧行为 | embedded gate | GAP-02/WP-01A | L1/L2 | T51、T52 + fail-closed impact analysis | 固定环境、allowlist、surface/Golden 基线 |
 | T61B 候选实现 differential 与回退演练 | embedded pre-merge gate | GAP-02/WP-01B | L1～L3 | T61A + candidate hash | 零未批准差异、rollback receipt；未通过不得 merge/close |
 | T62A code + contract report-only（open） | standalone | GAP-01/WP-02 | L1/L2 | T61A + 新/替代 sponsor + 父合同重新双审 | WI-202 候选 RC-09 No-Go；重启项须分类/合同缺口报告、历史零误阻断、RC-06 预算 |
@@ -110,7 +111,7 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T66 单个 ProgramService 领域切片 | standalone + T61A/B | GAP-03/WP-06 | L3 | T51、T52 + 真实重叠子项 | 迁移职责 -90%、RC-04 结构改善、稳定发布、删旧后回退演练 |
 | T67 单个 Program Stage family | standalone + T61A/B | GAP-04/WP-07 | L3 | T51、T52 + 真实重叠子项 | 镜像 LOC -70%、33 命令兼容、稳定发布、删旧后回退演练 |
 
-**全局恢复门禁**：表中 T61A、T62A～T62C、T63～T67 的任何新实例，在 T56/WI-208 完成
+**全局恢复门禁**：表中 T61A、T62A～T62C、T63～T67 的任何新实例，在 T57/WI-209 完成
 fresh-main acceptance 前均不得启动。既有已完成 receipt 不受影响；本门禁优先于各行仍保留的历史
 T51/T52 依赖描述。
 
@@ -120,16 +121,17 @@ T51/T52 依赖描述。
 
 | 规范 | 任务 |
 |---|---|
-| GAP-01～GAP-13 | T22、T51～T67 |
+| GAP-01～GAP-14 | T22、T51～T67 |
 | LP-01～LP-12 | T21、T23、T32、T63～T67 |
-| NC-01～NC-06 | T21、T51～T56 |
-| CC-01～CC-08 | T21、T51、T52、T55、T56、T61A、T61B、T62A～T62C、T63～T67（按 impact analysis） |
+| NC-01～NC-06 | T21、T51～T57 |
+| CC-01～CC-08 | T21、T51、T52、T55～T57、T61A、T61B、T62A～T62C、T63～T67（按 impact analysis） |
 | RC-01～RC-10 | T21、T32、T61A、T61B、T62A～T62C、T63～T67（按适用矩阵） |
 | FR-01～FR-02 | T21、T22、T32 |
-| FR-03～FR-04 | T51、T52、T55、T56、T61A、T61B |
+| FR-03～FR-04 | T51、T52、T55～T57、T61A、T61B |
 | FR-05～FR-07 | T62A～T62C、T65～T67 |
 | FR-08～FR-09 | T23、T43、全部实现子项 |
 | FR-10～FR-11 | T31～T33 |
-| FR-12 | T42、T43、T55、T56 formal truth |
+| FR-12 | T42、T43、T55～T57 formal truth |
 | FR-13 | T55、T56 |
-| SC-01～SC-09 | T32、T33、T41～T43、T55、T56 |
+| FR-14 | T57 |
+| SC-01～SC-09 | T32、T33、T41～T43、T55～T57 |

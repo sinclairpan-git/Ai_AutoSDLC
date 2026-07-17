@@ -33,7 +33,10 @@ def _clear_ide_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestStageCommand:
-    def test_stage_help(self) -> None:
+    def test_stage_help(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
         result = runner.invoke(app, ["stage", "--help"])
         assert result.exit_code == 0
         assert "show" in result.output

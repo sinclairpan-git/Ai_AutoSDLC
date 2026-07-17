@@ -16,10 +16,12 @@
 - WI-206 / PR #137 / merge `506e950d` 已把18个models顶层string helper收敛为一个private helper，
   product `+37/-246/net -209`；fresh-main full `3220 passed, 3 skipped`，以
   `completed_reduction` 关闭一个 T63 family。
-- WI-207/GAP-12 兼容 formal PR #140 已合入 `8d325a4d`；implementation candidate `c4e5f07d` 已按
-  root bypass + 两个 managed 入口局部 hook + root/local test isolation 落地，严格产品 additions=4、
-  测试 additions=110，focused/full/治理/回滚门禁全绿，待 final-tree 双审与 PR #139/fresh-main。
-  WI-208/GAP-13 继续独立处理 resume-pack reconstruction；二者先后关闭后再恢复新的减重候选。
+- WI-207/GAP-12 兼容 formal PR #140 已合入 `8d325a4d`；implementation final HEAD `8bbff9bd` 严格
+  产品 additions=4、测试 `+110/-22`，双 Agent/Codex/22 checks 全绿，PR #139 已合并为 `8752aa97`。
+  首轮 fresh-main 业务断言通过但 full suite 污染 root resume/Cursor；当前独立 test-isolation repair
+  只改 8 个测试文件，产品 diff 为空，GAP-12 仍 active。
+- WI-208/GAP-13 继续独立处理 resume-pack reconstruction；WI-209/GAP-14 随后独立处理 YAML quoted
+  scalar 的 comment-policy false positive。三项 fresh-main 后才恢复新的减重候选。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新
   写成可执行合同，旧 verdict 同时失效。
@@ -45,6 +47,6 @@
 - GAP/WP 子项仍按独立 WI/branch/PR 推进；本 summary 不宣称整体减重完成。
 - WI-202 的首个 T62A 候选因完整 proof 明显超过 RC-06 预算，已按 RC-09 停止且未合入；
   GAP-01/T62A 仍 open，T62B/T62C 未开始，FR-08 双 reviewer fallback 继续有效。
-- GAP-12、GAP-13 是验证/连续性可靠性缺口，不计 RC-08 减重收益；WI-207 不得混入 continuity，
-  WI-208 不得混入 adapter dispatch。
+- GAP-12、GAP-13、GAP-14 是验证/连续性可靠性缺口，不计 RC-08 减重收益；WI-207 不得混入
+  continuity/comment parser，WI-208 不得混入 adapter dispatch，WI-209 不得用 YAML 全局豁免掩盖误报。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

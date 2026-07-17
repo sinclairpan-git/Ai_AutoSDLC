@@ -181,25 +181,30 @@
 
 ### T51 Push、PR、Codex review 与 required checks
 
-- **状态**：PR #139 draft；formal/实现修订已完成，待 final-tree 双 PASS 后重请求 Codex review
+- **状态**：已完成；PR #139 合并为 `8752aa97`，current-head Codex 无 finding，22/22 checks 通过
 - **依赖**：T44
 - **验收**：单逻辑实现 commit、push、ready PR、`@codex review`、约五分钟 heartbeat；findings focused
   修复并重新验证/复审；required checks 全绿。
 
 ### T52 Merge 与 fresh-main acceptance
 
-- **状态**：待执行
+- **状态**：active；首轮 fresh-main 业务断言全绿但 full suite 污染真实 checkout；test-isolation repair
+  final local gates 全绿，待 exact-tree 双审、独立 PR 与最终 fresh-main
 - **依赖**：T51
-- **验收**：fresh detached `origin/main` 重跑 real-hook nodeids、focused、full、Ruff、constraints、truth；
-  branch tree 与 mainline 内容一致、工作树 clean；GAP-12 具备关闭证据。
+- **实现**：只修改 `tests/conftest.py` 与 7 个已定位 CLI test 文件；共享临时 cwd fixture + session
+  repository-state guard；产品 diff 为空，预算不超过 8 文件/gross `+135`/net `+120`。
+- **验收**：repair PR 双 Agent/Codex/checks/merge 后，fresh detached `origin/main` 重跑 real-hook nodeids、
+  focused、full、Ruff、constraints、truth；tracked/managed pre/post 摘要直接相同、工作树 clean，GAP-12
+  才具备关闭证据。
 
 ### T53 启动 WI208 并继续父路线
 
 - **状态**：待执行
 - **依赖**：T52
 - **验收**：下一 work item 为 WI208 `resume-pack-portable-lossless-reconstruction-sources`；更新父台账时
-  GAP-12=closed、GAP-13=active；不关闭 GAP-05/WI196/RC-08，不发布版本。WI208 关闭后再选下一个
-  T63/T65/WP-06/WP-07 原子减重项。
+  GAP-12=closed、GAP-13=active、GAP-14=queued；不关闭 GAP-05/WI196/RC-08，不发布版本。WI208
+  关闭后启动 WI209 comment-policy false-positive 修复，WI209 关闭后再选下一个 T63/T65/WP-06/WP-07
+  原子减重项。
 
 ## 追踪矩阵
 
@@ -211,6 +216,6 @@
 | CC-01～CC-03 | T33～T43、T52 |
 | CC-05 / CC-06 | T32～T43、T52 |
 | CC-07 | T33、T41、T51、T52 |
-| FR-001～FR-012 | T14、T21～T53 |
-| SC-001～SC-008 | T21～T53 |
+| FR-001～FR-015 | T14、T21～T53 |
+| SC-001～SC-010 | T21～T53 |
 | WI-196 FR-08 / FR-10 | T13、T21～T25、T44 |

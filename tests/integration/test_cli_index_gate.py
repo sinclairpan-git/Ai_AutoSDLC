@@ -833,7 +833,7 @@ class TestCliIndexAndGate:
         assert "frontend_visual_a11y_issue_review" not in result.output
 
     def test_rules_show_missing_rule_deduplicates_available_list(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         class _FakeRulesLoader:
             def load_rule(self, _name: str):
@@ -843,6 +843,7 @@ class TestCliIndexAndGate:
                 return ["alpha", "alpha", "beta", "beta"]
 
         monkeypatch.setattr(sub_apps, "RulesLoader", _FakeRulesLoader)
+        monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["rules", "show", "missing-rule"])
 
@@ -851,9 +852,10 @@ class TestCliIndexAndGate:
         assert result.output.count("beta") == 1
 
     def test_studio_route_invalid_type_deduplicates_valid_types(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(sub_apps, "console", Console(width=240, force_terminal=False))
+        monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["studio", "route", "not-a-real-type"])
 
