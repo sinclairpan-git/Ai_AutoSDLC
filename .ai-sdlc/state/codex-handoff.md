@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T20:33:34+00:00
-- Reason: WI209 RED baseline committed and verified
-- Goal: 按 WI209 frozen contract 完成最小 GREEN、全量/回退、双审与 implementation PR
-- State: RED committed as 6438d589: two approved test files only, 112 insertions, product diff zero; unit witness 3/3 failed and CLI witness 2 failed/1 passed for the intended quoted-scalar defects
+- Updated: 2026-07-17T20:48:00+00:00
+- Reason: WI209 GREEN and focused regression complete
+- Goal: 完成 WI209 全量/回退验证、双对抗实现评审与 implementation PR
+- State: RED 6438d589, GREEN e289057e, safety d6a39cd8 committed; product net +129/130, tests net +195/200; comment-policy 23/23 and verify-constraints integration 49/49 passed
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- RED contract is frozen; GREEN may edit only src/ai_sdlc/core/comment_policy.py and must preserve fail-closed behavior plus frozen LOC/helper budgets
+- Implementation remains confined to comment_policy.py with side-aware fail-closed YAML token classification; no new files or public abstractions
 
 ## Commands / Tests
-- RED witness: unit 3 failed; CLI 2 failed, 1 passed; ruff check passed; RED commit 6438d589
+- uv run pytest tests/unit/test_comment_policy.py -q => 23 passed; uv run pytest tests/integration/test_cli_verify_constraints.py -q => 49 passed; Ruff focused passed
 
 ## Blockers / Risks
-- T22 GREEN, safety matrix, full regression, dual adversarial implementation review, PR and fresh-main acceptance remain pending
+- Framework constraints/spec validation/full suite, normalized LOC proof, dual adversarial implementation PASS, PR/Codex/checks/merge/fresh-main remain pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- implement the smallest token-aware YAML quoted-scalar classifier in comment_policy.py, then run exact RED nodes to GREEN
+- run verify constraints, spec validate, normalized LOC proof, and full pytest/Ruff before dual adversarial implementation review
