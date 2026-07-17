@@ -67,7 +67,7 @@
 
 ### T25 formal gates、PR 与 merge
 
-- **状态**：pending
+- **状态**：completed；formal PR #142 merged as `f432fb04`，fresh-main gates PASS
 - **依赖**：T24
 - **验收**：constraints/validate/truth/manifest exact/diff-check/Cursor zero-diff；formal commit/PR、Codex、
   required checks、heartbeat、merge；implementation branch 只能基于 formal merge main。
@@ -76,7 +76,7 @@
 
 ### T31 写 relocation/loss RED
 
-- **状态**：blocked by T25
+- **状态**：completed；24-case focused RED=`18 failed, 6 passed`，失败均命中冻结缺口
 - **依赖**：T25
 - **文件**：四个 test allowlist 文件
 - **验收**：至少一个 RED 暴露旧 absolute root，至少一个 RED 暴露 linked branch/context 丢失或 active
@@ -89,7 +89,7 @@
 
 ### T32 实现 portable path normalization
 
-- **状态**：blocked by T31
+- **状态**：completed；所有 repo-internal path 经单一 normalizer 输出 portable relative path
 - **依赖**：T31
 - **文件**：`src/ai_sdlc/context/state.py`
 - **验收**：filesystem/working-set paths 与 active files repo-relative、`/` 分隔；旧 root/drive/UNC/escape
@@ -97,7 +97,7 @@
 
 ### T33 实现 lossless canonical reconstruction
 
-- **状态**：blocked by T32
+- **状态**：completed；共同 builder/loader 已实现字段级 canonical source 与 handoff 三态
 - **依赖**：T32
 - **文件**：仅 `src/ai_sdlc/context/state.py`；`core/handoff.py` 只回归，不修改
 - **验收**：spec §3 优先级；old pack not donor；semantic compare 覆盖 stage/batch/task、branch、docs
@@ -108,7 +108,8 @@
 
 ### T34 focused GREEN 与预算
 
-- **状态**：blocked by T33
+- **状态**：completed；Codex P2 修复后 focused `107 passed`；raw product/tests net=`+108/+239`，同版本
+  Ruff 格式化 exact base/candidate 副本后的 normalized product/tests net=`+120/+211`
 - **依赖**：T33
 - **验收**：plan §8 focused 全绿；产品最多 1 文件/net +120，测试最多 4 文件/net +240；无 test
   deletion/weakening、无第二个产品文件。
@@ -117,15 +118,16 @@
 
 ### T41 full/governance/differential/rollback
 
-- **状态**：blocked by T34
+- **状态**：completed；Codex P2 新提交的 full/governance/differential/rollback 以最新 execution log 终态回执为准
 - **依赖**：T34
-- **验收**：full/Ruff/format/constraints/validate/truth/diff-check 全绿；批准差分只有 NC-05；byte-only
+- **验收**：full/Ruff lint/format baseline-differential/constraints/validate/truth/diff-check 通过；批准差分只有
+  NC-05；byte-only
   首次 repair 只复用既有 event 文本/canonical serialization/rebuild timestamp，第二次 status/recover
   bytes/event no-op；revert/reapply tree exact；测试未污染外部 checkout。
 
 ### T42 final tree 双 Agent 复审
 
-- **状态**：blocked by T41
+- **状态**：pending
 - **依赖**：T41
 - **验收**：冻结 HEAD/tree/binary/name-status/formal hash/LOC/test evidence；Pascal 与 Confucius 对同一
   target 双 PASS；任何后续 tree 变化使 verdict 作废。
@@ -134,7 +136,7 @@
 
 ### T51 implementation PR 交付
 
-- **状态**：blocked by T42
+- **状态**：in progress；PR #143 已打开，当前提交 Codex P2 正在修复，merge blocked by T41/T42
 - **依赖**：T42
 - **验收**：push、ready PR、current-head Codex review、heartbeat；actionable finding 修复后重跑 T41/T42；
   required checks 全绿后 merge。

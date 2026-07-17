@@ -7,12 +7,14 @@ from unittest.mock import patch
 
 import pytest
 
+from ai_sdlc.context import state as context_state
 from ai_sdlc.context.state import (
     CheckpointLoadError,
     build_resume_pack,
     load_checkpoint,
     load_resume_pack,
     save_checkpoint,
+    save_latest_summary,
     save_resume_pack,
     save_runtime_state,
     save_working_set,
@@ -31,10 +33,35 @@ def _seed_linked_checkpoint(tmp_path: Path) -> tuple[str, str, str]:
         for filename in ("spec.md", "plan.md", "tasks.md"):
             (spec_dir / filename).write_text(f"# {work_item_id}\n", encoding="utf-8")
     checkpoint = _make_checkpoint()
+    checkpoint.current_stage = "execute"
     checkpoint.linked_wi_id = LINKED_WI
     save_checkpoint(tmp_path, checkpoint)
-    linked_dir = tmp_path / "specs" / LINKED_WI
-    return tuple(str(linked_dir / name) for name in ("spec.md", "plan.md", "tasks.md"))
+    return tuple(
+        f"specs/{LINKED_WI}/{name}" for name in ("spec.md", "plan.md", "tasks.md")
+    )
+
+
+def _write_handoff(
+    root: Path,
+    *,
+    work_item_id: str = LINKED_WI,
+    branch: str = f"feature/{LINKED_WI}",
+    goal: str = "Resume portable pack",
+    state: str = "Ready",
+    next_step: str = "Continue",
+) -> None:
+    content = (
+        "# Continuity Handoff\n\n"
+        f"- Goal: {goal}\n- State: {state}\n- Work Item: {work_item_id}\n"
+        f"- Branch: {branch}\n\n## Key Decisions\n- Goal: section detail\n\n"
+        f"## Exact Next Steps\n- {next_step}\n"
+    )
+    for path in (
+        root / ".ai-sdlc/state/codex-handoff.md",
+        root / ".ai-sdlc/work-items" / work_item_id / "codex-handoff.md",
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
 
 
 def _make_checkpoint() -> Checkpoint:
@@ -152,26 +179,9 @@ class TestResumePack:
         return loaded
 
     def test_build_from_checkpoint(self, tmp_path: Path) -> None:
-        cp = Checkpoint(
-            current_stage="design",
-            feature=FeatureInfo(
-                id="001",
-                spec_dir="specs/001",
-                design_branch="d/001",
-                feature_branch="f/001",
-                current_branch="d/001",
-            ),
-            prd_source="prd.md",
-        )
-        save_checkpoint(tmp_path, cp)
-
-        # Create some files
-        (tmp_path / "prd.md").write_text("# PRD")
+        self._prepare_checkpoint(tmp_path, stage="design")
         (tmp_path / ".ai-sdlc" / "memory").mkdir(parents=True, exist_ok=True)
         (tmp_path / ".ai-sdlc" / "memory" / "constitution.md").write_text("# C")
-        spec_dir = tmp_path / "specs" / "001"
-        spec_dir.mkdir(parents=True)
-        (spec_dir / "spec.md").write_text("# Spec")
 
         pack = build_resume_pack(tmp_path)
         assert pack is not None
@@ -183,17 +193,7 @@ class TestResumePack:
         assert build_resume_pack(tmp_path) is None
 
     def test_save_resume_pack(self, tmp_path: Path) -> None:
-        cp = Checkpoint(
-            current_stage="execute",
-            feature=FeatureInfo(
-                id="001",
-                spec_dir="s",
-                design_branch="d",
-                feature_branch="f",
-                current_branch="f",
-            ),
-        )
-        save_checkpoint(tmp_path, cp)
+        self._prepare_checkpoint(tmp_path)
         pack = build_resume_pack(tmp_path)
         assert pack is not None
         save_resume_pack(tmp_path, pack)
@@ -201,20 +201,7 @@ class TestResumePack:
         assert resume_file.exists()
 
     def test_load_resume_pack_round_trip(self, tmp_path: Path) -> None:
-        spec_dir = tmp_path / "specs" / "001"
-        spec_dir.mkdir(parents=True)
-        (spec_dir / "spec.md").write_text("# Spec", encoding="utf-8")
-        cp = Checkpoint(
-            current_stage="execute",
-            feature=FeatureInfo(
-                id="001",
-                spec_dir="specs/001",
-                design_branch="d/001",
-                feature_branch="f/001",
-                current_branch="f/001",
-            ),
-        )
-        save_checkpoint(tmp_path, cp)
+        self._prepare_checkpoint(tmp_path)
         pack = build_resume_pack(tmp_path)
         assert pack is not None
         save_resume_pack(tmp_path, pack)
@@ -290,13 +277,44 @@ class TestResumePack:
         assert pack is not None
         snapshot = pack.working_set_snapshot
         assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == expected_paths
-        assert pack.current_branch == ""
-        save_runtime_state(tmp_path, LINKED_WI, state_models.RuntimeState(current_branch="runtime/198"))
-        assert build_resume_pack(tmp_path).current_branch == "runtime/198"
-        Path(expected_paths[1]).unlink()
+        _write_handoff(tmp_path)
+        pack = build_resume_pack(tmp_path)
+        assert pack.current_branch == f"feature/{LINKED_WI}"
+        assert pack.working_set_snapshot.context_summary == (
+            "Goal: Resume portable pack | State: Ready | Next: Continue"
+        )
+        assert pack.working_set_snapshot.active_files == [
+            expected_paths[2],
+            expected_paths[1],
+            expected_paths[0],
+        ]
+        save_runtime_state(
+            tmp_path,
+            LINKED_WI,
+            state_models.RuntimeState(
+                current_stage="verify", current_branch="runtime/198"
+            ),
+        )
+        pack = build_resume_pack(tmp_path)
+        assert (pack.current_stage, pack.current_branch) == ("verify", "runtime/198")
+        assert pack.working_set_snapshot.active_files == list(expected_paths)
+
+        (tmp_path / ".ai-sdlc/state/codex-handoff.md").unlink()
+        (tmp_path / ".ai-sdlc/work-items" / LINKED_WI / "codex-handoff.md").unlink()
+        save_working_set(
+            tmp_path,
+            LINKED_WI,
+            state_models.WorkingSet(context_summary="working summary"),
+        )
+        save_latest_summary(tmp_path, LINKED_WI, "  \n")
+        assert build_resume_pack(tmp_path).working_set_snapshot.context_summary == (
+            "working summary"
+        )
+
+        (tmp_path / expected_paths[1]).unlink()
         assert build_resume_pack(tmp_path).working_set_snapshot.plan_path == ""
-        Path(expected_paths[0]).unlink()
-        Path(expected_paths[2]).unlink()
+        (tmp_path / expected_paths[0]).unlink()
+        (tmp_path / expected_paths[2]).unlink()
         snapshot = build_resume_pack(tmp_path).working_set_snapshot
         assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
         legacy = _make_checkpoint()
@@ -306,7 +324,29 @@ class TestResumePack:
 
     def test_load_resume_pack_rebuilds_fresh_legacy_linked_working_set(self, tmp_path: Path) -> None:
         expected_paths = _seed_linked_checkpoint(tmp_path)
-        overlay = state_models.WorkingSet(spec_path=expected_paths[0], plan_path=expected_paths[1], tasks_path=expected_paths[2])
+        for raw, active in (
+            (str(tmp_path / expected_paths[0]), [expected_paths[0], expected_paths[1]]),
+            (expected_paths[0].replace("/", "\\"), [expected_paths[0], expected_paths[1]]),
+            ("../escape/spec.md", [expected_paths[1]]),
+            ("/other/repo/spec.md", [expected_paths[1]]),
+            (r"D:\other\spec.md", [expected_paths[1]]),
+            (r"\\server\share\spec.md", [expected_paths[1]]),
+        ):
+            overlay = state_models.WorkingSet(
+                spec_path=raw, active_files=[raw, expected_paths[1], expected_paths[1]]
+            )
+            save_working_set(tmp_path, LINKED_WI, overlay)
+            snapshot = build_resume_pack(tmp_path).working_set_snapshot
+            assert snapshot.spec_path == expected_paths[0]
+            assert snapshot.active_files == active
+        assert context_state._portable_repo_path(
+            Path(r"C:\repo"), r"C:\repo\specs\one.md"
+        ) == "specs/one.md"
+        overlay = state_models.WorkingSet(
+            spec_path=str(tmp_path / expected_paths[0]),
+            plan_path=str(tmp_path / expected_paths[1]),
+            tasks_path=str(tmp_path / expected_paths[2]),
+        )
         save_working_set(tmp_path, LINKED_WI, overlay)
         legacy_pack = build_resume_pack(tmp_path)
         assert legacy_pack is not None
@@ -319,6 +359,155 @@ class TestResumePack:
         assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == expected_paths
         assert loaded.current_branch == ""
         assert any("stale" in event for event in events)
+
+    def test_handoff_branch_context_and_wire_matrix(self, tmp_path: Path) -> None:
+        _seed_linked_checkpoint(tmp_path)
+        for branch, expected in (
+            (f"feature/{LINKED_WI}", f"feature/{LINKED_WI}"),
+            ("HEAD", ""),
+            ("none", ""),
+            ("main", ""),
+        ):
+            _write_handoff(tmp_path, branch=branch)
+            pack = build_resume_pack(tmp_path)
+            assert pack.current_branch == expected
+            assert pack.working_set_snapshot.context_summary.startswith("Goal: Resume")
+        for goal, state, next_step, expected in (
+            ("none", "Ready", "none", "State: Ready"),
+            ("none", "none", "none", "Continuity handoff updated"),
+            ("Goal", "none", "Next", "Goal: Goal | Next: Next"),
+        ):
+            _write_handoff(tmp_path, goal=goal, state=state, next_step=next_step)
+            assert build_resume_pack(
+                tmp_path
+            ).working_set_snapshot.context_summary == expected
+
+        _write_handoff(tmp_path, work_item_id="other")
+        (tmp_path / ".ai-sdlc/work-items" / LINKED_WI / "codex-handoff.md").unlink()
+        assert build_resume_pack(tmp_path).working_set_snapshot.context_summary == ""
+
+    @pytest.mark.parametrize(
+        ("handoff_wi", "has_context"), [(LINKED_WI, True), ("other", False)]
+    )
+    def test_no_linked_keeps_feature_branch_and_matching_context(
+        self, tmp_path: Path, handoff_wi: str, has_context: bool
+    ) -> None:
+        _seed_linked_checkpoint(tmp_path)
+        checkpoint = load_checkpoint(tmp_path, strict=True)
+        assert checkpoint is not None
+        checkpoint.linked_wi_id = None
+        checkpoint.feature.id = LINKED_WI
+        checkpoint.feature.spec_dir = f"specs/{LINKED_WI}"
+        checkpoint.feature.current_branch = "feature/no-linked"
+        save_checkpoint(tmp_path, checkpoint)
+        save_runtime_state(
+            tmp_path,
+            LINKED_WI,
+            state_models.RuntimeState(current_branch="runtime/no-linked"),
+        )
+        _write_handoff(tmp_path, work_item_id=handoff_wi)
+
+        pack = build_resume_pack(tmp_path)
+
+        assert pack.current_branch == "feature/no-linked"
+        assert bool(pack.working_set_snapshot.context_summary) is has_context
+
+    def test_load_resume_pack_repairs_without_active_work_item(
+        self, tmp_path: Path
+    ) -> None:
+        checkpoint = _make_checkpoint()
+        checkpoint.feature.id = "unknown"
+        save_checkpoint(tmp_path, checkpoint)
+        pack = build_resume_pack(tmp_path)
+        save_resume_pack(tmp_path, pack.model_copy(update={"current_stage": "execute"}))
+        events: list[str] = []
+
+        loaded = load_resume_pack(tmp_path, event_log=events)
+
+        assert loaded.current_stage == "init"
+        assert any("stale" in event for event in events)
+
+    def test_resume_pair_converges_and_handoff_errors_fail_closed(
+        self, tmp_path: Path
+    ) -> None:
+        _seed_linked_checkpoint(tmp_path)
+        pack = build_resume_pack(tmp_path)
+        save_resume_pack(tmp_path, pack)
+        root_pack = tmp_path / ".ai-sdlc/state/resume-pack.yaml"
+        scoped_pack = (
+            tmp_path / ".ai-sdlc/work-items" / LINKED_WI / "resume-pack.yaml"
+        )
+        scoped_pack.write_bytes(scoped_pack.read_bytes() + b"\n")
+        events: list[str] = []
+        pack = load_resume_pack(tmp_path, event_log=events)
+        assert root_pack.read_bytes() == scoped_pack.read_bytes()
+        assert any("stale" in event for event in events)
+        converged = root_pack.read_bytes()
+        events.clear()
+        load_resume_pack(tmp_path, event_log=events)
+        assert root_pack.read_bytes() == converged
+        assert events == []
+
+        handoff = tmp_path / ".ai-sdlc/state/codex-handoff.md"
+        scoped_handoff = tmp_path / ".ai-sdlc/work-items" / LINKED_WI / "codex-handoff.md"
+        _write_handoff(tmp_path)
+        invalid_cases = (
+            b"\xff\xfe",
+            b"- Work Item: duplicate\n- Work Item: duplicate\n",
+            b"# malformed\n",
+            handoff.read_bytes(),
+        )
+        for index, invalid in enumerate(invalid_cases):
+            scoped_handoff.unlink(missing_ok=True)
+            handoff.write_bytes(invalid)
+            if index == 3:
+                scoped_handoff.write_bytes(b"mismatch")
+            before = root_pack.read_bytes()
+            assert load_resume_pack(tmp_path, event_log=events) == pack
+            assert root_pack.read_bytes() == before
+            assert events == []
+            root_pack.write_text(": bad {{", encoding="utf-8")
+            pack = load_resume_pack(tmp_path, event_log=events)
+            assert any("corrupted" in event for event in events)
+            events.clear()
+
+        original_read = Path.read_bytes
+
+        def unreadable(path: Path) -> bytes:
+            if path.name == "codex-handoff.md":
+                raise OSError("handoff unavailable")
+            return original_read(path)
+
+        before = root_pack.read_bytes()
+        with patch.object(Path, "read_bytes", unreadable):
+            assert load_resume_pack(tmp_path, event_log=events) == pack
+            assert root_pack.read_bytes() == before
+            assert events == []
+            root_pack.write_text(": bad {{", encoding="utf-8")
+            pack = load_resume_pack(tmp_path, event_log=events)
+        assert any("corrupted" in event for event in events)
+        events.clear()
+
+        original = Path.replace
+
+        def fail_root_replace(path: Path, target: Path) -> Path:
+            if Path(target) == root_pack:
+                raise OSError("root replace failed")
+            return original(path, target)
+
+        with patch.object(Path, "replace", fail_root_replace), pytest.raises(
+            OSError, match="root replace"
+        ):
+            save_resume_pack(tmp_path, pack.model_copy(update={"current_batch": 9}))
+        assert not list(root_pack.parent.glob(".*.staged"))
+        assert not list(scoped_pack.parent.glob(".*.staged"))
+        load_resume_pack(tmp_path)
+        assert root_pack.read_bytes() == scoped_pack.read_bytes()
+        converged = root_pack.read_bytes()
+        events.clear()
+        load_resume_pack(tmp_path, event_log=events)
+        assert root_pack.read_bytes() == converged
+        assert events == []
 
     @pytest.mark.parametrize("linked_wi_id", [LINKED_WI, None, ""])
     def test_load_resume_pack_rebuilds_semantically_stale_pack(
@@ -342,6 +531,9 @@ class TestResumePack:
         save_runtime_state(tmp_path, LINKED_WI, dirty_runtime)
         dirty_pack = build_resume_pack(tmp_path)
         assert dirty_pack is not None
+        dirty_pack.docs_baseline_ref = "stale-ref"
+        dirty_pack.working_set_snapshot.active_files = ["stale.py"]
+        dirty_pack.working_set_snapshot.context_summary = "stale context"
         save_resume_pack(tmp_path, dirty_pack)
         save_runtime_state(
             tmp_path,
@@ -364,6 +556,9 @@ class TestResumePack:
             0,
             "",
         )
+        assert loaded.docs_baseline_ref == ""
+        assert loaded.working_set_snapshot.active_files != ["stale.py"]
+        assert not loaded.working_set_snapshot.context_summary
         assert any("stale" in event for event in events)
         events.clear()
         assert load_resume_pack(tmp_path, event_log=events) == loaded

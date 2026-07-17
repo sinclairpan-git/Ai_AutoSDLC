@@ -169,7 +169,8 @@ unreadable、linked attached/detached/GitError/historical-feature Branch、zero-
 - **NC-01**：先红后绿；RED 必须失败于绝对路径或字段丢失，而非 fixture/解析错误。
 - **NC-02**：一个 builder、一个 path normalizer、一个窄 handoff fallback reader；不得在 CLI handler 复制。
 - **NC-03**：产品修改最多 1 个既有文件，净新增不超过 120 行；测试最多 4 个既有文件，净新增不超过
-  240 行。超过任一预算先回到 design，不用压缩可读性硬凑。
+  240 行。预算必须同时报告 raw diff，以及用同一 Ruff 版本分别格式化 exact base/candidate 副本后的
+  normalized diff；两者均不得超限。超过任一预算先回到 design，不用压缩长行或牺牲可读性硬凑。
 - **NC-04**：不减少现有测试、断言、平台或错误分支；新增注释只解释 source priority、迁移和 fail-closed。
 - **NC-05**：兼容差异只允许：repo-internal absolute→relative、matching handoff 补齐 context、linked
   eligible handoff 补齐 branch、缺 working-set active 时按 `STAGE_FILES` 构造最小 active set、stale semantic
@@ -187,7 +188,9 @@ unreadable、linked attached/detached/GitError/historical-feature Branch、zero-
 - **SC-208-04**：root/scoped pack 的 raw bytes 一致；model-equal/bytes-different 也会首次 repair，第二次
   status/recover pack/checkpoint bytes 不变。
 - **SC-208-05**：WI-198 unit/handoff/recover/status regression 与全量测试全部通过。
-- **SC-208-06**：产品/测试 diff 满足 NC-03，Ruff、format、constraints、program validate/truth、diff-check 全绿。
+- **SC-208-06**：产品/测试 raw/normalized diff 均满足 NC-03；Ruff lint、constraints、program
+  validate/truth、diff-check 全绿。若 exact base 的 full format 已失败，candidate 只允许保留完全相同的
+  待格式化文件集合，并须证明 changed allowlist 的 base/candidate 格式化副本仍满足预算；不得新增格式债务。
 - **SC-208-07**：Pascal/Confucius 对同一 formal hash 和同一 final tree 分别明确 PASS，无 actionable finding。
 - **SC-208-08**：implementation PR 的 current-head Codex、required checks、merge 与 fresh-main acceptance 全绿。
 - **SC-208-09**：父台账仅把 GAP-13/T56 标为关闭；GAP-14/T57 仍 queued，WI-196/RC-08/release 仍开放。

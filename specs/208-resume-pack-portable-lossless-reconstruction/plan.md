@@ -149,6 +149,11 @@ uv run ai-sdlc program truth audit
 git diff --check
 ```
 
+format 采用 baseline-differential gate：若 exact base 的同一命令为绿，candidate 必须为绿；若 base 已有
+继承失败，必须冻结 base/candidate 排序后的待格式化文件集合并证明完全相同。另对本次 changed allowlist
+分别复制 exact base/candidate、使用同一 Ruff 版本格式化后计算 normalized numstat；raw 与 normalized
+product/test net 都必须满足 `120/240`，不得用压缩长行规避预算。
+
 每组命令前后比较 tracked status/index/content、canonical adapter、project config、root/scoped pack 与
 checkpoint；允许 pack 首次批准修复，第二次必须完全相同，不执行自动 restore。Phase 3、PR 与 fresh-main
 期间任何 Cursor 非目标变化都直接 FAIL；只有 Phase 0 初始化/bootstrap 的已记录 refresh 可在 formal
@@ -164,7 +169,7 @@ baseline 冻结前用 `apply_patch` 恢复，不能计入门禁 PASS。
 
 ## 9. Phase 4：复审、PR 与 fresh-main
 
-1. 冻结 HEAD/tree、binary diff、name-status、formal combined、path/LOC budget、focused/full evidence。
+1. 冻结 HEAD/tree、binary diff、name-status、formal combined、raw/normalized LOC budget、focused/full evidence。
 2. Pascal 从精简/直接性复审；Confucius 从兼容/安全性复审；任一变更使双方 verdict 作废。
 3. 双 PASS 后 push implementation branch、创建 ready PR、请求 current-head Codex review并约五分钟 heartbeat。
 4. actionable finding focused 修复后重新跑门禁和双审；required checks 全绿才 merge。
