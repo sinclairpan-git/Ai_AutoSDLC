@@ -118,7 +118,7 @@
 
 ### T41 full/governance/differential/rollback
 
-- **状态**：in progress；首个 candidate 的证明因双 Agent finding 与后续 tree 变化退役，Round 2 待重跑
+- **状态**：completed；Round 2 exact logic commit 的 full/governance/state-diff/rollback-reapply 全部通过
 - **依赖**：T34
 - **验收**：full/Ruff lint/format baseline-differential/constraints/validate/truth/diff-check 通过；批准差分只有
   NC-05；byte-only
