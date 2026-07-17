@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T21:07:05+00:00
-- Reason: WI209 full regression and governance gates passed
-- Goal: 完成 WI209 回退重放、双对抗终审与 implementation PR/fresh-main acceptance
-- State: Candidate 6be8df9c/tree 14e473f7 passed focused 23+49, governance constraints/validate/truth, manifest 1, full 3247 passed 3 skipped; raw LOC 129/191 and normalized 130/199; no test-state drift
+- Updated: 2026-07-17T21:09:41+00:00
+- Reason: WI209 rollback and reapply proof passed
+- Goal: 完成 WI209 双对抗终审与 implementation PR/fresh-main acceptance
+- State: Full and governance gates passed; disposable per-commit rollback/reapply passed: midpoint tree 0c865c43 equals formal merge and final tree 0a145a78 equals candidate
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Keep candidate minimal and preserve inherited whole-file Ruff-format baseline as explicit dual-review evidence; Ruff lint passes and normalized budgets pass
+- Freeze candidate after recording rollback proof; both adversarial reviewers must inspect the same HEAD/tree/diff identity and agree PASS before push
 
 ## Commands / Tests
-- full pytest: 3247 passed, 3 skipped in 610.30s; constraints no blockers; validate PASS; truth ready/fresh 1101/1101; manifest 1 passed 77.80s; Ruff check PASS
+- rollback replay: 8 commits reverted in reverse and reapplied in original order; midpoint 0c865c4335cd86d84124992382730a2e200419db; final 0a145a789dc2740df10112788fd17c99d212aacc
 
 ## Blockers / Risks
-- Rollback replay, final identity freeze, dual adversarial implementation PASS, PR/Codex/checks/merge/fresh-main remain pending
+- Dual adversarial implementation PASS, PR/Codex/checks/merge/fresh-main remain pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- perform disposable-worktree per-commit rollback/reapply tree proof, freeze final identity, then send the exact same candidate to Pascal and Confucius
+- commit continuity, freeze final identity, run Pascal lean/directness and Confucius safety/compat reviews against identical candidate
