@@ -1,27 +1,34 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T10:09:43+00:00
-- Reason: Make continuity stable across the final evidence-only commit and external review receipts.
-- Goal: Merge WI208 formal PR #142 only after all current-head reviews pass
-- State: Round 7 formal and evidence corrections are materialized on the latest PR head. Formal combined remains a91b6d3541e755e604ec7ee376bd0db5b8a037cc5e2c71e94e800ab768860b39; truth and terminal gates are green.
+- Updated: 2026-07-17T11:00:37+00:00
+- Reason: after T31 RED proof
+- Goal: Implement WI208 portable lossless resume-pack reconstruction with no regressions
+- State: T31 RED frozen: 18 failed, 6 passed on expected GAP13 assertions; product code remains unchanged.
 - Stage: close
 - Work Item: 208-resume-pack-portable-lossless-reconstruction
-- Branch: feature/208-resume-pack-portable-lossless-reconstruction-docs
+- Branch: feature/208-resume-pack-portable-lossless-reconstruction-dev
 
 ## Changed Files
-- none
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/work-items/208-resume-pack-portable-lossless-reconstruction/codex-handoff.md
+- M specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
+- M specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
+- M tests/integration/test_cli_handoff.py
+- M tests/integration/test_cli_recover.py
+- M tests/integration/test_cli_status.py
+- M tests/unit/test_context_state.py
 
 ## Key Decisions
-- Treat the latest PR-head review receipts as dynamic external state. Keep T25 pending and implementation blocked until the formal PR merge is proven on main.
+- Keep one-product-file state.py boundary and test net <=240.
 
 ## Commands / Tests
-- truth ready/fresh snapshot 69cf7219585d31b50f10c961b0c53ea389d5123af08c86151b224ad2e7b0d76b; constraints no BLOCKER; validate PASS; manifest exact PASS; protected artifacts unchanged.
+- uv run pytest focused WI208 RED nodes -q: 18 failed, 6 passed in 2.11s
 
 ## Blockers / Risks
-- None in content. Merge depends on Pascal and Confucius full-commit PASS, Codex current-head review, and all GitHub checks.
+- T32 and T33 GREEN implementation not started.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Review the latest PR #142 head; merge only when both local adversarial reviews, Codex review, and every required check pass, then run fresh-main acceptance before creating the implementation branch.
+- Implement portable path normalization and canonical reconstruction only in src/ai_sdlc/context/state.py, then run the same focused matrix.

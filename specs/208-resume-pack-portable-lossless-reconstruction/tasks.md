@@ -67,7 +67,7 @@
 
 ### T25 formal gates、PR 与 merge
 
-- **状态**：pending
+- **状态**：completed；formal PR #142 merged as `f432fb04`，fresh-main gates PASS
 - **依赖**：T24
 - **验收**：constraints/validate/truth/manifest exact/diff-check/Cursor zero-diff；formal commit/PR、Codex、
   required checks、heartbeat、merge；implementation branch 只能基于 formal merge main。
@@ -76,7 +76,7 @@
 
 ### T31 写 relocation/loss RED
 
-- **状态**：blocked by T25
+- **状态**：completed；24-case focused RED=`18 failed, 6 passed`，失败均命中冻结缺口
 - **依赖**：T25
 - **文件**：四个 test allowlist 文件
 - **验收**：至少一个 RED 暴露旧 absolute root，至少一个 RED 暴露 linked branch/context 丢失或 active
@@ -89,7 +89,7 @@
 
 ### T32 实现 portable path normalization
 
-- **状态**：blocked by T31
+- **状态**：pending
 - **依赖**：T31
 - **文件**：`src/ai_sdlc/context/state.py`
 - **验收**：filesystem/working-set paths 与 active files repo-relative、`/` 分隔；旧 root/drive/UNC/escape

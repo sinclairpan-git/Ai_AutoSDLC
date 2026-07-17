@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -201,6 +202,40 @@ def _init_git_repo(root: Path) -> None:
 def _commit_all(root: Path, message: str) -> None:
     subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
     subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+
+
+def test_status_rebuild_is_portable_after_detached_relocation(tmp_path: Path) -> None:
+    source, relocated = tmp_path / "source", tmp_path / "relocated"
+    source.mkdir()
+    _init_git_repo(source)
+    init_project(source)
+    historical, linked = "207-historical", "208-linked"
+    for work_item_id in (historical, linked):
+        spec_dir = source / "specs" / work_item_id
+        spec_dir.mkdir(parents=True)
+        for name in ("spec.md", "plan.md", "tasks.md"):
+            (spec_dir / name).write_text(f"# {name}\n", encoding="utf-8")
+    feature = FeatureInfo(id=historical, spec_dir=f"specs/{historical}", design_branch="", feature_branch="", current_branch=f"feature/{historical}")
+    save_checkpoint(source, Checkpoint(current_stage="execute", feature=feature, linked_wi_id=linked))
+    subprocess.run(["git", "checkout", "-b", f"feature/{linked}"], cwd=source, check=True, capture_output=True)
+    update_handoff(source, goal="Resume after relocation", state="Ready", next_steps=["Run status"])
+    _commit_all(source, "test: seed relocation")
+    shutil.copytree(source, relocated)
+    subprocess.run(["git", "checkout", "--detach", "HEAD"], cwd=relocated, check=True, capture_output=True)
+    (relocated / ".ai-sdlc/work-items" / linked / "resume-pack.yaml").unlink()
+
+    with patch("ai_sdlc.cli.commands.find_project_root", return_value=relocated):
+        first = runner.invoke(app, ["status"])
+        before = (relocated / ".ai-sdlc/state/resume-pack.yaml").read_bytes()
+        second = runner.invoke(app, ["status"])
+    pack = load_resume_pack(relocated)
+
+    assert first.exit_code == 0, first.output
+    assert second.exit_code == 0, second.output
+    assert pack.current_branch == f"feature/{linked}"
+    assert pack.working_set_snapshot.context_summary == "Goal: Resume after relocation | State: Ready | Next: Run status"
+    assert all(not Path(path).is_absolute() for path in pack.working_set_snapshot.active_files)
+    assert before == (relocated / ".ai-sdlc/state/resume-pack.yaml").read_bytes()
 
 
 def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
