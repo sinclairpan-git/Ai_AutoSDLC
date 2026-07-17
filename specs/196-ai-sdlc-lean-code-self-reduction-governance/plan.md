@@ -39,7 +39,7 @@
 WI-206 fresh-main 新暴露的验证/连续性缺口（先于下一减重候选）
   └─ T55 GAP-12 program implicit adapter side effect（WI-207，已关闭）
        └─ T56 GAP-13 portable/lossless resume reconstruction（WI-208 / PR #143，已关闭）
-            └─ T57 GAP-14 YAML quoted-scalar comment-policy false positive（WI-209，queued）
+            └─ T57 GAP-14 YAML quoted-scalar comment-policy false positive（WI-209，formal ready）
 ```
 
 WP-03～WP-07 不互相强制串行。只有代码重叠、契约重叠或同一重复族才形成真实依赖；依赖必须在子项 spec 中用文件/符号和测试证明。
@@ -124,17 +124,19 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 
 ### T57：GAP-14 YAML quoted-scalar comment-policy false positive
 
-- **当前状态**：queued；WI-208 fresh-main 依赖已满足，待本关闭回执合并后由 WI-209 独立 formal 冻结
-  parser 边界。
+- **当前状态**：formal ready；WI-208 implementation/closure 已由 PR #143/#144 合并，WI-209 已从
+  `main@85bdedac` 创建独立 docs 分支；Round 5 同一身份双对抗 PASS，待最终 lifecycle identity 复审、
+  formal PR 与合并。
 - **风险/范围**：L2；只处理 unified diff 中 YAML quoted scalar 内容被 `_is_comment_line()` 误判为注释。
 - **非目标**：不豁免真实 YAML comments，不修改 adapter、resume reconstruction 或 verify telemetry。
-- **进入**：用 single/double quoted multiline scalar、plain scalar、真实 comment 和非 YAML source 建立 RED
-  characterization，证明只有 quoted scalar 内容的 `#` 不应进入 removed-comment finding。
+- **进入**：用 single/double quoted multiline scalar、plain/literal/folded、真实 comment 和非 YAML source
+  建立 RED characterization；同时冻结 added quoted 内容不得抵消真实 removed comment。
 - **验证/完成**：path/syntax-aware 最小实现；现有 Python/Markdown/YAML comment detection 保持；focused/full/
   constraints/fresh-main clean。
 - **停止/回退**：若方案需要全局关闭 YAML comment detection、引入完整 YAML diff 重写器或 waiver，则回到
   design；revert WI-209 独立提交。
-- **证据**：comment-policy unit matrix、verify constraints integration、双 Agent、PR/CI/fresh-main。
+- **证据**：WI-209 child formal、comment-policy unit/Git matrix、verify constraints integration、双 Agent、
+  PR/CI/fresh-main。
 
 T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷，不计 Reduction Contract 收益。
 
@@ -247,11 +249,11 @@ T53A、T53B、T54 已分别使用独立 WI/branch/PR 关闭，不再是待执行
 - Parent-only review target 为父 `spec.md + plan.md + tasks.md`。当前 child authoring 修改父 formal 时，
   target 唯一扩展为 child 与父各三文件。canonical combined 算法唯一：repo-relative path 按 ordinal
   升序；每行是 `<lowercase file sha256><two spaces><repo-relative path>\n`；对全部 UTF-8 行再次做 SHA-256。
-  当前 WI208 在 worktree 根使用：
+  当前 WI209 在 worktree 根使用；后续 active child 必须机械替换 `$child`，不得发明第二套算法：
 
   ```powershell
   $parent = 'specs/196-ai-sdlc-lean-code-self-reduction-governance'
-  $child = 'specs/208-resume-pack-portable-lossless-reconstruction'
+  $child = 'specs/209-yaml-quoted-scalar-comment-policy'
   $files = @("$parent/spec.md", "$parent/plan.md", "$parent/tasks.md", "$child/spec.md", "$child/plan.md", "$child/tasks.md") | Sort-Object
   $rows = foreach ($file in $files) { "$((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant())  $file" }
   $payload = [Text.Encoding]::UTF8.GetBytes(($rows -join "`n") + "`n")

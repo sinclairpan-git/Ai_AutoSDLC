@@ -1,37 +1,33 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T16:18:38+00:00
-- Reason: after dual closure review found stale handoff
-- Goal: Close WI208 GAP-13 after fresh-main acceptance
-- State: Closure branch contains final ready/fresh truth and corrected continuity; delivery remains gated by dual PASS and PR/Codex/checks/merge
+- Updated: 2026-07-17T19:26:37+00:00
+- Reason: WI209 formal ready lifecycle terminal checkpoint
+- Goal: 交付 WI209 GAP-14 formal PR 并合并；formal 合并前不改产品代码
+- State: Round 5 同一身份双对抗 PASS；T12 completed、T13/formal ready；最终 truth/audit/validate/comment-policy/manifest exact 全绿，待 lifecycle identity 终审
 - Stage: close
-- Work Item: 208-resume-pack-portable-lossless-reconstruction
-- Branch: feature/208-resume-pack-portable-lossless-reconstruction-acceptance
+- Work Item: 209-yaml-quoted-scalar-comment-policy
+- Branch: feature/209-yaml-quoted-scalar-comment-policy-docs
 
 ## Changed Files
-- program-manifest.yaml
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
-- specs/208-resume-pack-portable-lossless-reconstruction/development-summary.md
-- specs/208-resume-pack-portable-lossless-reconstruction/plan.md
-- specs/208-resume-pack-portable-lossless-reconstruction/spec.md
-- specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
-- specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
+- modified: `.ai-sdlc/project/config/project-state.yaml`
+- modified: `.ai-sdlc/state/codex-handoff.md`
+- modified: `program-manifest.yaml`
+- modified: `specs/196-ai-sdlc-lean-code-self-reduction-governance/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}`
+- added: `specs/209-yaml-quoted-scalar-comment-policy/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}`
+- modified: `tests/integration/test_repo_program_manifest.py`
+- Git staging truth must be read from `git status --short`; this list intentionally does not persist volatile XY codes.
 
 ## Key Decisions
-- Keep truth snapshot 7524de5d after all closure docs; refresh continuity afterward so recovery does not repeat completed truth/resume work
+- 一产品文件、两测试文件、零新模块/公共抽象；最终 review 后不再改变六文件 lifecycle 状态
 
 ## Commands / Tests
-- PR 143 merged f51c176a; relocation 1 passed; focused 107 passed; full 3230 passed 3 skipped; Ruff/constraints/validate PASS; truth remains ready/fresh and manifest exact 1 passed after resume restore
+- truth ready/fresh 1101/1101、209/209、0/0；constraints/validate PASS；comment-policy 9 passed；manifest exact 1 passed in 85.17s
 
 ## Blockers / Risks
-- Delivery is gated by fresh dual PASS and PR/Codex/checks/merge; WI209 cannot start before acceptance merge
+- 最终 lifecycle identity 尚未取得 Pascal/Confucius 双 PASS；formal PR/Codex/checks/merge 未完成
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Deliver this closure through dual review and PR/Codex/checks/merge; only then start WI209 formal
+- Pascal/Confucius 对最终 formal-ready exact target 从零复审；双 PASS 后提交并交付 formal PR
