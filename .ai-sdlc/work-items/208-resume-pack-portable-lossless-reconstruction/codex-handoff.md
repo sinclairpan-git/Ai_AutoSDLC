@@ -1,29 +1,30 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T12:48:39+00:00
-- Reason: after Round 2 T41 full proof
+- Updated: 2026-07-17T13:16:13+00:00
+- Reason: after T42 Round 2 findings and TDD fix
 - Goal: Complete WI208 portable lossless resume-pack reconstruction without regressions
-- State: Round 2 T41 complete: focused/full/governance/rollback proof passed
+- State: T42 Round 2 dual FAIL fixed by TDD; Round 3 focused and LOC gates pass; T41 reopened
 - Stage: close
 - Work Item: 208-resume-pack-portable-lossless-reconstruction
 - Branch: feature/208-resume-pack-portable-lossless-reconstruction-dev
 
 ## Changed Files
-- M program-manifest.yaml
 - M specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
 - M specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
+- M src/ai_sdlc/context/state.py
+- M tests/unit/test_context_state.py
 
 ## Key Decisions
-- Final review target will use raw and Ruff-normalized LOC plus baseline-differential format evidence
+- No-linked branch is checkpoint-authoritative; restored every frozen handoff and staged-fault assertion without duplicate fixtures
 
 ## Commands / Tests
-- 105 focused passed; 3228 full passed and 3 skipped; constraints/validate/truth/manifest exact passed; rollback/reapply trees exact
+- RED 2 failed; GREEN 2 passed; focused 107 passed; raw +108/+239; normalized +120/+209
 
 ## Blockers / Risks
-- Pascal and Confucius exact-tree T42 review remain
+- Round 3 full/governance/rollback and fresh dual review remain
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Sync terminal truth, commit proof receipt, rerun exact gates, freeze identities, obtain dual PASS
+- Commit Round 3 focused fix, rerun T41 exact proof, then obtain Pascal and Confucius PASS

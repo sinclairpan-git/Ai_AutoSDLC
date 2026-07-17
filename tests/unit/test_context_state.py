@@ -386,6 +386,32 @@ class TestResumePack:
         (tmp_path / ".ai-sdlc/work-items" / LINKED_WI / "codex-handoff.md").unlink()
         assert build_resume_pack(tmp_path).working_set_snapshot.context_summary == ""
 
+    @pytest.mark.parametrize(
+        ("handoff_wi", "has_context"), [(LINKED_WI, True), ("other", False)]
+    )
+    def test_no_linked_keeps_feature_branch_and_matching_context(
+        self, tmp_path: Path, handoff_wi: str, has_context: bool
+    ) -> None:
+        _seed_linked_checkpoint(tmp_path)
+        checkpoint = load_checkpoint(tmp_path, strict=True)
+        assert checkpoint is not None
+        checkpoint.linked_wi_id = None
+        checkpoint.feature.id = LINKED_WI
+        checkpoint.feature.spec_dir = f"specs/{LINKED_WI}"
+        checkpoint.feature.current_branch = "feature/no-linked"
+        save_checkpoint(tmp_path, checkpoint)
+        save_runtime_state(
+            tmp_path,
+            LINKED_WI,
+            state_models.RuntimeState(current_branch="runtime/no-linked"),
+        )
+        _write_handoff(tmp_path, work_item_id=handoff_wi)
+
+        pack = build_resume_pack(tmp_path)
+
+        assert pack.current_branch == "feature/no-linked"
+        assert bool(pack.working_set_snapshot.context_summary) is has_context
+
     def test_load_resume_pack_repairs_without_active_work_item(
         self, tmp_path: Path
     ) -> None:
@@ -428,12 +454,13 @@ class TestResumePack:
         invalid_cases = (
             b"\xff\xfe",
             b"- Work Item: duplicate\n- Work Item: duplicate\n",
+            b"# malformed\n",
             handoff.read_bytes(),
         )
         for index, invalid in enumerate(invalid_cases):
             scoped_handoff.unlink(missing_ok=True)
             handoff.write_bytes(invalid)
-            if index == 2:
+            if index == 3:
                 scoped_handoff.write_bytes(b"mismatch")
             before = root_pack.read_bytes()
             assert load_resume_pack(tmp_path, event_log=events) == pack
@@ -455,6 +482,7 @@ class TestResumePack:
         with patch.object(Path, "read_bytes", unreadable):
             assert load_resume_pack(tmp_path, event_log=events) == pack
             assert root_pack.read_bytes() == before
+            assert events == []
             root_pack.write_text(": bad {{", encoding="utf-8")
             pack = load_resume_pack(tmp_path, event_log=events)
         assert any("corrupted" in event for event in events)
@@ -475,6 +503,11 @@ class TestResumePack:
         assert not list(scoped_pack.parent.glob(".*.staged"))
         load_resume_pack(tmp_path)
         assert root_pack.read_bytes() == scoped_pack.read_bytes()
+        converged = root_pack.read_bytes()
+        events.clear()
+        load_resume_pack(tmp_path, event_log=events)
+        assert root_pack.read_bytes() == converged
+        assert events == []
 
     @pytest.mark.parametrize("linked_wi_id", [LINKED_WI, None, ""])
     def test_load_resume_pack_rebuilds_semantically_stale_pack(

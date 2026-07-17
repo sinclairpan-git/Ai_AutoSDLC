@@ -108,8 +108,8 @@
 
 ### T34 focused GREEN 与预算
 
-- **状态**：completed；Round 2 focused `105 passed`；raw product/tests net=`+106/+206`，同版本 Ruff
-  格式化 exact base/candidate 副本后的 normalized product/tests net=`+118/+176`
+- **状态**：completed；Round 3 focused `107 passed`；raw product/tests net=`+108/+239`，同版本 Ruff
+  格式化 exact base/candidate 副本后的 normalized product/tests net=`+120/+209`
 - **依赖**：T33
 - **验收**：plan §8 focused 全绿；产品最多 1 文件/net +120，测试最多 4 文件/net +240；无 test
   deletion/weakening、无第二个产品文件。
@@ -118,7 +118,7 @@
 
 ### T41 full/governance/differential/rollback
 
-- **状态**：completed；Round 2 exact logic commit 的 full/governance/state-diff/rollback-reapply 全部通过
+- **状态**：in progress；Round 2 证明因 T42 双 FAIL 与后续 tree 变化退役，Round 3 待重跑
 - **依赖**：T34
 - **验收**：full/Ruff lint/format baseline-differential/constraints/validate/truth/diff-check 通过；批准差分只有
   NC-05；byte-only

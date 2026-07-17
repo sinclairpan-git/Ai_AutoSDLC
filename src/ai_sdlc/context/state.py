@@ -651,10 +651,12 @@ def _portable_repo_path(root: Path, raw_path: str | Path) -> str:
 
 
 def _resume_branch(checkpoint: Checkpoint, runtime: RuntimeState | None, handoff: str) -> str:
-    runtime_branch = runtime.current_branch.strip() if runtime else ""
     linked = (checkpoint.linked_wi_id or "").strip()
-    if runtime_branch or not linked:
-        return runtime_branch or checkpoint.feature.current_branch
+    if not linked:
+        return checkpoint.feature.current_branch
+    runtime_branch = runtime.current_branch.strip() if runtime else ""
+    if runtime_branch:
+        return runtime_branch
     branch = handoff.strip()
     historical = checkpoint.feature.current_branch if linked != checkpoint.feature.id else ""
     invalid = not branch or branch.lower() in {"head", "none"} or branch == historical
