@@ -2030,10 +2030,10 @@ specs:
   path: specs/208-resume-pack-portable-lossless-reconstruction
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-17T13:18:43Z'
+  generated_at: '2026-07-17T13:38:07Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: d8485f4f
+  repo_revision: a05cb776
   authoring_hash: 6321933d695c3e1127f90c984aa769346b5f85156259642a5b8a9047882606aa
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
@@ -2076,7 +2076,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 097ac1af1f47b2038cebf186abd2d897bb5d55488c30ae815a4d885d2cf3529e
+  snapshot_hash: 617ff4fc09cc23b00d61b7157bd1811a40e41a984866f68a522c28dc35805481
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2095,7 +2095,7 @@ truth_snapshot:
     unmapped_sources: 0
     missing_sources: 0
     phase_signal_count: 3627
-    deferred_signal_count: 6534
+    deferred_signal_count: 6533
     non_goal_signal_count: 389
     layer_totals:
       blueprint: 1
@@ -11469,7 +11469,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 208-resume-pack-portable-lossless-reconstruction
       phase_signal_count: 0
-      deferred_signal_count: 2
+      deferred_signal_count: 1
       non_goal_signal_count: 1
     - path: specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
       source_type: execution_log

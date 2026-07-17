@@ -118,7 +118,7 @@
 
 ### T41 full/governance/differential/rollback
 
-- **状态**：in progress；Round 2 证明因 T42 双 FAIL 与后续 tree 变化退役，Round 3 待重跑
+- **状态**：completed；Round 3 exact logic commit 的 full/governance/state-diff/rollback-reapply 全部通过
 - **依赖**：T34
 - **验收**：full/Ruff lint/format baseline-differential/constraints/validate/truth/diff-check 通过；批准差分只有
   NC-05；byte-only
