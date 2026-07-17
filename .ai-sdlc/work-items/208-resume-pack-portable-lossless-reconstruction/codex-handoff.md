@@ -1,36 +1,37 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T15:59:25+00:00
-- Reason: after WI208 fresh-main acceptance
+- Updated: 2026-07-17T16:18:38+00:00
+- Reason: after dual closure review found stale handoff
 - Goal: Close WI208 GAP-13 after fresh-main acceptance
-- State: PR 143 merged as f51c176a; fresh-main relocation, focused, full and governance gates PASS
+- State: Closure branch contains final ready/fresh truth and corrected continuity; delivery remains gated by dual PASS and PR/Codex/checks/merge
 - Stage: close
 - Work Item: 208-resume-pack-portable-lossless-reconstruction
 - Branch: feature/208-resume-pack-portable-lossless-reconstruction-acceptance
 
 ## Changed Files
-- M specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
-- M specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
-- M specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
-- M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-- M specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
-- M specs/208-resume-pack-portable-lossless-reconstruction/development-summary.md
-- M specs/208-resume-pack-portable-lossless-reconstruction/plan.md
-- M specs/208-resume-pack-portable-lossless-reconstruction/spec.md
-- M specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
-- M specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
+- program-manifest.yaml
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+- specs/208-resume-pack-portable-lossless-reconstruction/development-summary.md
+- specs/208-resume-pack-portable-lossless-reconstruction/plan.md
+- specs/208-resume-pack-portable-lossless-reconstruction/spec.md
+- specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
+- specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
 
 ## Key Decisions
-- Record GAP-13/T56 closed in a standalone acceptance branch; keep GAP-14/T57 queued for WI209
+- Keep truth snapshot 7524de5d after all closure docs; refresh continuity afterward so recovery does not repeat completed truth/resume work
 
 ## Commands / Tests
-- Relocation 1 passed; focused 107 passed; full 3230 passed 3 skipped; Ruff/constraints/validate/truth/manifest PASS; protected state unchanged
+- PR 143 merged f51c176a; relocation 1 passed; focused 107 passed; full 3230 passed 3 skipped; Ruff/constraints/validate PASS; truth remains ready/fresh and manifest exact 1 passed after resume restore
 
 ## Blockers / Risks
-- Acceptance closure PR must receive dual adversarial PASS, Codex review and required checks before WI209 formal starts
+- Delivery is gated by fresh dual PASS and PR/Codex/checks/merge; WI209 cannot start before acceptance merge
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Restore derived resume changes, sync truth, freeze formal hashes, obtain Pascal and Confucius PASS, open acceptance PR
+- Deliver this closure through dual review and PR/Codex/checks/merge; only then start WI209 formal
