@@ -68,7 +68,7 @@ tests/integration/test_cli_handoff.py
    acceptance，关闭 GAP-12/T55。
 2. 初始化 WI208 canonical docs，恢复 `workitem init` 产生的非目标 Cursor refresh。
 3. 冻结 spec §3 source matrix、§4 migration/mismatch matrix、allowlist、预算、RED/GREEN 与回退合同。
-4. 同步 WI-196 和 WI-207 状态；GAP-13/T56=active、GAP-14/T57=queued。
+4. 完成后同步 WI-196 和 WI-207 状态；fresh-main 后 GAP-13/T56=closed、GAP-14/T57=queued。
 5. 对 child + parent 六份 formal 计算父计划 §9 canonical combined hash；Pascal/Confucius 从零评审。
 6. 任一 finding 先验证再修订；六文件一变，双方旧 verdict 同时失效，直到同一 hash 双 PASS。
 7. 运行 constraints、program validate/truth、manifest exact、diff-check；提交 formal PR，Codex/checks 全绿后合并。

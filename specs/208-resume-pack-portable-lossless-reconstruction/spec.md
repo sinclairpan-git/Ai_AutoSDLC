@@ -3,7 +3,7 @@
 **功能编号**：`208-resume-pack-portable-lossless-reconstruction`
 **父项**：WI-196 `GAP-13 / T56`
 **创建日期**：2026-07-17
-**状态**：formal review pending
+**状态**：completed；PR #143 / merge `f51c176a`，fresh-main acceptance PASS
 **风险**：L2；影响 CC-03、CC-06、CC-07；Reduction Contract 不适用
 
 ## 1. 背景与问题

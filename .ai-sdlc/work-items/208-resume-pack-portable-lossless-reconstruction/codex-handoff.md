@@ -1,29 +1,36 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T14:46:25+00:00
-- Reason: after Round 5 full and governance proof
-- Goal: Complete WI208 portable lossless resume-pack reconstruction without regressions
-- State: Round 5 full and governance proof PASS; preparing final receipt and exact rollback/reapply
+- Updated: 2026-07-17T15:59:25+00:00
+- Reason: after WI208 fresh-main acceptance
+- Goal: Close WI208 GAP-13 after fresh-main acceptance
+- State: PR 143 merged as f51c176a; fresh-main relocation, focused, full and governance gates PASS
 - Stage: close
 - Work Item: 208-resume-pack-portable-lossless-reconstruction
-- Branch: feature/208-resume-pack-portable-lossless-reconstruction-dev
+- Branch: feature/208-resume-pack-portable-lossless-reconstruction-acceptance
 
 ## Changed Files
-- M program-manifest.yaml
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- M specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+- M specs/208-resume-pack-portable-lossless-reconstruction/development-summary.md
+- M specs/208-resume-pack-portable-lossless-reconstruction/plan.md
+- M specs/208-resume-pack-portable-lossless-reconstruction/spec.md
 - M specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
 - M specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
 
 ## Key Decisions
-- Codex P2 fixed by scanning handoff metadata only before the first Markdown section
+- Record GAP-13/T56 closed in a standalone acceptance branch; keep GAP-14/T57 queued for WI209
 
 ## Commands / Tests
-- Focused 107 passed; full 3230 passed 3 skipped; raw +108/+239; normalized +120/+211; Ruff/constraints/validate/truth/manifest PASS
+- Relocation 1 passed; focused 107 passed; full 3230 passed 3 skipped; Ruff/constraints/validate/truth/manifest PASS; protected state unchanged
 
 ## Blockers / Risks
-- Fresh Pascal and Confucius PASS plus current-head Codex re-review still required before merge
+- Acceptance closure PR must receive dual adversarial PASS, Codex review and required checks before WI209 formal starts
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Sync final truth, commit receipt, run terminal gates and exact rollback/reapply, freeze identities for dual review
+- Restore derived resume changes, sync truth, freeze formal hashes, obtain Pascal and Confucius PASS, open acceptance PR

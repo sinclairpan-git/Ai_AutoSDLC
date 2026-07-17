@@ -127,7 +127,8 @@
 
 ### T42 final tree 双 Agent 复审
 
-- **状态**：pending
+- **状态**：completed；Pascal/Confucius 对 HEAD `a0b6feb1`、tree `69ebf49f`、formal combined
+  `ce6cd4013af1a2f8e0d37082e330c42dc1d2a9a2cb686d36ad6fe7267c0361e0` 同时 PASS
 - **依赖**：T41
 - **验收**：冻结 HEAD/tree/binary/name-status/formal hash/LOC/test evidence；Pascal 与 Confucius 对同一
   target 双 PASS；任何后续 tree 变化使 verdict 作废。
@@ -136,21 +137,22 @@
 
 ### T51 implementation PR 交付
 
-- **状态**：in progress；PR #143 已打开，当前提交 Codex P2 正在修复，merge blocked by T41/T42
+- **状态**：completed；PR #143 在 current-head Codex clean 与 22/22 checks SUCCESS 后 merge 为 `f51c176a`
 - **依赖**：T42
 - **验收**：push、ready PR、current-head Codex review、heartbeat；actionable finding 修复后重跑 T41/T42；
   required checks 全绿后 merge。
 
 ### T52 fresh-main 关闭 GAP-13
 
-- **状态**：blocked by T51
+- **状态**：completed；fresh detached main relocation `1 passed`、focused `107 passed`、full
+  `3230 passed, 3 skipped`，Ruff/constraints/validate/truth/manifest 与 clean-state 全部通过
 - **依赖**：T51
 - **验收**：fresh detached main 运行 relocation node、focused/full/Ruff/constraints/truth、root/scoped equal、
   second no-op、clean-state；只把 GAP-13/T56 标 closed。
 
 ### T53 启动 WI209
 
-- **状态**：blocked by T52
+- **状态**：ready；T52 已完成，待本 acceptance PR 合并后在新的 formal branch 初始化 WI209
 - **依赖**：T52
 - **验收**：WI209 单独处理 GAP-14 quoted-scalar comment-policy false positive；不提前启动新的
   T61/T62/T63～T67，不关闭 WI-196/RC-08，不发布版本。
