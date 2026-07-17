@@ -19,8 +19,9 @@
 - WI-207/GAP-12 已关闭：formal PR #140 合入 `8d325a4d`；implementation PR #139 合入 `8752aa97`；
   test-isolation repair PR #141 合入 `8d8b8f96`。最终 fresh-main real-hook/focused/full
   `3224 passed, 3 skipped`、Ruff/format/constraints/validate/truth 全绿，pre/post repository state 相同且 clean。
-- WI-208/GAP-13 已 active，独立处理 resume-pack reconstruction；WI-209/GAP-14 随后独立处理 YAML quoted
-  scalar 的 comment-policy false positive。三项 fresh-main 后才恢复新的减重候选。
+- WI-208/GAP-13 已由 PR #143 / merge `f51c176a` 关闭；fresh-main relocation/focused/full/Ruff/治理门禁
+  全绿且 repository state clean。WI-209/GAP-14 随后独立处理 YAML quoted scalar 的 comment-policy
+  false positive；WI-209 fresh-main 后才恢复新的减重候选。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新
   写成可执行合同，旧 verdict 同时失效。
@@ -46,6 +47,6 @@
 - GAP/WP 子项仍按独立 WI/branch/PR 推进；本 summary 不宣称整体减重完成。
 - WI-202 的首个 T62A 候选因完整 proof 明显超过 RC-06 预算，已按 RC-09 停止且未合入；
   GAP-01/T62A 仍 open，T62B/T62C 未开始，FR-08 双 reviewer fallback 继续有效。
-- GAP-12、GAP-13、GAP-14 是验证/连续性可靠性缺口，不计 RC-08 减重收益；WI-207 不得混入
+- GAP-12、GAP-13 已关闭且不计 RC-08 减重收益；GAP-14 仍是开放的验证可靠性缺口。WI-207 不得混入
   continuity/comment parser，WI-208 不得混入 adapter dispatch，WI-209 不得用 YAML 全局豁免掩盖误报。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

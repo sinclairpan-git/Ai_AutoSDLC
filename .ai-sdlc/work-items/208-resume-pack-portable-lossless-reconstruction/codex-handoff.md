@@ -1,29 +1,37 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T14:46:25+00:00
-- Reason: after Round 5 full and governance proof
-- Goal: Complete WI208 portable lossless resume-pack reconstruction without regressions
-- State: Round 5 full and governance proof PASS; preparing final receipt and exact rollback/reapply
+- Updated: 2026-07-17T16:18:38+00:00
+- Reason: after dual closure review found stale handoff
+- Goal: Close WI208 GAP-13 after fresh-main acceptance
+- State: Closure branch contains final ready/fresh truth and corrected continuity; delivery remains gated by dual PASS and PR/Codex/checks/merge
 - Stage: close
 - Work Item: 208-resume-pack-portable-lossless-reconstruction
-- Branch: feature/208-resume-pack-portable-lossless-reconstruction-dev
+- Branch: feature/208-resume-pack-portable-lossless-reconstruction-acceptance
 
 ## Changed Files
-- M program-manifest.yaml
-- M specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
-- M specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
+- program-manifest.yaml
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+- specs/208-resume-pack-portable-lossless-reconstruction/development-summary.md
+- specs/208-resume-pack-portable-lossless-reconstruction/plan.md
+- specs/208-resume-pack-portable-lossless-reconstruction/spec.md
+- specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
+- specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
 
 ## Key Decisions
-- Codex P2 fixed by scanning handoff metadata only before the first Markdown section
+- Keep truth snapshot 7524de5d after all closure docs; refresh continuity afterward so recovery does not repeat completed truth/resume work
 
 ## Commands / Tests
-- Focused 107 passed; full 3230 passed 3 skipped; raw +108/+239; normalized +120/+211; Ruff/constraints/validate/truth/manifest PASS
+- PR 143 merged f51c176a; relocation 1 passed; focused 107 passed; full 3230 passed 3 skipped; Ruff/constraints/validate PASS; truth remains ready/fresh and manifest exact 1 passed after resume restore
 
 ## Blockers / Risks
-- Fresh Pascal and Confucius PASS plus current-head Codex re-review still required before merge
+- Delivery is gated by fresh dual PASS and PR/Codex/checks/merge; WI209 cannot start before acceptance merge
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Sync final truth, commit receipt, run terminal gates and exact rollback/reapply, freeze identities for dual review
+- Deliver this closure through dual review and PR/Codex/checks/merge; only then start WI209 formal

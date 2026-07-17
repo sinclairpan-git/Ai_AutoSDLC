@@ -38,8 +38,8 @@
 
 WI-206 fresh-main 新暴露的验证/连续性缺口（先于下一减重候选）
   └─ T55 GAP-12 program implicit adapter side effect（WI-207，已关闭）
-       └─ T56 GAP-13 portable/lossless resume reconstruction（WI-208，active）
-            └─ T57 GAP-14 YAML quoted-scalar comment-policy false positive（WI-209）
+       └─ T56 GAP-13 portable/lossless resume reconstruction（WI-208 / PR #143，已关闭）
+            └─ T57 GAP-14 YAML quoted-scalar comment-policy false positive（WI-209，queued）
 ```
 
 WP-03～WP-07 不互相强制串行。只有代码重叠、契约重叠或同一重复族才形成真实依赖；依赖必须在子项 spec 中用文件/符号和测试证明。
@@ -102,8 +102,8 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 
 ### T56：GAP-13 portable/lossless resume reconstruction
 
-- **当前状态**：active；WI-207 fresh-main 已通过，WI-208 formal 正在冻结 canonical source、迁移与
-  relocation/detached 验收方案。
+- **当前状态**：completed；WI-208 / PR #143 已合入 `f51c176a`，fresh-main relocation、focused、full、
+  Ruff、constraints、validate、truth 与 manifest exact 全绿，保护文件与 clean state 不变。
 - **风险/范围**：L2；只处理 status/recover/handoff 的 resume-pack reconstruction 与 root/scoped 同步。
 - **非目标**：不信任可能陈旧的旧 pack 字段，不修改 root adapter dispatch；checkpoint 继续锚定 active
   WI/fingerprint/docs baseline/execute fallback，active-WI runtime 继续优先提供 stage/batch/task。WI-198 的窄
@@ -124,7 +124,8 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 
 ### T57：GAP-14 YAML quoted-scalar comment-policy false positive
 
-- **当前状态**：queued；待 WI-208 fresh-main 后由 WI-209 formal 冻结 parser 边界。
+- **当前状态**：queued；WI-208 fresh-main 依赖已满足，待本关闭回执合并后由 WI-209 独立 formal 冻结
+  parser 边界。
 - **风险/范围**：L2；只处理 unified diff 中 YAML quoted scalar 内容被 `_is_comment_line()` 误判为注释。
 - **非目标**：不豁免真实 YAML comments，不修改 adapter、resume reconstruction 或 verify telemetry。
 - **进入**：用 single/double quoted multiline scalar、plain scalar、真实 comment 和非 YAML source 建立 RED
