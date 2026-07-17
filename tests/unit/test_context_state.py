@@ -53,7 +53,8 @@ def _write_handoff(
     content = (
         "# Continuity Handoff\n\n"
         f"- Goal: {goal}\n- State: {state}\n- Work Item: {work_item_id}\n"
-        f"- Branch: {branch}\n\n## Exact Next Steps\n- {next_step}\n"
+        f"- Branch: {branch}\n\n## Key Decisions\n- Goal: section detail\n\n"
+        f"## Exact Next Steps\n- {next_step}\n"
     )
     for path in (
         root / ".ai-sdlc/state/codex-handoff.md",
@@ -376,9 +377,7 @@ class TestResumePack:
             ("none", "none", "none", "Continuity handoff updated"),
             ("Goal", "none", "Next", "Goal: Goal | Next: Next"),
         ):
-            _write_handoff(
-                tmp_path, goal=goal, state=state, next_step=next_step
-            )
+            _write_handoff(tmp_path, goal=goal, state=state, next_step=next_step)
             assert build_resume_pack(
                 tmp_path
             ).working_set_snapshot.context_summary == expected

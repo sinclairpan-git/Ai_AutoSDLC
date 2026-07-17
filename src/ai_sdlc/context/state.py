@@ -695,7 +695,7 @@ def _read_resume_handoff(root: Path, work_item_id: str) -> tuple[str, str, str]:
         prefix = f"- {field}:"
         matches = [
             line.removeprefix(prefix).strip()
-            for line in lines
+            for line in content.partition("\n## ")[0].splitlines()
             if line.startswith(prefix)
         ]
         if len(matches) != 1:

@@ -108,8 +108,8 @@
 
 ### T34 focused GREEN 与预算
 
-- **状态**：completed；Round 4 focused `107 passed`；raw product/tests net=`+108/+240`，同版本 Ruff
-  格式化 exact base/candidate 副本后的 normalized product/tests net=`+120/+210`
+- **状态**：completed；Codex P2 修复后 focused `107 passed`；raw product/tests net=`+108/+239`，同版本
+  Ruff 格式化 exact base/candidate 副本后的 normalized 结果以最新 execution log 终态回执为准
 - **依赖**：T33
 - **验收**：plan §8 focused 全绿；产品最多 1 文件/net +120，测试最多 4 文件/net +240；无 test
   deletion/weakening、无第二个产品文件。
@@ -118,7 +118,7 @@
 
 ### T41 full/governance/differential/rollback
 
-- **状态**：completed；Round 3 exact logic commit 的 full/governance/state-diff/rollback-reapply 全部通过
+- **状态**：pending；Codex P2 修改生产代码，Round 3 证明已退役，须对新 exact target 全量重跑
 - **依赖**：T34
 - **验收**：full/Ruff lint/format baseline-differential/constraints/validate/truth/diff-check 通过；批准差分只有
   NC-05；byte-only
@@ -136,7 +136,7 @@
 
 ### T51 implementation PR 交付
 
-- **状态**：blocked by T42
+- **状态**：in progress；PR #143 已打开，当前提交 Codex P2 正在修复，merge blocked by T41/T42
 - **依赖**：T42
 - **验收**：push、ready PR、current-head Codex review、heartbeat；actionable finding 修复后重跑 T41/T42；
   required checks 全绿后 merge。
