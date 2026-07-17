@@ -1,29 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T19:46:05+00:00
-- Reason: PR 145 Codex P1 scoped WI209 handoff repair
-- Goal: 修复 PR #145 Codex finding，取得 current-head clean review/checks 并合并 formal PR
-- State: Codex reviewed 6e4e3a0 and found missing WI209 scoped handoff；已新增与 root 字节一致的 scoped copy，focused/governance/manifest/audit 全绿，待双 Agent 复审后推送
+- Updated: 2026-07-17T20:23:01+00:00
+- Reason: WI209 formal merge accepted，start independent implementation branch
+- Goal: 按 WI209 frozen contract 完成 RED、最小 GREEN、全量/回退/双审与 implementation PR
+- State: formal PR #145 merged as 46156c24；fresh-main src zero diff、root/scoped handoff equal、constraints/validate/comment/manifest/audit all green；implementation branch created from origin/main
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
-- Branch: feature/209-yaml-quoted-scalar-comment-policy-docs
+- Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
 
 ## Changed Files
 - modified: `.ai-sdlc/state/codex-handoff.md`
-- added: `.ai-sdlc/work-items/209-yaml-quoted-scalar-comment-policy/codex-handoff.md`
+- modified: `.ai-sdlc/work-items/209-yaml-quoted-scalar-comment-policy/codex-handoff.md`
 - Git staging truth must be read from `git status --short`; this list intentionally does not persist volatile XY codes.
 
 ## Key Decisions
-- root 与 WI209 scoped handoff 必须 byte-identical；不修改 formal 六文件技术合同或 lifecycle
+- next commit must contain RED tests only；product implementation limited to comment_policy.py and frozen budgets
 
 ## Commands / Tests
-- handoff blobs equal；constraints/validate PASS；comment-policy 9 passed；manifest exact 1 passed in 82.23s；truth ready/fresh 1101/1101
+- fresh-main: comment-policy 9 passed；manifest exact 1 passed in 81.29s；truth ready/fresh 1101/1101
 
 ## Blockers / Risks
-- 修复提交尚未取得 Pascal/Confucius 双 PASS、尚未推送；PR #145 current-head Codex/checks 未完成
+- T21 RED、T22 GREEN、T23 safety/budget and final delivery are pending
 
 ## Local PR Review
-- PR #145 Codex reviewed `6e4e3a0` and reported P1 missing WI209 scoped handoff；已用 root/scoped byte equality 修复，待 current-head re-review
+- none
 
 ## Exact Next Steps
-- 冻结修复树并由 Pascal/Confucius 从零复审；双 PASS 后提交推送、回复 thread、重请求 @codex review
+- add minimal parameterized RED only in the two approved test files，run exact failing nodes，commit tests-only RED
