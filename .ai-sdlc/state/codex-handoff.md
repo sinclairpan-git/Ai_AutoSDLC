@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T21:09:41+00:00
-- Reason: WI209 rollback and reapply proof passed
-- Goal: 完成 WI209 双对抗终审与 implementation PR/fresh-main acceptance
-- State: Full and governance gates passed; disposable per-commit rollback/reapply passed: midpoint tree 0c865c43 equals formal merge and final tree 0a145a78 equals candidate
+- Updated: 2026-07-17T21:20:10+00:00
+- Reason: WI209 later multiline quoted-token repair focused gates passed
+- Goal: Re-verify WI209 after later-multiline-token boundary fix, then rerun dual review and PR/fresh-main
+- State: Prior identity review aborted after local edge finding; RED a603ed97 and GREEN 9f202c90 committed; unit 23/23, CLI 49/49, constraints/validate/truth PASS; raw/normalized product 129/130
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Freeze candidate after recording rollback proof; both adversarial reviewers must inspect the same HEAD/tree/diff identity and agree PASS before push
+- A later quoted token that starts on the current closing line and ends later must register its start-line interval; candidate must be fully reverified under a new identity
 
 ## Commands / Tests
-- rollback replay: 8 commits reverted in reverse and reapplied in original order; midpoint 0c865c4335cd86d84124992382730a2e200419db; final 0a145a789dc2740df10112788fd17c99d212aacc
+- RED: 1 intended flow case failed; GREEN: unit 23 passed, CLI 49 passed, Ruff PASS, constraints no blockers, validate PASS, truth ready/fresh 1101/1101
 
 ## Blockers / Risks
-- Dual adversarial implementation PASS, PR/Codex/checks/merge/fresh-main remain pending
+- Second full suite, rollback replay, new final identity, dual PASS, PR/Codex/checks/merge/fresh-main pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- commit continuity, freeze final identity, run Pascal lean/directness and Confucius safety/compat reviews against identical candidate
+- commit continuity, rerun full pytest, repeat rollback/reapply proof, freeze new identity, restart both adversarial reviewers
