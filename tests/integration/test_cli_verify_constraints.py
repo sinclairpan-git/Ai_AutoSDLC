@@ -207,21 +207,7 @@ def _commit_all(root: Path, message: str) -> None:
 def _write_comment_policy_git_fixture(root: Path, *, before: str, after: str) -> None:
     init_project(root)
     _minimal_constitution(root)
-    spec_dir = root / "specs" / "001-wi"
-    spec_dir.mkdir(parents=True, exist_ok=True)
-    save_checkpoint(
-        root,
-        Checkpoint(
-            current_stage="init",
-            feature=FeatureInfo(
-                id="001",
-                spec_dir="specs/001-wi",
-                design_branch="d",
-                feature_branch="f",
-                current_branch="main",
-            ),
-        ),
-    )
+    _write_012_checkpoint(root)
     _init_git_repo(root)
     source = root / "config.yaml"
     source.write_text(before, encoding="utf-8")
@@ -779,25 +765,22 @@ def _write_frontend_evidence_class_checkpoint(
 
 class TestCliVerifyConstraints:
     @pytest.mark.parametrize(
-        ("before", "after", "exit_code", "blocker"),
+        ("before", "after", "exit_code"),
         [
             (
                 "value: 'first\n  #139 continuation\n  last'\n",
                 "value: 'first\n  last'\n",
                 0,
-                "",
             ),
             (
                 "value: first\n# keep operator note\n",
                 "value: first\n",
                 1,
-                "in config.yaml: # keep operator note",
             ),
             (
                 "value: first\n# keep operator note\n",
                 'value: "first\n  #139 continuation"\n',
                 1,
-                "in config.yaml: # keep operator note",
             ),
         ],
     )
@@ -808,7 +791,6 @@ class TestCliVerifyConstraints:
         before: str,
         after: str,
         exit_code: int,
-        blocker: str,
     ) -> None:
         _write_comment_policy_git_fixture(tmp_path, before=before, after=after)
         monkeypatch.chdir(tmp_path)
@@ -816,10 +798,9 @@ class TestCliVerifyConstraints:
         result = runner.invoke(app, ["verify", "constraints"])
 
         assert result.exit_code == exit_code
-        if blocker:
-            assert blocker in result.output
-        else:
-            assert "original comment removed" not in result.output
+        assert ("original comment removed" in result.output) == bool(exit_code)
+        if exit_code:
+            assert "in config.yaml: # keep operator note" in result.output
 
     def test_exit_1_missing_constitution(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
