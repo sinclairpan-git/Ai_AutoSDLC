@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T21:32:11+00:00
-- Reason: WI209 repaired candidate full regression and rollback proof passed
-- Goal: Complete WI209 dual adversarial review and implementation PR/fresh-main acceptance
-- State: Later-multiline-token repair fully reverified: unit 23, CLI 49, full 3247 passed 3 skipped, constraints/validate/truth PASS, raw 129/191 normalized 130/199; 12-commit rollback/reapply exact
+- Updated: 2026-07-17T21:44:28+00:00
+- Reason: WI209 malformed path fail-closed and safe display focused gates passed
+- Goal: Run final WI209 full verification, rollback proof, dual review and PR/fresh-main
+- State: Malformed path RED c31a2b7c and safe-display RED 669e8dfc fixed by 7853a0e0/e952d46b; unit 23, CLI 49, constraints/validate/truth PASS; budgets product129/130 tests200/198 raw/normalized
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Freeze a new final identity after continuity commit; prior interrupted review identity is invalid and must not be reused
+- Explicit invalid path headers override diff fallback with unknown side state; added stays fail-closed and display uses <unknown>; no further scope expansion
 
 ## Commands / Tests
-- second full 3247 passed 3 skipped in 566.89s; rollback2 midpoint 0c865c4335cd86d84124992382730a2e200419db, final c18a43cd17e8eafd0d0a83bad478c20aacd46998
+- unit 23 passed; CLI 49 passed; Ruff PASS; constraints no blockers; validate PASS; truth ready/fresh 1101/1101
 
 ## Blockers / Risks
-- New dual adversarial PASS, PR/Codex/checks/merge/fresh-main remain pending
+- Final full, rollback replay, new exact identity, dual PASS, PR/Codex/checks/merge/fresh-main pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- commit final continuity, calculate exact identity, restart Pascal and Confucius against the same candidate
+- commit continuity, run final full pytest, replay all commits, freeze identity, restart dual reviewers
