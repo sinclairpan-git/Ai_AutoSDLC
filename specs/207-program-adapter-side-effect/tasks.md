@@ -188,8 +188,7 @@
 
 ### T52 Merge 与 fresh-main acceptance
 
-- **状态**：active；首轮 fresh-main 业务断言全绿但 full suite 污染真实 checkout；test-isolation repair
-  final local gates 全绿，待 exact-tree 双审、独立 PR 与最终 fresh-main
+- **状态**：已完成；repair PR #141 合并为 `8d8b8f96`，最终 fresh-main 全绿且 repository state clean
 - **依赖**：T51
 - **实现**：只修改 `tests/conftest.py` 与 7 个已定位 CLI test 文件；共享临时 cwd fixture + session
   repository-state guard；产品 diff 为空，预算不超过 8 文件/gross `+135`/net `+120`。
@@ -199,9 +198,9 @@
 
 ### T53 启动 WI208 并继续父路线
 
-- **状态**：待执行
+- **状态**：已完成；WI208 canonical formal 已初始化，父台账为 GAP-12=closed/GAP-13=active/GAP-14=queued
 - **依赖**：T52
-- **验收**：下一 work item 为 WI208 `resume-pack-portable-lossless-reconstruction-sources`；更新父台账时
+- **验收**：下一 work item 为 WI208 `resume-pack-portable-lossless-reconstruction`；更新父台账时
   GAP-12=closed、GAP-13=active、GAP-14=queued；不关闭 GAP-05/WI196/RC-08，不发布版本。WI208
   关闭后启动 WI209 comment-policy false-positive 修复，WI209 关闭后再选下一个 T63/T65/WP-06/WP-07
   原子减重项。

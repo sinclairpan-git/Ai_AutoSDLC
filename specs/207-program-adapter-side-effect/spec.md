@@ -2,7 +2,7 @@
 
 **功能编号**：`207-program-adapter-side-effect`
 **创建日期**：2026-07-16
-**状态**：implementation PR #139 已合并；fresh-main test-isolation repair active
+**状态**：closed；PR #139 + test-isolation repair PR #141 已合并并通过 fresh-main clean acceptance
 **类型**：WI-196 / GAP-12 基础副作用修复（L2，影响 CC-05）
 **基线**：`origin/main@506e950dee3469248ef7e6b5e1aac664668d18a1`
 

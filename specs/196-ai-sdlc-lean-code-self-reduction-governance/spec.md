@@ -50,7 +50,7 @@
 | GAP-09 | 已关闭 | WI-199 / PR #123 / merge `208a34c8`：framework capability 与 consumer inheritance fail-closed 分离 | T53A 已完成；回退整个 WI-199 会重开本项 | 否 |
 | GAP-10 | 已关闭 | WI-200 / PR #124 / merge `c737eda0`：repository capability 与本机会话 consumption fail-closed 分离 | T53B 已完成；runtime admission 仍独立诊断 | 否 |
 | GAP-11 | 已关闭 | WI-201 / PR #125 / merge `d19c8b7d`：source inventory 收敛为 complete、unmapped=0、missing=0 | T54 已完成；新增 source 继续 fail-closed | 否 |
-| GAP-12 | 开放 | `origin/main@506e950d` 的只读 program 命令会改写 tracked `.cursor/rules/ai-sdlc.mdc`，但 PR #139 全族 bypass 又使首次 managed delivery 丢失 `materialized → verified_loaded` 迁移；program tests 还存在 root/local hook 隔离边界 | T55 / WI-207：root program 无条件 hook 改为 bypass，仅在两个 managed-delivery 依赖入口局部刷新，并补双轴 real-hook/host-ingress 回归 | 是（验证与兼容可靠性） |
+| GAP-12 | 已关闭 | WI-207：formal PR #140、implementation PR #139、test-isolation repair PR #141；merge `8d8b8f96` 的 fresh-main real-hook/focused/full/Ruff/治理门禁全绿且 repository state clean | T55 已完成；回退 PR #139 或 #141 会重开本项 | 否 |
 | GAP-13 | 开放 | detached worktree 执行 `uv run ai-sdlc status` 会把 root/scoped resume-pack 重建为 worktree 绝对路径，并清空 branch、active files、context | T56 / WI-208：冻结 portable/lossless canonical reconstruction source，再修 status/recover/handoff | 是（连续性可靠性） |
 | GAP-14 | 开放 | `comment_policy._is_comment_line()` 按 stripped diff line 判断前缀；YAML single-quoted scalar 的续行内容以 `#139...` 开头时被误判为被删除注释，导致 `verify constraints` 假 blocker | T57 / WI-209：先以 quoted-scalar diff characterization 固定误报，再做 path/syntax-aware 最小修复；不得用 execution-log waiver 掩盖 | 是（验证可靠性） |
 
@@ -144,8 +144,8 @@ WP-03～WP-07 的每个减重候选在编码前冻结以下字段；缺一项不
 GAP-07、GAP-08 的缺陷修复按合同可独立或并行启动，且每个缺陷必须先写能复现原行为的定向 characterization test。两项现已分别由 WI-197、WI-198 关闭，WP-01A 的基础 barrier 已满足；后续候选仍须满足各自 impact analysis 与 sponsor/admission 条件。
 
 GAP-12 与 GAP-13 是 WI-206 fresh-main 验收中暴露的两个不同根因；GAP-14 是 WI-207 fresh-main
-诊断 dirty diff 时暴露的第三个独立验证根因。三项必须使用独立 WI/branch/PR。
-T55 只处理 root program bypass、两个 managed-delivery 入口局部兼容刷新与 program test isolation；
+诊断 dirty diff 时暴露的第三个独立验证根因。三项必须使用独立 WI/branch/PR。T55 已由 WI-207
+关闭；T55 只处理 root program bypass、两个 managed-delivery 入口局部兼容刷新与 program test isolation；
 T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy 对 quoted scalar 的误报。
 三项都先红后绿，且不计为减重成果。由于它们会污染治理证据、恢复状态或阻断合法变更，路线在继续
 新的 T63/T65/WP-06/WP-07 候选前先顺序关闭 T55、T56、T57。
