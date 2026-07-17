@@ -44,7 +44,8 @@ _CJK_TOKEN_RE = re.compile(r"[\u4e00-\u9fff]{2,}")
 _COMMENT_PREFIX_RE = re.compile(r"^\s*(#|//|/\*|\*|<!--|-->|'''|\"\"\")")
 _BLOCK_COMMENT_SUFFIX_RE = re.compile(r"(\*/|-->|'''|\"\"\")\s*$")
 _HUNK_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(?: .*)?$")
-_DIFF_PATH_RE = re.compile(r'diff --git ("a/(?:\\.|[^"\\])*"|a/[^\s"]+) ("b/(?:\\.|[^"\\])*"|b/[^\s"]+)')
+_GIT_PATH_PATTERN = r'"(?:\\(?:[abtnvfr\\"]|[0-7]{3})|[^\x00-\x1f\x7f"\\])*"|[^\s"\\\x00-\x1f\x7f]+'
+_DIFF_PATH_RE = re.compile(r'diff --git ("a/(?:\\(?:[abtnvfr\\"]|[0-7]{3})|[^\x00-\x1f\x7f"\\])*"|a/[^\s"\\\x00-\x1f\x7f]+) ("b/(?:\\(?:[abtnvfr\\"]|[0-7]{3})|[^\x00-\x1f\x7f"\\])*"|b/[^\s"\\\x00-\x1f\x7f]+)')
 _COMMENT_DELETION_REASON_TOKENS = (
     "删除注释",
     "移除注释",
@@ -131,8 +132,8 @@ def collect_removed_comment_findings(
         if raw_line.startswith("diff --git "):
             _flush_removed_comments(findings, current_path, removed, added)
             match = _DIFF_PATH_RE.fullmatch(raw_line)
-            paths = tuple(map(_path_from_diff_header, match.groups())) if match else ()
-            old_path, new_path = paths if len(paths) == 2 and all(paths) else (None, None)
+            old_path = _path_from_diff_header(match[1]) if match else None
+            new_path = _path_from_diff_header(match[2]) if match else None
             current_path = new_path or "<unknown>"
             old_line = new_line = None
         elif raw_line.startswith("--- "):
@@ -230,6 +231,8 @@ def _path_from_diff_header(value: str) -> str | None:
     value = value.strip()
     if value == "/dev/null":
         return ""
+    if re.fullmatch(_GIT_PATH_PATTERN, value) is None:
+        return None
     if value.startswith('"'):
         try:
             decoded = ast.literal_eval(value)
@@ -316,7 +319,6 @@ def _git_diff(root: Path) -> str:
             text=True,
             encoding="utf-8",
             errors="replace",
-            check=False,
         )
     except OSError:
         return ""
@@ -345,7 +347,6 @@ def _changed_execution_log_records_comment_deletion(
             text=True,
             encoding="utf-8",
             errors="replace",
-            check=False,
         )
     except OSError:
         return False
