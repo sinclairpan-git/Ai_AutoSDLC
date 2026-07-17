@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T21:56:26+00:00
-- Reason: WI209 final full and rollback proof passed
+- Updated: 2026-07-17T22:27:58+00:00
+- Reason: WI209 adversarial findings remediated and focused verification passed
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Final candidate fully green: unit23 CLI49 full3247/3skip constraints/validate/truth/Ruff; budgets raw129/200 normalized130/199; 18-commit rollback/reapply exact
+- State: Review findings remediated: invalid diff header fail-closed; full formal safety matrix covered; product raw/normalized +116/+125; tests +192/+200; max function 44; focused Ruff and 79 tests pass
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Freeze final candidate now; no further local scope changes before both reviewers inspect identical identity
+- Discard 0f213227 candidate; freeze only after full suite, governance, replay, and exact current handoff are rerun
 
 ## Commands / Tests
-- final full 3247 passed 3 skipped in 558.34s; rollback midpoint 0c865c4335cd86d84124992382730a2e200419db final a1af1d9cd9ac019f2d79cf0fa3c07fe77faaf996
+- uv run ruff check three scoped files PASS; uv run pytest unit plus CLI integration 79 passed
 
 ## Blockers / Risks
-- Dual PASS, PR/Codex/checks/merge/fresh-main pending
+- Full suite, governance, replay, dual adversarial PASS, PR checks and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- commit final handoff, calculate identity, run Pascal/Confucius read-only reviews, then push PR only on dual PASS
+- Run full suite and governance; prove rollback/reapply identity; update exact WI209 handoff; restart Pascal and Confucius from zero
