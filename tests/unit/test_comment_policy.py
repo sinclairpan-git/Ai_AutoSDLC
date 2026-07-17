@@ -15,6 +15,9 @@ from ai_sdlc.core.comment_policy import (
     should_avoid_noise_comment,
 )
 
+_MIXED_OLD_PY = "stable = 1\n# real\n"
+_MIXED_NEW_YAML = 'value: "x\n # inside"\nstable: 1\n'
+
 
 def test_comment_language_uses_current_user_language() -> None:
     zh = decide_comment_language(current_user_text="请修复支付回调，并保留原有注释")
@@ -177,7 +180,7 @@ def test_added_yaml_quoted_content_does_not_replace_removed_comment(
 @pytest.mark.parametrize(
     ("old_path", "new_path", "old_source", "new_source", "expected"),
     [
-        ("old.py", "new.yaml", "stable = 1\n# real\n", 'value: "x\n # inside"\nstable: 1\n', 1),
+        ("old.py", "new.yaml", _MIXED_OLD_PY, _MIXED_NEW_YAML, 1),
         ("old.yaml", "new.py", "stable: 1\n# real\n", "stable = 1\n# replacement\n", 0),
     ],
 )
@@ -196,9 +199,7 @@ def test_yaml_mixed_extension_uses_each_side_source(
     old.unlink()
     (tmp_path / new_path).write_text(new_source, encoding="utf-8")
     diff = f"diff --git a/{old_path} b/{new_path}\n--- a/{old_path}\n+++ b/{new_path}\n@@ -2 +2 @@\n-# real\n+ # inside\n"
-
     findings = collect_removed_comment_findings(diff_text=diff, root=tmp_path)
-
     assert len(findings) == expected
 
 
@@ -209,7 +210,6 @@ def test_yaml_quoted_path_and_unsafe_new_source_are_fail_closed(tmp_path: Path) 
     _commit_all(tmp_path)
     source.write_text('value: "first\n  done"\n', encoding="utf-8")
     assert collect_comment_deletion_blockers(tmp_path) == []
-
     source.write_text("# real\n", encoding="utf-8")
     _commit_all(tmp_path)
     source.unlink()
@@ -220,7 +220,8 @@ def test_yaml_quoted_path_and_unsafe_new_source_are_fail_closed(tmp_path: Path) 
     diff = f"diff --git a/x b/x\n--- {quoted}\n+++ {quoted}\n@@ -1 +1 @@\n-# real\n+# replacement\n"
     assert len(collect_removed_comment_findings(diff_text=diff, root=tmp_path)) == 1
     traversal = diff.replace(quoted, "b/../target.yaml", 1).replace(quoted, "b/../target.yaml", 1)
-    assert len(collect_removed_comment_findings(diff_text=traversal, root=tmp_path)) == 1
+    unsafe = collect_removed_comment_findings(diff_text=traversal, root=tmp_path)
+    assert len(unsafe) == 1
 
 
 def test_yaml_reparse_and_invalid_hunk_are_fail_closed(
@@ -235,7 +236,9 @@ def test_yaml_reparse_and_invalid_hunk_are_fail_closed(
 
     def reparse_lstat(path: Path) -> object:
         info = real_lstat(path)
-        return SimpleNamespace(st_mode=info.st_mode, st_file_attributes=1024) if path == source else info
+        if path != source:
+            return info
+        return SimpleNamespace(st_mode=info.st_mode, st_file_attributes=1024)
 
     monkeypatch.setattr(Path, "lstat", reparse_lstat)
     diff = "diff --git a/config.yaml b/config.yaml\n--- a/config.yaml\n+++ b/config.yaml\n@@ -1 +1 @@\n-# real\n+# replacement\n"
@@ -243,12 +246,18 @@ def test_yaml_reparse_and_invalid_hunk_are_fail_closed(
     invalid = collect_removed_comment_findings(
         diff_text=diff.replace("@@ -1 +1 @@", "@@ bad @@"), root=tmp_path
     )
-    assert len(findings) == len(invalid) == 1
+    bad_path = diff.replace("diff --git a/config.yaml b/config.yaml", "diff --git a/x.py b/x.py")
+    bad_path = bad_path.replace("--- a/config.yaml", '--- "bad').replace(
+        "+++ b/config.yaml", '+++ "bad'
+    )
+    malformed = collect_removed_comment_findings(diff_text=bad_path, root=tmp_path)
+    assert {len(findings), len(invalid), len(malformed)} == {1}
 
 
 def _commit_all(root: Path) -> None:
-    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "test"], cwd=root, check=True, capture_output=True)
+    options = {"cwd": root, "check": True, "capture_output": True}
+    subprocess.run(["git", "add", "."], **options)
+    subprocess.run(["git", "commit", "-m", "test"], **options)
 
 
 def _init_git_repo(root: Path) -> None:
