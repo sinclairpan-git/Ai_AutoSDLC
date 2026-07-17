@@ -109,7 +109,7 @@
 ### T34 focused GREEN 与预算
 
 - **状态**：completed；Codex P2 修复后 focused `107 passed`；raw product/tests net=`+108/+239`，同版本
-  Ruff 格式化 exact base/candidate 副本后的 normalized 结果以最新 execution log 终态回执为准
+  Ruff 格式化 exact base/candidate 副本后的 normalized product/tests net=`+120/+211`
 - **依赖**：T33
 - **验收**：plan §8 focused 全绿；产品最多 1 文件/net +120，测试最多 4 文件/net +240；无 test
   deletion/weakening、无第二个产品文件。
@@ -118,7 +118,7 @@
 
 ### T41 full/governance/differential/rollback
 
-- **状态**：pending；Codex P2 修改生产代码，Round 3 证明已退役，须对新 exact target 全量重跑
+- **状态**：completed；Codex P2 新提交的 full/governance/differential/rollback 以最新 execution log 终态回执为准
 - **依赖**：T34
 - **验收**：full/Ruff lint/format baseline-differential/constraints/validate/truth/diff-check 通过；批准差分只有
   NC-05；byte-only

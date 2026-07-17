@@ -1,30 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T14:23:53+00:00
-- Reason: after PR 143 Codex P2 focused fix
+- Updated: 2026-07-17T14:46:25+00:00
+- Reason: after Round 5 full and governance proof
 - Goal: Complete WI208 portable lossless resume-pack reconstruction without regressions
-- State: PR 143 Codex P2 TDD GREEN; T41 and T42 reopened for new exact target
+- State: Round 5 full and governance proof PASS; preparing final receipt and exact rollback/reapply
 - Stage: close
 - Work Item: 208-resume-pack-portable-lossless-reconstruction
 - Branch: feature/208-resume-pack-portable-lossless-reconstruction-dev
 
 ## Changed Files
+- M program-manifest.yaml
 - M specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
 - M specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
-- M src/ai_sdlc/context/state.py
-- M tests/unit/test_context_state.py
 
 ## Key Decisions
-- Scope handoff metadata to the header before the first Markdown section; keep Exact Next Steps full-section parsing unchanged
+- Codex P2 fixed by scanning handoff metadata only before the first Markdown section
 
 ## Commands / Tests
-- Targeted RED 1 failed, GREEN 1 passed; focused 107 passed; Ruff lint and diff-check PASS; raw product/tests +108/+239
+- Focused 107 passed; full 3230 passed 3 skipped; raw +108/+239; normalized +120/+211; Ruff/constraints/validate/truth/manifest PASS
 
 ## Blockers / Risks
-- Old dual adversarial PASS is invalid after production and test changes
+- Fresh Pascal and Confucius PASS plus current-head Codex re-review still required before merge
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit focused fix, run full and terminal proof, freeze exact identities, obtain fresh Pascal and Confucius PASS
+- Sync final truth, commit receipt, run terminal gates and exact rollback/reapply, freeze identities for dual review
