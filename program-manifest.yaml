@@ -2029,12 +2029,15 @@ specs:
 - id: 208-resume-pack-portable-lossless-reconstruction
   path: specs/208-resume-pack-portable-lossless-reconstruction
   depends_on: []
+- id: 209-yaml-quoted-scalar-comment-policy
+  path: specs/209-yaml-quoted-scalar-comment-policy
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-17T16:01:38Z'
+  generated_at: '2026-07-17T19:22:46Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: f51c176a
-  authoring_hash: 6321933d695c3e1127f90c984aa769346b5f85156259642a5b8a9047882606aa
+  repo_revision: 85bdedac
+  authoring_hash: d19fa3c1f538ee3f2f05230a58cc1092616cb9dfaf3477f1d88c5244a8a4a4df
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 01c3db2eed14ae56d4d4e493386fc2293d4b33c42f54e5a58d115f50127f76ee
@@ -2076,7 +2079,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 7524de5d59ed2eeb6c060b5ca2858c4f8a6ab9d837bd0189385f8c7fbf7b46f5
+  snapshot_hash: 7a78b8b8f3f596ef516dc5a4c83946a7df9a11fd2166304a63de606bcf23f3b7
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2090,31 +2093,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1096
-    mapped_sources: 1096
+    total_sources: 1101
+    mapped_sources: 1101
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3634
-    deferred_signal_count: 6541
-    non_goal_signal_count: 389
+    phase_signal_count: 3637
+    deferred_signal_count: 6551
+    non_goal_signal_count: 391
     layer_totals:
       blueprint: 1
-      spec: 208
-      plan: 208
-      tasks: 208
-      execution: 208
-      close: 208
+      spec: 209
+      plan: 209
+      tasks: 209
+      execution: 209
+      close: 209
       requirements: 2
       defect: 3
       design: 8
       release: 42
     layer_materialized:
       blueprint: 1
-      spec: 208
-      plan: 208
-      tasks: 208
-      execution: 208
-      close: 208
+      spec: 209
+      plan: 209
+      tasks: 209
+      execution: 209
+      close: 209
       requirements: 2
       defect: 3
       design: 8
@@ -10965,7 +10968,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 196-ai-sdlc-lean-code-self-reduction-governance
       phase_signal_count: 0
-      deferred_signal_count: 1
+      deferred_signal_count: 2
       non_goal_signal_count: 13
     - path: specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
       source_type: tasks_doc
@@ -10983,7 +10986,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 196-ai-sdlc-lean-code-self-reduction-governance
       phase_signal_count: 5
-      deferred_signal_count: 15
+      deferred_signal_count: 16
       non_goal_signal_count: 8
     - path: specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
       source_type: development_summary
@@ -11488,6 +11491,51 @@ truth_snapshot:
       mapping_ref: 208-resume-pack-portable-lossless-reconstruction
       phase_signal_count: 0
       deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/209-yaml-quoted-scalar-comment-policy/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 209-yaml-quoted-scalar-comment-policy
+      phase_signal_count: 1
+      deferred_signal_count: 3
+      non_goal_signal_count: 1
+    - path: specs/209-yaml-quoted-scalar-comment-policy/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 209-yaml-quoted-scalar-comment-policy
+      phase_signal_count: 2
+      deferred_signal_count: 3
+      non_goal_signal_count: 0
+    - path: specs/209-yaml-quoted-scalar-comment-policy/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 209-yaml-quoted-scalar-comment-policy
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 1
+    - path: specs/209-yaml-quoted-scalar-comment-policy/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 209-yaml-quoted-scalar-comment-policy
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/209-yaml-quoted-scalar-comment-policy/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 209-yaml-quoted-scalar-comment-policy
+      phase_signal_count: 0
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
