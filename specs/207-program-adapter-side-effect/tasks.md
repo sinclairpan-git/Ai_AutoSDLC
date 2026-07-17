@@ -83,7 +83,7 @@
 
 ### T25 Formal PR、Codex review、CI 与 merge
 
-- **状态**：进行中；兼容修订 PR #140 已创建并进入 Codex review/required checks
+- **状态**：已完成；PR #140 合并为 `8d325a4d`，fresh-main formal gates 全绿
 - **依赖**：T24
 - **验收**：单一 docs commit、push、PR、`@codex review`、heartbeat、required checks 全绿；actionable
   finding 修复后重新双审/重跑；formal PR 合入 main，fresh-main truth/constraints 通过。
@@ -92,15 +92,14 @@
 
 ### T31 创建独立 implementation branch/worktree
 
-- **状态**：部分完成；独立 branch/worktree/PR #139 已创建，但 formal merge 后 rebase 尚未执行，T25
-  完成前不得视为 completed
+- **状态**：已完成；implementation branch 已基于 formal merge `8d325a4d` rebase，过期 docs commits 已跳过
 - **依赖**：T25
 - **验收**：`feature/207-program-adapter-side-effect-dev` 从 formal merge main 创建；formal worktree
   不承载源码；implementation baseline clean。
 
 ### T32 添加 program test autouse 隔离
 
-- **状态**：部分完成；root binding 已隔离，需补 program-local binding
+- **状态**：已完成；root/program-local 双 binding 已隔离，真实 hook 用例显式豁免
 - **依赖**：T31
 - **文件**：`tests/integration/test_cli_program.py`
 - **验收**：普通用例同时 patch root/program-local hook；naive/pre-import 阶段对 local binding 使用
@@ -117,7 +116,7 @@
 
 ### T34 记录 naive bypass 兼容 RED
 
-- **状态**：已完成（PR #139 Codex P2，禁止合并）
+- **状态**：已完成；PR #139 Codex P2 已接受，candidate 前兼容 RED 已固定
 - **依赖**：T33
 - **文件**：`tests/integration/test_cli_program.py`
 - **验收**：无宿主信号 materialize Codex adapter 后设置 `OPENAI_CODEX=1`；naive bypass 下
@@ -125,7 +124,7 @@
 
 ### T35 实施四行窄化 gating
 
-- **状态**：待执行
+- **状态**：已完成；implementation commit `c4e5f07d`，产品 additions=4、测试 additions=110
 - **依赖**：T34、兼容 formal 双 PASS/mainline
 - **文件**：`src/ai_sdlc/cli/main.py`、`src/ai_sdlc/cli/program_cmd.py`
 - **验收**：保留 `"program"` tuple member；新增一个既有 hook import；managed-delivery-apply 在 root
@@ -137,7 +136,7 @@
 
 ### T41 运行 focused 与 execute compatibility
 
-- **状态**：待执行
+- **状态**：已完成；focused `238 passed`
 - **依赖**：T35
 - **命令**：
   `uv run pytest tests/integration/test_cli_program.py tests/integration/test_cli_ide_adapter.py tests/unit/test_cli_hooks.py -q`
@@ -150,7 +149,7 @@
 
 ### T42 运行 full、Ruff 与治理门禁
 
-- **状态**：待执行
+- **状态**：已完成；Ruff PASS、full `3224 passed, 3 skipped`、治理门禁全绿
 - **依赖**：T41
 - **命令**：
   1. `uv run ruff check src tests`
@@ -164,7 +163,7 @@
 
 ### T43 生成差分与回退证据
 
-- **状态**：待执行
+- **状态**：已完成；implementation commit 精确 revert/reapply 后 tree 均逐字节匹配目标
 - **依赖**：T42
 - **验收**：记录原始基线/naive bypass/候选 transcript、exit、受保护 digests 与 ingress state；非两个
   managed 刷新入口的全部 program 路径移除 root adapter notice/write；direct apply missing yes 的
@@ -173,7 +172,7 @@
 
 ### T44 Final tree 双 Agent 复审
 
-- **状态**：待执行；既有 verdict 已因 formal/implementation 变化作废
+- **状态**：以外部 final-tree 同 HEAD/tree 双 Agent 回执为准；本表不内嵌动态 verdict
 - **依赖**：T43
 - **验收**：Pascal/Confucius 对同一 HEAD/tree/binary diff/name-status/formal hash/test evidence 均 PASS，
   无 actionable finding；评审后不再修改树，若修改则 verdict 作废。
@@ -182,7 +181,7 @@
 
 ### T51 Push、PR、Codex review 与 required checks
 
-- **状态**：PR #139 draft；Codex P2 已接受，待 formal/实现修订、双审后重请求
+- **状态**：PR #139 draft；formal/实现修订已完成，待 final-tree 双 PASS 后重请求 Codex review
 - **依赖**：T44
 - **验收**：单逻辑实现 commit、push、ready PR、`@codex review`、约五分钟 heartbeat；findings focused
   修复并重新验证/复审；required checks 全绿。

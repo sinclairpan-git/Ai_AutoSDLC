@@ -16,10 +16,10 @@
 - WI-206 / PR #137 / merge `506e950d` 已把18个models顶层string helper收敛为一个private helper，
   product `+37/-246/net -209`；fresh-main full `3220 passed, 3 skipped`，以
   `completed_reduction` 关闭一个 T63 family。
-- WI-207/GAP-12 首轮 formal PR #138 已合入；implementation PR #139 因 Codex P2 与双 Agent 共同确认
-  managed-ingress 兼容回归而转 draft并重开 formal。修订只允许 root bypass + 两个 managed 入口局部
-  hook + root/local test isolation；WI-208/GAP-13 继续独立处理 resume-pack reconstruction。二者先后
-  关闭后再恢复新的减重候选。
+- WI-207/GAP-12 兼容 formal PR #140 已合入 `8d325a4d`；implementation candidate `c4e5f07d` 已按
+  root bypass + 两个 managed 入口局部 hook + root/local test isolation 落地，严格产品 additions=4、
+  测试 additions=110，focused/full/治理/回滚门禁全绿，待 final-tree 双审与 PR #139/fresh-main。
+  WI-208/GAP-13 继续独立处理 resume-pack reconstruction；二者先后关闭后再恢复新的减重候选。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新
   写成可执行合同，旧 verdict 同时失效。
@@ -37,7 +37,8 @@
   Round 10 canonical combined `2d19a12c...4fa9` 曾取得 Pascal/Confucius 同哈希双 PASS；该 HEAD 上的
   Codex P2 随后发现 child T31 在 formal merge/rebase 前提前标记 completed。finding 已接受，Round 10
   退役；Round 11 canonical combined `46b63b1c...c2efb` 已取得 Pascal/Confucius 同哈希双 PASS、
-  findings=`none`。动态 PASS receipt 后 final terminal gates 已全绿；PR #140 合并前不得恢复 PR #139。
+  findings=`none`。动态 PASS receipt 后 final terminal gates 已全绿，随后 PR #140 已合并；本段只保留
+  formal 历史，不代表 PR #139 已完成。
 
 ## 未完成边界
 

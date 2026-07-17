@@ -1,12 +1,12 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T00:26:17+00:00
-- Reason: 终态真值与双对抗复审完成
-- Goal: 合并 WI207 formal PR #140
-- State: Round 11 combined 46b63b1c 同哈希双 PASS；历史叙事聚焦复审双方 PASS；truth ready/fresh
+- Updated: 2026-07-17T02:21:10+00:00
+- Reason: 关闭双评审发现的终态 lifecycle 措辞残留
+- Goal: 完成 WI207 final-tree 双审并交付 PR #139
+- State: formal merge 8d325a4d；implementation c4e5f07d 产品+4/测试+110；终态 continuity/truth 已刷新，等待新 HEAD/tree 双审
 - Stage: close
 - Work Item: 207-program-adapter-side-effect
-- Branch: feature/207-program-adapter-side-effect-docs
+- Branch: feature/207-program-adapter-side-effect-dev
 
 ## Changed Files
 - M .ai-sdlc/state/codex-handoff.md
@@ -14,27 +14,26 @@
 - M .ai-sdlc/work-items/207-program-adapter-side-effect/codex-handoff.md
 - M program-manifest.yaml
 - M specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
-- M specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
-- M specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
 - M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-- M specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
 - M specs/207-program-adapter-side-effect/development-summary.md
-- M specs/207-program-adapter-side-effect/plan.md
 - M specs/207-program-adapter-side-effect/spec.md
 - M specs/207-program-adapter-side-effect/task-execution-log.md
 - M specs/207-program-adapter-side-effect/tasks.md
+- M src/ai_sdlc/cli/main.py
+- M src/ai_sdlc/cli/program_cmd.py
+- M tests/integration/test_cli_program.py
 
 ## Key Decisions
-- formal 六文件冻结；T31 仅在 formal merge 后 rebase implementation 才 completed
+- 只保留 root program bypass 与两个 managed 局部 hook；GAP-13 继续由 WI208 独立处理
 
 ## Commands / Tests
-- truth sync/validate/audit PASS：ready/fresh，1091/1091，unmapped=0，missing=0；formal combined 46b63b1c；Cursor 恢复后 diff-check PASS
+- focused 238 passed；Ruff PASS；full 3224 passed, 3 skipped；constraints/validate/truth ready-fresh；revert/reapply tree exact
 
 ## Blockers / Risks
-- PR #140 新 HEAD 的 Codex review 与 required checks 未全绿前不得合并或恢复 PR #139
+- 新 HEAD/tree 的 Pascal/Confucius 双 PASS、PR #139 current-head Codex与required checks、fresh-main 前不得关闭 GAP-12
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- amend 单一 formal commit并 force-with-lease push PR #140；请求 Codex review并 heartbeat；全绿后 merge与 fresh-main 验证
+- Pascal/Confucius 对新 HEAD/tree 从零双审；双 PASS 后 force-with-lease 推送 PR #139、标记 ready、重请求 Codex review 并 heartbeat
