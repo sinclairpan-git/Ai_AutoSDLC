@@ -11,8 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from yaml import scan
-from yaml.tokens import ScalarToken
+from yaml import ScalarToken, scan
 
 
 class CommentLanguage(str, Enum):
@@ -242,9 +241,7 @@ def _path_from_diff_header(value: str) -> str | None:
             value = decoded.encode("latin-1").decode("utf-8")
         except (UnicodeEncodeError, UnicodeDecodeError):
             return None
-    if value.startswith(("a/", "b/")):
-        value = value[2:]
-    return value or None
+    return re.sub(r"^[ab]/", "", value) or None
 
 
 def _read_yaml_source(root: Path, path: str, *, old: bool) -> str | None:
@@ -300,6 +297,9 @@ def _quoted_scalar_lines(source: str) -> tuple[set[int], int] | None:
         start, end = token.start_mark, token.end_mark
         start_column = start.column if start.line == end.line else 0
         intervals.setdefault(end.line, []).append((start_column, end.column))
+        if start.line != end.line:
+            line_length = len(lines[start.line])
+            intervals.setdefault(start.line, []).append((start.column, line_length))
     quoted: set[int] = set()
     for token in tokens:
         start, end = token.start_mark, token.end_mark
