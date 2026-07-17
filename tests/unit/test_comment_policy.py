@@ -233,7 +233,6 @@ def test_yaml_reparse_and_invalid_hunk_are_fail_closed(
     _commit_all(tmp_path)
     source.write_text("# replacement\n", encoding="utf-8")
     real_lstat = Path.lstat
-
     def reparse_lstat(path: Path) -> object:
         info = real_lstat(path)
         if path != source:
@@ -252,6 +251,7 @@ def test_yaml_reparse_and_invalid_hunk_are_fail_closed(
     )
     malformed = collect_removed_comment_findings(diff_text=bad_path, root=tmp_path)
     assert {len(findings), len(invalid), len(malformed)} == {1}
+    assert malformed[0].path == "<unknown>"
 
 
 def _commit_all(root: Path) -> None:
