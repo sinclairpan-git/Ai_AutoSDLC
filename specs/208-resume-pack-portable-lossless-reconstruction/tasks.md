@@ -89,7 +89,7 @@
 
 ### T32 实现 portable path normalization
 
-- **状态**：pending
+- **状态**：completed；所有 repo-internal path 经单一 normalizer 输出 portable relative path
 - **依赖**：T31
 - **文件**：`src/ai_sdlc/context/state.py`
 - **验收**：filesystem/working-set paths 与 active files repo-relative、`/` 分隔；旧 root/drive/UNC/escape
@@ -97,7 +97,7 @@
 
 ### T33 实现 lossless canonical reconstruction
 
-- **状态**：blocked by T32
+- **状态**：completed；共同 builder/loader 已实现字段级 canonical source 与 handoff 三态
 - **依赖**：T32
 - **文件**：仅 `src/ai_sdlc/context/state.py`；`core/handoff.py` 只回归，不修改
 - **验收**：spec §3 优先级；old pack not donor；semantic compare 覆盖 stage/batch/task、branch、docs
@@ -108,7 +108,7 @@
 
 ### T34 focused GREEN 与预算
 
-- **状态**：blocked by T33
+- **状态**：completed；focused `122 passed`，product net `+96`、tests net `+235`
 - **依赖**：T33
 - **验收**：plan §8 focused 全绿；产品最多 1 文件/net +120，测试最多 4 文件/net +240；无 test
   deletion/weakening、无第二个产品文件。
@@ -117,7 +117,7 @@
 
 ### T41 full/governance/differential/rollback
 
-- **状态**：blocked by T34
+- **状态**：pending
 - **依赖**：T34
 - **验收**：full/Ruff/format/constraints/validate/truth/diff-check 全绿；批准差分只有 NC-05；byte-only
   首次 repair 只复用既有 event 文本/canonical serialization/rebuild timestamp，第二次 status/recover

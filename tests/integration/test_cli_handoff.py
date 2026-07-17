@@ -138,7 +138,7 @@ def test_handoff_update_prefers_linked_work_item_working_set(tmp_path: Path) -> 
     assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == tuple(f"specs/{linked}/{name}" for name in ("spec.md", "plan.md", "tasks.md"))
     assert snapshot.context_summary == "Goal: Resume linked WI"
     assert snapshot.active_files == [f"specs/{linked}/tasks.md", f"specs/{linked}/plan.md", f"specs/{linked}/spec.md"]
-    assert context_state.load_resume_pack(tmp_path).current_branch == "feature/182-continuity"
+    assert context_state.load_resume_pack(tmp_path).current_branch == ""
     assert root_pack == (scoped_dir / "resume-pack.yaml").read_text()
 
 

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 import shutil
 from collections.abc import Callable
 from pathlib import Path
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 CHECKPOINT_PATH = Path(".ai-sdlc") / "state" / "checkpoint.yml"
 RESUME_PACK_PATH = Path(".ai-sdlc") / "state" / "resume-pack.yaml"
+_HANDOFF_PATH = Path(".ai-sdlc") / "state" / "codex-handoff.md"
 
 STAGE_FILES: dict[str, list[str]] = {
     "init": [],
@@ -131,7 +133,16 @@ def _build_resume_pack_from_checkpoint(root: Path, cp: Checkpoint) -> ResumePack
     work_item_id = active_work_item_id(cp)
     runtime = load_runtime_state(root, work_item_id) if work_item_id else None
     summary = load_latest_summary(root, work_item_id) if work_item_id else ""
-    ws = _build_resume_working_set(root, cp, work_item_id, summary)
+    handoff_state, handoff_branch, handoff_summary = _read_resume_handoff(
+        root, work_item_id
+    )
+    ws = _build_resume_working_set(
+        root,
+        cp,
+        work_item_id,
+        summary,
+        handoff_summary if handoff_state == "available" else "",
+    )
 
     current_batch = 0
     last_task = ""
@@ -147,13 +158,7 @@ def _build_resume_pack_from_checkpoint(root: Path, cp: Checkpoint) -> ResumePack
         current_batch=current_batch,
         last_committed_task=last_task,
         working_set_snapshot=ws,
-        current_branch=(
-            runtime.current_branch
-            if runtime and runtime.current_branch
-            else ""
-            if (cp.linked_wi_id or "").strip()
-            else (cp.feature.current_branch if cp.feature else "")
-        ),
+        current_branch=_resume_branch(cp, runtime, handoff_branch),
         docs_baseline_ref=cp.feature.docs_baseline_ref if cp.feature else "",
         docs_baseline_at=cp.feature.docs_baseline_at if cp.feature else "",
         timestamp=now_iso(),
@@ -187,8 +192,10 @@ def load_resume_pack(
     )
     scoped_issue = None
     if work_item_id:
+        root_path = root / RESUME_PACK_PATH
+        scoped_path = work_item_resume_pack_path(root, work_item_id)
         scoped_pack, scoped_issue = _load_resume_pack_candidate(
-            work_item_resume_pack_path(root, work_item_id),
+            scoped_path,
             checkpoint,
         )
         if (
@@ -196,38 +203,28 @@ def load_resume_pack(
             and scoped_issue is None
             and root_pack is not None
             and scoped_pack is not None
-            and root_pack.model_dump(mode="json") != scoped_pack.model_dump(mode="json")
         ):
-            scoped_issue = "stale"
+            try:
+                different = (
+                    root_pack.model_dump(mode="json")
+                    != scoped_pack.model_dump(mode="json")
+                    or root_path.read_bytes() != scoped_path.read_bytes()
+                )
+            except OSError:
+                different = True
+            if different:
+                scoped_issue = "stale"
 
     issue = root_issue or scoped_issue
     expected_pack = None
     if issue is None and work_item_id:
+        handoff_state, _, _ = _read_resume_handoff(root, work_item_id)
+        if handoff_state == "invalid":
+            return root_pack
         try:
             expected_pack = _build_resume_pack_from_checkpoint(root, checkpoint)
-            pack_fields = (
-                "current_stage",
-                "current_batch",
-                "last_committed_task",
-            )
-            if any(
-                getattr(root_pack, field) != getattr(expected_pack, field)
-                for field in pack_fields
-            ):
+            if _resume_semantics(root_pack) != _resume_semantics(expected_pack):
                 issue = "stale"
-            if (
-                issue is None
-                and checkpoint.linked_wi_id
-                and checkpoint.linked_wi_id.strip()
-            ):
-                actual = root_pack.working_set_snapshot
-                expected = expected_pack.working_set_snapshot
-                fields = ("spec_path", "plan_path", "tasks_path")
-                if root_pack.current_branch != expected_pack.current_branch or any(
-                    getattr(actual, field) != getattr(expected, field)
-                    for field in fields
-                ):
-                    issue = "stale"
         except (YamlStoreError, UnicodeError, OSError):
             expected_pack = None
     if issue is not None:
@@ -477,6 +474,7 @@ def _build_resume_working_set(
     checkpoint: Checkpoint,
     work_item_id: str,
     summary: str,
+    handoff_summary: str,
 ) -> WorkingSet:
     working_set = _build_resume_working_set_from_filesystem(root, checkpoint, work_item_id)
     artifact = load_working_set(root, work_item_id) if work_item_id else None
@@ -489,16 +487,21 @@ def _build_resume_working_set(
             "plan_path",
             "tasks_path",
         ):
-            value = getattr(artifact, field)
+            value = _portable_repo_path(root, getattr(artifact, field))
             if value:
                 setattr(working_set, field, value)
         if artifact.active_files:
-            working_set.active_files = list(artifact.active_files)
+            working_set.active_files = _portable_paths(root, artifact.active_files)
         if artifact.context_summary:
             working_set.context_summary = artifact.context_summary
 
+    if not working_set.active_files:
+        required = (getattr(working_set, field) for field in STAGE_FILES.get(checkpoint.current_stage, []))
+        working_set.active_files = [path for path in required if path and (root / path).exists()]
     if summary:
         working_set.context_summary = summary.strip()
+    if handoff_summary:
+        working_set.context_summary = handoff_summary
     return working_set
 
 
@@ -510,23 +513,21 @@ def _build_resume_working_set_from_filesystem(
     ws = WorkingSet()
     if checkpoint.feature:
         spec_dir = root / "specs" / work_item_id if (checkpoint.linked_wi_id or "").strip() else root / checkpoint.feature.spec_dir
-        if (spec_dir / "spec.md").exists():
-            ws.spec_path = str(spec_dir / "spec.md")
-        if (spec_dir / "plan.md").exists():
-            ws.plan_path = str(spec_dir / "plan.md")
-        if (spec_dir / "tasks.md").exists():
-            ws.tasks_path = str(spec_dir / "tasks.md")
+        for field, filename in (("spec_path", "spec.md"), ("plan_path", "plan.md"), ("tasks_path", "tasks.md")):
+            path = spec_dir / filename
+            if path.exists():
+                setattr(ws, field, _portable_repo_path(root, path))
 
     if checkpoint.prd_source and (root / checkpoint.prd_source).exists():
-        ws.prd_path = checkpoint.prd_source
+        ws.prd_path = _portable_repo_path(root, checkpoint.prd_source)
 
     constitution = root / ".ai-sdlc" / "memory" / "constitution.md"
     if constitution.exists():
-        ws.constitution_path = str(constitution)
+        ws.constitution_path = _portable_repo_path(root, constitution)
 
     tech_stack = root / ".ai-sdlc" / "profiles" / "tech-stack.yml"
     if tech_stack.exists():
-        ws.tech_stack_path = str(tech_stack)
+        ws.tech_stack_path = _portable_repo_path(root, tech_stack)
     return ws
 
 
@@ -613,7 +614,102 @@ def _relative_string(root: Path, raw_path: str) -> str:
 
 
 def _relative_path(root: Path, path: Path) -> str:
+    return _portable_repo_path(root, path)
+
+
+def _portable_repo_path(root: Path, raw_path: str | Path) -> str:
+    raw = str(raw_path).strip()
+    if not raw:
+        return ""
+    normalized = raw.replace("\\", "/")
+    if normalized.startswith("//") or re.match(r"^[A-Za-z]:", normalized):
+        return ""
+    if normalized.startswith("/"):
+        try:
+            normalized = (Path(normalized).resolve().relative_to(root.resolve())).as_posix()
+        except ValueError:
+            return ""
+    parts = [part for part in normalized.split("/") if part not in ("", ".")]
+    if not parts or ".." in parts:
+        return ""
+    return "/".join(parts)
+
+
+def _portable_paths(root: Path, raw_paths: list[str]) -> list[str]:
+    result: list[str] = []
+    for raw in raw_paths:
+        path = _portable_repo_path(root, raw)
+        if path and path not in result:
+            result.append(path)
+    return result
+
+
+def _resume_branch(checkpoint: Checkpoint, runtime: RuntimeState | None, handoff: str) -> str:
+    runtime_branch = runtime.current_branch.strip() if runtime else ""
+    if runtime_branch:
+        return runtime_branch
+    if not (checkpoint.linked_wi_id or "").strip():
+        return checkpoint.feature.current_branch if checkpoint.feature else ""
+    branch = handoff.strip()
+    if not branch or branch.lower() in {"head", "none"}:
+        return ""
+    feature = checkpoint.feature
+    if feature and checkpoint.linked_wi_id != feature.id and branch == feature.current_branch:
+        return ""
+    return branch
+
+
+def _resume_semantics(pack: ResumePack) -> tuple[object, ...]:
+    return (
+        pack.current_stage, pack.current_batch, pack.last_committed_task, pack.current_branch,
+        pack.docs_baseline_ref, pack.docs_baseline_at,
+        pack.working_set_snapshot.model_dump(mode="json"),
+    )
+
+
+def _read_resume_handoff(root: Path, work_item_id: str) -> tuple[str, str, str]:
+    path = root / _HANDOFF_PATH
     try:
-        return str(path.resolve().relative_to(root.resolve()))
-    except ValueError:
-        return str(path)
+        raw = path.read_bytes()
+    except FileNotFoundError:
+        return "absent", "", ""
+    except OSError:
+        return "invalid", "", ""
+    try:
+        scoped = work_item_dir(root, work_item_id) / "codex-handoff.md"
+        try:
+            scoped_raw = scoped.read_bytes()
+        except FileNotFoundError:
+            scoped_raw = raw
+        if scoped_raw != raw:
+            return "invalid", "", ""
+        content = raw.decode("utf-8")
+    except (OSError, UnicodeError):
+        return "invalid", "", ""
+
+    lines = content.splitlines()
+    values: dict[str, str] = {}
+    for field in ("Work Item", "Branch", "Goal", "State"):
+        prefix = f"- {field}:"
+        matches = [line.removeprefix(prefix).strip() for line in lines if line.startswith(prefix)]
+        if len(matches) != 1:
+            return "invalid", "", ""
+        values[field] = "" if matches[0].lower() == "none" else matches[0]
+    sections = [index for index, line in enumerate(lines) if line.strip() == "## Exact Next Steps"]
+    if len(sections) != 1:
+        return "invalid", "", ""
+    next_step = ""
+    for line in lines[sections[0] + 1:]:
+        if line.startswith("## "):
+            break
+        if not line.strip():
+            continue
+        if not line.startswith("- "):
+            return "invalid", "", ""
+        item = line.removeprefix("- ").strip()
+        if item and item.lower() != "none" and not next_step:
+            next_step = item
+    if values["Work Item"] != work_item_id:
+        return "absent", "", ""
+    parts = [f"{name}: {value}" for name, value in (("Goal", values["Goal"]), ("State", values["State"]), ("Next", next_step)) if value]
+    return "available", values["Branch"], " | ".join(parts) or "Continuity handoff updated"

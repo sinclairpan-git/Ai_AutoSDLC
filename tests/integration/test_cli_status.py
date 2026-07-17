@@ -217,6 +217,7 @@ def test_status_rebuild_is_portable_after_detached_relocation(tmp_path: Path) ->
             (spec_dir / name).write_text(f"# {name}\n", encoding="utf-8")
     feature = FeatureInfo(id=historical, spec_dir=f"specs/{historical}", design_branch="", feature_branch="", current_branch=f"feature/{historical}")
     save_checkpoint(source, Checkpoint(current_stage="execute", feature=feature, linked_wi_id=linked))
+    _commit_all(source, "test: initialize relocation fixture")
     subprocess.run(["git", "checkout", "-b", f"feature/{linked}"], cwd=source, check=True, capture_output=True)
     update_handoff(source, goal="Resume after relocation", state="Ready", next_steps=["Run status"])
     _commit_all(source, "test: seed relocation")

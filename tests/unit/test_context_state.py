@@ -380,12 +380,12 @@ class TestResumePack:
     def test_build_resume_pack_normalizes_paths_and_runtime_priority(self, tmp_path: Path) -> None:
         expected_paths = _seed_linked_checkpoint(tmp_path)
         _write_handoff(tmp_path)
-        cases = [str(tmp_path / expected_paths[0]), expected_paths[0].replace("/", "\\"), "../escape/spec.md", "/other/repo/spec.md", r"C:\other\repo\spec.md", r"\\server\share\spec.md"]
-        for raw in cases:
+        cases = [(str(tmp_path / expected_paths[0]), True), (expected_paths[0].replace("/", "\\"), True), ("../escape/spec.md", False), ("/other/repo/spec.md", False), (r"C:\other\repo\spec.md", False), (r"\\server\share\spec.md", False)]
+        for raw, spec_is_active in cases:
             save_working_set(tmp_path, LINKED_WI, state_models.WorkingSet(spec_path=raw, active_files=[raw, expected_paths[1], expected_paths[1]]))
             snapshot = build_resume_pack(tmp_path).working_set_snapshot
             assert snapshot.spec_path == expected_paths[0]
-            assert snapshot.active_files == [expected_paths[0], expected_paths[1]]
+            assert snapshot.active_files == ([expected_paths[0]] if spec_is_active else []) + [expected_paths[1]]
 
         save_runtime_state(tmp_path, LINKED_WI, state_models.RuntimeState(current_branch="runtime/linked"))
         assert build_resume_pack(tmp_path).current_branch == "runtime/linked"
