@@ -206,8 +206,7 @@ def _commit_all(root: Path, message: str) -> None:
 
 def _write_comment_policy_git_fixture(root: Path, *, before: str, after: str) -> None:
     init_project(root)
-    _minimal_constitution(root)
-    _write_012_checkpoint(root)
+    _write_012_checkpoint(root, stage="init", feature_id="001")
     _init_git_repo(root)
     source = root / "config.yaml"
     source.write_text(before, encoding="utf-8")
@@ -233,16 +232,21 @@ def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
     subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
 
 
-def _write_012_checkpoint(root: Path) -> None:
-    spec = root / "specs" / "012-frontend-contract-verify-integration"
+def _write_012_checkpoint(
+    root: Path, *, stage: str = "verify", feature_id: str = "012"
+) -> None:
+    spec_dir = "specs/012-frontend-contract-verify-integration"
+    if feature_id != "012":
+        spec_dir = f"specs/{feature_id}-wi"
+    spec = root / spec_dir
     spec.mkdir(parents=True, exist_ok=True)
     save_checkpoint(
         root,
         Checkpoint(
-            current_stage="verify",
+            current_stage=stage,
             feature=FeatureInfo(
-                id="012",
-                spec_dir="specs/012-frontend-contract-verify-integration",
+                id=feature_id,
+                spec_dir=spec_dir,
                 design_branch="d",
                 feature_branch="f",
                 current_branch="main",
@@ -764,34 +768,17 @@ def _write_frontend_evidence_class_checkpoint(
 
 
 class TestCliVerifyConstraints:
-    @pytest.mark.parametrize(
-        ("before", "after", "exit_code"),
-        [
-            (
-                "value: 'first\n  #139 continuation\n  last'\n",
-                "value: 'first\n  last'\n",
-                0,
-            ),
-            (
-                "value: first\n# keep operator note\n",
-                "value: first\n",
-                1,
-            ),
-            (
-                "value: first\n# keep operator note\n",
-                'value: "first\n  #139 continuation"\n',
-                1,
-            ),
-        ],
-    )
+    @pytest.mark.parametrize("case", ("quoted", "removed", "added"))
     def test_comment_policy_yaml_quoted_scalar_cli_contract(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
-        before: str,
-        after: str,
-        exit_code: int,
+        case: str,
     ) -> None:
+        quoted = case == "quoted"
+        before = "value: 'first\n  #139 continuation\n  last'\n" if quoted else "value: first\n# keep operator note\n"
+        after = {"quoted": "value: 'first\n  last'\n", "removed": "value: first\n", "added": 'value: "first\n  #139 continuation"\n'}[case]
+        exit_code = int(not quoted)
         _write_comment_policy_git_fixture(tmp_path, before=before, after=after)
         monkeypatch.chdir(tmp_path)
 

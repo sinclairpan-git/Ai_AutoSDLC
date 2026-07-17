@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import subprocess
 import stat
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-import ai_sdlc.core.comment_policy as comment_policy
 
+import ai_sdlc.core.comment_policy as comment_policy
 from ai_sdlc.core.comment_policy import (
     CommentLanguage,
     collect_comment_deletion_blockers,
@@ -19,6 +19,12 @@ from ai_sdlc.core.comment_policy import (
 
 _MIXED_OLD_PY = "stable = 1\n# real\n"
 _MIXED_NEW_YAML = 'value: "x\n # inside"\nstable: 1\n'
+_SINGLE = "value: 'first\n  #139 continuation\n  last'\n"
+_DOUBLE = 'value: "first\n  #139 continuation\n  last"\n'
+_FLOW = 'value: ["first\n  # inside", " # later\n  tail"]\n'
+_FLOW_COMMENT = 'value: ["first\n  # inside", "# later"] # real\n'
+_REAL_COMMENT = "value: first\n# keep operator note\n"
+_ADDED_QUOTED = 'value: "first\n  #139 continuation"\n'
 
 
 def test_comment_language_uses_current_user_language() -> None:
@@ -135,43 +141,31 @@ def test_comment_deletion_reason_must_match_path_and_comment(tmp_path: Path) -> 
 
 
 @pytest.mark.parametrize(
-    ("suffix", "before", "after", "expected"),
+    "case",
     [
-        (".yaml", "value: 'first\n  #139 continuation\n  last'\n", "value: 'first\n  last'\n", 0),
-        (".yml", 'value: "first\n  #139 continuation\n  last"\n', 'value: "first\n  last"\n', 0),
-        (".yaml", "value: first\n# real comment\n", "value: first\n", 1),
-        (".yaml", "value: |\n  # literal content\n", "value: |\n", 1),
-        (".yaml", "value: >\n  # folded content\n", "value: >\n", 1),
-        (".yaml", 'value: "open\n  # malformed\n', 'value: "open\n', 1),
-        (".yaml", 'value: "first\n  # inside" # real\n', 'value: "first\n  done"\n', 1),
-        (".yaml", 'value: ["first\n  # inside", " # later\n  tail"]\n', 'value: ["first\n  done", " # later\n  tail"]\n', 0),
-        (".yaml", 'value: ["first\n  # inside", "# later"] # real\n', 'value: ["first\n  done", "# later"]\n', 1),
+        (".yaml", _SINGLE, "#139 continuation", "done", 0),
+        (".yml", _DOUBLE, "#139 continuation", "done", 0),
+        (".yaml", "value: first\n# real comment\n", "# real comment", "", 1),
+        (".yaml", "value: |\n  # literal content\n", "# literal content", "done", 1),
+        (".yaml", "value: >\n  # folded content\n", "# folded content", "done", 1),
+        (".yaml", 'value: "open\n  # malformed\n', "# malformed", "done", 1),
+        (".yaml", 'value: "first\n  # inside" # real\n', "# real", "", 1),
+        (".yaml", _FLOW, "# inside", "done", 0),
+        (".yaml", _FLOW_COMMENT, "# real", "", 1),
+        (".yaml", _REAL_COMMENT, _REAL_COMMENT.strip(), _ADDED_QUOTED.strip(), 1),
     ],
 )
 def test_yaml_quoted_scalar_continuation_is_not_comment(
     tmp_path: Path,
-    suffix: str,
-    before: str,
-    after: str,
-    expected: int,
+    case: tuple[str, str, str, str, int],
 ) -> None:
-    assert len(_change_blockers(tmp_path, before, after, suffix)) == expected
-
-
-def test_added_yaml_quoted_content_does_not_replace_removed_comment(
-    tmp_path: Path,
-) -> None:
-    blockers = _change_blockers(
-        tmp_path,
-        "value: first\n# keep operator note\n",
-        'value: "first\n  #139 continuation"\n',
-    )
-    assert len(blockers) == 1
-    assert blockers[0].endswith("in config.yaml: # keep operator note")
+    suffix, before, old, new, expected = case
+    after = before.replace(old, new)
+    assert len(_blockers(tmp_path, before, after, suffix)) == expected
 
 
 @pytest.mark.parametrize(
-    ("old_path", "new_path", "old_source", "new_source", "expected"),
+    "case",
     [
         ("old.py", "new.yaml", _MIXED_OLD_PY, _MIXED_NEW_YAML, 1),
         ("old.yaml", "new.py", "stable: 1\n# real\n", "stable = 1\n# replacement\n", 0),
@@ -181,12 +175,9 @@ def test_added_yaml_quoted_content_does_not_replace_removed_comment(
 )
 def test_yaml_mixed_extension_uses_each_side_source(
     tmp_path: Path,
-    old_path: str,
-    new_path: str,
-    old_source: str,
-    new_source: str,
-    expected: int,
+    case: tuple[str, str, str, str, int],
 ) -> None:
+    old_path, new_path, old_source, new_source, expected = case
     _init_git_repo(tmp_path)
     old = tmp_path / old_path
     old.write_text(old_source, encoding="utf-8")
@@ -210,12 +201,13 @@ def test_yaml_quoted_path_and_traversal_are_fail_closed(tmp_path: Path) -> None:
     source.write_text("# replacement\n", encoding="utf-8")
     quoted = r'"a/\351\205\215\347\275\256 file.yaml"'
     diff = f"diff --git a/x b/x\n--- {quoted}\n+++ {quoted}\n@@ -1 +1 @@\n-# real\n+# replacement\n"
-    traversal = diff.replace(quoted, "b/../target.yaml", 1).replace(quoted, "b/../target.yaml", 1)
-    assert len(collect_removed_comment_findings(diff_text=traversal, root=tmp_path)) == 1
+    traversal = diff.replace(quoted, "b/../target.yaml")
+    findings = collect_removed_comment_findings(diff_text=traversal, root=tmp_path)
+    assert len(findings) == 1
 
 
 @pytest.mark.parametrize(
-    ("unsafe_part", "unsafe_mode", "file_attributes"),
+    "case",
     [
         ("config.yaml", stat.S_IFLNK, 0),
         ("dir", stat.S_IFLNK, 0),
@@ -227,10 +219,9 @@ def test_yaml_quoted_path_and_traversal_are_fail_closed(tmp_path: Path) -> None:
 def test_yaml_unsafe_new_source_is_fail_closed(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    unsafe_part: str,
-    unsafe_mode: int,
-    file_attributes: int,
+    case: tuple[str, int, int],
 ) -> None:
+    unsafe_part, unsafe_mode, file_attributes = case
     _init_git_repo(tmp_path)
     source = tmp_path / "dir" / "config.yaml"
     source.parent.mkdir()
@@ -251,20 +242,16 @@ def test_yaml_unsafe_new_source_is_fail_closed(
     assert len(collect_removed_comment_findings(diff_text=diff, root=tmp_path)) == 1
 
 
-@pytest.mark.parametrize(
-    "diff",
-    [
+def test_diff_multi_hunk_zero_count_suffix_no_newline_create_delete_and_invalid_headers() -> None:
+    diffs = [
         "diff --git broken\n@@ -1 +1 @@\n-# real\n+value\n",
         'diff --git a/x b/x\n--- "bad\n+++ "bad\n@@ bad @@\n-# real\n+value\n',
         "diff --git a/x.py b/x.py\n--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@ section\n-# one\n+value\n\\ No newline at end of file\n@@ -0,0 +3 @@\n+# added\n",
         "diff --git a/new.py b/new.py\n--- /dev/null\n+++ b/new.py\n@@ -0,0 +1 @@\n+# created\n",
         "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-# deleted\n",
-    ],
-    ids=["invalid-header", "invalid-path-hunk", "multi-hunk-zero-suffix-no-newline", "create", "delete"],
-)
-def test_diff_edge_cases_fail_closed(diff: str) -> None:
-    findings = collect_removed_comment_findings(diff_text=diff)
-    assert len(findings) == (0 if "created" in diff else 1)
+    ]
+    counts = [len(collect_removed_comment_findings(diff_text=diff)) for diff in diffs]
+    assert counts == [1, 1, 1, 0, 1]
 
 
 def test_yaml_missing_source_and_scanner_error_are_fail_closed(
@@ -278,7 +265,7 @@ def test_yaml_missing_source_and_scanner_error_are_fail_closed(
     diff = "diff --git a/config.yaml b/config.yaml\n--- a/config.yaml\n+++ b/config.yaml\n@@ -1 +1 @@\n-# real\n+# replacement\n"
     assert len(collect_removed_comment_findings(diff_text=diff, root=tmp_path)) == 1
     source.write_text("# replacement\n", encoding="utf-8")
-    monkeypatch.setattr(comment_policy, "scan", lambda _: (_ for _ in ()).throw(ValueError()))
+    monkeypatch.setattr(comment_policy, "scan", lambda _: 1 / 0)
     assert len(collect_removed_comment_findings(diff_text=diff, root=tmp_path)) == 1
 
 
@@ -288,12 +275,12 @@ def _commit_all(root: Path) -> None:
     subprocess.run(["git", "commit", "-m", "test"], **options)
 
 
-def _change_blockers(root: Path, before: str, after: str, suffix: str = ".yaml") -> list[str]:
+def _blockers(root: Path, old: str, new: str, suffix: str = ".yaml") -> list[str]:
     _init_git_repo(root)
     source = root / f"config{suffix}"
-    source.write_text(before, encoding="utf-8")
+    source.write_text(old, encoding="utf-8")
     _commit_all(root)
-    source.write_text(after, encoding="utf-8")
+    source.write_text(new, encoding="utf-8")
     return collect_comment_deletion_blockers(root)
 
 

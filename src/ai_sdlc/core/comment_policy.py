@@ -50,6 +50,7 @@ _COMMENT_DELETION_REASON_TOKENS = (
     "comment deletion",
     "removed comment",
 )
+_YamlSourceCache = dict[tuple[bool, str], tuple[set[int], int] | None]
 
 
 def decide_comment_language(
@@ -115,82 +116,48 @@ def should_avoid_noise_comment(*, code: str, comment: str) -> bool:
 
 
 def collect_removed_comment_findings(
-    *,
-    diff_text: str,
-    root: Path | None = None,
+    *, diff_text: str, root: Path | None = None
 ) -> tuple[CommentDeletionFinding, ...]:
     """Find removed comments in a unified diff unless each has a local replacement."""
     findings: list[CommentDeletionFinding] = []
-    current_path = ""
-    old_path = new_path = old_line = new_line = None
-    removed_comments: list[str] = []
-    added_comments: list[str] = []
-    source_cache: dict[tuple[bool, str], tuple[set[int], int] | None] = {}
-
-    def flush() -> None:
-        unpaired_count = max(len(removed_comments) - len(added_comments), 0)
-        if unpaired_count:
-            findings.extend(
-                CommentDeletionFinding(current_path or "<unknown>", comment)
-                for comment in removed_comments[-unpaired_count:]
-            )
-        removed_comments.clear()
-        added_comments.clear()
-
-    def counts_as_comment(text: str, *, old: bool, line: int | None) -> bool:
-        if not _is_comment_line(text):
-            return False
-        path = old_path if old else new_path
-        if path is not None and Path(path).suffix.lower() not in {".yaml", ".yml"}:
-            return True
-        if root is None or not path or line is None or line <= 0:
-            return old
-        key = (old, path)
-        if key not in source_cache:
-            source = _read_yaml_source(root, path, old=old)
-            source_cache[key] = _quoted_scalar_lines(source) if source is not None else None
-        quoted = source_cache[key]
-        if quoted is None or line > quoted[1]:
-            return old
-        return line not in quoted[0]
+    current_path = "<unknown>"
+    old_path = new_path = None
+    old_line = new_line = None
+    removed, added = [], []
+    cache: _YamlSourceCache = {}
 
     for raw_line in diff_text.splitlines():
         if raw_line.startswith("diff --git "):
-            flush()
-            current_path = raw_line.split()[3].removeprefix("b/")
-            old_path = new_path = current_path
+            _flush_removed_comments(findings, current_path, removed, added)
+            parts = raw_line.split()
+            current_path = parts[3].removeprefix("b/") if len(parts) == 4 else "<unknown>"
+            old_path = new_path = None if current_path == "<unknown>" else current_path
             old_line = new_line = None
-            continue
-        if raw_line.startswith("--- "):
+        elif raw_line.startswith("--- "):
             old_path = _path_from_diff_header(raw_line[4:])
-            continue
-        if raw_line.startswith("+++ "):
+        elif raw_line.startswith("+++ "):
             new_path = _path_from_diff_header(raw_line[4:])
             fallback = old_path or current_path
             current_path = "<unknown>" if new_path is None else new_path or fallback
-            continue
-        if raw_line.startswith("@@"):
-            flush()
+        elif raw_line.startswith("@@"):
+            _flush_removed_comments(findings, current_path, removed, added)
             match = _HUNK_RE.match(raw_line)
             old_line = int(match.group(1)) if match else None
             new_line = int(match.group(2)) if match else None
-            continue
-        if raw_line.startswith("-") and not raw_line.startswith("---"):
+        elif raw_line.startswith("-") and not raw_line.startswith("---"):
             text = raw_line[1:]
-            if counts_as_comment(text, old=True, line=old_line):
-                removed_comments.append(text.strip())
+            if _counts_as_comment(text, old_path, old_line, True, root, cache):
+                removed.append(text.strip())
             old_line = old_line + 1 if old_line is not None else None
-            continue
-        if raw_line.startswith("+") and not raw_line.startswith("+++"):
+        elif raw_line.startswith("+") and not raw_line.startswith("+++"):
             text = raw_line[1:]
-            if counts_as_comment(text, old=False, line=new_line):
-                added_comments.append(text.strip())
+            if _counts_as_comment(text, new_path, new_line, False, root, cache):
+                added.append(text.strip())
             new_line = new_line + 1 if new_line is not None else None
-            continue
-        if raw_line.startswith(" "):
+        elif raw_line.startswith(" "):
             old_line = old_line + 1 if old_line is not None else None
             new_line = new_line + 1 if new_line is not None else None
-    flush()
+    _flush_removed_comments(findings, current_path, removed, added)
     return tuple(findings)
 
 
@@ -226,6 +193,37 @@ def _is_comment_line(text: str) -> bool:
     return bool(_COMMENT_PREFIX_RE.match(stripped) or _BLOCK_COMMENT_SUFFIX_RE.search(stripped))
 
 
+def _flush_removed_comments(
+    findings: list[CommentDeletionFinding], path: str, removed: list[str], added: list[str]
+) -> None:
+    count = max(len(removed) - len(added), 0)
+    findings.extend(CommentDeletionFinding(path, text) for text in removed[-count:] if count)
+    removed.clear()
+    added.clear()
+
+
+def _counts_as_comment(
+    text: str,
+    path: str | None,
+    line: int | None,
+    old: bool,
+    root: Path | None,
+    cache: _YamlSourceCache,
+) -> bool:
+    if not _is_comment_line(text):
+        return False
+    if path is not None and Path(path).suffix.lower() not in {".yaml", ".yml"}:
+        return True
+    if root is None or not path or line is None or line <= 0:
+        return old
+    key = (old, path)
+    if key not in cache:
+        source = _read_yaml_source(root, path, old=old)
+        cache[key] = _quoted_scalar_lines(source) if source is not None else None
+    quoted = cache[key]
+    return old if quoted is None or line > quoted[1] else line not in quoted[0]
+
+
 def _path_from_diff_header(value: str) -> str | None:
     value = value.strip()
     if value == "/dev/null":
@@ -233,13 +231,8 @@ def _path_from_diff_header(value: str) -> str | None:
     if value.startswith('"'):
         try:
             decoded = ast.literal_eval(value)
-        except (SyntaxError, ValueError):
-            return None
-        if not isinstance(decoded, str):
-            return None
-        try:
             value = decoded.encode("latin-1").decode("utf-8")
-        except (UnicodeEncodeError, UnicodeDecodeError):
+        except (AttributeError, SyntaxError, UnicodeError, ValueError):
             return None
     return re.sub(r"^[ab]/", "", value) or None
 
@@ -248,19 +241,16 @@ def _read_yaml_source(root: Path, path: str, *, old: bool) -> str | None:
     relative = Path(path)
     if relative.is_absolute() or not relative.parts or ".." in relative.parts:
         return None
-    if old:
-        try:
+    try:
+        if old:
             result = subprocess.run(
-                ["git", "show", f"HEAD:{path}"], cwd=root, capture_output=True, check=False
+                ["git", "show", f"HEAD:{path}"], cwd=root, capture_output=True
             )
-        except OSError:
-            return None
-        if result.returncode != 0:
-            return None
-        payload = result.stdout
-    else:
-        candidate = root
-        try:
+            if result.returncode != 0:
+                return None
+            payload = result.stdout
+        else:
+            candidate = root
             for index, part in enumerate(relative.parts):
                 candidate /= part
                 info = candidate.lstat()
@@ -274,11 +264,8 @@ def _read_yaml_source(root: Path, path: str, *, old: bool) -> str | None:
             descriptor = os.open(candidate, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
             with os.fdopen(descriptor, "rb") as stream:
                 payload = stream.read()
-        except (OSError, ValueError):
-            return None
-    try:
         return payload.decode("utf-8")
-    except UnicodeDecodeError:
+    except (OSError, UnicodeDecodeError, ValueError):
         return None
 
 
