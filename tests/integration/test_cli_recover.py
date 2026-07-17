@@ -123,7 +123,10 @@ class TestCliRecover:
         root_pack = (tmp_path / ".ai-sdlc/state/resume-pack.yaml").read_text()
         assert result.exit_code == 0
         assert "rebuilding from checkpoint" in result.output.lower()
-        assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == tuple(f"specs/{linked}/{name}" for name in ("spec.md", "plan.md", "tasks.md"))
+        assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == tuple(
+            f"specs/{linked}/{name}"
+            for name in ("spec.md", "plan.md", "tasks.md")
+        )
         assert root_pack == scoped.read_text()
 
     def test_recover_surfaces_continuity_handoff_next_steps(

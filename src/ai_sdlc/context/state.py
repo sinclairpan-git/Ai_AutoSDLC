@@ -5,10 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import re
 import shutil
 from collections.abc import Callable
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 from ai_sdlc.core.config import YamlStore, YamlStoreError
 from ai_sdlc.models.state import (
@@ -25,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 CHECKPOINT_PATH = Path(".ai-sdlc") / "state" / "checkpoint.yml"
 RESUME_PACK_PATH = Path(".ai-sdlc") / "state" / "resume-pack.yaml"
-_HANDOFF_PATH = Path(".ai-sdlc") / "state" / "codex-handoff.md"
 
 STAGE_FILES: dict[str, list[str]] = {
     "init": [],
@@ -132,6 +130,7 @@ def build_resume_pack(root: Path) -> ResumePack | None:
 def _build_resume_pack_from_checkpoint(root: Path, cp: Checkpoint) -> ResumePack:
     work_item_id = active_work_item_id(cp)
     runtime = load_runtime_state(root, work_item_id) if work_item_id else None
+    stage = runtime.current_stage if runtime and runtime.current_stage else cp.current_stage
     summary = load_latest_summary(root, work_item_id) if work_item_id else ""
     handoff_state, handoff_branch, handoff_summary = _read_resume_handoff(
         root, work_item_id
@@ -140,6 +139,7 @@ def _build_resume_pack_from_checkpoint(root: Path, cp: Checkpoint) -> ResumePack
         root,
         cp,
         work_item_id,
+        stage,
         summary,
         handoff_summary if handoff_state == "available" else "",
     )
@@ -154,7 +154,7 @@ def _build_resume_pack_from_checkpoint(root: Path, cp: Checkpoint) -> ResumePack
         last_task = cp.execute_progress.last_committed_task
 
     return ResumePack(
-        current_stage=runtime.current_stage if runtime and runtime.current_stage else cp.current_stage,
+        current_stage=stage,
         current_batch=current_batch,
         last_committed_task=last_task,
         working_set_snapshot=ws,
@@ -217,10 +217,11 @@ def load_resume_pack(
 
     issue = root_issue or scoped_issue
     expected_pack = None
-    if issue is None and work_item_id:
-        handoff_state, _, _ = _read_resume_handoff(root, work_item_id)
-        if handoff_state == "invalid":
-            return root_pack
+    if issue is None:
+        if work_item_id:
+            handoff_state, _, _ = _read_resume_handoff(root, work_item_id)
+            if handoff_state == "invalid":
+                return root_pack
         try:
             expected_pack = _build_resume_pack_from_checkpoint(root, checkpoint)
             if _resume_semantics(root_pack) != _resume_semantics(expected_pack):
@@ -473,6 +474,7 @@ def _build_resume_working_set(
     root: Path,
     checkpoint: Checkpoint,
     work_item_id: str,
+    stage: str,
     summary: str,
     handoff_summary: str,
 ) -> WorkingSet:
@@ -491,15 +493,19 @@ def _build_resume_working_set(
             if value:
                 setattr(working_set, field, value)
         if artifact.active_files:
-            working_set.active_files = _portable_paths(root, artifact.active_files)
+            paths = (_portable_repo_path(root, path) for path in artifact.active_files)
+            working_set.active_files = list(dict.fromkeys(filter(None, paths)))
         if artifact.context_summary:
             working_set.context_summary = artifact.context_summary
 
     if not working_set.active_files:
-        required = (getattr(working_set, field) for field in STAGE_FILES.get(checkpoint.current_stage, []))
-        working_set.active_files = [path for path in required if path and (root / path).exists()]
+        required = (getattr(working_set, field) for field in STAGE_FILES.get(stage, []))
+        working_set.active_files = [
+            path for path in required if path and (root / path).exists()
+        ]
+    summary = summary.strip()
     if summary:
-        working_set.context_summary = summary.strip()
+        working_set.context_summary = summary
     if handoff_summary:
         working_set.context_summary = handoff_summary
     return working_set
@@ -622,11 +628,20 @@ def _portable_repo_path(root: Path, raw_path: str | Path) -> str:
     if not raw:
         return ""
     normalized = raw.replace("\\", "/")
-    if normalized.startswith("//") or re.match(r"^[A-Za-z]:", normalized):
-        return ""
-    if normalized.startswith("/"):
+    windows_path = PureWindowsPath(raw)
+    if windows_path.drive:
+        windows_root = PureWindowsPath(str(root))
+        if not windows_path.is_absolute() or not windows_root.is_absolute():
+            return ""
         try:
-            normalized = (Path(normalized).resolve().relative_to(root.resolve())).as_posix()
+            normalized = windows_path.relative_to(windows_root).as_posix()
+        except ValueError:
+            return ""
+    elif normalized.startswith("/"):
+        try:
+            normalized = (
+                Path(normalized).resolve().relative_to(root.resolve()).as_posix()
+            )
         except ValueError:
             return ""
     parts = [part for part in normalized.split("/") if part not in ("", ".")]
@@ -635,40 +650,25 @@ def _portable_repo_path(root: Path, raw_path: str | Path) -> str:
     return "/".join(parts)
 
 
-def _portable_paths(root: Path, raw_paths: list[str]) -> list[str]:
-    result: list[str] = []
-    for raw in raw_paths:
-        path = _portable_repo_path(root, raw)
-        if path and path not in result:
-            result.append(path)
-    return result
-
-
 def _resume_branch(checkpoint: Checkpoint, runtime: RuntimeState | None, handoff: str) -> str:
     runtime_branch = runtime.current_branch.strip() if runtime else ""
-    if runtime_branch:
-        return runtime_branch
-    if not (checkpoint.linked_wi_id or "").strip():
-        return checkpoint.feature.current_branch if checkpoint.feature else ""
+    linked = (checkpoint.linked_wi_id or "").strip()
+    if runtime_branch or not linked:
+        return runtime_branch or checkpoint.feature.current_branch
     branch = handoff.strip()
-    if not branch or branch.lower() in {"head", "none"}:
-        return ""
-    feature = checkpoint.feature
-    if feature and checkpoint.linked_wi_id != feature.id and branch == feature.current_branch:
-        return ""
-    return branch
+    historical = checkpoint.feature.current_branch if linked != checkpoint.feature.id else ""
+    invalid = not branch or branch.lower() in {"head", "none"} or branch == historical
+    return "" if invalid else branch
 
 
-def _resume_semantics(pack: ResumePack) -> tuple[object, ...]:
-    return (
-        pack.current_stage, pack.current_batch, pack.last_committed_task, pack.current_branch,
-        pack.docs_baseline_ref, pack.docs_baseline_at,
-        pack.working_set_snapshot.model_dump(mode="json"),
-    )
+def _resume_semantics(pack: ResumePack) -> dict[str, object]:
+    return pack.model_dump(mode="json", exclude={"timestamp"})
 
 
 def _read_resume_handoff(root: Path, work_item_id: str) -> tuple[str, str, str]:
-    path = root / _HANDOFF_PATH
+    if not work_item_id:
+        return "absent", "", ""
+    path = root / ".ai-sdlc" / "state" / "codex-handoff.md"
     try:
         raw = path.read_bytes()
     except FileNotFoundError:
@@ -691,15 +691,23 @@ def _read_resume_handoff(root: Path, work_item_id: str) -> tuple[str, str, str]:
     values: dict[str, str] = {}
     for field in ("Work Item", "Branch", "Goal", "State"):
         prefix = f"- {field}:"
-        matches = [line.removeprefix(prefix).strip() for line in lines if line.startswith(prefix)]
+        matches = [
+            line.removeprefix(prefix).strip()
+            for line in lines
+            if line.startswith(prefix)
+        ]
         if len(matches) != 1:
             return "invalid", "", ""
         values[field] = "" if matches[0].lower() == "none" else matches[0]
-    sections = [index for index, line in enumerate(lines) if line.strip() == "## Exact Next Steps"]
+    sections = [
+        index
+        for index, line in enumerate(lines)
+        if line.strip() == "## Exact Next Steps"
+    ]
     if len(sections) != 1:
         return "invalid", "", ""
     next_step = ""
-    for line in lines[sections[0] + 1:]:
+    for line in lines[sections[0] + 1 :]:
         if line.startswith("## "):
             break
         if not line.strip():
@@ -711,5 +719,7 @@ def _read_resume_handoff(root: Path, work_item_id: str) -> tuple[str, str, str]:
             next_step = item
     if values["Work Item"] != work_item_id:
         return "absent", "", ""
-    parts = [f"{name}: {value}" for name, value in (("Goal", values["Goal"]), ("State", values["State"]), ("Next", next_step)) if value]
-    return "available", values["Branch"], " | ".join(parts) or "Continuity handoff updated"
+    entries = (("Goal", values["Goal"]), ("State", values["State"]), ("Next", next_step))
+    parts = [f"{name}: {value}" for name, value in entries if value]
+    summary = " | ".join(parts) or "Continuity handoff updated"
+    return "available", values["Branch"], summary

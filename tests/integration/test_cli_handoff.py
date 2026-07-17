@@ -121,6 +121,9 @@ def test_handoff_update_show_and_check(tmp_path: Path) -> None:
     assert "ai-sdlc pr-review close --require-no-blockers" in show.output
     assert check.exit_code == 0
     assert "ready" in check.output.lower()
+    pack = context_state.load_resume_pack(tmp_path)
+    assert pack.current_branch == "feature/182-continuity"
+    assert pack.working_set_snapshot.context_summary.startswith("Goal: Add continuity")
 
 
 def test_handoff_update_prefers_linked_work_item_working_set(tmp_path: Path) -> None:
@@ -135,9 +138,16 @@ def test_handoff_update_prefers_linked_work_item_working_set(tmp_path: Path) -> 
     assert result.exit_code == 0
     assert f"Work Item: {linked}" in handoff
     assert handoff == (scoped_dir / "codex-handoff.md").read_text(encoding="utf-8")
-    assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == tuple(f"specs/{linked}/{name}" for name in ("spec.md", "plan.md", "tasks.md"))
+    assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == tuple(
+        f"specs/{linked}/{name}"
+        for name in ("spec.md", "plan.md", "tasks.md")
+    )
     assert snapshot.context_summary == "Goal: Resume linked WI"
-    assert snapshot.active_files == [f"specs/{linked}/tasks.md", f"specs/{linked}/plan.md", f"specs/{linked}/spec.md"]
+    assert snapshot.active_files == [
+        f"specs/{linked}/tasks.md",
+        f"specs/{linked}/plan.md",
+        f"specs/{linked}/spec.md",
+    ]
     assert context_state.load_resume_pack(tmp_path).current_branch == ""
     assert root_pack == (scoped_dir / "resume-pack.yaml").read_text()
 

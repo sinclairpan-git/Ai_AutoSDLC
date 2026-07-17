@@ -1,30 +1,35 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T11:28:46+00:00
-- Reason: after T41 full proof
+- Updated: 2026-07-17T12:17:45+00:00
+- Reason: after Round 2 review fixes and focused proof
 - Goal: Complete WI208 portable lossless resume-pack reconstruction without regressions
-- State: T41 complete: 3245 passed, 3 skipped; governance and protected-state checks passed; rollback and reapply trees are exact.
+- State: Round 2 functional fixes and readable LOC reduction complete; T41 full proof reopened
 - Stage: close
 - Work Item: 208-resume-pack-portable-lossless-reconstruction
 - Branch: feature/208-resume-pack-portable-lossless-reconstruction-dev
 
 ## Changed Files
+- M specs/208-resume-pack-portable-lossless-reconstruction/plan.md
+- M specs/208-resume-pack-portable-lossless-reconstruction/spec.md
 - M specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
 - M specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
+- M src/ai_sdlc/context/state.py
+- M tests/integration/test_cli_handoff.py
+- M tests/integration/test_cli_recover.py
+- M tests/integration/test_cli_status.py
+- M tests/unit/test_context_state.py
 
 ## Key Decisions
-- Treat the identical 273-file base/candidate Ruff format inventory as inherited debt, not authority to modify forbidden files.
+- Use baseline-differential format gate plus raw and Ruff-normalized 120/240 LOC budgets
 
 ## Commands / Tests
-- uv run pytest -q: 3245 passed, 3 skipped in 740.96s
-- constraints/validate/truth/diff-check: PASS; snapshots unchanged
-- rollback tree equals f432fb04; reapply tree equals candidate
+- Focused six-file suite: 105 passed in 38.83s; raw product/tests +106/+206; normalized +118/+176
 
 ## Blockers / Risks
-- T42 exact-tree Pascal and Confucius reviews remain.
+- T41 full/governance/rollback and exact-tree dual review remain
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit the T41 receipt, rerun final governance on the exact commit, freeze target identities, and obtain dual adversarial PASS.
+- Run Round 2 full verification, freeze exact target, obtain Pascal and Confucius PASS

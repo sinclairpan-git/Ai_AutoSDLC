@@ -178,51 +178,54 @@ def _write_specs_dir_legacy_artifacts(root: Path, work_item_id: str = "LEGACY-00
     )
 
 
+def _git(root: Path, *args: str) -> None:
+    subprocess.run(["git", *args], cwd=root, check=True, capture_output=True)
+
+
 def _init_git_repo(root: Path) -> None:
-    subprocess.run(
-        ["git", "init", "--initial-branch=main"],
-        cwd=root,
-        check=True,
-        capture_output=True,
-    )
-    subprocess.run(
-        ["git", "config", "user.email", "t@t.com"],
-        cwd=root,
-        check=True,
-        capture_output=True,
-    )
-    subprocess.run(
-        ["git", "config", "user.name", "T"],
-        cwd=root,
-        check=True,
-        capture_output=True,
-    )
+    _git(root, "init", "--initial-branch=main")
+    _git(root, "config", "user.email", "t@t.com")
+    _git(root, "config", "user.name", "T")
 
 
 def _commit_all(root: Path, message: str) -> None:
-    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
-    subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
+    _git(root, "add", ".")
+    _git(root, "commit", "-m", message)
 
 
 def test_status_rebuild_is_portable_after_detached_relocation(tmp_path: Path) -> None:
-    source, relocated = tmp_path / "source", tmp_path / "relocated"
+    source = tmp_path / "source"
     source.mkdir()
     _init_git_repo(source)
     init_project(source)
-    historical, linked = "207-historical", "208-linked"
-    for work_item_id in (historical, linked):
-        spec_dir = source / "specs" / work_item_id
-        spec_dir.mkdir(parents=True)
-        for name in ("spec.md", "plan.md", "tasks.md"):
-            (spec_dir / name).write_text(f"# {name}\n", encoding="utf-8")
-    feature = FeatureInfo(id=historical, spec_dir=f"specs/{historical}", design_branch="", feature_branch="", current_branch=f"feature/{historical}")
-    save_checkpoint(source, Checkpoint(current_stage="execute", feature=feature, linked_wi_id=linked))
+    linked = "208-linked"
+    spec_dir = source / "specs" / linked
+    spec_dir.mkdir(parents=True)
+    for name in ("spec.md", "plan.md", "tasks.md"):
+        (spec_dir / name).write_text(f"# {name}\n", encoding="utf-8")
+    feature = FeatureInfo(
+        id=linked,
+        spec_dir=f"specs/{linked}",
+        design_branch="",
+        feature_branch="",
+        current_branch="",
+    )
+    save_checkpoint(
+        source,
+        Checkpoint(current_stage="execute", feature=feature, linked_wi_id=linked),
+    )
     _commit_all(source, "test: initialize relocation fixture")
-    subprocess.run(["git", "checkout", "-b", f"feature/{linked}"], cwd=source, check=True, capture_output=True)
-    update_handoff(source, goal="Resume after relocation", state="Ready", next_steps=["Run status"])
+    _git(source, "checkout", "-b", f"feature/{linked}")
+    update_handoff(
+        source,
+        goal="Resume after relocation",
+        state="Ready",
+        next_steps=["Run status"],
+    )
     _commit_all(source, "test: seed relocation")
+    relocated = tmp_path / "relocated"
     shutil.copytree(source, relocated)
-    subprocess.run(["git", "checkout", "--detach", "HEAD"], cwd=relocated, check=True, capture_output=True)
+    _git(relocated, "checkout", "--detach", "HEAD")
     (relocated / ".ai-sdlc/work-items" / linked / "resume-pack.yaml").unlink()
 
     with patch("ai_sdlc.cli.commands.find_project_root", return_value=relocated):
@@ -231,30 +234,21 @@ def test_status_rebuild_is_portable_after_detached_relocation(tmp_path: Path) ->
         second = runner.invoke(app, ["status"])
     pack = load_resume_pack(relocated)
 
-    assert first.exit_code == 0, first.output
-    assert second.exit_code == 0, second.output
+    assert first.exit_code == second.exit_code == 0
     assert pack.current_branch == f"feature/{linked}"
-    assert pack.working_set_snapshot.context_summary == "Goal: Resume after relocation | State: Ready | Next: Run status"
-    assert all(not Path(path).is_absolute() for path in pack.working_set_snapshot.active_files)
+    snapshot = pack.working_set_snapshot
+    assert snapshot.context_summary == (
+        "Goal: Resume after relocation | State: Ready | Next: Run status"
+    )
+    assert all(not Path(path).is_absolute() for path in snapshot.active_files)
     assert before == (relocated / ".ai-sdlc/state/resume-pack.yaml").read_bytes()
 
 
 def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
-    subprocess.run(
-        ["git", "checkout", "-b", branch_name],
-        cwd=root,
-        check=True,
-        capture_output=True,
-    )
+    _git(root, "checkout", "-b", branch_name)
     (root / "scratch.txt").write_text(f"{branch_name}\n", encoding="utf-8")
-    subprocess.run(["git", "add", "."], cwd=root, check=True, capture_output=True)
-    subprocess.run(
-        ["git", "commit", "-m", f"feat: {branch_name}"],
-        cwd=root,
-        check=True,
-        capture_output=True,
-    )
-    subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
+    _commit_all(root, f"feat: {branch_name}")
+    _git(root, "checkout", "main")
 
 
 def _write_branch_lifecycle_fixture(
@@ -1436,8 +1430,7 @@ def test_status_json_includes_execute_authorization_blocker_before_execute_stage
     (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
     (spec_dir / "tasks.md").write_text(EXECUTABLE_TASKS_FIXTURE, encoding="utf-8")
-    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "seed execute auth fixture"], cwd=tmp_path, check=True, capture_output=True)
+    _commit_all(tmp_path, "seed execute auth fixture")
     save_checkpoint(
         tmp_path,
         Checkpoint(
@@ -1488,8 +1481,7 @@ def test_status_text_surfaces_execute_authorization_state(
     (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
     (spec_dir / "tasks.md").write_text(EXECUTABLE_TASKS_FIXTURE, encoding="utf-8")
-    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "seed execute auth text fixture"], cwd=tmp_path, check=True, capture_output=True)
+    _commit_all(tmp_path, "seed execute auth text fixture")
     save_checkpoint(
         tmp_path,
         Checkpoint(
