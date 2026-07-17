@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T23:41:37+00:00
-- Reason: WI209 final post-Git-grammar regression, governance and replay evidence complete
+- Updated: 2026-07-17T23:55:57+00:00
+- Reason: WI209 decoded path trust finding remediated
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Final Git-grammar candidate green: focused 78; full 3253 passed/3 skipped; constraints and validate PASS; truth ready/fresh 1101/1101 and 209/209; manifest exact PASS; budgets product +119/+130 and tests +192/+200 raw/normalized; max function 45
+- State: Latest safety finding remediated: decoded paths require correct diff side, nonempty canonical relative components, no traversal/NUL/drive absolute; paired headers fail closed together; canonical quoted-header tab retained; focused 78 and Ruff PASS; budgets product +123/+130 tests +192/+200; max function 46
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Reject all prior identities and verdicts; final review starts only from the continuity commit produced by this update, with no further content changes
+- Invalidate 4edcfe2f candidate and prior verdicts; refreeze only after full regression, governance, replay and exact continuity rerun
 
 ## Commands / Tests
-- 30 commits replayed from formal tree 0c865c4335cd86d84124992382730a2e200419db to tree c21a7cb1e67c1b5929f5c717c7e513bffbd74500 exactly; full suite 3253 passed 3 skipped in 557.83s
+- RED reproduced side/traversal/absolute/NUL fail-open; GREEN retains unknown findings and preserves real quoted Unicode Git diff; scoped 78 passed
 
 ## Blockers / Risks
-- Fresh dual adversarial PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
+- Full suite, governance, replay, fresh dual review, PR checks, merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Calculate final HEAD/tree/binary identity; Pascal and Confucius review that identical clean candidate from zero; push PR only after dual PASS
+- Run full suite and governance; replay all commits from formal base; refresh final handoff; restart Pascal and Confucius from zero
