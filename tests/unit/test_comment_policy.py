@@ -3,6 +3,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from ai_sdlc.core.comment_policy import (
     CommentLanguage,
     collect_comment_deletion_blockers,
@@ -126,6 +128,48 @@ def test_comment_deletion_reason_must_match_path_and_comment(tmp_path: Path) -> 
     )
 
     assert collect_comment_deletion_blockers(tmp_path) == []
+
+
+@pytest.mark.parametrize(
+    ("suffix", "quote"),
+    [(".yaml", "'"), (".yml", '"')],
+)
+def test_yaml_quoted_scalar_continuation_is_not_comment(
+    tmp_path: Path,
+    suffix: str,
+    quote: str,
+) -> None:
+    _init_git_repo(tmp_path)
+    source = tmp_path / f"config{suffix}"
+    source.write_text(
+        f"value: {quote}first\n  #139 continuation\n  last{quote}\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "init"], cwd=tmp_path, check=True, capture_output=True
+    )
+    source.write_text(f"value: {quote}first\n  last{quote}\n", encoding="utf-8")
+
+    assert collect_comment_deletion_blockers(tmp_path) == []
+
+
+def test_added_yaml_quoted_content_does_not_replace_removed_comment(
+    tmp_path: Path,
+) -> None:
+    _init_git_repo(tmp_path)
+    source = tmp_path / "config.yaml"
+    source.write_text("value: first\n# keep operator note\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "init"], cwd=tmp_path, check=True, capture_output=True
+    )
+    source.write_text('value: "first\n  #139 continuation"\n', encoding="utf-8")
+
+    blockers = collect_comment_deletion_blockers(tmp_path)
+
+    assert len(blockers) == 1
+    assert blockers[0].endswith("in config.yaml: # keep operator note")
 
 
 def _init_git_repo(root: Path) -> None:
