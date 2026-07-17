@@ -327,6 +327,7 @@ class TestResumePack:
             (str(tmp_path / expected_paths[0]), [expected_paths[0], expected_paths[1]]),
             (expected_paths[0].replace("/", "\\"), [expected_paths[0], expected_paths[1]]),
             ("../escape/spec.md", [expected_paths[1]]),
+            ("/other/repo/spec.md", [expected_paths[1]]),
             (r"D:\other\spec.md", [expected_paths[1]]),
             (r"\\server\share\spec.md", [expected_paths[1]]),
         ):

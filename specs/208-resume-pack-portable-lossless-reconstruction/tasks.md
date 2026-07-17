@@ -108,8 +108,8 @@
 
 ### T34 focused GREEN 与预算
 
-- **状态**：completed；Round 3 focused `107 passed`；raw product/tests net=`+108/+239`，同版本 Ruff
-  格式化 exact base/candidate 副本后的 normalized product/tests net=`+120/+209`
+- **状态**：completed；Round 4 focused `107 passed`；raw product/tests net=`+108/+240`，同版本 Ruff
+  格式化 exact base/candidate 副本后的 normalized product/tests net=`+120/+210`
 - **依赖**：T33
 - **验收**：plan §8 focused 全绿；产品最多 1 文件/net +120，测试最多 4 文件/net +240；无 test
   deletion/weakening、无第二个产品文件。
