@@ -44,8 +44,8 @@ _CJK_TOKEN_RE = re.compile(r"[\u4e00-\u9fff]{2,}")
 _COMMENT_PREFIX_RE = re.compile(r"^\s*(#|//|/\*|\*|<!--|-->|'''|\"\"\")")
 _BLOCK_COMMENT_SUFFIX_RE = re.compile(r"(\*/|-->|'''|\"\"\")\s*$")
 _HUNK_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(?: .*)?$")
-_GIT_PATH_PATTERN = r'"(?:\\(?:[abtnvfr\\"]|[0-7]{3})|[^\x00-\x1f\x7f"\\])*"|[^\s"\\\x00-\x1f\x7f]+'
-_DIFF_PATH_RE = re.compile(r'diff --git ("a/(?:\\(?:[abtnvfr\\"]|[0-7]{3})|[^\x00-\x1f\x7f"\\])*"|a/[^\s"\\\x00-\x1f\x7f]+) ("b/(?:\\(?:[abtnvfr\\"]|[0-7]{3})|[^\x00-\x1f\x7f"\\])*"|b/[^\s"\\\x00-\x1f\x7f]+)')
+_GIT_PATH = r'"(?:\\(?:[abtnvfr\\"]|[0-7]{3})|[^\x00-\x1f\x7f"\\])*"|[^\x00- \x7f"\\]+'
+_DIFF_PATH_RE = re.compile(rf"diff --git ({_GIT_PATH}) ({_GIT_PATH})")
 _COMMENT_DELETION_REASON_TOKENS = (
     "删除注释",
     "移除注释",
@@ -132,14 +132,15 @@ def collect_removed_comment_findings(
         if raw_line.startswith("diff --git "):
             _flush_removed_comments(findings, current_path, removed, added)
             match = _DIFF_PATH_RE.fullmatch(raw_line)
-            old_path = _path_from_diff_header(match[1]) if match else None
-            new_path = _path_from_diff_header(match[2]) if match else None
+            old_path = _diff_path(match[1], "a") if match else None
+            new_path = _diff_path(match[2], "b") if match else None
             current_path = new_path or "<unknown>"
             old_line = new_line = None
         elif raw_line.startswith("--- "):
-            old_path = _path_from_diff_header(raw_line[4:])
+            old_path = _diff_path(raw_line[4:], "a")
+            new_path = None
         elif raw_line.startswith("+++ "):
-            new_path = _path_from_diff_header(raw_line[4:])
+            new_path = _diff_path(raw_line[4:], "b") if old_path is not None else None
             fallback = old_path or current_path
             current_path = "<unknown>" if new_path is None else new_path or fallback
         elif raw_line.startswith("@@"):
@@ -227,11 +228,11 @@ def _counts_as_comment(
     return old if quoted is None or line > quoted[1] else line not in quoted[0]
 
 
-def _path_from_diff_header(value: str) -> str | None:
-    value = value.strip()
+def _diff_path(value: str, side: str) -> str | None:
+    value = value.removesuffix("\t")
     if value == "/dev/null":
         return ""
-    if re.fullmatch(_GIT_PATH_PATTERN, value) is None:
+    if re.fullmatch(_GIT_PATH, value) is None:
         return None
     if value.startswith('"'):
         try:
@@ -239,7 +240,12 @@ def _path_from_diff_header(value: str) -> str | None:
             value = decoded.encode("latin-1").decode("utf-8")
         except (AttributeError, SyntaxError, UnicodeError, ValueError):
             return None
-    return re.sub(r"^[ab]/", "", value) or None
+    path = value.removeprefix(f"{side}/")
+    if path == value or "\0" in path or {"", ".", ".."} & set(path.split("/")):
+        return None
+    if re.match(r"^[A-Za-z]:/", path):
+        return None
+    return path
 
 
 def _read_yaml_source(root: Path, path: str, *, old: bool) -> str | None:
@@ -316,7 +322,6 @@ def _git_diff(root: Path) -> str:
             ["git", "diff", "--unified=0", "HEAD", "--"],
             cwd=root,
             capture_output=True,
-            text=True,
             encoding="utf-8",
             errors="replace",
         )
@@ -344,7 +349,6 @@ def _changed_execution_log_records_comment_deletion(
             ],
             cwd=root,
             capture_output=True,
-            text=True,
             encoding="utf-8",
             errors="replace",
         )
