@@ -1,30 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T10:06:19+00:00
-- Reason: Record final gates for the Round 7 summary correction.
-- Goal: Close WI208 formal PR #142 before implementation
-- State: Round 7 development summary is aligned and all refreshed terminal gates pass. The six-file formal target remains unchanged and the evidence-only correction is ready to commit.
+- Updated: 2026-07-17T10:09:43+00:00
+- Reason: Make continuity stable across the final evidence-only commit and external review receipts.
+- Goal: Merge WI208 formal PR #142 only after all current-head reviews pass
+- State: Round 7 formal and evidence corrections are materialized on the latest PR head. Formal combined remains a91b6d3541e755e604ec7ee376bd0db5b8a037cc5e2c71e94e800ab768860b39; truth and terminal gates are green.
 - Stage: close
 - Work Item: 208-resume-pack-portable-lossless-reconstruction
 - Branch: feature/208-resume-pack-portable-lossless-reconstruction-docs
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/work-items/208-resume-pack-portable-lossless-reconstruction/codex-handoff.md
-- M program-manifest.yaml
-- M specs/208-resume-pack-portable-lossless-reconstruction/development-summary.md
+- none
 
 ## Key Decisions
-- Keep formal combined a91b6d3541e755e604ec7ee376bd0db5b8a037cc5e2c71e94e800ab768860b39; modify only summary, truth metadata and synchronized handoffs.
+- Treat the latest PR-head review receipts as dynamic external state. Keep T25 pending and implementation blocked until the formal PR merge is proven on main.
 
 ## Commands / Tests
-- truth sync/audit PASS snapshot 69cf7219585d31b50f10c961b0c53ea389d5123af08c86151b224ad2e7b0d76b; constraints no BLOCKER; program validate PASS; manifest exact 1 passed in 83.90s.
+- truth ready/fresh snapshot 69cf7219585d31b50f10c961b0c53ea389d5123af08c86151b224ad2e7b0d76b; constraints no BLOCKER; validate PASS; manifest exact PASS; protected artifacts unchanged.
 
 ## Blockers / Risks
-- None in content; the new commit still requires fresh full-commit dual PASS, Codex and CI.
+- None in content. Merge depends on Pascal and Confucius full-commit PASS, Codex current-head review, and all GitHub checks.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Restore known GAP13-generated resume artifacts, stage exact summary evidence, commit/push, then rerun all reviews on one immutable HEAD.
+- Review the latest PR #142 head; merge only when both local adversarial reviews, Codex review, and every required check pass, then run fresh-main acceptance before creating the implementation branch.
