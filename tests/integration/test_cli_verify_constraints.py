@@ -778,15 +778,14 @@ class TestCliVerifyConstraints:
         quoted = case == "quoted"
         before = "value: 'first\n  #139 continuation\n  last'\n" if quoted else "value: first\n# keep operator note\n"
         after = {"quoted": "value: 'first\n  last'\n", "removed": "value: first\n", "added": 'value: "first\n  #139 continuation"\n'}[case]
-        exit_code = int(not quoted)
         _write_comment_policy_git_fixture(tmp_path, before=before, after=after)
         monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["verify", "constraints"])
 
-        assert result.exit_code == exit_code
-        assert ("original comment removed" in result.output) == bool(exit_code)
-        if exit_code:
+        assert result.exit_code == int(not quoted)
+        assert ("original comment removed" in result.output) == (not quoted)
+        if not quoted:
             assert "in config.yaml: # keep operator note" in result.output
 
     def test_exit_1_missing_constitution(

@@ -169,7 +169,6 @@ def test_yaml_quoted_scalar_continuation_is_not_comment(
     [
         ("old.py", "new.yaml", _MIXED_OLD_PY, _MIXED_NEW_YAML, 1),
         ("old.yaml", "new.py", "stable: 1\n# real\n", "stable = 1\n# replacement\n", 0),
-        ("old.yaml", "new.yml", _MIXED_NEW_YAML, _MIXED_NEW_YAML, 0),
         ("old.YAML", "new.YML", _MIXED_NEW_YAML, _MIXED_NEW_YAML, 0),
     ],
 )
@@ -245,13 +244,15 @@ def test_yaml_unsafe_new_source_is_fail_closed(
 def test_diff_multi_hunk_zero_count_suffix_no_newline_create_delete_and_invalid_headers() -> None:
     diffs = [
         "diff --git broken\n@@ -1 +1 @@\n-# real\n+value\n",
+        'diff --git a/x.py "unterminated\n@@ -1 +1 @@\n-# real\n+# replacement\n',
         'diff --git a/x b/x\n--- "bad\n+++ "bad\n@@ bad @@\n-# real\n+value\n',
         "diff --git a/x.py b/x.py\n--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@ section\n-# one\n+value\n\\ No newline at end of file\n@@ -0,0 +3 @@\n+# added\n",
         "diff --git a/new.py b/new.py\n--- /dev/null\n+++ b/new.py\n@@ -0,0 +1 @@\n+# created\n",
         "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-# deleted\n",
     ]
-    counts = [len(collect_removed_comment_findings(diff_text=diff)) for diff in diffs]
-    assert counts == [1, 1, 1, 0, 1]
+    findings = [collect_removed_comment_findings(diff_text=diff) for diff in diffs]
+    assert [len(result) for result in findings] == [1, 1, 1, 1, 0, 1]
+    assert findings[1][0].path == "<unknown>"
 
 
 def test_yaml_missing_source_and_scanner_error_are_fail_closed(
