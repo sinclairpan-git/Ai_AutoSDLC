@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from typer.testing import CliRunner
 
 from ai_sdlc.cli.main import app
@@ -30,6 +31,7 @@ from ai_sdlc.models.state import (
 from ai_sdlc.routers.bootstrap import init_project
 
 runner = CliRunner()
+pytestmark = pytest.mark.usefixtures("isolated_cli_cwd")
 
 
 def _write_legacy_root_artifacts(root: Path) -> None:

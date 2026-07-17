@@ -80,6 +80,7 @@ from tests.support.managed_delivery import (
 )
 
 runner = CliRunner()
+pytestmark = pytest.mark.usefixtures("isolated_cli_cwd")
 
 
 EXECUTABLE_TASKS_FIXTURE = """# Tasks

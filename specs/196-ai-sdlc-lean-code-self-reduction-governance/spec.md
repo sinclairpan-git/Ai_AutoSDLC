@@ -52,6 +52,7 @@
 | GAP-11 | 已关闭 | WI-201 / PR #125 / merge `d19c8b7d`：source inventory 收敛为 complete、unmapped=0、missing=0 | T54 已完成；新增 source 继续 fail-closed | 否 |
 | GAP-12 | 开放 | `origin/main@506e950d` 的只读 program 命令会改写 tracked `.cursor/rules/ai-sdlc.mdc`，但 PR #139 全族 bypass 又使首次 managed delivery 丢失 `materialized → verified_loaded` 迁移；program tests 还存在 root/local hook 隔离边界 | T55 / WI-207：root program 无条件 hook 改为 bypass，仅在两个 managed-delivery 依赖入口局部刷新，并补双轴 real-hook/host-ingress 回归 | 是（验证与兼容可靠性） |
 | GAP-13 | 开放 | detached worktree 执行 `uv run ai-sdlc status` 会把 root/scoped resume-pack 重建为 worktree 绝对路径，并清空 branch、active files、context | T56 / WI-208：冻结 portable/lossless canonical reconstruction source，再修 status/recover/handoff | 是（连续性可靠性） |
+| GAP-14 | 开放 | `comment_policy._is_comment_line()` 按 stripped diff line 判断前缀；YAML single-quoted scalar 的续行内容以 `#139...` 开头时被误判为被删除注释，导致 `verify constraints` 假 blocker | T57 / WI-209：先以 quoted-scalar diff characterization 固定误报，再做 path/syntax-aware 最小修复；不得用 execution-log waiver 掩盖 | 是（验证可靠性） |
 
 每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
 
@@ -94,7 +95,7 @@ CC-05 描述默认授权合同，不追溯删除已经显式定义的 preflight/
 
 ### 6.1 非减重变更合同
 
-T51、T52、T53A、T53B、T54、T55、T56 属于缺陷/truth 修复，使用 NC-01～NC-06，不强迫承担减重阈值：
+T51、T52、T53A、T53B、T54、T55、T56、T57 属于缺陷/truth 修复，使用 NC-01～NC-06，不强迫承担减重阈值：
 
 - **NC-01**：冻结可复现的 observed/expected behavior 和基线 revision。
 - **NC-02**：列出受影响 CC、文件/符号、truth/fixture 影响分析；缺失或不确定时 fail-closed。
@@ -124,7 +125,7 @@ WP-03～WP-07 的每个减重候选在编码前冻结以下字段；缺一项不
 
 | 子项 | 强制合同 |
 |---|---|
-| T51/T52/T53A/T53B/T54/T55/T56 | NC-01～NC-06 + 受影响 CC；RC 不适用 |
+| T51/T52/T53A/T53B/T54/T55/T56/T57 | NC-01～NC-06 + 受影响 CC；RC 不适用 |
 | WP-01 | RC-01～RC-03、RC-06、RC-07、RC-09、RC-10 + impact analysis 选出的 CC；Phase A/B 落实 CC |
 | WP-02 | RC-01～RC-03、RC-06、RC-07、RC-09、RC-10 + CC-01/02/03/05/06/07；代码指标与合同 admission 两个规则族都经历 report/warning/blocking，使用独立状态/回退开关 |
 | WP-03/WP-04/WP-05 | RC-01～RC-07、RC-09、RC-10 + impact analysis 选出的 CC；RC-04 按重复/候选类型解释 |
@@ -142,19 +143,20 @@ WP-03～WP-07 的每个减重候选在编码前冻结以下字段；缺一项不
 
 GAP-07、GAP-08 的缺陷修复按合同可独立或并行启动，且每个缺陷必须先写能复现原行为的定向 characterization test。两项现已分别由 WI-197、WI-198 关闭，WP-01A 的基础 barrier 已满足；后续候选仍须满足各自 impact analysis 与 sponsor/admission 条件。
 
-GAP-12 与 GAP-13 是 WI-206 fresh-main 验收中暴露的两个不同根因，必须继续使用独立 WI/branch/PR。
+GAP-12 与 GAP-13 是 WI-206 fresh-main 验收中暴露的两个不同根因；GAP-14 是 WI-207 fresh-main
+诊断 dirty diff 时暴露的第三个独立验证根因。三项必须使用独立 WI/branch/PR。
 T55 只处理 root program bypass、两个 managed-delivery 入口局部兼容刷新与 program test isolation；
-T56 只处理 continuity canonical reconstruction。
-两项都先红后绿，且不计为减重成果。由于二者会污染治理证据或恢复状态，路线在继续新的 T63/T65/
-WP-06/WP-07 候选前先顺序关闭 T55、T56。
+T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy 对 quoted scalar 的误报。
+三项都先红后绿，且不计为减重成果。由于它们会污染治理证据、恢复状态或阻断合法变更，路线在继续
+新的 T63/T65/WP-06/WP-07 候选前先顺序关闭 T55、T56、T57。
 
 兼容、安全或授权边界不得用 waiver 绕过。GAP-09～GAP-11 已由 WI-199～WI-201 关闭，不再是开放阻断依赖；后续目标切片仍须落盘 inheritance、adapter consumption 与 source inventory 的防回归影响分析。分析缺失或不确定，或 truth 再次出现对应 blocker、unmapped/missing source 时，必须 fail-closed、登记 owner/证据并重开对应 GAP；truth 保持关闭条件时不得重复执行 T53A/T53B/T54。
 
 ## 8. 功能需求
 
-- **FR-01**：GAP-01～GAP-13 必须有证据、边界、责任子项和关闭证据索引。
+- **FR-01**：GAP-01～GAP-14 必须有证据、边界、责任子项和关闭证据索引。
 - **FR-02**：实现子项必须按 §6.3 适用矩阵 fail-closed 校验 NC、CC 与 RC；不允许伪造 N/A 绕门。
-- **FR-03**：GAP-07、GAP-08、GAP-12、GAP-13 每项使用独立 WI/branch/PR，先红后绿验证原始缺陷。
+- **FR-03**：GAP-07、GAP-08、GAP-12、GAP-13、GAP-14 每项使用独立 WI/branch/PR，先红后绿验证原始缺陷。
 - **FR-04**：WP-01 只覆盖目标切片实际影响的契约；Phase A 在编码前捕获旧基线，Phase B 必须绑定候选 commit/tree hash 并作为同一候选 PR 的 pre-merge gate。
 - **FR-05**：WP-02 的代码指标与 NC/CC/RC admission 两个规则族都按 report-only、warning、blocking 演进，状态和回退独立；每阶段冻结 versioned expected delta，未列入 delta 的兼容差异仍为 BLOCKER。
 - **FR-06**：WP-05 必须先做 go/no-go；预测不满足 RC 时直接取消，不预设 YAML/JSON 是答案。
@@ -168,7 +170,9 @@ WP-06/WP-07 候选前先顺序关闭 T55、T56。
   `tests/integration/test_repo_program_manifest.py` 的 inventory/close 两个精确预期值，不得新增测试逻辑
   或行数。
 - **FR-13**：WI-207 不得修改 resume-pack/state reconstruction；WI-208 不得顺带修改 root adapter dispatch。
-  两项分别 fresh-main 后才允许恢复新的减重候选。
+  两项分别 fresh-main 后继续进入 WI-209，不得提前恢复新的减重候选。
+- **FR-14**：WI-209 只修 comment preservation 的 YAML quoted-scalar false positive，不得修改 adapter、
+  resume reconstruction 或把所有 YAML `#` 行一律豁免；WI-209 fresh-main 前不得恢复新的减重候选。
 
 ## 9. 成功标准
 
@@ -181,8 +185,8 @@ WP-06/WP-07 候选前先顺序关闭 T55、T56。
 - **SC-06**：兼容安全 Agent 与精简效率 Agent 对同一 `spec.md + plan.md + tasks.md` 内容哈希均明确 PASS。
 - **SC-07**：GAP-07 与 GAP-08 已作为两个独立首批实现项分别关闭，关闭证据绑定 WI-197/PR #121 与 WI-198/PR #122；WP-01A 的基础 barrier 已满足。
 - **SC-08**：后续减重工作包只有满足适用 Reduction Contract 才能以 `completed_reduction` 关闭。WP-05 单项 No-Go 用 `cancelled_no_go`；六个冻结候选均完成评估且全部 No-Go 时，GAP-06 可用 `closed_no_viable_reduction` 关闭，但不计减重成果。只有基线或消费者发生实质变化才允许重新打开。
-- **SC-09**：GAP-12 由 WI-207 关闭、GAP-13 由后续 WI-208 关闭；任一项不得借另一项的测试或 PR
-  伪装为已完成，且二者均不得计入 RC-08 产品 LOC 减重。
+- **SC-09**：GAP-12 由 WI-207 关闭、GAP-13 由 WI-208 关闭、GAP-14 由 WI-209 关闭；任一项不得借
+  另一项的测试、waiver 或 PR 伪装为已完成，且三者均不得计入 RC-08 产品 LOC 减重。
 
 ## 10. 冻结决策
 
@@ -194,5 +198,5 @@ WP-06/WP-07 候选前先顺序关闭 T55、T56。
 6. WI-202 首次 T62A 候选经两套完整 proof 证实违反 RC-06，按 RC-09 停止且不合入任何
    source/state/claim；GAP-01/T62A 保持 open，T62B/T62C 未开始。重启必须同时取得新的或替代
    sponsor，并重新冻结和双审父合同；在此之前按 FR-08 为 CC-05/CC-06 保留两个独立 reviewer。
-7. WI-206 关闭后先执行 WI-207/GAP-12，再执行 WI-208/GAP-13；两个基础修复完成后才恢复新的
-   T63/T65/WP-06/WP-07 原子减重选择，RC-08 全路线终态前不发布版本。
+7. WI-206 关闭后依次执行 WI-207/GAP-12、WI-208/GAP-13、WI-209/GAP-14；三个基础修复完成后才
+   恢复新的 T63/T65/WP-06/WP-07 原子减重选择，RC-08 全路线终态前不发布版本。

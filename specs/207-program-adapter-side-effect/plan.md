@@ -200,10 +200,17 @@ solution 但无 managed request/apply；config-lock 软失败仍 warning-and-con
 
 ### Phase 4：Implementation PR 与 fresh-main
 
-**动作**：双 Agent final tree review、push、PR、`@codex review`、约五分钟 heartbeat、required checks、
-merge。
-**fresh-main**：在新 detached worktree 重跑 real-hook nodeids、focused、full、Ruff、constraints、truth，
-确认 clean。
+**实现事实**：PR #139 已在同 HEAD/tree 双 Agent PASS、current-head Codex 无 finding、22/22 checks
+通过后合并为 `8752aa97`。
+**fresh-main 发现**：real-hook、focused、full 与 Ruff 业务断言通过，但 full suite 结束后 root resume-pack/
+Cursor 变化；pristine worktree 的 verify、real-hook、focused 单独运行均 clean，根因收敛到 CLI tests 继承
+真实 cwd，而非 verify 或产品 hook 回归。
+**acceptance repair**：仅修改 `tests/conftest.py` 与 7 个已定位 CLI test 文件；共享 cwd fixture 由模块
+显式 opt-in，self-update 在临时 cwd 初始化项目；session guard 比较 tracked status/index/content、全部
+canonical adapter 目标、project config 与动态 scoped resume-pack。预算为 8 文件、gross `+135`、net
+`+120`，产品 diff 必须为空。
+**最终 fresh-main**：repair PR 合并后在新 detached worktree 重跑 real-hook nodeids、focused、full、Ruff、
+constraints、truth；每个命令结束与总体结束均直接 clean，不允许 restore 后判 PASS。
 **关闭**：只关闭 GAP-12；GAP-13 进入 WI208 formal，不发布版本。
 
 ## 7. 关键验证矩阵
@@ -220,6 +227,7 @@ merge。
 | truth execute | 既有 truth sync execute | audit/status surface | 输出/schema 差异即 revert |
 | managed execute | 既有 managed apply execute | artifact assertions | 写入丢失即 revert |
 | explicit adapter | CLI adapter/hook tests | Cursor/VSCode variants | 失效即 No-Go |
+| full-suite checkout isolation | 受影响 8 文件 focused + session guard | full suite 前后 tracked/managed 摘要 | 任一增量变化保留现场并阻断 |
 | cross-platform | GitHub Windows/macOS/Linux checks | byte-only assertions | 平台失败不合并 |
 | parent route truth | manifest validate/audit | fresh-main audit | non-ready 重开对应 GAP |
 
@@ -240,5 +248,6 @@ Implementation final review 绑定精确 HEAD、tree、binary diff、name-status
 
 WI207 合并并 fresh-main 后，立即建立 WI208
 `resume-pack-portable-lossless-reconstruction-sources`，先裁决 canonical reconstruction source，再允许
-修改 `context/state.py` / `core/handoff.py`。WI208 关闭后才恢复下一个 T63/T65/WP-06/WP-07 原子减重项；
+修改 `context/state.py` / `core/handoff.py`。WI208 关闭后建立 WI209，单独修复 YAML quoted scalar 的
+comment preservation false positive；WI209 fresh-main 后才恢复下一个 T63/T65/WP-06/WP-07 原子减重项。
 WI-196 全路线满足 RC-08 前不发布版本。

@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 import yaml
 from typer.testing import CliRunner
 
@@ -36,6 +37,7 @@ from ai_sdlc.core.requirement_loop import (
 )
 
 runner = CliRunner()
+pytestmark = pytest.mark.usefixtures("isolated_cli_cwd")
 
 
 def test_loop_help_lists_status_and_list() -> None:

@@ -15,8 +15,15 @@ from typer.testing import CliRunner
 import ai_sdlc.cli.self_update_cmd as self_update_cmd
 from ai_sdlc import __version__
 from ai_sdlc.cli.main import app
+from ai_sdlc.routers.bootstrap import init_project
 
 runner = CliRunner()
+pytestmark = pytest.mark.usefixtures("isolated_cli_cwd")
+
+
+@pytest.fixture(autouse=True)
+def _initialize_self_update_cli_project(tmp_path: Path) -> None:
+    init_project(tmp_path)
 
 
 def _env(tmp_path, *, channel: str = "github-archive") -> dict[str, str]:

@@ -145,7 +145,10 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"], cwd=str(tmp_path))
         assert result.exit_code in (1, 2)
 
-    def test_run_help(self) -> None:
+    def test_run_help(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
         result = runner.invoke(app, ["run", "--help"])
         assert result.exit_code == 0
         plain_output = _plain_cli_output(result.output)
