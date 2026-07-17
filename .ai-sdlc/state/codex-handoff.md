@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T09:21:38+00:00
-- Reason: Record completed terminal gates before the corrected PR-head commit.
-- Goal: Complete WI208 formal PR audit closure and merge before implementation
-- State: Unified full-commit audit defects are corrected. Final truth is ready/fresh with inventory 1096/1096 and the approved six-file formal hash remains unchanged; preparing the focused PR-head correction commit.
+- Updated: 2026-07-17T09:49:35+00:00
+- Reason: Record Round 7 terminal gate results before commit.
+- Goal: Close WI208 formal PR #142 before implementation
+- State: Round 7 receipt-state correction is complete. Truth is ready/fresh with 1096/1096 inventory; terminal gates pass; the corrected six-file target awaits commit and fresh dual review.
 - Stage: close
 - Work Item: 208-resume-pack-portable-lossless-reconstruction
 - Branch: feature/208-resume-pack-portable-lossless-reconstruction-docs
@@ -12,19 +12,20 @@
 - M .ai-sdlc/state/codex-handoff.md
 - M .ai-sdlc/work-items/208-resume-pack-portable-lossless-reconstruction/codex-handoff.md
 - M program-manifest.yaml
-- M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- M specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
+- M specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
 
 ## Key Decisions
-- Use crash-convergent staged-pair terminology; never promise cross-file atomicity. Keep the approved six-file formal target at aab82d2601bbeb097331865e022b6c2458133bfae62f3afa9c5fc4a1496a18aa.
+- Use receipt-based dynamic review states; keep T25 pending and T31 blocked until formal PR merge. Round 7 formal combined is a91b6d3541e755e604ec7ee376bd0db5b8a037cc5e2c71e94e800ab768860b39.
 
 ## Commands / Tests
-- truth sync/audit PASS snapshot 5aa52d6e29b2b91c3782fc57105f5acd46743177341273894a58388ce481a204; constraints no BLOCKER; program validate PASS; manifest exact 1 passed in 84.48s; diff-check PASS.
+- truth sync/audit PASS snapshot 17a749943870cfe78238b15030c67deabbf147638d999b530d8a2f0896f3580c; constraints no BLOCKER; program validate PASS; manifest exact 1 passed in 85.59s.
 
 ## Blockers / Risks
-- GitHub Codex connector currently asks the repository owner to connect a Codex account; all PR checks were green on the prior HEAD.
+- None in content; corrected HEAD still requires Pascal, Confucius, Codex and all GitHub checks.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Stage the exact four-file correction, prove cached/worktree gates, commit and push, then require Pascal and Confucius PASS on the identical new HEAD and re-request Codex review.
+- Restore the known GAP13-generated resume artifacts to the frozen baseline, stage exact corrected evidence, commit/push, then rerun all reviews and heartbeat on one immutable HEAD.

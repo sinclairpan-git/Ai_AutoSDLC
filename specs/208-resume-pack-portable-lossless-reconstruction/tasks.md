@@ -38,7 +38,7 @@
 
 ### T21 冻结六文件 review target
 
-- **状态**：已完成；当前六文件 target 已按父计划 §9 冻结，待 T22/T23 从零复审
+- **状态**：已完成；当前六文件 target 已按父计划 §9 冻结
 - **依赖**：T14
 - **文件**：child 与 WI-196 parent 的 `spec.md / plan.md / tasks.md`
 - **验收**：source priority、兼容矩阵、allowlist、预算、RED/GREEN、回退与 fresh-main 可执行；使用父计划
@@ -46,21 +46,21 @@
 
 ### T22 Pascal 精简/直接性评审
 
-- **状态**：pending；verdict 只写 execution log/handoff，避免 hash 自引用
+- **状态**：以 execution log 最新 formal 同哈希终态回执为准；历史轮次仅保留在日志
 - **依赖**：T21
 - **验收**：确认单 builder、无三套 CLI patch、无通用 parser/path framework、120/240 行预算现实；输出
   findings-first `PASS/FAIL` 与精确 target 身份。
 
 ### T23 Confucius 兼容/安全性评审
 
-- **状态**：pending；verdict 只写 execution log/handoff
+- **状态**：以 execution log 最新 formal 同哈希终态回执为准；历史轮次仅保留在日志
 - **依赖**：T21
 - **验收**：确认 checkpoint/WI-198、path/Windows、unreadable optional、crash-convergence/idempotence、
   staged-pair fault、rollback、CLI/error contract 完整；输出 `PASS/FAIL` 与精确 target 身份。
 
 ### T24 findings 收敛至同一 hash 双 PASS
 
-- **状态**：pending
+- **状态**：以 execution log 最新 formal 同哈希终态回执为准；formal 文件不内嵌动态 verdict/hash
 - **依赖**：T22、T23
 - **验收**：逐条验证/处置；任一六文件变化使双方旧 verdict 失效；最终 Pascal/Confucius 对同一 combined
   均 PASS 且无 actionable finding。
