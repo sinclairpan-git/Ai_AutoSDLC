@@ -117,7 +117,7 @@
 
 ### T41 full/governance/differential/rollback
 
-- **状态**：pending
+- **状态**：completed；full/governance/state-diff/rollback-reapply 全部通过
 - **依赖**：T34
 - **验收**：full/Ruff/format/constraints/validate/truth/diff-check 全绿；批准差分只有 NC-05；byte-only
   首次 repair 只复用既有 event 文本/canonical serialization/rebuild timestamp，第二次 status/recover
@@ -125,7 +125,7 @@
 
 ### T42 final tree 双 Agent 复审
 
-- **状态**：blocked by T41
+- **状态**：pending
 - **依赖**：T41
 - **验收**：冻结 HEAD/tree/binary/name-status/formal hash/LOC/test evidence；Pascal 与 Confucius 对同一
   target 双 PASS；任何后续 tree 变化使 verdict 作废。
