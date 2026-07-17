@@ -44,6 +44,7 @@ _CJK_TOKEN_RE = re.compile(r"[\u4e00-\u9fff]{2,}")
 _COMMENT_PREFIX_RE = re.compile(r"^\s*(#|//|/\*|\*|<!--|-->|'''|\"\"\")")
 _BLOCK_COMMENT_SUFFIX_RE = re.compile(r"(\*/|-->|'''|\"\"\")\s*$")
 _HUNK_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(?: .*)?$")
+_DIFF_PATH_RE = re.compile(r'diff --git ("a/(?:\\.|[^"\\])*"|a/[^\s"]+) ("b/(?:\\.|[^"\\])*"|b/[^\s"]+)')
 _COMMENT_DELETION_REASON_TOKENS = (
     "删除注释",
     "移除注释",
@@ -129,9 +130,10 @@ def collect_removed_comment_findings(
     for raw_line in diff_text.splitlines():
         if raw_line.startswith("diff --git "):
             _flush_removed_comments(findings, current_path, removed, added)
-            parts = raw_line.split()
-            current_path = parts[3].removeprefix("b/") if len(parts) == 4 else "<unknown>"
-            old_path = new_path = None if current_path == "<unknown>" else current_path
+            match = _DIFF_PATH_RE.fullmatch(raw_line)
+            paths = tuple(map(_path_from_diff_header, match.groups())) if match else ()
+            old_path, new_path = paths if len(paths) == 2 and all(paths) else (None, None)
+            current_path = new_path or "<unknown>"
             old_line = new_line = None
         elif raw_line.startswith("--- "):
             old_path = _path_from_diff_header(raw_line[4:])
