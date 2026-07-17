@@ -122,8 +122,7 @@ def collect_removed_comment_findings(
     """Find removed comments in a unified diff unless each has a local replacement."""
     findings: list[CommentDeletionFinding] = []
     current_path = ""
-    old_path, new_path = None, None
-    old_line, new_line = None, None
+    old_path = new_path = old_line = new_line = None
     removed_comments: list[str] = []
     added_comments: list[str] = []
     source_cache: dict[tuple[bool, str], tuple[set[int], int] | None] = {}
@@ -167,7 +166,8 @@ def collect_removed_comment_findings(
             continue
         if raw_line.startswith("+++ "):
             new_path = _path_from_diff_header(raw_line[4:])
-            current_path = new_path or old_path or current_path
+            fallback = old_path or current_path
+            current_path = "<unknown>" if new_path is None else new_path or fallback
             continue
         if raw_line.startswith("@@"):
             flush()
