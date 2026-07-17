@@ -8,6 +8,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from ai_sdlc.cli.cli_hooks import run_ide_adapter_if_initialized
 from ai_sdlc.core.frontend_delivery_truth import summarize_frontend_delivery_truth_item
 from ai_sdlc.core.frontend_inheritance_truth import (
     summarize_frontend_inheritance_status_for_display,
@@ -1522,6 +1523,7 @@ def program_managed_delivery_apply(
 ) -> None:
     """Preview or execute the narrow managed delivery apply runtime."""
     root = _resolve_root()
+    run_ide_adapter_if_initialized(console=console)
     svc = ProgramService(root)
 
     request_payload = svc.build_frontend_managed_delivery_apply_request(
@@ -2355,6 +2357,7 @@ def program_solution_confirm(
         )
         raise typer.Exit(code=2)
 
+    run_ide_adapter_if_initialized(console=console)
     apply_request = svc.build_frontend_managed_delivery_apply_request(
         second_confirmation_acknowledged=(
             ack_effective_change or not requires_effective_change_ack

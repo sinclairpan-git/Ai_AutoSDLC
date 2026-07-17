@@ -56,6 +56,7 @@ _READ_ONLY_SUBCOMMANDS = (
     "provenance",
     "loop",
     "pr-review",
+    "program",
     "self-update",
 )
 _UPDATE_NOTICE_BYPASS_SUBCOMMANDS = ("loop", "self-update")

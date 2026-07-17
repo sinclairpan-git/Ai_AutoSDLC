@@ -331,3 +331,19 @@ Round 3，新目标只做从零双审。
 - 动态 PASS receipt 落盘后的 final gates 已全绿：constraints no BLOCKER；truth ready/fresh、inventory
   `1091/1091`、unmapped/missing=`0/0`；validate PASS；root exact=`PASS`；diff-check PASS；已知 GAP-12
   Cursor 非目标刷新已精确恢复。下一步更新 PR #140 current HEAD；formal merge 前不恢复 PR #139。
+
+## 23. Batch 2026-07-16-022：formal merge、implementation TDD 与 final-tree freeze
+
+- PR #140 已合并为 `8d325a4d`；detached fresh-main 的 constraints、root exact、validate/truth audit
+  均通过，formal canonical combined 保持 `46b63b1c...c2efb`。
+- Implementation branch 基于该 merge rebase；产品/测试仅由单一 implementation commit 承载，治理
+  receipt 单独提交。TDD 在 110 行测试预算内稳定得到真实宿主 blocker、局部 hook 零调用与异常未传播
+  的 RED，随后以一个既有 hook import、两个局部调用转为 GREEN。
+- Implementation commit=`c4e5f07d`；产品 diff 严格为 `main.py +1`、`program_cmd.py +3`，未修改
+  adapter/ProgramService/第三 handler；测试 diff=`+110/-22`。
+- focused=`238 passed`；Ruff PASS；full=`3224 passed, 3 skipped`；constraints no BLOCKER、validate PASS、
+  truth audit ready/fresh；候选治理命令后 Cursor 与工作树保持 clean。
+- 对 `c4e5f07d` 的 detached `git revert --no-edit` 产生的 tree 与 `8d325a4d` 完全一致；reapply 后 tree
+  与 candidate 完全一致，两个 name-diff 均为 0。
+- 本批次冻结 final-tree 输入；T44 verdict 仅使用外部同 HEAD/tree 双 Agent 回执，评审后不得再修改树。
+  双 PASS 后才可更新 PR #139、重请求 Codex review 与 required checks。

@@ -2,7 +2,7 @@
 
 **功能编号**：`207-program-adapter-side-effect`
 **创建日期**：2026-07-16
-**状态**：PR #139 Codex P2 后 formal 兼容修订门禁
+**状态**：implementation final-tree 双审门禁（PR #139 draft）
 **类型**：WI-196 / GAP-12 基础副作用修复（L2，影响 CC-05）
 **基线**：`origin/main@506e950dee3469248ef7e6b5e1aac664668d18a1`
 
