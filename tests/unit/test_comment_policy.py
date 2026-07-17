@@ -139,7 +139,7 @@ def test_comment_deletion_reason_must_match_path_and_comment(tmp_path: Path) -> 
         (".yaml", "value: >\n  # folded content\n", "value: >\n", 1),
         (".yaml", 'value: "open\n  # malformed\n', 'value: "open\n', 1),
         (".yaml", 'value: "first\n  # inside" # real\n', 'value: "first\n  done"\n', 1),
-        (".yaml", 'value: ["first\n  # inside", "# later"]\n', 'value: ["first\n  done", "# later"]\n', 0),
+        (".yaml", 'value: ["first\n  # inside", " # later\n  tail"]\n', 'value: ["first\n  done", " # later\n  tail"]\n', 0),
         (".yaml", 'value: ["first\n  # inside", "# later"] # real\n', 'value: ["first\n  done", "# later"]\n', 1),
     ],
 )
