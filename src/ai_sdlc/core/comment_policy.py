@@ -141,7 +141,7 @@ def collect_removed_comment_findings(
     def counts_as_comment(text: str, *, old: bool, line: int | None) -> bool:
         if not _is_comment_line(text):
             return False
-        path = (old_path if old else new_path) or current_path
+        path = old_path if old else new_path
         if path is not None and Path(path).suffix.lower() not in {".yaml", ".yml"}:
             return True
         if root is None or not path or line is None or line <= 0:
@@ -159,7 +159,7 @@ def collect_removed_comment_findings(
         if raw_line.startswith("diff --git "):
             flush()
             current_path = raw_line.split()[3].removeprefix("b/")
-            old_path = new_path = None
+            old_path = new_path = current_path
             old_line = new_line = None
             continue
         if raw_line.startswith("--- "):
