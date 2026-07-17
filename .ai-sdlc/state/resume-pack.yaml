@@ -19,20 +19,16 @@ working_set_snapshot:
   - specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
   - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
   - specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
-  - specs/206-model-string-dedupe/task-execution-log.md
-  - specs/206-model-string-dedupe/development-summary.md
   - program-manifest.yaml
-  - tests/integration/test_repo_program_manifest.py
-  - .ai-sdlc/project/config/project-state.yaml
-  - .ai-sdlc/state/checkpoint.yml
   - .ai-sdlc/state/codex-handoff.md
   - .ai-sdlc/work-items/207-program-adapter-side-effect/codex-handoff.md
-  context_summary: 'State: WI207 Round 2 scope findings已闭环，terminal sync/Cursor恢复完成。 |
-    Next: 冻结Round 3六文件hash并从零双审；双PASS后不改formal target进入formal PR，FAIL才重新sync。'
+  context_summary: 'Goal: 合并 WI207 formal PR #140 | State: Round 11 combined 46b63b1c
+    同哈希双 PASS；历史叙事聚焦复审双方 PASS；truth ready/fresh | Next: amend 单一 formal commit并 force-with-lease
+    push PR #140；请求 Codex review并 heartbeat；全绿后 merge与 fresh-main 验证'
 current_branch: feature/207-program-adapter-side-effect-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-16T15:29:40+00:00'
+timestamp: '2026-07-17T00:26:17+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-16T15:29:26+00:00'
 checkpoint_fingerprint: 88014388a14c101bfdd8173448c7e1422926d1cbcdf7af76809abfed8140dc0b

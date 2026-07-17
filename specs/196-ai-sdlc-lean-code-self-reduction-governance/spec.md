@@ -50,7 +50,7 @@
 | GAP-09 | 已关闭 | WI-199 / PR #123 / merge `208a34c8`：framework capability 与 consumer inheritance fail-closed 分离 | T53A 已完成；回退整个 WI-199 会重开本项 | 否 |
 | GAP-10 | 已关闭 | WI-200 / PR #124 / merge `c737eda0`：repository capability 与本机会话 consumption fail-closed 分离 | T53B 已完成；runtime admission 仍独立诊断 | 否 |
 | GAP-11 | 已关闭 | WI-201 / PR #125 / merge `d19c8b7d`：source inventory 收敛为 complete、unmapped=0、missing=0 | T54 已完成；新增 source 继续 fail-closed | 否 |
-| GAP-12 | 开放 | `origin/main@506e950d` 执行 `uv run ai-sdlc program validate` 返回 PASS，但先改写 tracked `.cursor/rules/ai-sdlc.mdc`；program tests 只 patch nested root 时还可能写真实 checkout | T55 / WI-207：整个 program 顶层命令族隔离 implicit adapter hook，并补 test autouse/real-hook byte-stability | 是（验证可靠性） |
+| GAP-12 | 开放 | `origin/main@506e950d` 的只读 program 命令会改写 tracked `.cursor/rules/ai-sdlc.mdc`，但 PR #139 全族 bypass 又使首次 managed delivery 丢失 `materialized → verified_loaded` 迁移；program tests 还存在 root/local hook 隔离边界 | T55 / WI-207：root program 无条件 hook 改为 bypass，仅在两个 managed-delivery 依赖入口局部刷新，并补双轴 real-hook/host-ingress 回归 | 是（验证与兼容可靠性） |
 | GAP-13 | 开放 | detached worktree 执行 `uv run ai-sdlc status` 会把 root/scoped resume-pack 重建为 worktree 绝对路径，并清空 branch、active files、context | T56 / WI-208：冻结 portable/lossless canonical reconstruction source，再修 status/recover/handoff | 是（连续性可靠性） |
 
 每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
@@ -78,12 +78,17 @@
 | CC-02 | 成功、业务阻断和输入错误退出码 | characterization test |
 | CC-03 | artifact 路径、schema 版本、字段、顺序语义和错误文本 | 版本化 normalizer + 结构 diff |
 | CC-04 | checkpoint、work item、loop、review 的合法状态迁移 | 状态矩阵测试 |
-| CC-05 | `--dry-run` 无写入，`--execute/--yes` 授权边界 | 工作区、`.git`、外部路径、子进程和网络副作用观测 |
+| CC-05 | 默认 `--dry-run` 无写入，`--execute/--yes` 保持授权边界；WI-207 唯一窄例外是 `managed-delivery-apply --dry-run` 可执行既有幂等 adapter refresh，仅允许 managed adapter 文件与 project config 的宿主验证 exact delta | 工作区、`.git`、外部路径、子进程和网络副作用观测；WI-207 额外比较 adapter/config bytes 与 ingress state |
 | CC-06 | 配置/环境变量优先级、幂等、重试、恢复和中断续跑 | 环境矩阵 + 重放测试 |
 | CC-07 | Windows、macOS、Linux 与离线发布路径 | 受影响平台 smoke |
 | CC-08 | 代表性兄弟项目共享 CLI 路径 | 有选择理由的项目清单 + smoke |
 
 Golden normalizer 必须版本化，只允许显式列入 allowlist 的时间、绝对临时路径、随机 ID 等非语义字段变化。确定性不等于等价；完成判定必须是旧/新实现零未批准语义差异。
+
+CC-05 描述默认授权合同，不追溯删除已经显式定义的 preflight/materialization 语义。WI-207 必须同时
+冻结两层例外：`managed-delivery-apply` 省略 `--request` 时既有 truth-derived request 物化，以及本项
+新增保留的 adapter/config 宿主验证刷新；direct `--execute` 缺少 `--yes` 时，二者仍可在 guard 前发生，
+但不得执行 mutate action 或写 apply result artifact。任何其他例外必须另立合同，不得类推放宽。
 
 ## 6. 变更合同与 Reduction Contract
 
@@ -138,7 +143,8 @@ WP-03～WP-07 的每个减重候选在编码前冻结以下字段；缺一项不
 GAP-07、GAP-08 的缺陷修复按合同可独立或并行启动，且每个缺陷必须先写能复现原行为的定向 characterization test。两项现已分别由 WI-197、WI-198 关闭，WP-01A 的基础 barrier 已满足；后续候选仍须满足各自 impact analysis 与 sponsor/admission 条件。
 
 GAP-12 与 GAP-13 是 WI-206 fresh-main 验收中暴露的两个不同根因，必须继续使用独立 WI/branch/PR。
-T55 只处理 root CLI dispatch 与 program test isolation；T56 只处理 continuity canonical reconstruction。
+T55 只处理 root program bypass、两个 managed-delivery 入口局部兼容刷新与 program test isolation；
+T56 只处理 continuity canonical reconstruction。
 两项都先红后绿，且不计为减重成果。由于二者会污染治理证据或恢复状态，路线在继续新的 T63/T65/
 WP-06/WP-07 候选前先顺序关闭 T55、T56。
 

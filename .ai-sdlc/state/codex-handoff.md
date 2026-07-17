@@ -1,48 +1,40 @@
 # Continuity Handoff
 
-- Updated: 2026-07-16T15:29:40+00:00
-- Reason: WI207 formal authoring checkpoint
-- Goal: 关闭 GAP-12 program implicit adapter side effect，并保持 GAP-13 为独立 WI208
-- State: WI207 Round 2 scope findings 已闭环，terminal sync与Cursor恢复完成；当前只执行Round 3同哈希复审
+- Updated: 2026-07-17T00:26:17+00:00
+- Reason: 终态真值与双对抗复审完成
+- Goal: 合并 WI207 formal PR #140
+- State: Round 11 combined 46b63b1c 同哈希双 PASS；历史叙事聚焦复审双方 PASS；truth ready/fresh
 - Stage: close
 - Work Item: 207-program-adapter-side-effect
 - Branch: feature/207-program-adapter-side-effect-docs
 
 ## Changed Files
-- M .ai-sdlc/project/config/project-state.yaml
-- M .ai-sdlc/state/checkpoint.yml
 - M .ai-sdlc/state/codex-handoff.md
 - M .ai-sdlc/state/resume-pack.yaml
-- ?? .ai-sdlc/work-items/207-program-adapter-side-effect/codex-handoff.md
+- M .ai-sdlc/work-items/207-program-adapter-side-effect/codex-handoff.md
 - M program-manifest.yaml
 - M specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
 - M specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
 - M specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
 - M specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
 - M specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
-- M specs/206-model-string-dedupe/development-summary.md
-- M specs/206-model-string-dedupe/task-execution-log.md
-- M tests/integration/test_repo_program_manifest.py
-- ?? specs/207-program-adapter-side-effect/
+- M specs/207-program-adapter-side-effect/development-summary.md
+- M specs/207-program-adapter-side-effect/plan.md
+- M specs/207-program-adapter-side-effect/spec.md
+- M specs/207-program-adapter-side-effect/task-execution-log.md
+- M specs/207-program-adapter-side-effect/tasks.md
 
 ## Key Decisions
-- WI207 只改 main.py 一个 bypass member 与 test_cli_program.py 隔离；resume-pack 重建拆到 WI208
+- formal 六文件冻结；T31 仅在 formal merge 后 rebase implementation 才 completed
 
 ## Commands / Tests
-- origin/main 复现：program validate 改 Cursor；verify 不改；status 独立重建 resume-pack
-- program truth sync/validate/audit：ready/fresh、inventory complete、zero blocker
-- verify constraints：no BLOCKERs
-- root exact truth node：1 passed in 78.35s
-- git diff --check：PASS；Cursor rule 已精确恢复 HEAD
-- Round 1：Pascal FAIL、Confucius FAIL；评审期间文件/HEAD/tree/hash不变
-- Round 1 findings 修订后：truth ready/fresh、constraints PASS、root exact truth PASS、Cursor已恢复
-- Round 2：Pascal/Confucius均仅指出父顶层scope残留；已修订，无其他finding
+- truth sync/validate/audit PASS：ready/fresh，1091/1091，unmapped=0，missing=0；formal combined 46b63b1c；Cursor 恢复后 diff-check PASS
 
 ## Blockers / Risks
-- 当前基线 program/workitem 命令会临时刷新 Cursor；handoff/status 可能生成绝对路径，提交前必须精确恢复为 repo-relative
+- PR #140 新 HEAD 的 Codex review 与 required checks 未全绿前不得合并或恢复 PR #139
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 冻结Round 3六文件combined hash并让Pascal/Confucius从零复审；双PASS后不改formal target并进入formal PR，FAIL才修订与重新sync
+- amend 单一 formal commit并 force-with-lease push PR #140；请求 Codex review并 heartbeat；全绿后 merge与 fresh-main 验证

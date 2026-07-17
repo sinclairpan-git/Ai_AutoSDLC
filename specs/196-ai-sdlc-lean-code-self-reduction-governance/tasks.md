@@ -97,7 +97,7 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T53A 关闭 frontend inheritance truth（已完成） | standalone | GAP-09 | L2 | 已满足 | WI-199 / PR #123 / merge `208a34c8` |
 | T53B 关闭 adapter consumption truth（已完成） | standalone | GAP-10 | L2 | 已满足 | WI-200 / PR #124 / merge `c737eda0` |
 | T54 收敛 source inventory（已完成） | standalone | GAP-11 | L2 | 已满足 | WI-201 / PR #125 / merge `d19c8b7d`；0 unmapped / 0 missing |
-| T55 隔离 program implicit adapter side effect（active） | standalone | GAP-12 | L1 | WI-206 fresh-main | WI-207；root bypass + test isolation + real-hook bytes + fresh-main |
+| T55 隔离 program implicit adapter side effect（active） | standalone | GAP-12 | L2 / CC-05 | WI-206 fresh-main | WI-207；root bypass + 两个 managed 局部 hook + root/local test isolation + 双轴回归 + fresh-main |
 | T56 建立 portable/lossless resume reconstruction（queued） | standalone | GAP-13 | L2 | T55 fresh-main + WI-198 impact analysis | WI-208；canonical source + status/recover/handoff relocation/detached tests |
 | T61A 捕获目标切片旧行为 | embedded gate | GAP-02/WP-01A | L1/L2 | T51、T52 + fail-closed impact analysis | 固定环境、allowlist、surface/Golden 基线 |
 | T61B 候选实现 differential 与回退演练 | embedded pre-merge gate | GAP-02/WP-01B | L1～L3 | T61A + candidate hash | 零未批准差异、rollback receipt；未通过不得 merge/close |

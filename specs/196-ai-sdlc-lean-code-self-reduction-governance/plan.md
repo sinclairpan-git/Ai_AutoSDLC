@@ -86,14 +86,18 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 
 ### T55：GAP-12 program implicit adapter side effect
 
-- **当前状态**：WI-207 formal authoring；基线 `origin/main@506e950d` 已复现。
-- **风险/范围**：L1；只处理 root `program` dispatch 与 `test_cli_program.py` 的真实 hook 隔离。
-- **非目标**：不修改 adapter 同步算法、ProgramService/handler、resume-pack 或 verify telemetry。
-- **进入**：real-hook 临时 Cursor fixture 证明 program validate/truth 命令会改 adapter bytes。
-- **验证/完成**：`program` 不再隐式调用 hook；只读命令受保护 bytes 稳定；truth/managed execute 和显式
-  adapter 路径保持；fresh-main clean。
-- **停止/回退**：若需修改第二个产品文件或 execute 语义变化则停止；revert WI-207 独立实现提交。
-- **证据**：WI-207 formal、real-hook RED/GREEN、focused/full、PR/CI/fresh-main。
+- **当前状态**：PR #139 draft；Codex P2 与双 Agent 已确认全族 bypass 的 managed-ingress 回归，formal
+  重新进入设计门禁。
+- **风险/范围**：L2 / CC-05；root `program` bypass + 两个 managed-delivery handler 局部既有 hook +
+  `test_cli_program.py` root/local 隔离与双轴 fixture。
+- **非目标**：不修改 adapter 同步算法、ProgramService、第三个 handler、resume-pack 或 verify telemetry。
+- **进入**：real-hook Cursor fixture 证明只读 program 会改 adapter bytes；real-host fixture 证明 naive
+  bypass 会让 managed delivery 保持 materialized 并出现假 blocker。
+- **验证/完成**：三个只读命令受保护 bytes 稳定；managed 两入口保留 verified_loaded 迁移；其他
+  truth/execute 与显式 adapter 路径保持；fresh-main clean。
+- **停止/回退**：若需修改 `ide_adapter.py`、ProgramService、第三个 handler、引入分类器或超过 4 行产品
+  additions 则停止；revert WI-207 独立实现提交。
+- **证据**：WI-207 formal、原始/naive/candidate 双轴证据、focused/full、PR/CI/fresh-main。
 
 ### T56：GAP-13 portable/lossless resume reconstruction
 
