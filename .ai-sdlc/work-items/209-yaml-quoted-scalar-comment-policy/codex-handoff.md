@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T21:44:28+00:00
-- Reason: WI209 malformed path fail-closed and safe display focused gates passed
-- Goal: Run final WI209 full verification, rollback proof, dual review and PR/fresh-main
-- State: Malformed path RED c31a2b7c and safe-display RED 669e8dfc fixed by 7853a0e0/e952d46b; unit 23, CLI 49, constraints/validate/truth PASS; budgets product129/130 tests200/198 raw/normalized
+- Updated: 2026-07-17T21:56:26+00:00
+- Reason: WI209 final full and rollback proof passed
+- Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
+- State: Final candidate fully green: unit23 CLI49 full3247/3skip constraints/validate/truth/Ruff; budgets raw129/200 normalized130/199; 18-commit rollback/reapply exact
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Explicit invalid path headers override diff fallback with unknown side state; added stays fail-closed and display uses <unknown>; no further scope expansion
+- Freeze final candidate now; no further local scope changes before both reviewers inspect identical identity
 
 ## Commands / Tests
-- unit 23 passed; CLI 49 passed; Ruff PASS; constraints no blockers; validate PASS; truth ready/fresh 1101/1101
+- final full 3247 passed 3 skipped in 558.34s; rollback midpoint 0c865c4335cd86d84124992382730a2e200419db final a1af1d9cd9ac019f2d79cf0fa3c07fe77faaf996
 
 ## Blockers / Risks
-- Final full, rollback replay, new exact identity, dual PASS, PR/Codex/checks/merge/fresh-main pending
+- Dual PASS, PR/Codex/checks/merge/fresh-main pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- commit continuity, run final full pytest, replay all commits, freeze identity, restart dual reviewers
+- commit final handoff, calculate identity, run Pascal/Confucius read-only reviews, then push PR only on dual PASS
