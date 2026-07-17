@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -131,27 +132,36 @@ def test_comment_deletion_reason_must_match_path_and_comment(tmp_path: Path) -> 
 
 
 @pytest.mark.parametrize(
-    ("suffix", "quote"),
-    [(".yaml", "'"), (".yml", '"')],
+    ("suffix", "before", "after", "expected"),
+    [
+        (".yaml", "value: 'first\n  #139 continuation\n  last'\n", "value: 'first\n  last'\n", 0),
+        (".yml", 'value: "first\n  #139 continuation\n  last"\n', 'value: "first\n  last"\n', 0),
+        (".yaml", "value: first\n# real comment\n", "value: first\n", 1),
+        (".yaml", "value: |\n  # literal content\n", "value: |\n", 1),
+        (".yaml", "value: >\n  # folded content\n", "value: >\n", 1),
+        (".yaml", 'value: "open\n  # malformed\n', 'value: "open\n', 1),
+        (".yaml", 'value: "first\n  # inside" # real\n', 'value: "first\n  done"\n', 1),
+        (".yaml", 'value: ["first\n  # inside", "# later"]\n', 'value: ["first\n  done", "# later"]\n', 0),
+        (".yaml", 'value: ["first\n  # inside", "# later"] # real\n', 'value: ["first\n  done", "# later"]\n', 1),
+    ],
 )
 def test_yaml_quoted_scalar_continuation_is_not_comment(
     tmp_path: Path,
     suffix: str,
-    quote: str,
+    before: str,
+    after: str,
+    expected: int,
 ) -> None:
     _init_git_repo(tmp_path)
     source = tmp_path / f"config{suffix}"
-    source.write_text(
-        f"value: {quote}first\n  #139 continuation\n  last{quote}\n",
-        encoding="utf-8",
-    )
+    source.write_text(before, encoding="utf-8")
     subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
     subprocess.run(
         ["git", "commit", "-m", "init"], cwd=tmp_path, check=True, capture_output=True
     )
-    source.write_text(f"value: {quote}first\n  last{quote}\n", encoding="utf-8")
+    source.write_text(after, encoding="utf-8")
 
-    assert collect_comment_deletion_blockers(tmp_path) == []
+    assert len(collect_comment_deletion_blockers(tmp_path)) == expected
 
 
 def test_added_yaml_quoted_content_does_not_replace_removed_comment(
@@ -170,6 +180,79 @@ def test_added_yaml_quoted_content_does_not_replace_removed_comment(
 
     assert len(blockers) == 1
     assert blockers[0].endswith("in config.yaml: # keep operator note")
+
+
+@pytest.mark.parametrize(
+    ("old_path", "new_path", "old_source", "new_source", "expected"),
+    [
+        ("old.py", "new.yaml", "stable = 1\n# real\n", 'value: "x\n # inside"\nstable: 1\n', 1),
+        ("old.yaml", "new.py", "stable: 1\n# real\n", "stable = 1\n# replacement\n", 0),
+    ],
+)
+def test_yaml_mixed_extension_uses_each_side_source(
+    tmp_path: Path,
+    old_path: str,
+    new_path: str,
+    old_source: str,
+    new_source: str,
+    expected: int,
+) -> None:
+    _init_git_repo(tmp_path)
+    old = tmp_path / old_path
+    old.write_text(old_source, encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=tmp_path, check=True, capture_output=True)
+    old.unlink()
+    (tmp_path / new_path).write_text(new_source, encoding="utf-8")
+    diff = f"diff --git a/{old_path} b/{new_path}\n--- a/{old_path}\n+++ b/{new_path}\n@@ -2 +2 @@\n-# real\n+ # inside\n"
+
+    findings = collect_removed_comment_findings(diff_text=diff, root=tmp_path)
+
+    assert len(findings) == expected
+
+
+def test_yaml_quoted_path_and_unsafe_new_source_are_fail_closed(tmp_path: Path) -> None:
+    _init_git_repo(tmp_path)
+    source = tmp_path / "配置 file.yaml"
+    source.write_text('value: "first\n  # inside"\n', encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=tmp_path, check=True, capture_output=True)
+    source.write_text('value: "first\n  done"\n', encoding="utf-8")
+    assert collect_comment_deletion_blockers(tmp_path) == []
+
+    source.write_text("# real\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "real"], cwd=tmp_path, check=True, capture_output=True)
+    source.unlink()
+    target = tmp_path / "target.yaml"
+    target.write_text("# replacement\n", encoding="utf-8")
+    source.symlink_to(target)
+    quoted = r'"a/\351\205\215\347\275\256 file.yaml"'
+    diff = f"diff --git a/x b/x\n--- {quoted}\n+++ {quoted}\n@@ -1 +1 @@\n-# real\n+# replacement\n"
+    assert len(collect_removed_comment_findings(diff_text=diff, root=tmp_path)) == 1
+    traversal = diff.replace(quoted, "b/../target.yaml", 1).replace(quoted, "b/../target.yaml", 1)
+    assert len(collect_removed_comment_findings(diff_text=traversal, root=tmp_path)) == 1
+
+
+def test_yaml_reparse_and_invalid_hunk_are_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _init_git_repo(tmp_path)
+    source = tmp_path / "config.yaml"
+    source.write_text("# real\n", encoding="utf-8")
+    subprocess.run(["git", "add", "."], cwd=tmp_path, check=True, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "init"], cwd=tmp_path, check=True, capture_output=True)
+    source.write_text("# replacement\n", encoding="utf-8")
+    real_lstat = Path.lstat
+
+    def reparse_lstat(path: Path) -> object:
+        info = real_lstat(path)
+        return SimpleNamespace(st_mode=info.st_mode, st_file_attributes=1024) if path == source else info
+
+    monkeypatch.setattr(Path, "lstat", reparse_lstat)
+    diff = "diff --git a/config.yaml b/config.yaml\n--- a/config.yaml\n+++ b/config.yaml\n@@ -1 +1 @@\n-# real\n+# replacement\n"
+    assert len(collect_removed_comment_findings(diff_text=diff, root=tmp_path)) == 1
+    assert len(collect_removed_comment_findings(diff_text=diff.replace("@@ -1 +1 @@", "@@ bad @@"), root=tmp_path)) == 1
 
 
 def _init_git_repo(root: Path) -> None:
