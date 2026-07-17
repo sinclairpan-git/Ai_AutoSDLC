@@ -246,8 +246,8 @@ Implementation final review 绑定精确 HEAD、tree、binary diff、name-status
 
 ## 9. 后续顺序
 
-WI207 合并并 fresh-main 后，立即建立 WI208
-`resume-pack-portable-lossless-reconstruction-sources`，先裁决 canonical reconstruction source，再允许
+WI207 已合并并完成 fresh-main，WI208
+`resume-pack-portable-lossless-reconstruction` 已建立并先裁决 canonical reconstruction source，再允许
 修改 `context/state.py` / `core/handoff.py`。WI208 关闭后建立 WI209，单独修复 YAML quoted scalar 的
 comment preservation false positive；WI209 fresh-main 后才恢复下一个 T63/T65/WP-06/WP-07 原子减重项。
 WI-196 全路线满足 RC-08 前不发布版本。

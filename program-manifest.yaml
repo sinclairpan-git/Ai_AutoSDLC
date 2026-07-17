@@ -2026,12 +2026,15 @@ specs:
 - id: 207-program-adapter-side-effect
   path: specs/207-program-adapter-side-effect
   depends_on: []
+- id: 208-resume-pack-portable-lossless-reconstruction
+  path: specs/208-resume-pack-portable-lossless-reconstruction
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-17T05:27:01Z'
+  generated_at: '2026-07-17T08:15:25Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 8752aa97
-  authoring_hash: ae0b78834b5f6e92e93b1dc029268333b4270b7375af938e0d2919e4ccbc840d
+  repo_revision: 8d8b8f96
+  authoring_hash: 6321933d695c3e1127f90c984aa769346b5f85156259642a5b8a9047882606aa
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 01c3db2eed14ae56d4d4e493386fc2293d4b33c42f54e5a58d115f50127f76ee
@@ -2073,7 +2076,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 65268ff3052f41931b28af8c0e03524d70e937d99f87718abbe3daec6b7dfbfb
+  snapshot_hash: 3b78aaccb6284daf00fe475a31e3de5e1715d097fc3416d14289e423795ad9fb
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2087,31 +2090,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1091
-    mapped_sources: 1091
+    total_sources: 1096
+    mapped_sources: 1096
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3609
-    deferred_signal_count: 6512
-    non_goal_signal_count: 384
+    phase_signal_count: 3622
+    deferred_signal_count: 6528
+    non_goal_signal_count: 389
     layer_totals:
       blueprint: 1
-      spec: 207
-      plan: 207
-      tasks: 207
-      execution: 207
-      close: 207
+      spec: 208
+      plan: 208
+      tasks: 208
+      execution: 208
+      close: 208
       requirements: 2
       defect: 3
       design: 8
       release: 42
     layer_materialized:
       blueprint: 1
-      spec: 207
-      plan: 207
-      tasks: 207
-      execution: 207
-      close: 207
+      spec: 208
+      plan: 208
+      tasks: 208
+      execution: 208
+      close: 208
       requirements: 2
       defect: 3
       design: 8
@@ -11440,6 +11443,51 @@ truth_snapshot:
       mapping_ref: 207-program-adapter-side-effect
       phase_signal_count: 4
       deferred_signal_count: 5
+      non_goal_signal_count: 0
+    - path: specs/208-resume-pack-portable-lossless-reconstruction/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 208-resume-pack-portable-lossless-reconstruction
+      phase_signal_count: 1
+      deferred_signal_count: 1
+      non_goal_signal_count: 1
+    - path: specs/208-resume-pack-portable-lossless-reconstruction/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 208-resume-pack-portable-lossless-reconstruction
+      phase_signal_count: 3
+      deferred_signal_count: 3
+      non_goal_signal_count: 2
+    - path: specs/208-resume-pack-portable-lossless-reconstruction/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 208-resume-pack-portable-lossless-reconstruction
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 1
+    - path: specs/208-resume-pack-portable-lossless-reconstruction/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 208-resume-pack-portable-lossless-reconstruction
+      phase_signal_count: 9
+      deferred_signal_count: 11
+      non_goal_signal_count: 1
+    - path: specs/208-resume-pack-portable-lossless-reconstruction/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 208-resume-pack-portable-lossless-reconstruction
+      phase_signal_count: 0
+      deferred_signal_count: 0
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc

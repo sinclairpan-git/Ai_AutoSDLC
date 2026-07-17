@@ -16,11 +16,10 @@
 - WI-206 / PR #137 / merge `506e950d` 已把18个models顶层string helper收敛为一个private helper，
   product `+37/-246/net -209`；fresh-main full `3220 passed, 3 skipped`，以
   `completed_reduction` 关闭一个 T63 family。
-- WI-207/GAP-12 兼容 formal PR #140 已合入 `8d325a4d`；implementation final HEAD `8bbff9bd` 严格
-  产品 additions=4、测试 `+110/-22`，双 Agent/Codex/22 checks 全绿，PR #139 已合并为 `8752aa97`。
-  首轮 fresh-main 业务断言通过但 full suite 污染 root resume/Cursor；当前独立 test-isolation repair
-  只改 8 个测试文件，产品 diff 为空，GAP-12 仍 active。
-- WI-208/GAP-13 继续独立处理 resume-pack reconstruction；WI-209/GAP-14 随后独立处理 YAML quoted
+- WI-207/GAP-12 已关闭：formal PR #140 合入 `8d325a4d`；implementation PR #139 合入 `8752aa97`；
+  test-isolation repair PR #141 合入 `8d8b8f96`。最终 fresh-main real-hook/focused/full
+  `3224 passed, 3 skipped`、Ruff/format/constraints/validate/truth 全绿，pre/post repository state 相同且 clean。
+- WI-208/GAP-13 已 active，独立处理 resume-pack reconstruction；WI-209/GAP-14 随后独立处理 YAML quoted
   scalar 的 comment-policy false positive。三项 fresh-main 后才恢复新的减重候选。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新

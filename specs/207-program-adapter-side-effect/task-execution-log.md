@@ -383,3 +383,17 @@ Round 3，新目标只做从零双审。
   `365e80a7c0c0dc311dcb3480a16b1349179c9fc2`、index hash=
   `f1b3b0c6dd6e68a783c32c61bdb88b10e753e2fd`，3 份 scoped resume 与 project config 摘要逐项相同，
   未执行 restore。下一步仅刷新终态 handoff/truth 并冻结 exact review target。
+
+## 26. Batch 2026-07-17-025：repair merge、fresh-main 与 GAP-12 关闭
+
+- repair exact target 由 Pascal/lean-directness 与 Confucius/compatibility-safety 对同一 HEAD/tree/diff/
+  formal hash 双 PASS，findings=`none`；产品 diff=0，tests=`+134/-15`、net `+119`。
+- PR #141 current-head Codex 未发现 actionable issue，13 个 required checks 全绿，merge commit=
+  `8d8b8f96725ba6d2ba3257341f930348d7d9b0ac`。
+- fresh detached `origin/main@8d8b8f96` 的 real-hook=`4 passed`、focused=`238 passed`、full=
+  `3224 passed, 3 skipped`；Ruff/format PASS、constraints no BLOCKER、validate PASS、truth ready/fresh、
+  inventory `1091/1091`、unmapped/missing=`0/0`、manifest exact PASS。
+- 显式 clean gate 比较 tracked/canonical adapter/project config/全部 scoped resume；最终与 pre-state 相同，
+  无 restore，worktree clean。因此 SC-007/SC-009/SC-010 满足，GAP-12/T55 关闭。
+- WI208 `resume-pack-portable-lossless-reconstruction` 已在独立 docs branch 初始化；父状态同步为
+  GAP-12=closed、GAP-13=active、GAP-14=queued。不关闭 WI196/GAP-05/RC-08，不发布版本。

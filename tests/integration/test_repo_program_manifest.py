@@ -39,8 +39,8 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
 
     assert validation.valid, validation.errors
     assert inventory is not None
-    assert (inventory.state, inventory.total_sources, inventory.mapped_sources, inventory.unmapped_sources, inventory.missing_sources) == ("complete", 1091, 1091, 0, 0)
-    assert (inventory.layer_totals["close"], inventory.layer_materialized["close"]) == (207, 207)
+    assert (inventory.state, inventory.total_sources, inventory.mapped_sources, inventory.unmapped_sources, inventory.missing_sources) == ("complete", 1096, 1096, 0, 0)
+    assert (inventory.layer_totals["close"], inventory.layer_materialized["close"]) == (208, 208)
     assert release_registry == {(path, "release_doc", "release") for path in release_paths}
     assert not any(warning.startswith("migration_pending: truth source unmapped for ") for warning in validation.warnings)
     assert capability_closure_states == {"frontend-mainline-delivery": "closed", "agent-adapter-verified-host-ingress": "closed"}

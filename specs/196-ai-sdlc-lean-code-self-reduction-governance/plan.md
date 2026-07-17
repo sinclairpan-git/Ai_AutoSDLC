@@ -37,8 +37,8 @@
   └─ T54 source inventory（WI-201 / PR #125，已关闭）
 
 WI-206 fresh-main 新暴露的验证/连续性缺口（先于下一减重候选）
-  └─ T55 GAP-12 program implicit adapter side effect（WI-207）
-       └─ T56 GAP-13 portable/lossless resume reconstruction（WI-208）
+  └─ T55 GAP-12 program implicit adapter side effect（WI-207，已关闭）
+       └─ T56 GAP-13 portable/lossless resume reconstruction（WI-208，active）
             └─ T57 GAP-14 YAML quoted-scalar comment-policy false positive（WI-209）
 ```
 
@@ -87,8 +87,8 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 
 ### T55：GAP-12 program implicit adapter side effect
 
-- **当前状态**：PR #139 已合并为 `8752aa97`；首轮 fresh-main 业务断言全绿但 full suite 污染真实
-  checkout，独立 test-isolation repair active，GAP-12 尚未关闭。
+- **当前状态**：已关闭。PR #139 合并为 `8752aa97`；独立 test-isolation repair PR #141 合并为
+  `8d8b8f96`；fresh-main real-hook/focused/full/Ruff/format/constraints/validate/truth 全绿且 checkout clean。
 - **风险/范围**：L2 / CC-05；root `program` bypass + 两个 managed-delivery handler 局部既有 hook +
   `test_cli_program.py` root/local 隔离与双轴 fixture。
 - **非目标**：不修改 adapter 同步算法、ProgramService、第三个 handler、resume-pack 或 verify telemetry。
@@ -102,17 +102,25 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 
 ### T56：GAP-13 portable/lossless resume reconstruction
 
-- **当前状态**：待 WI-207 fresh-main 后由 WI-208 formal 冻结 canonical source 方案。
+- **当前状态**：active；WI-207 fresh-main 已通过，WI-208 formal 正在冻结 canonical source、迁移与
+  relocation/detached 验收方案。
 - **风险/范围**：L2；只处理 status/recover/handoff 的 resume-pack reconstruction 与 root/scoped 同步。
-- **非目标**：不信任可能陈旧的旧 pack 字段，不修改 root adapter dispatch，不改变 WI-198 checkpoint
-  单一真值原则而不做迁移裁决。
+- **非目标**：不信任可能陈旧的旧 pack 字段，不修改 root adapter dispatch；checkpoint 继续锚定 active
+  WI/fingerprint/docs baseline/execute fallback，active-WI runtime 继续优先提供 stage/batch/task。WI-198 的窄
+  迁移裁决允许 matching canonical handoff 为所有 active WI 补 context、只以 eligible Branch 补 linked
+  branch；active files 只从 working-set 或既有 `STAGE_FILES` 构造，no-linked 始终使用 checkpoint feature
+  branch，仍禁止 `HEAD`/GitError fallback/历史 feature branch/docs 泄漏。
 - **进入**：在不同 absolute worktree/detached HEAD 下复现绝对路径、空 branch/active/context，并完成
   WI-198 合同 impact analysis。
 - **验证/完成**：repo 内部路径 portable；canonical sources 可无损重建；fresh status/handoff 幂等；
-  stale/missing/corrupt 与 Windows 路径矩阵回归通过。
+  stale/missing/corrupt、model-equal/raw-bytes-different、handoff tri-state/sentinel/summary、linked branch
+  eligibility 与 Windows 路径矩阵回归通过。
+- **批准差分**：除 portable/context/eligible branch/active-set/semantic 修复外，byte-only mismatch 只允许
+  首次 canonical serialization、既有 stale/rebuilt event 序列与 rebuild timestamp；模型语义、checkpoint、
+  event 文本不变，第二次 load 无写入/无 event。
 - **停止/回退**：若只能通过信任旧 resume-pack 或推翻 WI-198 fail-closed 语义实现，则回到 design；
   revert WI-208 独立提交。
-- **证据**：unit + status/recover/handoff integration + relocation/detached/atomic-write receipt。
+- **证据**：unit + status/recover/handoff integration + relocation/detached/crash-convergence receipt。
 
 ### T57：GAP-14 YAML quoted-scalar comment-policy false positive
 
@@ -235,9 +243,21 @@ T53A、T53B、T54 已分别使用独立 WI/branch/PR 关闭，不再是待执行
 
 ## 9. 评审、提交与完成
 
-- 当前治理文档的 review target 为 `spec.md + plan.md + tasks.md`。在 worktree 根运行：`base=specs/196-ai-sdlc-lean-code-self-reduction-governance; for f in "$base/spec.md" "$base/plan.md" "$base/tasks.md"; do shasum -a 256 "$f"; done | LC_ALL=C sort | shasum -a 256`；相对路径文本属于哈希输入。
+- Parent-only review target 为父 `spec.md + plan.md + tasks.md`。当前 child authoring 修改父 formal 时，
+  target 唯一扩展为 child 与父各三文件。canonical combined 算法唯一：repo-relative path 按 ordinal
+  升序；每行是 `<lowercase file sha256><two spaces><repo-relative path>\n`；对全部 UTF-8 行再次做 SHA-256。
+  当前 WI208 在 worktree 根使用：
+
+  ```powershell
+  $parent = 'specs/196-ai-sdlc-lean-code-self-reduction-governance'
+  $child = 'specs/208-resume-pack-portable-lossless-reconstruction'
+  $files = @("$parent/spec.md", "$parent/plan.md", "$parent/tasks.md", "$child/spec.md", "$child/plan.md", "$child/tasks.md") | Sort-Object
+  $rows = foreach ($file in $files) { "$((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant())  $file" }
+  $payload = [Text.Encoding]::UTF8.GetBytes(($rows -join "`n") + "`n")
+  [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($payload)).ToLowerInvariant()
+  ```
 - review record 包含 agent、维度、review target hash、时间、findings、处置、verdict；任一目标文件变化使两个 PASS 同时失效。
 - 所有运行时工作包与 WI-196 mainline PR 均遵守 `AGENTS.md` 的 push、PR、Codex review、checks、heartbeat 和 merge 协议；L3 额外要求本地只读 reviewer。
-- 当前子项 authoring 修改父 formal 时，review target 必须同时包含 child 与父 `spec.md + plan.md + tasks.md`；
-  双 Agent 对同一组合哈希 PASS 后才可合并。handoff 应指向当前 active child，不得退回已关闭的
+- 当前子项 authoring 修改父 formal 时，review target 必须按上述唯一算法包含六文件；双 Agent 对同一
+  combined hash PASS 后才可合并。handoff 应指向当前 active child，不得退回已关闭的
   GAP-07/08、旧 WI-202 或已完成 WI-206。
