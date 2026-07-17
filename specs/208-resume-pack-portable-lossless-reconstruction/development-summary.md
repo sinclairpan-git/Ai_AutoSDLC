@@ -1,6 +1,6 @@
 # WI-208 Development Summary
 
-**状态**：Round 6 exact target 双 PASS；immutable final gates 进行中
+**状态**：Round 7 exact target 已冻结；fresh 双审修订中
 **父项**：WI-196 GAP-13/T56
 
 WI208 修复 relocated/detached worktree 中 resume-pack 重建的绝对路径和 continuity 字段丢失。根因已
@@ -25,11 +25,14 @@ Formal Round 5 exact combined
 从零复算 start/end 并双 PASS；两者均未发现 actionable finding，target drift=`NO`。首次 staged
 `git diff --cached --check` 随后发现 untracked child 新文件的 Markdown 行尾空格；修复使 child 三件套
 变化，Round 5 PASS 按合同失效。Round 6 combined
-`aab82d2601bbeb097331865e022b6c2458133bfae62f3afa9c5fc4a1496a18aa` 已重新双审。
+`aab82d2601bbeb097331865e022b6c2458133bfae62f3afa9c5fc4a1496a18aa` 曾由 Pascal/Confucius 双 PASS，
+但 Codex 随后发现 T21～T24 仍保留过期等待/pending 状态；两位本地 reviewer 均确认 finding actionable，
+因此 Round 6 已退役。
 
-Round 6 已由 Pascal/Confucius 分别 start/end 复算 exact combined 并双 PASS、无 actionable finding、
-target drift=`NO`；两者都实证 child 三件套相对 Round 5 仅 8 处 trailing-space 删除、业务合同零变化。
+Round 7 只将上述四个状态行改为 WI207 同型的 latest-execution-log receipt 模式；T25 仍 `pending`、T31
+仍 `blocked by T25`。当前 canonical combined=
+`a91b6d3541e755e604ec7ee376bd0db5b8a037cc5e2c71e94e800ab768860b39`，其余五个 formal 文件未变。
 
-Terminal pre-pass：truth sync/audit=`ready/fresh`、inventory `1096/1096`、unmapped/missing=`0/0`；constraints
-no BLOCKER、program validate PASS、manifest exact `1 passed in 84.91s`。Round 6 双 PASS 后重新 final
-sync/gates。
+Round 7 target 冻结后 terminal pre-pass 已取得 truth sync/audit=`ready/fresh`、inventory `1096/1096`、
+unmapped/missing=`0/0`、constraints no BLOCKER、program validate PASS、manifest exact `1 passed`。本摘要
+对齐后仍须 final truth/gates 与同一 immutable HEAD 双审；最终回执放在 commit/PR 外部证据。
