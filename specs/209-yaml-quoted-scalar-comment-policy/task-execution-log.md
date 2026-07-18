@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation CI repair verification；Round 12 双审与 PR #146 Codex clean 已因 Windows CI 测试夹具 finding 退役，Round 13 重新执行终态门禁
+**状态**：closure adversarial re-review；PR #146/merge `31aad572` 与 fresh-main acceptance 已完成；closure Round 2 matching lifecycle findings 已修订，等待新身份双审与 closure PR delivery
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -330,3 +330,12 @@
   且 T43 在 closure PR 尚未 merge 时提前标为 ready；除此之外均无 finding，verdict 均为 FAIL。
 - 两项 finding 已接受：Next 改为由评审调用绑定当前精确身份，T43 恢复 queued。Round 1 身份退役；
   产品、测试、fresh-main 证据与关闭边界不变，新身份必须重新取得同一身份双 PASS。
+
+## 24. Batch 2026-07-18-024：closure Round 2 双 FAIL 与时间/状态修订
+
+- Closure Round 2 target=`6d7d0b89`、tree=`a272a294`、canonical combined=`7eb8af00`；Round 1 两项
+  finding 已闭合，产品/测试及保护面零差异，focused/truth/manifest/constraints/validate/clean 全绿。
+- Pascal/Confucius 唯一且相同的 P1 为双 handoff 的 Updated/Reason 早于其记录的 Round 1 disposition
+  与新 manifest，以及本日志顶层状态仍停在 Round 13；除此之外均无 finding，verdict 均为 FAIL。
+- 顶层状态已同步为 closure adversarial re-review；truth 更新完成后再刷新双 handoff 时间与原因。
+  Round 2 身份退役，产品/测试、fresh-main 与 GAP-14 关闭证据不变，新身份须从零双审。
