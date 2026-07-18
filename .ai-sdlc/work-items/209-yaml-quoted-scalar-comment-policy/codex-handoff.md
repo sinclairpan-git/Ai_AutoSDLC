@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T00:39:50+00:00
-- Reason: WI209 fourth-fix governance verification complete
+- Updated: 2026-07-18T00:42:01+00:00
+- Reason: WI209 final fourth-fix replay evidence complete
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Fourth adversarial fix fully verified: focused 78; full 3253 passed/3 skipped; constraints/validate PASS; truth ready/fresh 1101/1101 and 209/209; manifest exact PASS; budgets +123/+130 product and +192/+200 tests raw/normalized
+- State: Final fourth-fix candidate verified: focused 78; full 3253 passed/3 skipped; governance/truth/manifest PASS; budgets exact; 40-commit replay tree exact
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Candidate format-check failures in all three approved files are inherited from base; Ruff lint is clean; product max function remains 46 and no helper/API/scope expansion occurred
+- Reject every earlier candidate identity and verdict; only the final continuity commit after this update may enter fresh dual adversarial review
 
 ## Commands / Tests
-- manifest exact 1 passed in 76.33s; product raw/normalized +123/+130; tests +192/+200; truth ready/fresh inventory 1101/1101 layers 209/209
+- 40 commits replayed from formal merge 46156c24 to target 88314ee2; target and replay tree both 4cc43b8bd136ef42fcbd1b67fbf386ab54d143fe
 
 ## Blockers / Risks
-- Independent commit replay, fresh dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
+- Fresh dual adversarial PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Restore unrelated resume/WI208 handoff mutations; mirror root handoff to WI209; commit governance receipt; replay every implementation commit from formal tree and compare final tree
+- Restore unrelated resume/WI208 handoff mutations; mirror and commit final WI209 continuity; replay final continuity commit; freeze identity and request Pascal/Confucius review from zero
