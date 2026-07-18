@@ -24,6 +24,9 @@
 - WI-209/GAP-14 已关闭：formal PR #145/merge `46156c24` 与 implementation PR #146/merge `31aad572`
   已完成；Round 15 双 Agent、Codex current-head、22/22 checks 与 fresh-main focused/full/Ruff/治理/
   clean-state 全绿。该验证可靠性修复不计 RC-08；本 closure PR 合并后恢复下一原子减重候选选择。
+- WI-210 已选定下一原子 T63 formal candidate：current main `4b434864` 上 28 个 exact text-dedupe defs、
+  27 modules、196 product LOC、730 calls；Pascal/Confucius 已统一推荐复用现有 stdlib-only
+  `utils/helpers.py`，不新增模块。当前只冻结合同，不表示实现、减重或关闭完成。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新
   写成可执行合同，旧 verdict 同时失效。
@@ -53,6 +56,7 @@
   `+121/+200`、normalized `+128/+198`，5 private helper、零新产品/测试文件、零公共抽象；Round 15
   candidate/replay 同树且双 Agent PASS，PR #146 的 Codex current-head、22/22 checks 与 fresh-main
   `3275 passed, 3 skipped` 全部通过。回退对应 implementation PR 会重开各自 GAP。
-- 下一步尚未选择新的原子减重项；只允许从 T63/T65/WP-06/WP-07 中按依赖、sponsor 与预期收益选择
-  一个独立 WI，不恢复已 No-Go 且缺少 sponsor 的 T62A，也不把基础缺陷修复计作减重。
+- 下一步由 WI-210 独立 formal branch/PR 冻结 exact text-dedupe family；formal 同一 identity 双 PASS 并
+  合入 main 后，才可从新 main 创建 implementation branch。不得恢复已 No-Go 且缺少 sponsor 的 T62A，
+  也不得把 WI-210 formal 或基础缺陷修复计作已完成减重。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
