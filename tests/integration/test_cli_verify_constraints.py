@@ -204,16 +204,6 @@ def _commit_all(root: Path, message: str) -> None:
     subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
 
 
-def _write_comment_policy_git_fixture(root: Path, *, before: str, after: str) -> None:
-    init_project(root)
-    _write_012_checkpoint(root, stage="init", feature_id="001")
-    _init_git_repo(root)
-    source = root / "config.yaml"
-    source.write_text(before, encoding="utf-8")
-    _commit_all(root, "init")
-    source.write_text(after, encoding="utf-8")
-
-
 def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
     subprocess.run(
         ["git", "checkout", "-b", branch_name],
@@ -232,20 +222,15 @@ def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
     subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
 
 
-def _write_012_checkpoint(
-    root: Path, *, stage: str = "verify", feature_id: str = "012"
-) -> None:
-    spec_dir = "specs/012-frontend-contract-verify-integration"
-    if feature_id != "012":
-        spec_dir = f"specs/{feature_id}-wi"
-    spec = root / spec_dir
-    spec.mkdir(parents=True, exist_ok=True)
+def _write_012_checkpoint(root: Path, stage: str = "verify", spec_dir: str = "") -> None:
+    spec_dir = spec_dir or "specs/012-frontend-contract-verify-integration"
+    (root / spec_dir).mkdir(parents=True, exist_ok=True)
     save_checkpoint(
         root,
         Checkpoint(
             current_stage=stage,
             feature=FeatureInfo(
-                id=feature_id,
+                id=spec_dir.split("/", 1)[1].split("-", 1)[0],
                 spec_dir=spec_dir,
                 design_branch="d",
                 feature_branch="f",
@@ -778,15 +763,19 @@ class TestCliVerifyConstraints:
         quoted = case == "quoted"
         before = "value: 'first\n  #139 continuation\n  last'\n" if quoted else "value: first\n# keep operator note\n"
         after = {"quoted": "value: 'first\n  last'\n", "removed": "value: first\n", "added": 'value: "first\n  #139 continuation"\n'}[case]
-        _write_comment_policy_git_fixture(tmp_path, before=before, after=after)
+        init_project(tmp_path)
+        _write_012_checkpoint(tmp_path, "init", "specs/001-wi")
+        _init_git_repo(tmp_path)
+        (tmp_path / "config.yaml").write_text(before, encoding="utf-8")
+        _commit_all(tmp_path, "init")
+        (tmp_path / "config.yaml").write_text(after, encoding="utf-8")
         monkeypatch.chdir(tmp_path)
 
         result = runner.invoke(app, ["verify", "constraints"])
 
         assert result.exit_code == int(not quoted)
         assert ("original comment removed" in result.output) == (not quoted)
-        if not quoted:
-            assert "in config.yaml: # keep operator note" in result.output
+        assert quoted or "in config.yaml: # keep operator note" in result.output
 
     def test_exit_1_missing_constitution(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

@@ -17,7 +17,6 @@ from ai_sdlc.core.comment_policy import (
     should_avoid_noise_comment,
 )
 
-_MIXED_OLD_PY = "stable = 1\n# real\n"
 _MIXED_NEW_YAML = 'value: "x\n # inside"\nstable: 1\n'
 _SINGLE = "value: 'first\n  #139 continuation\n  last'\n"
 _DOUBLE = 'value: "first\n  #139 continuation\n  last"\n'
@@ -25,6 +24,29 @@ _FLOW = 'value: ["first\n  # inside", " # later\n  tail"]\n'
 _FLOW_COMMENT = 'value: ["first\n  # inside", "# later"] # real\n'
 _REAL_COMMENT = "value: first\n# keep operator note\n"
 _ADDED_QUOTED = 'value: "first\n  #139 continuation"\n'
+_DIFF_CASES = [
+    "diff --git broken\n@@ -1 +1 @@\n-# real\n+value\n",
+    'diff --git a/x.py "unterminated\n@@ -1 +1 @@\n-# first\n+# replacement\n',
+    'diff --git a/x.py "b/x\\x2epy"\n@@ -1 +1 @@\n-# second\n+# replacement\n',
+    "diff --git a/x.py b/x.py\\q\n@@ -1 +1 @@\n-# third\n+# replacement\n",
+    'diff --git a/x.py "b/x.py\\000"\n@@ -1 +1 @@\n-# nul\n+# replacement\n',
+    'diff --git a/x b/x\n--- "bad\n+++ "b/x\\x2epy"\n@@ bad @@\n-# escape\n+# replacement\n',
+    "diff --git a/x.py b/x.py\n--- c/x.py\n+++ d/x.py\n@@ -1 +1 @@\n-# sides\n+# replacement\n",
+    "diff --git a/x.py b/x.py\n--- b/x.py\n+++ a/x.py\n@@ -1 +1 @@\n-# swapped\n+# replacement\n",
+    "diff --git a/../x.py b/../x.py\n@@ -1 +1 @@\n-# traversal\n+# replacement\n",
+    "diff --git a//x.py b//x.py\n@@ -1 +1 @@\n-# absolute\n+# replacement\n",
+    "diff --git c/x.py b/x.py\n@@ -1 +1 @@\n-# wrong old\n+# replacement\n",
+    'diff --git "c/x.py" b/x.py\n@@ -1 +1 @@\n-# quoted wrong old\n+# replacement\n',
+    "diff --git /dev/null b/x.py\n@@ -1 +1 @@\n-# null operand\n+# replacement\n",
+    'diff --git "a/C:x.py" "b/C:x.py"\n@@ -1 +1 @@\n-# drive relative\n+# replacement\n',
+    'diff --git "a/C:\\\\x.py" "b/C:\\\\x.py"\n@@ -1 +1 @@\n-# drive rooted\n+# replacement\n',
+    'diff --git "a/\\\\\\\\server\\\\share\\\\x.py" "b/\\\\\\\\server\\\\share\\\\x.py"\n@@ -1 +1 @@\n-# unc\n+# replacement\n',
+    'diff --git "a/..\\\\x.py" "b/..\\\\x.py"\n@@ -1 +1 @@\n-# backslash traversal\n+# replacement\n',
+    "diff --git a/x.py b/x.py\n--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@ section\n-# one\n+value\n\\ No newline at end of file\n@@ -0,0 +3 @@\n+# added\n",
+    "diff --git a/new.py b/new.py\n--- /dev/null\n+++ b/new.py\n@@ -0,0 +1 @@\n+# created\n",
+    "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-# deleted\n",
+]
+_DIFF_CASE_IDS = "broken unterminated python-x-escape bad-unquoted-escape nul bad-explicit wrong-explicit-sides swapped-explicit-sides posix-traversal empty-component wrong-old quoted-wrong-old null-operand drive-relative drive-rooted unc backslash-traversal multi-hunk create delete".split()  # noqa: SIM905
 
 
 def test_comment_language_uses_current_user_language() -> None:
@@ -143,31 +165,31 @@ def test_comment_deletion_reason_must_match_path_and_comment(tmp_path: Path) -> 
 @pytest.mark.parametrize(
     "case",
     [
-        (".yaml", _SINGLE, "#139 continuation", "done", 0),
-        (".yml", _DOUBLE, "#139 continuation", "done", 0),
-        (".yaml", "value: first\n# real comment\n", "# real comment", "", 1),
-        (".yaml", "value: |\n  # literal content\n", "# literal content", "done", 1),
-        (".yaml", "value: >\n  # folded content\n", "# folded content", "done", 1),
-        (".yaml", 'value: "open\n  # malformed\n', "# malformed", "done", 1),
-        (".yaml", 'value: "first\n  # inside" # real\n', "# real", "", 1),
-        (".yaml", _FLOW, "# inside", "done", 0),
-        (".yaml", _FLOW_COMMENT, "# real", "", 1),
-        (".yaml", _REAL_COMMENT, _REAL_COMMENT.strip(), _ADDED_QUOTED.strip(), 1),
+        ("c.yaml", _SINGLE, "#139 continuation", "done", 0),
+        ("c.yml", _DOUBLE, "#139 continuation", "done", 0),
+        ("c.yaml", "value: first\n# real comment\n", "# real comment", "", 1),
+        ("c.yaml", "value: |\n  # literal content\n", "# literal content", "done", 1),
+        ("c.yaml", "value: >\n  # folded content\n", "# folded content", "done", 1),
+        ("c.yaml", 'value: "open\n  # malformed\n', "# malformed", "done", 1),
+        ("c.yaml", 'value: "first\n  # inside" # real\n', "# real", "", 1),
+        ("c.yaml", _FLOW, "# inside", "done", 0),
+        ("c.yaml", _FLOW_COMMENT, "# real", "", 1),
+        ("c.yaml", _REAL_COMMENT, _REAL_COMMENT.strip(), _ADDED_QUOTED.strip(), 1),
     ],
 )
 def test_yaml_quoted_scalar_continuation_is_not_comment(
     tmp_path: Path,
     case: tuple[str, str, str, str, int],
 ) -> None:
-    suffix, before, old, new, expected = case
+    path, before, old, new, expected = case
     after = before.replace(old, new)
-    assert len(_blockers(tmp_path, before, after, suffix)) == expected
+    assert len(_blockers(tmp_path, before, after, path)) == expected
 
 
 @pytest.mark.parametrize(
     "case",
     [
-        ("old.py", "new.yaml", _MIXED_OLD_PY, _MIXED_NEW_YAML, 1),
+        ("old.py", "new.yaml", "stable = 1\n# real\n", _MIXED_NEW_YAML, 1),
         ("old.yaml", "new.py", "stable: 1\n# real\n", "stable = 1\n# replacement\n", 0),
         ("old.YAML", "new.YML", _MIXED_NEW_YAML, _MIXED_NEW_YAML, 0),
     ],
@@ -189,12 +211,8 @@ def test_yaml_mixed_extension_uses_each_side_source(
 
 
 def test_yaml_quoted_path_and_traversal_are_fail_closed(tmp_path: Path) -> None:
-    _init_git_repo(tmp_path)
     source = tmp_path / "配置 file.yaml"
-    source.write_text('value: "first\n  # inside"\n', encoding="utf-8")
-    _commit_all(tmp_path)
-    source.write_text('value: "first\n  done"\n', encoding="utf-8")
-    assert collect_comment_deletion_blockers(tmp_path) == []
+    assert not _blockers(tmp_path, _DOUBLE, _DOUBLE.replace("#139 continuation", "done"), source.name)
     source.write_text("# real\n", encoding="utf-8")
     _commit_all(tmp_path)
     source.write_text("# replacement\n", encoding="utf-8")
@@ -208,12 +226,11 @@ def test_yaml_quoted_path_and_traversal_are_fail_closed(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "case",
     [
-        ("config.yaml", stat.S_IFLNK, 0),
-        ("dir", stat.S_IFLNK, 0),
-        ("config.yaml", stat.S_IFIFO, 0),
-        ("config.yaml", stat.S_IFREG, 1024),
+        ("d/c.yml", stat.S_IFLNK, 0),
+        ("d", stat.S_IFLNK, 0),
+        ("d/c.yml", stat.S_IFIFO, 0),
+        ("d/c.yml", stat.S_IFREG, 1024),
     ],
-    ids=["final-symlink", "parent-symlink", "special-file", "reparse"],
 )
 def test_yaml_unsafe_new_source_is_fail_closed(
     tmp_path: Path,
@@ -221,13 +238,7 @@ def test_yaml_unsafe_new_source_is_fail_closed(
     case: tuple[str, int, int],
 ) -> None:
     unsafe_part, unsafe_mode, file_attributes = case
-    _init_git_repo(tmp_path)
-    source = tmp_path / "dir" / "config.yaml"
-    source.parent.mkdir()
-    source.write_text("# real\n", encoding="utf-8")
-    _commit_all(tmp_path)
-    source.write_text("# replacement\n", encoding="utf-8")
-    target = source.parent if unsafe_part == "dir" else source
+    target = tmp_path / unsafe_part
     real_lstat = Path.lstat
 
     def unsafe_lstat(path: Path) -> object:
@@ -237,22 +248,17 @@ def test_yaml_unsafe_new_source_is_fail_closed(
         return SimpleNamespace(st_mode=unsafe_mode, st_file_attributes=file_attributes)
 
     monkeypatch.setattr(Path, "lstat", unsafe_lstat)
-    diff = "diff --git a/dir/config.yaml b/dir/config.yaml\n--- a/dir/config.yaml\n+++ b/dir/config.yaml\n@@ -1 +1 @@\n-# real\n+# replacement\n"
-    assert len(collect_removed_comment_findings(diff_text=diff, root=tmp_path)) == 1
+    assert len(_blockers(tmp_path, "# real\n", "# replacement\n", "d/c.yml")) == 1
 
 
-def test_diff_multi_hunk_zero_count_suffix_no_newline_create_delete_and_invalid_headers() -> None:
-    diffs = [
-        "diff --git broken\n@@ -1 +1 @@\n-# real\n+value\n",
-        'diff --git a/x.py "unterminated\n@@ -1 +1 @@\n-# first\n+# replacement\ndiff --git a/x.py "b/x\\x2epy"\n@@ -1 +1 @@\n-# second\n+# replacement\ndiff --git a/x.py b/x.py\\q\n@@ -1 +1 @@\n-# third\n+# replacement\ndiff --git a/x.py "b/x.py\\000"\n@@ -1 +1 @@\n-# nul\n+# replacement\n',
-        'diff --git a/x b/x\n--- "bad\n+++ "b/x\\x2epy"\n@@ bad @@\n-# escape\n+# replacement\ndiff --git a/x.py b/x.py\n--- c/x.py\n+++ d/x.py\n@@ -1 +1 @@\n-# sides\n+# replacement\ndiff --git a/x.py b/x.py\n--- b/x.py\n+++ a/x.py\n@@ -1 +1 @@\n-# swapped\n+# replacement\ndiff --git a/../x.py b/../x.py\n@@ -1 +1 @@\n-# traversal\n+# replacement\ndiff --git a//x.py b//x.py\n@@ -1 +1 @@\n-# absolute\n+# replacement\ndiff --git c/x.py b/x.py\n@@ -1 +1 @@\n-# wrong old\n+# replacement\ndiff --git "c/x.py" b/x.py\n@@ -1 +1 @@\n-# quoted wrong old\n+# replacement\ndiff --git /dev/null b/x.py\n@@ -1 +1 @@\n-# null operand\n+# replacement\ndiff --git "a/C:x.py" "b/C:x.py"\n@@ -1 +1 @@\n-# drive relative\n+# replacement\ndiff --git "a/C:\\\\x.py" "b/C:\\\\x.py"\n@@ -1 +1 @@\n-# drive rooted\n+# replacement\ndiff --git "a/\\\\\\\\server\\\\share\\\\x.py" "b/\\\\\\\\server\\\\share\\\\x.py"\n@@ -1 +1 @@\n-# unc\n+# replacement\ndiff --git "a/..\\\\x.py" "b/..\\\\x.py"\n@@ -1 +1 @@\n-# backslash traversal\n+# replacement\n',
-        "diff --git a/x.py b/x.py\n--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@ section\n-# one\n+value\n\\ No newline at end of file\n@@ -0,0 +3 @@\n+# added\n",
-        "diff --git a/new.py b/new.py\n--- /dev/null\n+++ b/new.py\n@@ -0,0 +1 @@\n+# created\n",
-        "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-# deleted\n",
-    ]
-    findings = [collect_removed_comment_findings(diff_text=diff) for diff in diffs]
-    assert [len(result) for result in findings] == [1, 4, 12, 1, 0, 1]
-    assert all(item.path == "<unknown>" for result in findings[1:3] for item in result)
+@pytest.mark.parametrize("diff", _DIFF_CASES, ids=_DIFF_CASE_IDS)
+def test_diff_boundaries_are_isolated(diff: str) -> None:
+    findings = collect_removed_comment_findings(diff_text=diff)
+    actual = [(finding.path, finding.removed_comment) for finding in findings]
+    lines = diff.splitlines()
+    removed = next((line[1:] for line in lines if line.startswith("-#")), "")
+    path = {"# one": "x.py", "# deleted": "old.py"}.get(removed, "<unknown>")
+    assert actual == ([] if not removed else [(path, removed)])
 
 
 def test_yaml_missing_source_and_scanner_error_are_fail_closed(
@@ -264,10 +270,12 @@ def test_yaml_missing_source_and_scanner_error_are_fail_closed(
     _commit_all(tmp_path)
     source.unlink()
     diff = "diff --git a/config.yaml b/config.yaml\n--- a/config.yaml\n+++ b/config.yaml\n@@ -1 +1 @@\n-# real\n+# replacement\n"
-    assert len(collect_removed_comment_findings(diff_text=diff, root=tmp_path)) == 1
+    findings = collect_removed_comment_findings(diff_text=diff, root=tmp_path)
+    assert len(findings) == 1
     source.write_text("# replacement\n", encoding="utf-8")
     monkeypatch.setattr(comment_policy, "scan", lambda _: 1 / 0)
-    assert len(collect_removed_comment_findings(diff_text=diff, root=tmp_path)) == 1
+    findings = collect_removed_comment_findings(diff_text=diff, root=tmp_path)
+    assert len(findings) == 1
 
 
 def _commit_all(root: Path) -> None:
@@ -276,9 +284,10 @@ def _commit_all(root: Path) -> None:
     subprocess.run(["git", "commit", "-m", "test"], **options)
 
 
-def _blockers(root: Path, old: str, new: str, suffix: str = ".yaml") -> list[str]:
+def _blockers(root: Path, old: str, new: str, path: str = "config.yaml") -> list[str]:
     _init_git_repo(root)
-    source = root / f"config{suffix}"
+    source = root / path
+    source.parent.mkdir(parents=True, exist_ok=True)
     source.write_text(old, encoding="utf-8")
     _commit_all(root)
     source.write_text(new, encoding="utf-8")
