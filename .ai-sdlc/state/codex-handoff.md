@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T08:08:33+00:00
-- Reason: WI209 Round 13 committed replay freeze
-- Goal: Deliver WI209 without product regression, cross-platform fixture failure, or raw/normalized budget overrun
-- State: Candidate 18aaacef and replay 465aecf3 share tree 821c108e; product unchanged in Round 13; all local tests, budgets, terminal truth and manifest gates pass; renewed dual review is next
+- Updated: 2026-07-18T08:32:13+00:00
+- Reason: WI209 Round 14 canonical lifecycle reconciliation target
+- Goal: Deliver WI209 without product regression, cross-platform fixture failure, budget overrun, or stale lifecycle truth
+- State: Round 14 canonical target records final truth/manifest/replay complete; product and test blobs are unchanged from the fully verified Round 13 tree; prior dual FAIL is disposed; only renewed same-identity dual review and current-head PR delivery remain
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -27,16 +27,16 @@
 - tests/unit/test_comment_policy.py
 
 ## Key Decisions
-- Keep Windows-legal real-Git coverage plus direct mixed decoder coverage; normalized product/tests remain +128/+198 with no new public abstraction
+- Do not self-embed the review target commit/tree in canonical content; bind exact candidate/replay identity in the review invocation after the continuity commit is replayed
 
 ## Commands / Tests
-- candidate 18aaacef replay 465aecf3 tree 821c108ef14432dc3fb53ff2e8a65eb1b448c3c8 binary 38fbe40cdddf1b0c3b3ca9bb55e201e238b4098c61aa0c9ee216b9b611acd876; 84 commits 0 merges 16 files; full 3275 passed 3 skipped; truth ready/fresh; manifest exact pass
+- Round 14 truth snapshot 559d8a137456cb3697f2896c42ac1a912ffb3d7a854089fc6ad2df32e47249cd ready/fresh 1101/1101 209/209 missing/unmapped 0; manifest exact 1 passed in 103.22s; product/test blobs unchanged; focused 100 and full 3275 passed 3 skipped; raw +121/+200 normalized +128/+198
 
 ## Blockers / Risks
-- Round 12 and all earlier Round 13 identities are retired; Pascal and Confucius must independently PASS the final post-handoff identity before push; current-head Codex/checks/merge/fresh-main remain
+- Round 13 first post-handoff identity received matching Pascal/Confucius P1 lifecycle FAIL and is retired; the current target must independently PASS both dimensions before push; current-head Codex/checks/merge/fresh-main remain
 
 ## Local PR Review
-- Round 12 Pascal/Confucius PASS and Codex clean retired by the Round 13 test change; renewed verdicts required
+- Round 13 Pascal/Confucius matching P1 lifecycle FAIL accepted and fixed; renewed verdicts required
 
 ## Exact Next Steps
-- Request Pascal and Confucius review of the same final commit/tree/diff identity; only dual PASS permits push
+- Bind the exact current candidate/replay commit, tree and diff hashes in both review requests; only same-identity Pascal and Confucius PASS permits push, Codex review, checks, merge and fresh-main acceptance

@@ -83,8 +83,11 @@
   parent plan/child summary lifecycle 漂移 FAIL，身份与全部 verdict 退役。
 - **Round 12**：canonical lifecycle 修订后，同一冻结身份 Pascal/Confucius 双 PASS；PR #146 Codex 对
   `2662309e80` 无 major issue。后续 Windows CI finding 与测试变更使身份和全部 verdict 退役。
-- **Round 13**：产品实现不变；跨平台测试与 normalized 预算修复、当前测试树 T31 full 已完成，等待
-  final truth freeze/replay 和同一新身份双审。
+- **Round 13**：产品实现不变；跨平台测试与 normalized 预算修复、T31、final truth/manifest/replay
+  已完成；首个 post-handoff identity 因 canonical lifecycle receipt 仍称 freeze/replay 待执行而被
+  Pascal/Confucius 双 FAIL，该身份退役。
+- **Round 14**：只同步 canonical lifecycle、terminal/replay receipt 与 handoff；产品/测试 blob 不变。
+  当前仅等待同一新身份双审，实际 HEAD/tree 由评审调用绑定；双 PASS 前不得 push。
 
 ## Batch 4：交付与关闭
 

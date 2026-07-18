@@ -285,3 +285,16 @@
 - source inventory=`1101/1101`、layers=`209/209`、missing/unmapped=`0/0`；manifest exact
   `1 passed in 105.89s`。本 receipt 写回会按设计使 snapshot stale，下一步只执行 final sync/audit/
   manifest freeze、commit/replay 与同一身份双审，不重复产品修改。
+
+## 20. Batch 2026-07-18-020：Round 13 final freeze 与 Round 14 lifecycle 修订
+
+- receipt 后 final truth snapshot=`7cadbc689c94fcb3e2c71cb3933275ac0d42ec0a55d99b31b27caf41e74c3df3`；
+  target audit=`ready/fresh`，inventory/layers=`1101/1101`、`209/209`、missing/unmapped=`0/0`，manifest
+  exact `1 passed in 101.33s`。candidate=`9f460a0d`、replay=`8cb54228`，tree 均为 `553434f5`，root/scoped
+  handoff blob 相同、两端 clean；85 commits、0 merge、16 files。
+- Pascal/Confucius 均确认 Round 13 产品不变，Windows 合法真实 Git fixture、mixed decoder、预算、
+  formatter、focused/full 与 fail-closed/no-follow 证据无可操作问题；共同 P1 是 canonical spec/plan/tasks/
+  summary/log/handoff 仍把已完成 final truth/replay 写成待执行或中间 identity，verdict 均为 FAIL。
+- Round 14 仅同步 lifecycle、terminal/replay receipt 与 continuity；产品/测试 blob 不变。最终 review
+  target 的精确 HEAD/tree 由评审调用绑定，不在 canonical 内容中自引用；当前只剩同一身份双审、
+  current-head Codex/checks、merge 与 fresh-main。
