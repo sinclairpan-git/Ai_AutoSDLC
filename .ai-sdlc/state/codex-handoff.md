@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T01:21:54+00:00
-- Reason: WI209 fifth-review governance verification complete
+- Updated: 2026-07-18T01:23:25+00:00
+- Reason: WI209 final fifth-review candidate closure
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Fifth-review candidate fully verified: focused 97; full 3272 passed/3 skipped; constraints/validate/Ruff PASS; truth ready/fresh 1101/1101 and 209/209; manifest exact PASS; budgets product +123/+130 tests +190/+200
+- State: Final fifth-review candidate fully verified and independently replayable: focused 97; full 3272 passed/3 skipped; governance/truth/manifest PASS; budgets exact; mirrored continuity ready for review
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- All 20 diff boundary cases have named pytest IDs and exact per-case path/comment assertions; whole-file format-check remains inherited in the same three base files
+- Only the final clean HEAD/tree identity may be reviewed; prior verdicts and identities are invalid; no further code, test, governance, or continuity edits are allowed during review
 
 ## Commands / Tests
-- manifest exact 1 passed in 76.47s; full 3272 passed/3 skipped in 561.81s; max product function 46; budgets remain within frozen limits
+- Independent replay from formal merge reproduces the candidate tree exactly; final continuity commit is appended to the replay before review identity is issued
 
 ## Blockers / Risks
-- Independent final replay, fresh dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
+- Fresh dual adversarial PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Restore unrelated resume/WI208 handoff mutations and mirror WI209; commit governance receipt; append new commits to independent replay and compare tree; freeze final identity; request both reviews from zero
+- Pascal and Confucius review the same frozen identity from zero; only dual PASS permits push and PR creation, followed by current-head Codex review, required checks, merge and fresh-main acceptance
