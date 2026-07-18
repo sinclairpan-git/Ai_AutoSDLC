@@ -38,15 +38,17 @@ _DIFF_CASES = [
     "diff --git c/x.py b/x.py\n@@ -1 +1 @@\n-# wrong old\n+# replacement\n",
     'diff --git "c/x.py" b/x.py\n@@ -1 +1 @@\n-# quoted wrong old\n+# replacement\n',
     "diff --git /dev/null b/x.py\n@@ -1 +1 @@\n-# null operand\n+# replacement\n",
+    "diff --git a/x.py /dev/null\n@@ -1 +1 @@\n-# null new\n+# replacement\n",
     'diff --git "a/C:x.py" "b/C:x.py"\n@@ -1 +1 @@\n-# drive relative\n+# replacement\n',
     'diff --git "a/C:\\\\x.py" "b/C:\\\\x.py"\n@@ -1 +1 @@\n-# drive rooted\n+# replacement\n',
     'diff --git "a/\\\\\\\\server\\\\share\\\\x.py" "b/\\\\\\\\server\\\\share\\\\x.py"\n@@ -1 +1 @@\n-# unc\n+# replacement\n',
     'diff --git "a/..\\\\x.py" "b/..\\\\x.py"\n@@ -1 +1 @@\n-# backslash traversal\n+# replacement\n',
     "diff --git a/x.py b/x.py\n--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@ section\n-# one\n+value\n\\ No newline at end of file\n@@ -0,0 +3 @@\n+# added\n",
     "diff --git a/new.py b/new.py\n--- /dev/null\n+++ b/new.py\n@@ -0,0 +1 @@\n+# created\n",
+    "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +1 @@\n-# deleted\n+# replacement\n",
     "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-# deleted\n",
 ]
-_DIFF_CASE_IDS = "broken unterminated python-x-escape bad-unquoted-escape nul bad-explicit wrong-explicit-sides swapped-explicit-sides posix-traversal empty-component wrong-old quoted-wrong-old null-operand drive-relative drive-rooted unc backslash-traversal multi-hunk create delete".split()  # noqa: SIM905
+_DIFF_CASE_IDS = "broken unterminated python-x-escape bad-unquoted-escape nul bad-explicit wrong-explicit-sides swapped-explicit-sides posix-traversal empty-component wrong-old quoted-wrong-old null-operand null-new-operand drive-relative drive-rooted unc backslash-traversal multi-hunk create malformed-delete-added delete".split()  # noqa: SIM905
 
 
 def test_comment_language_uses_current_user_language() -> None:

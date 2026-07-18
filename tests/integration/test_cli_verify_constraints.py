@@ -222,16 +222,16 @@ def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
     subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
 
 
-def _write_012_checkpoint(root: Path, stage: str = "verify", spec_dir: str = "") -> None:
-    spec_dir = spec_dir or "specs/012-frontend-contract-verify-integration"
-    (root / spec_dir).mkdir(parents=True, exist_ok=True)
+def _write_012_checkpoint(root: Path, stage: str = "verify", spec: str = "") -> None:
+    spec = spec or "specs/012-frontend-contract-verify-integration"
+    (root / spec).mkdir(parents=True, exist_ok=True)
     save_checkpoint(
         root,
         Checkpoint(
             current_stage=stage,
             feature=FeatureInfo(
-                id=spec_dir.split("/", 1)[1].split("-", 1)[0],
-                spec_dir=spec_dir,
+                id=spec.split("/", 1)[1].split("-", 1)[0],
+                spec_dir=spec,
                 design_branch="d",
                 feature_branch="f",
                 current_branch="main",
