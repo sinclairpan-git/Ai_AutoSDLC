@@ -102,13 +102,13 @@ def test_mapping_item_dedupe_uses_one_shared_binding() -> None:
 以下27 non-empty LOC 的 `wi211-t61-corpus-v1` 是唯一 executable harness。10 个 baseline body 的 AST
 完全相同、candidate 10 个 alias identity 相同，因此只对每个 unique implementation 执行一次4-case corpus；
 模块级覆盖由103/104 direct、1162/1163 impact 与72 imports承担。每个 case 调用 `_case` 新建对象，每条
-observation 规范化为 compact、sorted-key、UTF-8 JSONL。baseline/candidate/revert/reapply 先做同环境字节
+observation 规范化为 compact、sorted-key、UTF-8 JSONL；return outcome 另存每个结果 dict 的 key 顺序，
+避免外层 `sort_keys=True` 掩盖 first-wins/key-order 回归。baseline/candidate/revert/reapply 先做同环境字节
 比较再比较 SHA-256；JSONL 只存 disposable evidence，最终 receipt 登记其 hash/计数/环境，不复制 cases。
 
 <!-- wi211-t61-corpus-v1:start -->
 ```python
 import importlib, json, unittest.mock
-CASES = ("falsy", "events_filter_first", "json_error", "subclass_shallow")
 def _values(truth, items, events):
     values = unittest.mock.MagicMock()
     values.__bool__.side_effect = lambda: events.append(f"bool:{truth}") or truth
@@ -124,7 +124,8 @@ def _observe(binding, name):
     }
     values = cases[name]()
     try:
-        outcome = {"kind": "return", "value": binding(values)}
+        result = binding(values)
+        outcome = {"kind": "return", "keys": [list(item) for item in result], "value": result}
     except Exception as exc:
         outcome = {"kind": "raise", "type": type(exc).__name__, "message": str(exc)}
     if name == "subclass_shallow":
@@ -132,13 +133,13 @@ def _observe(binding, name):
         outcome["probe"] = [type(item) is dict, item is not values[0], item["nested"] is nested]
     return {"case": name, "events": events, "outcome": outcome}
 binding = importlib.import_module("ai_sdlc.core.frontend_contract_observation_provider")._dedupe_mapping_items
-rows = [_observe(binding, name) for name in CASES]
+rows = [_observe(binding, name) for name in ("falsy", "events_filter_first", "json_error", "subclass_shallow")]
 print("".join(json.dumps(row, separators=(",", ":"), sort_keys=True) + "\n" for row in rows), end="")
 ```
 <!-- wi211-t61-corpus-v1:end -->
 
 - 当前 Python 3.11 formal baseline/candidate 必须各输出4 observations、digest=
-  `106b6f5e088e79cfa6c21dfffd43ed29b8d9019f19b51369ecc122de0aef5b3f`；其他运行时不复用该摘要，
+  `8c6d3e21ef597673c767e39a3919864242daed6014d13b1400a95eafabdb54e0`；其他运行时不复用该摘要，
   只要求 candidate/revert/reapply 与同解释器 baseline JSONL 逐字节相等；
 - 跑 103 direct tests 与 23-file/1162-test 影响切片 baseline；
 - 对 `rg -l 'from ai_sdlc\.utils\.helpers import' src/ai_sdlc` 得到的 72 模块逐个 cold import，要求
@@ -189,7 +190,7 @@ from ai_sdlc.utils.helpers import _dedupe_mapping_items as _dedupe_mapping_items
 ## 5. Phase 3：T61B、回退与验证
 
 1. 在 `implementation_tree` 上逐字执行 §3.3 recipe；当前 Python 3.11 期望4 observations、digest=
-   `106b6f5e088e79cfa6c21dfffd43ed29b8d9019f19b51369ecc122de0aef5b3f`，且 JSONL 与 baseline 字节相等。
+   `8c6d3e21ef597673c767e39a3919864242daed6014d13b1400a95eafabdb54e0`，且 JSONL 与 baseline 字节相等。
 2. 重跑 104 direct、23-file/1163 impact、72 cold imports、full pytest、Ruff、constraints、validate、truth。
 3. 在 disposable clone checkout `implementation_commit` 后 revert 它：tree OID=baseline；重跑结构、4-case diff、
    103 direct、1162 impact、72 imports。
@@ -216,7 +217,7 @@ from ai_sdlc.utils.helpers import _dedupe_mapping_items as _dedupe_mapping_items
 | 路径 | 必须证明 | 命令/证据 |
 |---|---|---|
 | identity RED/GREEN | 10 distinct→1 shared；module=`utils.helpers` | exact unit nodeid |
-| mapping 语义 | unique implementation 的 truthiness/事件+过滤/首次+key/Unicode、JSON异常、浅复制 | 4-case JSONL differential |
+| mapping 语义 | unique implementation 的 truthiness/事件+过滤/首次+显式key-order probe/Unicode、JSON异常、浅复制 | 4-case JSONL differential |
 | 直接行为 | 10 target test files 场景不减 | baseline/revert 103；candidate/reapply 104 |
 | 影响行为 | observation/verification/artifact/CLI/Program | 固定23 files；baseline/revert 1162；candidate/reapply 1163 |
 | 共享叶子 import | 全部 72 importer 无失败/输出 | cold-import receipt |

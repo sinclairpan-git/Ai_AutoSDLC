@@ -84,7 +84,8 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **依赖**：T11。
 - **完成**：10/10/120/23、Python 3.11 固定 digest + Python 3.12 同解释器 AST equality、0 private consumer、
   72 importers、`plan.md` §3.3 唯一27 non-empty LOC executable 4-case corpus。
-- **验证**：当前 Python 3.11 baseline 为4 observations、digest=`106b6f5e08...5b3f`；103 direct、1162
+- **验证**：当前 Python 3.11 baseline 为4 observations、digest=`8c6d3e21ef...54e0`；return outcome显式保存
+  每个结果dict的key顺序；103 direct、1162
   impact、72 cold imports；full baseline 只在 exact implementation base 跑一次。
 
 ### T13 Identity TDD RED
@@ -110,7 +111,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **状态**：pending。
 - **依赖**：T14。
 - **验收**：implementation 4-case JSONL 与同环境 baseline 字节完全一致；Python 3.11 digest=
-  `106b6f5e08...5b3f`；104 direct、
+  `8c6d3e21ef...54e0`；104 direct、
   1163 impact、72 imports 全绿。
 
 ### T22 Rollback/reapply rehearsal

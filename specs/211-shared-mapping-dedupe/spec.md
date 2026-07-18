@@ -129,8 +129,9 @@ payload 均以 UTF-8 做 SHA-256；不得把行号、文件位置或格式化空
 - `plan.md` §3.3 的27 non-empty LOC `wi211-t61-corpus-v1` 是唯一 canonical factory、事件与 JSONL
   normalizer；只对每个 unique implementation 执行 `falsy`、`events_filter_first`、`json_error`、
   `subclass_shallow` 四类 fresh case，其中第二类组合验证事件、非 dict 过滤、首次保留、key order 与 Unicode；
+  return outcome 必须显式记录每个结果 dict 的 key 顺序，不得只依赖外层 sorted-key JSON；
 - 当前 Python 3.11 formal baseline/candidate 均为4 observations、digest=
-  `106b6f5e088e79cfa6c21dfffd43ed29b8d9019f19b51369ecc122de0aef5b3f`；跨 Python/OS 不固定摘要，只要求
+  `8c6d3e21ef597673c767e39a3919864242daed6014d13b1400a95eafabdb54e0`；跨 Python/OS 不固定摘要，只要求
   同解释器 baseline/candidate/revert/reapply JSONL 字节完全一致；历史 14×10 spike digest 不再承担 admission；
 - 10 个 direct test files 精确为 103 tests；23 个影响测试文件在 candidate spike 为 1162 tests；
 - 72 个现有 `utils.helpers` importer 必须全部 cold import，failure=0、stdout/stderr=0；

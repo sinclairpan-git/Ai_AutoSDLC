@@ -143,6 +143,22 @@
   digest=`106b6f5e...5b3f`；diff-check、inline-backtick、YAML、constraints、program validate、placeholder 与
   protected-path 扫描全部 PASS。下一步是 terminal truth sync/manifest 与新 identity，不预写 reviewer 结论。
 
+## Batch 2026-07-18-009：第四轮安全变异 finding 与 key-order 修订
+
+- 第四轮 clean identity=`64b8fc3501bd56413b0985b0dd7a42386c2135aa`、tree=`a9a3a04743ea...77f6`、
+  formal-six=`b41c9b8ca2...c68e`。首次 review prompt 因 root 错把 hash row 而非 path 排序而被双方立即 FAIL；
+  按父 plan §9 用 shell/Python 独立复算更正后，对同一未变 checkout 从零复审。
+- Pascal=`LEAN PASS`、findings=none；Confucius=`SAFETY FAIL`、findings=1，因此本 identity 整体 FAIL，
+  Pascal PASS 同时失效。finding：外层 JSONL `sort_keys=True` 会抹平返回 dict 的 key 顺序，last-wins
+  mutation 仍得到旧 digest，无法证明首次保留/key-order。
+- disposition：不增加 case 或保护 LOC；现有 return observation 同时记录结果与每个结果 dict 的 keys。
+  第一次尝试的 comprehension iterable assignment expression 被 Python 语法拒绝且未保留；最终用可读的
+  `result`/`outcome` 两行，并在唯一 rows 调用处内联四个名称，harness 仍为27 non-empty/max line 116。
+- 修订后 Python 3.11 formal baseline/spike candidate 均为4行、digest=
+  `8c6d3e21ef597673c767e39a3919864242daed6014d13b1400a95eafabdb54e0`；定向 last-wins mutation 为
+  `636f787f84ef12bbe9ffacae0a4eeeed233289df8f4a1a0f3f7269426afdce62`，`events_filter_first` 的 keys
+  从 `["b","a"]` 变为 `["a","b"]`，门禁现在可观测该回归。
+
 ## 不随执行批次过期的门禁顺序
 
 1. formal source 或证据变化后，先做 truth sync/audit、manifest exact 与本地门禁，再提交 clean identity；
