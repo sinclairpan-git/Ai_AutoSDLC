@@ -2,7 +2,7 @@
 
 **功能编号**：`210-shared-text-dedupe`
 **创建日期**：2026-07-18
-**当前状态**：Batch 0 formal 编制；产品实现未授权
+**当前状态**：Batch 0 formal pre-review gates PASS；等待 exact-identity 双对抗评审；产品实现未授权
 
 ## Batch 2026-07-18-001：下一原子候选选择
 
@@ -53,14 +53,13 @@
 
 ### 待完成
 
-1. 运行 formal 门禁并冻结 exact identity；
+1. 冻结 terminal exact identity；
 2. Pascal/Confucius 对同一 identity 评审至双 PASS；
-3. 为冻结可复算 identity，允许仅在本地形成 formal commit；双 PASS 前不得 push/创建 PR，也不得进入
-   产品实现。
+3. 双 PASS 前不得 push/创建 PR，也不得进入产品实现。
 
 ### Branch/worktree disposition
 
-- branch：`merge-pending`（仅表示本地 formal 中间态，不声称 PR 已创建）。
+- branch：`feature/210-shared-text-dedupe-docs`（本地 formal review candidate，尚未 push/创建 PR）。
 - worktree：`retained(formal review and delivery pending)`。
 
 ## Batch 2026-07-18-003：隔离实现预算 Spike
@@ -79,3 +78,17 @@
   `__name__/__qualname__` 统一为 `_dedupe_text_items`；`p1_artifacts` annotation 变为 `object`。
 - Formal 预算据此拆成 raw/non-empty 双账：产品 hard=`+39/-252` 与 `+35/-196`；RC-06 采用
   non-empty，product35+test≤9+truth≤2 计划≤46、hard cap=49。
+
+## Batch 2026-07-18-004：Formal pre-review 门禁
+
+- 本地 seed commit=`4038919060e64ea9b0eb039bd5c05756c40a0ab2`；该提交仅用于让 truth generator
+  绑定已提交的 canonical sources，不构成双审 PASS 或 push 授权。
+- root manifest expectation 仅机械同步两条既有断言：inventory=`1106/1106/0/1`，close=`210/209`；
+  `tests/integration/test_repo_program_manifest.py`=`1 passed in 91.70s`，未改测试逻辑。
+- `uv run ai-sdlc verify constraints` PASS；`uv run ai-sdlc program validate` PASS。
+- `uv run ai-sdlc program truth sync --execute --yes` 生成 snapshot
+  `4503b0c2550cde9ae80ddb4307ed08d9ef47ec4eb5400a8d1c6bad7242aff5c1`；随后 truth audit=
+  `ready/fresh`，source inventory=`1106/1106`、missing close source=`1`。
+- handoff CLI 因旧 checkpoint 短暂改写 resume-pack/WI208 handoff；两文件已精确恢复为 HEAD。
+  Cursor rule、resume-pack、WI208 handoff 与 `src/` 均为 zero diff，root/scoped WI210 handoff byte-identical。
+- 下一步只允许形成 terminal formal identity，并由 Pascal/Confucius 对同一 identity 从零复审。
