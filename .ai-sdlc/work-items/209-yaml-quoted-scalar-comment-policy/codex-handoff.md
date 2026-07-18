@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T01:07:06+00:00
-- Reason: WI209 fifth-review test-auditability remediation complete
+- Updated: 2026-07-18T01:17:34+00:00
+- Reason: WI209 fifth-review full regression complete
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Fifth-review remediation green: 20 named isolated diff cases; focused 97 passed; Ruff clean; product +123/+130 and tests +190/+200 raw/normalized; full rerun pending
+- State: Fifth-review remediation fully green: focused 97; full 3272 passed/3 skipped; Ruff clean; product +123/+130 and tests +190/+200 raw/normalized; governance rerun pending
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Replace aggregate count assertions with per-case exact path/comment assertions; compact split is limited to readable pytest IDs while every diff remains a separate physical case line
+- The 19 additional passing full-suite items are the independently parameterized diff cases; no product behavior changed after the fourth-fix full run
 
 ## Commands / Tests
-- uv run pytest focused: 97 passed in 11.20s; Ruff PASS; test budgets raw/normalized +190/+200
+- uv run pytest -q: 3272 passed, 3 skipped in 561.81s
 
 ## Blockers / Risks
-- Fresh full suite/governance/replay, dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
+- Fresh governance/replay, dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Restore unrelated resume/WI208 handoff mutations and mirror WI209; commit continuity; rerun full suite and governance; replay from formal merge; freeze new identity; request both adversarial reviews from zero
+- Restore unrelated resume/WI208 handoff mutations and mirror WI209; commit full receipt; rerun constraints, validate, truth, manifest exact, budgets and replay; freeze new identity for both reviews
