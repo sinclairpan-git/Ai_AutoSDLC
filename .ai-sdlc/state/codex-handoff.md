@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T00:20:15+00:00
-- Reason: WI209 fourth adversarial RED/GREEN batch complete
+- Updated: 2026-07-18T00:32:04+00:00
+- Reason: WI209 post-fourth-fix full regression complete
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Fourth adversarial findings reproduced RED and fixed GREEN; focused 78 passed and Ruff clean; full verification pending
+- State: Fourth adversarial fix fully green: focused 78 and full 3253 passed/3 skipped; Ruff clean; governance pending
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Trust diff --git operands atomically and reject decoded Windows drive, UNC, rooted, and backslash traversal paths without adding helpers or public API
+- Only the new post-fix full-suite result is accepted; all earlier candidate identities and verdicts remain invalid
 
 ## Commands / Tests
-- RED boundary expected 12 but old implementation returned 5; GREEN focused 78 passed in 11.02s; Ruff PASS
+- uv run pytest -q: 3253 passed, 3 skipped in 563.52s
 
 ## Blockers / Risks
-- Full suite, governance replay, fresh dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
+- Governance replay, fresh dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Restore unrelated resume/WI208 handoff mutations; mirror root handoff to WI209; recompute budgets; run full suite and governance
+- Restore unrelated resume/WI208 handoff mutations; mirror root handoff to WI209; run constraints, validate, truth, manifest and replay checks
