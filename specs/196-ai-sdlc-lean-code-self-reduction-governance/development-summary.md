@@ -61,7 +61,8 @@
   全部 mixed escape 场景；最终 raw 产品/测试 `+121/+200`、normalized `+128/+198`，focused
   `100 passed`、full `3275 passed, 3 skipped`，final truth/manifest/replay 已通过。Round 13 首个
   post-handoff 身份随后因 canonical lifecycle receipt 仍称 freeze/replay 待执行被双方 reviewer 判定
-  FAIL；Round 14 只同步 receipt，产品/测试不变，当前仅等待新身份双审/current-head CI。
+  FAIL；Round 14 同步 receipt 后双方只发现 child T41 仍指向 Round 13 head，身份再次双 FAIL。Round 15
+  仅修 T41 与 review receipt，产品/测试不变，当前只等待新身份双审/current-head CI。
   PR 与 fresh-main 前仍是开放的验证可靠性缺口。WI-207 不得混入
   continuity/comment parser，WI-208 不得混入 adapter dispatch，WI-209 不得用 YAML 全局豁免掩盖误报，
   也不得让 added quoted 内容充当真实替代注释。

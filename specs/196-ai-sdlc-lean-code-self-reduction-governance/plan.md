@@ -131,8 +131,9 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
   `+201` 超限 1 行，现仅缩短 direct decoder witness 的非语义文件名，Unicode/space/Tab/newline/quote/
   backslash 覆盖不变；最终 raw 产品/测试 `+121/+200`、normalized `+128/+198`，focused `100 passed`、
   full `3275 passed, 3 skipped`，final truth/manifest 与独立 replay 已完成。Round 13 首个 post-handoff
-  身份因 canonical lifecycle 仍写“待 freeze/replay”被 Pascal/Confucius 双 FAIL 后退役；Round 14 仅修订
-  canonical receipt，产品/测试不变，当前只等待同一新身份双审与 current-head CI。
+  身份因 canonical lifecycle 仍写“待 freeze/replay”被 Pascal/Confucius 双 FAIL 后退役；Round 14 修订
+  canonical receipt 后，双方仅发现 child T41 仍误指 Round 13 head 并再次双 FAIL。Round 15 只修该
+  PR gate 与 review receipt，产品/测试不变，当前只等待同一新身份双审与 current-head CI。
 - **风险/范围**：L2；只处理 unified diff 中 YAML quoted scalar 内容被 `_is_comment_line()` 误判为注释。
 - **非目标**：不豁免真实 YAML comments，不修改 adapter、resume reconstruction 或 verify telemetry。
 - **进入**：用 single/double quoted multiline scalar、plain/literal/folded、真实 comment 和非 YAML source

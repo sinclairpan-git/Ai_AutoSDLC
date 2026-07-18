@@ -86,8 +86,10 @@
 - **Round 13**：产品实现不变；跨平台测试与 normalized 预算修复、T31、final truth/manifest/replay
   已完成；首个 post-handoff identity 因 canonical lifecycle receipt 仍称 freeze/replay 待执行而被
   Pascal/Confucius 双 FAIL，该身份退役。
-- **Round 14**：只同步 canonical lifecycle、terminal/replay receipt 与 handoff；产品/测试 blob 不变。
-  当前仅等待同一新身份双审，实际 HEAD/tree 由评审调用绑定；双 PASS 前不得 push。
+- **Round 14**：canonical lifecycle 主体已闭合，产品/测试 blob 不变；Pascal/Confucius 唯一共同 P1 为
+  T41 仍写“等待 Round 13 新 head”，可能把 PR gate 绑定退役身份，verdict 均为 FAIL。
+- **Round 15**：只把 T41 绑定到评审调用提供的当前 Round 15 精确身份并记录 receipt；产品/测试 blob
+  不变。当前仅等待同一新身份双审；双 PASS 前不得 push。
 
 ## Batch 4：交付与关闭
 
@@ -95,8 +97,8 @@
 
 - **依赖**：T32。
 - **验收**：push/PR/@codex review/heartbeat；Codex 对 current HEAD clean、所有 required checks success 后 merge。
-- **当前状态**：PR #146 已打开；Round 12 head 的 Codex clean 已退役，等待 Round 13 新 head 双审后 push、
-  重请求 Codex 与全部 checks 成功。
+- **当前状态**：PR #146 已打开；Round 12 head 的 Codex clean 已退役，等待评审调用绑定的当前 Round 15
+  精确身份双审后 push、重请求 Codex 与全部 checks 成功。
 
 ### T42 fresh-main acceptance（queued）
 

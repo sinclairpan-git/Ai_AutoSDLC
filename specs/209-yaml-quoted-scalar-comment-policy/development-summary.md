@@ -1,7 +1,7 @@
 # 开发摘要：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial re-review；formal PR #145/merge `46156c24` 已完成；Round 12 双审/Codex clean 因 Windows fixture finding 退役；Round 13 预算、focused/full、final truth/manifest/replay 已通过，首个 post-handoff 身份因 lifecycle receipt 滞后双 FAIL；Round 14 仅修 canonical receipt，等待新身份双审/current-head CI
+**状态**：implementation adversarial re-review；formal PR #145/merge `46156c24` 已完成；Round 12 双审/Codex clean 因 Windows fixture finding 退役；Round 13 预算、focused/full、final truth/manifest/replay 已通过；Round 13 首个 post-handoff 身份因 lifecycle receipt 滞后双 FAIL，Round 14 又因 T41 残留 Round 13 head 双 FAIL；Round 15 仅修 T41/receipt，等待新身份双审/current-head CI
 
 ## 当前结论
 
@@ -40,8 +40,9 @@ replay `8cb54228` tree 均为 `553434f5`，两端 clean。
 
 Round 13 首个 post-handoff 身份的两位 reviewer 均未发现产品、安全、预算或覆盖问题，但共同发现
 canonical lifecycle 与 handoff 仍把已完成的 final truth/replay 写成待执行/中间身份，verdict 均为 FAIL。
-Round 14 仅修订 lifecycle、final receipt 与 continuity，产品/测试 blob 不变；新 review target 的实际
-HEAD/tree 由评审调用绑定，当前只剩同一身份双审与 current-head CI。
+Round 14 修订 lifecycle/final receipt 后，双方确认上一轮 P1 主体已闭合，但唯一共同 P1 是 T41 仍写
+“等待 Round 13 新 head”，可能让 PR gate 绑定退役身份，verdict 均为 FAIL。Round 15 仅把 T41 绑定到
+评审调用提供的当前精确身份并记录 receipt；产品/测试 blob 不变，当前只剩同一身份双审与 current-head CI。
 
 ## 冻结方向
 
@@ -54,6 +55,6 @@ HEAD/tree 由评审调用绑定，当前只剩同一身份双审与 current-head
 
 ## 交付边界
 
-formal PR #145 已以产品代码零差异合并；PR #146 保持打开。final truth/replay 已完成；Round 14 新身份
+formal PR #145 已以产品代码零差异合并；PR #146 保持打开。final truth/replay 已完成；Round 15 新身份
 必须取得同一身份双 PASS、current-head Codex 和全平台 checks；merge 与 fresh-main 全部完成后才能
 关闭 GAP-14/T57，并恢复下一原子减重候选。

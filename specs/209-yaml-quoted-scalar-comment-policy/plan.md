@@ -15,7 +15,8 @@ raw-Unicode/C-escape 直接验证 decoder；产品实现和预算边界不变。
 assert 被 Ruff 展开而得到测试 `+201`；仅缩短 witness 的非语义文件名后，全部 escape 场景不变，最终
 raw 产品/测试 `+121/+200`、normalized `+128/+198`。focused/full、final truth/manifest 与独立 replay
 已通过；Round 13 首个 post-handoff 身份因 canonical lifecycle receipt 滞后被双方 reviewer 判定 FAIL。
-Round 14 只同步当前 receipt，产品/测试不变，当前仅重新绑定同一新身份双审/current-head review/checks。
+Round 14 同步 receipt 后，双方只发现 T41 仍误指 Round 13 head 并再次双 FAIL。Round 15 只修 T41 与
+review receipt，产品/测试不变，当前仅重新绑定同一新身份双审/current-head review/checks。
 
 ## 2. 技术背景
 

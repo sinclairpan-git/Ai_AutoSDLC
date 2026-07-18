@@ -298,3 +298,14 @@
 - Round 14 仅同步 lifecycle、terminal/replay receipt 与 continuity；产品/测试 blob 不变。最终 review
   target 的精确 HEAD/tree 由评审调用绑定，不在 canonical 内容中自引用；当前只剩同一身份双审、
   current-head Codex/checks、merge 与 fresh-main。
+
+## 21. Batch 2026-07-18-021：Round 14 T41 residual FAIL 与 Round 15 修订
+
+- Round 14 candidate=`98b34679`、replay=`29baf25f`，tree 均为 `6c4f1e53`，root/scoped handoff 相同、
+  两端 clean；snapshot=`559d8a137456cb3697f2896c42ac1a912ffb3d7a854089fc6ad2df32e47249cd`，
+  truth/audit=`ready/fresh 1101/1101 209/209`，manifest exact PASS。
+- Pascal/Confucius 均确认上一轮 lifecycle 主体及全部产品/安全/预算/覆盖/replay finding 已闭合；唯一
+  共同 P1 是 T41 当前状态仍写“等待 Round 13 新 head 双审后 push”，会把 PR gate 指向退役身份，
+  verdict 均为 FAIL。
+- Round 15 只把 T41 绑定到评审调用提供的当前精确身份并记录本 receipt；产品/测试 blob 不变，
+  final truth/replay 仍为 completed，双 PASS 前不得 push。
