@@ -35,7 +35,14 @@
 
 所有证据默认对应基线 revision；`program-manifest.yaml` 证据必须以目标提交内的 `truth_snapshot.repo_revision`、`generated_at`、`snapshot_hash` 三元组为准，并通过 `uv run ai-sdlc program truth audit` 复核。规范不得硬编码会随 truth sync 变化的 snapshot hash。
 
-复核必须在目标 commit/PR checkout 上执行并记录目标 commit、三元组、audit 输出与退出码。当前交付只接受 `snapshot_state=fresh`、整体 `state=ready`、退出码 0，且 manifest 无 `missing/invalid/stale`、validation error 或 blocker；capability blocking refs 与 source inventory 计数仍须作为精确集合记录在 execution log。任意 non-ready、非零退出码、集合变化或证据缺失均 fail-closed；若 GAP-09～GAP-11 对应 blocker 或 unmapped/missing source 再现，必须登记证据并重开对应 GAP，不得以 `PASS_WITH_REGISTERED_DEBT` 继续。
+复核必须在目标 commit/PR checkout 上执行并记录目标 commit、三元组、audit 输出与退出码。当前交付只接受
+`snapshot_state=fresh`、整体 `state=ready`、退出码 0，且 manifest 无 `invalid/stale`、validation error 或
+blocker。唯一允许的 active-child pre-close 状态是：恰好一个已映射、`exists=false`、
+`source_type=development_summary`、`truth_layer=close` 的当前 child `development-summary.md`，且 close totals/materialized
+精确为 `N/(N-1)`；它表示尚未伪造的未来 closure，不是 GAP-11 回归。该 child closure 必须把 missing
+归零并恢复 `N/N`。capability blocking refs 与 source inventory 精确集合仍须记录；任一其他 missing、任一
+unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合未解释变化或证据缺失均 fail-closed，
+并在命中 GAP-09～GAP-11 时登记证据、重开对应 GAP，不得以 `PASS_WITH_REGISTERED_DEBT` 继续。
 
 | 编号 | 类别 | 事实证据 / 复现入口 | 目标与责任 | 减重关键路径 |
 |---|---|---|---|---|
@@ -43,7 +50,7 @@
 | GAP-02 | 兼容缺口 | 现有测试分散，缺少目标切片统一的 CLI/artifact/状态/副作用 differential 基线 | WP-01：最小充分 Characterization/Golden | 是 |
 | GAP-03 | 结构臃肿 | `src/ai_sdlc/core/program_service.py` 17,369 行、249 方法 | WP-06：逐领域切片、保留 facade、稳定后删旧实现 | 是 |
 | GAP-04 | 结构臃肿 | `src/ai_sdlc/cli/program_cmd.py` 7,062 行；33 个公共 program 命令与 77 对相似长命令候选 | WP-07：逐 stage family 双跑与收敛 | 是 |
-| GAP-05 | 重复实现（active） | WI-205、WI-206、WI-210 已各关闭一个 exact family；WI-210 / PR #149 / merge `904fe5de` 将 28 个 text-dedupe body 收敛为 1 个共享实现，产品净删 213 行且 fresh-main 全绿；其余候选仍须逐族证明 | WP-03/WP-04：只合并语义和失败模式一致的重复族；回退对应 implementation PR 会重开该 family | 是 |
+| GAP-05 | 重复实现（active） | WI-205、WI-206、WI-210 已各关闭一个 exact family；WI-211 formal 当前冻结 10-module mapping-dedupe 候选，120 LOC/23 calls，spike raw net -122、non-empty net -104；该预测不计入已完成 ledger | WP-03/WP-04：只合并语义和失败模式一致的重复族；WI-211 必须先完成 formal 双审、T61A/B、implementation 与 closure，回退对应 implementation PR 会重开该 family | 是 |
 | GAP-06 | 单一真值源候选 | `frontend_page_ui_schema.py`、`frontend_cross_provider_consistency.py`、`frontend_quality_platform.py`、`frontend_provider_expansion.py`、`frontend_provider_runtime_adapter.py`、`frontend_theme_token_governance.py` 的 6 个 `build_p*_baseline` builder | WP-05：对该有限候选集逐项 go/no-go；只有净减重合同成立才实施 | 条件性 |
 | GAP-07 | 已关闭 | WI-197 / PR #121 / merge `4802596f`：adapter mutation 不再与 clean-tree preflight 自冲突 | T51 已完成；权威证据见 WI-197 execution log §6.3～6.7 | 否 |
 | GAP-08 | 已关闭 | WI-198 / PR #122 / merge `68150d3f`：resume working set 以 active linked WI 为准 | T52 已完成；权威证据见 WI-198 execution log §3～§8 | 否 |
@@ -150,7 +157,7 @@ T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy
 三项都先红后绿，且不计为减重成果。由于它们会污染治理证据、恢复状态或阻断合法变更，路线在继续
 新的 T63/T65/WP-06/WP-07 候选前先顺序关闭 T55、T56、T57。
 
-兼容、安全或授权边界不得用 waiver 绕过。GAP-09～GAP-11 已由 WI-199～WI-201 关闭，不再是开放阻断依赖；后续目标切片仍须落盘 inheritance、adapter consumption 与 source inventory 的防回归影响分析。分析缺失或不确定，或 truth 再次出现对应 blocker、unmapped/missing source 时，必须 fail-closed、登记 owner/证据并重开对应 GAP；truth 保持关闭条件时不得重复执行 T53A/T53B/T54。
+兼容、安全或授权边界不得用 waiver 绕过。GAP-09～GAP-11 已由 WI-199～WI-201 关闭，不再是开放阻断依赖；后续目标切片仍须落盘 inheritance、adapter consumption 与 source inventory 的防回归影响分析。分析缺失或不确定，或 truth 再次出现对应 blocker、unmapped 或 §3 允许边界之外的 missing source 时，必须 fail-closed、登记 owner/证据并重开对应 GAP；truth 保持关闭条件时不得重复执行 T53A/T53B/T54。
 
 ## 8. 功能需求
 
@@ -201,3 +208,5 @@ T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy
    sponsor，并重新冻结和双审父合同；在此之前按 FR-08 为 CC-05/CC-06 保留两个独立 reviewer。
 7. WI-206 关闭后依次执行 WI-207/GAP-12、WI-208/GAP-13、WI-209/GAP-14；三个基础修复完成后才
    恢复新的 T63/T65/WP-06/WP-07 原子减重选择，RC-08 全路线终态前不发布版本。
+8. WI-210 closure fresh-main 已满足恢复门禁；WI-211 只冻结一个 T63 mapping-dedupe family。formal、
+   implementation、closure 未全部合并验收前，不得把 spike 预测计入 RC-08 ledger，也不得关闭 GAP-05。

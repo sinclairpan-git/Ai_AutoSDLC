@@ -83,7 +83,11 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 - **依赖**：T42。
 - **完成**：提交只包含治理文档和合法 truth/handoff；随后按仓库 mainline PR 协议交付。
 - **提交后验证**：在目标 commit/PR checkout 上运行 `uv run ai-sdlc program truth audit`，把目标 commit、`repo_revision + generated_at + snapshot_hash`、audit 输出、退出码和 blocking refs/source inventory 精确集合写入 execution log/PR 证据。
-- **判定**：只有 `snapshot_state=fresh`、整体 `state=ready`、退出码 0，且无 `missing/invalid/stale`、validation error 或 blocker 才可继续。任意非零、non-ready、集合增减或证据缺失一律停止交付并返回 T41/T22；若 GAP-09～GAP-11 对应 blocker 或 unmapped/missing source 再现，必须重开对应 GAP，不允许 `PASS_WITH_REGISTERED_DEBT` 例外。
+- **判定**：只有 `snapshot_state=fresh`、整体 `state=ready`、退出码 0，且无 `invalid/stale`、validation
+  error 或 blocker 才可继续。active child 在 pre-close 只允许一个 mapped/`exists=false` 的当前
+  `development-summary.md`，close=`N/(N-1)`；closure 必须恢复 missing=0、close=`N/N`。任一其他
+  missing、任一 unmapped、非零、non-ready、集合未解释增减或证据缺失一律停止并返回 T41/T22；若命中
+  GAP-09～GAP-11，必须重开对应 GAP，不允许 `PASS_WITH_REGISTERED_DEBT` 例外。
 - **回退**：revert WI-196 文档提交，不影响产品运行时。
 
 ## Batch 5：独立实现子项目录
@@ -105,17 +109,21 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T62A code + contract report-only（open） | standalone | GAP-01/WP-02 | L1/L2 | T61A + 新/替代 sponsor + 父合同重新双审 | WI-202 候选 RC-09 No-Go；重启项须分类/合同缺口报告、历史零误阻断、RC-06 预算 |
 | T62B code + contract warning | standalone | GAP-01/WP-02 | L2 | T62A 稳定 | 两规则族 warning fixture、waiver schema、独立开关 |
 | T62C code + contract blocking | standalone | GAP-01/WP-02 | L2 | T62B 稳定 | 两规则族 blocker、admission `active + verified`、独立降级与 reviewer fallback 测试 |
-| T63 单个 helper/DTO/test 重复族（按 family 继续） | standalone + T61A/B | GAP-05/WP-03 | L1 | T51、T52 已满足；WI-205、WI-206、WI-210 各完成一个 family | WI-210 / PR #149 / merge `904fe5de`：28→1 body、产品 net -213、双 Agent/Codex/22 checks/fresh-main；新 family 仍须重复族清零、目标切片 LOC -10%、全量测试 |
+| T63 单个 helper/DTO/test 重复族（按 family 继续） | standalone + T61A/B | GAP-05/WP-03 | L1 | T51、T52 已满足；WI-205、WI-206、WI-210 各完成一个 family；WI-211 formal in progress | WI-210 / PR #149 / merge `904fe5de`：28→1 body、产品 net -213；WI-211 候选为10→1 mapping body、23 calls、预测 raw net -122，但仅在 formal/implementation/closure 全部验收后记账 |
 | T64 单个 Loop Store family | standalone + T61A/B | GAP-05/WP-04 | L2 | T51、T52 | store differential、LOC -10%、恢复/损坏输入测试 |
 | T65 单个 baseline 候选 go/no-go | standalone + T61A/B on Go | GAP-06/WP-05 | L2 | T51、T52 | Go=`completed_reduction`；单项 No-Go=`cancelled_no_go`；六项全 No-Go=`closed_no_viable_reduction` |
 | T66 单个 ProgramService 领域切片 | standalone + T61A/B | GAP-03/WP-06 | L3 | T51、T52 + 真实重叠子项 | 迁移职责 -90%、RC-04 结构改善、稳定发布、删旧后回退演练 |
 | T67 单个 Program Stage family | standalone + T61A/B | GAP-04/WP-07 | L3 | T51、T52 + 真实重叠子项 | 镜像 LOC -70%、33 命令兼容、稳定发布、删旧后回退演练 |
 
-**全局恢复门禁**：T57/WI-209 fresh-main acceptance 已完成；表中 T61A、T62A～T62C、T63～T67 的
-新实例在本 closure PR 合并后恢复选择，但仍须逐项满足各自依赖、sponsor、RC 与原子 WI/branch/PR。
+**全局恢复门禁**：T57/WI-209 与 WI-210 closure fresh-main acceptance 已完成；表中 T61A、
+T62A～T62C、T63～T67 的新实例已恢复选择，但仍须逐项满足各自依赖、sponsor、RC 与原子 WI/branch/PR。
+WI-211 已选择一个 T63 candidate，但 formal merge/fresh-main 前不得创建 implementation branch。
 既有已完成 receipt 不受影响；各行保留的历史 T51/T52 依赖已满足，不需要重复执行。
 
-每个目标切片必须先落盘 GAP-09～GAP-11 防回归 impact analysis；分析缺失/不确定或当前 truth 再现对应 blocker、unmapped/missing source 时默认阻断并重开相应 GAP。关闭条件持续满足时不得重复执行 T53A/T53B/T54，也不得把它们重新解释为待满足硬依赖。
+每个目标切片必须先落盘 GAP-09～GAP-11 防回归 impact analysis；除当前 active child 唯一 mapped
+pre-close `development-summary.md`（close=`N/(N-1)`）外，分析缺失/不确定或当前 truth 再现对应
+blocker、unmapped/missing source 时默认阻断并重开相应 GAP。关闭条件持续满足时不得重复执行
+T53A/T53B/T54，也不得把它们重新解释为待满足硬依赖。
 
 ## 追踪矩阵
 

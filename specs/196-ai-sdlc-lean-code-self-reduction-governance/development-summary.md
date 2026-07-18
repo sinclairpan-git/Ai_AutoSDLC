@@ -61,7 +61,9 @@
   `3275 passed, 3 skipped` 全部通过。回退对应 implementation PR 会重开各自 GAP。
 - RC-08 family ledger 已记录 WI-205 `net -109`、WI-206 `net -209`、WI-210 `net -213`，累计产品
   raw `net -531`；这只是已关闭重复族的局部收益，不代表路线整体达到 10% 或两个超大文件降到 400 行。
-- 下一步尚未选择新的原子减重项；只允许从新的 T63/T65/WP-06/WP-07 候选中按真实收益、证明成本与
-  sponsor 选择一个独立 WI。不得恢复已 No-Go 且缺少 sponsor 的 T62A，也不得关闭 GAP-05/WI-196、
-  宣称 RC-08 达成或发布版本。
+- WI-211 已选择一个独立 T63 mapping-dedupe candidate：10 exact defs/120 LOC/23 calls，formal spike
+  raw net -122/non-empty net -104，Pascal/Confucius 均只批准进入 formal。该预测不计入上面的已关闭
+  ledger；formal/implementation/closure 未全部验收前不得声称 completed reduction。
+- 下一步是完成 WI-211 formal 同 identity 双审与 mainline acceptance；不得恢复已 No-Go 且缺少 sponsor
+  的 T62A，也不得关闭 GAP-05/WI-196、宣称 RC-08 达成或发布版本。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
