@@ -216,7 +216,7 @@ def _counts_as_comment(
 ) -> bool:
     if not _is_comment_line(text):
         return False
-    if path is not None and Path(path).suffix.lower() not in {".yaml", ".yml"}:
+    if path and Path(path).suffix.lower() not in {".yaml", ".yml"}:
         return True
     if root is None or not path or line is None or line <= 0:
         return old
