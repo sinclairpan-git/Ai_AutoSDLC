@@ -150,11 +150,11 @@ def test_comment_deletion_reason_must_match_path_and_comment(tmp_path: Path) -> 
     log.write_text("# Log\n", encoding="utf-8")
     _commit_all(tmp_path)
     source.write_text("def f():\n pass\n", encoding="utf-8")
-    log.write_text("removed comment: unrelated\n", encoding="utf-8")
+    log.write_text("# Log\nremoved comment: unrelated\n", encoding="utf-8")
 
     assert collect_comment_deletion_blockers(tmp_path)
 
-    log.write_text("removed comment: src/a.py explains payment\n", encoding="utf-8")
+    log.write_text("# Log\nremoved comment: src/a.py explains payment\n", encoding="utf-8")
 
     assert collect_comment_deletion_blockers(tmp_path) == []
 
