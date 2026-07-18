@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T03:21:51+00:00
-- Reason: WI209 Round 9 terminal verification checkpoint
+- Updated: 2026-07-18T03:23:14+00:00
+- Reason: WI209 final Round 9 candidate closure
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Round 8 findings repaired and freshly verified: focused 98; full 3273 passed/3 skipped; mutation, budgets, lifecycle, truth and manifest evidence complete
+- State: Final Round 9 candidate fully verified and independently replayable: focused 98; full 3273 passed/3 skipped; mutation/budgets/lifecycle/truth/manifest complete; mirrored continuity ready
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -25,16 +25,16 @@
 - tests/unit/test_comment_policy.py
 
 ## Key Decisions
-- Keep GAP-14/T57 open; T13/T21/T22/T23/T31 completed; T32 remains implementation adversarial review until exact replay and same-identity dual PASS
+- Only the final clean HEAD/tree identity may be reviewed; all prior identities and verdicts are retired; GAP-14/T57 stays open until PR merge and fresh-main acceptance
 
 ## Commands / Tests
-- focused 98 passed; delete-path mutant expected FAIL; full 3273 passed/3 skipped in 675.17s; product raw/norm +123/+130 tests +198/+200; Ruff check/diff-check PASS and base/candidate format parity; constraints no BLOCKER; validate PASS; truth ready/fresh 1101/1101 209/209; manifest exact 1 passed in 83.40s
+- focused 98 passed; delete-path mutant expected FAIL; full 3273 passed/3 skipped in 675.17s; product raw/norm +123/+130 tests +198/+200; Ruff check/diff-check PASS with base/candidate format parity; constraints no BLOCKER; validate PASS; truth ready/fresh 1101/1101 209/209; manifest exact 1 passed in 83.40s; independent replay tree exact
 
 ## Blockers / Risks
-- Independent replay, Round 9 dual adversarial review, PR current-head Codex/checks, merge and fresh-main acceptance pending
+- Fresh Round 9 dual adversarial PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Replay all commits after the Round 8 replay point, require exact tree equality, freeze one immutable Round 9 identity, then have Pascal and Confucius independently review that same identity from zero
+- Pascal and Confucius independently review the same frozen Round 9 identity from zero; only dual PASS permits push and PR creation, then current-head Codex review/check heartbeat, merge and fresh-main acceptance
