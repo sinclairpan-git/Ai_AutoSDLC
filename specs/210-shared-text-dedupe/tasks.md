@@ -7,8 +7,9 @@ related_doc:
 
 **编号**：`210-shared-text-dedupe`
 **来源**：`spec.md + plan.md`
-**当前授权**：Batch 0～3 已完成；closure 只允许 docs/truth/continuity 与 manifest 测试的两条
-pre-close missing `1→0`、close layer `209→210` 机械期望，不再修改产品代码或其他测试逻辑
+**当前授权**：Batch 0～2 与 Batch 3 的 T31/T32 已完成，T33 closure in progress；closure 只允许
+docs/truth/continuity 与 manifest 测试的两条 pre-close missing `1→0`、close layer `209→210` 机械
+期望，不再修改产品代码或其他测试逻辑
 
 ## 批次图
 

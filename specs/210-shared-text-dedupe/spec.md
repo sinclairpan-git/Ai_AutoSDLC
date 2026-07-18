@@ -8,14 +8,14 @@
 
 ## 1. 决策摘要
 
-当前 `main` 存在一个可机械证明的私有文本去重重复族：28 个顶层函数、27 个模块、196 行产品代码、
+冻结基线 `main@4b434864` 存在一个可机械证明的私有文本去重重复族：28 个顶层函数、27 个模块、196 行产品代码、
 730 个直接调用。28 个函数的 AST body digest 均为
 ```
 08aa3c8fe861c4d69e2fcfcdbc6bc212b7b6d0c52ef6e2e4b382327dd48d962a
 ```
 
 本项只把该 exact family 收敛到现有
-`src/ai_sdlc/utils/helpers.py::_dedupe_text_items`。该模块当前 96 raw / 68 non-empty LOC，只依赖标准库，
+`src/ai_sdlc/utils/helpers.py::_dedupe_text_items`。该模块在冻结基线为 96 raw / 68 non-empty LOC，只依赖标准库，
 docstring 已明确覆盖 text processing；repo-wide 已有 55 个 importer，CLI/Core/Generators 中有 42 个，
 其中 10 个属于本候选。实现必须保留 28 个模块局部私有名，
 730 个调用表达式零修改；不新增模块、公共导出、wrapper、策略或配置。

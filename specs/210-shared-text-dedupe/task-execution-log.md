@@ -272,3 +272,15 @@
   docs、truth、continuity 与 manifest 测试的 missing `1→0`、close layer `209→210` 两条期望，
   不关闭 GAP-05/WI-196、不恢复 WI-204、不发布版本。manifest exact 依次以两项 pre-close 值 RED，
   没有第三处漂移或测试逻辑修改；两条期望同步后 GREEN=`1 passed in 93.96s`。
+
+## Batch 2026-07-18-020：Closure Round 1 split verdict 与最小修订
+
+- reviewed HEAD/tree=`cef78bd1928f3337a936f59be10e319aeee835ef`/
+  `d6209d0502789ee87293816a4bfc339fc1f20e73`；Pascal FAIL、Confucius PASS，整体未通过；内容修订后
+  两份 verdict 均退役。
+- Pascal 三项 finding：tasks 顶部把仍 in-progress 的 T33 包含在“Batch 0～3 已完成”；双 handoff
+  重复要求已存在的 commit/freeze；spec 把 28-body 与 helpers.py 96/68 的 formal 基线误写为当前真值。
+- 最小修订只收窄 Batch 状态、把两处数值标成冻结基线、让 handoff Next 直接绑定 Round 2 调用的 exact
+  identity。产品、测试、receipt、rollback、累计 ledger 与关闭边界均不改。
+- Confucius 检查 CLI help 时触发 `.cursor/rules/ai-sdlc.mdc` 自举改写，已立即精确恢复 HEAD blob
+  `ec0ed427a1db1d14370e1518a0c0fd2b8880384b`；reviewed identity 与 clean-state 未漂移。
