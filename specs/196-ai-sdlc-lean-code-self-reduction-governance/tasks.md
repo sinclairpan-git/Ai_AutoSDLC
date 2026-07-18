@@ -99,7 +99,7 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T54 收敛 source inventory（已完成） | standalone | GAP-11 | L2 | 已满足 | WI-201 / PR #125 / merge `d19c8b7d`；0 unmapped / 0 missing |
 | T55 隔离 program implicit adapter side effect（已完成） | standalone | GAP-12 | L2 / CC-05 | 已满足 | WI-207；PR #139 + repair PR #141 / merge `8d8b8f96`；fresh-main full 3224/3、repository state clean |
 | T56 建立 portable/lossless resume reconstruction（已完成） | standalone | GAP-13 | L2 | 已满足 | WI-208 / PR #143 / merge `f51c176a`；canonical source、relocation/focused/full、双 Agent、Codex、22/22 checks、fresh-main clean |
-| T57 修复 YAML quoted-scalar comment-policy false positive（implementation adversarial review） | standalone | GAP-14 | L2 | T56 与 formal PR #145/merge `46156c24` 已满足；WI-209 Round 8 双 FAIL 正在修复测试覆盖与 canonical receipts | WI-209；old/new 对称 quoted token span、quoted/plain/literal/real-comment characterization + constraints/full/fresh-main；fresh-main 前不关闭 |
+| T57 修复 YAML quoted-scalar comment-policy false positive（implementation adversarial review） | standalone | GAP-14 | L2 | T56 与 formal PR #145/merge `46156c24` 已满足；WI-209 Round 8 findings 已修订并通过 fresh verification，Round 9 双审待完成 | WI-209；old/new 对称 quoted token span、quoted/plain/literal/real-comment characterization + constraints/full/fresh-main；fresh-main 前不关闭 |
 | T61A 捕获目标切片旧行为 | embedded gate | GAP-02/WP-01A | L1/L2 | T51、T52 + fail-closed impact analysis | 固定环境、allowlist、surface/Golden 基线 |
 | T61B 候选实现 differential 与回退演练 | embedded pre-merge gate | GAP-02/WP-01B | L1～L3 | T61A + candidate hash | 零未批准差异、rollback receipt；未通过不得 merge/close |
 | T62A code + contract report-only（open） | standalone | GAP-01/WP-02 | L1/L2 | T61A + 新/替代 sponsor + 父合同重新双审 | WI-202 候选 RC-09 No-Go；重启项须分类/合同缺口报告、历史零误阻断、RC-06 预算 |

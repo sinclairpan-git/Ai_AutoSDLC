@@ -2033,10 +2033,10 @@ specs:
   path: specs/209-yaml-quoted-scalar-comment-policy
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-17T19:22:46Z'
+  generated_at: '2026-07-18T03:12:01Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 85bdedac
+  repo_revision: 75fb3856
   authoring_hash: d19fa3c1f538ee3f2f05230a58cc1092616cb9dfaf3477f1d88c5244a8a4a4df
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
@@ -2079,7 +2079,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 7a78b8b8f3f596ef516dc5a4c83946a7df9a11fd2166304a63de606bcf23f3b7
+  snapshot_hash: ab329e1241e8b8060f16651c147c3a0c6b66b9c6460192dc4081ba703c9e31cd
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2097,8 +2097,8 @@ truth_snapshot:
     mapped_sources: 1101
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3637
-    deferred_signal_count: 6551
+    phase_signal_count: 3638
+    deferred_signal_count: 6554
     non_goal_signal_count: 391
     layer_totals:
       blueprint: 1
@@ -11517,7 +11517,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 209-yaml-quoted-scalar-comment-policy
       phase_signal_count: 0
-      deferred_signal_count: 0
+      deferred_signal_count: 1
       non_goal_signal_count: 1
     - path: specs/209-yaml-quoted-scalar-comment-policy/task-execution-log.md
       source_type: execution_log
@@ -11525,8 +11525,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 209-yaml-quoted-scalar-comment-policy
-      phase_signal_count: 0
-      deferred_signal_count: 1
+      phase_signal_count: 1
+      deferred_signal_count: 3
       non_goal_signal_count: 0
     - path: specs/209-yaml-quoted-scalar-comment-policy/development-summary.md
       source_type: development_summary

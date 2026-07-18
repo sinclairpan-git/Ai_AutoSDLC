@@ -1,7 +1,7 @@
 # 开发摘要：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 8 findings 修订中
+**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 8 findings 已修订，Round 9 双审待完成
 
 ## 当前结论
 
@@ -10,7 +10,8 @@ GAP-14 是验证可靠性缺陷，不是减重成果。实现已限定在 `comme
 同时保持真实注释、删除文件、malformed path/header 与 added-side fail-closed 合同。
 
 Round 8 产品修复与回放证据通过，但双审发现 canonical delete+added 用例被压缩掉，以及 child/parent
-lifecycle、execution receipt 和 handoff 与实现事实不同步。当前只修复这些证据缺口，不扩展产品范围。
+lifecycle、execution receipt 和 handoff 与实现事实不同步。两类 finding 已按原范围修订并重新通过
+focused/full/预算门禁；GAP-14/T57 仍等待新身份双 PASS，不扩展产品范围。
 
 ## 冻结方向
 

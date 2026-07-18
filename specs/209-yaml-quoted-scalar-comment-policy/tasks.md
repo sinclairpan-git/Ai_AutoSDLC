@@ -43,20 +43,20 @@
 - **验证**：RED nodes GREEN；`tests/unit/test_comment_policy.py` 全绿。
 - **证据**：`e289057e` 起始 GREEN；后续同文件修订闭合 path/header/source trust findings，未新增产品文件或公共抽象。
 
-### T23 安全矩阵与预算（in progress）
+### T23 安全矩阵与预算（completed）
 
 - **依赖**：T22。
 - **验收**：真实 YAML/Python/Markdown comments、plain/literal/folded、malformed、mixed-extension rename/quoted path、no-follow symlink/reparse/containment、标准 hunk 边界、closing flow suffix/escape、replacement reason 与 CLI exit/text 全部通过；以 `256/134/1799` 为 raw 基线，产品 ≤130、两测试合计 ≤200，三文件 Ruff-normalized 一致满足。
 - **停止**：新增模块/公共抽象、预算超限或 blocker 文本变化即回到 T22/设计。
-- **当前状态**：Round 8 指出 canonical delete+added real-comment 用例被压缩掉；已恢复该独立反事实，待 Round 9 focused/预算复验后完成。
+- **证据**：canonical delete+added real-comment 独立反事实已恢复并杀死错误回退 mutant；focused 98 PASS；产品 raw/normalized `+123/+130`、测试合计 `+198/+200`。
 
 ## Batch 3：终态证明
 
-### T31 全量与治理门禁（in progress）
+### T31 全量与治理门禁（completed）
 
 - **依赖**：T23。
 - **验收**：comment-policy、verify-constraints、full、Ruff、constraints、validate、truth、manifest、diff-check 全绿；full 前后 HEAD/tree、resume/handoff/status 无漂移。
-- **当前状态**：Round 8 产品候选曾取得 focused 97、full 3272/3 与 terminal gates；本次 canonical 文档修订使旧终态身份失效，须重新执行 truth/manifest/clean gates。
+- **证据**：修订后 full `3273 passed, 3 skipped`；Ruff/constraints/validate/diff-check PASS；truth sync 重算 `ready`、inventory `1101/1101`。终态 receipt 写回后按计划再次 sync/audit/manifest。
 
 ### T32 回退演练和双对抗终审（in progress）
 

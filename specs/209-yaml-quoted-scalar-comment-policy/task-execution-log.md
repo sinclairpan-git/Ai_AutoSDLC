@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；Round 8 双 FAIL 修订中
+**状态**：implementation adversarial review；Round 8 findings 已修订，Round 9 双审待完成
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -158,3 +158,15 @@
   状态与实现事实不一致，且 handoff 未列实际变更文件和可复跑命令，verdict=FAIL。
 - Round 8 身份与全部 verdict 已退役。T13/T21/T22 completed；T23/T31/T32 在证据修订、复验与新身份
   双审完成前保持 in progress；GAP-14/T57 保持开放，T41/T42 仍 queued。
+
+## 8. Batch 2026-07-18-008：Round 8 findings 修订与 fresh verification
+
+- 测试、child/parent lifecycle/task/summary/receipt 在同一逻辑提交 `e5fad23c` 修订；恢复 canonical
+  delete+added real-comment case，focused `98 passed`，临时 mutant 对该 node 得到预期 FAIL。
+- raw/normalized 预算重算：产品 `+123/+130`；两个测试文件 `+198/+200`；5 个 private helper、
+  最大修改/新增函数 48 行、零新产品/测试文件、零公共抽象。
+- fresh full `3273 passed, 3 skipped in 675.17s`；constraints 无 BLOCKER、validate PASS、Ruff check 与
+  diff-check PASS。canonical receipt 写回前 truth audit 正确返回 stale/current ready，随后 source CLI truth
+  sync 写入 snapshot `c3a62cb3863a67005913ec15a34e757e1b0cc3404428fb86e850503a82c860a3`，inventory `1101/1101`。
+- T23/T31 转 completed；T32 继续 in progress。当前 receipt 会改变 snapshot，必须再次 sync/audit、
+  manifest exact、replay 后才冻结 Round 9；GAP-14/T57 与 T41/T42 状态不变。

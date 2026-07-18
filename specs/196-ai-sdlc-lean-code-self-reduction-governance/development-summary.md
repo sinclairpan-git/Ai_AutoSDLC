@@ -49,8 +49,8 @@
 - WI-202 的首个 T62A 候选因完整 proof 明显超过 RC-06 预算，已按 RC-09 停止且未合入；
   GAP-01/T62A 仍 open，T62B/T62C 未开始，FR-08 双 reviewer fallback 继续有效。
 - GAP-12、GAP-13 已关闭且不计 RC-08 减重收益；GAP-14 处于 WI-209 implementation adversarial
-  review。Round 8 产品候选通过 focused/full/治理与 replay，但测试覆盖稀释和 canonical receipt 失真使
-  双审 FAIL；新身份双 PASS、PR 与 fresh-main 前仍是开放的验证可靠性缺口。WI-207 不得混入
+  review。Round 8 测试覆盖稀释和 canonical receipt 失真 findings 已修订并通过 fresh verification；
+  Round 9 同一新身份双 PASS、PR 与 fresh-main 前仍是开放的验证可靠性缺口。WI-207 不得混入
   continuity/comment parser，WI-208 不得混入 adapter dispatch，WI-209 不得用 YAML 全局豁免掩盖误报，
   也不得让 added quoted 内容充当真实替代注释。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

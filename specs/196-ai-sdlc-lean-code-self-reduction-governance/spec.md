@@ -52,7 +52,7 @@
 | GAP-11 | 已关闭 | WI-201 / PR #125 / merge `d19c8b7d`：source inventory 收敛为 complete、unmapped=0、missing=0 | T54 已完成；新增 source 继续 fail-closed | 否 |
 | GAP-12 | 已关闭 | WI-207：formal PR #140、implementation PR #139、test-isolation repair PR #141；merge `8d8b8f96` 的 fresh-main real-hook/focused/full/Ruff/治理门禁全绿且 repository state clean | T55 已完成；回退 PR #139 或 #141 会重开本项 | 否 |
 | GAP-13 | 已关闭 | WI-208 / PR #143 / merge `f51c176a`：共同 builder 以 canonical sources portable/lossless 重建 root/scoped resume-pack，保留 branch、active files、context 与 raw-byte convergence | T56 已完成；fresh-main relocation/focused/full/Ruff/治理门禁全绿，保护文件与 clean state 不变；回退 PR #143 会重开本项 | 否 |
-| GAP-14 | implementation adversarial review | `comment_policy._is_comment_line()` 按 stripped diff line 判断前缀；WI-209 在 `main@85bdedac` 复现 single/double quoted scalar 续行均产生 1 finding，而 PyYAML token 实际跨越该内容行 | T57 / WI-209：formal PR #145 已合并为 `46156c24`；implementation Round 8 产品修复通过验证，但测试覆盖与 canonical receipt 双 FAIL 正在修订；fresh-main 前保持开放，禁止 waiver | 是（验证可靠性） |
+| GAP-14 | implementation adversarial review | `comment_policy._is_comment_line()` 按 stripped diff line 判断前缀；WI-209 在 `main@85bdedac` 复现 single/double quoted scalar 续行均产生 1 finding，而 PyYAML token 实际跨越该内容行 | T57 / WI-209：formal PR #145 已合并为 `46156c24`；Round 8 测试覆盖与 canonical receipt findings 已修订并通过 fresh verification，Round 9 双审/fresh-main 前保持开放，禁止 waiver | 是（验证可靠性） |
 
 每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
 
