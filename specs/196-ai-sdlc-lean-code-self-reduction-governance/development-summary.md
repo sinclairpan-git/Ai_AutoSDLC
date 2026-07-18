@@ -28,7 +28,8 @@
 - WI-210 formal PR #148 已合并为 `b2f9997b`；implementation commit `96952684` 已把 28 个 exact
   text-dedupe body 收敛为现有 `utils/helpers.py` 中 1 个 private helper + 28 个模块局部 alias，
   730 calls 不变，产品 raw `+39/-252/net -213`、non-empty `+35/-196/net -161`。T61 differential、
-  full `3276 passed, 3 skipped` 与 rollback/reapply 已通过；仍待 final governance、同一 identity 双审、
+  full `3276 passed, 3 skipped`、rollback/reapply 与 terminal governance 已通过；旧 implementation
+  review identity 因 formal/continuity finding 退役，当前最小修订提交后仍待同一 identity 双审、
   PR/mainline/fresh-main，因此不表示 WI-210 已关闭。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新

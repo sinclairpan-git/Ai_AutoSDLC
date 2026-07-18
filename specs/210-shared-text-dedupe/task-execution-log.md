@@ -2,7 +2,7 @@
 
 **功能编号**：`210-shared-text-dedupe`
 **创建日期**：2026-07-18
-**当前状态**：Batch 0 formal Round 4 terminal gates complete；等待同一 identity 双审；产品实现未授权
+**当前状态**：Implementation 与 terminal gates complete；旧 implementation review identity 已退役；当前最小修订提交后等待同一 identity 双审，PR 未创建、WI 未关闭
 
 ## Batch 2026-07-18-001：下一原子候选选择
 
@@ -225,3 +225,16 @@
   manifest exact=`1 passed in 113.88s`；truth audit=`ready/fresh`。
 - 本批结果写入 source 后必须再执行 terminal truth sync；该 terminal snapshot 与 continuity 更新不修改
   产品、测试、receipt 结构或 rollback identity。
+
+## Batch 2026-07-18-016：Implementation Round 1 双 FAIL 与最小处置
+
+- reviewed commit/tree=`e6e3134932bde0a8e4ec5e7783ffb02cc9346c19`/
+  `3a335e41ab15e0c2c1f2678a8e2c12ae09e9572c`；Pascal 与 Confucius 均 FAIL，旧 identity 退役。
+- 两方共同 finding：terminal root/scoped handoff 仍写“等待 evidence commit”，只列 8 个 evidence
+  path，漏列累计 28 个产品文件与 1 个测试文件。
+- Pascal 额外 finding：implementation 进度误写入父 formal `plan.md`，使六文件 combined 从 approved
+  `8ebd3834...15e50` 漂移为 `f54b4a69...bb489`，但 receipt 仍绑定 approved hash。
+- 最小处置：父 plan 精确恢复 formal-approved blob；进度只保留在 summary/log/receipt/continuity；
+  child 顶层、父 summary 与两份 handoff 同步 current review-pending truth，并完整列出 base..HEAD 路径。
+- 产品、测试、receipt schema、T61 differential 与 rollback tree 均不改；内容变化后两位 reviewer 必须
+  对新 commit/tree/diff/receipt identity 从零复审。
