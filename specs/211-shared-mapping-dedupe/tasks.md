@@ -83,8 +83,8 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **状态**：pending。
 - **依赖**：T11。
 - **完成**：10/10/120/23、Python 3.11 固定 digest + Python 3.12 同解释器 AST equality、0 private consumer、
-  72 importers、`plan.md` §3.3 唯一24 non-empty LOC executable 6-case corpus。
-- **验证**：当前 Python 3.11 baseline 为6 observations、digest=`bf4a6deebf...980e`；103 direct、1162
+  72 importers、`plan.md` §3.3 唯一27 non-empty LOC executable 4-case corpus。
+- **验证**：当前 Python 3.11 baseline 为4 observations、digest=`106b6f5e08...5b3f`；103 direct、1162
   impact、72 cold imports；full baseline 只在 exact implementation base 跑一次。
 
 ### T13 Identity TDD RED
@@ -92,8 +92,8 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **状态**：pending。
 - **依赖**：T12。
 - **文件**：现有 `tests/unit/test_frontend_contract_observation_provider.py`。
-- **验收**：新增一个 identity test；baseline 只因 10 objects 不同失败；含 `importlib`≤12 non-empty LOC，
-  与 harness 合计保护成本≤36，0 新测试文件/fixture。
+- **验收**：新增一个4 non-empty LOC identity test；baseline 只因两个代表模块 objects 不同失败；结构门禁
+  另证全部10 aliases 指向同一 helper；与27 LOC harness 合计保护成本=31，0 新测试文件/fixture。
 
 ### T14 最小 GREEN
 
@@ -109,18 +109,20 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 - **状态**：pending。
 - **依赖**：T14。
-- **验收**：implementation 6-case JSONL 与同环境 baseline 字节完全一致；Python 3.11 digest=
-  `bf4a6deebf...980e`；104 direct、
+- **验收**：implementation 4-case JSONL 与同环境 baseline 字节完全一致；Python 3.11 digest=
+  `106b6f5e08...5b3f`；104 direct、
   1163 impact、72 imports 全绿。
 
 ### T22 Rollback/reapply rehearsal
 
 - **状态**：pending。
 - **依赖**：T21 + exact `implementation_commit/tree`。
-- **验收**：disposable clone revert tree=baseline、reapply tree=`implementation_tree`；revert 重跑结构/6-case/
-  103/72，reapply 重跑结构/6-case/104/72。
-- **回执**：之后提交唯一 `t61-differential-rollback-receipt.json` 形成 `evidence_review_head/tree`；receipt
-  绑定 implementation/revert/reapply，禁止绑定自身 commit/tree/hash；review envelope 绑定 receipt blob。
+- **验收**：disposable clone revert tree=baseline、reapply tree=`implementation_tree`；revert 重跑结构/4-case/
+  103/72，reapply 重跑结构/4-case/104/72。
+- **回执**：之后的 evidence commit chain 只允许唯一 `t61-differential-rollback-receipt.json`、强制 root/scoped
+  handoff 与必要机械 truth/manifest，形成 `evidence_review_head/tree`；`implementation_commit` 后产品和行为测试
+  零变化。receipt 绑定 implementation/revert/reapply，禁止绑定自身 commit/tree/hash；review envelope 绑定
+  receipt、root/scoped handoff 与 truth/manifest blobs。
 
 ### T23 全量与 GAP 防回归
 
@@ -148,7 +150,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 - **状态**：pending。
 - **依赖**：T31。
-- **验收**：PR merge；detached `origin/main` 重跑6-case/104/1163/full/Ruff/constraints/validate/truth/
+- **验收**：PR merge；detached `origin/main` 重跑4-case/104/1163/full/Ruff/constraints/validate/truth/
   manifest/clean；product ledger 与 reviewed `implementation_tree` 一致，receipt 与 evidence review blob一致。
 
 ## Batch 4：Closure

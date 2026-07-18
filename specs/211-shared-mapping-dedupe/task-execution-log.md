@@ -122,6 +122,27 @@
   identity，不再是当前合同或维护成本。
 - 删除注释 `specs/211-shared-mapping-dedupe/spec.md`：`**Then** 每个运行时的 140 个 observation 与对应 baseline 完全一致`；第二轮 Pascal finding 证明10×14 harness违反 RC-06，故替换为 unique implementation 6-case JSONL，并由103/104 direct、1162/1163 impact、10→1 identity 与72 imports补足模块面。
 
+## Batch 2026-07-18-008：第三轮 terminal 对抗评审与预算/连续性修订
+
+- 第三轮 identity=`1483af94084ef66856d5e0e85e884166f406c225`、tree=`8a44ee78041a...d9fb1`、
+  formal-six=`5fff7b5c...b769`；Pascal=`LEAN FAIL`、Confucius=`SAFETY FAIL`，该 identity 永久失效。
+- Pascal finding：保护预算错误使用147 raw deletions，内含20个空行；合法 non-empty denominator=127、
+  `floor(127×25%)=31`。既有24 LOC harness + 12 LOC identity=36超限，压缩长行也损害可维护性。
+- Confucius finding：`implementation_commit` 后“只含 receipt”的提交规则与 AGENTS.md 强制在测试/证据批次
+  更新 root/scoped handoff 冲突，无法同时满足 evidence identity 和 continuity protocol。
+- disposition：representative identity test 收敛为4 non-empty LOC，独立结构门禁覆盖全部10 aliases；canonical
+  harness 改为可读的27 non-empty LOC、最长116字符，组合成4个 fresh cases。保护成本=31，精确等于上限；
+  产品+证明 raw additions目标≤58、hard cap=60。
+- 修订后 recipe 在 Python 3.11 formal baseline 与 disposable spike candidate 均输出4行逐字相同 JSONL，digest=
+  `106b6f5e088e79cfa6c21dfffd43ed29b8d9019f19b51369ecc122de0aef5b3f`；覆盖 truthiness/迭代事件、非 dict
+  过滤、首次保留、key order/Unicode、JSON异常、dict subclass/top copy/nested identity。
+- evidence commit chain 现允许且只允许 receipt、强制 root/scoped handoff 与必要机械 truth/manifest；receipt
+  不绑定自身 commit/tree/hash，review envelope 绑定 receipt/continuity/truth blobs；`implementation_commit`
+  后产品与行为测试零变化，仍可作为唯一 rollback/reapply target。
+- 第四轮修订自检：harness=27 non-empty/max line 116、identity=4/max line 94；baseline/spike 均为4行且
+  digest=`106b6f5e...5b3f`；diff-check、inline-backtick、YAML、constraints、program validate、placeholder 与
+  protected-path 扫描全部 PASS。下一步是 terminal truth sync/manifest 与新 identity，不预写 reviewer 结论。
+
 ## 不随执行批次过期的门禁顺序
 
 1. formal source 或证据变化后，先做 truth sync/audit、manifest exact 与本地门禁，再提交 clean identity；

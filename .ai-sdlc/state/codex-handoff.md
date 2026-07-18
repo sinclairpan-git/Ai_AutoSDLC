@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T21:03:38+00:00
-- Reason: WI211 第二轮 terminal 双 FAIL 后的证据减重与身份模型修订
+- Updated: 2026-07-18T21:35:03+00:00
+- Reason: WI211 第三轮 terminal 双 FAIL 后的保护预算与连续性证据链修订
 - Goal: 取得 WI211 formal 同一 identity 双 PASS 并在实现前完成 formal mainline 验收
-- State: ed5020ef/b1dc1b21 两轮 identity 均已失效；第二轮三项 finding 已修复、formal/truth 重新冻结；承载本 handoff 的提交即第三轮评审 identity；implementation 未授权
+- State: ed5020ef/b1dc1b21/1483af94 三轮 identity 均已失效；第三轮两项 finding 已修复并完成 terminal truth sync；第四轮 clean review identity 尚待提交冻结；implementation 未授权
 - Stage: design
 - Work Item: 211-shared-mapping-dedupe
 - Branch: feature/211-shared-mapping-dedupe-docs
@@ -26,22 +26,24 @@
 
 ## Key Decisions
 - 只处理10-module exact mapping family；23 calls不改；formal/implementation/closure三PR隔离
-- baseline/revert=103/1162，implementation/reapply=104/1163；6-case JSONL与72 cold imports必须等价
-- canonical harness=24、identity test≤12，保护成本36；3.11固定AST digest、3.12同解释器比较
-- rollback绑定implementation identity；receipt由独立evidence review identity携带且禁止自绑定
+- baseline/revert=103/1162，implementation/reapply=104/1163；4-case JSONL与72 cold imports必须等价
+- canonical harness=27 non-empty、identity test=4，保护成本31=`floor(127×25%)`；最长行116/94
+- rollback绑定implementation identity；evidence chain仅允许receipt、强制handoff与必要机械truth/manifest，禁止receipt自绑定及implementation后产品/行为测试变化
+- Python 3.11固定AST digest、3.12同解释器比较；4-case跨平台只要求同解释器逐字节相等
 - active child只允许一个 mapped pre-close summary missing
 
 ## Commands / Tests
 - candidate spike raw +25/-147、non-empty +23/-127；baseline/candidate impact均1162；72 imports clean
-- compact corpus baseline/candidate=6、digest bf4a6deebf；3.11 AST body/full/call精确复现6602b868/6fb4192d/a62a6dee
-- constraints、validate、truth ready/fresh 1111/1111、snapshot f4d8b541；manifest exact PASS；product/protected zero diff
+- readable corpus baseline/candidate=4、digest 106b6f5e08；harness/identity=27/4 non-empty；3.11 AST body/full/call精确复现6602b868/6fb4192d/a62a6dee
+- diff-check、inline-backtick、YAML、placeholder、constraints、validate与protected扫描PASS
+- terminal truth sync/audit ready/fresh，1111/1111、missing/unmapped=1/0、close=210/211、snapshot dc5ef76a；manifest exact=`1 passed`
 
 ## Blockers / Risks
 - PowerShell host前置崩溃，使用/bin/zsh fallback；implementation在formal双PASS/Codex/checks/merge/fresh-main前未授权
 
 ## Local PR Review
-- Candidate selection 双 PASS；terminal Round1/Round2 双 FAIL findings均已修复；第三轮同 identity 双审 pending
+- Candidate selection 双 PASS；terminal Round1/Round2/Round3 identity均双 FAIL并已失效；第四轮同 identity 双审 pending
 
 ## Exact Next Steps
-- 以承载本 handoff 的 exact HEAD/tree 冻结父子六文件 combined 与 diff identity
-- Pascal/Confucius从零审查同一 identity；仅双PASS允许push/formal PR
+- 提交第四轮修订，复跑提交后 truth audit/manifest exact/clean/parity/protected 并冻结 HEAD/tree/formal-six/diff/truth identity
+- Pascal/Confucius从零审查同一第四轮 identity；仅双PASS允许push/formal PR
