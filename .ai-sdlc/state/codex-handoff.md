@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T00:09:27+00:00
-- Reason: WI209 final post-decoded-path regression, governance and replay evidence complete
+- Updated: 2026-07-18T00:20:15+00:00
+- Reason: WI209 fourth adversarial RED/GREEN batch complete
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Final decoded-path candidate green: focused 78; full 3253 passed/3 skipped; constraints and validate PASS; truth ready/fresh 1101/1101 and 209/209; manifest exact PASS; budgets product +123/+130 and tests +192/+200 raw/normalized; max function 46
+- State: Fourth adversarial findings reproduced RED and fixed GREEN; focused 78 passed and Ruff clean; full verification pending
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Reject all prior identities and verdicts; final review starts only from the continuity commit produced by this update, with no further content changes
+- Trust diff --git operands atomically and reject decoded Windows drive, UNC, rooted, and backslash traversal paths without adding helpers or public API
 
 ## Commands / Tests
-- 34 commits replayed from formal tree 0c865c4335cd86d84124992382730a2e200419db to tree f2edc8d5494490594ca2a71b4e8be4ed20df7888 exactly; full suite 3253 passed 3 skipped in 558.05s
+- RED boundary expected 12 but old implementation returned 5; GREEN focused 78 passed in 11.02s; Ruff PASS
 
 ## Blockers / Risks
-- Fresh dual adversarial PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
+- Full suite, governance replay, fresh dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Calculate final HEAD/tree/binary identity; Pascal and Confucius review that identical clean candidate from zero; push PR only after dual PASS
+- Restore unrelated resume/WI208 handoff mutations; mirror root handoff to WI209; recompute budgets; run full suite and governance
