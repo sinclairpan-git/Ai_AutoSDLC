@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation CI repair verification；Round 12 双审与 PR #146 Codex clean 已因 Windows CI 测试夹具 finding 退役，Round 13 重新执行终态门禁
+**状态**：closure adversarial re-review；PR #146/merge `31aad572` 与 fresh-main acceptance 已完成；closure Round 2 matching lifecycle findings 已修订，等待新身份双审与 closure PR delivery
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -309,3 +309,33 @@
   verdict 均为 FAIL。
 - Round 15 只把 T41 绑定到评审调用提供的当前精确身份并记录本 receipt；产品/测试 blob 不变，
   final truth/replay 仍为 completed，双 PASS 前不得 push。
+
+## 22. Batch 2026-07-18-022：Round 15 双 PASS、PR 合并与 fresh-main 关闭
+
+- Round 15 candidate=`c5c6e94a`、replay=`abad54a6`，tree 均为 `adfc8503`；Pascal/Confucius 分别从
+  精简直接性与兼容安全性复审同一身份，均 PASS、无 actionable finding。
+- PR #146 的 Codex current-head review 审到 `c5c6e94adc` 且无 major issue；Windows 3.11/3.12 full
+  与其余 checks 全绿，最终 22/22 success，merge=`31aad572a61d9a0ca952fc8cd12923a5a1c9bbb5`。
+- fresh detached main focused=`100 passed in 16.23s`、full=`3275 passed, 3 skipped in 624.03s`；Ruff、
+  constraints、program validate、truth `ready/fresh 1101/1101 209/209`、manifest exact
+  `1 passed in 94.27s`、diff/clean guard 全部通过，HEAD 与 `origin/main` 精确一致且状态 clean。
+- T32/T41/T42 completed，GAP-14/T57 closed；回退 PR #146 会重开。本 closure PR 不修改产品/测试，
+  合并后 T43 才选择下一原子减重项，WI209 不计 RC-08。
+
+## 23. Batch 2026-07-18-023：closure Round 1 双 FAIL 与 lifecycle 修订
+
+- Closure Round 1 target=`db19754a`、tree=`540d4a50`、canonical combined=`ce2dbffd`；产品/测试与
+  WI208/resume 保护面零差异，root/scoped handoff 相同，truth/manifest/constraints/validate/focused 全绿。
+- Pascal/Confucius 独立评审得到相同两项 P1：handoff Next 在 target 已冻结后仍要求重复 commit/freeze，
+  且 T43 在 closure PR 尚未 merge 时提前标为 ready；除此之外均无 finding，verdict 均为 FAIL。
+- 两项 finding 已接受：Next 改为由评审调用绑定当前精确身份，T43 恢复 queued。Round 1 身份退役；
+  产品、测试、fresh-main 证据与关闭边界不变，新身份必须重新取得同一身份双 PASS。
+
+## 24. Batch 2026-07-18-024：closure Round 2 双 FAIL 与时间/状态修订
+
+- Closure Round 2 target=`6d7d0b89`、tree=`a272a294`、canonical combined=`7eb8af00`；Round 1 两项
+  finding 已闭合，产品/测试及保护面零差异，focused/truth/manifest/constraints/validate/clean 全绿。
+- Pascal/Confucius 唯一且相同的 P1 为双 handoff 的 Updated/Reason 早于其记录的 Round 1 disposition
+  与新 manifest，以及本日志顶层状态仍停在 Round 13；除此之外均无 finding，verdict 均为 FAIL。
+- 顶层状态已同步为 closure adversarial re-review；truth 更新完成后再刷新双 handoff 时间与原因。
+  Round 2 身份退役，产品/测试、fresh-main 与 GAP-14 关闭证据不变，新身份须从零双审。

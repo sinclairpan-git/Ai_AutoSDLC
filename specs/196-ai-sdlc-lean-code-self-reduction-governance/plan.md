@@ -39,7 +39,7 @@
 WI-206 fresh-main 新暴露的验证/连续性缺口（先于下一减重候选）
   └─ T55 GAP-12 program implicit adapter side effect（WI-207，已关闭）
        └─ T56 GAP-13 portable/lossless resume reconstruction（WI-208 / PR #143，已关闭）
-            └─ T57 GAP-14 YAML quoted-scalar comment-policy false positive（WI-209，implementation replay/adversarial review）
+            └─ T57 GAP-14 YAML quoted-scalar comment-policy false positive（WI-209 / PR #146，已关闭）
 ```
 
 WP-03～WP-07 不互相强制串行。只有代码重叠、契约重叠或同一重复族才形成真实依赖；依赖必须在子项 spec 中用文件/符号和测试证明。
@@ -124,16 +124,11 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 
 ### T57：GAP-14 YAML quoted-scalar comment-policy false positive
 
-- **当前状态**：implementation replay/adversarial review；WI-209 formal PR #145 已合并为 `46156c24`。
-  Round 12 同一身份双审 PASS，PR #146 Codex 对该 head 无 major issue；Windows 3.11/3.12 full CI 均只因
-  测试夹具物化含 quote/newline 的非法 Windows 文件名失败。Round 13 保留跨平台合法的真实 Git
-  `core.quotePath=false` 回归，并直接验证 mixed decoder；产品代码不变。初次 normalized 复算暴露测试
-  `+201` 超限 1 行，现仅缩短 direct decoder witness 的非语义文件名，Unicode/space/Tab/newline/quote/
-  backslash 覆盖不变；最终 raw 产品/测试 `+121/+200`、normalized `+128/+198`，focused `100 passed`、
-  full `3275 passed, 3 skipped`，final truth/manifest 与独立 replay 已完成。Round 13 首个 post-handoff
-  身份因 canonical lifecycle 仍写“待 freeze/replay”被 Pascal/Confucius 双 FAIL 后退役；Round 14 修订
-  canonical receipt 后，双方仅发现 child T41 仍误指 Round 13 head 并再次双 FAIL。Round 15 只修该
-  PR gate 与 review receipt，产品/测试不变，当前只等待同一新身份双审与 current-head CI。
+- **当前状态**：completed；WI-209 formal PR #145/merge `46156c24` 与 implementation PR #146/merge
+  `31aad572` 已完成。Round 15 candidate/replay tree 精确一致，Pascal/Confucius 对同一身份双 PASS；Codex
+  审到 current head `c5c6e94adc` 且 22/22 checks success。fresh detached main focused `100 passed`、full
+  `3275 passed, 3 skipped`，Ruff、constraints、validate、truth `ready/fresh 1101/1101 209/209`、manifest
+  与 clean guard 全绿；GAP-14 已关闭，回退 PR #146 会重开。
 - **风险/范围**：L2；只处理 unified diff 中 YAML quoted scalar 内容被 `_is_comment_line()` 误判为注释。
 - **非目标**：不豁免真实 YAML comments，不修改 adapter、resume reconstruction 或 verify telemetry。
 - **进入**：用 single/double quoted multiline scalar、plain/literal/folded、真实 comment 和非 YAML source
