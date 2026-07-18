@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T03:23:14+00:00
-- Reason: WI209 final Round 9 candidate closure
+- Updated: 2026-07-18T03:54:49+00:00
+- Reason: WI209 Round 9 real-Git path GREEN checkpoint
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Final Round 9 candidate fully verified and independently replayable: focused 98; full 3273 passed/3 skipped; mutation/budgets/lifecycle/truth/manifest complete; mirrored continuity ready
+- State: Round 9 real-Git space-path finding is RED/GREEN: default ASCII and quotePath=false Unicode cases pass; focused 100 PASS; product/test budgets pass
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -25,16 +25,16 @@
 - tests/unit/test_comment_policy.py
 
 ## Key Decisions
-- Only the final clean HEAD/tree identity may be reviewed; all prior identities and verdicts are retired; GAP-14/T57 stays open until PR merge and fresh-main acceptance
+- Keep ambiguous diff --git space paths fail-closed; recover only tab-terminated single-path headers, then reuse all side/traversal/drive/NUL/containment checks; GAP-14/T57 stays open
 
 ## Commands / Tests
-- focused 98 passed; delete-path mutant expected FAIL; full 3273 passed/3 skipped in 675.17s; product raw/norm +123/+130 tests +198/+200; Ruff check/diff-check PASS with base/candidate format parity; constraints no BLOCKER; validate PASS; truth ready/fresh 1101/1101 209/209; manifest exact 1 passed in 83.40s; independent replay tree exact
+- real Git RED slice 2 failed/10 passed; GREEN slice 12 passed; full focused 100 passed; Ruff check/diff-check PASS; raw/normalized budgets product 123/130 tests 200/198
 
 ## Blockers / Risks
-- Fresh Round 9 dual adversarial PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
+- Fresh full suite, truth sync/audit, manifest, replay, Round 10 dual review, PR checks and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Pascal and Confucius independently review the same frozen Round 9 identity from zero; only dual PASS permits push and PR creation, then current-head Codex review/check heartbeat, merge and fresh-main acceptance
+- Run fresh full pytest and terminal governance gates; sync canonical truth after receipts, replay exact commits, freeze one Round 10 identity, then require Pascal/Confucius PASS
