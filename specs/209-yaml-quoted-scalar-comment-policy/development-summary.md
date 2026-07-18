@@ -1,7 +1,7 @@
 # 开发摘要：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 8 findings 已修订，Round 9 双审待完成
+**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 9 safety finding 修订中
 
 ## 当前结论
 
@@ -12,6 +12,10 @@ GAP-14 是验证可靠性缺陷，不是减重成果。实现已限定在 `comme
 Round 8 产品修复与回放证据通过，但双审发现 canonical delete+added 用例被压缩掉，以及 child/parent
 lifecycle、execution receipt 和 handoff 与实现事实不同步。两类 finding 已按原范围修订并重新通过
 focused/full/预算门禁；GAP-14/T57 仍等待新身份双 PASS，不扩展产品范围。
+
+Round 9 Pascal 已 PASS；Confucius 用真实 Git 证明含空格路径的歧义 `diff --git` header 虽正确失信，
+但后续带终止 Tab 的单路径 `---/+++` header 也被同一 grammar 拒绝，导致 quoted scalar 假 BLOCKER。
+当前仅允许从该可消歧 header 恢复路径，不能放宽双路径 header。
 
 ## 冻结方向
 

@@ -43,26 +43,29 @@
 - **验证**：RED nodes GREEN；`tests/unit/test_comment_policy.py` 全绿。
 - **证据**：`e289057e` 起始 GREEN；后续同文件修订闭合 path/header/source trust findings，未新增产品文件或公共抽象。
 
-### T23 安全矩阵与预算（completed）
+### T23 安全矩阵与预算（in progress）
 
 - **依赖**：T22。
 - **验收**：真实 YAML/Python/Markdown comments、plain/literal/folded、malformed、mixed-extension rename/quoted path、no-follow symlink/reparse/containment、标准 hunk 边界、closing flow suffix/escape、replacement reason 与 CLI exit/text 全部通过；以 `256/134/1799` 为 raw 基线，产品 ≤130、两测试合计 ≤200，三文件 Ruff-normalized 一致满足。
 - **停止**：新增模块/公共抽象、预算超限或 blocker 文本变化即回到 T22/设计。
 - **证据**：canonical delete+added real-comment 独立反事实已恢复并杀死错误回退 mutant；focused 98 PASS；产品 raw/normalized `+123/+130`、测试合计 `+198/+200`。
+- **当前状态**：Round 9 新发现真实 Git 未引号空格路径兼容缺口；默认 ASCII 空格与 `core.quotePath=false` 非 ASCII 空格两条 RED 已提交，待最小 GREEN 与预算复验。
 
 ## Batch 3：终态证明
 
-### T31 全量与治理门禁（completed）
+### T31 全量与治理门禁（in progress）
 
 - **依赖**：T23。
 - **验收**：comment-policy、verify-constraints、full、Ruff、constraints、validate、truth、manifest、diff-check 全绿；full 前后 HEAD/tree、resume/handoff/status 无漂移。
 - **证据**：修订后 full `3273 passed, 3 skipped`；Ruff/constraints/validate/diff-check PASS；truth sync 重算 `ready`、inventory `1101/1101`。终态 receipt 写回后按计划再次 sync/audit/manifest。
+- **当前状态**：Round 9 产品 finding 会改变候选身份；GREEN 后必须重新执行 full、truth/manifest 与 replay。
 
 ### T32 回退演练和双对抗终审（in progress）
 
 - **依赖**：T31。
 - **验收**：逐提交 revert 精确回到 formal merge tree、reapply 精确回到 candidate tree；Pascal/Confucius 对同一 final identity 均 PASS，无未处置 finding。
 - **当前状态**：Round 8 replay tree 精确一致，但 Pascal 因测试覆盖稀释 FAIL，Confucius 因 canonical lifecycle 与 continuity receipt 失真 FAIL；两项均须修订后从零双审。
+- **Round 9**：Pascal 对修订身份 PASS；Confucius 发现真实 Git 空格路径假 BLOCKER，verdict=FAIL；该身份退役。
 
 ## Batch 4：交付与关闭
 

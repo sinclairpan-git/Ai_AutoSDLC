@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；Round 8 findings 已修订，Round 9 双审待完成
+**状态**：implementation adversarial review；Round 9 safety finding 修订中
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -170,3 +170,15 @@
   sync 写入 snapshot `c3a62cb3863a67005913ec15a34e757e1b0cc3404428fb86e850503a82c860a3`，inventory `1101/1101`。
 - T23/T31 转 completed；T32 继续 in progress。当前 receipt 会改变 snapshot，必须再次 sync/audit、
   manifest exact、replay 后才冻结 Round 9；GAP-14/T57 与 T41/T42 状态不变。
+
+## 9. Batch 2026-07-18-009：Round 9 真实 Git 空格路径 FAIL
+
+- Round 9 exact identity=`0974a315` / tree=`3f44e4ae`；Pascal 未发现精简、预算或覆盖问题，verdict=PASS。
+- Confucius 在真实仓库复现：默认 Git 对 `my file.yaml` 输出未引号 `diff --git`，并以 Tab 终止
+  `---/+++` 单路径 header；`core.quotePath=false` 下 `配置 file.yaml` 相同。当前两者均产生
+  `[('<unknown>', '# inside')]`，verdict=FAIL。
+- 根因：双路径 `_GIT_PATH` 为防歧义正确拒绝空格，但 `_diff_path()` 对可消歧的 Tab 终止单路径 header
+  仍复用该 grammar，old/new source trust 无法恢复。修复不得放宽 `diff --git`；只允许安全的 Tab 终止
+  单路径 grammar，并继续执行 side-prefix、traversal、NUL/drive/containment 防护。
+- 两条真实 Git RED：相关切片 `2 failed, 10 passed`；Round 9 身份与 verdict 退役，T23/T31/T32
+  in progress，T41/T42 queued，GAP-14/T57 保持开放。

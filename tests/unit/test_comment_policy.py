@@ -20,6 +20,7 @@ from ai_sdlc.core.comment_policy import (
 _MIXED_NEW_YAML = 'value: "x\n # inside"\nstable: 1\n'
 _SINGLE = "value: 'first\n  #139 continuation\n  last'\n"
 _DOUBLE = 'value: "first\n  #139 continuation\n  last"\n'
+_DOUBLE_DONE = _DOUBLE.replace("#139 continuation", "done")
 _FLOW = 'value: ["first\n  # inside", " # later\n  tail"]\n'
 _FLOW_COMMENT = 'value: ["first\n  # inside", "# later"] # real\n'
 _REAL_COMMENT = "value: first\n# keep operator note\n"
@@ -149,16 +150,11 @@ def test_comment_deletion_reason_must_match_path_and_comment(tmp_path: Path) -> 
     log.write_text("# Log\n", encoding="utf-8")
     _commit_all(tmp_path)
     source.write_text("def f():\n pass\n", encoding="utf-8")
-    log.write_text("# Log\n\n- removed comment: unrelated generic reason\n", encoding="utf-8")
+    log.write_text("removed comment: unrelated\n", encoding="utf-8")
 
     assert collect_comment_deletion_blockers(tmp_path)
 
-    log.write_text(
-        "# Log\n\n"
-        "- removed comment reason: src/a.py explains payment idempotency "
-        "was folded into the function contract.\n",
-        encoding="utf-8",
-    )
+    log.write_text("removed comment: src/a.py explains payment\n", encoding="utf-8")
 
     assert collect_comment_deletion_blockers(tmp_path) == []
 
@@ -168,6 +164,7 @@ def test_comment_deletion_reason_must_match_path_and_comment(tmp_path: Path) -> 
     [
         ("c.yaml", _SINGLE, "#139 continuation", "done", 0),
         ("c.yml", _DOUBLE, "#139 continuation", "done", 0),
+        ("my file.yaml", _DOUBLE, "#139 continuation", "done", 0),
         ("c.yaml", "value: first\n# real comment\n", "# real comment", "", 1),
         ("c.yaml", "value: |\n  # literal content\n", "# literal content", "done", 1),
         ("c.yaml", "value: >\n  # folded content\n", "# folded content", "done", 1),
@@ -211,9 +208,9 @@ def test_yaml_mixed_extension_uses_each_side_source(
     assert len(findings) == expected
 
 
-def test_yaml_quoted_path_and_invalid_new_header_are_fail_closed(tmp_path: Path) -> None:
+def test_yaml_quoted_path_header_is_fail_closed(tmp_path: Path) -> None:
     source = tmp_path / "配置 file.yaml"
-    assert not _blockers(tmp_path, _DOUBLE, _DOUBLE.replace("#139 continuation", "done"), source.name)
+    assert not _blockers(tmp_path, _DOUBLE, _DOUBLE_DONE, source.name)
     quoted = r'"a/\351\205\215\347\275\256 file.yaml"'
     unknown = ("<unknown>", "#139 continuation")
     headers = (
@@ -229,6 +226,13 @@ def test_yaml_quoted_path_and_invalid_new_header_are_fail_closed(tmp_path: Path)
         actual = [(finding.path, finding.removed_comment) for finding in findings]
         expected = [] if "+++ /dev/null" in header else [unknown]
         assert actual == expected, header
+
+
+def test_yaml_quote_path_false(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "1")
+    monkeypatch.setenv("GIT_CONFIG_KEY_0", "core.quotePath")
+    monkeypatch.setenv("GIT_CONFIG_VALUE_0", "false")
+    assert not _blockers(tmp_path, _DOUBLE, _DOUBLE_DONE, "配置 file.yaml")
 
 
 @pytest.mark.parametrize(
