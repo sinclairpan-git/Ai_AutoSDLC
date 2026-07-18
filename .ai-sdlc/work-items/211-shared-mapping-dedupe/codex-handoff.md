@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T22:00:35+00:00
+- Updated: 2026-07-18T22:03:20+00:00
 - Reason: WI211 第四轮安全变异 FAIL 后的显式 key-order 观察修订
 - Goal: 取得 WI211 formal 同一 identity 双 PASS 并在实现前完成 formal mainline 验收
-- State: ed5020ef/b1dc1b21/1483af94/64b8fc35 四轮 identity 均已失效；第四轮 Pascal PASS、Confucius FAIL 的 key-order finding 已修复并完成新 truth sync；第五轮 clean review identity 尚待提交冻结；implementation 未授权
+- State: ed5020ef/b1dc1b21/1483af94/64b8fc35 四轮 identity 均已失效；第四轮 key-order finding 已修复，第五轮合同、truth 与提交后门禁已冻结；承载本 handoff 的 clean tip 即第五轮 review identity；implementation 未授权
 - Stage: design
 - Work Item: 211-shared-mapping-dedupe
 - Branch: feature/211-shared-mapping-dedupe-docs
@@ -36,8 +36,8 @@
 - candidate spike raw +25/-147、non-empty +23/-127；baseline/candidate impact均1162；72 imports clean
 - readable corpus baseline/candidate=4、digest 8c6d3e21ef；last-wins mutation digest 636f787f84 且keys顺序不同；harness/identity=27/4 non-empty；3.11 AST body/full/call精确复现6602b868/6fb4192d/a62a6dee
 - diff-check、inline-backtick、YAML、placeholder、constraints、validate与protected扫描PASS
-- 第五轮 terminal truth sync/audit ready/fresh，1111/1111、missing/unmapped=1/0、close=210/211、snapshot a2da8973；manifest exact=`1 passed`
-- 修订后constraints无BLOCKER、program validate/YAML/diff/protected扫描PASS；root/scoped parity待review identity复算
+- 第五轮 terminal truth sync/audit及提交后复验均ready/fresh，1111/1111、missing/unmapped=1/0、close=210/211、snapshot a2da8973；manifest exact两次=`1 passed`
+- 提交后constraints无BLOCKER、program validate PASS；root/scoped parity与protected/product zero diff待review identity复算
 
 ## Blockers / Risks
 - PowerShell host前置崩溃，使用/bin/zsh fallback；implementation在formal双PASS/Codex/checks/merge/fresh-main前未授权
@@ -46,5 +46,5 @@
 - Candidate selection 双 PASS；terminal Round1～Round3双FAIL；Round4 Pascal PASS/Confucius FAIL，双方结论均失效；Round5双审pending
 
 ## Exact Next Steps
-- 提交 key-order 修订，复跑提交后 truth audit/manifest exact/clean/parity/protected 并冻结第五轮HEAD/tree/formal-six/diff/truth identity
+- 复算当前 clean tip 的HEAD/tree/formal-six/diff/truth、handoff parity与protected/product zero diff
 - Pascal/Confucius从零审查同一第五轮 identity；仅双PASS允许push/formal PR
