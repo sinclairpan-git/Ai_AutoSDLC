@@ -90,8 +90,24 @@
   恢复 HEAD，root handoff已修正为 WI211/design，并创建 byte-identical WI211 scoped handoff。
 - 本日志追加使 seed snapshot authoring hash按预期失效；下一步必须先做 terminal sync，不得直接评审旧 snapshot。
 
-## 当前精确下一步
+## Batch 2026-07-18-006：首轮 terminal 对抗评审与修订
 
-1. 对本日志新增证据做 terminal truth sync，重跑 audit/manifest exact；
-2. 提交 terminal formal batch；该提交直接作为 exact HEAD/tree/combined review identity；
-3. Pascal/Confucius 对同一 identity 审查至双 PASS，之后才允许 push/formal PR。
+- 首轮 terminal identity=`ed5020ef68917e3a361d9612ee4b08a447e69ddb`、tree=`279740819687...2d7f`、
+  formal-six=`8c9eba5a4d...a24`；Pascal=`LEAN FAIL`、Confucius=`SAFETY FAIL`，该 identity 永久失效。
+- Pascal findings：父合同把合法的 active-child pre-close summary missing 与 GAP-11 回归混为一谈；本日志
+  的下一步滞后于 terminal handoff。
+- Confucius findings：140 observation 与 AST digest 缺少可复算 recipe；private delta 未覆盖
+  `__globals__`、pickle 与 `inspect` 派生视图；同样确认 lifecycle 日志滞后。
+- disposition：父子 formal 已精确定义唯一 mapped/`exists=false` child summary、close=`N/(N-1)` 的
+  pre-close 边界和 closure `N/N`；plan §3.3 冻结 executable JSONL recipe，Python 3.11 baseline/candidate
+  均为140 observations、digest=`2657ee073f...1d695`；AST payload 与所有 identity/code/globals/source-owner
+  派生 private delta 已显式冻结。
+- preliminary spike digest `05b7908685...3aab` 只保留为历史发现证据，不再承担 implementation admission；
+  当前可执行 recipe 是唯一验收源。
+
+## 不随执行批次过期的门禁顺序
+
+1. formal source 或证据变化后，先做 truth sync/audit、manifest exact 与本地门禁，再提交 clean identity；
+2. Pascal/Confucius 必须从零审查同一 HEAD/tree/formal-six/diff/truth，任一 finding 使双方结论同时失效；
+3. 只有同 identity 双 PASS/findings=none 才允许 push/formal PR；PR merge/fresh-main 前 implementation 禁止。
+4. 精确运行态、snapshot 与下一动作只写 root/scoped byte-identical handoff，避免 execution source 自证循环。

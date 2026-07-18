@@ -237,7 +237,12 @@ T53A、T53B、T54 已分别使用独立 WI/branch/PR 关闭，不再是待执行
 - T53B：WI-200 / PR #124 / merge `c737eda0`，adapter canonical consumption truth 已关闭。
 - T54：WI-201 / PR #125 / merge `d19c8b7d`，source inventory 已收敛为 unmapped=0、missing=0。
 
-每个后续目标切片仍须落盘对应 impact analysis，作用是防止上述 truth 回归，而不是重复执行已关闭任务。分析缺失或不确定，或当前 truth 再次出现对应 blocker、unmapped/missing source 时，必须 fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B/T54 重新当作硬依赖。涉及 adapter 入口的切片仍须明确验证 GAP-10 的 consumption 边界未回归。
+每个后续目标切片仍须落盘对应 impact analysis，作用是防止上述 truth 回归，而不是重复执行已关闭任务。
+active child 在 closure 前只允许一个已映射但尚不存在的 `development-summary.md`，close 层必须精确为
+`N/(N-1)`；closure 必须归零为 `N/N`，不得预建空 summary 伪造完成。分析缺失或不确定，或当前 truth
+再次出现对应 blocker、unmapped、第二个 missing 或其他类型/path/layer 的 missing source 时，必须
+fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B/T54 重新当作硬依赖。涉及 adapter
+入口的切片仍须明确验证 GAP-10 的 consumption 边界未回归。
 
 ## 8. 停止与回退总则
 

@@ -72,6 +72,10 @@ formal PR 不得含 `src/ai_sdlc/**` 或 implementation test diff。
 
 使用 exact fresh `origin/main` 创建 `feature/211-shared-mapping-dedupe`。记录 HEAD/tree、Python/OS/uv、
 10 defs、23 calls、body/full/call digest、72 importers、private consumers、目标文件和受保护文件 blob。
+结构 digest 必须逐字采用 spec §2.1 的 AST payload recipe；其中 call nodes 的判定是
+`isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and
+node.func.id == "_dedupe_mapping_items"`。先核对 body/full/call 分别为 `6602b868...`、`6fb4192d...`、
+`a62a6dee...`，再捕获实现 base；不得用 grep 文本或含位置属性的 AST 替代。
 
 ### 3.2 写唯一 failing test
 
@@ -103,10 +107,140 @@ def test_mapping_item_dedupe_uses_one_shared_binding() -> None:
 
 ### 3.3 捕获行为与导入基线
 
-- 对 spec §4 的 14 个 case factory 逐 binding 创建新对象，记录 `outcome + exception + side events`；
-- 本机 Python 3.11 baseline 140 observations digest 应为
-  `05b7908685c415a6dada0b1530ca0bd310afb4f8ca4b950343752a5ea6643aab`；其他运行时先记录自己的
-  baseline，再要求 candidate/revert/reapply 同环境相等；
+以下 `wi211-t61-corpus-v1` 代码块是唯一 executable recipe。每个 binding/case 都调用 `_case` 新建对象；
+每条 observation 按 module/case/outcome/events/probe 规范化为 compact、sorted-key、UTF-8 JSONL，保留末尾
+换行后做 SHA-256。baseline JSONL 必须保存到 disposable evidence 目录，candidate/revert/reapply 与同环境
+baseline 做字节级比较后才比较 digest；receipt 只登记 digest/计数/环境和 evidence hash，不复制第二套 case。
+
+<!-- wi211-t61-corpus-v1:start -->
+```python
+import hashlib
+import importlib
+import json
+import sys
+
+MODULE_NAMES = (
+    "ai_sdlc.core.frontend_contract_observation_provider",
+    "ai_sdlc.core.frontend_contract_runtime_attachment",
+    "ai_sdlc.core.frontend_contract_verification",
+    "ai_sdlc.core.frontend_gate_verification",
+    "ai_sdlc.core.frontend_visual_a11y_evidence_provider",
+    "ai_sdlc.generators.frontend_cross_provider_consistency_artifacts",
+    "ai_sdlc.generators.frontend_provider_expansion_artifacts",
+    "ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts",
+    "ai_sdlc.generators.frontend_quality_platform_artifacts",
+    "ai_sdlc.generators.frontend_theme_token_governance_artifacts",
+)
+CASE_NAMES = (
+    "none", "empty", "duplicate", "key_order", "invalid_values", "unicode",
+    "nested_duplicate", "int_keys", "falsy_distinct", "unserializable",
+    "cyclic", "mixed_key_sort", "truthiness_events", "dict_subclass_shallow",
+)
+
+
+def _case(name):
+    events = []
+    probe = lambda result: {}
+    if name == "none":
+        values = None
+    elif name == "empty":
+        values = []
+    elif name == "duplicate":
+        values = [{"a": 1}, {"a": 1}]
+    elif name == "key_order":
+        values = [{"a": 1, "b": 2}, {"b": 2, "a": 1}]
+    elif name == "invalid_values":
+        values = [1, "x", {"a": 1}, None]
+    elif name == "unicode":
+        values = [{"键": "值"}, {"键": "值"}]
+    elif name == "nested_duplicate":
+        values = [{"a": {"b": [1, 2]}}, {"a": {"b": [1, 2]}}]
+    elif name == "int_keys":
+        values = [{1: "x"}, {1: "x"}]
+    elif name == "falsy_distinct":
+        class FalsyValues:
+            def __bool__(self):
+                events.append("bool:false")
+                return False
+
+            def __iter__(self):
+                events.append("iter:unexpected")
+                raise AssertionError("falsy values must not be iterated")
+
+        values = FalsyValues()
+    elif name == "unserializable":
+        values = [{"value": {1}}]
+    elif name == "cyclic":
+        item = {}
+        item["self"] = item
+        values = [item]
+    elif name == "mixed_key_sort":
+        values = [{1: "int", "1": "str"}]
+    elif name == "truthiness_events":
+        class EventValues:
+            def __bool__(self):
+                events.append("bool:true")
+                return True
+
+            def __iter__(self):
+                events.append("iter:start")
+                yield {"event": 1}
+                events.append("iter:after-first")
+                yield {"event": 1}
+                events.append("iter:end")
+
+        values = EventValues()
+    elif name == "dict_subclass_shallow":
+        class Item(dict):
+            pass
+
+        nested = []
+        item = Item(nested=nested)
+        values = [item]
+        probe = lambda result: {
+            "nested_identity_preserved": result[0]["nested"] is nested,
+            "result_exact_dict": type(result[0]) is dict,
+            "top_level_is_new": result[0] is not item,
+        }
+    else:
+        raise AssertionError(name)
+    return values, events, probe
+
+
+def _observe(binding, module_name, case_name):
+    values, events, probe = _case(case_name)
+    try:
+        result = binding(values)
+    except Exception as exc:
+        outcome = {
+            "kind": "raise",
+            "exception": f"{type(exc).__module__}.{type(exc).__qualname__}",
+            "message": str(exc),
+        }
+    else:
+        outcome = {"kind": "return", "value": result, "probe": probe(result)}
+    return {"module": module_name, "case": case_name, "events": events, "outcome": outcome}
+
+
+rows = [
+    _observe(importlib.import_module(module_name)._dedupe_mapping_items, module_name, case_name)
+    for module_name in MODULE_NAMES
+    for case_name in CASE_NAMES
+]
+jsonl = "".join(
+    json.dumps(row, allow_nan=False, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n"
+    for row in rows
+).encode("utf-8")
+if "--jsonl" in sys.argv[1:]:
+    sys.stdout.buffer.write(jsonl)
+else:
+    print(json.dumps({"observations": len(rows), "sha256": hashlib.sha256(jsonl).hexdigest()}, sort_keys=True))
+```
+<!-- wi211-t61-corpus-v1:end -->
+
+- 当前 Python 3.11 formal baseline/candidate 必须各输出140 observations、digest=
+  `2657ee073f131d0760ee1b751d32f5f71c2f9afe30a7f05bc261487ea8c1d695`；其他运行时先记录自己的
+  baseline JSONL/digest，再要求 candidate/revert/reapply 同环境逐字节相等；
 - 跑 103 direct tests 与 23-file/1162-test 影响切片 baseline；
 - 对 `rg -l 'from ai_sdlc\.utils\.helpers import' src/ai_sdlc` 得到的 72 模块逐个 cold import，要求
   failures/noisy 均为空；
@@ -155,8 +289,8 @@ from ai_sdlc.utils.helpers import _dedupe_mapping_items as _dedupe_mapping_items
 
 ## 5. Phase 3：T61B、回退与验证
 
-1. 在 candidate 上重跑 140 observations，当前 Python 3.11 期望 digest=
-   `05b7908685c415a6dada0b1530ca0bd310afb4f8ca4b950343752a5ea6643aab`。
+1. 在 candidate 上逐字执行 §3.3 recipe 并重跑 140 observations，当前 Python 3.11 期望 digest=
+   `2657ee073f131d0760ee1b751d32f5f71c2f9afe30a7f05bc261487ea8c1d695`，且 JSONL 与 baseline 字节相等。
 2. 重跑 104 direct、23-file/1163 impact、72 cold imports、full pytest、Ruff、constraints、validate、truth。
 3. 在 disposable clone revert implementation commit：tree OID=baseline；重跑结构、140 diff、
    103 direct、1162 impact、72 imports。

@@ -47,7 +47,9 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **状态**：completed。
 - **GAP-09**：capability/inheritance、blocking refs、codegen/test admission、artifact/schema 零漂移。
 - **GAP-10**：adapter capability/consumption、runtime-adapter artifact 与 CLI transcript 零漂移。
-- **GAP-11**：implementation 新增 source=0；formal/closure 仅 canonical WI source；unexpected missing/unmapped 阻断。
+- **GAP-11**：implementation 新增 source=0；formal 唯一 expected missing 是 mapped/`exists=false` 的本 child
+  `development-summary.md` 且 close=211/210；closure 必须归零为211/211。任一 unmapped、第二个 missing 或
+  其他 type/path/layer 的 missing 阻断。
 - **停止**：分析不确定或 truth 漂移时重开对应 GAP，不得继续 candidate。
 
 ### T03 Formal 双 Agent 评审
@@ -80,8 +82,10 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 - **状态**：pending。
 - **依赖**：T11。
-- **完成**：10/10/120/23、body/full/call digest、0 private consumer、72 importers、14-case corpus。
-- **验证**：140 observations、103 direct、1162 impact、72 cold imports；full baseline 只在 exact implementation base 跑一次。
+- **完成**：10/10/120/23、按 spec §2.1 recipe 复算 body/full/call digest、0 private consumer、72 importers、
+  `plan.md` §3.3 唯一 executable 14-case corpus。
+- **验证**：当前 Python 3.11 baseline 为140 observations、digest=`2657ee073f...1d695`；103 direct、1162
+  impact、72 cold imports；full baseline 只在 exact implementation base 跑一次。
 
 ### T13 Identity TDD RED
 
@@ -104,7 +108,8 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 - **状态**：pending。
 - **依赖**：T14。
-- **验收**：candidate 140 digest 与同环境 baseline 完全一致；104 direct、1163 impact、72 imports 全绿。
+- **验收**：candidate 140 JSONL 与同环境 baseline 字节完全一致且 digest=`2657ee073f...1d695`；104 direct、
+  1163 impact、72 imports 全绿。
 
 ### T22 Rollback/reapply rehearsal
 

@@ -35,7 +35,14 @@
 
 所有证据默认对应基线 revision；`program-manifest.yaml` 证据必须以目标提交内的 `truth_snapshot.repo_revision`、`generated_at`、`snapshot_hash` 三元组为准，并通过 `uv run ai-sdlc program truth audit` 复核。规范不得硬编码会随 truth sync 变化的 snapshot hash。
 
-复核必须在目标 commit/PR checkout 上执行并记录目标 commit、三元组、audit 输出与退出码。当前交付只接受 `snapshot_state=fresh`、整体 `state=ready`、退出码 0，且 manifest 无 `missing/invalid/stale`、validation error 或 blocker；capability blocking refs 与 source inventory 计数仍须作为精确集合记录在 execution log。任意 non-ready、非零退出码、集合变化或证据缺失均 fail-closed；若 GAP-09～GAP-11 对应 blocker 或 unmapped/missing source 再现，必须登记证据并重开对应 GAP，不得以 `PASS_WITH_REGISTERED_DEBT` 继续。
+复核必须在目标 commit/PR checkout 上执行并记录目标 commit、三元组、audit 输出与退出码。当前交付只接受
+`snapshot_state=fresh`、整体 `state=ready`、退出码 0，且 manifest 无 `invalid/stale`、validation error 或
+blocker。唯一允许的 active-child pre-close 状态是：恰好一个已映射、`exists=false`、
+`source_type=development_summary`、`truth_layer=close` 的当前 child `development-summary.md`，且 close totals/materialized
+精确为 `N/(N-1)`；它表示尚未伪造的未来 closure，不是 GAP-11 回归。该 child closure 必须把 missing
+归零并恢复 `N/N`。capability blocking refs 与 source inventory 精确集合仍须记录；任一其他 missing、任一
+unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合未解释变化或证据缺失均 fail-closed，
+并在命中 GAP-09～GAP-11 时登记证据、重开对应 GAP，不得以 `PASS_WITH_REGISTERED_DEBT` 继续。
 
 | 编号 | 类别 | 事实证据 / 复现入口 | 目标与责任 | 减重关键路径 |
 |---|---|---|---|---|
@@ -150,7 +157,7 @@ T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy
 三项都先红后绿，且不计为减重成果。由于它们会污染治理证据、恢复状态或阻断合法变更，路线在继续
 新的 T63/T65/WP-06/WP-07 候选前先顺序关闭 T55、T56、T57。
 
-兼容、安全或授权边界不得用 waiver 绕过。GAP-09～GAP-11 已由 WI-199～WI-201 关闭，不再是开放阻断依赖；后续目标切片仍须落盘 inheritance、adapter consumption 与 source inventory 的防回归影响分析。分析缺失或不确定，或 truth 再次出现对应 blocker、unmapped/missing source 时，必须 fail-closed、登记 owner/证据并重开对应 GAP；truth 保持关闭条件时不得重复执行 T53A/T53B/T54。
+兼容、安全或授权边界不得用 waiver 绕过。GAP-09～GAP-11 已由 WI-199～WI-201 关闭，不再是开放阻断依赖；后续目标切片仍须落盘 inheritance、adapter consumption 与 source inventory 的防回归影响分析。分析缺失或不确定，或 truth 再次出现对应 blocker、unmapped 或 §3 允许边界之外的 missing source 时，必须 fail-closed、登记 owner/证据并重开对应 GAP；truth 保持关闭条件时不得重复执行 T53A/T53B/T54。
 
 ## 8. 功能需求
 
