@@ -1,29 +1,42 @@
 # Continuity Handoff
 
-- Updated: 2026-07-17T19:46:05+00:00
-- Reason: PR 145 Codex P1 scoped WI209 handoff repair
-- Goal: 修复 PR #145 Codex finding，取得 current-head clean review/checks 并合并 formal PR
-- State: Codex reviewed 6e4e3a0 and found missing WI209 scoped handoff；已新增与 root 字节一致的 scoped copy，focused/governance/manifest/audit 全绿，待双 Agent 复审后推送
+- Updated: 2026-07-18T08:49:48+00:00
+- Reason: WI209 Round 15 T41 identity reconciliation target
+- Goal: Deliver WI209 without product regression, cross-platform fixture failure, budget overrun, or stale PR gate identity
+- State: Round 15 canonical target records final truth/manifest/replay complete and binds T41 to the current review invocation; product and test blobs remain unchanged; Round 14 dual FAIL is disposed; only renewed same-identity dual review and current-head PR delivery remain
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
-- Branch: feature/209-yaml-quoted-scalar-comment-policy-docs
+- Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
 
 ## Changed Files
-- modified: `.ai-sdlc/state/codex-handoff.md`
-- added: `.ai-sdlc/work-items/209-yaml-quoted-scalar-comment-policy/codex-handoff.md`
-- Git staging truth must be read from `git status --short`; this list intentionally does not persist volatile XY codes.
+- .ai-sdlc/state/codex-handoff.md
+- .ai-sdlc/work-items/209-yaml-quoted-scalar-comment-policy/codex-handoff.md
+- program-manifest.yaml
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+- specs/209-yaml-quoted-scalar-comment-policy/development-summary.md
+- specs/209-yaml-quoted-scalar-comment-policy/plan.md
+- specs/209-yaml-quoted-scalar-comment-policy/spec.md
+- specs/209-yaml-quoted-scalar-comment-policy/task-execution-log.md
+- specs/209-yaml-quoted-scalar-comment-policy/tasks.md
+- src/ai_sdlc/core/comment_policy.py
+- tests/integration/test_cli_verify_constraints.py
+- tests/unit/test_comment_policy.py
 
 ## Key Decisions
-- root 与 WI209 scoped handoff 必须 byte-identical；不修改 formal 六文件技术合同或 lifecycle
+- Keep exact commit/tree/replay hashes outside self-referential canonical content and bind them in both review requests after the final continuity commit is replayed
 
 ## Commands / Tests
-- handoff blobs equal；constraints/validate PASS；comment-policy 9 passed；manifest exact 1 passed in 82.23s；truth ready/fresh 1101/1101
+- Round 15 truth snapshot 829b9d0a32357ffb4595d797a39e6c6aa32aa0ad31113411c564779e5adbd097 ready/fresh 1101/1101 209/209 missing/unmapped 0; manifest exact 1 passed in 99.48s; product/test blobs unchanged; focused 100 full 3275 passed 3 skipped; raw +121/+200 normalized +128/+198
 
 ## Blockers / Risks
-- 修复提交尚未取得 Pascal/Confucius 双 PASS、尚未推送；PR #145 current-head Codex/checks 未完成
+- Round 14 candidate received matching Pascal/Confucius P1 because T41 still named a retired Round 13 head; it is retired and fixed; the current target must independently PASS both dimensions before push
 
 ## Local PR Review
-- PR #145 Codex reviewed `6e4e3a0` and reported P1 missing WI209 scoped handoff；已用 root/scoped byte equality 修复，待 current-head re-review
+- Round 14 Pascal/Confucius matching P1 T41 identity FAIL accepted and fixed; renewed verdicts required
 
 ## Exact Next Steps
-- 冻结修复树并由 Pascal/Confucius 从零复审；双 PASS 后提交推送、回复 thread、重请求 @codex review
+- Bind the exact current candidate/replay commit, tree and diff hashes in both Round 15 review requests; only same-identity Pascal and Confucius PASS permits push, Codex review, checks, merge and fresh-main acceptance

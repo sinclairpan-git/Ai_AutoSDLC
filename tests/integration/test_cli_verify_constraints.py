@@ -222,16 +222,16 @@ def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
     subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
 
 
-def _write_012_checkpoint(root: Path) -> None:
-    spec = root / "specs" / "012-frontend-contract-verify-integration"
-    spec.mkdir(parents=True, exist_ok=True)
+def _write_012_checkpoint(root: Path, stage: str = "verify", spec: str = "") -> None:
+    spec = spec or "specs/012-frontend-contract-verify-integration"
+    (root / spec).mkdir(parents=True, exist_ok=True)
     save_checkpoint(
         root,
         Checkpoint(
-            current_stage="verify",
+            current_stage=stage,
             feature=FeatureInfo(
-                id="012",
-                spec_dir="specs/012-frontend-contract-verify-integration",
+                id=spec.split("/", 1)[1].split("-", 1)[0],
+                spec_dir=spec,
                 design_branch="d",
                 feature_branch="f",
                 current_branch="main",
@@ -753,6 +753,30 @@ def _write_frontend_evidence_class_checkpoint(
 
 
 class TestCliVerifyConstraints:
+    @pytest.mark.parametrize("case", ("quoted", "removed", "added"))
+    def test_comment_policy_yaml_quoted_scalar_cli_contract(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        case: str,
+    ) -> None:
+        quoted = case == "quoted"
+        before = "value: 'first\n  #139 continuation\n  last'\n" if quoted else "value: first\n# keep operator note\n"
+        after = {"quoted": "value: 'first\n  last'\n", "removed": "value: first\n", "added": 'value: "first\n  #139 continuation"\n'}[case]
+        init_project(tmp_path)
+        _write_012_checkpoint(tmp_path, "init", "specs/001-wi")
+        _init_git_repo(tmp_path)
+        (tmp_path / "config.yaml").write_text(before, encoding="utf-8")
+        _commit_all(tmp_path, "init")
+        (tmp_path / "config.yaml").write_text(after, encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+
+        result = runner.invoke(app, ["verify", "constraints"])
+
+        assert result.exit_code == int(not quoted)
+        assert ("original comment removed" in result.output) == (not quoted)
+        assert quoted or "in config.yaml: # keep operator note" in result.output
+
     def test_exit_1_missing_constitution(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

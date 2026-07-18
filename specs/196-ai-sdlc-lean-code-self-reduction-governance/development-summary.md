@@ -20,9 +20,9 @@
   test-isolation repair PR #141 合入 `8d8b8f96`。最终 fresh-main real-hook/focused/full
   `3224 passed, 3 skipped`、Ruff/format/constraints/validate/truth 全绿，pre/post repository state 相同且 clean。
 - WI-208/GAP-13 已由 PR #143 / merge `f51c176a` 关闭，closure PR #144 合并为 `85bdedac`；fresh-main
-  relocation/focused/full/Ruff/治理门禁全绿且 repository state clean。WI-209/GAP-14 已在独立 docs 分支
-  进入 formal，使用 old/new hunk 行号与 PyYAML quoted token span 的窄边界；WI-209 fresh-main 后才恢复
-  新的减重候选。
+  relocation/focused/full/Ruff/治理门禁全绿且 repository state clean。WI-209 formal PR #145 已合并为
+  `46156c24`；GAP-14/T57 正处于独立 implementation replay/adversarial review，使用 old/new hunk 行号与
+  PyYAML quoted token span 的窄边界，只有 fresh-main 后才恢复新的减重候选。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新
   写成可执行合同，旧 verdict 同时失效。
@@ -48,8 +48,22 @@
 - GAP/WP 子项仍按独立 WI/branch/PR 推进；本 summary 不宣称整体减重完成。
 - WI-202 的首个 T62A 候选因完整 proof 明显超过 RC-06 预算，已按 RC-09 停止且未合入；
   GAP-01/T62A 仍 open，T62B/T62C 未开始，FR-08 双 reviewer fallback 继续有效。
-- GAP-12、GAP-13 已关闭且不计 RC-08 减重收益；GAP-14 处于 WI-209 formal ready，Round 5 已同一
-  身份双 PASS，但 formal PR/implementation/fresh-main 前仍是开放的验证可靠性缺口。WI-207 不得混入
+- GAP-12、GAP-13 已关闭且不计 RC-08 减重收益；GAP-14 处于 WI-209 implementation CI repair
+  verification。Round 8 测试覆盖稀释和 canonical receipt 失真 findings 已修订并通过 fresh verification；
+  Round 9 Pascal PASS、Confucius 因真实 Git 空格路径假 BLOCKER FAIL；该 finding 已按原范围 GREEN，
+  Round 10 fresh full/治理/replay 后双审仍因 mixed Unicode+C-escape、canonical plan、formatter 合同与
+  continuity 真值 FAIL。四项已进入 Round 11 修订，其中产品 finding 已 RED/GREEN，预算降至
+  raw/normalized `+121/+128`；fresh full `3275 passed, 3 skipped`、治理门禁与独立 replay 已通过，
+  Round 11 Confucius PASS、Pascal 因 parent plan/child summary 进行中措辞 FAIL，身份退役；Round 12
+  统一 canonical lifecycle 后取得同一身份双 PASS，PR #146 Codex 对该 head 无 major issue。Windows
+  3.11/3.12 full CI 随后均证明 mixed-path 测试夹具物化了 Windows 非法文件名；Round 13 仅修测试夹具，
+  产品不变。初次 normalized 测试 `+201` 超限 1 行后，只缩短 direct witness 的非语义文件名并保留
+  全部 mixed escape 场景；最终 raw 产品/测试 `+121/+200`、normalized `+128/+198`，focused
+  `100 passed`、full `3275 passed, 3 skipped`，final truth/manifest/replay 已通过。Round 13 首个
+  post-handoff 身份随后因 canonical lifecycle receipt 仍称 freeze/replay 待执行被双方 reviewer 判定
+  FAIL；Round 14 同步 receipt 后双方只发现 child T41 仍指向 Round 13 head，身份再次双 FAIL。Round 15
+  仅修 T41 与 review receipt，产品/测试不变，当前只等待新身份双审/current-head CI。
+  PR 与 fresh-main 前仍是开放的验证可靠性缺口。WI-207 不得混入
   continuity/comment parser，WI-208 不得混入 adapter dispatch，WI-209 不得用 YAML 全局豁免掩盖误报，
   也不得让 added quoted 内容充当真实替代注释。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
