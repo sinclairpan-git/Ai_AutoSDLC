@@ -230,7 +230,7 @@ def test_yaml_quoted_path_header_is_fail_closed(tmp_path: Path) -> None:
 
 def test_yaml_quote_path_false(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GIT_CONFIG_PARAMETERS", "'core.quotePath'='false'")
-    assert not _blockers(tmp_path, _DOUBLE, _DOUBLE_DONE, "配置\t file.yaml")
+    assert not _blockers(tmp_path, _DOUBLE, _DOUBLE_DONE, '配置\t\n"\\ file.yaml')
 
 
 @pytest.mark.parametrize(

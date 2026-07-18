@@ -237,7 +237,8 @@ def _diff_path(value: str, side: str) -> str | None:
         return None
     if value.startswith('"'):
         try:
-            value = ast.literal_eval(value).encode("latin-1").decode("utf-8")
+            byte_literal = value.encode().decode("latin1")
+            value = ast.literal_eval(byte_literal).encode("latin1").decode()
         except (AttributeError, SyntaxError, UnicodeError, ValueError):
             return None
     path = value.removeprefix(f"{side}/")
@@ -254,12 +255,9 @@ def _read_yaml_source(root: Path, path: str, *, old: bool) -> str | None:
         return None
     try:
         if old:
-            result = subprocess.run(
-                ["git", "show", f"HEAD:{path}"], cwd=root, capture_output=True
-            )
-            if result.returncode != 0:
-                return None
-            payload = result.stdout
+            payload = subprocess.run(
+                ["git", "show", f"HEAD:{path}"], cwd=root, capture_output=True, check=True
+            ).stdout
         else:
             candidate = root
             for index, part in enumerate(relative.parts):
@@ -276,7 +274,7 @@ def _read_yaml_source(root: Path, path: str, *, old: bool) -> str | None:
             with os.fdopen(descriptor, "rb") as stream:
                 payload = stream.read()
         return payload.decode("utf-8")
-    except (OSError, UnicodeDecodeError, ValueError):
+    except (OSError, subprocess.SubprocessError, UnicodeDecodeError, ValueError):
         return None
 
 
