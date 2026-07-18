@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T01:43:50+00:00
-- Reason: WI209 sixth-review full regression complete
+- Updated: 2026-07-18T01:48:00+00:00
+- Reason: WI209 sixth-review governance verification complete
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Sixth-review null-source candidate fully green: focused 99; full 3274 passed/3 skipped; Ruff clean; product +123/+130 and tests +192/+200 raw/normalized; governance rerun pending
+- State: Sixth-review null-source candidate fully verified: focused 99; full 3274 passed/3 skipped; constraints/validate/Ruff PASS; truth ready/fresh 1101/1101 and 209/209; manifest exact PASS; budgets +123/+130 and +192/+200
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Both null-new-operand and malformed-delete-added now retain the removed finding; normal explicit create/delete remains covered independently
+- Empty new-source handling is closed with one condition substitution and two isolated direction-specific regression cases; inherited whole-file format status is unchanged
 
 ## Commands / Tests
-- uv run pytest -q: 3274 passed, 3 skipped in 564.33s
+- manifest exact 1 passed in 76.13s; full 3274 passed/3 skipped in 564.33s; max product function 46; budgets exact
 
 ## Blockers / Risks
-- Fresh governance/replay, dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
+- Independent replay, fresh dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Restore unrelated resume/WI208 handoff mutations and mirror WI209; commit full receipt; rerun constraints, validate, truth, manifest exact and budgets; replay/freeze new identity; request both reviews from zero
+- Restore unrelated resume/WI208 handoff mutations and mirror WI209; commit governance receipt; append new commits to independent replay and compare tree; freeze final identity; request both reviews from zero
