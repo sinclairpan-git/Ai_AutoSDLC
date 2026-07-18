@@ -133,7 +133,7 @@ def collect_removed_comment_findings(
             _flush_removed_comments(findings, current_path, removed, added)
             match = _DIFF_PATH_RE.fullmatch(raw_line)
             old_path = _diff_path(match[1], "a") if match else None
-            new_path = _diff_path(match[2], "b") if match else None
+            new_path = _diff_path(match[2], "b") if match and old_path else None
             current_path = new_path or "<unknown>"
             old_line = new_line = None
         elif raw_line.startswith("--- "):
@@ -241,9 +241,9 @@ def _diff_path(value: str, side: str) -> str | None:
         except (AttributeError, SyntaxError, UnicodeError, ValueError):
             return None
     path = value.removeprefix(f"{side}/")
-    if path == value or "\0" in path or {"", ".", ".."} & set(path.split("/")):
-        return None
-    if re.match(r"^[A-Za-z]:/", path):
+    invalid = {"", ".", ".."} & set(re.split(r"[\\/]", path))
+    drive = len(path) > 1 and path[0].isalpha() and path[1] == ":"
+    if path == value or "\0" in path or invalid or drive:
         return None
     return path
 
