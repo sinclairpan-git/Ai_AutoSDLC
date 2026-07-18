@@ -1,27 +1,39 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T02:27:56+00:00
-- Reason: WI209 final eighth-review candidate closure
+- Updated: 2026-07-18T02:51:28+00:00
+- Reason: WI209 Round 8 findings remediation checkpoint
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Final eighth-review candidate fully verified and independently replayable: focused 97; full 3272 passed/3 skipped; governance/truth/manifest PASS; budgets exact; mirrored continuity ready for review
+- State: Round 8 findings repaired in one logical batch: canonical delete+added guard restored; child/parent lifecycle and receipts synchronized; focused 98 PASS; budgets exact
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
 
 ## Changed Files
-- none
+- .ai-sdlc/state/codex-handoff.md
+- .ai-sdlc/work-items/209-yaml-quoted-scalar-comment-policy/codex-handoff.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+- specs/209-yaml-quoted-scalar-comment-policy/development-summary.md
+- specs/209-yaml-quoted-scalar-comment-policy/spec.md
+- specs/209-yaml-quoted-scalar-comment-policy/task-execution-log.md
+- specs/209-yaml-quoted-scalar-comment-policy/tasks.md
+- src/ai_sdlc/core/comment_policy.py
+- tests/integration/test_cli_verify_constraints.py
+- tests/unit/test_comment_policy.py
 
 ## Key Decisions
-- Only the final clean HEAD/tree identity may be reviewed; all prior verdicts and identities are invalid; no code, test, governance or continuity edits are allowed during review
+- Keep GAP-14/T57 open in implementation adversarial review; T13/T21/T22 complete while T23/T31/T32 remain active until fresh gates and dual PASS
 
 ## Commands / Tests
-- Independent replay through all post-formal commits reproduces the candidate tree exactly; final continuity commit is appended to replay before review identity is issued
+- Focused unit+CLI 98 passed; Ruff check and diff-check passed; delete-path mutant is killed by malformed-delete-added; raw/normalized budgets product 123/130 and tests 198/200
 
 ## Blockers / Risks
-- Fresh dual adversarial PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
+- Fresh full suite, governance truth/manifest, independent replay, dual adversarial review, PR checks and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Pascal and Confucius review the same frozen identity from zero; only dual PASS permits push and PR creation, followed by current-head Codex review, required checks, merge and fresh-main acceptance
+- Run full pytest, constraints, validate, truth sync/audit and manifest exact; then update T23/T31 receipts, replay the complete series, freeze a new identity and require Pascal/Confucius PASS
