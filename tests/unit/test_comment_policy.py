@@ -44,9 +44,10 @@ _DIFF_CASES = [
     'diff --git "a/..\\\\x.py" "b/..\\\\x.py"\n@@ -1 +1 @@\n-# backslash traversal\n+# replacement\n',
     "diff --git a/x.py b/x.py\n--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@ section\n-# one\n+value\n\\ No newline at end of file\n@@ -0,0 +3 @@\n+# added\n",
     "diff --git a/new.py b/new.py\n--- /dev/null\n+++ b/new.py\n@@ -0,0 +1 @@\n+# created\n",
+    "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +1 @@\n-# deleted\n+# replacement\n",
     "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-# deleted\n",
 ]
-_DIFF_CASE_IDS = "broken unterminated python-x-escape bad-unquoted-escape nul bad-explicit wrong-explicit-sides swapped-explicit-sides posix-traversal empty-component wrong-old quoted-wrong-old null-operand drive-relative drive-rooted unc backslash-traversal multi-hunk create delete".split()  # noqa: SIM905
+_DIFF_CASE_IDS = "broken unterminated python-x-escape bad-unquoted-escape nul bad-explicit wrong-explicit-sides swapped-explicit-sides posix-traversal empty-component wrong-old quoted-wrong-old null-operand drive-relative drive-rooted unc backslash-traversal multi-hunk create malformed-delete-added delete".split()  # noqa: SIM905
 
 
 def test_comment_language_uses_current_user_language() -> None:
@@ -214,6 +215,7 @@ def test_yaml_quoted_path_and_invalid_new_header_are_fail_closed(tmp_path: Path)
     source = tmp_path / "配置 file.yaml"
     assert not _blockers(tmp_path, _DOUBLE, _DOUBLE.replace("#139 continuation", "done"), source.name)
     quoted = r'"a/\351\205\215\347\275\256 file.yaml"'
+    unknown = ("<unknown>", "#139 continuation")
     headers = (
         f"diff --git {quoted} /dev/null",
         f"diff --git {quoted} d/config.yaml",
@@ -225,7 +227,7 @@ def test_yaml_quoted_path_and_invalid_new_header_are_fail_closed(tmp_path: Path)
         diff = f"{header}\n@@ -2 +2 @@\n-  #139 continuation\n+# replacement\n"
         findings = collect_removed_comment_findings(diff_text=diff, root=tmp_path)
         actual = [(finding.path, finding.removed_comment) for finding in findings]
-        expected = [] if "+++ /dev/null" in header else [("<unknown>", "#139 continuation")]
+        expected = [] if "+++ /dev/null" in header else [unknown]
         assert actual == expected, header
 
 

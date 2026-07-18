@@ -18,45 +18,51 @@
 - **验收**：FR/SC/矩阵、old/new path/line、分侧 fail-closed、预算、停止/回退均闭合；Pascal 与 Confucius 按父计划 §9 唯一 recipe，对父/子各 `spec+plan+tasks` 六文件同一 combined hash 均 PASS。
 - **停止**：任一 reviewer 有 finding 时修正文档、重算哈希并重开两位评审，直到一致 PASS。
 
-### T13 formal 治理、PR 与合并（in progress）
+### T13 formal 治理、PR 与合并（completed）
 
 - **依赖**：T12 双 PASS。
 - **验收**：父 GAP-14/T57 标为 formal ready；manifest truth `ready/fresh`，root exact、constraints、validate、diff-check 通过；formal PR current-head Codex clean 且 checks 全绿后合并。
 - **非目标**：`src/ai_sdlc/` 零差异；除 root exact inventory/close 数值外测试零差异。
+- **证据**：formal PR #145 已合并为 `46156c24def705ecd12981d13ca1988d061a4fc7`；implementation 分支从该 merge 独立创建。
 
 ## Batch 2：TDD 与最小实现
 
-### T21 提交真实 RED characterization（queued）
+### T21 提交真实 RED characterization（completed）
 
 - **依赖**：T13 formal merge；从新 main 创建独立 implementation 分支。
 - **文件**：`tests/unit/test_comment_policy.py`、`tests/integration/test_cli_verify_constraints.py`。
 - **验收**：single/double removed continuation 至少一个参数化 node 在基线失败；added quoted/不可确认 YAML 内容不能替代真实 comment；CLI exit/text 已冻结。
 - **验证**：记录精确 pytest node、失败断言和退出码；RED 只含测试。
+- **证据**：`6438d589`；unit witness 3/3 RED，CLI witness 2 RED/1 PASS，产品文件零差异。
 
-### T22 实现 path/syntax-aware GREEN（queued）
+### T22 实现 path/syntax-aware GREEN（completed）
 
 - **依赖**：T21。
 - **文件**：`src/ai_sdlc/core/comment_policy.py`。
 - **验收**：保留 `--unified=0`；old/new path/行号、HEAD/worktree sources、PyYAML quoted token span/end column 和分侧保守过滤生效。
 - **验证**：RED nodes GREEN；`tests/unit/test_comment_policy.py` 全绿。
+- **证据**：`e289057e` 起始 GREEN；后续同文件修订闭合 path/header/source trust findings，未新增产品文件或公共抽象。
 
-### T23 安全矩阵与预算（queued）
+### T23 安全矩阵与预算（in progress）
 
 - **依赖**：T22。
 - **验收**：真实 YAML/Python/Markdown comments、plain/literal/folded、malformed、mixed-extension rename/quoted path、no-follow symlink/reparse/containment、标准 hunk 边界、closing flow suffix/escape、replacement reason 与 CLI exit/text 全部通过；以 `256/134/1799` 为 raw 基线，产品 ≤130、两测试合计 ≤200，三文件 Ruff-normalized 一致满足。
 - **停止**：新增模块/公共抽象、预算超限或 blocker 文本变化即回到 T22/设计。
+- **当前状态**：Round 8 指出 canonical delete+added real-comment 用例被压缩掉；已恢复该独立反事实，待 Round 9 focused/预算复验后完成。
 
 ## Batch 3：终态证明
 
-### T31 全量与治理门禁（queued）
+### T31 全量与治理门禁（in progress）
 
 - **依赖**：T23。
 - **验收**：comment-policy、verify-constraints、full、Ruff、constraints、validate、truth、manifest、diff-check 全绿；full 前后 HEAD/tree、resume/handoff/status 无漂移。
+- **当前状态**：Round 8 产品候选曾取得 focused 97、full 3272/3 与 terminal gates；本次 canonical 文档修订使旧终态身份失效，须重新执行 truth/manifest/clean gates。
 
-### T32 回退演练和双对抗终审（queued）
+### T32 回退演练和双对抗终审（in progress）
 
 - **依赖**：T31。
 - **验收**：逐提交 revert 精确回到 formal merge tree、reapply 精确回到 candidate tree；Pascal/Confucius 对同一 final identity 均 PASS，无未处置 finding。
+- **当前状态**：Round 8 replay tree 精确一致，但 Pascal 因测试覆盖稀释 FAIL，Confucius 因 canonical lifecycle 与 continuity receipt 失真 FAIL；两项均须修订后从零双审。
 
 ## Batch 4：交付与关闭
 

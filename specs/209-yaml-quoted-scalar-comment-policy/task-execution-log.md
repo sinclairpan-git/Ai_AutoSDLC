@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：formal ready；T13 PR delivery in progress
+**状态**：implementation adversarial review；Round 8 双 FAIL 修订中
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -135,3 +135,26 @@
   root handoff 晚于 manifest 且 Next 真实，保护 blob 等于 HEAD，verdict=PASS。
 - T12 因同一 combined hash 双 PASS 转为 completed；T13 与父 GAP-14/T57 转为 formal ready / PR delivery
   in progress。该 lifecycle 变化会改变六文件 review target，必须冻结最终身份并由双方再审后才能提交。
+
+## 7. Batch 2026-07-18-007：implementation TDD、门禁与 Round 8 双 FAIL
+
+### 实现与验证收据
+
+- formal PR #145 合并为 `46156c24def705ecd12981d13ca1988d061a4fc7`；implementation branch 从该
+  merge 独立创建。RED=`6438d589`：unit 3/3 失败、CLI 2 失败/1 通过、产品零差异。
+- 初始 GREEN=`e289057e`，安全矩阵=`d6a39cd8`；后续 findings 均在同一产品文件内以独立 RED/GREEN
+  修订，未新增产品/测试文件或公共抽象。Round 8 预算为产品 raw/normalized `+123/+130`、测试合计
+  `+196/+200`，5 个 private helper，最大修改/新增函数 48 行。
+- Round 8 focused `97 passed`；full `3272 passed, 3 skipped in 565.52s`；Ruff check、constraints、
+  validate、truth `ready/fresh 1101/1101`、manifest exact、diff-check 均通过；formal base 与候选具有同一
+  组三文件 Ruff-format 既有债。
+- disposable replay 逐提交复现候选 tree，Round 8 冻结 HEAD=`9ca77548`、tree=`8bbd001d`，两端 clean。
+
+### Round 8 对抗 findings 与处置
+
+- Pascal / 精简直接性：产品实现与预算通过；canonical `+++ /dev/null` 删除真实注释且包含 added
+  comment 的独立用例被压缩掉，mutant 可存活，verdict=FAIL。现恢复该用例，不删除其他安全场景。
+- Confucius / 兼容安全：历史 new-header source-trust P2 已闭合；child/parent lifecycle、T21～T32
+  状态与实现事实不一致，且 handoff 未列实际变更文件和可复跑命令，verdict=FAIL。
+- Round 8 身份与全部 verdict 已退役。T13/T21/T22 completed；T23/T31/T32 在证据修订、复验与新身份
+  双审完成前保持 in progress；GAP-14/T57 保持开放，T41/T42 仍 queued。

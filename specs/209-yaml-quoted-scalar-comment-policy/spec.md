@@ -4,7 +4,7 @@
 **父项**：`196-ai-sdlc-lean-code-self-reduction-governance` / GAP-14 / T57
 **基线**：`main@85bdedaca6a34563ccc2b8626a7e0adb188f1d4e`
 **创建日期**：2026-07-17
-**状态**：formal ready；Round 5 同一身份双对抗 PASS，formal PR/Codex/checks/merge 未完成
+**状态**：implementation adversarial review；formal PR #145 已合并为 `46156c24`，Round 8 双 FAIL 修订中；GAP-14/T57 保持开放
 
 ## 1. 问题与目标
 
