@@ -43,7 +43,8 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **GAP-09**：frontend capability/inheritance、blocking refs 与 codegen/test admission 零差异。
 - **GAP-10**：adapter canonical consumption、CLI transcript 与 adapter 调用集合零差异。
 - **GAP-11**：formal 唯一允许缺失预登记 close source；implementation source 新增=0；closure missing=0。
-- **证据**：execution log + `.ai-sdlc/work-items/210-shared-text-dedupe/` 下 differential/rollback receipts。
+- **证据**：execution log + `.ai-sdlc/work-items/210-shared-text-dedupe/` 下唯一
+  `t61-differential-rollback-receipt.json`。
 - **停止**：分析不确定、unexpected unmapped/missing、capability/blocking refs 漂移时重开对应 GAP。
 
 ### T03 Formal 对抗评审至双 PASS

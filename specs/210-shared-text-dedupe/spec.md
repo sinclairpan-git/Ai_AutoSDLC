@@ -98,9 +98,9 @@ union 变为共享 `object`。只读扫描与 corpus 必须证明仓库内没有
 | GAP-11 source inventory | formal 只新增已映射 WI-210 sources；implementation 新产品/测试文件=0，不新增 source registry 类型 | formal 允许唯一预登记 close source `development-summary.md` 暂未物化；除该项外必须 unmapped=0/missing=0，closure 后总 missing=0；否则 owner=WI-210 delivery，停止并重开 GAP-11 |
 
 命令回执写入 `specs/210-shared-text-dedupe/task-execution-log.md`；implementation differential 与
-rollback/reapply 结构化回执分别写入
-`.ai-sdlc/work-items/210-shared-text-dedupe/t61-differential-receipt.yaml` 和
-`.ai-sdlc/work-items/210-shared-text-dedupe/rollback-reapply-receipt.yaml`。
+rollback/reapply 复用一个结构化回执：
+`.ai-sdlc/work-items/210-shared-text-dedupe/t61-differential-rollback-receipt.json`。不为同一 L1
+候选拆分第二个 evidence schema 或 sidecar。
 
 ## 4. Reduction Contract
 

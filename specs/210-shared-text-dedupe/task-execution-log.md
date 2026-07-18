@@ -2,7 +2,7 @@
 
 **功能编号**：`210-shared-text-dedupe`
 **创建日期**：2026-07-18
-**当前状态**：Batch 0 formal Round 1 双 FAIL 已接受；Round 2 修订与重验中；产品实现未授权
+**当前状态**：Batch 0 formal Round 2 split verdict 已退役；Round 3 最小修订与重验中；产品实现未授权
 
 ## Batch 2026-07-18-001：下一原子候选选择
 
@@ -123,3 +123,14 @@
   root/scoped handoff 保持 byte-identical。
 - 本批提交后的 current HEAD 即 Round 2 review identity；review invocation 必须按父 plan §9 绑定父子
   六文件 combined 与可复算的 binary/name-status hashes。除双审外不再要求重复 commit/freeze。
+
+## Batch 2026-07-18-007：Formal Round 2 split verdict 与 Round 3 处置
+
+- reviewed commit/tree=`60c93644`/`23cc23b7`，six-file combined=`cde82e85...bf84e`；Confucius
+  `PASS/findings:none`，Pascal `FAIL`，因此整体未通过，Confucius PASS 随内容修订失效。
+- Pascal 三项 finding 全部接受：顶层 current state 滞后；root/scoped handoff 的 Changed Files 漏列
+  3 个 base..HEAD 路径；两个未来 receipt sidecar 对 L1 candidate 过度实现。
+- Round 3 只做最小处置：终态前同步 current state；handoff 补回 project-state、父 plan、manifest
+  expectation test；复用 WI205/WI206 先例的单一 `t61-differential-rollback-receipt.json`。
+- Round 2 两份 verdict 与所有 hash 退役；新内容必须重新同步 truth、通过 formal gates，并由两位 reviewer
+  对同一新 identity 从零复审。
