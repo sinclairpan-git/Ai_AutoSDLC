@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T12:08:44+00:00
-- Reason: WI210 formal pre-review gates checkpoint
+- Updated: 2026-07-18T12:15:36+00:00
+- Reason: WI210 terminal formal truth checkpoint before exact-identity review
 - Goal: Freeze WI210 exact text-dedupe reduction contract and obtain same-identity dual PASS before implementation
-- State: Local formal seed commit 40389190 is materialized; truth snapshot 4503b0c2 is fresh; final receipt commit and exact-identity dual review remain
+- State: Formal receipts are committed at 31889a27 and terminal truth snapshot e49c3edf is materialized; final identity commit and dual review remain
 - Stage: design
 - Work Item: 210-shared-text-dedupe
 - Branch: feature/210-shared-text-dedupe-docs
@@ -29,7 +29,7 @@
 ## Commands / Tests
 - candidate audit PASS: unit 441, CLI integration 398, current-main full 3275 passed 3 skipped
 - isolated spike PASS: 27 cold imports, 730 calls unchanged, 1282 tests, Ruff lint, formatter debt parity 24-to-24, diff check
-- manifest integration 1 passed; constraints PASS; program validate PASS; truth audit ready/fresh 1106/1106
+- manifest integration 1 passed; constraints PASS; program validate PASS; preliminary truth audit ready/fresh 1106/1106; terminal truth snapshot e49c3edf
 - protected diff restored clean: Cursor rule, resume-pack and WI208 handoff unchanged; src diff zero
 
 ## Blockers / Risks
@@ -40,4 +40,4 @@
 - Candidate selection review converged, but no formal exact-identity PASS exists yet
 
 ## Exact Next Steps
-- Finalize formal receipts, sync truth, freeze exact identity, then run both adversarial reviews from zero
+- Commit terminal truth/continuity, rerun formal gates, freeze exact identity, then run both adversarial reviews from zero

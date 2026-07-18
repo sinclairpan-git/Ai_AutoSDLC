@@ -86,9 +86,10 @@
 - root manifest expectation 仅机械同步两条既有断言：inventory=`1106/1106/0/1`，close=`210/209`；
   `tests/integration/test_repo_program_manifest.py`=`1 passed in 91.70s`，未改测试逻辑。
 - `uv run ai-sdlc verify constraints` PASS；`uv run ai-sdlc program validate` PASS。
-- `uv run ai-sdlc program truth sync --execute --yes` 生成 snapshot
-  `4503b0c2550cde9ae80ddb4307ed08d9ef47ec4eb5400a8d1c6bad7242aff5c1`；随后 truth audit=
-  `ready/fresh`，source inventory=`1106/1106`、missing close source=`1`。
+- seed commit 后首次 truth sync 生成 snapshot `4503b0c2550c...aff5c1`，随后 truth audit=`ready/fresh`；
+  pre-review receipt commit=`31889a27d8d8b269260af7fa4e4d966ba6b882ee` 后终态 sync 生成 snapshot
+  `e49c3edfc3c2552c907fb0d1a9c5e31126f62b08ca72c2e67d25641925117a3e`。source inventory 始终为
+  `1106/1106`、missing close source=`1`。
 - handoff CLI 因旧 checkpoint 短暂改写 resume-pack/WI208 handoff；两文件已精确恢复为 HEAD。
   Cursor rule、resume-pack、WI208 handoff 与 `src/` 均为 zero diff，root/scoped WI210 handoff byte-identical。
 - 下一步只允许形成 terminal formal identity，并由 Pascal/Confucius 对同一 identity 从零复审。
