@@ -25,7 +25,7 @@ plan lifecycle、formatter contract 与 continuity Next 四项问题，Round 10 
 Round 11 用真实 Git RED/GREEN 覆盖 raw Unicode 与 Tab/newline/quote/backslash/space 混合路径，decoder
 未新增 helper/文件，预算降为产品 raw/normalized `+121/+128`、测试 `+200/+198`。两份 plan 已同步
 implementation lifecycle，并把 format 合同明确为 lint PASS + base/candidate formatter parity；fresh
-focused `100 passed`、full `3275 passed, 3 skipped` 与治理门禁已通过，terminal replay 与双审仍待完成。
+focused `100 passed`、full `3275 passed, 3 skipped`、治理门禁与独立 replay 已通过，仅同一最终身份双审待完成。
 
 ## 冻结方向
 

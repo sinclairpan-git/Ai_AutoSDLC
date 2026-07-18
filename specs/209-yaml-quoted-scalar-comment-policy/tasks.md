@@ -73,7 +73,7 @@
 - **Round 9**：Pascal 对修订身份 PASS；Confucius 发现真实 Git 空格路径假 BLOCKER，verdict=FAIL；该身份退役。finding 已 RED/GREEN。
 - **Round 10**：fresh full/terminal gates/replay 已完成，但 Pascal 因 parent plan、formatter contract、handoff
   Next FAIL，Confucius 因 mixed Unicode+C-escape 与 handoff Next FAIL；身份与 verdict 退役。
-- **Round 11**：findings 与 fresh full/治理门禁已完成；待 receipt 后 terminal truth/manifest、重新 replay 与同一身份双审。
+- **Round 11**：findings、fresh full、terminal truth/manifest 与独立 replay 已完成；仅同一最终身份双审待完成。
 
 ## Batch 4：交付与关闭
 

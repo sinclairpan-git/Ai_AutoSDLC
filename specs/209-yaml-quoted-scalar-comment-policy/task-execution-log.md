@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；Round 10 findings 已修订，Round 11 fresh full/治理门禁已通过，terminal replay/双审待完成
+**状态**：implementation adversarial review；Round 10 findings 已修订，Round 11 fresh full/治理/replay 已通过，仅同一最终身份双审待完成
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -231,3 +231,12 @@
   inventory `1101/1101`、layers `209/209`、missing/unmapped=`0/0`；manifest exact `1 passed in 101.56s`。
 - T31 completed；receipt 后 terminal truth/manifest、Round 11 commits replay 与同一新身份双审仍属 T32。
   GAP-14/T57 与 T41/T42 状态不变。
+
+## 15. Batch 2026-07-18-015：Round 11 terminal truth 与独立 replay
+
+- receipt 后 terminal truth sync/audit=`ready/fresh`，snapshot=`5fae17833827cdf1b04f84663692121805cb2f6fae728145b1cdd6dfdedfc2b6`，
+  inventory `1101/1101`、layers `209/209`、missing/unmapped=`0/0`；manifest exact `1 passed in 101.66s`，
+  target commit audit/manifest 复验 PASS。
+- Round 10 后 6 commits 逐个 replay：candidate=`478cdf30`、replay=`3410bf7f`，tree 均为
+  `91494638db6c17de92c52fe674139a29aeb30de6`，两端 clean；本 receipt/manifest 提交将继续 replay。
+- T32 只剩同一最终身份双审；GAP-14/T57、T41/T42 不变，不重复已完成 truth/replay/freeze。
