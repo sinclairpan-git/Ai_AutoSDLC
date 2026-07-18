@@ -245,13 +245,13 @@ def test_diff_multi_hunk_zero_count_suffix_no_newline_create_delete_and_invalid_
     diffs = [
         "diff --git broken\n@@ -1 +1 @@\n-# real\n+value\n",
         'diff --git a/x.py "unterminated\n@@ -1 +1 @@\n-# first\n+# replacement\ndiff --git a/x.py "b/x\\x2epy"\n@@ -1 +1 @@\n-# second\n+# replacement\ndiff --git a/x.py b/x.py\\q\n@@ -1 +1 @@\n-# third\n+# replacement\ndiff --git a/x.py "b/x.py\\000"\n@@ -1 +1 @@\n-# nul\n+# replacement\n',
-        'diff --git a/x b/x\n--- "bad\n+++ "b/x\\x2epy"\n@@ bad @@\n-# escape\n+# replacement\ndiff --git a/x.py b/x.py\n--- c/x.py\n+++ d/x.py\n@@ -1 +1 @@\n-# sides\n+# replacement\ndiff --git a/x.py b/x.py\n--- b/x.py\n+++ a/x.py\n@@ -1 +1 @@\n-# swapped\n+# replacement\ndiff --git a/../x.py b/../x.py\n@@ -1 +1 @@\n-# traversal\n+# replacement\ndiff --git a//x.py b//x.py\n@@ -1 +1 @@\n-# absolute\n+# replacement\n',
+        'diff --git a/x b/x\n--- "bad\n+++ "b/x\\x2epy"\n@@ bad @@\n-# escape\n+# replacement\ndiff --git a/x.py b/x.py\n--- c/x.py\n+++ d/x.py\n@@ -1 +1 @@\n-# sides\n+# replacement\ndiff --git a/x.py b/x.py\n--- b/x.py\n+++ a/x.py\n@@ -1 +1 @@\n-# swapped\n+# replacement\ndiff --git a/../x.py b/../x.py\n@@ -1 +1 @@\n-# traversal\n+# replacement\ndiff --git a//x.py b//x.py\n@@ -1 +1 @@\n-# absolute\n+# replacement\ndiff --git c/x.py b/x.py\n@@ -1 +1 @@\n-# wrong old\n+# replacement\ndiff --git "c/x.py" b/x.py\n@@ -1 +1 @@\n-# quoted wrong old\n+# replacement\ndiff --git /dev/null b/x.py\n@@ -1 +1 @@\n-# null operand\n+# replacement\ndiff --git "a/C:x.py" "b/C:x.py"\n@@ -1 +1 @@\n-# drive relative\n+# replacement\ndiff --git "a/C:\\\\x.py" "b/C:\\\\x.py"\n@@ -1 +1 @@\n-# drive rooted\n+# replacement\ndiff --git "a/\\\\\\\\server\\\\share\\\\x.py" "b/\\\\\\\\server\\\\share\\\\x.py"\n@@ -1 +1 @@\n-# unc\n+# replacement\ndiff --git "a/..\\\\x.py" "b/..\\\\x.py"\n@@ -1 +1 @@\n-# backslash traversal\n+# replacement\n',
         "diff --git a/x.py b/x.py\n--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@ section\n-# one\n+value\n\\ No newline at end of file\n@@ -0,0 +3 @@\n+# added\n",
         "diff --git a/new.py b/new.py\n--- /dev/null\n+++ b/new.py\n@@ -0,0 +1 @@\n+# created\n",
         "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-# deleted\n",
     ]
     findings = [collect_removed_comment_findings(diff_text=diff) for diff in diffs]
-    assert [len(result) for result in findings] == [1, 4, 5, 1, 0, 1]
+    assert [len(result) for result in findings] == [1, 4, 12, 1, 0, 1]
     assert all(item.path == "<unknown>" for result in findings[1:3] for item in result)
 
 
