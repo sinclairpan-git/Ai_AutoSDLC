@@ -1,62 +1,40 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T16:00:02+00:00
-- Reason: adversarial Round 2 finding fixed; freeze Round 3 candidate
-- Goal: 完成 WI210 shared text dedupe 实现、验证、双重对抗评审与主线交付
-- State: Implementation Round 1/2 identities 已退役；Round 2 唯一 parent-summary P2 已最小修复；terminal truth 852c1b19 ready；当前内容等待 Round 3 同一 identity 双审，未 push/建 PR
-- Stage: execute
+- Updated: 2026-07-18T18:01:36+00:00
+- Reason: WI210 closure Round 1 findings fixed; freeze Round 2 content
+- Goal: 关闭 WI210 单个 T63 shared-text-dedupe family；产品代码零修改，测试仅同步两条 close source 期望
+- State: Closure Round 1 Pascal FAIL/Confucius PASS 已退役；三项 lifecycle/baseline findings 已最小修复；terminal truth 95d53d74 ready、missing 0；当前内容必须作为新 identity 由双方从零复审
+- Stage: close
 - Work Item: 210-shared-text-dedupe
-- Branch: feature/210-shared-text-dedupe
+- Branch: codex/210-shared-text-dedupe-closure
 
 ## Changed Files
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/210-shared-text-dedupe/codex-handoff.md
-- .ai-sdlc/work-items/210-shared-text-dedupe/t61-differential-rollback-receipt.json
 - program-manifest.yaml
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+- specs/210-shared-text-dedupe/development-summary.md
+- specs/210-shared-text-dedupe/plan.md
+- specs/210-shared-text-dedupe/spec.md
 - specs/210-shared-text-dedupe/task-execution-log.md
-- src/ai_sdlc/cli/commands.py
-- src/ai_sdlc/cli/program_cmd.py
-- src/ai_sdlc/cli/run_cmd.py
-- src/ai_sdlc/cli/sub_apps.py
-- src/ai_sdlc/cli/workitem_cmd.py
-- src/ai_sdlc/core/artifact_target_guard.py
-- src/ai_sdlc/core/backlog_breach_guard.py
-- src/ai_sdlc/core/close_check.py
-- src/ai_sdlc/core/execute_authorization.py
-- src/ai_sdlc/core/frontend_contract_observation_provider.py
-- src/ai_sdlc/core/frontend_contract_runtime_attachment.py
-- src/ai_sdlc/core/frontend_contract_verification.py
-- src/ai_sdlc/core/frontend_gate_verification.py
-- src/ai_sdlc/core/frontend_visual_a11y_evidence_provider.py
-- src/ai_sdlc/core/p1_artifacts.py
-- src/ai_sdlc/core/plan_check.py
-- src/ai_sdlc/core/runner.py
-- src/ai_sdlc/core/verify_constraints.py
-- src/ai_sdlc/core/workitem_traceability.py
-- src/ai_sdlc/core/workitem_truth.py
-- src/ai_sdlc/generators/frontend_cross_provider_consistency_artifacts.py
-- src/ai_sdlc/generators/frontend_generation_constraint_artifacts.py
-- src/ai_sdlc/generators/frontend_page_ui_schema_artifacts.py
-- src/ai_sdlc/generators/frontend_provider_expansion_artifacts.py
-- src/ai_sdlc/generators/frontend_provider_runtime_adapter_artifacts.py
-- src/ai_sdlc/generators/frontend_quality_platform_artifacts.py
-- src/ai_sdlc/generators/frontend_theme_token_governance_artifacts.py
-- src/ai_sdlc/utils/helpers.py
-- tests/unit/test_plan_check.py
+- specs/210-shared-text-dedupe/tasks.md
+- tests/integration/test_repo_program_manifest.py
 
 ## Key Decisions
-- formal 六文件、产品、测试、receipt、rollback 不变；累计 base..current 36 paths完整；任何内容变化使旧 verdict 失效
+- closure 只登记一个 completed_reduction family；GAP-05、WI-196、RC-08 与 release 保持 open；产品代码零修改，测试仅 2 条 missing/close-layer 机械期望
 
 ## Commands / Tests
-- Round2 Confucius PASS/Pascal FAIL retired；parent summary contradiction removed；truth 852c1b19 ready 1106/1106
+- fresh-main targeted 1283 passed；full 3276 passed, 3 skipped；closure focused 9、manifest exact 1 passed；constraints/validate/truth/diff/clean PASS；truth ready 1106/1106 missing 0
 
 ## Blockers / Risks
-- PowerShell host 前置崩溃，使用 /bin/zsh fallback；仍需 Round3 双 PASS、Codex/CI、merge、fresh-main
+- PowerShell host 前置崩溃，使用 /bin/zsh fallback；closure 仍需同一 identity 双 PASS、Codex/checks、merge 与 fresh-main docs acceptance
 
 ## Local PR Review
-- Round 1 双 FAIL、Round 2 split verdict 均已退役；finding 已最小修复，等待 Round 3 新 identity 双审
+- Round 1 split verdict 已退役；Pascal 三项 finding 已修复，Confucius PASS 随内容变化失效；Round 2 必须同一 identity 双 PASS
 
 ## Exact Next Steps
-- 冻结 finding-fix commit/tree/diff/receipt hashes；Pascal 与 Confucius Round 3 从零复审；仅双 PASS 后 push/PR
+- 在 Round 2 调用中绑定当前 exact HEAD/tree；Pascal/Confucius 同一 identity 双 PASS 后才 push/PR

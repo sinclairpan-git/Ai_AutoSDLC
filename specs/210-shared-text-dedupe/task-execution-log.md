@@ -2,7 +2,7 @@
 
 **功能编号**：`210-shared-text-dedupe`
 **创建日期**：2026-07-18
-**当前状态**：Implementation 与 terminal gates complete；旧 implementation review identity 已退役；当前最小修订提交后等待同一 identity 双审，PR 未创建、WI 未关闭
+**当前状态**：closure adversarial review；implementation PR #149/merge `904fe5de` 与 fresh-main acceptance 已完成，closure docs 等待同一 identity 双审与 PR delivery
 
 ## Batch 2026-07-18-001：下一原子候选选择
 
@@ -248,3 +248,39 @@
   列为未完成，current truth 自相矛盾；其余 formal combined、36-path handoff、产品/测试/receipt 均通过。
 - 最小修复只从父 summary 下一步删除已完成的 governance；同步必要 review log/continuity 后重新 truth
   sync。产品、测试、formal 六文件、receipt 与 rollback identity 不改；新 identity 必须 Round 3 双 PASS。
+
+## Batch 2026-07-18-018：Implementation Round 3 双 PASS 与 PR delivery
+
+- reviewed HEAD/tree=`6ee2d35fe1ce8276ccb7388dfd4207521cc04e3b`/
+  `326f8962df22ad24d3f99a912c3d781746f07d6b`；binary=`16ea1399...e4710`、name-status=
+  `1baec00c...99d6`、receipt=`9fa4bbfc...dccf`、formal six=`8ebd3834...15e50`。
+- Pascal/精简直接性与 Confucius/兼容安全性均从零复算并 PASS、findings=none；产品 raw
+  `+39/-252/net -213`、non-empty `+35/-196/net -161`，28 aliases、730 calls、行为/异常/event、
+  cold imports 与 rollback/reapply 证据全部一致。
+- PR #149 的 Codex current-head review 未发现 major issue；Compatibility Gate 与全部 required checks
+  22/22 success，merge=`904fe5decc90deba64d09eb6fa94cb3c2a359d93`。
+
+## Batch 2026-07-18-019：Fresh-main acceptance 与 closure authoring
+
+- detached `origin/main@904fe5de`：exact 32-file targeted=`1283 passed in 163.54s`，full=
+  `3276 passed, 3 skipped in 661.34s`；Ruff、constraints、program validate、truth `ready/fresh`
+  `1106/1106`、manifest exact=`1 passed in 97.14s`、diff/clean-state 全绿。
+- 产品相对 formal base 保持 raw `+39/-252/net -213`；28 个选定重复实现体清零为 1 个共享 body 与
+  28 个局部 alias。回退回执仍绑定 base/candidate exact tree；closure 产品代码零修改，测试只改下述
+  两条 manifest 期望。
+- closure 物化 `development-summary.md`，使预登记 missing source 可归零；只更新 child/parent
+  docs、truth、continuity 与 manifest 测试的 missing `1→0`、close layer `209→210` 两条期望，
+  不关闭 GAP-05/WI-196、不恢复 WI-204、不发布版本。manifest exact 依次以两项 pre-close 值 RED，
+  没有第三处漂移或测试逻辑修改；两条期望同步后 GREEN=`1 passed in 93.96s`。
+
+## Batch 2026-07-18-020：Closure Round 1 split verdict 与最小修订
+
+- reviewed HEAD/tree=`cef78bd1928f3337a936f59be10e319aeee835ef`/
+  `d6209d0502789ee87293816a4bfc339fc1f20e73`；Pascal FAIL、Confucius PASS，整体未通过；内容修订后
+  两份 verdict 均退役。
+- Pascal 三项 finding：tasks 顶部把仍 in-progress 的 T33 包含在“Batch 0～3 已完成”；双 handoff
+  重复要求已存在的 commit/freeze；spec 把 28-body 与 helpers.py 96/68 的 formal 基线误写为当前真值。
+- 最小修订只收窄 Batch 状态、把两处数值标成冻结基线、让 handoff Next 直接绑定 Round 2 调用的 exact
+  identity。产品、测试、receipt、rollback、累计 ledger 与关闭边界均不改。
+- Confucius 检查 CLI help 时触发 `.cursor/rules/ai-sdlc.mdc` 自举改写，已立即精确恢复 HEAD blob
+  `ec0ed427a1db1d14370e1518a0c0fd2b8880384b`；reviewed identity 与 clean-state 未漂移。

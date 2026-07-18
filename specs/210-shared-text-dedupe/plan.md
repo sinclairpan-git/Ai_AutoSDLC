@@ -8,7 +8,7 @@ related_doc:
 **编号**：`210-shared-text-dedupe`
 **基线**：`origin/main@4b4348646a11cf2e27e488ddad892977958476a9`
 **风险**：L1 / T63 / WP-03
-**当前阶段**：formal freeze；产品实现未授权
+**当前阶段**：closure；implementation PR #149 已合并并通过 fresh-main acceptance
 
 ## 1. 目标与原则
 
@@ -16,8 +16,9 @@ related_doc:
 `src/ai_sdlc/utils/helpers.py` 的 text section 作为唯一承载点，保持 28 个局部私有 alias 和 730 个
 调用表达式。计划优先减少实现与证明总量，不创建第二个 helper module、wrapper、公共工具框架或配置。
 
-本项不处理 ProgramService/Program Stage/baseline/store，也不恢复 WI-204 sponsor。formal 和产品实现
-分为独立 branch/PR；只有 formal mainline receipt 后才能从新的 `main` 建 implementation branch。
+本项未处理 ProgramService/Program Stage/baseline/store，也未恢复 WI-204 sponsor。formal 与产品实现
+已用独立 branch/PR 交付；closure 只登记完成事实，产品代码零修改，测试仅机械同步预登记 close source
+物化后的 missing `1→0` 与 close layer `209→210` 两条期望。
 
 ## 2. 当前真值
 
@@ -130,8 +131,9 @@ T61A 不新增独立 harness、snapshot、fixture 或 JSON evidence 文件；命
 3. push、创建 PR、请求 Codex current-head review，保持约五分钟 heartbeat；
 4. actionable finding 只做 focused 修复，内容变化后重跑双审与 Codex review；
 5. required checks 全绿后 merge；
-6. detached fresh `main` 跑 targeted/full/Ruff/governance/clean-state acceptance；
-7. closure 只登记一个 T63 `completed_reduction`，不关闭 WI-196 或发布版本。
+6. detached fresh `main@904fe5de` 已通过 targeted `1283 passed`、full `3276 passed, 3 skipped`、
+   Ruff、governance、manifest 与 clean-state acceptance；
+7. closure 登记一个 T63 `completed_reduction`，不关闭 GAP-05、WI-196 或发布版本。
 
 ## 9. 停止与回退条件
 
