@@ -134,6 +134,7 @@ def collect_removed_comment_findings(
             match = _DIFF_PATH_RE.fullmatch(raw_line)
             old_path = _diff_path(match[1], "a") if match else None
             new_path = _diff_path(match[2], "b") if match and old_path else None
+            old_path = old_path if new_path else None
             current_path = new_path or "<unknown>"
             old_line = new_line = None
         elif raw_line.startswith("--- "):
@@ -141,6 +142,7 @@ def collect_removed_comment_findings(
             new_path = None
         elif raw_line.startswith("+++ "):
             new_path = _diff_path(raw_line[4:], "b") if old_path is not None else None
+            old_path = None if new_path is None else old_path
             fallback = old_path or current_path
             current_path = "<unknown>" if new_path is None else new_path or fallback
         elif raw_line.startswith("@@"):
@@ -200,8 +202,7 @@ def _is_comment_line(text: str) -> bool:
 def _flush_removed_comments(
     findings: list[CommentDeletionFinding], path: str, removed: list[str], added: list[str]
 ) -> None:
-    count = max(len(removed) - len(added), 0)
-    findings.extend(CommentDeletionFinding(path, text) for text in removed[-count:] if count)
+    findings.extend(CommentDeletionFinding(path, text) for text in removed[len(added) :])
     removed.clear()
     added.clear()
 
@@ -236,8 +237,7 @@ def _diff_path(value: str, side: str) -> str | None:
         return None
     if value.startswith('"'):
         try:
-            decoded = ast.literal_eval(value)
-            value = decoded.encode("latin-1").decode("utf-8")
+            value = ast.literal_eval(value).encode("latin-1").decode("utf-8")
         except (AttributeError, SyntaxError, UnicodeError, ValueError):
             return None
     path = value.removeprefix(f"{side}/")
