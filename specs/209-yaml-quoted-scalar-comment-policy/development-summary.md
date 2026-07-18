@@ -1,7 +1,7 @@
 # 开发摘要：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 9 safety finding 修订中
+**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 9 finding 已 GREEN，Round 10 待验证/双审
 
 ## 当前结论
 
@@ -15,7 +15,8 @@ focused/full/预算门禁；GAP-14/T57 仍等待新身份双 PASS，不扩展产
 
 Round 9 Pascal 已 PASS；Confucius 用真实 Git 证明含空格路径的歧义 `diff --git` header 虽正确失信，
 但后续带终止 Tab 的单路径 `---/+++` header 也被同一 grammar 拒绝，导致 quoted scalar 假 BLOCKER。
-当前仅允许从该可消歧 header 恢复路径，不能放宽双路径 header。
+修复只允许从该可消歧 header 恢复路径，不放宽双路径 header；默认 ASCII 空格与
+`core.quotePath=false` 非 ASCII 空格真实 Git 回归均已 GREEN。
 
 ## 冻结方向
 

@@ -50,7 +50,8 @@
   GAP-01/T62A 仍 open，T62B/T62C 未开始，FR-08 双 reviewer fallback 继续有效。
 - GAP-12、GAP-13 已关闭且不计 RC-08 减重收益；GAP-14 处于 WI-209 implementation adversarial
   review。Round 8 测试覆盖稀释和 canonical receipt 失真 findings 已修订并通过 fresh verification；
-  Round 9 Pascal PASS、Confucius 因真实 Git 空格路径假 BLOCKER FAIL，正在按原范围修订；同一新身份
+  Round 9 Pascal PASS、Confucius 因真实 Git 空格路径假 BLOCKER FAIL；该 finding 已按原范围 GREEN，
+  等待 Round 10 terminal gates 与同一新身份双审；
   双 PASS、PR 与 fresh-main 前仍是开放的验证可靠性缺口。WI-207 不得混入
   continuity/comment parser，WI-208 不得混入 adapter dispatch，WI-209 不得用 YAML 全局豁免掩盖误报，
   也不得让 added quoted 内容充当真实替代注释。

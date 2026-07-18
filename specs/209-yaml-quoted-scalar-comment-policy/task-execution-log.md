@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；Round 9 safety finding 修订中
+**状态**：implementation adversarial review；Round 9 finding 已 GREEN，Round 10 terminal gates/双审待完成
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -182,3 +182,13 @@
   单路径 grammar，并继续执行 side-prefix、traversal、NUL/drive/containment 防护。
 - 两条真实 Git RED：相关切片 `2 failed, 10 passed`；Round 9 身份与 verdict 退役，T23/T31/T32
   in progress，T41/T42 queued，GAP-14/T57 保持开放。
+
+## 10. Batch 2026-07-18-010：真实 Git 空格路径最小 GREEN
+
+- RED=`01930486`；测试 fixture 修订=`47635935`；GREEN=`7d59ea64`；等价 Git config 压缩=`41bd3e06`。
+- 产品仅增加 `_TAB_PATH` 并在原始单路径值带终止 Tab 时选用；`_DIFF_PATH_RE` 未放宽，解码后仍执行
+  side-prefix、空组件、traversal、drive、NUL 与 containment 检查。两处等价赋值合并抵消产品行数。
+- 真实 Git 默认 `my file.yaml` 与 `core.quotePath=false` 的 `配置 file.yaml` 均 GREEN；完整 focused
+  `100 passed`，Ruff check/diff-check PASS。
+- 预算：产品 raw/normalized `+123/+130`；unit/CLI tests raw `+176/+24=+200`、normalized
+  `+166/+32=+198`；5 private helper、零新文件/公共抽象，T23 completed，T31/T32 in progress。
