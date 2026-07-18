@@ -2,7 +2,7 @@
 
 **功能编号**：`210-shared-text-dedupe`
 **创建日期**：2026-07-18
-**当前状态**：Batch 0 formal Round 2 split verdict 已退役；Round 3 最小修订与重验中；产品实现未授权
+**当前状态**：Batch 0 formal Round 3 terminal gates complete；等待同一 identity 双审；产品实现未授权
 
 ## Batch 2026-07-18-001：下一原子候选选择
 
@@ -134,3 +134,15 @@
   expectation test；复用 WI205/WI206 先例的单一 `t61-differential-rollback-receipt.json`。
 - Round 2 两份 verdict 与所有 hash 退役；新内容必须重新同步 truth、通过 formal gates，并由两位 reviewer
   对同一新 identity 从零复审。
+
+## Batch 2026-07-18-008：Formal Round 3 terminal gates
+
+- 最小 finding 修订 commit=`c72b82abc384867f7cb6fbbabd4b5f9b66399cc2`；只改 formal docs/
+  continuity，产品与测试 zero additional diff。
+- truth sync snapshot=`9ee622990aa491b228e38e29a018647bd89f6667321ed83bd070bedcbe864216`；
+  manifest exact=`1 passed in 108.03s`，constraints/validate PASS，truth audit=`ready/fresh 1106/1106`、
+  unmapped=0、唯一 pre-close missing=1。
+- root/scoped handoff 完整列出全部 12 个 base..HEAD formal diff 文件并保持 byte-identical；Cursor/
+  resume/WI208 protected diff=0；唯一 future receipt 为 `t61-differential-rollback-receipt.json`。
+- 本批提交后的 current HEAD 直接作为 Round 3 review identity；下一动作仅为绑定 exact commit/tree、
+  父子六文件 combined 与 diff hashes 后双审，不再重复 commit/freeze。

@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T13:02:46+00:00
-- Reason: WI210 formal Round 2 split-verdict direction change
-- Goal: Resolve WI210 Round 2 lean-review findings and obtain Round 3 same-identity dual PASS
-- State: Round 2 split verdict is retired; three lean-review findings are accepted; Round 3 minimal edits and gates are in progress
+- Updated: 2026-07-18T13:10:17+00:00
+- Reason: WI210 formal Round 3 terminal gate receipt
+- Goal: Obtain WI210 Round 3 same-identity dual PASS and deliver the formal PR before implementation
+- State: Round 3 minimal findings are fixed; terminal truth 9ee62299 and all formal gates pass; the current committed HEAD is the review identity and only dual review remains
 - Stage: design
 - Work Item: 210-shared-text-dedupe
 - Branch: feature/210-shared-text-dedupe-docs
@@ -27,13 +27,13 @@
 - Retain the parent-plan six-file identity, WI196 dependency, GAP impact and non-empty test cap from Round 2
 
 ## Commands / Tests
-- Round 2 Confucius PASS and Pascal FAIL received; no push or PR; product src unchanged
+- Round 2 split verdict retired; manifest exact 1 passed; constraints and validate PASS; truth ready/fresh 1106/1106; product src and protected paths unchanged
 
 ## Blockers / Risks
 - Implementation remains unauthorized until Round 3 dual PASS and formal mainline receipt
 
 ## Local PR Review
-- Round 2 Confucius PASS and Pascal FAIL; both verdicts retired for Round 3 edits
+- Round 2 verdicts retired; Round 3 Pascal and Confucius verdicts pending on current HEAD
 
 ## Exact Next Steps
-- Finish Round 3 edits, restore protected handoff side effects, sync truth, run gates, freeze new identity, and review both agents from zero
+- Bind current HEAD/tree, parent-plan six-file combined and diff hashes; run Pascal and Confucius from zero; only dual PASS permits push and PR
