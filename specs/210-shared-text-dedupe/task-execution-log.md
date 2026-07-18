@@ -238,3 +238,13 @@
   child 顶层、父 summary 与两份 handoff 同步 current review-pending truth，并完整列出 base..HEAD 路径。
 - 产品、测试、receipt schema、T61 differential 与 rollback tree 均不改；内容变化后两位 reviewer 必须
   对新 commit/tree/diff/receipt identity 从零复审。
+
+## Batch 2026-07-18-017：Implementation Round 2 split verdict 与最小处置
+
+- reviewed commit/tree=`d906085da5e78137bfb0cc12802d5c44e33ff475`/
+  `2732fd1c61069ec7cc12c8d31530cf979be8889f`；Confucius PASS、Pascal FAIL，整体未通过；
+  两份 verdict 随内容修订同时退役。
+- Pascal 唯一 P2：父 summary 上段已声明 terminal governance 通过，下段“下一步”仍把 final governance
+  列为未完成，current truth 自相矛盾；其余 formal combined、36-path handoff、产品/测试/receipt 均通过。
+- 最小修复只从父 summary 下一步删除已完成的 governance；同步必要 review log/continuity 后重新 truth
+  sync。产品、测试、formal 六文件、receipt 与 rollback identity 不改；新 identity 必须 Round 3 双 PASS。

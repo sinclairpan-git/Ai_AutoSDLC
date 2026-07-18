@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T15:42:10+00:00
-- Reason: adversarial Round 1 findings fixed; freeze new review candidate
+- Updated: 2026-07-18T16:00:02+00:00
+- Reason: adversarial Round 2 finding fixed; freeze Round 3 candidate
 - Goal: 完成 WI210 shared text dedupe 实现、验证、双重对抗评审与主线交付
-- State: Implementation Round 1 identity 已因 formal/continuity findings 退役；父 formal plan 已恢复 approved blob；terminal truth b176b6d5 ready；当前最小修订内容等待新 identity 双审，未 push/建 PR
+- State: Implementation Round 1/2 identities 已退役；Round 2 唯一 parent-summary P2 已最小修复；terminal truth 852c1b19 ready；当前内容等待 Round 3 同一 identity 双审，未 push/建 PR
 - Stage: execute
 - Work Item: 210-shared-text-dedupe
 - Branch: feature/210-shared-text-dedupe
@@ -47,16 +47,16 @@
 - tests/unit/test_plan_check.py
 
 ## Key Decisions
-- 产品/测试/receipt schema 不变；累计 base..current 36 paths 必须完整列出；内容变化使两位旧 verdict 同时失效
+- formal 六文件、产品、测试、receipt、rollback 不变；累计 base..current 36 paths完整；任何内容变化使旧 verdict 失效
 
 ## Commands / Tests
-- Round1 Pascal/Confucius FAIL；产品指标仍 +39/-252 raw、+35/-196 nonempty；parent plan restored；truth b176b6d5 ready 1106/1106
+- Round2 Confucius PASS/Pascal FAIL retired；parent summary contradiction removed；truth 852c1b19 ready 1106/1106
 
 ## Blockers / Risks
-- PowerShell host 前置崩溃，使用 /bin/zsh fallback；仍需新 identity 双 PASS、Codex/CI、merge、fresh-main
+- PowerShell host 前置崩溃，使用 /bin/zsh fallback；仍需 Round3 双 PASS、Codex/CI、merge、fresh-main
 
 ## Local PR Review
-- Round 1 Pascal/Confucius FAIL 已退役；finding 已做最小修复，等待新 identity 从零复审
+- Round 1 双 FAIL、Round 2 split verdict 均已退役；finding 已最小修复，等待 Round 3 新 identity 双审
 
 ## Exact Next Steps
-- 冻结 finding-fix commit/tree/diff/receipt hashes；Pascal 与 Confucius 从零复审；仅双 PASS 后 push/PR
+- 冻结 finding-fix commit/tree/diff/receipt hashes；Pascal 与 Confucius Round 3 从零复审；仅双 PASS 后 push/PR

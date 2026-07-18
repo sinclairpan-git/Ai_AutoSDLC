@@ -60,7 +60,7 @@
   `+121/+200`、normalized `+128/+198`，5 private helper、零新产品/测试文件、零公共抽象；Round 15
   candidate/replay 同树且双 Agent PASS，PR #146 的 Codex current-head、22/22 checks 与 fresh-main
   `3275 passed, 3 skipped` 全部通过。回退对应 implementation PR 会重开各自 GAP。
-- 下一步完成 WI-210 final governance 与同一 identity 双对抗 review；双 PASS 后交付 implementation PR，
+- 下一步完成 WI-210 同一 identity 双对抗 review；双 PASS 后交付 implementation PR，
   合并并 fresh-main 验收后再用独立 closure PR 记为 `completed_reduction`。不得恢复已 No-Go 且缺少
   sponsor 的 T62A，也不得在 fresh-main receipt 前把 WI-210 计作已完成减重。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
