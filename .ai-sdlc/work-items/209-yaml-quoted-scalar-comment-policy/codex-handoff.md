@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T00:42:01+00:00
-- Reason: WI209 final fourth-fix replay evidence complete
+- Updated: 2026-07-18T01:07:06+00:00
+- Reason: WI209 fifth-review test-auditability remediation complete
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Final fourth-fix candidate verified: focused 78; full 3253 passed/3 skipped; governance/truth/manifest PASS; budgets exact; 40-commit replay tree exact
+- State: Fifth-review remediation green: 20 named isolated diff cases; focused 97 passed; Ruff clean; product +123/+130 and tests +190/+200 raw/normalized; full rerun pending
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Reject every earlier candidate identity and verdict; only the final continuity commit after this update may enter fresh dual adversarial review
+- Replace aggregate count assertions with per-case exact path/comment assertions; compact split is limited to readable pytest IDs while every diff remains a separate physical case line
 
 ## Commands / Tests
-- 40 commits replayed from formal merge 46156c24 to target 88314ee2; target and replay tree both 4cc43b8bd136ef42fcbd1b67fbf386ab54d143fe
+- uv run pytest focused: 97 passed in 11.20s; Ruff PASS; test budgets raw/normalized +190/+200
 
 ## Blockers / Risks
-- Fresh dual adversarial PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
+- Fresh full suite/governance/replay, dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Restore unrelated resume/WI208 handoff mutations; mirror and commit final WI209 continuity; replay final continuity commit; freeze identity and request Pascal/Confucius review from zero
+- Restore unrelated resume/WI208 handoff mutations and mirror WI209; commit continuity; rerun full suite and governance; replay from formal merge; freeze new identity; request both adversarial reviews from zero
