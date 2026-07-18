@@ -2036,6 +2036,10 @@ specs:
   path: specs/210-shared-text-dedupe
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
+- id: 211-shared-mapping-dedupe
+  path: specs/211-shared-mapping-dedupe
+  depends_on:
+  - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
   generated_at: '2026-07-18T17:59:39Z'
   generated_by: ai-sdlc program truth sync
