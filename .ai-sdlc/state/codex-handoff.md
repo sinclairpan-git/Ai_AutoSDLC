@@ -34,7 +34,7 @@
 ## Commands / Tests
 - candidate spike raw +25/-147、non-empty +23/-127；baseline/candidate impact均1162；72 imports clean
 - compact corpus baseline/candidate=6、digest bf4a6deebf；3.11 AST body/full/call精确复现6602b868/6fb4192d/a62a6dee
-- constraints、validate、truth sync ready 1111/1111、snapshot f4d8b541；manifest exact last 1 passed in 97.65s；product/protected zero diff
+- constraints、validate、truth ready/fresh 1111/1111、snapshot f4d8b541；manifest exact PASS；product/protected zero diff
 
 ## Blockers / Risks
 - PowerShell host前置崩溃，使用/bin/zsh fallback；implementation在formal双PASS/Codex/checks/merge/fresh-main前未授权
