@@ -53,7 +53,8 @@
   Round 9 Pascal PASS、Confucius 因真实 Git 空格路径假 BLOCKER FAIL；该 finding 已按原范围 GREEN，
   Round 10 fresh full/治理/replay 后双审仍因 mixed Unicode+C-escape、canonical plan、formatter 合同与
   continuity 真值 FAIL。四项已进入 Round 11 修订，其中产品 finding 已 RED/GREEN，预算降至
-  raw/normalized `+121/+128`，等待 fresh full/terminal truth/replay 与同一新身份双审；
+  raw/normalized `+121/+128`；fresh full `3275 passed, 3 skipped` 与治理门禁已通过，等待 terminal replay
+  与同一新身份双审；
   双 PASS、PR 与 fresh-main 前仍是开放的验证可靠性缺口。WI-207 不得混入
   continuity/comment parser，WI-208 不得混入 adapter dispatch，WI-209 不得用 YAML 全局豁免掩盖误报，
   也不得让 added quoted 内容充当真实替代注释。

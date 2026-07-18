@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；Round 10 双审 FAIL，Round 11 修订与 fresh verification 进行中
+**状态**：implementation adversarial review；Round 10 findings 已修订，Round 11 fresh full/治理门禁已通过，terminal replay/双审待完成
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -221,3 +221,13 @@
   原字节并复用既有 escape parser。
 - 产品 raw/normalized `+121/+128`；unit/CLI raw `+176/+24=+200`、normalized `+166/+32=+198`；
   5 private helper、0 public abstraction/new file。T23 completed；Round 11 full/terminal truth/replay/双审待完成。
+
+## 14. Batch 2026-07-18-014：Round 11 fresh full 与 preliminary terminal gates
+
+- fresh full=`3275 passed, 3 skipped in 684.03s`；focused `100 passed`；Ruff/diff-check、constraints、
+  validate PASS。formal base 与 candidate 的 format check 均 exit 1、同一组三文件 `Would reformat`，满足
+  修订后的 parity 合同且不声称 format PASS。
+- preliminary truth sync/audit=`ready/fresh`，snapshot=`4fb741bd0d14029e5adf0ef6877d4531a846107ea9d6a74a2e8e8bf9d06b34e3`，
+  inventory `1101/1101`、layers `209/209`、missing/unmapped=`0/0`；manifest exact `1 passed in 101.56s`。
+- T31 completed；receipt 后 terminal truth/manifest、Round 11 commits replay 与同一新身份双审仍属 T32。
+  GAP-14/T57 与 T41/T42 状态不变。

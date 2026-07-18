@@ -56,12 +56,14 @@
 
 ## Batch 3：终态证明
 
-### T31 全量与治理门禁（in progress）
+### T31 全量与治理门禁（completed）
 
 - **依赖**：T23。
 - **验收**：comment-policy、verify-constraints、full、Ruff、constraints、validate、truth、manifest、diff-check 全绿；full 前后 HEAD/tree、resume/handoff/status 无漂移。
 - **证据**：Round 10 fresh full `3275 passed, 3 skipped in 703.77s`；Ruff/constraints/validate/diff-check PASS；truth sync/audit 为 `ready/fresh`、inventory `1101/1101`、layers `209/209`，manifest exact `1 passed in 97.46s`。
-- **当前状态**：Round 10 结果因后续产品/plan/continuity finding 退役；Round 11 必须重跑 fresh full 与全部治理门禁。
+- **Round 11 证据**：fresh full `3275 passed, 3 skipped in 684.03s`；Ruff/diff-check、constraints、validate
+  PASS；truth `ready/fresh 1101/1101 209/209`，manifest exact `1 passed in 101.56s`；base/candidate
+  formatter parity 为同 exit 1、同三个批准文件。本 receipt 后在 T32 冻结前再次 terminal sync/audit/manifest。
 
 ### T32 回退演练和双对抗终审（in progress）
 
@@ -71,7 +73,7 @@
 - **Round 9**：Pascal 对修订身份 PASS；Confucius 发现真实 Git 空格路径假 BLOCKER，verdict=FAIL；该身份退役。finding 已 RED/GREEN。
 - **Round 10**：fresh full/terminal gates/replay 已完成，但 Pascal 因 parent plan、formatter contract、handoff
   Next FAIL，Confucius 因 mixed Unicode+C-escape 与 handoff Next FAIL；身份与 verdict 退役。
-- **Round 11**：产品 finding 已 RED/GREEN；待 plan/continuity truth、fresh gates、重新 replay 与同一身份双审。
+- **Round 11**：findings 与 fresh full/治理门禁已完成；待 receipt 后 terminal truth/manifest、重新 replay 与同一身份双审。
 
 ## Batch 4：交付与关闭
 
