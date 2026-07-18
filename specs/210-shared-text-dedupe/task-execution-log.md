@@ -168,3 +168,60 @@
   `src/` zero diff，worktree clean。
 - 本批提交后的 current HEAD 直接作为 Round 4 review identity；只等待两位 reviewer 对同一父子六文件
   combined PASS，不再重复 commit/freeze。
+
+## Batch 2026-07-18-011：Formal mainline receipt 与 implementation admission
+
+- Round 4 terminal identity=`75429035ba163e20f6f72fe1daa6ed1b96181d1c`，Pascal/Confucius 对同一
+  identity 均 PASS、findings=`none`；Codex reviewed commit=`75429035ba` 且未发现 major issue。
+- PR #148 的 13 个最终 checks（含 Windows 3.11/3.12 与 Compatibility Gate Result）全部 SUCCESS；
+  merge commit=`b2f9997bb7586e4e9310478101d2a23d77148c85`。
+- detached fresh-main 验收：manifest exact=`1 passed in 98.21s`，constraints/validate PASS，truth=
+  `ready/fresh 1106/1106`、unmapped=0、唯一 pre-close missing=1；`src/` 与 protected paths zero diff。
+- implementation branch=`feature/210-shared-text-dedupe` 从该 exact main 创建；formal merge 前的 spike
+  未复制为交付分支或提交。
+
+## Batch 2026-07-18-012：T61A、RED/GREEN 与原子实现
+
+- exact base 重算 PASS：28 defs / 27 modules / 196 definition non-empty / 730 calls；body=
+  `08aa3c8f...d962a`，call AST=`b259abaf...07492`，private consumer=0，planned import new SCC=0。
+- frozen corpus 14 cases × 28 bindings=`392` observations，baseline divergence=0；27/27 cold imports
+  exit 0 且无 stdout/stderr。exact 32-file=`1282 passed in 164.31s`；full baseline=
+  `3275 passed, 3 skipped in 703.33s`。
+- 一个既有 test file 新增 raw 11 / non-empty 9；shared helper 缺失时 RED，最小实现后
+  `1 passed`。临时 reverse-order mutation 被同一测试杀死（`1 failed`），恢复后再次 `1 passed`。
+- 原子 implementation commit=`969526842322d1dfbecbacc3ffa629d2931e4d78`，tree=
+  `860a07e73cd97cfae26b3274b8f8d210cd9bf0a0`；同一提交完成 helper/add-import/delete-body，
+  未留下 29 份并存实现。
+
+## Batch 2026-07-18-013：T61B differential、预算与测试
+
+- candidate exact body=1、module-local aliases=28、calls=730；call AST 与 baseline 完全相同，
+  unapproved private consumer=0，wrapper/public export/new product or test file=0。
+- baseline/candidate 双 corpus 各 392 observations，结果、异常 type/message 与 event trace 零差异，
+  digest=`f9b48eb0...a5f36c`；candidate 27/27 cold imports 干净。
+- 产品 raw `+39/-252/net -213`、non-empty `+35/-196/net -161`；测试 raw +11、non-empty +9；
+  RC-06 additions=44≤49，`helpers.py`=105 raw LOC。
+- Ruff lint PASS；28 个产品文件 formatter debt 集合 24→24（含测试文件口径 25→25）；candidate
+  exact 32-file=`1283 passed in 159.19s`，full=`3276 passed, 3 skipped in 689.06s`。
+
+## Batch 2026-07-18-014：Rollback / reapply rehearsal
+
+- disposable worktree 从 implementation commit 创建；revert commit=`450dfedc6f194d52301a6a78bb02717b8d85a89a`，
+  tree=`14a65ee3b9db7374f5a555b2258440cd6778218a`，与 frozen baseline tree exact 相同。
+- reverted targeted=`1282 passed in 185.34s`；corpus digest exact match baseline；27/27 cold imports
+  clean。未重复执行 full suite，遵守 formal 的 baseline/final candidate 各一次边界。
+- reapply commit=`788079da6721369938eaf534b85d3c45cd373292`，tree 恢复为
+  `860a07e73cd97cfae26b3274b8f8d210cd9bf0a0`；targeted=`1283 passed in 159.20s`，corpus/import
+  exact match candidate。
+- 单一结构化回执已写入
+  `.ai-sdlc/work-items/210-shared-text-dedupe/t61-differential-rollback-receipt.json`；未新增第二套 schema。
+
+## Batch 2026-07-18-015：Implementation authoring governance gates
+
+- authoring truth execute snapshot=`a1f8d65bddddf3aa31b1b9153c7a245d63a10c7b75ec547ab4ef04b62920518d`；
+  inventory=`1106/1106`、unmapped=0、唯一 pre-close missing=1，两个 release capability 均保持
+  `closed/ready`。
+- `uv run ruff check src tests` PASS；receipt JSON parse PASS；constraints PASS；program validate PASS；
+  manifest exact=`1 passed in 113.88s`；truth audit=`ready/fresh`。
+- 本批结果写入 source 后必须再执行 terminal truth sync；该 terminal snapshot 与 continuity 更新不修改
+  产品、测试、receipt 结构或 rollback identity。

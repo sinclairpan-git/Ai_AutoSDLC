@@ -174,9 +174,10 @@ T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷
 
 ### WP-03：稳定 helper / DTO / 镜像测试重复族（L1）
 
-- **当前状态**：WI-205、WI-206 已各关闭一个 family；WI-210 已从 current main 冻结下一候选，
-  范围为 28 个 exact text-dedupe defs / 27 modules / 196 LOC / 730 calls。Formal 双 PASS 与 mainline
-  receipt 前未授权实现；目标产品 non-empty 净删至少 161 行。
+- **当前状态**：WI-205、WI-206 已各关闭一个 family；WI-210 formal PR #148 已合入
+  `b2f9997b`。implementation commit `96952684` 已把 28 个 exact text-dedupe body 收敛为 1 个
+  shared helper + 28 个模块局部 alias，730 calls 不变，产品 non-empty 净删 161 行；T61B 与
+  rollback/reapply 已通过，仍待治理门禁、同一 final identity 双审、PR/mainline/fresh-main，尚未关闭。
 - **范围**：一次只选一个经语义审查的重复族。
 - **非目标**：不跨不同错误语义合并，不建设通用 utility framework。
 - **进入**：WP-01A 完成；至少三处当前调用者、失败模式一致、RC 预测达标。

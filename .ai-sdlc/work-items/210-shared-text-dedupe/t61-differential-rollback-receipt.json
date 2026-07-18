@@ -1,0 +1,84 @@
+{
+  "schema_version": "ai-sdlc.t61-differential-rollback-receipt.v1",
+  "work_item_id": "210-shared-text-dedupe",
+  "generated_at": "2026-07-18T14:56:12Z",
+  "implementation": {
+    "baseline_commit": "b2f9997bb7586e4e9310478101d2a23d77148c85",
+    "baseline_tree_oid": "14a65ee3b9db7374f5a555b2258440cd6778218a",
+    "commit": "969526842322d1dfbecbacc3ffa629d2931e4d78",
+    "candidate_tree_oid": "860a07e73cd97cfae26b3274b8f8d210cd9bf0a0"
+  },
+  "formal_contract": {
+    "spec_sha256": "4118ecd7f840ecd146db4748139f22c7cd4e3a2c13b4abd598a82dce215c06b8",
+    "plan_sha256": "f5120af68e91902d45af6767d95c2d5107f9ec7579eeb574349b7665379aed06",
+    "tasks_sha256": "de194bdf66c864ca0a521a05a7a0e280bf271aa73bd4cd8ac8aa5bb83c13aed8",
+    "six_file_combined_sha256": "8ebd38340e1142ee5d1c2c8c98f87a18230121bb0de44a057304f152e0e15e50"
+  },
+  "environment": {
+    "platform": "macOS-27.0-arm64-arm-64bit",
+    "python": "3.11.15",
+    "pydantic": "2.12.5"
+  },
+  "reduction_ledger": {
+    "product_raw": {"additions": 39, "deletions": 252, "net": -213},
+    "product_nonempty": {"additions": 35, "deletions": 196, "net": -161},
+    "test_raw": {"additions": 11, "deletions": 0, "net": 11},
+    "test_nonempty": {"additions": 9, "deletions": 0, "net": 9},
+    "rc06_nonempty_additions": 44,
+    "rc06_cap": 49,
+    "helpers_raw_loc": 105,
+    "new_product_files": 0,
+    "new_test_files": 0,
+    "public_exports": 0,
+    "wrappers": 0
+  },
+  "structural_differential": {
+    "baseline_definitions": 28,
+    "candidate_definitions": 1,
+    "candidate_module_aliases": 28,
+    "all_aliases_share_identity": true,
+    "baseline_calls": 730,
+    "candidate_calls": 730,
+    "call_ast_sha256": "b259abaf7abb4bb0ef5c6d58f6e9abede5e1f53335c0537c83504a6aeea07492",
+    "body_ast_sha256": "08aa3c8fe861c4d69e2fcfcdbc6bc212b7b6d0c52ef6e2e4b382327dd48d962a",
+    "unapproved_private_consumers": 0,
+    "new_import_cycles": 0
+  },
+  "behavior_event_differential": {
+    "cases": 14,
+    "bindings": 28,
+    "observations_each": 392,
+    "equal": true,
+    "corpus_sha256": "f9b48eb0db1d3ac7bb72dfafab2fc8d28e4f912431b586cb5a9d4854a0a5f36c",
+    "cold_import_modules": 27,
+    "cold_import_failures": 0,
+    "cold_import_stdout_nonempty": 0,
+    "cold_import_stderr_nonempty": 0,
+    "cold_import_sha256": "a96e5788d6c0cc61cdb0b74165a236a8b3165cab98949e4057a2b4730d2b34b0"
+  },
+  "verification": {
+    "baseline_targeted": "1282 passed in 164.31s",
+    "baseline_full": "3275 passed, 3 skipped in 703.33s",
+    "red": "ImportError: utils.helpers._dedupe_text_items missing",
+    "candidate_identity_green": "1 passed in 0.27s",
+    "reverse_order_mutation": "1 failed in 0.29s",
+    "restored_identity_green": "1 passed in 0.28s",
+    "candidate_targeted": "1283 passed in 159.19s",
+    "candidate_full": "3276 passed, 3 skipped in 689.06s",
+    "ruff": "All checks passed",
+    "product_formatter_debt": "24 -> 24"
+  },
+  "rollback_rehearsal": {
+    "disposable_worktree": ".worktrees/210-shared-text-dedupe-rollback",
+    "revert_commit": "450dfedc6f194d52301a6a78bb02717b8d85a89a",
+    "reverted_tree_oid": "14a65ee3b9db7374f5a555b2258440cd6778218a",
+    "reverted_tree_matches_baseline": true,
+    "reverted_targeted": "1282 passed in 185.34s",
+    "reverted_corpus_matches_baseline": true,
+    "reapply_commit": "788079da6721369938eaf534b85d3c45cd373292",
+    "reapplied_tree_oid": "860a07e73cd97cfae26b3274b8f8d210cd9bf0a0",
+    "reapplied_tree_matches_candidate": true,
+    "reapplied_targeted": "1283 passed in 159.20s",
+    "reapplied_corpus_matches_candidate": true
+  }
+}
