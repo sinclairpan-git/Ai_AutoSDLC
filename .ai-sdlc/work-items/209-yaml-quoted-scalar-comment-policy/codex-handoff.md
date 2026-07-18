@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T04:36:26+00:00
-- Reason: WI209 Round 10 terminal replay checkpoint
+- Updated: 2026-07-18T05:04:28+00:00
+- Reason: WI209 Round 11 focused GREEN checkpoint
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Round 10 terminal candidate verified: focused 100; full 3275 passed/3 skipped; terminal governance/truth/manifest PASS; independent replay tree exact
+- State: Round 10 dual FAIL fully triaged; Round 11 mixed Unicode+C-escape and canonical plan/formatter findings GREEN; focused 100 PASS; full/terminal gates pending
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -13,10 +13,12 @@
 - .ai-sdlc/work-items/209-yaml-quoted-scalar-comment-policy/codex-handoff.md
 - program-manifest.yaml
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
 - specs/209-yaml-quoted-scalar-comment-policy/development-summary.md
+- specs/209-yaml-quoted-scalar-comment-policy/plan.md
 - specs/209-yaml-quoted-scalar-comment-policy/spec.md
 - specs/209-yaml-quoted-scalar-comment-policy/task-execution-log.md
 - specs/209-yaml-quoted-scalar-comment-policy/tasks.md
@@ -25,16 +27,16 @@
 - tests/unit/test_comment_policy.py
 
 ## Key Decisions
-- Keep ambiguous diff --git space paths fail-closed; recover only tab-terminated single-path headers, reuse all path/source guards, and retire every verdict not bound to the final mirrored handoff identity
+- Decode mixed raw Unicode and Git C-escapes through a Latin-1 byte-literal carrier; keep all path/source guards; require Ruff lint PASS plus exact formal-base/candidate formatter parity
 
 ## Commands / Tests
-- focused 100 passed; full 3275 passed/3 skipped in 703.77s; Ruff/constraints/validate/diff-check PASS; truth ready/fresh 1101/1101 209/209; manifest exact 1 passed; budgets product raw/norm +123/+130 tests +200/+198; replay tree 7d2947c4 exact
+- Round 11 RED 1 failed; GREEN unit 51 and focused 100 passed; Ruff/diff-check/constraints/validate PASS; budgets product raw/norm +121/+128 tests +200/+198; Round 10 Pascal/Confucius FAIL retired
 
 ## Blockers / Risks
-- Fresh Round 10 Pascal/Confucius PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
+- Fresh full, terminal truth/manifest, new independent replay, Round 11 dual PASS, PR checks/review, merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Mirror final handoff, replay its commit, freeze one clean HEAD/tree/hash identity, then require Pascal and Confucius to independently PASS that same identity before push/PR
+- Run fresh full pytest; write terminal receipts; sync/audit truth and manifest; replay Round 10 repair commits; freeze a new identity; then require Pascal/Confucius PASS
