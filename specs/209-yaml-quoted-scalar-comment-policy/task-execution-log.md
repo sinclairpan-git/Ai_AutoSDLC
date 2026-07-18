@@ -321,3 +321,12 @@
   `1 passed in 94.27s`、diff/clean guard 全部通过，HEAD 与 `origin/main` 精确一致且状态 clean。
 - T32/T41/T42 completed，GAP-14/T57 closed；回退 PR #146 会重开。本 closure PR 不修改产品/测试，
   合并后 T43 才选择下一原子减重项，WI209 不计 RC-08。
+
+## 23. Batch 2026-07-18-023：closure Round 1 双 FAIL 与 lifecycle 修订
+
+- Closure Round 1 target=`db19754a`、tree=`540d4a50`、canonical combined=`ce2dbffd`；产品/测试与
+  WI208/resume 保护面零差异，root/scoped handoff 相同，truth/manifest/constraints/validate/focused 全绿。
+- Pascal/Confucius 独立评审得到相同两项 P1：handoff Next 在 target 已冻结后仍要求重复 commit/freeze，
+  且 T43 在 closure PR 尚未 merge 时提前标为 ready；除此之外均无 finding，verdict 均为 FAIL。
+- 两项 finding 已接受：Next 改为由评审调用绑定当前精确身份，T43 恢复 queued。Round 1 身份退役；
+  产品、测试、fresh-main 证据与关闭边界不变，新身份必须重新取得同一身份双 PASS。

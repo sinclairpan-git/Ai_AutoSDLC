@@ -3,7 +3,7 @@
 - Updated: 2026-07-18T09:57:15+00:00
 - Reason: WI209 closure terminal gates complete
 - Goal: Close WI209/GAP-14 after fresh-main acceptance without product or test changes
-- State: Closure docs and program truth are synchronized; snapshot f9498dfc is ready/fresh; terminal constraints/validate/manifest/diff/protected guards passed; only closure dual review and PR delivery remain
+- State: Closure Round 1 matching lifecycle findings are accepted and fixed; product/test evidence and terminal gates remain valid; only renewed same-identity dual review and PR delivery remain
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: codex/209-yaml-comment-policy-close
@@ -33,7 +33,7 @@
 - Closure delivery still requires same-identity dual PASS plus PR Codex/checks/merge; reverting PR #146 reopens GAP-14
 
 ## Local PR Review
-- Round 15 implementation identity received Pascal/Confucius PASS; closure identity has not yet been reviewed
+- Closure Round 1 Pascal/Confucius matching P1 findings on stale Next and premature T43 ready are accepted and fixed; renewed verdicts required
 
 ## Exact Next Steps
-- Commit and freeze one closure identity; obtain Pascal and Confucius PASS; then push and deliver the closure PR through Codex/checks/merge
+- Bind the current closure identity in both review calls; only Pascal and Confucius PASS permits push and PR delivery through Codex/checks/merge

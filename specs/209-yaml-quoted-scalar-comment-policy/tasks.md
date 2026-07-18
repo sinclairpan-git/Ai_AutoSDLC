@@ -109,7 +109,7 @@
   624.03s`；Ruff、constraints、program validate、truth `ready/fresh 1101/1101 209/209`、manifest exact
   `1 passed in 94.27s`、diff/clean guard 均通过，HEAD 与 `origin/main` 一致。
 
-### T43 恢复下一原子减重选择（ready）
+### T43 恢复下一原子减重选择（queued）
 
 - **依赖**：T42 + 本 closure PR merge。
 - **验收**：本 closure PR 合并后，只从 T63/T65/WP-06/WP-07 中按依赖/收益选择一个独立候选；
