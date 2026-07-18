@@ -101,7 +101,8 @@ def test_mapping_item_dedupe_uses_one_shared_binding() -> None:
 
 以下27 non-empty LOC 的 `wi211-t61-corpus-v1` 是唯一 executable harness。10 个 baseline body 的 AST
 完全相同、candidate 10 个 alias identity 相同，因此只对每个 unique implementation 执行一次4-case corpus；
-模块级覆盖由103/104 direct、1162/1163 impact 与72 imports承担。每个 case 调用 `_case` 新建对象，每条
+模块级覆盖由103/104 direct、1162/1163 impact 与72 imports承担。每个 case 通过 `cases[name]()` 调用对应
+factory 新建对象，每条
 observation 规范化为 compact、sorted-key、UTF-8 JSONL；return outcome 另存每个结果 dict 的 key 顺序，
 避免外层 `sort_keys=True` 掩盖 first-wins/key-order 回归。baseline/candidate/revert/reapply 先做同环境字节
 比较再比较 SHA-256；JSONL 只存 disposable evidence，最终 receipt 登记其 hash/计数/环境，不复制 cases。

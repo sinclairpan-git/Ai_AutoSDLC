@@ -159,6 +159,16 @@
   `636f787f84ef12bbe9ffacae0a4eeeed233289df8f4a1a0f3f7269426afdce62`，`events_filter_first` 的 keys
   从 `["b","a"]` 变为 `["a","b"]`，门禁现在可观测该回归。
 
+## Batch 2026-07-18-010：第五轮双 Agent 同 finding 文案修订
+
+- 第五轮 identity=`18caf35f8841781e389f607035cf5f782eb5a003`、tree=`b8e55d6677fb...53fa`、
+  formal-six=`213d75ba10...bcea`；Pascal=`LEAN FAIL`、Confucius=`SAFETY FAIL`，该 identity 永久失效。
+- 两位 reviewer 独立给出同一 finding：plan §3.3 声称每个 case 调用不存在的 `_case` factory，而 executable
+  harness 实际通过局部 `cases[name]()` 选择 factory，违反唯一 harness 的自洽性并会误导实施者。
+- disposition：只把正文改为“通过 `cases[name]()` 调用对应 factory 新建对象”；executable code、4 cases、
+  27 LOC、digest、identity test、产品预算与证据链均不改变。双方确认 key-order mutation blocker 已关闭，
+  其余 lean/safety 证据无新增 finding；内容变化使旧结论全部失效，进入第六轮从零复审。
+
 ## 不随执行批次过期的门禁顺序
 
 1. formal source 或证据变化后，先做 truth sync/audit、manifest exact 与本地门禁，再提交 clean identity；
