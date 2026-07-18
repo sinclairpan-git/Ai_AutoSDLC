@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T02:26:15+00:00
-- Reason: WI209 Round 7 terminal gates checkpoint
+- Updated: 2026-07-18T02:27:56+00:00
+- Reason: WI209 final eighth-review candidate closure
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Round 7 fix fully verified: focused 97; full 3272 passed/3 skipped; governance/truth/manifest PASS; budgets exact; clean worktree before final replay
+- State: Final eighth-review candidate fully verified and independently replayable: focused 97; full 3272 passed/3 skipped; governance/truth/manifest PASS; budgets exact; mirrored continuity ready for review
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Invalid or null new diff headers atomically clear old and new source trust; valid explicit +++ /dev/null retains old YAML syntax context; no scope expansion
+- Only the final clean HEAD/tree identity may be reviewed; all prior verdicts and identities are invalid; no code, test, governance or continuity edits are allowed during review
 
 ## Commands / Tests
-- constraints no BLOCKER; validate PASS; truth ready/fresh 1101/1101 and 209/209; manifest 1 passed in 76.06s; Ruff check/diff-check PASS; base/candidate format debt parity 3/3; helpers 5 max function 48
+- Independent replay through all post-formal commits reproduces the candidate tree exactly; final continuity commit is appended to replay before review identity is issued
 
 ## Blockers / Risks
-- Independent replay, new frozen identity, fresh dual adversarial review, PR checks and fresh-main acceptance pending
+- Fresh dual adversarial PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Replay all post-formal commits in the disposable WI209 worktree, require exact tree equality, refresh final continuity once, freeze immutable identity, then send that identity to Pascal and Confucius from zero
+- Pascal and Confucius review the same frozen identity from zero; only dual PASS permits push and PR creation, followed by current-head Codex review, required checks, merge and fresh-main acceptance
