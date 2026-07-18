@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T05:49:48+00:00
-- Reason: WI209 Round 11 final dual-review handoff
+- Updated: 2026-07-18T06:13:49+00:00
+- Reason: WI209 Round 12 final lifecycle-review handoff
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Round 11 findings GREEN; focused 100 and full 3275/3 PASS; terminal truth/manifest PASS; independent replay exact; only dual review and delivery remain
+- State: Round 11 safety PASS/lean lifecycle FAIL retired; Round 12 lifecycle truth reconciled; product/full/governance/replay remain verified; only final dual review and delivery remain
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -27,13 +27,13 @@
 - tests/unit/test_comment_policy.py
 
 ## Key Decisions
-- Decode mixed raw Unicode and Git C-escapes through a Latin-1 byte-literal carrier; retain all path/source guards; require Ruff lint PASS plus exact base/candidate formatter parity; retire Round 10 verdicts
+- Keep Round 11 product/test tree unchanged; correct only stale canonical lifecycle wording; require both reviewers to PASS the new identical final identity
 
 ## Commands / Tests
-- Round 11 RED 1 failed; focused 100; full 3275 passed/3 skipped in 684.03s; Ruff/diff-check/constraints/validate PASS; truth ready/fresh 1101/1101 209/209; manifest exact PASS; budgets product +121/+128 tests +200/+198; replay tree f40435d8 exact
+- Round 12 Ruff/diff-check/constraints/validate PASS; truth ready/fresh 1101/1101 209/209; manifest exact PASS; product +121/+128 tests +200/+198; frozen full 3275/3 remains bound to unchanged product/test tree; replay exact
 
 ## Blockers / Risks
-- Fresh Round 11 Pascal/Confucius PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
+- Fresh Round 12 Pascal/Confucius PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
