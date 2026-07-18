@@ -105,7 +105,7 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T62A code + contract report-only（open） | standalone | GAP-01/WP-02 | L1/L2 | T61A + 新/替代 sponsor + 父合同重新双审 | WI-202 候选 RC-09 No-Go；重启项须分类/合同缺口报告、历史零误阻断、RC-06 预算 |
 | T62B code + contract warning | standalone | GAP-01/WP-02 | L2 | T62A 稳定 | 两规则族 warning fixture、waiver schema、独立开关 |
 | T62C code + contract blocking | standalone | GAP-01/WP-02 | L2 | T62B 稳定 | 两规则族 blocker、admission `active + verified`、独立降级与 reviewer fallback 测试 |
-| T63 单个 helper/DTO/test 重复族 | standalone + T61A/B | GAP-05/WP-03 | L1 | T51、T52 | 重复族清零、目标切片 LOC -10%、全量测试 |
+| T63 单个 helper/DTO/test 重复族（按 family 继续） | standalone + T61A/B | GAP-05/WP-03 | L1 | T51、T52 已满足；WI-205、WI-206、WI-210 各完成一个 family | WI-210 / PR #149 / merge `904fe5de`：28→1 body、产品 net -213、双 Agent/Codex/22 checks/fresh-main；新 family 仍须重复族清零、目标切片 LOC -10%、全量测试 |
 | T64 单个 Loop Store family | standalone + T61A/B | GAP-05/WP-04 | L2 | T51、T52 | store differential、LOC -10%、恢复/损坏输入测试 |
 | T65 单个 baseline 候选 go/no-go | standalone + T61A/B on Go | GAP-06/WP-05 | L2 | T51、T52 | Go=`completed_reduction`；单项 No-Go=`cancelled_no_go`；六项全 No-Go=`closed_no_viable_reduction` |
 | T66 单个 ProgramService 领域切片 | standalone + T61A/B | GAP-03/WP-06 | L3 | T51、T52 + 真实重叠子项 | 迁移职责 -90%、RC-04 结构改善、稳定发布、删旧后回退演练 |

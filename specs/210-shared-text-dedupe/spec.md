@@ -2,7 +2,7 @@
 
 **功能编号**：`210-shared-text-dedupe`
 **创建日期**：2026-07-18
-**状态**：formal review candidate；未授权实现
+**状态**：completed_reduction；formal PR #148、implementation PR #149 与 fresh-main acceptance 已完成
 **父项**：WI-196 `T63 / WP-03 / GAP-05`
 **基线 revision**：`4b4348646a11cf2e27e488ddad892977958476a9`
 

@@ -7,7 +7,8 @@ related_doc:
 
 **编号**：`210-shared-text-dedupe`
 **来源**：`spec.md + plan.md`
-**当前授权**：只允许 Batch 0；formal merge 前禁止 Batch 1～3 产品修改
+**当前授权**：Batch 0～3 已完成；closure 只允许 docs/truth/continuity 与 manifest 测试的两条
+pre-close missing `1→0`、close layer `209→210` 机械期望，不再修改产品代码或其他测试逻辑
 
 ## 批次图
 
@@ -47,7 +48,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
   `t61-differential-rollback-receipt.json`。
 - **停止**：分析不确定、unexpected unmapped/missing、capability/blocking refs 漂移时重开对应 GAP。
 
-### T03 Formal 对抗评审至双 PASS
+### T03 Formal 对抗评审至双 PASS（completed）
 
 - **依赖**：T02A。
 - **reviewer A**：Pascal / 精简收益、直接性、YAGNI、预算。
@@ -56,7 +57,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
   审查同一 identity，任一 finding 修订后从零重审。
 - **完成**：两者均 `PASS` 且 findings=none。
 
-### T04 Formal 门禁与 PR
+### T04 Formal 门禁与 PR（completed）
 
 - **依赖**：T03。
 - **范围**：本 WI docs/log、WI-196 索引、manifest/truth、root/scoped handoff、next sequence，以及
@@ -67,13 +68,13 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ## Batch 1：T61A 与 TDD
 
-### T11 从 formal receipt 后 main 建 implementation branch
+### T11 从 formal receipt 后 main 建 implementation branch（completed）
 
 - **依赖**：T04 mainline merge + fresh-main acceptance。
 - **完成**：独立 worktree/branch；baseline revision、toolchain、OS、protected blobs 已登记。
 - **停止**：implementation branch 若早于 formal merge 创建则删除重建。
 
-### T12 捕获 T61A 基线
+### T12 捕获 T61A 基线（completed）
 
 - **依赖**：T11。
 - **完成**：重算 28/27/196/730、body digest、private consumers、import graph；跑 behavior/event corpus。
@@ -123,7 +124,7 @@ uv run pytest -q $tests
 - **清单门禁**：必须为 32 个唯一、存在且按 repo-relative 字典序排列的路径；收集数或路径漂移即停止。
 - **停止**：任一基线漂移先回 formal，不边写边扩大范围。
 
-### T13 写最小 RED
+### T13 写最小 RED（completed）
 
 - **依赖**：T12。
 - **文件**：一个既有测试文件；不得新增 test file/fixture/snapshot。
@@ -132,7 +133,7 @@ uv run pytest -q $tests
   non-empty 计量，product35+test≤9+truth≤2 计划≤46、硬上限49。禁止 `noqa`、超长压行或只写
   manual probe；空行不计，注释、参数化数据和其他非空新增行均计，raw additions 另行披露。
 
-### T14 实现共享 helper 与 aliases
+### T14 实现共享 helper 与 aliases（completed）
 
 - **依赖**：T13 RED。
 - **产品文件**：`utils/helpers.py` + spec §2.1 的 27 个模块。
@@ -141,7 +142,7 @@ uv run pytest -q $tests
   new module/public export/wrapper=0。
 - **停止**：超预算、cycle、调用变化或需要 suppression 立即 No-Go。
 
-### T15 GREEN 与 mutation
+### T15 GREEN 与 mutation（completed）
 
 - **依赖**：T14。
 - **完成**：RED 测试 GREEN；reverse-order mutation RED；恢复后 shared test 与受影响测试 GREEN。
@@ -149,14 +150,14 @@ uv run pytest -q $tests
 
 ## Batch 2：T61B、回退与双审
 
-### T21 结构与行为 differential
+### T21 结构与行为 differential（completed）
 
 - **依赖**：T15。
 - **结构**：exact body=1、alias=28、calls=730、private consumer approved diff 集合不扩大。
 - **行为**：baseline/candidate 结果、异常 type/message、event trace 零未批准差异。
 - **导入**：27 个模块在干净子进程逐一 import，无 stderr/cycle/import-time 写入。
 
-### T22 测试与治理门禁
+### T22 测试与治理门禁（completed）
 
 - **依赖**：T21。
 - **测试**：spike 的 32-file / 1282-test 集合、candidate full、Ruff lint、formatter 24-file parity、
@@ -164,37 +165,46 @@ uv run pytest -q $tests
 - **治理**：constraints、validate、truth sync/audit、manifest exact、diff-check、clean-state。
 - **预算**：记录 raw/non-empty product/test additions/deletions；文档不冒充代码减重。
 
-### T23 rollback/reapply rehearsal
+### T23 rollback/reapply rehearsal（completed）
 
 - **依赖**：T22。
 - **完成**：candidate→baseline tree OID exact；targeted/corpus/import 通过；baseline→candidate tree OID exact。
 - **停止**：任何树不一致、测试差异或人工 allowlist 非空即 FAIL。
 
-### T24 同一 candidate 双对抗 review
+### T24 同一 candidate 双对抗 review（completed）
 
 - **依赖**：T23。
 - **identity**：commit、tree、binary diff hash、name-status hash、T61B/rollback receipt。
 - **完成**：Pascal 与 Confucius 对同一 identity 均 PASS、findings=none。
 - **规则**：内容变化使两份 PASS 同时失效。
+- **证据**：Round 3 reviewed HEAD=`6ee2d35f`、tree=`326f8962`；Pascal/Confucius 对相同 identity
+  均 PASS、findings=none。
 
 ## Batch 3：PR、Fresh Main 与关闭
 
-### T31 Implementation PR
+### T31 Implementation PR（completed）
 
 - **依赖**：T24。
 - **完成**：push、PR、Codex current-head clean、required checks 全绿；有 finding 则 focused 修复并重审。
 - **heartbeat**：约五分钟监控 review/checks，直至 merge 或用户输入 blocker。
+- **证据**：PR #149；Codex 审到 current head `6ee2d35f` 且无 major issue，22/22 checks success，
+  merge=`904fe5decc90deba64d09eb6fa94cb3c2a359d93`。
 
-### T32 Fresh-main acceptance
+### T32 Fresh-main acceptance（completed）
 
 - **依赖**：T31 merge。
 - **完成**：detached current main 上受影响测试/full/Ruff/governance/manifest/clean-state 全绿。
 - **证明**：实现产品 non-empty 净删≥161，selected family 100% 清零，回退仍可复算。
+- **证据**：detached `main@904fe5de` targeted=`1283 passed in 163.54s`、full=
+  `3276 passed, 3 skipped in 661.34s`；Ruff、constraints、validate、truth ready/fresh、manifest exact、
+  diff/clean-state 全部通过。
 
-### T33 Closure
+### T33 Closure（in progress）
 
 - **依赖**：T32。
 - **完成**：WI-210=`completed_reduction`；更新 WI-196 索引与 RC-08 ledger；closure docs PR 合并并验收。
+- **当前状态**：完成事实已物化；等待 closure 同一 identity 双审、PR/Codex/checks/merge 与 fresh-main
+  docs acceptance。PR 合并前不提前标记本任务 completed。
 - **边界**：不关闭 GAP-05/WI-196，不恢复 WI-204，不发布版本。
 
 ## 追踪矩阵

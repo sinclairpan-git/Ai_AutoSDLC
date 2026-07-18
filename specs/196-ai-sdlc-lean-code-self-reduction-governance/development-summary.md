@@ -8,9 +8,8 @@
 
 - 冻结统一 gap 台账、NC/CC/RC 合同、原子子项与对抗评审规则。
 - 治理基线 PR：`#120`；merge commit：`4dd0f1c9`。
-- GAP-07～GAP-11 已分别由 WI-197～WI-201 合入并关闭；当前 WI-210 formal truth inventory 为
-  complete、unmapped=0、missing=1。唯一 missing 是已登记但在关闭前不物化的 WI-210
-  `development-summary.md`，不是 unmapped truth debt；WI-210 closure 必须将其恢复为 0。
+- GAP-07～GAP-11 已分别由 WI-197～WI-201 合入并关闭；WI-210 closure 已物化预登记的
+  `development-summary.md`，truth inventory 保持 complete、unmapped=0，并将 pre-close missing 恢复为 0。
 - WI-203 / PR #126 已冻结减重候选和保护预算 sponsor；不等于候选实现或删除完成。
 - WI-205 / PR #134 / merge `aa156afe` 已关闭一个 T63 artifact path 重复族，产品净减少 109 行，
   fresh-main 全量 `3220 passed, 3 skipped`；这不是 GAP-05 或路线整体关闭。
@@ -24,13 +23,13 @@
   relocation/focused/full/Ruff/治理门禁全绿且 repository state clean。
 - WI-209/GAP-14 已关闭：formal PR #145/merge `46156c24` 与 implementation PR #146/merge `31aad572`
   已完成；Round 15 双 Agent、Codex current-head、22/22 checks 与 fresh-main focused/full/Ruff/治理/
-  clean-state 全绿。该验证可靠性修复不计 RC-08；本 closure PR 合并后恢复下一原子减重候选选择。
-- WI-210 formal PR #148 已合并为 `b2f9997b`；implementation commit `96952684` 已把 28 个 exact
-  text-dedupe body 收敛为现有 `utils/helpers.py` 中 1 个 private helper + 28 个模块局部 alias，
-  730 calls 不变，产品 raw `+39/-252/net -213`、non-empty `+35/-196/net -161`。T61 differential、
-  full `3276 passed, 3 skipped`、rollback/reapply 与 terminal governance 已通过；旧 implementation
-  review identity 因 formal/continuity finding 退役，当前最小修订提交后仍待同一 identity 双审、
-  PR/mainline/fresh-main，因此不表示 WI-210 已关闭。
+  clean-state 全绿。该验证可靠性修复不计 RC-08；其 closure 已合并并恢复原子减重候选选择。
+- WI-210 已以 `completed_reduction` 关闭一个 T63 family：formal PR #148/merge `b2f9997b`，
+  implementation PR #149/merge `904fe5de`。28 个 exact text-dedupe body 收敛为现有
+  `utils/helpers.py` 中 1 个 private helper + 28 个模块局部 alias，730 calls 不变，产品 raw
+  `+39/-252/net -213`、non-empty `+35/-196/net -161`。Round 3 双 Agent、Codex current-head、22/22
+  checks、rollback/reapply 与 fresh-main targeted `1283 passed`、full `3276 passed, 3 skipped`、治理/
+  clean-state 全部通过；回退 PR #149 会重开该 family。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新
   写成可执行合同，旧 verdict 同时失效。
@@ -60,7 +59,9 @@
   `+121/+200`、normalized `+128/+198`，5 private helper、零新产品/测试文件、零公共抽象；Round 15
   candidate/replay 同树且双 Agent PASS，PR #146 的 Codex current-head、22/22 checks 与 fresh-main
   `3275 passed, 3 skipped` 全部通过。回退对应 implementation PR 会重开各自 GAP。
-- 下一步完成 WI-210 同一 identity 双对抗 review；双 PASS 后交付 implementation PR，
-  合并并 fresh-main 验收后再用独立 closure PR 记为 `completed_reduction`。不得恢复已 No-Go 且缺少
-  sponsor 的 T62A，也不得在 fresh-main receipt 前把 WI-210 计作已完成减重。
+- RC-08 family ledger 已记录 WI-205 `net -109`、WI-206 `net -209`、WI-210 `net -213`，累计产品
+  raw `net -531`；这只是已关闭重复族的局部收益，不代表路线整体达到 10% 或两个超大文件降到 400 行。
+- 下一步尚未选择新的原子减重项；只允许从新的 T63/T65/WP-06/WP-07 候选中按真实收益、证明成本与
+  sponsor 选择一个独立 WI。不得恢复已 No-Go 且缺少 sponsor 的 T62A，也不得关闭 GAP-05/WI-196、
+  宣称 RC-08 达成或发布版本。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
