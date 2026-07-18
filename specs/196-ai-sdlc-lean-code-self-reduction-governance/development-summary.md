@@ -27,8 +27,8 @@
   clean-state 全绿。该验证可靠性修复不计 RC-08；本 closure PR 合并后恢复下一原子减重候选选择。
 - WI-210 已选定下一原子 T63 formal candidate：current main `4b434864` 上 28 个 exact text-dedupe defs、
   27 modules、196 product LOC、730 calls；Pascal/Confucius 已统一推荐复用现有 stdlib-only
-  `utils/helpers.py`，不新增模块。Formal Round 1 已因 identity/compat/admission/continuity finding 双 FAIL，
-  当前进入 Round 2 修订；不表示实现、减重或关闭完成。
+  `utils/helpers.py`，不新增模块。Formal Round 1～3 identity 均已退役；当前 terminal formal identity
+  等待同一 identity 双审，implementation 仍未授权；不表示实现、减重或关闭完成。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新
   写成可执行合同，旧 verdict 同时失效。

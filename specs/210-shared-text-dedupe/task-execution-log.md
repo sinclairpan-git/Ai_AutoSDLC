@@ -2,7 +2,7 @@
 
 **功能编号**：`210-shared-text-dedupe`
 **创建日期**：2026-07-18
-**当前状态**：Batch 0 formal Round 3 terminal gates complete；等待同一 identity 双审；产品实现未授权
+**当前状态**：Batch 0 formal Round 3 双 FAIL 已接受；Round 4 current-truth 修订与重验中；产品实现未授权
 
 ## Batch 2026-07-18-001：下一原子候选选择
 
@@ -146,3 +146,13 @@
   resume/WI208 protected diff=0；唯一 future receipt 为 `t61-differential-rollback-receipt.json`。
 - 本批提交后的 current HEAD 直接作为 Round 3 review identity；下一动作仅为绑定 exact commit/tree、
   父子六文件 combined 与 diff hashes 后双审，不再重复 commit/freeze。
+
+## Batch 2026-07-18-009：Formal Round 3 双 FAIL 与 Round 4 处置
+
+- reviewed commit/tree=`90011f74`/`c6b996f6`，six-file combined=`8ebd3834...15e50`；Pascal 与
+  Confucius 均 `VERDICT: FAIL`，finding 完全一致。
+- 唯一 finding：父 `development-summary.md` 仍写“当前进入 Round 2 修订”，与 Round 3 child/log/
+  handoff current truth 冲突。其余 identity、单一 receipt、12-file handoff、gates 均无新增问题。
+- Round 4 只把父 summary 改为不易再次陈旧的状态：Round 1～3 identity 已退役、当前 terminal
+  formal identity 等待双审、implementation 未授权；同步必要 log/continuity 后重验。
+- Round 3 verdict/hash 全退役；新 current HEAD 必须由两位 reviewer 从零复审。
