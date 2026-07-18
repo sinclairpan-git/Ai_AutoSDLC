@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T01:23:25+00:00
-- Reason: WI209 final fifth-review candidate closure
+- Updated: 2026-07-18T01:33:26+00:00
+- Reason: WI209 sixth-review null-source RED/GREEN complete
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Final fifth-review candidate fully verified and independently replayable: focused 97; full 3272 passed/3 skipped; governance/truth/manifest PASS; budgets exact; mirrored continuity ready for review
+- State: Sixth-review null-source remediation green: 22 isolated diff cases and focused 99 passed; Ruff clean; product/test budgets unchanged at +123/+130 and +192/+200 raw/normalized; full rerun pending
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -12,16 +12,16 @@
 - none
 
 ## Key Decisions
-- Only the final clean HEAD/tree identity may be reviewed; prior verdicts and identities are invalid; no further code, test, governance, or continuity edits are allowed during review
+- Empty new-source path is not a confirmed non-YAML file: removed comments remain conservative while added comments cannot count as replacement; implemented as one existing-condition substitution
 
 ## Commands / Tests
-- Independent replay from formal merge reproduces the candidate tree exactly; final continuity commit is appended to the replay before review identity is issued
+- RED: null-new-operand and malformed-delete-added both returned no finding; GREEN: 22 boundary cases and 99 focused tests passed
 
 ## Blockers / Risks
-- Fresh dual adversarial PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
+- Fresh full suite/governance/replay, dual adversarial PASS, PR review/checks/merge and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Pascal and Confucius review the same frozen identity from zero; only dual PASS permits push and PR creation, followed by current-head Codex review, required checks, merge and fresh-main acceptance
+- Restore unrelated resume/WI208 handoff mutations and mirror WI209; commit receipt; rerun full suite and governance; replay from formal merge; freeze new identity; request both reviews from zero
