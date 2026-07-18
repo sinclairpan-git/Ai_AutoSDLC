@@ -169,6 +169,16 @@
   27 LOC、digest、identity test、产品预算与证据链均不改变。双方确认 key-order mutation blocker 已关闭，
   其余 lean/safety 证据无新增 finding；内容变化使旧结论全部失效，进入第六轮从零复审。
 
+## Batch 2026-07-18-011：第六轮 rollback impact 任务补齐
+
+- 第六轮 identity=`beff58e901123e785f28e39e41f3f8b0f1eb5328`、tree=`1376f224f3c5...3d71`、
+  formal-six=`bf160a31b1...749c`；Pascal=`LEAN PASS`、Confucius=`SAFETY FAIL`，该 identity 整体失效。
+- Confucius finding：tasks T22 只写 revert `103/72`、reapply `104/72`，遗漏 spec/plan 强制的1162/1163
+  impact slice；按任务执行会形成弱于正式合同的 rollback/reapply 证明。
+- disposition：T22 明确补为 revert `103 direct/1162 impact/72 imports`、reapply
+  `104 direct/1163 impact/72 imports`；不修改 executable harness、产品/测试范围、预算或证据 identity 模型。
+  Pascal 对第六轮其余 lean 合同无 finding；双方旧结论因内容变化失效，进入第七轮从零复审。
+
 ## 不随执行批次过期的门禁顺序
 
 1. formal source 或证据变化后，先做 truth sync/audit、manifest exact 与本地门禁，再提交 clean identity；

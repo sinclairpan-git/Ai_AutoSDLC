@@ -119,7 +119,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **状态**：pending。
 - **依赖**：T21 + exact `implementation_commit/tree`。
 - **验收**：disposable clone revert tree=baseline、reapply tree=`implementation_tree`；revert 重跑结构/4-case/
-  103/72，reapply 重跑结构/4-case/104/72。
+  103 direct/1162 impact/72 imports，reapply 重跑结构/4-case/104 direct/1163 impact/72 imports。
 - **回执**：之后的 evidence commit chain 只允许唯一 `t61-differential-rollback-receipt.json`、强制 root/scoped
   handoff 与必要机械 truth/manifest，形成 `evidence_review_head/tree`；`implementation_commit` 后产品和行为测试
   零变化。receipt 绑定 implementation/revert/reapply，禁止绑定自身 commit/tree/hash；review envelope 绑定
