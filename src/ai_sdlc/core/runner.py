@@ -49,6 +49,7 @@ from ai_sdlc.models.work import WorkType
 from ai_sdlc.telemetry.enums import TelemetryEventStatus
 from ai_sdlc.telemetry.policy import resolve_runtime_telemetry_policy
 from ai_sdlc.telemetry.runtime import RuntimeTelemetry
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import now_iso
 
 logger = logging.getLogger(__name__)
@@ -68,15 +69,6 @@ PIPELINE_STAGES = [
 ]
 
 MAX_RETRIES = 3
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _program_truth_gate_surface(

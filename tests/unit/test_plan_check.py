@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
+import ai_sdlc.core.plan_check as pc
 from ai_sdlc.core.plan_check import (
     PlanCheckResult,
     count_pending_todos,
@@ -15,6 +17,15 @@ from ai_sdlc.core.plan_check import (
     resolve_plan_path_from_wi,
     run_plan_check,
 )
+from ai_sdlc.utils.helpers import _dedupe_text_items as dedupe
+
+
+def test_shared_text_dedupe_contract() -> None:
+    value = MagicMock(**{"__str__.side_effect": RuntimeError("boom")})
+    assert pc._dedupe_text_items is dedupe and dedupe(None) == []
+    assert dedupe([" beta ", "", "alpha", "beta"]) == ["beta", "alpha"]
+    with pytest.raises(RuntimeError, match="boom"):
+        dedupe([value])
 
 
 def test_count_pending_todos() -> None:

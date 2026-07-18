@@ -20,18 +20,10 @@ from ai_sdlc.models.work import (
     ResumePoint,
 )
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 _REVIEWER_DECISION_FILENAME = "reviewer-decision.yaml"
 _REVIEWER_DECISION_PREFIX = "reviewer-decision-"
-
-
-def _dedupe_text_items(values: list[str] | tuple[str, ...] | None) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _dedupe_pair_items(

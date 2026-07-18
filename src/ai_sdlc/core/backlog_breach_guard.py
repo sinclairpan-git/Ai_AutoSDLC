@@ -9,18 +9,10 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 _BACKLOG_REL = Path("docs") / "framework-defect-backlog.zh-CN.md"
 _DEFECT_ID_RE = re.compile(r"\bFD-\d{4}-\d{2}-\d{2}-\d{3}\b")
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _dedupe_mapping_items(values: object) -> list[dict[str, Any]]:

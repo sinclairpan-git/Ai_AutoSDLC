@@ -10,16 +10,8 @@ from typing import Any
 
 import yaml
 
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root, is_git_repo
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def parse_markdown_frontmatter(path: Path) -> tuple[dict[str, Any], str]:

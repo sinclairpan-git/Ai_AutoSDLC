@@ -14,15 +14,7 @@ from ai_sdlc.models.frontend_theme_token_governance import (
     ThemeTokenMapping,
     build_p2_frontend_theme_token_governance_baseline,
 )
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 
 def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:

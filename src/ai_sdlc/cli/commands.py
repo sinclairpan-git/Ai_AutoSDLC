@@ -103,17 +103,9 @@ from ai_sdlc.telemetry.display import (
 )
 from ai_sdlc.telemetry.readiness import build_status_json_surface
 from ai_sdlc.utils.helpers import AI_SDLC_DIR, find_project_root
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_status_text_items
 
 console = Console()
-
-
-def _dedupe_status_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _failed_gate_messages_for_init(result: GateResult | None) -> list[str]:

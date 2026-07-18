@@ -7,21 +7,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_NAME = "frontend-contract-observations.json"
 FRONTEND_CONTRACT_OBSERVATION_SCHEMA_VERSION = "frontend-contract-observations/v1"
 FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_ATTACHED = "attached"
 FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_MISSING_ARTIFACT = "missing_artifact"
 FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_STATUS_INVALID_ARTIFACT = "invalid_artifact"
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:

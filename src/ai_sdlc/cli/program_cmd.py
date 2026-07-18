@@ -41,6 +41,7 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_builtin_style_pack_manifests,
 )
 from ai_sdlc.telemetry.display import summarize_frontend_delivery_scope_for_display
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_cli_text_items
 from ai_sdlc.utils.helpers import find_project_root
 
 program_app = typer.Typer(help="Program-level planning across multiple specs")
@@ -57,15 +58,6 @@ def _resolve_root() -> Path:
         )
         raise typer.Exit(code=1)
     return root
-
-
-def _dedupe_cli_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _format_cli_path(path: Path) -> str:

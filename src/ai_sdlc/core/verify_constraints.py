@@ -139,6 +139,7 @@ from ai_sdlc.telemetry.generators import (
     observer_evaluation_id,
     observer_violation_id,
 )
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 CONSTITUTION_REL = Path(".ai-sdlc") / "memory" / "constitution.md"
 PIPELINE_RULE_REL = Path("src") / "ai_sdlc" / "rules" / "pipeline.md"
@@ -1474,15 +1475,6 @@ class ConstraintReport:
         object.__setattr__(
             self, "evidence_kinds", tuple(_dedupe_text_items(self.evidence_kinds))
         )
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 @dataclass(frozen=True, slots=True)

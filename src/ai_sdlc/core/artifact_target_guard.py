@@ -8,6 +8,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
+
 _WI_SEGMENT = r"\d{3}-[a-z0-9]+(?:-[a-z0-9]+)*"
 _CANONICAL_TARGET_PATTERNS = {
     "spec": re.compile(rf"^specs/{_WI_SEGMENT}/spec\.md$"),
@@ -34,15 +36,6 @@ _FORMAL_ARTIFACT_MARKERS: dict[str, tuple[str, ...]] = {
     ),
 }
 _AUXILIARY_PREFIX = "docs/superpowers/"
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _dedupe_mapping_items(values: object) -> list[dict[str, str]]:

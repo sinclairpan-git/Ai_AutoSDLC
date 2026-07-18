@@ -7,6 +7,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
+
 FRONTEND_VISUAL_A11Y_EVIDENCE_ARTIFACT_NAME = "frontend-visual-a11y-evidence.json"
 FRONTEND_VISUAL_A11Y_EVIDENCE_SCHEMA_VERSION = "frontend-visual-a11y-evidence/v1"
 AUTO_FRONTEND_VISUAL_A11Y_PROVIDER_KIND = "browser_gate_auto"
@@ -807,15 +809,6 @@ def _auto_issue_evaluation(
         quality_hint=quality_hint,
         changed_scope_explanation=changed_scope_explanation,
     )
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _require_mapping(
