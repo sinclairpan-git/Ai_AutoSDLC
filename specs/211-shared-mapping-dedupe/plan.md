@@ -25,7 +25,8 @@ related_doc:
 - 只修改 spec §2.1 的 10 个模块、`utils/helpers.py` 与一个既有 unit test；产品/测试均不新增文件。
 - 新增注释仅在解释非显然边界时使用简体中文；本项 exact helper 无需复述式注释。
 - 23 个调用表达式、CLI、artifact、schema、状态、授权和平台行为零未批准差异。
-- 产品 non-empty additions≤23，test additions≤20，truth test机械 additions≤2，合计≤45、hard cap=49。
+- 产品 raw/non-empty additions≤25/23；identity test含 import≤12 non-empty；formal executable harness=24
+  non-empty；保护成本36=`floor(147×25%)`，总 raw additions≤61、hard cap=61；truth test仅两行等量机械替换。
 - GAP-09～GAP-11 impact analysis 缺失、不确定或 truth 漂移时 fail-closed。
 - 任何 formal/implementation review target 内容变化同时作废 Pascal/Confucius 两份 PASS。
 
@@ -72,10 +73,11 @@ formal PR 不得含 `src/ai_sdlc/**` 或 implementation test diff。
 
 使用 exact fresh `origin/main` 创建 `feature/211-shared-mapping-dedupe`。记录 HEAD/tree、Python/OS/uv、
 10 defs、23 calls、body/full/call digest、72 importers、private consumers、目标文件和受保护文件 blob。
-结构 digest 必须逐字采用 spec §2.1 的 AST payload recipe；其中 call nodes 的判定是
-`isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and
-node.func.id == "_dedupe_mapping_items"`。先核对 body/full/call 分别为 `6602b868...`、`6fb4192d...`、
-`a62a6dee...`，再捕获实现 base；不得用 grep 文本或含位置属性的 AST 替代。
+Python 3.11 的结构 digest 必须逐字采用 spec §2.1 的 AST payload recipe；其中 call nodes 必须同时满足
+`isinstance(node, ast.Call)`、`isinstance(node.func, ast.Name)` 与
+`node.func.id == "_dedupe_mapping_items"`。先核对 body/full/call 分别为 `6602b868...`、`6fb4192d...`、
+`a62a6dee...`，再捕获实现 base；Python 3.12 因 `FunctionDef.type_params` 不复用 3.11 full digest，只做
+同解释器 baseline/candidate AST payload 相等和 10→1/23 calls 结构断言；不得用 grep 文本替代。
 
 ### 3.2 写唯一 failing test
 
@@ -83,21 +85,14 @@ node.func.id == "_dedupe_mapping_items"`。先核对 body/full/call 分别为 `6
 
 ```python
 def test_mapping_item_dedupe_uses_one_shared_binding() -> None:
-    module_names = (
-        "ai_sdlc.core.frontend_contract_observation_provider",
-        "ai_sdlc.core.frontend_contract_runtime_attachment",
-        "ai_sdlc.core.frontend_contract_verification",
-        "ai_sdlc.core.frontend_gate_verification",
-        "ai_sdlc.core.frontend_visual_a11y_evidence_provider",
-        "ai_sdlc.generators.frontend_cross_provider_consistency_artifacts",
-        "ai_sdlc.generators.frontend_provider_expansion_artifacts",
-        "ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts",
-        "ai_sdlc.generators.frontend_quality_platform_artifacts",
-        "ai_sdlc.generators.frontend_theme_token_governance_artifacts",
-    )
-    bindings = [
-        importlib.import_module(name)._dedupe_mapping_items for name in module_names
-    ]
+    suffixes = ("core.frontend_contract_observation_provider core.frontend_contract_runtime_attachment "
+                "core.frontend_contract_verification core.frontend_gate_verification "
+                "core.frontend_visual_a11y_evidence_provider generators.frontend_cross_provider_consistency_artifacts "
+                "generators.frontend_provider_expansion_artifacts generators.frontend_quality_platform_artifacts "
+                "generators.frontend_provider_runtime_adapter_artifacts "
+                "generators.frontend_theme_token_governance_artifacts").split()
+    bindings = [importlib.import_module(f"ai_sdlc.{suffix}")._dedupe_mapping_items
+                for suffix in suffixes]
     assert len({id(binding) for binding in bindings}) == 1
     assert bindings[0].__module__ == "ai_sdlc.utils.helpers"
 ```
@@ -107,144 +102,48 @@ def test_mapping_item_dedupe_uses_one_shared_binding() -> None:
 
 ### 3.3 捕获行为与导入基线
 
-以下 `wi211-t61-corpus-v1` 代码块是唯一 executable recipe。每个 binding/case 都调用 `_case` 新建对象；
-每条 observation 按 module/case/outcome/events/probe 规范化为 compact、sorted-key、UTF-8 JSONL，保留末尾
-换行后做 SHA-256。baseline JSONL 必须保存到 disposable evidence 目录，candidate/revert/reapply 与同环境
-baseline 做字节级比较后才比较 digest；receipt 只登记 digest/计数/环境和 evidence hash，不复制第二套 case。
+以下24 non-empty LOC 的 `wi211-t61-corpus-v1` 是唯一 executable harness。10 个 baseline body 的 AST
+完全相同、candidate 10 个 alias identity 相同，因此只对每个 unique implementation 执行一次6-case corpus；
+模块级覆盖由103/104 direct、1162/1163 impact 与72 imports承担。每个 case 调用 `_case` 新建对象，每条
+observation 规范化为 compact、sorted-key、UTF-8 JSONL。baseline/candidate/revert/reapply 先做同环境字节
+比较再比较 SHA-256；JSONL 只存 disposable evidence，最终 receipt 登记其 hash/计数/环境，不复制 cases。
 
 <!-- wi211-t61-corpus-v1:start -->
 ```python
-import hashlib
-import importlib
-import json
-import sys
-
-MODULE_NAMES = (
-    "ai_sdlc.core.frontend_contract_observation_provider",
-    "ai_sdlc.core.frontend_contract_runtime_attachment",
-    "ai_sdlc.core.frontend_contract_verification",
-    "ai_sdlc.core.frontend_gate_verification",
-    "ai_sdlc.core.frontend_visual_a11y_evidence_provider",
-    "ai_sdlc.generators.frontend_cross_provider_consistency_artifacts",
-    "ai_sdlc.generators.frontend_provider_expansion_artifacts",
-    "ai_sdlc.generators.frontend_provider_runtime_adapter_artifacts",
-    "ai_sdlc.generators.frontend_quality_platform_artifacts",
-    "ai_sdlc.generators.frontend_theme_token_governance_artifacts",
-)
-CASE_NAMES = (
-    "none", "empty", "duplicate", "key_order", "invalid_values", "unicode",
-    "nested_duplicate", "int_keys", "falsy_distinct", "unserializable",
-    "cyclic", "mixed_key_sort", "truthiness_events", "dict_subclass_shallow",
-)
-
-
+import importlib, json
+TARGET, CASES = "ai_sdlc.core.frontend_contract_observation_provider", ("falsy", "events", "filter_first", "key_unicode", "json_error", "subclass_shallow")
+class Values:
+    def __init__(self, truth, items, events): self.truth, self.items, self.events = truth, items, events
+    def __bool__(self): self.events.append(f"bool:{str(self.truth).lower()}"); return self.truth
+    def __iter__(self): self.events.append("iter:start"); yield from self.items; self.events.append("iter:end")
+class Item(dict): pass
 def _case(name):
-    events = []
-    probe = lambda result: {}
-    if name == "none":
-        values = None
-    elif name == "empty":
-        values = []
-    elif name == "duplicate":
-        values = [{"a": 1}, {"a": 1}]
-    elif name == "key_order":
-        values = [{"a": 1, "b": 2}, {"b": 2, "a": 1}]
-    elif name == "invalid_values":
-        values = [1, "x", {"a": 1}, None]
-    elif name == "unicode":
-        values = [{"键": "值"}, {"键": "值"}]
-    elif name == "nested_duplicate":
-        values = [{"a": {"b": [1, 2]}}, {"a": {"b": [1, 2]}}]
-    elif name == "int_keys":
-        values = [{1: "x"}, {1: "x"}]
-    elif name == "falsy_distinct":
-        class FalsyValues:
-            def __bool__(self):
-                events.append("bool:false")
-                return False
-
-            def __iter__(self):
-                events.append("iter:unexpected")
-                raise AssertionError("falsy values must not be iterated")
-
-        values = FalsyValues()
-    elif name == "unserializable":
-        values = [{"value": {1}}]
-    elif name == "cyclic":
-        item = {}
-        item["self"] = item
-        values = [item]
-    elif name == "mixed_key_sort":
-        values = [{1: "int", "1": "str"}]
-    elif name == "truthiness_events":
-        class EventValues:
-            def __bool__(self):
-                events.append("bool:true")
-                return True
-
-            def __iter__(self):
-                events.append("iter:start")
-                yield {"event": 1}
-                events.append("iter:after-first")
-                yield {"event": 1}
-                events.append("iter:end")
-
-        values = EventValues()
-    elif name == "dict_subclass_shallow":
-        class Item(dict):
-            pass
-
-        nested = []
-        item = Item(nested=nested)
-        values = [item]
-        probe = lambda result: {
-            "nested_identity_preserved": result[0]["nested"] is nested,
-            "result_exact_dict": type(result[0]) is dict,
-            "top_level_is_new": result[0] is not item,
-        }
-    else:
-        raise AssertionError(name)
-    return values, events, probe
-
-
-def _observe(binding, module_name, case_name):
-    values, events, probe = _case(case_name)
-    try:
-        result = binding(values)
-    except Exception as exc:
-        outcome = {
-            "kind": "raise",
-            "exception": f"{type(exc).__module__}.{type(exc).__qualname__}",
-            "message": str(exc),
-        }
-    else:
-        outcome = {"kind": "return", "value": result, "probe": probe(result)}
-    return {"module": module_name, "case": case_name, "events": events, "outcome": outcome}
-
-
-rows = [
-    _observe(importlib.import_module(module_name)._dedupe_mapping_items, module_name, case_name)
-    for module_name in MODULE_NAMES
-    for case_name in CASE_NAMES
-]
-jsonl = "".join(
-    json.dumps(row, allow_nan=False, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n"
-    for row in rows
-).encode("utf-8")
-if "--jsonl" in sys.argv[1:]:
-    sys.stdout.buffer.write(jsonl)
-else:
-    print(json.dumps({"observations": len(rows), "sha256": hashlib.sha256(jsonl).hexdigest()}, sort_keys=True))
+    events, nested = [], []
+    cases = {
+        "falsy": lambda: Values(False, [{"never": 1}], events), "events": lambda: Values(True, [{"x": 1}, {"x": 1}], events),
+        "filter_first": lambda: [0, {"x": 1}, {"x": 1}, None], "key_unicode": lambda: [{"b": "值", "a": 1}, {"a": 1, "b": "值"}],
+        "json_error": lambda: [{"bad": {1}}], "subclass_shallow": lambda: [Item(nested=nested)],
+    }
+    return cases[name](), events, nested
+def _observe(binding, name):
+    values, events, nested = _case(name)
+    try: outcome = {"kind": "return", "value": binding(values)}
+    except Exception as exc: outcome = {"kind": "raise", "type": type(exc).__module__ + "." + type(exc).__qualname__, "message": str(exc)}
+    if name == "subclass_shallow": outcome["probe"] = [type(outcome["value"][0]) is dict, outcome["value"][0] is not values[0], outcome["value"][0]["nested"] is nested]
+    return {"case": name, "events": events, "outcome": outcome}
+binding = importlib.import_module(TARGET)._dedupe_mapping_items
+rows = [_observe(binding, name) for name in CASES]
+print("".join(json.dumps(row, allow_nan=False, ensure_ascii=False, separators=(",", ":"), sort_keys=True) + "\n" for row in rows), end="")
 ```
 <!-- wi211-t61-corpus-v1:end -->
 
-- 当前 Python 3.11 formal baseline/candidate 必须各输出140 observations、digest=
-  `2657ee073f131d0760ee1b751d32f5f71c2f9afe30a7f05bc261487ea8c1d695`；其他运行时先记录自己的
-  baseline JSONL/digest，再要求 candidate/revert/reapply 同环境逐字节相等；
+- 当前 Python 3.11 formal baseline/candidate 必须各输出6 observations、digest=
+  `bf4a6deebf6ad5ce83f3147ec02fab29e7b7bab4fca280480016d7abac72980e`；其他运行时不复用该摘要，
+  只要求 candidate/revert/reapply 与同解释器 baseline JSONL 逐字节相等；
 - 跑 103 direct tests 与 23-file/1162-test 影响切片 baseline；
 - 对 `rg -l 'from ai_sdlc\.utils\.helpers import' src/ai_sdlc` 得到的 72 模块逐个 cold import，要求
   failures/noisy 均为空；
-- 将 baseline 字段先写入唯一 receipt，candidate 字段保持 absent 而非伪造占位。
+- baseline JSONL/字段先保存在 disposable evidence；implementation commit 前不得创建 repo receipt。
 
 ## 4. Phase 2：最小 GREEN
 
@@ -285,20 +184,24 @@ from ai_sdlc.utils.helpers import _dedupe_mapping_items as _dedupe_mapping_items
 3. 复算结构：目标 exact body=1、10 alias binding、23 calls、call digest不变、external consumer=0。
 4. 复算 diff：目标 raw additions≤25/deletions≥147、non-empty additions≤23/deletions≥127；
    超限立即停止，不靠删测试抵消。
-5. 提交一个可独立 revert 的 implementation commit；不在提交后改写产品内容。
+5. 提交只含产品与 identity test 的 `implementation_commit/tree`；该提交可独立 revert，之后不得改写产品。
 
 ## 5. Phase 3：T61B、回退与验证
 
-1. 在 candidate 上逐字执行 §3.3 recipe 并重跑 140 observations，当前 Python 3.11 期望 digest=
-   `2657ee073f131d0760ee1b751d32f5f71c2f9afe30a7f05bc261487ea8c1d695`，且 JSONL 与 baseline 字节相等。
+1. 在 `implementation_tree` 上逐字执行 §3.3 recipe；当前 Python 3.11 期望6 observations、digest=
+   `bf4a6deebf6ad5ce83f3147ec02fab29e7b7bab4fca280480016d7abac72980e`，且 JSONL 与 baseline 字节相等。
 2. 重跑 104 direct、23-file/1163 impact、72 cold imports、full pytest、Ruff、constraints、validate、truth。
-3. 在 disposable clone revert implementation commit：tree OID=baseline；重跑结构、140 diff、
+3. 在 disposable clone checkout `implementation_commit` 后 revert 它：tree OID=baseline；重跑结构、6-case diff、
    103 direct、1162 impact、72 imports。
-4. reapply 同一 commit：tree OID=reviewed candidate；重跑140、104 direct、1163 impact、72 imports并生成 receipt SHA-256。
-5. 验证 GAP-09 capability/inheritance/admission、GAP-10 adapter consumption/CLI、GAP-11 inventory/truth 零漂移。
-6. 对 exact candidate HEAD/tree/binary/name-status/formal-six/receipt/truth identity 让 Pascal/Confucius 双审。
-7. finding 成立则最小修复并全部重审；双 PASS 后才 push/PR。
-8. Codex current-head 无 actionable findings且 required checks 全绿后 merge；detached fresh-main 重跑
+4. reapply 同一 commit：tree OID=`implementation_tree`；重跑6-case、104 direct、1163 impact、72 imports。
+5. 回到主实现 worktree，新建唯一 receipt，只绑定 baseline、`implementation_commit/tree`、revert/reapply 与证据；
+   再提交只含 receipt 的 evidence commit，得到 `evidence_review_head/tree`。receipt 禁止写入自身所在
+   evidence commit/tree/hash；review envelope 单独绑定 receipt blob SHA-256。
+6. 验证 GAP-09 capability/inheritance/admission、GAP-10 adapter consumption/CLI、GAP-11 inventory/truth 零漂移。
+7. 对 exact `implementation_commit/tree` + `evidence_review_head/tree` + diff/formal-six/receipt blob/truth identity
+   让 Pascal/Confucius 双审。
+8. finding 成立则最小修复并全部重审；双 PASS 后才 push/PR。
+9. Codex current-head 无 actionable findings且 required checks 全绿后 merge；detached fresh-main 重跑
    targeted/full/Ruff/constraints/validate/truth/manifest/clean guard。
 
 ## 6. Phase 4：Closure
@@ -312,12 +215,12 @@ from ai_sdlc.utils.helpers import _dedupe_mapping_items as _dedupe_mapping_items
 | 路径 | 必须证明 | 命令/证据 |
 |---|---|---|
 | identity RED/GREEN | 10 distinct→1 shared；module=`utils.helpers` | exact unit nodeid |
-| mapping 语义 | 结果、异常、truthiness/dict 事件、浅复制 | 10×14=140 differential |
+| mapping 语义 | unique implementation 的 truthiness/事件、过滤/首次、key/Unicode、JSON异常、浅复制 | 6-case JSONL differential |
 | 直接行为 | 10 target test files 场景不减 | baseline/revert 103；candidate/reapply 104 |
 | 影响行为 | observation/verification/artifact/CLI/Program | 固定23 files；baseline/revert 1162；candidate/reapply 1163 |
 | 共享叶子 import | 全部 72 importer 无失败/输出 | cold-import receipt |
 | 结构/预算 | 10→1、23 calls不变、net达到阈值 | AST + numstat + non-empty counter |
-| 回退 | baseline/candidate tree 精确恢复 | disposable clone receipt |
+| 回退 | baseline/implementation tree 精确恢复；evidence identity不自引用 | disposable clone + receipt blob |
 | 治理 | GAP-09～11、truth、source inventory | constraints/validate/truth/manifest |
 | 平台 | Python 3.11/3.12、macOS/Linux/Windows | required GitHub checks |
 

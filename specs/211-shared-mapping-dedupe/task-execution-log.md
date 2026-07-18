@@ -105,6 +105,23 @@
 - preliminary spike digest `05b7908685...3aab` 只保留为历史发现证据，不再承担 implementation admission；
   当前可执行 recipe 是唯一验收源。
 
+## Batch 2026-07-18-007：第二轮 terminal 对抗评审与减证据修订
+
+- 第二轮 identity=`b1dc1b211bf8cc65867da46f873f9d897ec29754`、tree=`cc2331622730...b5500`、
+  formal-six=`16a0d1eb...9d0`；Pascal=`LEAN FAIL`、Confucius=`SAFETY FAIL`，该 identity 永久失效。
+- Pascal finding：121 raw/109 non-empty LOC executable recipe 未计入 RC-06，单独超过保护成本上限；10×14
+  matrix 与 exact-body/alias/direct/impact 结构证明重复。
+- Confucius findings：Python 3.12 `FunctionDef.type_params` 使3.11 full AST digest跨版本不稳定；receipt 对
+  candidate/review tree 的命名可能自引用。
+- disposition：canonical harness 收敛为24 non-empty LOC、1 unique implementation×6 high-risk cases；identity
+  test含 import≤12，保护成本36=`floor(147×25%)`。Python 3.11 固定三个 digest，3.12只做同解释器 AST equality
+  与结构断言。`implementation_commit/tree` 专用于 revert/reapply；后续只含 receipt 的
+  `evidence_review_head/tree` 携带证据，receipt 禁止绑定自身 commit/tree/hash。
+- 修订后 compact corpus 在 Python 3.11 baseline/spike candidate 均输出6行 JSONL、digest=
+  `bf4a6deebf6ad5ce83f3147ec02fab29e7b7bab4fca280480016d7abac72980e`；121行 recipe 仅保留在失效历史
+  identity，不再是当前合同或维护成本。
+- 删除注释 `specs/211-shared-mapping-dedupe/spec.md`：`**Then** 每个运行时的 140 个 observation 与对应 baseline 完全一致`；第二轮 Pascal finding 证明10×14 harness违反 RC-06，故替换为 unique implementation 6-case JSONL，并由103/104 direct、1162/1163 impact、10→1 identity 与72 imports补足模块面。
+
 ## 不随执行批次过期的门禁顺序
 
 1. formal source 或证据变化后，先做 truth sync/audit、manifest exact 与本地门禁，再提交 clean identity；
