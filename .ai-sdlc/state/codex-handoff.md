@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T02:08:57+00:00
-- Reason: WI209 Round 7 review fix and focused verification checkpoint
+- Updated: 2026-07-18T02:20:24+00:00
+- Reason: WI209 Round 7 full regression checkpoint
 - Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Round 7 safety finding reproduced RED and fixed GREEN; focused 97 PASS; Ruff check PASS; raw/normalized budgets PASS at product 123/130 and tests 196/200
+- State: Round 7 source-trust fix is GREEN; focused 97 PASS and full 3272 passed/3 skipped; budgets and Ruff check PASS
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -15,13 +15,13 @@
 - Invalid or null new diff headers atomically clear old and new source trust; valid explicit +++ /dev/null retains old YAML syntax context
 
 ## Commands / Tests
-- Focused unit+CLI 97 passed; Ruff check passed; disposable base/candidate format counts product +123/+130 tests +196/+200
+- uv run pytest -q => 3272 passed, 3 skipped in 565.52s; focused 97 passed; Ruff check passed; raw/normalized budgets product 123/130 tests 196/200
 
 ## Blockers / Risks
-- Full suite, governance/truth/manifest, replay, fresh dual adversarial review, PR checks and fresh-main acceptance pending
+- Terminal governance/truth/manifest, replay, fresh dual adversarial review, PR checks and fresh-main acceptance pending
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Run full suite and terminal governance gates, update continuity, replay exact commits, freeze a new identity, then require Pascal and Confucius PASS on that same identity
+- Run constraints, validate, truth audit, manifest exact and diff clean gates; then refresh continuity and replay exact commits before freezing a new dual-review identity
