@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T13:20:41+00:00
-- Reason: WI210 formal Round 3 matching dual-FAIL direction change
-- Goal: Resolve the sole WI210 Round 3 current-summary finding and obtain Round 4 same-identity dual PASS
-- State: Round 3 identity is retired after matching dual FAIL; the parent current summary is corrected; Round 4 truth and formal gates remain
+- Updated: 2026-07-18T13:28:20+00:00
+- Reason: WI210 formal Round 4 terminal gate receipt
+- Goal: Obtain WI210 Round 4 same-identity dual PASS and deliver the formal PR before implementation
+- State: Parent current summary is synchronized; terminal truth e0cd38bf and all formal gates pass; the current committed HEAD is the review identity and only dual review remains
 - Stage: design
 - Work Item: 210-shared-text-dedupe
 - Branch: feature/210-shared-text-dedupe-docs
@@ -27,13 +27,13 @@
 - Retain the single receipt, six-file identity, WI196 dependency, GAP impact and non-empty test cap
 
 ## Commands / Tests
-- Round 3 Pascal FAIL and Confucius FAIL matched on one stale parent-summary finding; no product or test changes
+- Round 3 matching dual FAIL retired; manifest exact 1 passed; constraints and validate PASS; truth ready/fresh 1106/1106; product src and protected paths unchanged
 
 ## Blockers / Risks
 - Implementation remains unauthorized until Round 4 dual PASS and formal mainline receipt
 
 ## Local PR Review
-- Round 3 Pascal FAIL and Confucius FAIL matched on the stale parent-summary finding; both verdicts retired
+- Round 3 verdicts retired; Round 4 Pascal and Confucius verdicts pending on current HEAD
 
 ## Exact Next Steps
-- Restore protected handoff side effects, commit the summary fix, sync truth, run gates, freeze Round 4 identity, and review both agents from zero
+- Bind current HEAD/tree, parent-plan six-file combined and diff hashes; run Pascal and Confucius from zero; only dual PASS permits push and PR

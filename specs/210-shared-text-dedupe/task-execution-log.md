@@ -2,7 +2,7 @@
 
 **功能编号**：`210-shared-text-dedupe`
 **创建日期**：2026-07-18
-**当前状态**：Batch 0 formal Round 3 双 FAIL 已接受；Round 4 current-truth 修订与重验中；产品实现未授权
+**当前状态**：Batch 0 formal Round 4 terminal gates complete；等待同一 identity 双审；产品实现未授权
 
 ## Batch 2026-07-18-001：下一原子候选选择
 
@@ -156,3 +156,15 @@
 - Round 4 只把父 summary 改为不易再次陈旧的状态：Round 1～3 identity 已退役、当前 terminal
   formal identity 等待双审、implementation 未授权；同步必要 log/continuity 后重验。
 - Round 3 verdict/hash 全退役；新 current HEAD 必须由两位 reviewer 从零复审。
+
+## Batch 2026-07-18-010：Formal Round 4 terminal gates
+
+- current-summary 修订 commit=`83e59461ac8bf6be37aab5fc868370143463447f`；产品/测试/合同 zero
+  additional diff。
+- truth sync snapshot=`e0cd38bfe4b51fbfa70a2e7932ba94ca46851b35cfd4b9468a07b90c4bc51786`；
+  manifest exact=`1 passed in 121.82s`，constraints/validate PASS，truth=`ready/fresh 1106/1106`、
+  unmapped=0、唯一 pre-close missing=1。
+- root/scoped handoff byte-identical 且 12-file 清单完整；Cursor/resume/WI208 protected diff=0；
+  `src/` zero diff，worktree clean。
+- 本批提交后的 current HEAD 直接作为 Round 4 review identity；只等待两位 reviewer 对同一父子六文件
+  combined PASS，不再重复 commit/freeze。
