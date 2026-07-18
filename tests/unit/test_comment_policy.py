@@ -38,17 +38,15 @@ _DIFF_CASES = [
     "diff --git c/x.py b/x.py\n@@ -1 +1 @@\n-# wrong old\n+# replacement\n",
     'diff --git "c/x.py" b/x.py\n@@ -1 +1 @@\n-# quoted wrong old\n+# replacement\n',
     "diff --git /dev/null b/x.py\n@@ -1 +1 @@\n-# null operand\n+# replacement\n",
-    "diff --git a/x.py /dev/null\n@@ -1 +1 @@\n-# null new\n+# replacement\n",
     'diff --git "a/C:x.py" "b/C:x.py"\n@@ -1 +1 @@\n-# drive relative\n+# replacement\n',
     'diff --git "a/C:\\\\x.py" "b/C:\\\\x.py"\n@@ -1 +1 @@\n-# drive rooted\n+# replacement\n',
     'diff --git "a/\\\\\\\\server\\\\share\\\\x.py" "b/\\\\\\\\server\\\\share\\\\x.py"\n@@ -1 +1 @@\n-# unc\n+# replacement\n',
     'diff --git "a/..\\\\x.py" "b/..\\\\x.py"\n@@ -1 +1 @@\n-# backslash traversal\n+# replacement\n',
     "diff --git a/x.py b/x.py\n--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@ section\n-# one\n+value\n\\ No newline at end of file\n@@ -0,0 +3 @@\n+# added\n",
     "diff --git a/new.py b/new.py\n--- /dev/null\n+++ b/new.py\n@@ -0,0 +1 @@\n+# created\n",
-    "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +1 @@\n-# deleted\n+# replacement\n",
     "diff --git a/old.py b/old.py\n--- a/old.py\n+++ /dev/null\n@@ -1 +0,0 @@\n-# deleted\n",
 ]
-_DIFF_CASE_IDS = "broken unterminated python-x-escape bad-unquoted-escape nul bad-explicit wrong-explicit-sides swapped-explicit-sides posix-traversal empty-component wrong-old quoted-wrong-old null-operand null-new-operand drive-relative drive-rooted unc backslash-traversal multi-hunk create malformed-delete-added delete".split()  # noqa: SIM905
+_DIFF_CASE_IDS = "broken unterminated python-x-escape bad-unquoted-escape nul bad-explicit wrong-explicit-sides swapped-explicit-sides posix-traversal empty-component wrong-old quoted-wrong-old null-operand drive-relative drive-rooted unc backslash-traversal multi-hunk create delete".split()  # noqa: SIM905
 
 
 def test_comment_language_uses_current_user_language() -> None:
@@ -212,17 +210,23 @@ def test_yaml_mixed_extension_uses_each_side_source(
     assert len(findings) == expected
 
 
-def test_yaml_quoted_path_and_traversal_are_fail_closed(tmp_path: Path) -> None:
+def test_yaml_quoted_path_and_invalid_new_header_are_fail_closed(tmp_path: Path) -> None:
     source = tmp_path / "配置 file.yaml"
     assert not _blockers(tmp_path, _DOUBLE, _DOUBLE.replace("#139 continuation", "done"), source.name)
-    source.write_text("# real\n", encoding="utf-8")
-    _commit_all(tmp_path)
-    source.write_text("# replacement\n", encoding="utf-8")
     quoted = r'"a/\351\205\215\347\275\256 file.yaml"'
-    diff = f"diff --git a/x b/x\n--- {quoted}\n+++ {quoted}\n@@ -1 +1 @@\n-# real\n+# replacement\n"
-    traversal = diff.replace(quoted, "b/../target.yaml")
-    findings = collect_removed_comment_findings(diff_text=traversal, root=tmp_path)
-    assert len(findings) == 1
+    headers = (
+        f"diff --git {quoted} /dev/null",
+        f"diff --git {quoted} d/config.yaml",
+        f"diff --git a/x b/x\n--- {quoted}\n+++ b/../target.yaml",
+        f'diff --git a/x b/x\n--- {quoted}\n+++ "bad',
+        f"diff --git a/x b/x\n--- {quoted}\n+++ /dev/null",
+    )
+    for header in headers:
+        diff = f"{header}\n@@ -2 +2 @@\n-  #139 continuation\n+# replacement\n"
+        findings = collect_removed_comment_findings(diff_text=diff, root=tmp_path)
+        actual = [(finding.path, finding.removed_comment) for finding in findings]
+        expected = [] if "+++ /dev/null" in header else [("<unknown>", "#139 continuation")]
+        assert actual == expected, header
 
 
 @pytest.mark.parametrize(
