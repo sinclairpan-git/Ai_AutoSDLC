@@ -71,7 +71,7 @@
   产品代码不变；pre-receipt truth/audit=`ready/fresh 1101/1101 209/209`、manifest exact
   `1 passed in 105.89s`，本 receipt 后只需 final sync/audit/manifest freeze。
 
-### T32 回退演练和双对抗终审（in progress）
+### T32 回退演练和双对抗终审（completed）
 
 - **依赖**：T31。
 - **验收**：逐提交 revert 精确回到 formal merge tree、reapply 精确回到 candidate tree；Pascal/Confucius 对同一 final identity 均 PASS，无未处置 finding。
@@ -89,26 +89,31 @@
 - **Round 14**：canonical lifecycle 主体已闭合，产品/测试 blob 不变；Pascal/Confucius 唯一共同 P1 为
   T41 仍写“等待 Round 13 新 head”，可能把 PR gate 绑定退役身份，verdict 均为 FAIL。
 - **Round 15**：只把 T41 绑定到评审调用提供的当前 Round 15 精确身份并记录 receipt；产品/测试 blob
-  不变。当前仅等待同一新身份双审；双 PASS 前不得 push。
+  不变。candidate=`c5c6e94a`、replay=`abad54a6`，tree 均为 `adfc8503`；Pascal/Confucius 对同一身份
+  均 PASS、无 finding，产品/测试 blob 与已通过 full 的身份相同。
 
 ## Batch 4：交付与关闭
 
-### T41 implementation PR（in progress）
+### T41 implementation PR（completed）
 
 - **依赖**：T32。
 - **验收**：push/PR/@codex review/heartbeat；Codex 对 current HEAD clean、所有 required checks success 后 merge。
-- **当前状态**：PR #146 已打开；Round 12 head 的 Codex clean 已退役，等待评审调用绑定的当前 Round 15
-  精确身份双审后 push、重请求 Codex 与全部 checks 成功。
+- **证据**：PR #146 的 Codex current-head review 审到 `c5c6e94adc` 且无 major issue；22/22 checks
+  success，merge=`31aad572a61d9a0ca952fc8cd12923a5a1c9bbb5`。
 
-### T42 fresh-main acceptance（queued）
+### T42 fresh-main acceptance（completed）
 
 - **依赖**：T41 merge。
 - **验收**：fresh detached `origin/main` 复跑 focused/full/Ruff/constraints/truth/clean guard；父 GAP-14/T57 只在此后关闭，回退 implementation PR 会重开。
+- **证据**：HEAD=`31aad572`；focused=`100 passed in 16.23s`，full=`3275 passed, 3 skipped in
+  624.03s`；Ruff、constraints、program validate、truth `ready/fresh 1101/1101 209/209`、manifest exact
+  `1 passed in 94.27s`、diff/clean guard 均通过，HEAD 与 `origin/main` 一致。
 
-### T43 恢复下一原子减重选择（queued）
+### T43 恢复下一原子减重选择（ready）
 
-- **依赖**：T42 closure PR merge。
-- **验收**：只从 T63/T65/WP-06/WP-07 中按依赖/收益选择一个独立候选；不得把 WI209 计入 RC-08 减重。
+- **依赖**：T42 + 本 closure PR merge。
+- **验收**：本 closure PR 合并后，只从 T63/T65/WP-06/WP-07 中按依赖/收益选择一个独立候选；
+  不得把 WI209 计入 RC-08 减重。
 
 ## 追踪矩阵
 

@@ -1,12 +1,12 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T08:49:48+00:00
-- Reason: WI209 Round 15 T41 identity reconciliation target
-- Goal: Deliver WI209 without product regression, cross-platform fixture failure, budget overrun, or stale PR gate identity
-- State: Round 15 canonical target records final truth/manifest/replay complete and binds T41 to the current review invocation; product and test blobs remain unchanged; Round 14 dual FAIL is disposed; only renewed same-identity dual review and current-head PR delivery remain
+- Updated: 2026-07-18T09:57:15+00:00
+- Reason: WI209 closure terminal gates complete
+- Goal: Close WI209/GAP-14 after fresh-main acceptance without product or test changes
+- State: Closure docs and program truth are synchronized; snapshot f9498dfc is ready/fresh; terminal constraints/validate/manifest/diff/protected guards passed; only closure dual review and PR delivery remain
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
-- Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
+- Branch: codex/209-yaml-comment-policy-close
 
 ## Changed Files
 - .ai-sdlc/state/codex-handoff.md
@@ -22,21 +22,18 @@
 - specs/209-yaml-quoted-scalar-comment-policy/spec.md
 - specs/209-yaml-quoted-scalar-comment-policy/task-execution-log.md
 - specs/209-yaml-quoted-scalar-comment-policy/tasks.md
-- src/ai_sdlc/core/comment_policy.py
-- tests/integration/test_cli_verify_constraints.py
-- tests/unit/test_comment_policy.py
 
 ## Key Decisions
-- Keep exact commit/tree/replay hashes outside self-referential canonical content and bind them in both review requests after the final continuity commit is replayed
+- Keep closure PR docs/truth/continuity only; select one next atomic reduction candidate only after closure merge
 
 ## Commands / Tests
-- Round 15 truth snapshot 829b9d0a32357ffb4595d797a39e6c6aa32aa0ad31113411c564779e5adbd097 ready/fresh 1101/1101 209/209 missing/unmapped 0; manifest exact 1 passed in 99.48s; product/test blobs unchanged; focused 100 full 3275 passed 3 skipped; raw +121/+200 normalized +128/+198
+- fresh-main focused 100; full 3275 passed 3 skipped; closure truth ready/fresh 1101/1101; manifest exact 1 passed in 87.12s; constraints/validate/diff/protected/continuity guards PASS
 
 ## Blockers / Risks
-- Round 14 candidate received matching Pascal/Confucius P1 because T41 still named a retired Round 13 head; it is retired and fixed; the current target must independently PASS both dimensions before push
+- Closure delivery still requires same-identity dual PASS plus PR Codex/checks/merge; reverting PR #146 reopens GAP-14
 
 ## Local PR Review
-- Round 14 Pascal/Confucius matching P1 T41 identity FAIL accepted and fixed; renewed verdicts required
+- Round 15 implementation identity received Pascal/Confucius PASS; closure identity has not yet been reviewed
 
 ## Exact Next Steps
-- Bind the exact current candidate/replay commit, tree and diff hashes in both Round 15 review requests; only same-identity Pascal and Confucius PASS permits push, Codex review, checks, merge and fresh-main acceptance
+- Commit and freeze one closure identity; obtain Pascal and Confucius PASS; then push and deliver the closure PR through Codex/checks/merge

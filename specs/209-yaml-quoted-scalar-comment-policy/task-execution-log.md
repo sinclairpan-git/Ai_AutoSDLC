@@ -309,3 +309,15 @@
   verdict 均为 FAIL。
 - Round 15 只把 T41 绑定到评审调用提供的当前精确身份并记录本 receipt；产品/测试 blob 不变，
   final truth/replay 仍为 completed，双 PASS 前不得 push。
+
+## 22. Batch 2026-07-18-022：Round 15 双 PASS、PR 合并与 fresh-main 关闭
+
+- Round 15 candidate=`c5c6e94a`、replay=`abad54a6`，tree 均为 `adfc8503`；Pascal/Confucius 分别从
+  精简直接性与兼容安全性复审同一身份，均 PASS、无 actionable finding。
+- PR #146 的 Codex current-head review 审到 `c5c6e94adc` 且无 major issue；Windows 3.11/3.12 full
+  与其余 checks 全绿，最终 22/22 success，merge=`31aad572a61d9a0ca952fc8cd12923a5a1c9bbb5`。
+- fresh detached main focused=`100 passed in 16.23s`、full=`3275 passed, 3 skipped in 624.03s`；Ruff、
+  constraints、program validate、truth `ready/fresh 1101/1101 209/209`、manifest exact
+  `1 passed in 94.27s`、diff/clean guard 全部通过，HEAD 与 `origin/main` 精确一致且状态 clean。
+- T32/T41/T42 completed，GAP-14/T57 closed；回退 PR #146 会重开。本 closure PR 不修改产品/测试，
+  合并后 T43 才选择下一原子减重项，WI209 不计 RC-08。
