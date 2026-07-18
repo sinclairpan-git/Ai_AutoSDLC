@@ -74,28 +74,12 @@ from ai_sdlc.models.frontend_theme_token_governance import (
 )
 from ai_sdlc.models.gate import GateVerdict
 from ai_sdlc.rules import RulesLoader
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_cli_text_items
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root
 
 console = Console()
 _BRANCH_NUMERIC_WORK_ITEM_RE = re.compile(r"^(?P<id>\d{3,})(?:[-_].*)?$")
-
-
-def _dedupe_cli_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _materialized_path_labels(root: Path, paths: object) -> list[str]:

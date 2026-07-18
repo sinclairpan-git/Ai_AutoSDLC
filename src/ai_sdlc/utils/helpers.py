@@ -68,6 +68,15 @@ def has_project_markers(path: Path) -> bool:
 # ── text helpers ──
 
 
+def _dedupe_text_items(values: object) -> list[str]:
+    deduped: list[str] = []
+    for value in values or []:
+        normalized = str(value).strip()
+        if normalized and normalized not in deduped:
+            deduped.append(normalized)
+    return deduped
+
+
 def slugify(text: str) -> str:
     """Convert text to a URL/filename-safe slug."""
     text = unicodedata.normalize("NFKD", text)

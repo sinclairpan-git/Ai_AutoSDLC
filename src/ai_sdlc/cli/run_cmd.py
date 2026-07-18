@@ -48,6 +48,7 @@ from ai_sdlc.integrations.ide_adapter import (
     build_adapter_governance_surface,
 )
 from ai_sdlc.models.state import Checkpoint
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root, now_iso
 
 console = Console()
@@ -63,15 +64,6 @@ _AGENTOPS_REPORTING_STAGES = (
     "close",
     "merge_release",
 )
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _agentops_receipt_diagnostic_lines(

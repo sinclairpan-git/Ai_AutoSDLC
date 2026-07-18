@@ -14,6 +14,7 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
 )
 from ai_sdlc.gates.frontend_contract_gate import FrontendContractGate
 from ai_sdlc.models.gate import GateResult
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 FRONTEND_CONTRACT_SOURCE_NAME = "frontend contract verification"
 FRONTEND_CONTRACT_CHECK_OBJECTS = (
@@ -31,15 +32,6 @@ FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_SOURCE_PROFILE_MISMATCH = (
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_VALID_EMPTY = "valid_empty"
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_DRIFT = "drift"
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_CLEAN = "clean"
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:

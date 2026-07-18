@@ -38,6 +38,7 @@ from ai_sdlc.core.workitem_truth import (
     run_truth_check,
 )
 from ai_sdlc.telemetry.display import summarize_frontend_delivery_scope_for_display
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_cli_text_items
 from ai_sdlc.utils.helpers import find_project_root, is_git_repo, now_iso
 
 _WORKITEM_ADAPTER_HOOK_META_KEY = "ai_sdlc.cli.workitem.adapter_hook"
@@ -62,15 +63,6 @@ def _workitem_before_command(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand in (None, "init"):
         return
     _run_workitem_adapter(ctx)
-
-
-def _dedupe_cli_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _format_cli_path(path: Path) -> str:

@@ -9,6 +9,7 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.core.branch_inventory import BranchInventoryEntry, build_branch_inventory
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 BATCH_SUMMARY_RE = re.compile(r"(?m)^\s*Batch\s+(?P<num>\d+)\s*[:：]")
 BATCH_HEADER_RE = re.compile(r"(?m)^##\s+Batch\s+(?P<num>\d+)\b")
@@ -27,15 +28,6 @@ WORKTREE_STATUS_DISPOSITION_RE = re.compile(
     r"(?m)^\s*-\s*当前批次 worktree disposition 状态：(?P<value>.+?)\s*$"
 )
 WI_SEQ_RE = re.compile(r"^(?P<seq>\d{3})\b")
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _dedupe_int_items(values: object) -> list[int]:

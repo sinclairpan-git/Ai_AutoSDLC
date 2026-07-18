@@ -10,15 +10,7 @@ from ai_sdlc.generators._artifact_paths import _dedupe_paths
 from ai_sdlc.models.frontend_generation_constraints import (
     FrontendGenerationConstraintSet,
 )
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 
 def frontend_generation_governance_root(root: Path) -> Path:

@@ -13,17 +13,9 @@ from ai_sdlc.core.task_guard import (
 )
 from ai_sdlc.core.workitem_truth import WorkitemTruthResult, run_truth_check
 from ai_sdlc.models.state import Checkpoint
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 _AUTHORIZED_STAGES = frozenset({"execute", "close"})
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 @dataclass

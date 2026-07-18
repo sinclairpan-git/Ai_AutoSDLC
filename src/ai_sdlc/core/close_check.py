@@ -43,6 +43,7 @@ from ai_sdlc.core.workitem_traceability import (
     evaluate_work_item_branch_lifecycle,
 )
 from ai_sdlc.models.work import WorkItemStatus
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root
 
 REQUIRED_LOG_MARKERS = (
@@ -302,15 +303,6 @@ class BranchCheckResult:
             "worktree_disposition": self.worktree_disposition,
             "next_required_actions": _dedupe_text_items(self.next_required_actions),
         }
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _unchecked_tasks_count(tasks_md: str) -> int:

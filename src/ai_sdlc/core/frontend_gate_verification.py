@@ -30,6 +30,7 @@ from ai_sdlc.models.frontend_browser_gate import (
     BrowserQualityGateExecutionContext,
 )
 from ai_sdlc.models.gate import GateCheck, GateResult, GateVerdict
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 FRONTEND_GATE_SOURCE_NAME = "frontend gate verification"
 FRONTEND_GATE_VISUAL_A11Y_CHECK_OBJECT = "frontend_visual_a11y_policy_artifacts"
@@ -53,15 +54,6 @@ FRONTEND_GATE_DECISION_REASON_RESULT_INCONSISTENCY = "result_inconsistency"
 FRONTEND_EVIDENCE_CLASS_FRAMEWORK_CAPABILITY = "framework_capability"
 FRONTEND_OBSERVATION_ATTACHMENT_COVERAGE_GAP = "frontend_contract_observations"
 FRONTEND_ATTACHMENT_REQUIREMENT_WAIVED = "waived_for_framework_capability"
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:

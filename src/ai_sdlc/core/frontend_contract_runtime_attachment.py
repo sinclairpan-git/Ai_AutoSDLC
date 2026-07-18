@@ -19,6 +19,7 @@ from ai_sdlc.core.frontend_contract_observation_runtime_policy import (
     assess_frontend_contract_observation_source,
 )
 from ai_sdlc.models.state import Checkpoint
+from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_SCOPE_CHECKPOINT = "checkpoint"
 FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_SCOPE_EXPLICIT_SPEC_DIR = "explicit_spec_dir"
@@ -36,15 +37,6 @@ FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_FRESHNESS_TIMESTAMP_ONLY = "timestamp_only"
 FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_WRITE_POLICY_EXPLICIT_OPT_IN = (
     "explicit_opt_in_required"
 )
-
-
-def _dedupe_text_items(values: object) -> list[str]:
-    deduped: list[str] = []
-    for value in values or []:
-        normalized = str(value).strip()
-        if normalized and normalized not in deduped:
-            deduped.append(normalized)
-    return deduped
 
 
 def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:
