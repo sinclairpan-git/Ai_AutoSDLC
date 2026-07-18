@@ -77,8 +77,21 @@
   product/rules/providers/workflows/Cursor/resume/WI208 protected zero diff 全部 PASS。
 - T02/T02A completed；T03 进入 in progress。当前尚无 formal PASS、PR 或 implementation 授权。
 
+## Batch 2026-07-18-005：Seed truth 与 continuity
+
+- seed commit=`26c9e6ea`；首次 committed-source truth sync 生成 snapshot=
+  `c26dfd8a3be6e4ac05fdfcff9e5869cca248624d9042f47071d799807f2ed45e`，repo revision=`26c9e6ea`，
+  authoring hash=`5ebffdf85a8c386136828b03b8d9ab9a9532d2393d67b002f653304470ebaaaa`。
+- truth audit=`ready/fresh`；source inventory=1111/1111、unmapped=0、唯一 pre-close missing=1；layer
+  totals/materialized 的 close=211/210；frontend/adapter capability 均 closed/ready。
+- manifest exact 先以旧 tuple RED：1106/1106/0/0 对实际1111/1111/0/1；只机械更新 inventory tuple 与
+  close 210/210→211/210 两行后 GREEN=`1 passed in 107.95s`，test numstat保持2/2且无逻辑/行数新增。
+- canonical handoff CLI 仍从 stale checkpoint 派生 WI208 并重建 resume-pack；WI208 handoff/resume 已精确
+  恢复 HEAD，root handoff已修正为 WI211/design，并创建 byte-identical WI211 scoped handoff。
+- 本日志追加使 seed snapshot authoring hash按预期失效；下一步必须先做 terminal sync，不得直接评审旧 snapshot。
+
 ## 当前精确下一步
 
-1. 提交 canonical sources，让 truth generator 可读取 revision；同步 manifest/truth 与 handoff，并恢复非范围副作用；
-2. 再跑 formal gates，冻结 exact HEAD/tree/combined identity；
+1. 对本日志新增证据做 terminal truth sync，重跑 audit/manifest exact；
+2. 提交 terminal formal batch；该提交直接作为 exact HEAD/tree/combined review identity；
 3. Pascal/Confucius 对同一 identity 审查至双 PASS，之后才允许 push/formal PR。
