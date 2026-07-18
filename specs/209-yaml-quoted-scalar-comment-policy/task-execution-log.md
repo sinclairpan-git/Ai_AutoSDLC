@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；Round 9 finding 已 GREEN，Round 10 terminal gates/双审待完成
+**状态**：implementation adversarial review；Round 10 full/治理门禁已通过，terminal replay/双审待完成
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -192,3 +192,13 @@
   `100 passed`，Ruff check/diff-check PASS。
 - 预算：产品 raw/normalized `+123/+130`；unit/CLI tests raw `+176/+24=+200`、normalized
   `+166/+32=+198`；5 private helper、零新文件/公共抽象，T23 completed，T31/T32 in progress。
+
+## 11. Batch 2026-07-18-011：Round 10 fresh full 与 preliminary terminal gates
+
+- fresh full=`3275 passed, 3 skipped in 703.77s`；focused `100 passed`；Ruff check、constraints、
+  program validate、diff-check 均 PASS。
+- preliminary truth sync 写入 snapshot `15062b92347ab3a00da78bb2487930676401eee555ca59311568c6dcea6cea97`；
+  独立 audit=`ready/fresh`，inventory `1101/1101`、layers `209/209`、missing/unmapped=`0/0`；manifest
+  exact=`1 passed in 97.46s`。
+- T31 completed；本 canonical receipt 会使 snapshot 变化，T32 冻结前必须再次 terminal sync/audit、
+  manifest exact、预算/范围审计与独立 replay。GAP-14/T57、T41/T42 状态不变。

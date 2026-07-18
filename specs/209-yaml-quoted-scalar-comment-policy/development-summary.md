@@ -1,7 +1,7 @@
 # 开发摘要：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 9 finding 已 GREEN，Round 10 待验证/双审
+**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 10 full/治理门禁已通过，replay/双审待完成
 
 ## 当前结论
 
@@ -18,6 +18,10 @@ Round 9 Pascal 已 PASS；Confucius 用真实 Git 证明含空格路径的歧义
 修复只允许从该可消歧 header 恢复路径，不放宽双路径 header；默认 ASCII 空格与
 `core.quotePath=false` 非 ASCII 空格真实 Git 回归均已 GREEN。
 
+Round 10 fresh full 为 `3275 passed, 3 skipped`；Ruff、constraints、validate、diff-check、truth
+`ready/fresh 1101/1101` 与 manifest exact 均通过。当前只剩 receipt 后 terminal truth/manifest、独立
+replay 和两位 reviewer 对同一冻结身份的终审，不把 preliminary PASS 解释为可交付。
+
 ## 冻结方向
 
 - 保持零上下文 diff；独立解析 old/new path 与 hunk 行号，覆盖 mixed-extension rename、Git quoted path 和标准边界。
@@ -29,6 +33,6 @@ Round 9 Pascal 已 PASS；Confucius 用真实 Git 证明含空格路径的歧义
 
 ## 交付边界
 
-formal PR #145 已以产品代码零差异合并；独立 implementation 分支已完成 RED/GREEN、full 与回放，
-当前仍处于双审 finding 修订。只有新身份双 PASS、implementation PR/Codex/checks/merge 与 fresh-main
+formal PR #145 已以产品代码零差异合并；独立 implementation 分支已完成 RED/GREEN 与 fresh full，
+当前仍处于 terminal replay/双审。只有新身份双 PASS、implementation PR/Codex/checks/merge 与 fresh-main
 全部完成后才能关闭 GAP-14/T57，并恢复下一原子减重候选。
