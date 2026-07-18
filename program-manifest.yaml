@@ -2034,7 +2034,8 @@ specs:
   depends_on: []
 - id: 210-shared-text-dedupe
   path: specs/210-shared-text-dedupe
-  depends_on: []
+  depends_on:
+  - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
   generated_at: '2026-07-18T12:13:30Z'
   generated_by: ai-sdlc program truth sync

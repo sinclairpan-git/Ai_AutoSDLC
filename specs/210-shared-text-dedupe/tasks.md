@@ -37,12 +37,22 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **完成**：范围、语义、CC、RC、T61A/B、停止/回退、分支/PR 边界无占位或冲突。
 - **验收**：canonical identity 可复算；产品/测试路径仍为零 diff。
 
-### T03 Formal 对抗评审至双 PASS
+### T02A GAP-09～GAP-11 impact admission
 
 - **依赖**：T02。
+- **GAP-09**：frontend capability/inheritance、blocking refs 与 codegen/test admission 零差异。
+- **GAP-10**：adapter canonical consumption、CLI transcript 与 adapter 调用集合零差异。
+- **GAP-11**：formal 唯一允许缺失预登记 close source；implementation source 新增=0；closure missing=0。
+- **证据**：execution log + `.ai-sdlc/work-items/210-shared-text-dedupe/` 下 differential/rollback receipts。
+- **停止**：分析不确定、unexpected unmapped/missing、capability/blocking refs 漂移时重开对应 GAP。
+
+### T03 Formal 对抗评审至双 PASS
+
+- **依赖**：T02A。
 - **reviewer A**：Pascal / 精简收益、直接性、YAGNI、预算。
 - **reviewer B**：Confucius / 兼容、安全、导入、证据与回退。
-- **规则**：同一 spec/plan/tasks identity 独立审查；任一 finding 修订后双方从零重审。
+- **规则**：按父 plan §9 唯一算法对父子各 spec/plan/tasks 六文件生成 canonical combined；双方独立
+  审查同一 identity，任一 finding 修订后从零重审。
 - **完成**：两者均 `PASS` 且 findings=none。
 
 ### T04 Formal 门禁与 PR
@@ -66,9 +76,50 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 - **依赖**：T11。
 - **完成**：重算 28/27/196/730、body digest、private consumers、import graph；跑 behavior/event corpus。
-- **测试**：spike 已验证的 32-file / `1282 passed` 集合从 main 重验；其中已含此前 23 unit
-  `441 passed` 与 8 CLI integration `398 passed` 的核心面；full baseline 只在 exact implementation
-  base 执行一次。
+- **测试**：spike 已验证的 32-file / `1282 passed` 集合从 main 重验；exact 构成为 25 unit + 7 CLI
+  integration。此前 23-unit/8-integration=`839 passed` 是不同的初始子集，只作递进历史证据，不冒充
+  32-file 集合。full baseline 只在 exact implementation base 执行一次。
+- **唯一 targeted 命令**：
+
+```powershell
+$tests = @(
+  'tests/integration/test_cli_program.py'
+  'tests/integration/test_cli_run.py'
+  'tests/integration/test_cli_status.py'
+  'tests/integration/test_cli_verify_constraints.py'
+  'tests/integration/test_cli_workitem_close_check.py'
+  'tests/integration/test_cli_workitem_plan_check.py'
+  'tests/integration/test_cli_workitem_truth_check.py'
+  'tests/unit/test_artifact_target_guard.py'
+  'tests/unit/test_backlog_breach_guard.py'
+  'tests/unit/test_cli_commands.py'
+  'tests/unit/test_close_check.py'
+  'tests/unit/test_execute_authorization.py'
+  'tests/unit/test_frontend_contract_observation_provider.py'
+  'tests/unit/test_frontend_contract_runtime_attachment.py'
+  'tests/unit/test_frontend_contract_verification.py'
+  'tests/unit/test_frontend_cross_provider_consistency_artifacts.py'
+  'tests/unit/test_frontend_gate_verification.py'
+  'tests/unit/test_frontend_generation_constraint_artifacts.py'
+  'tests/unit/test_frontend_page_ui_schema_artifacts.py'
+  'tests/unit/test_frontend_provider_expansion_artifacts.py'
+  'tests/unit/test_frontend_provider_runtime_adapter_artifacts.py'
+  'tests/unit/test_frontend_quality_platform_artifacts.py'
+  'tests/unit/test_frontend_theme_token_governance_artifacts.py'
+  'tests/unit/test_frontend_visual_a11y_evidence_provider.py'
+  'tests/unit/test_p1_artifacts.py'
+  'tests/unit/test_plan_check.py'
+  'tests/unit/test_program_service.py'
+  'tests/unit/test_run_cmd.py'
+  'tests/unit/test_runner_confirm.py'
+  'tests/unit/test_verify_constraints.py'
+  'tests/unit/test_workitem_traceability.py'
+  'tests/unit/test_workitem_truth.py'
+)
+uv run pytest -q $tests
+```
+
+- **清单门禁**：必须为 32 个唯一、存在且按 repo-relative 字典序排列的路径；收集数或路径漂移即停止。
 - **停止**：任一基线漂移先回 formal，不边写边扩大范围。
 
 ### T13 写最小 RED
@@ -78,7 +129,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **完成**：共享 identity/strip/空值/首次顺序/异常传播的参数化测试在 helper 缺失时 RED。
 - **预算**：characterization test non-empty additions≤9；harness/normalizer=0；RC-06 以 Ruff 后
   non-empty 计量，product35+test≤9+truth≤2 计划≤46、硬上限49。禁止 `noqa`、超长压行或只写
-  manual probe。
+  manual probe；空行不计，注释、参数化数据和其他非空新增行均计，raw additions 另行披露。
 
 ### T14 实现共享 helper 与 aliases
 
@@ -156,3 +207,4 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 | FR-01～FR-03 | T14、T21 |
 | FR-04～FR-06 | T03、T04、T24、T31～T33 |
 | SC-01～SC-06 | T03、T22～T24、T31～T33 |
+| GAP-09～GAP-11 | T02A、T21、T22、T32、T33 |

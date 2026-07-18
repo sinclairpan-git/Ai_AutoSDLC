@@ -71,9 +71,10 @@ WI-204 的 Program Finalization 候选保持 RC-09 No-Go：旧 sponsor 已撤销
 ## 3. 兼容边界
 
 28 个模块局部符号必须继续存在，因此 repo 内 monkeypatch/import-by-module 仍能工作。允许的私有
-introspection 差异仅限函数对象统一后必然发生的 `identity`、`__module__`、`__code__`、源码位置、
-traceback frame，以及 `p1_artifacts` 的私有 annotation 从窄 union 变为共享 `object`。只读扫描必须
-证明仓库内没有依赖这些属性的 consumer；若存在且需要 wrapper 才能兼容，按 RC-09 停止，不新增 wrapper。
+introspection 差异仅限函数对象统一后必然发生的 `identity`、`__module__`、`__name__`、
+`__qualname__`、`__code__`、源码位置、traceback frame，以及 `p1_artifacts` 的私有 annotation 从窄
+union 变为共享 `object`。只读扫描与 corpus 必须证明仓库内没有依赖这些属性的 consumer；若存在且
+需要 wrapper 才能兼容，按 RC-09 停止，不新增 wrapper。
 
 除上述明确批准的私有 introspection 差异外，以下均要求零差异：
 
@@ -87,6 +88,19 @@ traceback frame，以及 `p1_artifacts` 的私有 annotation 从窄 union 变为
 | CC-06 幂等/恢复 | 重复调用、generator 单遍消费与首次出现顺序 |
 | CC-07 平台 | Python 3.11/3.12 与 Windows/macOS/Linux |
 | CC-08 发布 | 本项不单独发版；最终路线发布仍执行 installed/sibling smoke |
+
+### 3.1 GAP-09～GAP-11 防回归影响分析
+
+| Gap | 本切片影响 | 强制证据与失败处置 |
+|---|---|---|
+| GAP-09 frontend inheritance | 目标虽含 frontend provider/generator 私有 helper，但不改 capability、provider、style、继承或 codegen/test admission；730 calls 与 artifact/schema 必须零差异 | `program truth audit` 的 frontend capability 必须继续 `closed/ready` 且 blocking refs 集合不变；否则 owner=WI-210 delivery，停止并重开 GAP-09 |
+| GAP-10 adapter consumption | 27 个目标模块不含 adapter ingress/canonical consumption 实现；CLI 私有去重不得改变 adapter 调用集合、入口或本机会话诊断 | agent-adapter capability 必须继续 `closed/ready`，truth/close refs 与相关 CLI transcript 不变；否则 owner=WI-210 delivery，停止并重开 GAP-10 |
+| GAP-11 source inventory | formal 只新增已映射 WI-210 sources；implementation 新产品/测试文件=0，不新增 source registry 类型 | formal 允许唯一预登记 close source `development-summary.md` 暂未物化；除该项外必须 unmapped=0/missing=0，closure 后总 missing=0；否则 owner=WI-210 delivery，停止并重开 GAP-11 |
+
+命令回执写入 `specs/210-shared-text-dedupe/task-execution-log.md`；implementation differential 与
+rollback/reapply 结构化回执分别写入
+`.ai-sdlc/work-items/210-shared-text-dedupe/t61-differential-receipt.yaml` 和
+`.ai-sdlc/work-items/210-shared-text-dedupe/rollback-reapply-receipt.yaml`。
 
 ## 4. Reduction Contract
 
@@ -118,7 +132,7 @@ traceback frame，以及 `p1_artifacts` 的私有 annotation 从窄 union 变为
 
 ### T61B（同一 candidate）
 
-1. 先增加≤9 raw 行的既有测试文件内 RED，证明共享 helper/顺序合同尚未建立；再实施 GREEN。
+1. 先增加≤9 non-empty 行的既有测试文件内 RED，证明共享 helper/顺序合同尚未建立；再实施 GREEN。
 2. AST/binding gate 证明只剩 1 个 exact body、28 个局部 alias、730 个调用表达式不变。
 3. 干净子进程逐一 import 27 个目标模块；不得有 cycle、import-time 写入或 stderr。
 4. baseline/candidate corpus 结果、异常与 event trace 完全一致；临时 reverse-order mutation 必须 RED。
@@ -126,20 +140,24 @@ traceback frame，以及 `p1_artifacts` 的私有 annotation 从窄 union 变为
    和三平台 CI；基线与 candidate 当前 format-check 待格式化集合必须同为精确 24 文件，不伪报 PASS。
 6. 在隔离 worktree 完成 exact revert/reapply tree identity；同一 candidate identity 由两位 reviewer 双 PASS。
 
+测试预算唯一按 Ruff 后新增 non-empty 行计量：空行不计；注释、参数化数据与其他所有非空新增行均计；
+raw additions 另行披露但不形成第二个判定阈值。
+
 ## 6. 功能需求
 
 - **FR-01**：系统只保留一份 §2.2 算法实现。
 - **FR-02**：28 个局部私有名和 730 个调用表达式保持，公共行为零差异。
 - **FR-03**：共享实现只落在现有 `utils/helpers.py` text section，不新增模块或公共导出。
 - **FR-04**：formal、implementation、closure 使用独立 branch/PR；formal merge 前不得改产品代码。
-- **FR-05**：任何内容变化使旧双审结论失效；Pascal 与 Confucius 必须对同一身份重新 PASS。
+- **FR-05**：本项修改父 formal，review target 按父 plan §9 唯一算法覆盖父子各 spec/plan/tasks 六文件；
+  任一目标文件变化使旧双审结论失效，Pascal 与 Confucius 必须对同一身份重新 PASS。
 - **FR-06**：implementation PR 必须通过 Codex current-head review、required CI、merge 后 fresh-main。
 - **FR-07**：formal 只可机械更新 `test_repo_program_manifest.py` 中受 WI-210 source/layer 计数影响的
   既有 expectation（≤2 additions/≤2 deletions），不得新增测试逻辑或改其他断言。
 
 ## 7. 成功标准
 
-- **SC-01**：formal spec/plan/tasks 同一 identity 获双 Agent PASS，无可操作 finding。
+- **SC-01**：父子六个 formal 文件的 canonical combined identity 获双 Agent PASS，无可操作 finding。
 - **SC-02**：产品 raw `+≤39/-≥252/net≤-213`，non-empty `+≤35/-≥196/net≤-161`；
   计划 RC-06 non-empty additions≤46、硬上限49。
 - **SC-03**：exact body 28→1、局部 alias=28、调用=730，无 wrapper/new module/public export。

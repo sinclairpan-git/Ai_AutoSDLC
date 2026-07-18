@@ -8,8 +8,9 @@
 
 - 冻结统一 gap 台账、NC/CC/RC 合同、原子子项与对抗评审规则。
 - 治理基线 PR：`#120`；merge commit：`4dd0f1c9`。
-- GAP-07～GAP-11 已分别由 WI-197～WI-201 合入并关闭；当前 truth inventory 为 complete，
-  unmapped/missing 均为 0。
+- GAP-07～GAP-11 已分别由 WI-197～WI-201 合入并关闭；当前 WI-210 formal truth inventory 为
+  complete、unmapped=0、missing=1。唯一 missing 是已登记但在关闭前不物化的 WI-210
+  `development-summary.md`，不是 unmapped truth debt；WI-210 closure 必须将其恢复为 0。
 - WI-203 / PR #126 已冻结减重候选和保护预算 sponsor；不等于候选实现或删除完成。
 - WI-205 / PR #134 / merge `aa156afe` 已关闭一个 T63 artifact path 重复族，产品净减少 109 行，
   fresh-main 全量 `3220 passed, 3 skipped`；这不是 GAP-05 或路线整体关闭。
@@ -26,7 +27,8 @@
   clean-state 全绿。该验证可靠性修复不计 RC-08；本 closure PR 合并后恢复下一原子减重候选选择。
 - WI-210 已选定下一原子 T63 formal candidate：current main `4b434864` 上 28 个 exact text-dedupe defs、
   27 modules、196 product LOC、730 calls；Pascal/Confucius 已统一推荐复用现有 stdlib-only
-  `utils/helpers.py`，不新增模块。当前只冻结合同，不表示实现、减重或关闭完成。
+  `utils/helpers.py`，不新增模块。Formal Round 1 已因 identity/compat/admission/continuity finding 双 FAIL，
+  当前进入 Round 2 修订；不表示实现、减重或关闭完成。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新
   写成可执行合同，旧 verdict 同时失效。

@@ -69,7 +69,16 @@ fresh-main acceptance / closure
 
 - Pascal 从净减重、直接性、YAGNI、预算评审；
 - Confucius 从行为、导入、安全、回退、证据完整性评审；
-- 两者必须对相同 spec/plan/tasks identity 独立 PASS；任一修订使两份 verdict 同时失效。
+- 本项修改父 formal，因此 review target 按父 plan §9 唯一算法包含父子各 spec/plan/tasks 六文件；
+  两者必须对相同 canonical combined identity 独立 PASS，任一目标文件修订使两份 verdict 同时失效。
+
+### 4.3 GAP-09～GAP-11 admission
+
+- GAP-09：frontend capability/inheritance、blocking refs 与 codegen/test admission 不得变化；
+- GAP-10：adapter canonical consumption、CLI transcript 与 adapter 调用集合不得变化；
+- GAP-11：除预登记且关闭前缺失的 WI-210 `development-summary.md` 外，unmapped/missing 必须为 0；
+  implementation 不新增产品/测试 source，closure 后 missing 必须回到 0；
+- 任一分析不确定或 truth/audit 结论漂移时，由 WI-210 delivery owner 停止本项并重开对应 GAP。
 
 ## 5. Phase 1：T61A 与 TDD
 
@@ -77,7 +86,8 @@ fresh-main acceptance / closure
 
 1. 重算 body/function digests、定义/文件/调用数和 protected blobs；漂移即停。
 2. 扫描 private consumer、import graph 与现有测试，生成实现前 corpus 结果。
-3. 在一个既有测试文件中增加≤9 raw 行；先以 shared binding 缺失形成 RED。
+3. 在一个既有测试文件中增加≤9 non-empty 行；先以 shared binding 缺失形成 RED；空行不计，注释、
+   参数化数据及其他非空新增行全部计入，raw additions 另行披露。
 4. 临时 reverse-order mutation 必须被该测试或既有顺序断言杀死；mutation 不提交。
 
 T61A 不新增独立 harness、snapshot、fixture 或 JSON evidence 文件；命令、digest 和结果写入既有
@@ -143,4 +153,5 @@ T61A 不新增独立 harness、snapshot、fixture 或 JSON evidence 文件；命
 - 治理：`uv run ai-sdlc verify constraints`、`program validate`、`program truth sync/audit`；
 - 回退：exact tree OID + revert/reapply + clean-state guard。
 
-命令中的精确文件集合由 T61A 从 formal receipt 后 main 重算，不在计划中复制 27 次形成第二真值源。
+32-file targeted 命令唯一冻结在 `tasks.md` T12；T61A 从 formal receipt 后 main 机械校验该清单的
+存在性、顺序和收集数，不在 plan/spec 重复维护第二份文件列表。

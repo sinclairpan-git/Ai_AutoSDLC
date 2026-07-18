@@ -1,43 +1,35 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T12:15:36+00:00
-- Reason: WI210 terminal formal truth checkpoint before exact-identity review
-- Goal: Freeze WI210 exact text-dedupe reduction contract and obtain same-identity dual PASS before implementation
-- State: Formal receipts are committed at 31889a27 and terminal truth snapshot e49c3edf is materialized; final identity commit and dual review remain
+- Updated: 2026-07-18T12:40:01+00:00
+- Reason: WI210 formal Round 1 dual-FAIL direction change
+- Goal: Resolve WI210 formal Round 1 dual-FAIL findings and obtain Round 2 same-identity dual PASS
+- State: Round 1 identity a038a68a/95e57fe7 is retired; seven unique contract, identity, continuity and admission findings are accepted; Round 2 edits are in progress
 - Stage: design
 - Work Item: 210-shared-text-dedupe
 - Branch: feature/210-shared-text-dedupe-docs
 
 ## Changed Files
-- .ai-sdlc/project/config/project-state.yaml
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/210-shared-text-dedupe/codex-handoff.md
 - program-manifest.yaml
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-- specs/210-shared-text-dedupe/spec.md
 - specs/210-shared-text-dedupe/plan.md
-- specs/210-shared-text-dedupe/tasks.md
+- specs/210-shared-text-dedupe/spec.md
 - specs/210-shared-text-dedupe/task-execution-log.md
-- tests/integration/test_repo_program_manifest.py
+- specs/210-shared-text-dedupe/tasks.md
 
 ## Key Decisions
-- Use existing stdlib-only utils/helpers.py; preserve 28 private aliases and 730 calls; spike product raw +39/-252/net -213 and non-empty +35/-196/net -161
-- Keep formal and implementation in separate PRs; no new module, wrapper, public export, or product diff in formal
+- Use parent plan section 9 six-file canonical identity; add WI210 to WI196 dependency; freeze GAP-09 to GAP-11 impact and exact 32-file command; use non-empty test cap
 
 ## Commands / Tests
-- candidate audit PASS: unit 441, CLI integration 398, current-main full 3275 passed 3 skipped
-- isolated spike PASS: 27 cold imports, 730 calls unchanged, 1282 tests, Ruff lint, formatter debt parity 24-to-24, diff check
-- manifest integration 1 passed; constraints PASS; program validate PASS; preliminary truth audit ready/fresh 1106/1106; terminal truth snapshot e49c3edf
-- protected diff restored clean: Cursor rule, resume-pack and WI208 handoff unchanged; src diff zero
+- Round 1 Pascal FAIL and Confucius FAIL received; no push or PR; product src remains unchanged
 
 ## Blockers / Risks
-- Implementation remains unauthorized until formal exact identity has Pascal and Confucius PASS and mainline receipt
-- Any budget overrun, cycle, alias/call drift, behavior difference, wrapper, suppression or public export is RC-09 No-Go
+- Implementation remains unauthorized until Round 2 dual PASS and formal mainline receipt
 
 ## Local PR Review
-- Candidate selection review converged, but no formal exact-identity PASS exists yet
+- Round 1 Pascal FAIL and Confucius FAIL; all findings accepted; old identity retired
 
 ## Exact Next Steps
-- Commit terminal truth/continuity, rerun formal gates, freeze exact identity, then run both adversarial reviews from zero
+- Finish Round 2 edits, restore protected handoff side effects, sync truth, run formal gates, freeze new identity, and review both agents from zero

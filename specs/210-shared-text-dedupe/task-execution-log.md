@@ -2,7 +2,7 @@
 
 **功能编号**：`210-shared-text-dedupe`
 **创建日期**：2026-07-18
-**当前状态**：Batch 0 formal pre-review gates PASS；等待 exact-identity 双对抗评审；产品实现未授权
+**当前状态**：Batch 0 formal Round 1 双 FAIL 已接受；Round 2 修订与重验中；产品实现未授权
 
 ## Batch 2026-07-18-001：下一原子候选选择
 
@@ -92,4 +92,20 @@
   `1106/1106`、missing close source=`1`。
 - handoff CLI 因旧 checkpoint 短暂改写 resume-pack/WI208 handoff；两文件已精确恢复为 HEAD。
   Cursor rule、resume-pack、WI208 handoff 与 `src/` 均为 zero diff，root/scoped WI210 handoff byte-identical。
-- 下一步只允许形成 terminal formal identity，并由 Pascal/Confucius 对同一 identity 从零复审。
+- 该终态 identity 随 Round 1 findings 退役，不得继续 review 或交付。
+
+## Batch 2026-07-18-005：Formal Round 1 双 FAIL 与处置
+
+- 退役 identity：commit=`a038a68a89964a94e109c1367608b4e8402362e4`，tree=
+  `95e57fe7a618dbc643f08c20eeaef7d0097566a9`；Pascal 与 Confucius 均 `VERDICT: FAIL`。
+- 两方共同 finding：父 formal 已修改却只审 child 三文件且使用第二套 combined recipe；handoff 仍要求
+  重复 terminal commit/freeze；test 预算混用 raw/non-empty。
+- 精简侧额外 finding：`__name__`/`__qualname__` 未进入批准 introspection allowlist；父 summary 将
+  current missing 错写为 0。
+- 安全侧额外 finding：manifest 缺少 WI210→WI196 dependency；未落盘 GAP-09～GAP-11 impact analysis；
+  32-file targeted 集合没有确定性命令。
+- 全部 finding 接受。Round 2 统一 test cap 为 Ruff 后 non-empty≤9；批准并扫描两项私有元数据差异；
+  登记父依赖与 impact/evidence URI；冻结 25 unit + 7 CLI integration 的 exact PowerShell targeted 命令；
+  review identity 改用父 plan §9 的父子六文件唯一算法。
+- spike 清单复核还纠正历史表述：32-file/1282 集合是 25 unit + 7 CLI integration；此前
+  23-unit/8-integration=839 是不同初始子集。内容变化后 Round 1 verdict 与所有旧 hash 全部失效。
