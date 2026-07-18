@@ -127,8 +127,11 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 - **当前状态**：implementation replay/adversarial review；WI-209 formal PR #145 已合并为 `46156c24`。
   Round 12 同一身份双审 PASS，PR #146 Codex 对该 head 无 major issue；Windows 3.11/3.12 full CI 均只因
   测试夹具物化含 quote/newline 的非法 Windows 文件名失败。Round 13 保留跨平台合法的真实 Git
-  `core.quotePath=false` 回归，并直接验证 mixed decoder；产品代码不变，Round 13 focused `100 passed`、
-  full `3275 passed, 3 skipped` 与治理门禁已通过，等待 truth freeze/replay/双审/current-head CI。
+  `core.quotePath=false` 回归，并直接验证 mixed decoder；产品代码不变。初次 normalized 复算暴露测试
+  `+201` 超限 1 行，现仅缩短 direct decoder witness 的非语义文件名，Unicode/space/Tab/newline/quote/
+  backslash 覆盖不变；最终 raw 产品/测试 `+121/+200`、normalized `+128/+198`，focused `100 passed`、
+  full `3275 passed, 3 skipped`，pre-receipt truth/manifest 已通过，等待 final truth freeze/replay/双审/
+  current-head CI。
 - **风险/范围**：L2；只处理 unified diff 中 YAML quoted scalar 内容被 `_is_comment_line()` 误判为注释。
 - **非目标**：不豁免真实 YAML comments，不修改 adapter、resume reconstruction 或 verify telemetry。
 - **进入**：用 single/double quoted multiline scalar、plain/literal/folded、真实 comment 和非 YAML source

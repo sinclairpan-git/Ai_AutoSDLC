@@ -4,7 +4,7 @@
 **父项**：`196-ai-sdlc-lean-code-self-reduction-governance` / GAP-14 / T57
 **基线**：`main@85bdedaca6a34563ccc2b8626a7e0adb188f1d4e`
 **创建日期**：2026-07-17
-**状态**：implementation replay/adversarial review；formal PR #145 已合并为 `46156c24`；Round 12 双审/Codex clean 因 Windows-illegal fixture 退役；Round 13 focused/full/治理通过，等待 truth freeze/replay/双审/current-head CI；GAP-14/T57 保持开放
+**状态**：implementation replay/adversarial review；formal PR #145 已合并为 `46156c24`；Round 12 双审/Codex clean 因 Windows-illegal fixture 退役；Round 13 test-only repair 的 raw/normalized 预算、focused/full 与 pre-receipt truth/manifest 已通过，等待 final truth freeze/replay/双审/current-head CI；GAP-14/T57 保持开放
 
 ## 1. 问题与目标
 

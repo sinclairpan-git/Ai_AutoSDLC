@@ -66,7 +66,10 @@
   formatter parity 为同 exit 1、同三个批准文件。本 receipt 后在 T32 冻结前再次 terminal sync/audit/manifest。
 - **Round 13**：Round 12 PR #146 Windows 3.11/3.12 full 各自仅失败 `test_yaml_quote_path_false`
   `WinError 123`；最小 test-only repair 后 node `1 passed`、unit `51 passed`、focused `100 passed`、full
-  `3275 passed, 3 skipped in 648.96s`；Ruff/constraints/validate/truth/manifest/diff-check PASS，产品代码不变。
+  `3275 passed, 3 skipped in 623.84s`；初次 normalized 测试 `+201` 超限 1 行后，仅缩短 direct witness
+  的非语义文件名并保留全部 escape 场景，最终 raw 产品/测试 `+121/+200`、normalized `+128/+198`；
+  产品代码不变；pre-receipt truth/audit=`ready/fresh 1101/1101 209/209`、manifest exact
+  `1 passed in 105.89s`，本 receipt 后只需 final sync/audit/manifest freeze。
 
 ### T32 回退演练和双对抗终审（in progress）
 
@@ -80,7 +83,8 @@
   parent plan/child summary lifecycle 漂移 FAIL，身份与全部 verdict 退役。
 - **Round 12**：canonical lifecycle 修订后，同一冻结身份 Pascal/Confucius 双 PASS；PR #146 Codex 对
   `2662309e80` 无 major issue。后续 Windows CI finding 与测试变更使身份和全部 verdict 退役。
-- **Round 13**：产品实现不变；跨平台测试修复与 T31 已完成，等待 truth freeze/replay 和同一新身份双审。
+- **Round 13**：产品实现不变；跨平台测试与 normalized 预算修复、当前测试树 T31 full 已完成，等待
+  final truth freeze/replay 和同一新身份双审。
 
 ## Batch 4：交付与关闭
 

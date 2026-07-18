@@ -57,8 +57,11 @@
   Round 11 Confucius PASS、Pascal 因 parent plan/child summary 进行中措辞 FAIL，身份退役；Round 12
   统一 canonical lifecycle 后取得同一身份双 PASS，PR #146 Codex 对该 head 无 major issue。Windows
   3.11/3.12 full CI 随后均证明 mixed-path 测试夹具物化了 Windows 非法文件名；Round 13 仅修测试夹具，
-  产品不变，focused `100 passed`、full `3275 passed, 3 skipped` 与治理门禁已通过，等待 truth freeze/
-  replay/双审/current-head CI。PR 与 fresh-main 前仍是开放的验证可靠性缺口。WI-207 不得混入
+  产品不变。初次 normalized 测试 `+201` 超限 1 行后，只缩短 direct witness 的非语义文件名并保留
+  全部 mixed escape 场景；最终 raw 产品/测试 `+121/+200`、normalized `+128/+198`，focused
+  `100 passed`、full `3275 passed, 3 skipped`，pre-receipt truth/manifest 已通过，等待 final truth freeze/
+  replay/双审/current-head CI。
+  PR 与 fresh-main 前仍是开放的验证可靠性缺口。WI-207 不得混入
   continuity/comment parser，WI-208 不得混入 adapter dispatch，WI-209 不得用 YAML 全局豁免掩盖误报，
   也不得让 added quoted 内容充当真实替代注释。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

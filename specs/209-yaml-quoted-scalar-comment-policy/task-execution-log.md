@@ -263,3 +263,25 @@
   truth sync/audit、manifest exact、diff-check PASS，inventory/layers=`1101/1101`、`209/209`；T31 completed。
 - 测试内容变化使 Round 12 双 PASS/Codex clean 退役；T31 completed、T32 in progress，T41 in progress，T42 queued。
   T32 仍 in progress；truth freeze/replay/双审/current-head review/checks 前不得合并，GAP-14/T57 保持开放。
+
+## 18. Batch 2026-07-18-018：Round 13 normalized budget correction
+
+- Round 13 初次 disposable Ruff-format 复算为 base `260/146/1840`、candidate `388/315/1872`：产品
+  `+128` 通过，但测试 `+169/+32=+201` 超上限 1 行；此前 raw 行数未暴露该 formatter 展开。
+- 根因仅为 direct decoder assert 中较长的非语义文件名使 Ruff 从 1 行展开为 4 行。将 witness 的
+  `file.yaml` 缩短为 `f` 后，raw Unicode、space、Tab、newline、quote、backslash 六类断言均保留；
+  真实 Git `core.quotePath=false` 仍独立使用 `配置 file.yaml`，未稀释跨平台回归。
+- 最终 raw 产品/unit/CLI=`377/310/1823`，相对基线产品 `+121`、测试 `+176/+24=+200`；normalized
+  candidate=`388/312/1872`，相对 base 产品 `+128`、测试 `+166/+32=+198`。5 private helper、零新
+  产品/测试文件、零公共抽象。
+- 当前精确 unit 文件 `51 passed in 3.55s`、focused `100 passed in 12.72s`、full
+  `3275 passed, 3 skipped in 623.84s`。本 receipt 改变 canonical truth；terminal sync/audit/manifest、
+  replay 与同一最终身份双审仍属 T32，Round 12/初始 Round 13 身份全部退役。
+
+## 19. Batch 2026-07-18-019：Round 13 pre-receipt terminal gates
+
+- Ruff lint、constraints、program validate、diff-check 均 PASS；truth sync 写入 snapshot
+  `a557d16c4f89d00eb65b40edf719f5e20bf3584d4c4a1bbf8bc8e20203b26745`，独立 audit=`ready/fresh`。
+- source inventory=`1101/1101`、layers=`209/209`、missing/unmapped=`0/0`；manifest exact
+  `1 passed in 105.89s`。本 receipt 写回会按设计使 snapshot stale，下一步只执行 final sync/audit/
+  manifest freeze、commit/replay 与同一身份双审，不重复产品修改。

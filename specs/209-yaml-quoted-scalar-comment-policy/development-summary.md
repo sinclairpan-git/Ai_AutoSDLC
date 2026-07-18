@@ -1,7 +1,7 @@
 # 开发摘要：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation replay/adversarial review；formal PR #145/merge `46156c24` 已完成；Round 12 双审/Codex clean 因 Windows fixture finding 退役；Round 13 focused/full/治理通过，等待 truth freeze/replay/双审/current-head CI
+**状态**：implementation replay/adversarial review；formal PR #145/merge `46156c24` 已完成；Round 12 双审/Codex clean 因 Windows fixture finding 退役；Round 13 预算、focused/full 与 pre-receipt truth/manifest 通过，等待 final truth freeze/replay/双审/current-head CI
 
 ## 当前结论
 
@@ -30,9 +30,13 @@ focused `100 passed`、full `3275 passed, 3 skipped`、治理门禁与独立 rep
 Round 12 同一冻结身份取得 Pascal/Confucius 双 PASS，PR #146 Codex 对 `2662309e80` 未发现 major issue；
 21 项 checks 中 19 项成功，Windows Python 3.11/3.12 full 均只因测试夹具尝试创建含 quote/newline 的
 非法 Windows 文件名失败。Round 13 不改产品：真实 Git 回归改用跨平台合法的 raw Unicode+space
-路径，mixed raw Unicode+C-escape 改为直接验证既有 decoder；本地精确 node、51 个 unit 与 Ruff 已 GREEN。
-Round 13 focused `100 passed`、full `3275 passed, 3 skipped in 648.96s`；constraints、validate、truth
-`ready/fresh 1101/1101 209/209`、manifest exact 与 diff-check 均 PASS，产品实现保持不变。
+路径，mixed raw Unicode+C-escape 改为直接验证既有 decoder；本地精确 node 与 51 个 unit 已 GREEN。
+初次 Ruff-normalized 复算因 direct assert 展开而得到测试 `+201`，超预算 1 行；现仅把 witness 的
+`file.yaml` 缩短为 `f`，Unicode/space/Tab/newline/quote/backslash 断言完整保留。最终 raw 产品/测试
+`+121/+200`、normalized `+128/+198`，focused `100 passed in 12.72s`、full
+`3275 passed, 3 skipped in 623.84s`；产品实现保持不变。pre-receipt truth/audit=`ready/fresh`、inventory/
+layers=`1101/1101`、`209/209`、missing/unmapped=`0/0`，manifest exact `1 passed in 105.89s`；本 receipt
+后等待 final truth freeze/replay/双审。
 
 ## 冻结方向
 
