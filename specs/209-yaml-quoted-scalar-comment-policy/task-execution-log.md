@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；Round 10 full/治理门禁已通过，terminal replay/双审待完成
+**状态**：implementation adversarial review；Round 10 双审 FAIL，Round 11 修订与 fresh verification 进行中
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -202,3 +202,22 @@
   exact=`1 passed in 97.46s`。
 - T31 completed；本 canonical receipt 会使 snapshot 变化，T32 冻结前必须再次 terminal sync/audit、
   manifest exact、预算/范围审计与独立 replay。GAP-14/T57、T41/T42 状态不变。
+
+## 12. Batch 2026-07-18-012：Round 10 双审 FAIL
+
+- 冻结 HEAD=`f58f2f5f`、tree=`ed8aa265`、replay=`42de1281`；tree/handoff exact，两端 clean。
+- Pascal：技术/预算/覆盖通过；parent plan formal lifecycle、child formatter gate 与 final handoff Next 三项
+  actionable，verdict=FAIL。Confucius：真实 Git mixed raw Unicode+C-escape 与 handoff Next actionable，
+  verdict=FAIL。
+- Round 10 身份与全部 verdict 退役；已完成 replay 只保留历史 receipt，内容修订后必须重新执行。
+  T23/T31/T32 in progress，T41/T42 queued，GAP-14/T57 保持开放。
+
+## 13. Batch 2026-07-18-013：mixed Unicode+C-escape 最小 GREEN
+
+- RED=`3b7d134a`：`core.quotePath=false` 下真实 Git quoted header 产生 `<unknown>`，精确 node `1 failed`。
+  GREEN=`6d05ede7`；预算直接化=`21aec2bf`。
+- 单一真实文件名同时覆盖 raw Unicode、Tab、newline、quote、backslash 和 space；focused `100 passed`，
+  Ruff/diff-check、constraints、validate PASS。decoder 未新增 helper，只在 C-quoted branch 保留 UTF-8
+  原字节并复用既有 escape parser。
+- 产品 raw/normalized `+121/+128`；unit/CLI raw `+176/+24=+200`、normalized `+166/+32=+198`；
+  5 private helper、0 public abstraction/new file。T23 completed；Round 11 full/terminal truth/replay/双审待完成。
