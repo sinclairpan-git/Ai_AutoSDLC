@@ -125,9 +125,9 @@ T51 与 T52 分属两个 WI/branch/PR，不以“基础包”合并交付。
 ### T57：GAP-14 YAML quoted-scalar comment-policy false positive
 
 - **当前状态**：implementation adversarial review；WI-209 formal PR #145 已合并为 `46156c24`，独立
-  implementation 分支已完成原始 quoted-scalar 与后续真实 Git findings 的 RED/GREEN。Round 10 双审发现
-  mixed Unicode+C-escape、canonical plan、formatter 合同和 continuity 真值问题，当前进入 Round 11 修订，
-  implementation PR 与 fresh-main acceptance 前保持开放。
+  implementation 分支已完成原始 quoted-scalar、后续真实 Git findings、Round 11 fresh full/治理/replay。
+  Round 11 Confucius PASS、Pascal 因本段和 child summary 仍使用进行中措辞 FAIL；该身份退役，Round 12
+  只修 canonical lifecycle truth。仅最终同一身份双 PASS、implementation PR 与 fresh-main acceptance 待完成。
 - **风险/范围**：L2；只处理 unified diff 中 YAML quoted scalar 内容被 `_is_comment_line()` 误判为注释。
 - **非目标**：不豁免真实 YAML comments，不修改 adapter、resume reconstruction 或 verify telemetry。
 - **进入**：用 single/double quoted multiline scalar、plain/literal/folded、真实 comment 和非 YAML source

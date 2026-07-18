@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；Round 10 findings 已修订，Round 11 fresh full/治理/replay 已通过，仅同一最终身份双审待完成
+**状态**：implementation adversarial review；Round 11 safety PASS/lean lifecycle FAIL 后身份退役，Round 12 canonical truth 已修订，仅同一最终身份双审待完成
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -240,3 +240,12 @@
 - Round 10 后 6 commits 逐个 replay：candidate=`478cdf30`、replay=`3410bf7f`，tree 均为
   `91494638db6c17de92c52fe674139a29aeb30de6`，两端 clean；本 receipt/manifest 提交将继续 replay。
 - T32 只剩同一最终身份双审；GAP-14/T57、T41/T42 不变，不重复已完成 truth/replay/freeze。
+
+## 16. Batch 2026-07-18-016：Round 11 split verdict 与 Round 12 truth 修订
+
+- Round 11 target=`a274e5e7` / tree=`9528e728`；Confucius 对 mixed-path、安全、truth/manifest/replay
+  verdict=PASS。Pascal 对技术/预算/mutant/formatter parity 通过，但 parent plan 与本 summary 仍用进行中
+  措辞，verdict=FAIL。
+- 内容变化使两方 verdict 均失效。Round 12 仅同步 current lifecycle 为“修订/full/治理/replay 已完成，
+  仅双审/PR/fresh-main 待完成”，产品/测试 tree、预算与 full receipt 不变。
+- T32 in progress；GAP-14/T57、T41/T42 状态不变。

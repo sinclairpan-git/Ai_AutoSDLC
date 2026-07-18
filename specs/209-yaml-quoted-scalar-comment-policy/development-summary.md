@@ -1,7 +1,7 @@
 # 开发摘要：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 10 双审 FAIL，Round 11 修订与 fresh verification 进行中
+**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 11 safety PASS/lean lifecycle FAIL 后身份退役，Round 12 canonical truth 已修订，仅同一最终身份双审待完成
 
 ## 当前结论
 
@@ -38,6 +38,6 @@ focused `100 passed`、full `3275 passed, 3 skipped`、治理门禁与独立 rep
 
 ## 交付边界
 
-formal PR #145 已以产品代码零差异合并；独立 implementation 分支正在完成 Round 11 fresh verification，
-当前仍处于 implementation adversarial review。只有新身份双 PASS、implementation PR/Codex/checks/merge 与 fresh-main
+formal PR #145 已以产品代码零差异合并；独立 implementation 分支已完成 Round 11 fresh verification 与
+replay，Round 12 只修正 lifecycle truth。当前仅最终同一身份双 PASS、implementation PR/Codex/checks/merge 与 fresh-main
 全部完成后才能关闭 GAP-14/T57，并恢复下一原子减重候选。

@@ -54,7 +54,8 @@
   Round 10 fresh full/治理/replay 后双审仍因 mixed Unicode+C-escape、canonical plan、formatter 合同与
   continuity 真值 FAIL。四项已进入 Round 11 修订，其中产品 finding 已 RED/GREEN，预算降至
   raw/normalized `+121/+128`；fresh full `3275 passed, 3 skipped`、治理门禁与独立 replay 已通过，
-  当前只剩同一最终身份双审；
+  Round 11 Confucius PASS、Pascal 因 parent plan/child summary 进行中措辞 FAIL，身份退役；Round 12 已
+  统一 canonical lifecycle，当前只剩同一最终身份双审；
   双 PASS、PR 与 fresh-main 前仍是开放的验证可靠性缺口。WI-207 不得混入
   continuity/comment parser，WI-208 不得混入 adapter dispatch，WI-209 不得用 YAML 全局豁免掩盖误报，
   也不得让 added quoted 内容充当真实替代注释。
