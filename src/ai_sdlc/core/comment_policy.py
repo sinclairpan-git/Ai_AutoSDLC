@@ -255,9 +255,9 @@ def _read_yaml_source(root: Path, path: str, *, old: bool) -> str | None:
         return None
     try:
         if old:
-            payload = subprocess.run(
-                ["git", "show", f"HEAD:{path}"], cwd=root, capture_output=True, check=True
-            ).stdout
+            payload = subprocess.check_output(
+                ["git", "show", f"HEAD:{path}"], cwd=root, stderr=subprocess.PIPE
+            )
         else:
             candidate = root
             for index, part in enumerate(relative.parts):
