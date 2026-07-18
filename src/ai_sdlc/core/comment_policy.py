@@ -45,6 +45,7 @@ _COMMENT_PREFIX_RE = re.compile(r"^\s*(#|//|/\*|\*|<!--|-->|'''|\"\"\")")
 _BLOCK_COMMENT_SUFFIX_RE = re.compile(r"(\*/|-->|'''|\"\"\")\s*$")
 _HUNK_RE = re.compile(r"^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@(?: .*)?$")
 _GIT_PATH = r'"(?:\\(?:[abtnvfr\\"]|[0-7]{3})|[^\x00-\x1f\x7f"\\])*"|[^\x00- \x7f"\\]+'
+_TAB_PATH = rf'{_GIT_PATH}|[^\x00-\x1f\x7f"\\]+'
 _DIFF_PATH_RE = re.compile(rf"diff --git ({_GIT_PATH}) ({_GIT_PATH})")
 _COMMENT_DELETION_REASON_TOKENS = (
     "删除注释",
@@ -123,8 +124,7 @@ def collect_removed_comment_findings(
     """Find removed comments in a unified diff unless each has a local replacement."""
     findings: list[CommentDeletionFinding] = []
     current_path = "<unknown>"
-    old_path = new_path = None
-    old_line = new_line = None
+    old_path = new_path = old_line = new_line = None
     removed, added = [], []
     cache: _YamlSourceCache = {}
 
@@ -230,10 +230,10 @@ def _counts_as_comment(
 
 
 def _diff_path(value: str, side: str) -> str | None:
-    value = value.removesuffix("\t")
+    rx, value = (_TAB_PATH, value[:-1]) if value.endswith("\t") else (_GIT_PATH, value)
     if value == "/dev/null":
         return ""
-    if re.fullmatch(_GIT_PATH, value) is None:
+    if re.fullmatch(rx, value) is None:
         return None
     if value.startswith('"'):
         try:
