@@ -2037,11 +2037,11 @@ specs:
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
-  generated_at: '2026-07-18T12:13:30Z'
+  generated_at: '2026-07-18T12:44:33Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 31889a27
-  authoring_hash: 927652ce6b5f64f9f74e56c1c769eeaf638c3622639181c3eada830020e1b9db
+  repo_revision: 526df48e
+  authoring_hash: 10a371afa6870e0684d82179e6de827e889d63524c2f893da0654baf18aa683a
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 01c3db2eed14ae56d4d4e493386fc2293d4b33c42f54e5a58d115f50127f76ee
@@ -2083,7 +2083,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: e49c3edfc3c2552c907fb0d1a9c5e31126f62b08ca72c2e67d25641925117a3e
+  snapshot_hash: 7de3b25313631d990c3d2005ddeffa4c2e821ef92a4fdda4b61190c85f704c70
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed

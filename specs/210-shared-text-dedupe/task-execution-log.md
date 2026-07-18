@@ -109,3 +109,17 @@
   review identity 改用父 plan §9 的父子六文件唯一算法。
 - spike 清单复核还纠正历史表述：32-file/1282 集合是 25 unit + 7 CLI integration；此前
   23-unit/8-integration=839 是不同初始子集。内容变化后 Round 1 verdict 与所有旧 hash 全部失效。
+
+## Batch 2026-07-18-006：Formal Round 2 修订与门禁
+
+- finding 修订 commit=`526df48ebf72a23bcc809ef22827e49160bda585`；`src/` zero diff，formal 仍未
+  push/建 PR。
+- `program-manifest.yaml` 已登记 WI210→WI196 dependency；truth sync snapshot=
+  `7de3b25313631d990c3d2005ddeffa4c2e821ef92a4fdda4b61190c85f704c70`，authoring hash=
+  `10a371afa6870e0684d82179e6de827e889d63524c2f893da0654baf18aa683a`。
+- manifest exact=`1 passed in 112.11s`；constraints PASS；program validate PASS；truth audit=
+  `ready/fresh`、inventory=`1106/1106`、unmapped=0、唯一 pre-close missing=1。
+- CLI handoff 的旧 checkpoint 副作用再次精确恢复；Cursor/resume/WI208 protected diff=0，WI210
+  root/scoped handoff 保持 byte-identical。
+- 本批提交后的 current HEAD 即 Round 2 review identity；review invocation 必须按父 plan §9 绑定父子
+  六文件 combined 与可复算的 binary/name-status hashes。除双审外不再要求重复 commit/freeze。
