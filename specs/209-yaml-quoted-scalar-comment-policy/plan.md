@@ -9,6 +9,11 @@
 先用 docs PR 冻结 false-positive 边界、预算和回退；formal 合并后创建独立 implementation 分支，按
 RED→GREEN→全量→双审→PR→fresh-main 推进。任何内容变化都会使之前的双 PASS 失效。
 
+当前 PR #146 已打开；Round 12 双审与 Codex current-head review 通过，但 Windows full CI 证明 mixed-path
+测试夹具物化了非法 Windows 文件名。Round 13 只修现有测试：真实 Git 使用跨平台合法路径，mixed
+raw-Unicode/C-escape 直接验证 decoder；产品实现和预算边界不变。focused/full/治理已通过，当前重新
+绑定 truth freeze/replay/双审/current-head review/checks。
+
 ## 2. 技术背景
 
 - Python 3.11+；现有依赖 `pyyaml>=6.0`。

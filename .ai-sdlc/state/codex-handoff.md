@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T06:13:49+00:00
-- Reason: WI209 Round 12 final lifecycle-review handoff
-- Goal: Obtain dual adversarial PASS and deliver WI209 implementation PR/fresh-main acceptance
-- State: Round 11 safety PASS/lean lifecycle FAIL retired; Round 12 lifecycle truth reconciled; product/full/governance/replay remain verified; only final dual review and delivery remain
+- Updated: 2026-07-18T07:29:41+00:00
+- Reason: WI209 Round 13 pre-freeze verification handoff
+- Goal: Deliver the cross-platform-safe WI209 implementation without product regression or budget growth
+- State: Round 13 test-only repair keeps product unchanged; focused, full, Ruff, constraints, validate, terminal truth audit and manifest exact all pass; replay and renewed same-identity dual review remain
 - Stage: close
 - Work Item: 209-yaml-quoted-scalar-comment-policy
 - Branch: feature/209-yaml-quoted-scalar-comment-policy-dev
@@ -27,16 +27,16 @@
 - tests/unit/test_comment_policy.py
 
 ## Key Decisions
-- Keep Round 11 product/test tree unchanged; correct only stale canonical lifecycle wording; require both reviewers to PASS the new identical final identity
+- Use a legal raw-Unicode-plus-space real Git fixture for core.quotePath=false and directly assert mixed raw-Unicode/C-escape decoder output; do not materialize Windows-illegal quote/newline filenames
 
 ## Commands / Tests
-- Round 12 Ruff/diff-check/constraints/validate PASS; truth ready/fresh 1101/1101 209/209; manifest exact PASS; product +121/+128 tests +200/+198; frozen full 3275/3 remains bound to unchanged product/test tree; replay exact
+- Focused 100 passed; full 3275 passed 3 skipped in 648.96s; Ruff/constraints/validate/diff-check PASS; truth ready/fresh 1101/1101 209/209; manifest exact 1 passed in 89.25s; raw budgets unchanged product +121 tests +200
 
 ## Blockers / Risks
-- Fresh Round 12 Pascal/Confucius PASS, PR current-head Codex review, required checks, merge and fresh-main acceptance pending
+- Commit/replay/normalized budget proof, renewed Pascal and Confucius PASS, push, current-head Codex review, all PR checks, merge and fresh-main acceptance remain pending
 
 ## Local PR Review
-- none
+- Round 12 Pascal/Confucius PASS and Codex clean retired by the Round 13 test change; renewed verdicts required
 
 ## Exact Next Steps
-- Pascal and Confucius independently review the same final clean identity; only dual PASS permits push/PR, then current-head Codex review/check heartbeat, merge and fresh-main acceptance
+- Commit the Round 13 test/docs/manifest/handoff batch, replay exact final tree, verify normalized budgets and clean identity, obtain renewed Pascal and Confucius PASS, then push and repeat PR heartbeat

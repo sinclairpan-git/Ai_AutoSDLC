@@ -64,6 +64,9 @@
 - **Round 11 证据**：fresh full `3275 passed, 3 skipped in 684.03s`；Ruff/diff-check、constraints、validate
   PASS；truth `ready/fresh 1101/1101 209/209`，manifest exact `1 passed in 101.56s`；base/candidate
   formatter parity 为同 exit 1、同三个批准文件。本 receipt 后在 T32 冻结前再次 terminal sync/audit/manifest。
+- **Round 13**：Round 12 PR #146 Windows 3.11/3.12 full 各自仅失败 `test_yaml_quote_path_false`
+  `WinError 123`；最小 test-only repair 后 node `1 passed`、unit `51 passed`、focused `100 passed`、full
+  `3275 passed, 3 skipped in 648.96s`；Ruff/constraints/validate/truth/manifest/diff-check PASS，产品代码不变。
 
 ### T32 回退演练和双对抗终审（in progress）
 
@@ -75,14 +78,18 @@
   Next FAIL，Confucius 因 mixed Unicode+C-escape 与 handoff Next FAIL；身份与 verdict 退役。
 - **Round 11**：findings、fresh full、terminal truth/manifest 与独立 replay 完成；Confucius PASS、Pascal 因
   parent plan/child summary lifecycle 漂移 FAIL，身份与全部 verdict 退役。
-- **Round 12**：只修 canonical lifecycle truth，不改产品/测试；仅同一最终身份双审待完成。
+- **Round 12**：canonical lifecycle 修订后，同一冻结身份 Pascal/Confucius 双 PASS；PR #146 Codex 对
+  `2662309e80` 无 major issue。后续 Windows CI finding 与测试变更使身份和全部 verdict 退役。
+- **Round 13**：产品实现不变；跨平台测试修复与 T31 已完成，等待 truth freeze/replay 和同一新身份双审。
 
 ## Batch 4：交付与关闭
 
-### T41 implementation PR（queued）
+### T41 implementation PR（in progress）
 
 - **依赖**：T32。
 - **验收**：push/PR/@codex review/heartbeat；Codex 对 current HEAD clean、所有 required checks success 后 merge。
+- **当前状态**：PR #146 已打开；Round 12 head 的 Codex clean 已退役，等待 Round 13 新 head 双审后 push、
+  重请求 Codex 与全部 checks 成功。
 
 ### T42 fresh-main acceptance（queued）
 

@@ -1,7 +1,7 @@
 # 任务执行日志：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；Round 11 safety PASS/lean lifecycle FAIL 后身份退役，Round 12 canonical truth 已修订，仅同一最终身份双审待完成
+**状态**：implementation CI repair verification；Round 12 双审与 PR #146 Codex clean 已因 Windows CI 测试夹具 finding 退役，Round 13 重新执行终态门禁
 **归档规则**：每个批次在末尾追加；代码/测试、任务状态与本批回执使用同一逻辑提交。
 
 ## 1. Batch 2026-07-17-001：初始化与可行性证据
@@ -249,3 +249,17 @@
 - 内容变化使两方 verdict 均失效。Round 12 仅同步 current lifecycle 为“修订/full/治理/replay 已完成，
   仅双审/PR/fresh-main 待完成”，产品/测试 tree、预算与 full receipt 不变。
 - T32 in progress；GAP-14/T57、T41/T42 状态不变。
+
+## 17. Batch 2026-07-18-017：Round 12 双 PASS、PR #146 与 Windows CI fixture FAIL
+
+- Round 12 final=`2662309e`、tree=`f73f0660`；Pascal/Confucius 同一身份双 PASS、无 finding。PR #146
+  Codex 对该 commit 未发现 major issue。
+- 21 项 checks 中 19 项成功；Windows Python 3.11/3.12 full 均仅失败
+  `test_yaml_quote_path_false`：fixture 在调用产品前创建含 quote/newline 的路径，触发 `WinError 123`。
+- Round 13 只改现有 unit fixture：真实 Git 使用合法 raw Unicode+space 路径，mixed raw Unicode+C-escape
+  直接验证 `_diff_path()`；产品代码与测试文件物理行数不变。本地 node `1 passed`、unit `51 passed`、
+  Ruff PASS。
+- Round 13 focused=`100 passed in 13.24s`；full=`3275 passed, 3 skipped in 648.96s`；constraints、validate、
+  truth sync/audit、manifest exact、diff-check PASS，inventory/layers=`1101/1101`、`209/209`；T31 completed。
+- 测试内容变化使 Round 12 双 PASS/Codex clean 退役；T31 completed、T32 in progress，T41 in progress，T42 queued。
+  T32 仍 in progress；truth freeze/replay/双审/current-head review/checks 前不得合并，GAP-14/T57 保持开放。

@@ -1,7 +1,7 @@
 # 开发摘要：YAML quoted-scalar comment-policy 精确识别
 
 **功能编号**：`209-yaml-quoted-scalar-comment-policy`
-**状态**：implementation adversarial review；formal PR #145/merge `46156c24` 已完成；Round 11 safety PASS/lean lifecycle FAIL 后身份退役，Round 12 canonical truth 已修订，仅同一最终身份双审待完成
+**状态**：implementation replay/adversarial review；formal PR #145/merge `46156c24` 已完成；Round 12 双审/Codex clean 因 Windows fixture finding 退役；Round 13 focused/full/治理通过，等待 truth freeze/replay/双审/current-head CI
 
 ## 当前结论
 
@@ -24,8 +24,15 @@ plan lifecycle、formatter contract 与 continuity Next 四项问题，Round 10 
 
 Round 11 用真实 Git RED/GREEN 覆盖 raw Unicode 与 Tab/newline/quote/backslash/space 混合路径，decoder
 未新增 helper/文件，预算降为产品 raw/normalized `+121/+128`、测试 `+200/+198`。两份 plan 已同步
-implementation lifecycle，并把 format 合同明确为 lint PASS + base/candidate formatter parity；fresh
-focused `100 passed`、full `3275 passed, 3 skipped`、治理门禁与独立 replay 已通过，仅同一最终身份双审待完成。
+implementation lifecycle，并把 format 合同明确为 lint PASS + base/candidate formatter parity；当时 fresh
+focused `100 passed`、full `3275 passed, 3 skipped`、治理门禁与独立 replay 已通过，仅剩同一身份双审。
+
+Round 12 同一冻结身份取得 Pascal/Confucius 双 PASS，PR #146 Codex 对 `2662309e80` 未发现 major issue；
+21 项 checks 中 19 项成功，Windows Python 3.11/3.12 full 均只因测试夹具尝试创建含 quote/newline 的
+非法 Windows 文件名失败。Round 13 不改产品：真实 Git 回归改用跨平台合法的 raw Unicode+space
+路径，mixed raw Unicode+C-escape 改为直接验证既有 decoder；本地精确 node、51 个 unit 与 Ruff 已 GREEN。
+Round 13 focused `100 passed`、full `3275 passed, 3 skipped in 648.96s`；constraints、validate、truth
+`ready/fresh 1101/1101 209/209`、manifest exact 与 diff-check 均 PASS，产品实现保持不变。
 
 ## 冻结方向
 
@@ -38,6 +45,6 @@ focused `100 passed`、full `3275 passed, 3 skipped`、治理门禁与独立 rep
 
 ## 交付边界
 
-formal PR #145 已以产品代码零差异合并；独立 implementation 分支已完成 Round 11 fresh verification 与
-replay，Round 12 只修正 lifecycle truth。当前仅最终同一身份双 PASS、implementation PR/Codex/checks/merge 与 fresh-main
+formal PR #145 已以产品代码零差异合并；PR #146 保持打开。Round 13 必须把新测试树重新绑定到
+truth freeze/replay、同一身份双 PASS、current-head Codex 和全平台 checks；merge 与 fresh-main
 全部完成后才能关闭 GAP-14/T57，并恢复下一原子减重候选。

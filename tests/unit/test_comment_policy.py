@@ -209,8 +209,7 @@ def test_yaml_mixed_extension_uses_each_side_source(
 
 
 def test_yaml_quoted_path_header_is_fail_closed(tmp_path: Path) -> None:
-    source = tmp_path / "配置 file.yaml"
-    assert not _blockers(tmp_path, _DOUBLE, _DOUBLE_DONE, source.name)
+    assert not _blockers(tmp_path, _DOUBLE, _DOUBLE_DONE, "配置 file.yaml")
     quoted = r'"a/\351\205\215\347\275\256 file.yaml"'
     unknown = ("<unknown>", "#139 continuation")
     headers = (
@@ -230,7 +229,8 @@ def test_yaml_quoted_path_header_is_fail_closed(tmp_path: Path) -> None:
 
 def test_yaml_quote_path_false(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("GIT_CONFIG_PARAMETERS", "'core.quotePath'='false'")
-    assert not _blockers(tmp_path, _DOUBLE, _DOUBLE_DONE, '配置\t\n"\\ file.yaml')
+    assert not _blockers(tmp_path, _DOUBLE, _DOUBLE_DONE, "配置 file.yaml")
+    assert comment_policy._diff_path(r'"a/配置\t\n\"\\ file.yaml"', "a") == '配置\t\n"\\ file.yaml'
 
 
 @pytest.mark.parametrize(
