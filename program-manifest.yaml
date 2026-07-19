@@ -2048,12 +2048,16 @@ specs:
   path: specs/213-programservice-bounded-stage-reduction
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
+- id: 214-workitem-readonly-adapter-side-effect
+  path: specs/214-workitem-readonly-adapter-side-effect
+  depends_on:
+  - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
-  generated_at: '2026-07-19T17:16:26Z'
+  generated_at: '2026-07-19T19:46:38Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 4f113788
-  authoring_hash: 073c80a6c4496b1034b953e4d1070492bc8082c292d02aeae242ac0b8d3b87bc
+  repo_revision: f5f51799
+  authoring_hash: a59fdb298fc649f0c089aec2bf3fa9253926a9a085939f48cadbce02dbf63df2
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 01c3db2eed14ae56d4d4e493386fc2293d4b33c42f54e5a58d115f50127f76ee
@@ -2095,7 +2099,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 7b7af6ae22d55879851fa86a131a3745766a7690a328a254bafa43beaf6dd4f9
+  snapshot_hash: e6cb16bb445488d33a5d0d72e8e20e19c6d37d9894f78f24b382ea2e167ccf0a
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2109,31 +2113,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1121
-    mapped_sources: 1121
+    total_sources: 1126
+    mapped_sources: 1126
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3665
-    deferred_signal_count: 6619
+    phase_signal_count: 3681
+    deferred_signal_count: 6639
     non_goal_signal_count: 394
     layer_totals:
       blueprint: 1
-      spec: 213
-      plan: 213
-      tasks: 213
-      execution: 213
-      close: 213
+      spec: 214
+      plan: 214
+      tasks: 214
+      execution: 214
+      close: 214
       requirements: 2
       defect: 3
       design: 8
       release: 42
     layer_materialized:
       blueprint: 1
-      spec: 213
-      plan: 213
-      tasks: 213
-      execution: 213
-      close: 213
+      spec: 214
+      plan: 214
+      tasks: 214
+      execution: 214
+      close: 214
       requirements: 2
       defect: 3
       design: 8
@@ -11001,8 +11005,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 196-ai-sdlc-lean-code-self-reduction-governance
-      phase_signal_count: 11
-      deferred_signal_count: 22
+      phase_signal_count: 12
+      deferred_signal_count: 23
       non_goal_signal_count: 8
     - path: specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
       source_type: development_summary
@@ -11721,8 +11725,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 213-programservice-bounded-stage-reduction
-      phase_signal_count: 2
-      deferred_signal_count: 3
+      phase_signal_count: 3
+      deferred_signal_count: 4
       non_goal_signal_count: 0
     - path: specs/213-programservice-bounded-stage-reduction/development-summary.md
       source_type: development_summary
@@ -11731,6 +11735,51 @@ truth_snapshot:
       exists: true
       mapping_ref: 213-programservice-bounded-stage-reduction
       phase_signal_count: 1
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/214-workitem-readonly-adapter-side-effect/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 214-workitem-readonly-adapter-side-effect
+      phase_signal_count: 0
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/214-workitem-readonly-adapter-side-effect/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 214-workitem-readonly-adapter-side-effect
+      phase_signal_count: 2
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/214-workitem-readonly-adapter-side-effect/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 214-workitem-readonly-adapter-side-effect
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/214-workitem-readonly-adapter-side-effect/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 214-workitem-readonly-adapter-side-effect
+      phase_signal_count: 10
+      deferred_signal_count: 12
+      non_goal_signal_count: 0
+    - path: specs/214-workitem-readonly-adapter-side-effect/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 214-workitem-readonly-adapter-side-effect
+      phase_signal_count: 2
       deferred_signal_count: 2
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
