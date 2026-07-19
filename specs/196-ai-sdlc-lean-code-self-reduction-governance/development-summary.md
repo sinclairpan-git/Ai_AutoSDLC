@@ -80,4 +80,7 @@
   fresh-main 验收均通过，merge/reviewed tree=`db0dd990`。下一步只恢复新的 T66 bounded-stage formal
   WI 创建；仍须在 current main 重新完成准入、T61A/B、预算和双审，不能把 WI212 当作 execute 或
   release 授权。
+- WI-213 已完成本地 formal authoring 与 Round 5 双 PASS，冻结 T66 terminal≤720、净删≥2,918；closure
+  material 已创建但 truth/final identity/PR/fresh-main 尚待完成。WI213 新登记 GAP-15，formal fresh-main 后
+  唯一下一项是独立 T58；T58 fresh-main 前不得进入 T66 T61A，且本项不授权提前发布。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

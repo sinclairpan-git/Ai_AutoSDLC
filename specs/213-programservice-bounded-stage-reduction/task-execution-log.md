@@ -248,3 +248,14 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
   挤压 proof≤190 且增加假差异。
 - 最小修订：DTO hook 只比较 source SHA-256+behavior，source unreadable 直接 fail-closed；保留当前
   `builtins.list/dict` tag，不实现 bytecode/code-object fallback。Round 5 必须新 identity 双 PASS0。
+
+## 11. Batch 2026-07-19-010：formal Round 5 authoring 双 PASS
+
+- HEAD=`e00aea25bc9ddb5da475e22eb6f02ba820cec4c0`
+- tree=`f17e24baf9747488a7a178d175bead33daf8db84`
+- formal-six=`674407cf6ac8c2f726a3975dc6fffeac0cc88786bf50a19d0e1687d09684cf27`
+- Pascal/LEAN：`PASS`、findings=0；Confucius/SAFETY：`PASS`、findings=0；worktree clean、双方只读。
+- 双方确认 normalized-code 完全移除，public/DTO/builtin 三类 fingerprint、truthiness/clock、预算、
+  rollback、offline、GAP-15 和发布边界均闭合。
+- 随后创建 `development-summary.md` 并更新 T31～T41 状态，因此 Round 5 降为 authoring receipt；最终
+  formal-six 变化后必须重新提交、同步 truth、跑门禁并在 T44 由双方对 current identity 再次 PASS0。

@@ -91,14 +91,14 @@ related_doc:
 
 ### T31 冻结 formal-six identity
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T24
 - **范围**：parent+child 各 `spec.md + plan.md + tasks.md`；父 plan §9 canonical hash。
 - **验收**：committed+clean HEAD/tree、六个 file hash 与 combined SHA-256 可复算；审查期间只读。
 
 ### T32 LEAN/YAGNI 独立审查
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T31
 - **Reviewer**：Pascal
 - **检查**：范围是否最窄、是否过度实现/纯移动、预算是否真实、设计是否直接、删除是否闭环。
@@ -106,7 +106,7 @@ related_doc:
 
 ### T33 SAFETY/COMPAT 独立审查
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T31
 - **Reviewer**：Confucius
 - **检查**：DTO/CLI/artifact/授权/异常/恢复/平台/安装/offline/sibling/rollback/truth/release 边界。
@@ -114,16 +114,18 @@ related_doc:
 
 ### T34 处置 finding 并同 identity 复审
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T32、T33
 - **规则**：正确 finding 做最小修正；错误或扩范围建议记录拒绝证据；formal-six 任一变化同时废止两 verdict。
-- **完成**：相同 current identity 上双方 PASS0；不得拼接不同 round/identity。
+- **完成**：Round 5 HEAD=`e00aea25`、tree=`f17e24ba`、formal-six=`674407cf...cf27` 上双方
+  PASS0/findings=0；closure material 改变 formal-six 后，本 receipt 退为 authoring PASS，T44 仍须对最终
+  current identity 双审，不得拼接不同 round/identity。
 
 ## Batch 4：formal truth、PR 与 fresh-main
 
 ### T41 完成 formal-only closure materials
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T34
 - **范围**：child execution log/development summary、parent writeback、root/scoped handoff。
 - **验收**：summary 只声明正式合同完成；handoff byte-identical；唯一下一步是创建 T58/GAP-15 WI；
