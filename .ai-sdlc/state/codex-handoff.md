@@ -47,6 +47,12 @@
 - GAP-03～06、WI-196、RC-08 与 release 均 open；全局 CLI 仍为 v0.9.6。
 - PowerShell host 仍有既知 .NET regex assembly 问题；本地使用 Python 3.11/zsh fallback，CI 仍覆盖 Windows。
 
+## Local PR Review
+
+- removed comment reason: `.ai-sdlc/state/codex-handoff.md` 中 WI211 reconciliation 的旧 Goal、State、
+  Changed Files、review receipt 和 Exact Next Steps 已由 PR #155 完成；本次替换为 WI212 当前恢复入口，
+  等价历史事实保留在 WI196/WI212 execution log，避免中断后错误返回已关闭工作项。
+
 ## Exact Next Steps
 
 1. 提交 Round 2 finding 修订，复算 parent §9 formal-six canonical identity，确认 base diff 无行尾空格。
