@@ -236,3 +236,15 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
   source-or-normalized-code+behavior；当前内建 factory 仅 allowlist `builtins.list/dict` stable tag+behavior。
   未知 callable 才 fail-closed，仍禁止 identity/address repr，proof≤190 不变。
 - Formal-six 已变化，Round 3 两个 FAIL 只保留为历史；Round 4 必须对新 committed+clean identity 从零双审。
+
+## 10. Batch 2026-07-19-009：formal Round 4 split verdict 与 YAGNI 收敛
+
+- 受审 identity：HEAD=`7b75b93cbc6f6eceff3eb6062d22763346b54ce6`；tree=
+  `1076c1db876a30468514358173dcfd04f6749487`；formal-six=
+  `db44ca60a1b4d0a96106abfa286ff93a8d3f2a08b3421c2396184c361074a816`；clean、只读。
+- Confucius/SAFETY=`PASS`、findings=0；Pascal/LEAN=`FAIL`、findings=1。内容变化使两 verdict 同时失效。
+- Pascal finding 成立：目标 DTO hook 均为可读取的普通 Python 源码，wheel/sdist 均包含 source；
+  `normalized-code` fallback 为不存在的 bytecode-only 场景引入跨 Python 3.11/3.12 code-object canonicalizer，
+  挤压 proof≤190 且增加假差异。
+- 最小修订：DTO hook 只比较 source SHA-256+behavior，source unreadable 直接 fail-closed；保留当前
+  `builtins.list/dict` tag，不实现 bytecode/code-object fallback。Round 5 必须新 identity 双 PASS0。

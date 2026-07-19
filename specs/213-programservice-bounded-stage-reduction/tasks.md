@@ -63,7 +63,7 @@ related_doc:
 - **状态**：completed
 - **依赖**：T21
 - **验收**：T61A 在产品编码前；双临时根、raw evidence、异常/写序/副作用/中断/重试、≥20次 p50/p95；
-  Python-surface manifest 分为 public surface/behavior、DTO hook source-or-code/behavior、allowlisted
+  Python-surface manifest 分为 public surface/behavior、DTO hook source/behavior（source unreadable 即阻断）、allowlisted
   `builtins.list/dict` factory tag，未知 callable fail-closed 且禁用 identity/address repr；execute/writer
   late-bound `self` dispatch 覆盖 `None`/truthy/falsey request/result 与 `generated_at=None/""/固定值` 的
   clock spy 矩阵，保持 legacy truthiness；
