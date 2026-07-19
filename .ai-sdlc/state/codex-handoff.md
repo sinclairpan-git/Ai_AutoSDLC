@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T15:41:00Z
+- Updated: 2026-07-19T15:50:00Z
 - Reason: 处理 PR #158 Codex P2 stale lifecycle summary finding
 - Goal: 完成 WI213 formal PR #158 的 current-head 复审、合并与 detached fresh-main 验收
-- State: 两份 stale summary 已最小修正；等待新 identity 门禁、双审与 current-head GitHub review
+- State: 两份 stale summary 已最小修正且 terminal truth/目标测试/manifest exact 已重建；等待提交新 identity、双审与 current-head GitHub review
 - Stage: decompose
 - Work Item: 213-programservice-bounded-stage-reduction
 - Branch: feature/213-programservice-bounded-stage-reduction-docs
@@ -75,6 +75,10 @@
 - program-manifest 已登记 WI213 depends_on WI196，并已 terminal sync/audit 为 ready/fresh。
 - PR #158 旧头 `6c242f9c` 的 required checks 已有 10/12 success、0 failure；Codex 行级 P2 指出 child/parent
   summary 将已完成 terminal truth/final gates 误写为未完成，finding 成立并已做两处最小修正。
+- Source correction commit=`f43c08e2`；terminal truth sync=`ready`、snapshot=`d146e206...e8fe4`、
+  inventory=`1121/1121`、unmapped/missing=`0/0`、close=`213/213`，Cursor SHA 仍为 `d5f04acf...0b6a`。
+- 目标测试=`165 passed, 474 deselected in 4.14s`；manifest exact=`1 passed in 144.17s`；constraints
+  no BLOCKER、program validate PASS、scope/handoff parity/diff-check 全绿。
 
 ## Blockers / Risks
 
@@ -99,8 +103,8 @@
 
 ## Exact Next Steps
 
-1. 检查 diff/parity/scope，运行 targeted、constraints、validate 与 truth gates；按需重新 sync terminal truth。
-2. 提交并推送两份 summary 与 byte-identical handoff 的最小修正。
-3. Pascal/Confucius 对同一新 committed+clean identity 从零复审，必须再次双 PASS0。
-4. 对 PR #158 重新请求 Codex current-head review，守候 required checks 全绿后 merge，并执行 detached fresh-main。
-5. 独立 lifecycle reconciliation 只回写已发生 receipt；其 fresh-main 后创建 T58，T58 fresh-main 后才进入 T66 T61A。
+1. 提交 terminal truth manifest 与 byte-identical handoff，复核 clean/current identity/truth audit。
+2. Pascal/Confucius 对同一新 committed+clean identity 从零复审，必须再次双 PASS0。
+3. 推送后对 PR #158 重新请求 Codex current-head review，守候 required checks 全绿后 merge。
+4. 执行 detached fresh-main 验收；独立 lifecycle reconciliation 只回写已发生 receipt。
+5. Lifecycle fresh-main 后创建 T58；T58 fresh-main 后才进入 T66 T61A。
