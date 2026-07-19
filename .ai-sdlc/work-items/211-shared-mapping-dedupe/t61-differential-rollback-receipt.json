@@ -1,0 +1,240 @@
+{
+  "schema_version": "ai-sdlc.t61-differential-rollback-receipt.v1",
+  "work_item_id": "211-shared-mapping-dedupe",
+  "generated_at": "2026-07-19T03:03:47Z",
+  "implementation": {
+    "formal_inventory_revision": "236cd00e8f2e9514487d237b47d4cbbf6fb5fe91",
+    "formal_amendment_merge": "96908f2c207dd8e03411d8acd489b2101a5787cf",
+    "baseline_commit": "96908f2c207dd8e03411d8acd489b2101a5787cf",
+    "baseline_tree_oid": "0fca3830e7b3faa5773e9e8b677cdb4d62d4eadd",
+    "commit": "36b342caa8900790f06cb29fd3e514c49944d063",
+    "candidate_tree_oid": "cbacdd4d271327b06ff28d04a1ee03e342b91a9f"
+  },
+  "formal_contract": {
+    "files": {
+      "specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md": "d347fc85f217a43cab67f553128341a23eb505bcfaf7448b46a2b1ef2c8775fd",
+      "specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md": "f0e73e106e62af4cca2ccb2557bebb21e3f42aa076d3afda6544c807fa6d0e9c",
+      "specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md": "14fdb98ad2a890706f40950b6095990145cfdefae8ed6c3c705710bc9f98b566",
+      "specs/211-shared-mapping-dedupe/plan.md": "ffbb0802a0f1db17b42c8e04ddeeeeb9b34afa7e8e0737617063abdc5d007efa",
+      "specs/211-shared-mapping-dedupe/spec.md": "6a75c08331ba38cd462a8480b3d15b1cb2c6035b8cb1ae52a24a9a2bf8628c76",
+      "specs/211-shared-mapping-dedupe/tasks.md": "24405ff0b72a0fa8c06191a9ac3769946819e0c7ed9718ee433e1f6bce31fd9d"
+    },
+    "combined_algorithm": "sha256(path-sorted rows formatted as '<file_sha256>  <repo_path>\\n')",
+    "six_file_combined_sha256": "63ca25a3baf059d06dce62220c399ef8597a33dd1b7f7b1d2a08aba4219678ce"
+  },
+  "environment": {
+    "platform": "macOS-27.0-arm64-arm-64bit",
+    "python": "3.11.15",
+    "python_ast_secondary": "3.12.13",
+    "pydantic": "2.12.5",
+    "pytest": "9.0.2",
+    "uv": "0.10.12",
+    "git": "2.54.0 (Apple Git-157)",
+    "preferred_shell": "PowerShell",
+    "executed_shell": "/bin/zsh",
+    "powershell_status": "host startup unavailable because of the known .NET regex assembly failure"
+  },
+  "reduction_ledger": {
+    "target_modules": {
+      "baseline_raw_loc": 4551,
+      "candidate_raw_loc": 4414,
+      "baseline_nonempty_loc": 4094,
+      "candidate_nonempty_loc": 3977
+    },
+    "shared_helper_module": {
+      "baseline_raw_loc": 105,
+      "candidate_raw_loc": 120,
+      "baseline_nonempty_loc": 75,
+      "candidate_nonempty_loc": 88
+    },
+    "product_raw": {
+      "additions": 25,
+      "deletions": 147,
+      "net": -122
+    },
+    "product_nonempty": {
+      "additions": 23,
+      "deletions": 127,
+      "net": -104
+    },
+    "identity_test": {
+      "raw_additions": 6,
+      "nonempty_additions": 4
+    },
+    "formal_harness_accounted_lines": 27,
+    "proof_nonempty_cost": 31,
+    "proof_nonempty_cap": 31,
+    "total_product_and_proof_raw_additions": 58,
+    "total_product_and_proof_raw_cap": 60,
+    "new_product_files": 0,
+    "new_test_files": 0,
+    "public_exports": 0,
+    "wrappers": 0
+  },
+  "structural_differential": {
+    "baseline_local_definitions": 10,
+    "candidate_local_definitions": 0,
+    "candidate_shared_definitions": 1,
+    "candidate_module_aliases": 10,
+    "all_aliases_share_helper_identity": true,
+    "baseline_calls": 23,
+    "candidate_calls": 23,
+    "call_payload_raw_dump_bytes": 8718,
+    "call_payload_bytes": 8741,
+    "call_ast_sha256": "a62a6dee4a25647d5088f92912cb1bd063db624a5ff6ee4a6aa4768918789af8",
+    "body_ast_sha256": "6602b8688426cf7ae803c793f9b86a3c3f6759abde0a638ab5953bdf1b58f200",
+    "full_function_ast_sha256": "6fb4192df6b37d095c3aedf17ac60046f05d3dfc43f3ed38a26f8e4170018929",
+    "python_3_12_same_interpreter": {
+      "body_payload_equal": true,
+      "full_payload_equal": true,
+      "call_payload_equal": true,
+      "baseline_definitions": 10,
+      "candidate_shared_definitions": 1,
+      "candidate_calls": 23
+    },
+    "deleted_inactive_json_imports": 7,
+    "retained_active_json_imports": 3,
+    "existing_helper_importers": 72,
+    "new_module_dependency_edges": 0,
+    "new_import_cycles": 0
+  },
+  "consumer_differential": {
+    "scope": "The 10 target alias bindings and 23 family-internal calls are authorized and excluded from product_runtime_external; tracked identity-test reads and disposable harness lookup are reported separately.",
+    "baseline": {
+      "product_runtime_external": {
+        "imports": 0,
+        "attributes": 0,
+        "wildcards": 0,
+        "monkeypatch_strings": 0
+      },
+      "tracked_identity_attribute_reads": 0,
+      "tracked_identity_private_calls": 0,
+      "disposable_harness_binding_lookup_per_process": 1
+    },
+    "candidate": {
+      "product_runtime_external": {
+        "imports": 0,
+        "attributes": 0,
+        "wildcards": 0,
+        "monkeypatch_strings": 0
+      },
+      "tracked_identity_attribute_reads": 2,
+      "tracked_identity_private_calls": 0,
+      "disposable_harness_binding_lookup_per_process": 1
+    },
+    "revert": {
+      "product_runtime_external": {
+        "imports": 0,
+        "attributes": 0,
+        "wildcards": 0,
+        "monkeypatch_strings": 0
+      },
+      "tracked_identity_attribute_reads": 0,
+      "tracked_identity_private_calls": 0,
+      "disposable_harness_binding_lookup_per_process": 1
+    },
+    "reapply": {
+      "product_runtime_external": {
+        "imports": 0,
+        "attributes": 0,
+        "wildcards": 0,
+        "monkeypatch_strings": 0
+      },
+      "tracked_identity_attribute_reads": 2,
+      "tracked_identity_private_calls": 0,
+      "disposable_harness_binding_lookup_per_process": 1
+    }
+  },
+  "behavior_differential": {
+    "harness_id": "wi211-t61-corpus-v1",
+    "harness_nonempty_loc": 27,
+    "cases": 4,
+    "jsonl_bytes": 502,
+    "jsonl_sha256": "8c6d3e21ef597673c767e39a3919864242daed6014d13b1400a95eafabdb54e0",
+    "baseline_candidate_byte_equal": true,
+    "baseline_revert_byte_equal": true,
+    "candidate_reapply_byte_equal": true,
+    "all_four_phase_byte_equal": true,
+    "cold_import_modules": 72,
+    "cold_import_failures": 0,
+    "cold_import_stdout_nonempty": 0,
+    "cold_import_stderr_nonempty": 0,
+    "unapproved_public_differences": []
+  },
+  "verification": {
+    "baseline_direct": "103 passed in 1.46s",
+    "baseline_impact": "1162 passed in 89.82s",
+    "baseline_full": "3276 passed, 3 skipped in 698.55s",
+    "identity_red": "1 failed in 0.49s because the two baseline local function objects differed",
+    "identity_green": "1 passed in 0.81s",
+    "candidate_direct": "104 passed in 1.97s",
+    "candidate_impact": "1163 passed in 87.69s",
+    "candidate_full": "3277 passed, 3 skipped in 650.94s",
+    "ruff_changed_and_full": "All checks passed",
+    "git_diff_check": "PASS",
+    "verify_constraints": "no BLOCKERs",
+    "program_validate": "PASS",
+    "program_truth_audit": "ready/fresh",
+    "manifest_exact": "1 passed in 107.47s"
+  },
+  "rollback_rehearsal": {
+    "disposable_clone": ".worktrees/211-rollback-36b342ca",
+    "revert_commit": "42f07d5912df292395aeb1d3c658be99ee50acc3",
+    "reverted_tree_oid": "0fca3830e7b3faa5773e9e8b677cdb4d62d4eadd",
+    "reverted_tree_matches_baseline": true,
+    "reverted_structure": "10 local definitions, 23 calls, call digest a62a6dee",
+    "reverted_consumer_matrix": "product/runtime external=0, tracked reads=0, harness lookup=1",
+    "reverted_direct": "103 passed in 1.20s",
+    "reverted_impact": "1162 passed in 89.87s",
+    "reverted_corpus_matches_baseline": true,
+    "reverted_cold_imports": "72 modules, 0 failures, 0 noisy imports",
+    "reapply_commit": "d9a7f8cd2e7dfb79d429822af337b1cb57123780",
+    "reapplied_tree_oid": "cbacdd4d271327b06ff28d04a1ee03e342b91a9f",
+    "reapplied_tree_matches_candidate": true,
+    "reapplied_structure": "1 shared definition, 10 aliases, 23 calls, call digest a62a6dee",
+    "reapplied_consumer_matrix": "product/runtime external=0, tracked reads=2, harness lookup=1",
+    "reapplied_direct": "104 passed in 1.47s",
+    "reapplied_impact": "1163 passed in 88.03s",
+    "reapplied_corpus_matches_candidate": true,
+    "reapplied_cold_imports": "72 modules, 0 failures, 0 noisy imports",
+    "main_worktree_destructive_checkout_or_reset_used": false,
+    "verdict": "PASS"
+  },
+  "surface_bindings": {
+    "set_digest_algorithm": "sha256(path-sorted rows formatted as '<file_sha256>  <repo_path>\\n')",
+    "target_file_count": 11,
+    "target_baseline_combined_sha256": "4f900ceb4efc51c51c2e579112c955264ece62b31c64b364857533dcfcba17b8",
+    "target_candidate_combined_sha256": "6c15bc856fce7732d7b0034fd03389856664d4716f9840987db443a73461fb53",
+    "identity_test_baseline_sha256": "911a77088cb2d67af626ad3788bf146468feee53b4c3178494ac7bc4b7ed4458",
+    "identity_test_candidate_sha256": "abe51b297b0d65ac697f6f0609a37e5cd7810d3807b3b5b73655e5c4d6756200"
+  },
+  "protected_surfaces": {
+    "file_count": 6,
+    "baseline_combined_sha256": "1be62fe2a22dca1674cd1dabb475c6624e245cd639347005fbc53b21384680bc",
+    "candidate_combined_sha256": "1be62fe2a22dca1674cd1dabb475c6624e245cd639347005fbc53b21384680bc",
+    "tree_oids": {
+      ".github/workflows": "67d1818a9460943d986bf53e649e988157ca8bfe",
+      "providers": "fe83cf745c44172fc908a01ca870bd781fe06a29",
+      "rules": "0d26d2eaa320eeefb1d2c546c7ffd5a970556b94",
+      "src/ai_sdlc/adapters": "58eef96a3367dbbc7efdccaf06db6a14f0a3da87"
+    },
+    "baseline_candidate_equal": true
+  },
+  "governance": {
+    "program_truth_audit": {
+      "state": "ready",
+      "snapshot_state": "fresh",
+      "snapshot_hash": "a3086e7aec7d410703924698beb580de9ff186cf451ecadd9f4c9b084ef986c7",
+      "authoring_hash": "5ebffdf85a8c386136828b03b8d9ab9a9532d2393d67b002f653304470ebaaaa",
+      "source_inventory": "1111/1111",
+      "unmapped": 0,
+      "expected_active_child_missing": 1,
+      "close_layer": "210/211"
+    },
+    "gap_09_frontend_inheritance": "closed and audit-ready; impact/full/constraints show no implementation drift",
+    "gap_10_adapter_consumption": "closed and audit-ready; protected adapter and CLI surfaces unchanged",
+    "gap_11_source_inventory": "complete; only the mapped active child close source is missing",
+    "handoff_parity_required": true
+  },
+  "verdict": "PASS"
+}
