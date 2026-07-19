@@ -1,49 +1,70 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T01:37:14Z
-- Reason: WI211 formal amendment terminal truth与manifest验收完成
-- Goal: 修正consumer证据口径并取得amendment双PASS、PR合并与fresh-main验收
-- State: amendment seed与terminal truth已完成；承载本handoff的clean tip即amendment review identity；产品/测试零修改，待双对抗评审
-- Stage: design
+- Updated: 2026-07-19T04:31:25Z
+- Reason: WI211 Round4统一finding已最小修复，移除handoff中已经完成的门禁/提交步骤
+- Goal: 完成WI211共享mapping去重的双对抗评审、mainline交付与fresh-main验收
+- State: 产品/测试/receipt未变；Codex P2及Round4统一finding已闭环，当前handoff-only clean tip待双对抗复审后推送PR #153
+- Stage: verify
 - Work Item: 211-shared-mapping-dedupe
-- Branch: feature/211-shared-mapping-dedupe-formal-amendment
+- Branch: feature/211-shared-mapping-dedupe
 
 ## Changed Files
-- specs/211-shared-mapping-dedupe/spec.md
-- specs/211-shared-mapping-dedupe/plan.md
-- specs/211-shared-mapping-dedupe/tasks.md
-- specs/211-shared-mapping-dedupe/task-execution-log.md
+- src/ai_sdlc/utils/helpers.py
+- src/ai_sdlc/core/frontend_contract_observation_provider.py
+- src/ai_sdlc/core/frontend_contract_runtime_attachment.py
+- src/ai_sdlc/core/frontend_contract_verification.py
+- src/ai_sdlc/core/frontend_gate_verification.py
+- src/ai_sdlc/core/frontend_visual_a11y_evidence_provider.py
+- src/ai_sdlc/generators/frontend_cross_provider_consistency_artifacts.py
+- src/ai_sdlc/generators/frontend_provider_expansion_artifacts.py
+- src/ai_sdlc/generators/frontend_provider_runtime_adapter_artifacts.py
+- src/ai_sdlc/generators/frontend_quality_platform_artifacts.py
+- src/ai_sdlc/generators/frontend_theme_token_governance_artifacts.py
+- tests/unit/test_frontend_contract_observation_provider.py
+- .ai-sdlc/work-items/211-shared-mapping-dedupe/t61-differential-rollback-receipt.json
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/211-shared-mapping-dedupe/codex-handoff.md
-- program-manifest.yaml
 
 ## Key Decisions
-- 不在implementation PR偷改formal；amendment独立branch/worktree/PR
-- consumer分三层：授权的10 aliases/23 calls；授权边界外product/runtime=0；tracked identity reads按阶段0/2
-- plan §3.3 disposable harness另行固定binding lookup=1/进程，不与tracked test或product零值混算
-- receipt必须按baseline/revert与candidate/reapply分栏；产品、测试、harness、digest、预算与减重范围均不变
-- implementation分支暂停；amendment merge/fresh-main前不得继续修receipt或发implementation PR
-- amendment seed commit=`f483a0ef`；terminal truth只更新`program-manifest.yaml`，无其他治理副作用
+- exact amended base=`96908f2c207dd8e03411d8acd489b2101a5787cf`，tree=`0fca3830e7b3faa5773e9e8b677cdb4d62d4eadd`
+- implementation commit=`36b342caa8900790f06cb29fd3e514c49944d063`，tree=`cbacdd4d271327b06ff28d04a1ee03e342b91a9f`；仅11个产品文件与唯一identity test
+- receipt seed=`7c3a9e5c1f4f63545c1d1e185dd6f04572c08307`，tree=`f50bf3cd3bc1539afcb97180d5e76c2f9d118452`
+- receipt member-fix commit=`206522603884032f755fa705a5f74a7223c41243`，tree=`29871eb380f6a7520003998ed7cb9b00f753258f`
+- receipt Git blob=`d62bebda18a15199faea58eb34f7209097b8dfdf`，SHA-256=`22e5d3888af99a39c8dea5bc9f7e138773ab815cd8c32a0779d205cc6a73aa05`
+- formal-six=`63ca25a3baf059d06dce62220c399ef8597a33dd1b7f7b1d2a08aba4219678ce`
+- consumer按三层分栏：授权10 aliases/23 calls；边界外product/runtime=0；tracked identity reads baseline/revert=0、candidate/reapply=2；harness lookup恒为1/进程
+- implementation commit之后产品与行为测试零变化；receipt不绑定自身commit/tree/hash
+- PowerShell host因已知.NET regex assembly问题无法启动，门禁使用`/bin/zsh` fallback；未运行会污染WI208的handoff CLI
 
 ## Commands / Tests
-- Implementation Round1：Pascal `LEAN FAIL/findings=1`；Confucius `SAFETY FAIL/findings=2`
-- 两位reviewer均确认产品行为/结构/预算/回退无finding；candidate 104/1163/full3277、双端72 imports与tree algebra全绿
-- amendment当前仅4个child docs与两份handoff变更；`src/`、`tests/`尚未修改
-- executable scanner：aliases=10、product/runtime external=0、tracked baseline/candidate=`0/2`且private calls=0、harness lookup=1
-- formal-six=`63ca25a3baf059d06dce62220c399ef8597a33dd1b7f7b1d2a08aba4219678ce`；diff-check、parity、product/test/protected zero PASS
-- `verify constraints` no BLOCKERs；`program validate` PASS
-- truth sync snapshot=`a3086e7aec7d410703924698beb580de9ff186cf451ecadd9f4c9b084ef986c7`；audit=`ready/fresh`、1111/1111、unmapped=0、expected missing=1
-- manifest exact=`1 passed in 105.37s`；truth sync后仅manifest diff
+- baseline：10 local defs/23 calls；body/full/call=`6602b868...`/`6fb4192d...`/`a62a6dee...`；4-case=4 rows/502 bytes/`8c6d3e21...`
+- baseline：direct 103、impact 1162、full 3276 passed/3 skipped、72 cold imports clean
+- RED：exact identity nodeid仅因两个本地函数对象不同失败；GREEN：1 passed
+- candidate：1 shared def、10 aliases、23 calls；product raw `+25/-147/net -122`，non-empty `+23/-127/net -104`
+- candidate：direct 104、impact 1163、full 3277 passed/3 skipped、72 imports clean；Python 3.12 body/full/call payload同解释器相等
+- four-phase JSONL逐字节相等；每阶段4 rows/502 bytes/`8c6d3e21...`
+- rollback：revert=`42f07d59`/tree exact baseline/103/1162/72；reapply=`d9a7f8cd`/tree exact candidate/104/1163/72
+- Ruff changed/full、diff-check、constraints、validate、truth、manifest exact全部PASS
+- truth=`ready/fresh`、1111/1111、unmapped=0、expected missing=1、snapshot=`a3086e7a...`
+- protected 6-file排序成员、逐文件baseline/candidate SHA与combined digest可独立重建；protected trees不变；GAP-09～11无漂移
+- receipt JSON/jq/self-binding guard PASS；证据脚本曾错误假设candidate owner仍在目标模块，修正为helper后四阶段字节直比PASS
 
 ## Blockers / Risks
-- 当前无执行blocker；amendment任一表述仍混淆授权alias、tracked test与disposable harness即不得进入评审
-- PowerShell host仍因已知.NET regex assembly问题无法启动，门禁使用`/bin/zsh` fallback并记录
+- 当前无执行blocker；handoff内容变化已使Round3旧head双PASS失效，当前新identity必须由双方重新评审
+- T62A/WI202无sponsor，禁止恢复；GAP-05/WI196/RC-08与release保持open
 
 ## Local PR Review
-- Round1旧implementation/evidence identity整体失效；旧formal Round7 PASS也不得覆盖本amendment内容
-- amendment必须由Pascal与Confucius对同一新formal-six从零双审
+- 旧implementation Round1因handoff滞后与consumer口径混算整体FAIL；产品行为/结构/预算/rollback无finding
+- formal amendment已由Pascal/Confucius同identity双PASS，并经PR #152、Codex current-head、10/10 checks与fresh-main验收
+- implementation Round2：Pascal `LEAN FAIL/findings=1`、Confucius `SAFETY FAIL/findings=1`，共同finding为protected combined digest未列6个成员路径；其余门禁均无finding
+- disposition：唯一receipt新增排序后的6个path→baseline/candidate SHA映射，并从该集合重算combined digest；receipt-only修复后terminal gates全绿
+- implementation Round3旧head=`9404f4e9727f491a88c82bc29830fd4b5b0bfad1`：Pascal `LEAN PASS/findings=0`、Confucius `SAFETY PASS/findings=0`
+- PR #153已创建且21项checks启动；Codex审查旧head提出1个P2：两份handoff仍称“待双审”，会让恢复会话重复已完成步骤；finding成立
+- disposition：仅同步更新两份handoff为post-review/PR实际状态；产品、测试、receipt及已通过的行为证据不变。因证据身份变化，Round3双PASS不沿用
+- implementation Round4旧head=`0059998b8b698239fd0446a9546d071c3cbabed4`：Pascal `LEAN FAIL/findings=1`、Confucius `SAFETY FAIL/findings=1`，共同finding为Exact Next Steps仍把已经完成的handoff-only门禁/提交列为待办；其余范围与门禁无finding
+- disposition：两份handoff同步删除该已完成步骤，next steps直接从当前identity双审开始；产品、测试、receipt仍为零变化，Round4结论不沿用
 
 ## Exact Next Steps
-- 复算当前clean tip的HEAD/tree/formal-six/diff/truth、constraints、validate、protected/parity/clean
-- Pascal/Confucius对同一amendment identity从零双审；任一finding使双方结论失效并修复后全重审
-- 双PASS后push/PR、Codex review、required checks、merge与detached fresh-main验收
+- Pascal/Confucius对该同一新identity重新双审；任一finding成立则最小修复并让双方从更新后的identity全重审
+- 双PASS后推送PR #153、重新请求Codex current-head review，持续heartbeat至当前head审查无finding且required checks全绿
+- merge后做detached fresh-main acceptance

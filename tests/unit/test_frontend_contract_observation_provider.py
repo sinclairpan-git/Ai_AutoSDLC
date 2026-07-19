@@ -6,6 +6,8 @@ import json
 
 import pytest
 
+import ai_sdlc.core.frontend_contract_observation_provider as observation_provider
+import ai_sdlc.generators.frontend_theme_token_governance_artifacts as theme_artifacts
 from ai_sdlc.core.frontend_contract_drift import PageImplementationObservation
 from ai_sdlc.core.frontend_contract_observation_provider import (
     FRONTEND_CONTRACT_OBSERVATION_ARTIFACT_NAME,
@@ -18,6 +20,10 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
     observation_artifact_path,
     write_frontend_contract_observation_artifact,
 )
+
+
+def test_mapping_item_dedupe_uses_one_shared_binding() -> None:
+    assert observation_provider._dedupe_mapping_items is theme_artifacts._dedupe_mapping_items
 
 
 def test_write_and_load_frontend_contract_observation_artifact_round_trips(
