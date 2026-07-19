@@ -75,9 +75,9 @@
 - program-manifest 已登记 WI213 depends_on WI196，并已 terminal sync/audit 为 ready/fresh。
 - PR #158 旧头 `6c242f9c` 的 required checks 已有 10/12 success、0 failure；Codex 行级 P2 指出 child/parent
   summary 将已完成 terminal truth/final gates 误写为未完成，finding 成立并已做两处最小修正。
-- Source correction commit=`f43c08e2`；terminal truth sync=`ready`、snapshot=`d146e206...e8fe4`、
+- Latest source correction commit=`a638be64`；terminal truth sync=`ready`、snapshot=`7038d31f...48e2e`、
   inventory=`1121/1121`、unmapped/missing=`0/0`、close=`213/213`，Cursor SHA 仍为 `d5f04acf...0b6a`。
-- 目标测试=`165 passed, 474 deselected in 4.14s`；manifest exact=`1 passed in 144.17s`；constraints
+- 目标测试=`165 passed, 474 deselected in 2.62s`；manifest exact=`1 passed in 96.09s`；constraints
   no BLOCKER、program validate PASS、scope/handoff parity/diff-check 全绿。
 
 ## Blockers / Risks
