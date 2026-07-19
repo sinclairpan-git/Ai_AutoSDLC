@@ -76,4 +76,8 @@
   稳定周期，要求 candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、
   offline/sibling smoke 与 selector rollback/reapply，再以独立 PR 删旧并重复同等安装与回退证明。
   RC-08 前仍禁止 tag、GitHub Release、PyPI 发布与全局 CLI 更新；该合同修订不关闭 GAP-03/GAP-04。
+- WI-212 PR #156 已合并为 `51903b8f`；最终本地双审、Codex current-head、13/13 checks 与 detached
+  fresh-main 验收均通过，merge/reviewed tree=`db0dd990`。下一步只恢复新的 T66 bounded-stage formal
+  WI 创建；仍须在 current main 重新完成准入、T61A/B、预算和双审，不能把 WI212 当作 execute 或
+  release 授权。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

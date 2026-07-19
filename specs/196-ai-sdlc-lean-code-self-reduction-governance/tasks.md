@@ -115,9 +115,12 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T66 单个 ProgramService 领域切片 | standalone + T61A/B | GAP-03/WP-06 | L3 | T51、T52 + 真实重叠子项 | 迁移职责 -90%、RC-04 结构改善；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与回退演练，删除前不得关闭 |
 | T67 单个 Program Stage family | standalone + T61A/B | GAP-04/WP-07 | L3 | T51、T52 + 真实重叠子项 | 镜像 LOC -70%、33 命令兼容；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与回退演练，删除前不得关闭 |
 
-**全局恢复门禁**：T57/WI-209、WI-210 与 WI-211 closure fresh-main acceptance 已完成；表中 T61A、
+**全局恢复门禁**：T57/WI-209、WI-210、WI-211 与 WI-212 candidate-selection fresh-main acceptance
+已完成；表中 T61A、
 T62A～T62C、T63～T67 的新实例已恢复选择，但仍须逐项满足各自依赖、sponsor、RC 与原子 WI/branch/PR。
 WI-211 已完成一个 T63 family；下一原子项必须从 fresh main 重新选择，不得沿用旧 spike 或已撤销 claim。
+WI-212 已唯一选择 T66 bounded-stage ProgramService domain，后续只允许创建新的 formal WI 并在 current
+main 重新复算；未完成 formal/T61A/B/双审前不得 execute。
 既有已完成 receipt 不受影响；各行保留的历史 T51/T52 依赖已满足，不需要重复执行。
 
 每个目标切片必须先落盘 GAP-09～GAP-11 防回归 impact analysis；除当前 active child 唯一 mapped
