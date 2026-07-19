@@ -237,4 +237,13 @@ product+proof≤686≤`floor(2947×25%)=736`，余量≥50。
 - sync 后 manifest exact=`1 passed in 103.60s`，constraints no BLOCKER、program validate PASS；test
   diff=`+2/-2`，禁止路径零差异，handoff parity、diff-check 与 clean-commit scope 全绿。
 - 本条只写回已发生 receipt，不改变 source inventory 集合；写回后必须复核 persisted snapshot 仍 fresh。
-  下一步是提交 current identity 并让 Pascal/Confucius 从零终审，不得再执行 truth sync。
+  下一步是确认 current HEAD 已提交且 clean；已满足时不得重复提交，直接让 Pascal/Confucius 从零终审。
+
+## 16. Batch 2026-07-19-013：terminal split verdict
+
+- exact HEAD/tree=`f9bf59634844fe1910d79a6e6415a85ca91d3f89`/
+  `71fab867ec8bc0d67d5d22d340c797f049a8641e`，formal-six=
+  `b07d4c7d1cfec572373117e41cb2ad3dc412f155e7e60d3f107c3fb858d091ac`；Pascal PASS0、
+  Confucius FAIL1，continuity 修订使双方 verdict 同时退役。
+- 唯一 finding 已接受：handoff/log 不再要求提交已经 committed+clean 的 current identity；恢复动作直接
+  进入 current HEAD 双审。truth source 集合和 formal-six 不变，禁止重复 truth sync。

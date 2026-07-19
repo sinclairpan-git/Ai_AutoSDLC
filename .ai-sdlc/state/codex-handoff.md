@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T09:43:52Z
-- Reason: WI212 terminal truth/local gates 全绿，准备 current HEAD 终审
+- Updated: 2026-07-19T09:53:01Z
+- Reason: WI212 terminal split verdict no-op next-step finding 最小处置
 - Goal: 完成候选选择、父 L3 合同修订、同 identity 双审、PR 与 detached fresh-main 验收
-- State: terminal truth ready/fresh、manifest/constraints/validate/scope 全绿；current HEAD 终审待执行
+- State: terminal Pascal PASS0/Confucius FAIL1 已退役；no-op next step 已删除，等待 current HEAD 双审
 - Stage: verify
 - Work Item: 212-reduction-candidate-selection
 - Branch: feature/212-reduction-candidate-selection-docs
@@ -52,6 +52,8 @@
   missing/unmapped=0/0、close=212/212，persisted snapshot stale 是唯一未完成本地门禁。
 - Terminal sync snapshot=`6b88dc3d...722b633`；audit ready/fresh、1116/1116、missing/unmapped=0/0、
   close=212/212；sync 后 manifest `1 passed in 103.60s`，constraints/validate/scope/parity 全绿。
+- Terminal HEAD/tree=`f9bf5963`/`71fab867` 得到 Pascal PASS0、Confucius FAIL1；唯一 finding 是继续
+  要求提交已 committed+clean identity，现已删除；内容变化使双方旧 verdict 退役。
 
 ## Blockers / Risks
 
@@ -69,8 +71,6 @@
 
 ## Exact Next Steps
 
-1. 复核 receipt writeback 后 persisted truth 仍 ready/fresh；不得再次 truth sync。
-2. 提交唯一 clean current identity，确认 test仅+2/-2、禁止路径零差异和 handoff byte-identical。
-3. Pascal/Confucius 对相同 current HEAD/tree/formal-six 从零终审；任一 finding 成立则最小修复并双方重审。
-4. 双 PASS 后 push/PR、Codex review/check heartbeat、merge 与 detached fresh-main 验收。
-5. 仅在 WI212 mainline 验收后创建新的 T66 formal WI；不得在本分支实现或发布版本。
+1. Pascal/Confucius 对相同 current HEAD/tree/formal-six 从零终审；任一 finding 成立则最小修复并双方重审。
+2. 双 PASS 后 push/PR、Codex review/check heartbeat、merge 与 detached fresh-main 验收。
+3. 仅在 WI212 mainline 验收后创建新的 T66 formal WI；不得在本分支实现或发布版本。
