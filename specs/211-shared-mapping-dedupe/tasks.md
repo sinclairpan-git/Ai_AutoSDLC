@@ -82,8 +82,9 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 - **状态**：pending。
 - **依赖**：T11。
-- **完成**：10/10/120/23、Python 3.11 固定 digest + Python 3.12 同解释器 AST equality、0 private consumer、
-  72 importers、`plan.md` §3.3 唯一27 non-empty LOC executable 4-case corpus。
+- **完成**：10/10/120/23、Python 3.11 固定 digest + Python 3.12 同解释器 AST equality、授权目标边界之外的
+  `src/` product/runtime consumer=0、tracked identity attribute reads=0、72 importers、`plan.md` §3.3 唯一27
+  non-empty LOC executable 4-case corpus且binding lookup=1/进程。
 - **验证**：当前 Python 3.11 baseline 为4 observations、digest=`8c6d3e21ef...54e0`；return outcome显式保存
   每个结果dict的key顺序；103 direct、1162
   impact、72 cold imports；full baseline 只在 exact implementation base 跑一次。
@@ -93,8 +94,9 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **状态**：pending。
 - **依赖**：T12。
 - **文件**：现有 `tests/unit/test_frontend_contract_observation_provider.py`。
-- **验收**：新增一个4 non-empty LOC identity test；baseline 只因两个代表模块 objects 不同失败；结构门禁
-  另证全部10 aliases 指向同一 helper；与27 LOC harness 合计保护成本=31，0 新测试文件/fixture。
+- **验收**：新增一个4 non-empty LOC identity test；baseline 只因两个代表模块 objects 不同失败；该测试精确
+  产生2次 tracked proof-only private attribute reads且不做其他消费；结构门禁另证全部10 aliases 指向同一 helper；
+  与27 LOC harness 合计保护成本=31，0 新测试文件/fixture。
 
 ### T14 最小 GREEN
 
@@ -112,18 +114,21 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 - **依赖**：T14。
 - **验收**：implementation 4-case JSONL 与同环境 baseline 字节完全一致；Python 3.11 digest=
   `8c6d3e21ef...54e0`；104 direct、
-  1163 impact、72 imports 全绿。
+  1163 impact、72 imports 全绿；consumer scan为product/runtime=0、tracked identity reads=2、harness lookup=1/进程。
 
 ### T22 Rollback/reapply rehearsal
 
 - **状态**：pending。
 - **依赖**：T21 + exact `implementation_commit/tree`。
-- **验收**：disposable clone revert tree=baseline、reapply tree=`implementation_tree`；revert 重跑结构/4-case/
-  103 direct/1162 impact/72 imports，reapply 重跑结构/4-case/104 direct/1163 impact/72 imports。
+- **验收**：disposable clone revert tree=baseline、reapply tree=`implementation_tree`；revert 重跑结构/consumer
+  scan product-runtime/tracked/harness=`0/0/1`/4-case/103 direct/1162 impact/72 imports，reapply 重跑consumer
+  scan product-runtime/tracked/harness=`0/2/1`/4-case/104 direct/1163 impact/72 imports。
 - **回执**：之后的 evidence commit chain 只允许唯一 `t61-differential-rollback-receipt.json`、强制 root/scoped
   handoff 与必要机械 truth/manifest，形成 `evidence_review_head/tree`；`implementation_commit` 后产品和行为测试
   零变化。receipt 绑定 implementation/revert/reapply，禁止绑定自身 commit/tree/hash；review envelope 绑定
-  receipt、root/scoped handoff 与 truth/manifest blobs。
+  receipt、root/scoped handoff 与 truth/manifest blobs；receipt 必须分栏证明授权目标边界之外的 product/runtime
+  consumers=0、tracked identity attribute reads baseline/revert=0 与 candidate/reapply=2、disposable harness
+  binding lookup=1/进程，不得把测试或harness读取混入产品零值。
 
 ### T23 全量与 GAP 防回归
 

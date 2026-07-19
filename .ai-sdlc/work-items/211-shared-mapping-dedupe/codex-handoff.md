@@ -1,50 +1,49 @@
 # Continuity Handoff
 
-- Updated: 2026-07-18T22:51:41+00:00
-- Reason: WI211 第六轮安全 FAIL 后的 rollback impact 任务补齐
-- Goal: 取得 WI211 formal 同一 identity 双 PASS 并在实现前完成 formal mainline 验收
-- State: 前六轮 identity 均已失效；第六轮 T22 impact finding 已修复，第七轮合同、truth 与提交后门禁已冻结；承载本 handoff 的 clean tip 即第七轮 review identity；implementation 未授权
+- Updated: 2026-07-19T01:37:14Z
+- Reason: WI211 formal amendment terminal truth与manifest验收完成
+- Goal: 修正consumer证据口径并取得amendment双PASS、PR合并与fresh-main验收
+- State: amendment seed与terminal truth已完成；承载本handoff的clean tip即amendment review identity；产品/测试零修改，待双对抗评审
 - Stage: design
 - Work Item: 211-shared-mapping-dedupe
-- Branch: feature/211-shared-mapping-dedupe-docs
+- Branch: feature/211-shared-mapping-dedupe-formal-amendment
 
 ## Changed Files
-- .ai-sdlc/project/config/project-state.yaml
+- specs/211-shared-mapping-dedupe/spec.md
+- specs/211-shared-mapping-dedupe/plan.md
+- specs/211-shared-mapping-dedupe/tasks.md
+- specs/211-shared-mapping-dedupe/task-execution-log.md
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/211-shared-mapping-dedupe/codex-handoff.md
 - program-manifest.yaml
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
-- specs/211-shared-mapping-dedupe/plan.md
-- specs/211-shared-mapping-dedupe/spec.md
-- specs/211-shared-mapping-dedupe/task-execution-log.md
-- specs/211-shared-mapping-dedupe/tasks.md
-- tests/integration/test_repo_program_manifest.py
 
 ## Key Decisions
-- 只处理10-module exact mapping family；23 calls不改；formal/implementation/closure三PR隔离
-- baseline/revert=103/1162，implementation/reapply=104/1163；4-case JSONL与72 cold imports必须等价
-- canonical harness=27 non-empty、identity test=4，保护成本31=`floor(127×25%)`；最长行116/94
-- rollback绑定implementation identity；evidence chain仅允许receipt、强制handoff与必要机械truth/manifest，禁止receipt自绑定及implementation后产品/行为测试变化
-- Python 3.11固定AST digest、3.12同解释器比较；4-case跨平台只要求同解释器逐字节相等
-- active child只允许一个 mapped pre-close summary missing
+- 不在implementation PR偷改formal；amendment独立branch/worktree/PR
+- consumer分三层：授权的10 aliases/23 calls；授权边界外product/runtime=0；tracked identity reads按阶段0/2
+- plan §3.3 disposable harness另行固定binding lookup=1/进程，不与tracked test或product零值混算
+- receipt必须按baseline/revert与candidate/reapply分栏；产品、测试、harness、digest、预算与减重范围均不变
+- implementation分支暂停；amendment merge/fresh-main前不得继续修receipt或发implementation PR
+- amendment seed commit=`f483a0ef`；terminal truth只更新`program-manifest.yaml`，无其他治理副作用
 
 ## Commands / Tests
-- candidate spike raw +25/-147、non-empty +23/-127；baseline/candidate impact均1162；72 imports clean
-- readable corpus baseline/candidate=4、digest 8c6d3e21ef；last-wins mutation digest 636f787f84 且keys顺序不同；harness/identity=27/4 non-empty；3.11 AST body/full/call精确复现6602b868/6fb4192d/a62a6dee
-- diff-check、inline-backtick、YAML、placeholder、constraints、validate与protected扫描PASS
-- 第七轮 terminal truth sync/audit及提交后复验均ready/fresh，1111/1111、missing/unmapped=1/0、close=210/211、snapshot 3349b226；manifest exact两次=`1 passed`
-- 跨spec/plan/tasks direct/impact/import/rollback计数扫描一致；提交后constraints无BLOCKER、program validate PASS
+- Implementation Round1：Pascal `LEAN FAIL/findings=1`；Confucius `SAFETY FAIL/findings=2`
+- 两位reviewer均确认产品行为/结构/预算/回退无finding；candidate 104/1163/full3277、双端72 imports与tree algebra全绿
+- amendment当前仅4个child docs与两份handoff变更；`src/`、`tests/`尚未修改
+- executable scanner：aliases=10、product/runtime external=0、tracked baseline/candidate=`0/2`且private calls=0、harness lookup=1
+- formal-six=`63ca25a3baf059d06dce62220c399ef8597a33dd1b7f7b1d2a08aba4219678ce`；diff-check、parity、product/test/protected zero PASS
+- `verify constraints` no BLOCKERs；`program validate` PASS
+- truth sync snapshot=`a3086e7aec7d410703924698beb580de9ff186cf451ecadd9f4c9b084ef986c7`；audit=`ready/fresh`、1111/1111、unmapped=0、expected missing=1
+- manifest exact=`1 passed in 105.37s`；truth sync后仅manifest diff
 
 ## Blockers / Risks
-- PowerShell host前置崩溃，使用/bin/zsh fallback；implementation在formal双PASS/Codex/checks/merge/fresh-main前未授权
+- 当前无执行blocker；amendment任一表述仍混淆授权alias、tracked test与disposable harness即不得进入评审
+- PowerShell host仍因已知.NET regex assembly问题无法启动，门禁使用`/bin/zsh` fallback并记录
 
 ## Local PR Review
-- Candidate selection 双 PASS；terminal Round1～Round6均有成立 finding 且结论失效；Round7双审pending
+- Round1旧implementation/evidence identity整体失效；旧formal Round7 PASS也不得覆盖本amendment内容
+- amendment必须由Pascal与Confucius对同一新formal-six从零双审
 
 ## Exact Next Steps
-- 复算当前 clean tip 的HEAD/tree/formal-six/diff/truth、handoff parity与protected/product zero diff
-- Pascal/Confucius从零审查同一第七轮 identity；仅双PASS允许push/formal PR
+- 复算当前clean tip的HEAD/tree/formal-six/diff/truth、constraints、validate、protected/parity/clean
+- Pascal/Confucius对同一amendment identity从零双审；任一finding使双方结论失效并修复后全重审
+- 双PASS后push/PR、Codex review、required checks、merge与detached fresh-main验收
