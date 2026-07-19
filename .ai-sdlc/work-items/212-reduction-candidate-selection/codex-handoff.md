@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T09:04:04Z
-- Reason: WI212 Round 2 双 Agent findings 已处置，准备冻结 Round 3 identity
+- Updated: 2026-07-19T09:08:49Z
+- Reason: WI212 Round 3 前清除退役 disposition 与初稿 consumer 计数
 - Goal: 完成候选选择、父 L3 合同修订、同 identity 双审、PR 与 detached fresh-main 验收
-- State: 候选扫描与父合同窄修已完成；Round 2 双 FAIL 已接受；产品实现未授权
+- State: Round 2 双 FAIL 已接受；Round 3 首次派发在 verdict 前中止，证据表已修正；产品实现未授权
 - Stage: verify
 - Work Item: 212-reduction-candidate-selection
 - Branch: feature/212-reduction-candidate-selection-docs
@@ -38,6 +38,8 @@
   未冒充 PASS，terminal 只允许两值 +2/-2。
 - Round 2 exact HEAD/tree=`6c1c9b35`/`c64c438b`、formal-six=`104c020b...50774`：Pascal FAIL5、
   Confucius FAIL4；所有 findings 已按最小范围处置，旧 verdict 退役。
+- Round 3 首次派发后根线程发现 early scan table 仍写退役 Deferred、T65 consumer 仍是初稿计数；
+  两位 reviewer 在形成 verdict 前已中止。表格现与 Carver 精确调用/文件计数及 RC-09 结论一致。
 
 ## Blockers / Risks
 
@@ -55,7 +57,7 @@
 
 ## Exact Next Steps
 
-1. 提交 Round 2 finding 修订，复算 parent §9 formal-six canonical identity，确认 base diff 无行尾空格。
+1. 以恢复时已提交且 clean 的 current HEAD/tree 为唯一身份，复算 parent §9 formal-six，确认 base diff 无行尾空格；已满足时不得改写证据或制造新 identity。
 2. Pascal/Confucius 对相同 Round 3 HEAD/tree/formal-six 从零评审；任一 finding 成立则最小修复并双方重审。
 3. 双 PASS 后更新任务/日志，创建 child development summary，机械替换 manifest test 两值，保持 +2/-2。
 4. 执行一次 truth sync，更新两份 byte-identical handoff，跑 constraints/validate/truth/manifest/scope/parity。
