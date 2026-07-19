@@ -2053,10 +2053,10 @@ specs:
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
-  generated_at: '2026-07-19T21:49:50Z'
+  generated_at: '2026-07-19T22:06:05Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: a8f9c0da
+  repo_revision: 8a07eac6
   authoring_hash: a59fdb298fc649f0c089aec2bf3fa9253926a9a085939f48cadbce02dbf63df2
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
@@ -2099,7 +2099,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: e83564cb8f5c975a37f20911f0a4d8841176a753491ffb4a3f8cc2e6fd0f532b
+  snapshot_hash: 3a23373505c54d58fe04def1234e5cd5f320efce834f7d9da3c153cabb9ea602
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2117,8 +2117,8 @@ truth_snapshot:
     mapped_sources: 1126
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3685
-    deferred_signal_count: 6644
+    phase_signal_count: 3687
+    deferred_signal_count: 6646
     non_goal_signal_count: 394
     layer_totals:
       blueprint: 1
@@ -11770,8 +11770,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 214-workitem-readonly-adapter-side-effect
-      phase_signal_count: 15
-      deferred_signal_count: 17
+      phase_signal_count: 16
+      deferred_signal_count: 18
       non_goal_signal_count: 0
     - path: specs/214-workitem-readonly-adapter-side-effect/development-summary.md
       source_type: development_summary
@@ -11779,8 +11779,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 214-workitem-readonly-adapter-side-effect
-      phase_signal_count: 1
-      deferred_signal_count: 1
+      phase_signal_count: 2
+      deferred_signal_count: 2
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
