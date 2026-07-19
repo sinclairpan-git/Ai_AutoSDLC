@@ -238,7 +238,7 @@ T58 不计 Reduction Contract 收益；其 lifecycle fresh-main receipt 是 WI-2
 - **当前状态**：WI-212 已唯一选择九个 bounded frontend stage；WI-213 formal-only 已在 PR #158 /
   merge `450d4988` 完成，lifecycle reconciliation 也已由 PR #159 / merge `d5ad7616` 与 detached
   fresh-main 收口，冻结 45 methods=`3,638/3,305`、terminal≤720、产品净删≥2,918。当前独立
-  T58/WI-214 active；其 implementation fresh-main 关闭 GAP-15 后，才创建唯一 T66 implementation WI。
+  T58/WI-214 active；其 lifecycle reconciliation fresh-main 关闭 GAP-15 后，才创建唯一 T66 implementation WI。
   该 WI 必须先 T61A 和双 readiness GO，随后 candidate PR 保留 legacy、完成主线预发布稳定周期，再以
   独立 PR 删除 legacy。
 - **范围**：每个子 WI 只迁移一个领域；`ProgramService` 暂作薄 facade。

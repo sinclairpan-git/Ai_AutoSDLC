@@ -146,3 +146,15 @@
 - Round 1 的五项 finding 已被双方确认实质闭合；Round 2 三项新增 finding 全部接受并继续减去重复证据。
 - 精确 targeted 命令加入 `tests/unit/test_cli_hooks.py`；仍只有一个新增测试文件，不新增测试 DSL/fixture framework。
 - Formal-six 已变化，Round 2 verdict 全部退役；提交后必须对新 identity 进行 Round 3 双审。
+
+## 9. Batch 2026-07-19-005：formal Round 3 split verdict
+
+- identity：HEAD=`fb08062a802e8055f6ba87fa87731f49c52b54fb`、tree=
+  `a654cd607613d4737ee1917c0ad8a3abd40534f2`、formal-six=
+  `c92563fbc12866b57741e10f0ff2125fabb9cf1e9e65384fe36f3350636bee55`；clean、只读。
+- Pascal/LEAN=`PASS`、findings=0，确认 15 sentinel + 1 representative real-hook A/B + 1 shared
+  partial-write 是最小充分证据，三阶段各有独立职责。
+- Confucius/SAFETY=`FAIL`、findings=1：parent plan 仍有一句把 GAP-15 关闭写在 implementation
+  fresh-main 后，与 lifecycle closure 合同冲突。Finding 成立，只把该句改为 lifecycle reconciliation
+  fresh-main 关闭；不改 child 设计、测试矩阵、源码或路线预算。
+- 单行 formal 变化使 Round 3 两份 verdict 同时退役；提交后必须对新 identity 进行 Round 4 双审。
