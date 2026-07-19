@@ -3,7 +3,7 @@
 - Updated: 2026-07-19T17:11:50Z
 - Reason: 处置 WI213 lifecycle 对抗复审 Round 1 的三项成立 finding
 - Goal: 完成 WI213 formal lifecycle reconciliation，然后从 fresh main 创建独立 T58/GAP-15
-- State: 过早 T58 授权、handoff 重复提交与 stale base/scope 已做最小修正；待提交、truth/gates 与同 identity 双审
+- State: Round 1 三项 finding 已最小修正，correction source/truth 已完成；待本地 gates 与同 identity 双审
 - Stage: decompose
 - Work Item: 213-programservice-bounded-stage-reduction
 - Branch: codex/213-programservice-bounded-stage-reduction-lifecycle
@@ -89,6 +89,9 @@
 - Lifecycle gates：constraints no BLOCKER、program validate PASS、truth audit=`ready/fresh 1121/1121`；
   targeted=`165 passed, 474 deselected in 8.45s`，manifest exact=`1 passed in 155.19s`；diff/scope/
   handoff parity/Cursor/source ancestry/clean 全绿。
+- Round 1 correction source=`4f113788`；truth sync=`ready`、snapshot=`7b7af6ae...d4f9`，inventory=
+  `1121/1121`、unmapped/missing=`0/0`、spec/plan/tasks/execution/close=`213/213`。上一条 lifecycle
+  gates 只属于修订前 identity，当前 identity 须重跑。
 
 ## Blockers / Risks
 
@@ -121,8 +124,8 @@
 
 ## Exact Next Steps
 
-1. 若本轮三项 finding correction 仍未提交，只提交一次；已提交则 no-op。
-2. 在 correction source commit 上同步 truth，完成 gates 并确认 committed+clean identity/formal-six。
+1. 若当前 manifest/handoff receipt 仍未提交，只提交一次；已提交则 no-op。
+2. 完成 correction identity 的 gates 并确认 committed+clean identity/formal-six。
 3. Pascal/Confucius 对该同一 lifecycle identity 独立复审，必须双 PASS0。
 4. 推送并创建 lifecycle PR，完成 Codex current-head review、required checks、merge 与 detached fresh-main。
 5. lifecycle fresh-main 后从 main 创建独立 T58/GAP-15 WI；T58 fresh-main 后才进入 T66 T61A。
