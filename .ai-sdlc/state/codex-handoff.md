@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T22:52:28Z
-- Reason: Amendment 已 merge/fresh-main；implementation RED/GREEN/full gates 全绿，进入 terminal truth
+- Updated: 2026-07-19T22:59:17Z
+- Reason: Implementation terminal source 已冻结；final manifest-only truth 后直接进入同身份双审
 - Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
-- State: T21-T24 completed；一行产品修复与聚焦测试已 committed，T31 terminal truth in progress
+- State: T21-T31 completed；一行产品修复、回归与 terminal continuity 已冻结，等待 final identity 双审
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-dev
@@ -13,6 +13,7 @@
 
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/214-workitem-readonly-adapter-side-effect/codex-handoff.md
+- program-manifest.yaml
 - src/ai_sdlc/cli/workitem_cmd.py
 - specs/214-workitem-readonly-adapter-side-effect/development-summary.md
 - specs/214-workitem-readonly-adapter-side-effect/task-execution-log.md
@@ -39,11 +40,13 @@
 - Test-only commit=`8f4f63dd`；detached RED=`16 failed, 33 passed in 16.27s`，失败范围与合同一致。
 - Product commit=`bd8a0de2`；targeted GREEN=`49 passed in 15.14s`；full=`3302 passed, 3 skipped in 673.22s`。
 - Ruff lint/V4a PASS；V4b 13 emitted ranges PASS；constraints no BLOCKERs；diff-check PASS。
-- Cursor protected rule SHA 保持 `d5f04acf...0b6a`；尚未执行 implementation terminal truth sync。
+- Terminal source=`581cf344`；首个 truth snapshot=`034f3464...d732`、inventory=`1126/1126`、manifest-only
+  commit=`e68ae027`；final manifest refresh 后不再反写 tracked source。
+- Cursor protected rule SHA 保持 `d5f04acf...0b6a`；final identity 只有全部 T31 gates 通过才可送审。
 
 ## Blockers / Risks
 
-- Implementation terminal truth、双 PASS0、PR/CI/merge/detached fresh-main 前不得开始 lifecycle reconciliation。
+- Implementation 双 PASS0、PR/CI/merge/detached fresh-main 前不得开始 lifecycle reconciliation。
 - handoff CLI 依据旧 WI208 checkpoint 写错 scoped copy；已用 apply_patch 恢复 WI208/resume-pack，并直接维护
   当前 WI214 root/scoped byte-identical，禁止把错误路由变化带入 implementation。
 
@@ -55,7 +58,7 @@
 
 ## Exact Next Steps
 
-- 提交 implementation execution/continuity source，执行 terminal truth sync/audit 与 manifest/scope/parity/Cursor/clean gates。
-- 对新的 committed+clean implementation identity 重跑 targeted/full/Ruff/V4/constraints 后，让双 Agent 从零审到 PASS0。
+- 对 final manifest-only truth 后的 committed+clean identity 完成 targeted/full/Ruff/V4/constraints/truth/scope gates，
+  让 Pascal/LEAN 与 Confucius/SAFETY 从零审到 PASS0。
 - 双 PASS0 后开 implementation PR、请求 Codex current-head review、等待 checks、merge 并 detached fresh-main。
 - Implementation fresh-main 通过后创建独立 lifecycle reconciliation；不得提前关闭 GAP-15/T58 或放行 T66。

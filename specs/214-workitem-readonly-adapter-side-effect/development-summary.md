@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal/amendment 均已 merge/fresh-main；implementation RED/GREEN/full gates 全绿，terminal truth 中
+**当前状态**：formal/amendment 已 merge/fresh-main；implementation T21～T31 completed，待 final identity 双审/PR
 
 ## 已冻结合同
 
@@ -40,8 +40,8 @@
 - 已完成：current-main 根因、范围、expected delta、最小设计、测试与异常矩阵、生命周期/回退合同、
   authoring 对抗评审收敛；formal PR #160 与 amendment PR #161 merge/detached fresh-main；implementation
   test-only/product 两提交、RED/GREEN、full/Ruff/V4/constraints。
-- 已开始：implementation terminal truth/handoff；尚未完成 implementation 双审/PR/checks/merge/fresh-main。
-  尚未开始：lifecycle PR、T66 T61A。
+- 已完成：implementation terminal truth/handoff/source freeze；尚未完成 implementation 双审/PR/checks/merge/
+  fresh-main。尚未开始：lifecycle PR、T66 T61A。
 - GAP-15/T58、T66、GAP-03、WI196、RC-08 与 release 均保持 open；当前禁止版本/tag/Release/PyPI/
   共享 CLI 更新。
 - Implementation 预审发现 formal V4 错把主线 273 个历史 formatter-red 文件设为全库零债务门禁；独立
@@ -54,3 +54,5 @@
 - Implementation 在 `FORMAT_BASE_SHA=8999efcf...a1b7` 上重放：test-only `8f4f63dd` RED=
   `16 failed/33 passed`；一行产品 commit `bd8a0de2` 后 targeted=`49 passed`、full=`3302 passed/3 skipped`；
   V4b 对 13 个 changed ranges 全绿，无全库历史格式化或范围扩张。
+- Terminal continuity source=`581cf344`、首个 truth snapshot=`034f3464...d732`；最终 reviewed identity 只允许
+  manifest-only truth refresh，持久下一步从双审开始，避免重复 sync。

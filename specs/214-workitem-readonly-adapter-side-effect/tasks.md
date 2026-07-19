@@ -112,12 +112,14 @@ related_doc:
 
 ### T31 冻结 implementation terminal truth 与本地门禁
 
-- **状态**：in_progress
+- **状态**：completed
 - **依赖**：T24
 - **验收**：先完成 execution log、real-hook/RED/GREEN receipt、program truth、root/scoped handoff；再跑
   `uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`、
   `uv run --python 3.11 pytest -q`、Ruff check/format、constraints、validate/truth、manifest exact、scope/
   parity/Cursor/clean，最后提交并冻结 terminal identity。
+- **完成**：execution/continuity source 与 manifest 分离提交；final truth snapshot fresh 后对 committed+clean
+  identity 重跑全部列示门禁，结果作为双审外部 receipt，不反写 source。
 
 ### T32 implementation 最终双审、PR、CI、merge 与 fresh-main
 

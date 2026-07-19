@@ -331,3 +331,16 @@
   351-352, 353-371, 373-375, 447-453, 454-457, 458-462, 463-468, 469-487`，全部 formatter-clean。
 - T21～T24 完成。下一步只做 implementation terminal truth/handoff/gates 与同身份双审；在 T32
   fresh-main 前 GAP-15/T58 仍 active、T66 T61A 仍 blocked。
+
+## 23. Batch 2026-07-19-019：implementation terminal source freeze
+
+- Execution/continuity source commit=`581cf344`；首个 truth sync snapshot=
+  `034f346489b0b9a233208098ab453a245928d222bd90040392625193ff80d732`、inventory=`1126/1126`、
+  missing/unmapped=`0/0`、各层=`214/214`，manifest-only commit=`e68ae027`。
+- 为避免 T31 永久停在 `in_progress` 或 final gate receipt 反写后立即令 truth stale，本 source 把 T31、summary 与
+  byte-identical handoff 预置为持久终态：final manifest-only sync 后直接进入同身份双审，不再要求续接 agent
+  重复 truth sync。
+- 本 source 后必须再次 terminal truth sync，并只在新的 committed+clean identity 上重跑 targeted/full、Ruff
+  lint/V4a/V4b、constraints、validate/audit、manifest exact、scope/parity/Cursor/diff-check。任一失败即不得送审；
+  成功结果作为 reviewer/PR 外部 receipt，不再修改 tracked source。
+- T31 完成边界不关闭 GAP-15/T58；T32 implementation fresh-main 前 lifecycle/T66 继续 blocked。
