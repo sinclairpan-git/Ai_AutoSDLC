@@ -241,3 +241,14 @@
 - Amendment pre-commit gates：`program validate` PASS、`verify constraints` no BLOCKERs、manifest exact
   `1 passed in 105.58s`、全库 formatter diagnostic 仍为 `273 red/133 green`、`src/tests/deps/workflow`
   零差异、root/scoped handoff byte-identical、Cursor base SHA/diff 与 `git diff --check` 全绿。
+
+## 16. Batch 2026-07-19-012：V4 amendment final review Round 1 FAIL
+
+- Exact identity：HEAD=`a91bbba3d4c23e69e69b22cd35573c01ed205dbe`、tree=
+  `b7203febeb8cd8ce28a36243dad4dd8dc61738c1`、clean；Pascal/LEAN=`FAIL2`、Confucius/SAFETY=`FAIL1`。
+- 双方重叠 P2 成立：V4b 使用动态 `origin/main...HEAD`，fresh-main 会退化为空 diff；只比较 273 个 red
+  文件也允许路径一增一减抵消或 legacy-red 文件内部新增债务。
+- Pascal P3 成立：summary/handoff 仍把已完成的 terminal truth/gates 写成下一步，续接状态陈旧。
+- 最小修正冻结 amendment fresh-main `FORMAT_BASE_SHA`，以 exact PowerShell 程序比较规范化 red path set
+  subset，并对两个 legacy 文件的 fixed-base changed ranges 执行 Ruff range check；handoff/summary 在新一轮
+  terminal sync 后改为 review-ready。Round 1 两份 verdict 同时退役，产品/测试仍零差异。

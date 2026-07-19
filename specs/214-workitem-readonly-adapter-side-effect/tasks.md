@@ -64,6 +64,8 @@ related_doc:
 - **状态**：pending
 - **依赖**：T15
 - **验收**：branch=`feature/214-workitem-readonly-adapter-side-effect-dev`；clean worktree；formal truth fresh。
+- **格式基线**：RED 前把 `FORMAT_BASE_SHA` 冻结为本 amendment detached fresh-main exact SHA，后续 dev/PR/
+  merge/fresh-main 不得改用动态 `origin/main`。
 
 ### T22 建立 RED 分发与兼容证明
 
@@ -93,8 +95,9 @@ related_doc:
 - **精确 targeted**：`uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`
 - **全量/静态门禁**：`uv run --python 3.11 pytest -q`；`uv run --python 3.11 ruff check src tests`；
   `uv run --python 3.11 ruff format --check tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py`；对 formal base 已 formatter-red 的 `workitem_cmd.py` 与
-  `test_cli_workitem_init.py` 运行 `ruff format --diff` baseline-delta，要求无新增 overlap hunk且全库 debt 不高于
-  base 的 273；`uv run --python 3.11 ai-sdlc verify constraints`；`git diff --check`。
+  `test_cli_workitem_init.py` 执行 plan §5.3 的 fixed-base V4b 程序，要求 candidate red path set 是 base set
+  子集且全部 candidate changed range format-check 通过；`uv run --python 3.11 ai-sdlc verify constraints`；
+  `git diff --check`。
 
 ## Batch 3：implementation truth、review 与 mainline
 

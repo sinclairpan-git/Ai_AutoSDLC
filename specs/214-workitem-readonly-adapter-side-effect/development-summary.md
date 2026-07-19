@@ -43,3 +43,5 @@
   共享 CLI 更新。
 - Implementation 预审发现 formal V4 错把主线 273 个历史 formatter-red 文件设为全库零债务门禁；独立
   amendment 仅改为 changed-file strict + legacy baseline-delta，不授权格式化非范围文件或放宽其他门禁。
+- Amendment final review Round 1 对 `a91bbba3` 一致否决动态 base/count-only 判定；当前改为固定
+  `FORMAT_BASE_SHA`、red path set subset 与 changed-range Ruff check，待重新 sync/gates 后同身份双审。

@@ -92,13 +92,70 @@ project-config bytes 的 SHA-256、`git status --porcelain=v1 -uall`、stdout/st
 - `V2`：`uv run --python 3.11 pytest -q`
 - `V3`：`uv run --python 3.11 ruff check src tests`
 - `V4a`：`uv run --python 3.11 ruff format --check tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py`
-- `V4b`：`uv run --python 3.11 ruff format --diff src/ai_sdlc/cli/workitem_cmd.py tests/integration/test_cli_workitem_init.py`；这两个 legacy 文件在 formal base `d7f8b163` 已 formatter-red，故本命令是 baseline-delta 证据而非零退出门禁。受审 diff 不得新增与 `origin/main...HEAD` 修改行重叠的 formatter hunk；全库诊断的 formatter-red 文件数不得高于 base 的 273。
+- `V4b`：按下方 fixed-base 程序执行 formatter-red 路径集合与 changed-range 门禁；这两个 legacy 文件在
+  formal base `d7f8b163` 已 formatter-red，禁止用动态 `origin/main` 或只比较 red 文件数量。
 - `V5`：`uv run --python 3.11 ai-sdlc verify constraints`
 - `V6`：`git diff --check`
 
 V1 的 RED 只允许新 dispatch assertions 失败；`init/link` legacy characterization 必须保持绿。GREEN、
 implementation final identity 和 fresh-main 均重跑 V1～V3、V4a/V4b、V5～V6；跨平台 required checks
 重跑 full pytest。不得为使历史全库 formatter 诊断变绿而格式化非范围文件。
+
+#### V4b fixed-base 可执行程序
+
+T21 在 RED 前把 `FORMAT_BASE_SHA` 冻结为本 amendment 的 detached fresh-main exact SHA，写入 implementation
+execution log 与 handoff；dev、PR、merge、fresh-main 始终使用该固定 SHA。以下 PowerShell 程序要求 candidate
+formatter-red 路径集合是 base 集合的子集，并对两个 legacy-red 文件的每个 candidate changed range 执行
+Ruff range check。路径统一为 `/` 且排序去重；任一新增 red path、range format failure 或 base 不可达均失败。
+
+```powershell
+$env:FORMAT_BASE_SHA = "<amendment detached fresh-main exact SHA>"
+$legacyFiles = @(
+  "src/ai_sdlc/cli/workitem_cmd.py",
+  "tests/integration/test_cli_workitem_init.py"
+)
+$baseDir = Join-Path ([IO.Path]::GetTempPath()) ("wi214-format-" + [guid]::NewGuid())
+
+function Get-FormatterRedPaths([string]$root) {
+  Push-Location $root
+  try {
+    @(& uv run --python 3.11 ruff format --check src tests 2>&1) |
+      Where-Object { $_ -match '^Would reformat:\s+(.+)$' } |
+      ForEach-Object { $Matches[1].Replace('\', '/') } |
+      Sort-Object -Unique
+  } finally { Pop-Location }
+}
+
+git worktree add --detach $baseDir $env:FORMAT_BASE_SHA
+if ($LASTEXITCODE -ne 0) { throw "FORMAT_BASE_SHA is not reachable" }
+try {
+  $baseRed = @(Get-FormatterRedPaths $baseDir)
+  $candidateRed = @(Get-FormatterRedPaths (Get-Location).Path)
+  $newRed = @(Compare-Object $baseRed $candidateRed |
+    Where-Object SideIndicator -eq '=>')
+  if ($newRed) { throw "new formatter-red paths: $($newRed.InputObject -join ', ')" }
+
+  foreach ($file in $legacyFiles) {
+    $patch = (& git diff --unified=0 "$env:FORMAT_BASE_SHA...HEAD" -- $file) -join "`n"
+    foreach ($match in [regex]::Matches(
+      $patch, '(?m)^@@ [^+]*\+(?<start>\d+)(?:,(?<count>\d+))? @@')) {
+      $start = [int]$match.Groups['start'].Value
+      $count = if ($match.Groups['count'].Success) {
+        [int]$match.Groups['count'].Value
+      } else { 1 }
+      if ($count -eq 0) { continue }
+      $end = $start + $count - 1
+      uv run --python 3.11 ruff format --check --range "$start-$end" $file
+      if ($LASTEXITCODE -ne 0) { throw "formatter debt in $file range $start-$end" }
+    }
+  }
+} finally {
+  git worktree remove --force $baseDir
+}
+```
+
+Implementation reviewed HEAD 必须记录本程序的 base/candidate red path 集合摘要与每个 emitted range；merge 后先
+证明 merge tree 等于 reviewed tree，再在 detached fresh-main 对相同 `FORMAT_BASE_SHA` 重跑，不复用动态 diff。
 
 ## 6. 分阶段执行
 
