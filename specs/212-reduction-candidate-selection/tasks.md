@@ -1,7 +1,7 @@
 # 任务分解：AI-SDLC 精益减重候选选择
 
-**编号**：`212-reduction-candidate-selection`  
-**来源**：`spec.md + plan.md`  
+**编号**：`212-reduction-candidate-selection`
+**来源**：`spec.md + plan.md`
 **分支类型**：docs-only formal；禁止产品 execute
 
 ## Batch 1：fresh-main 扫描

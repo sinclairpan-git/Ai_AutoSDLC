@@ -1,8 +1,8 @@
 # 功能规格：AI-SDLC 精益减重候选选择
 
-**功能编号**：`212-reduction-candidate-selection`  
-**创建日期**：2026-07-19  
-**状态**：只读候选决策；未授权产品实现  
+**功能编号**：`212-reduction-candidate-selection`
+**创建日期**：2026-07-19
+**状态**：只读候选决策；未授权产品实现
 **类型**：WI-196 / T63～T67 候选选择与 L3 路线缺口修正
 
 ## 1. 背景与基线
@@ -43,11 +43,15 @@
 
 | 路线 | fresh-main 证据 | 保守收益/成本 | 本轮结论 |
 |---|---|---|---|
-| T63 `_write_yaml` | 11 个完全相同定义/72 calls，121 行 | 保留 local alias 后保守净删 raw≥95/non-empty≥100；proof cap≤31 | Deferred L1 Go；优先级低于结构主线 |
+| T63 `_write_yaml` | 11 个完全相同定义/72 calls，121 行 | product additions≤31 + proof≤31 =62，超过 `floor(121×25%)=30` | RC-09 No-Go；产品净删预测不能抵消合并保护成本超限 |
 | T63 `ProgramService.__post_init__` | 15 个完全相同 8 行实现，共 120 行 | 需要改变 dataclass 继承/构造边界，净收益小且语义风险高 | No-Go（本轮） |
-| T63 `_find_duplicates` | 11 个完全相同定义/45 calls，共 88 行；11 模块已依赖同一 `_string_lists` | 保守净删 raw≥78/non-empty≥80；product additions≤21、proof cap≤22 | Deferred L1 Go；小收益不得阻塞 T66 |
+| T63 `_find_duplicates` | 11 个完全相同定义/45 calls，共 88 行；11 模块已依赖同一 `_string_lists` | product additions≤21 + proof≤22 =43，超过 `floor(88×25%)=22` | RC-09 No-Go；独立扫描把 product/proof 分开计费的 Go 结论退役 |
+| T63 core tuple `_dedupe_text_items` | 7 defs/69 calls，共 63 行 | product≤18 + proof≤15 =33，超过 `floor(63×25%)=15` | RC-09 No-Go |
+| T63 CLI/gate list `_dedupe_text_items` | 6 defs/11 calls，共 54 行 | product≤17 + proof≤13 =30，超过 `floor(54×25%)=13` | RC-09 No-Go |
+| T63 `_program_truth_gate_surface` | 2 defs/2 calls，共 70 行，涉及 fail-closed truth | product≤47 + proof≤16 =63，超过 `floor(70×25%)=17` | RC-09 No-Go；且保持 L2 |
+| T63 `_dedupe_model_items` / `_git_text` | 分别 36/23 行 gross | product+proof 分别≤26/6，超过 cap 9/5 | RC-09 No-Go |
 | T64 Loop Store | 既有 fresh-main 审计只定位 39 行完全一致切片 | helper 与恢复/损坏输入保护超过 RC-06 | RC-09 No-Go 保持；不重开 |
-| T65 Page/UI builder | 317/315 raw/non-empty；正常多行 YAML 207 行 | loader/resource/guard 后乐观成本约 227/225，净删约 90；需 package/wheel/offline proof | Deferred L2 Conditional Go；须 standalone disposable spike |
+| T65 Page/UI builder | 317/315 raw/non-empty；正常多行 YAML 207 行 | 乐观 candidate 227 单独已超过 `floor(317×25%)=79`，再加 proof 建议上限 60 只会扩大超支 | 预测 RC-09 No-Go；不得先写 resource/loader/spike |
 | T65 其余五 builder | Theme/Quality/Cross/Expansion/Runtime 为 128/172/242/89/77 raw LOC | 乐观 YAML+最小 loader 成本仍为 ≥132/166/244/91/133；四项净增，一项低于10% | 预测 No-Go；后续逐项 standalone receipt |
 | T67 九个 finalization CLI handler | 当前九段源码与 WI-203 baseline 逐字一致，2,020 行；旧预测净删至少 1,501 行 | WI-204 已实证可信保护最低为 222/356 行，旧 hard cap 180，sponsor revoked、claim=0 | Deferred；不得复用旧 formal，且应在 T66 改变重叠 service baseline 后重新扫描 |
 | **T66 bounded-stage ProgramService domain** | 九阶段 45 个方法，物理 3,638 行、可执行职责 3,305 行；详见 §4 | 预测产品净删至少 2,947 行；现有 165 个相关 service/CLI 测试可复用 | **Conditional Go：唯一下一候选** |
@@ -100,15 +104,17 @@ T63 的两行 Pydantic validator wrapper 不视为可直接删除的 exact famil
 |---|---|
 | RC-01 | 仅 §4.1 的 45 个方法和一个同领域 private module；27 个既有 callable 保持 |
 | RC-02 | target physical=3,638；executable responsibility=3,305；`program_service.py`=17,474 |
-| RC-03 | 新 private module≤380 行；deletion 后 ProgramService facade body 合计≤81 行；import/selector glue≤5 行；公共抽象=0；新增依赖=0 |
-| RC-04 | 原文件目标职责≥90% 收敛：3,305→≤81；目标切片终态≤466 行；产品净删≥3,172 行；九阶段镜像分支 100% 消除 |
+| RC-03 | 新 private module≤380 行；27 个 public callable 的 225 行签名/header 原位保留；deletion 后 facade body 合计≤81 行；import/selector glue≤5 行；公共抽象=0；新增依赖=0 |
+| RC-04 | 原文件可执行职责≥90% 收敛：3,305→≤81；目标切片终态≤691 行；产品净删≥2,947 行；九阶段镜像分支 100% 消除 |
 | RC-05 | legacy 共存时新增产品≤466 行；硬上限 `min(3638×15%,1000)=545`，余量≥79 |
-| RC-06 | product/test/harness/normalizer additions 合计≤686；其中新增 test/harness/normalizer≤220；`floor(3172×25%)=793`，保留≥107 行缓冲；既有四个已关闭 reduction 的 RC-06 cap 合计=161，本候选纳入后路线累计≤847≤1,500 |
+| RC-06 | product/test/harness/normalizer additions 合计≤686；其中新增 test/harness/normalizer≤220；`floor(2947×25%)=736`，保留≥50 行缓冲；按当前合并口径保守计入既有四项上限 27/54/49/54=184，本候选纳入后路线累计≤870≤1,500 |
 | RC-07 | 新文件≤400 行；新函数≤50 行；只允许 private stage definition/engine，九个当前调用者满足 LP-02 |
 | RC-09 | 任一预算超限、出现 stage-specific `if/match` 堆叠、不能复用现有测试、任一语义差异或需第二领域时立即 No-Go |
 | RC-10 | before/after、AST/LOC、45-symbol map、九阶段 differential、rollback/reapply、cross-platform/install/offline/sibling smoke 全部落盘 |
 
-预计 `program_service.py` 本切片减少至少 3,552 行，文件从 17,474 行下降到不高于 13,922 行；全产品计入新 module 后净删至少 3,172 行。这只是一个领域切片，不代表文件或 RC-08 终态达成。
+预计 `program_service.py` 保留 public header 225、facade body≤81 与 glue≤5 后，本切片减少至少
+3,327 行，文件从 17,474 行下降到不高于 14,147 行；全产品再计入新 module≤380 后净删至少
+2,947 行。这只是一个领域切片，不代表文件或 RC-08 终态达成。
 
 ## 5. L3 稳定周期与发布禁令的统一解释
 

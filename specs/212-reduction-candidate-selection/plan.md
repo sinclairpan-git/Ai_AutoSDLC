@@ -1,8 +1,8 @@
 # 实施计划：AI-SDLC 精益减重候选选择
 
-**编号**：`212-reduction-candidate-selection`  
-**日期**：2026-07-19  
-**规格**：`specs/212-reduction-candidate-selection/spec.md`  
+**编号**：`212-reduction-candidate-selection`
+**日期**：2026-07-19
+**规格**：`specs/212-reduction-candidate-selection/spec.md`
 **交付类型**：docs-only formal；不进入 execute
 
 ## 1. 目标与策略
@@ -34,7 +34,7 @@
 | MUST-2 可验证 | 每个数值绑定 revision、symbol 和可执行 recipe |
 | MUST-3 范围/验证/回退 | docs-only 独立 commit/PR；revert 不影响运行时 |
 | MUST-4 状态外化 | WI212 execution log、manifest 与双 handoff 同步 |
-| MUST-5 产品隔离 | 产品、测试、runtime rule 和 workflow 零差异 |
+| MUST-5 产品隔离 | 产品、测试逻辑/LOC、runtime rule 和 workflow 零差异；test 唯一例外为 manifest inventory/close 两值 `+2/-2` 等量替换 |
 | LP-01/10 | 不以 LOC 替代兼容；Conditional Go 有净删和停止阈值 |
 | LP-02/03 | 只服务九个当前 stage；不造 future extension point |
 | LP-05/12 | ProgramService 保留 thin facade；下一 WI 完成 candidate+stability+deletion 后才关闭 |
