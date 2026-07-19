@@ -60,6 +60,7 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 | GAP-12 | 已关闭 | WI-207：formal PR #140、implementation PR #139、test-isolation repair PR #141；merge `8d8b8f96` 的 fresh-main real-hook/focused/full/Ruff/治理门禁全绿且 repository state clean | T55 已完成；回退 PR #139 或 #141 会重开本项 | 否 |
 | GAP-13 | 已关闭 | WI-208 / PR #143 / merge `f51c176a`：共同 builder 以 canonical sources portable/lossless 重建 root/scoped resume-pack，保留 branch、active files、context 与 raw-byte convergence | T56 已完成；fresh-main relocation/focused/full/Ruff/治理门禁全绿，保护文件与 clean state 不变；回退 PR #143 会重开本项 | 否 |
 | GAP-14 | 已关闭 | `comment_policy._is_comment_line()` 曾按 stripped diff line 判断前缀；WI-209 在 `main@85bdedac` 复现 single/double quoted scalar 续行均产生 1 finding，而 PyYAML token 实际跨越该内容行 | T57 / WI-209：formal PR #145/merge `46156c24` 与 implementation PR #146/merge `31aad572`；Round 15 双 Agent、Codex current-head、22/22 checks 与 fresh-main focused/full/Ruff/治理/clean-state 全部通过；回退 PR #146 会重开，且本项不计 RC-08 | 否 |
+| GAP-15 | 基础缺陷（open） | `main@e184c8e2`：`program validate` 前后 `.cursor/rules/ai-sdlc.mdc` SHA-256 均为 `d5f04acf...0b6a`；只读 `workitem plan-check --json` 却输出 `IDE adapter (cursor): installed 1 file(s)` 并将 SHA 改为 `02d9656d...e134`，产生 `+18/-6` tracked diff。根因是 `workitem` callback 对除 `init` 外全部子命令无条件调用 adapter hook | T58：独立 WI/branch/PR；只隔离 `plan-check/guard/close-check/branch-check/truth-check` 等只读命令的隐式 refresh，保留 `init/link` 既有写语义；T66 T61A 前关闭 | 否 |
 
 每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
 
@@ -102,7 +103,7 @@ CC-05 描述默认授权合同，不追溯删除已经显式定义的 preflight/
 
 ### 6.1 非减重变更合同
 
-T51、T52、T53A、T53B、T54、T55、T56、T57 属于缺陷/truth 修复，使用 NC-01～NC-06，不强迫承担减重阈值：
+T51、T52、T53A、T53B、T54、T55、T56、T57、T58 属于缺陷/truth 修复，使用 NC-01～NC-06，不强迫承担减重阈值：
 
 - **NC-01**：冻结可复现的 observed/expected behavior 和基线 revision。
 - **NC-02**：列出受影响 CC、文件/符号、truth/fixture 影响分析；缺失或不确定时 fail-closed。
@@ -132,7 +133,7 @@ WP-03～WP-07 的每个减重候选在编码前冻结以下字段；缺一项不
 
 | 子项 | 强制合同 |
 |---|---|
-| T51/T52/T53A/T53B/T54/T55/T56/T57 | NC-01～NC-06 + 受影响 CC；RC 不适用 |
+| T51/T52/T53A/T53B/T54/T55/T56/T57/T58 | NC-01～NC-06 + 受影响 CC；RC 不适用 |
 | WP-01 | RC-01～RC-03、RC-06、RC-07、RC-09、RC-10 + impact analysis 选出的 CC；Phase A/B 落实 CC |
 | WP-02 | RC-01～RC-03、RC-06、RC-07、RC-09、RC-10 + CC-01/02/03/05/06/07；代码指标与合同 admission 两个规则族都经历 report/warning/blocking，使用独立状态/回退开关 |
 | WP-03/WP-04/WP-05 | RC-01～RC-07、RC-09、RC-10 + impact analysis 选出的 CC；RC-04 按重复/候选类型解释 |
@@ -157,13 +158,18 @@ T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy
 三项都先红后绿，且不计为减重成果。由于它们会污染治理证据、恢复状态或阻断合法变更，路线在继续
 新的 T63/T65/WP-06/WP-07 候选前先顺序关闭 T55、T56、T57。
 
+GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP-12 回归：`program validate` 的
+只读 bytes 仍稳定，但 `workitem` subapp callback 在只读子命令进入 handler 前无条件刷新 adapter。T58 必须
+在独立 WI/branch/PR 中以 RED/GREEN bytes、输出与 clean-tree 证明关闭；WI-213 只登记事实并恢复 adapter
+到 base bytes，不实施修复。由于该缺陷会污染 T61A baseline，T58 fresh-main receipt 是 T66 T61A 的硬前置。
+
 兼容、安全或授权边界不得用 waiver 绕过。GAP-09～GAP-11 已由 WI-199～WI-201 关闭，不再是开放阻断依赖；后续目标切片仍须落盘 inheritance、adapter consumption 与 source inventory 的防回归影响分析。分析缺失或不确定，或 truth 再次出现对应 blocker、unmapped 或 §3 允许边界之外的 missing source 时，必须 fail-closed、登记 owner/证据并重开对应 GAP；truth 保持关闭条件时不得重复执行 T53A/T53B/T54。
 
 ## 8. 功能需求
 
-- **FR-01**：GAP-01～GAP-14 必须有证据、边界、责任子项和关闭证据索引。
+- **FR-01**：GAP-01～GAP-15 必须有证据、边界、责任子项和关闭证据索引。
 - **FR-02**：实现子项必须按 §6.3 适用矩阵 fail-closed 校验 NC、CC 与 RC；不允许伪造 N/A 绕门。
-- **FR-03**：GAP-07、GAP-08、GAP-12、GAP-13、GAP-14 每项使用独立 WI/branch/PR，先红后绿验证原始缺陷。
+- **FR-03**：GAP-07、GAP-08、GAP-12、GAP-13、GAP-14、GAP-15 每项使用独立 WI/branch/PR，先红后绿验证原始缺陷。
 - **FR-04**：WP-01 只覆盖目标切片实际影响的契约；Phase A 在编码前捕获旧基线，Phase B 必须绑定候选 commit/tree hash 并作为同一候选 PR 的 pre-merge gate。
 - **FR-05**：WP-02 的代码指标与 NC/CC/RC admission 两个规则族都按 report-only、warning、blocking 演进，状态和回退独立；每阶段冻结 versioned expected delta，未列入 delta 的兼容差异仍为 BLOCKER。
 - **FR-06**：WP-05 必须先做 go/no-go；预测不满足 RC 时直接取消，不预设 YAML/JSON 是答案。
@@ -195,6 +201,8 @@ T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy
 - **SC-08**：后续减重工作包只有满足适用 Reduction Contract 才能以 `completed_reduction` 关闭。WP-05 单项 No-Go 用 `cancelled_no_go`；六个冻结候选均完成评估且全部 No-Go 时，GAP-06 可用 `closed_no_viable_reduction` 关闭，但不计减重成果。只有基线或消费者发生实质变化才允许重新打开。
 - **SC-09**：GAP-12 由 WI-207 关闭、GAP-13 由 WI-208 关闭、GAP-14 由 WI-209 关闭；任一项不得借
   另一项的测试、waiver 或 PR 伪装为已完成，且三者均不得计入 RC-08 产品 LOC 减重。
+- **SC-10**：GAP-15 由 T58 独立关闭；五个只读 `workitem` 命令不得改变 adapter/config/working tree，
+  `init/link` 写语义保持，且 T58 fresh-main 前不得进入 T66 T61A。
 
 ## 10. 冻结决策
 
@@ -215,3 +223,14 @@ T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy
    禁令互锁，WP-06/WP-07 的一个稳定周期仅指 FR-07 定义的主线预发布稳定周期；candidate 与 deletion
    仍属于同一工作包，deletion 后还要验证安装包、offline/sibling smoke 与 rollback/reapply。该解释不
    构成版本发布，也不允许提前关闭 GAP-03、GAP-04、WI-196 或 RC-08。
+10. WI-212 选中的 T66 bounded-stage domain 已进入 WI-213 formal-only 准入；current main 复算仍为
+    45 methods / 3,638 physical / 3,305 executable / branch proxy 386。Ruff 88 列反证确认九组显式
+    DTO/path binding 的 mechanical lower bound 约83～85行，不能藏入预备5行；WI-213 因此冻结 private
+    module≤360、candidate facade addition≤72、terminal facade body≤45、binding/glue≤90，并重算
+    shadow product≤522、product+proof≤712、terminal≤720、净删≥2,918。WI-212 的691/2,947与 WI-213
+    早期701/2,937仅保留为历史预估。该修订只有在
+    parent+child formal-six 双 PASS、mainline/fresh-main receipt 与后续 T61A 双 readiness GO 后才授权
+    candidate；formal 本身不关闭 T66/GAP-03，不恢复旧 WI-203/WI-204 hash，也不发布版本。
+11. WI-213 formal 验证新发现 GAP-15：`program validate` 已保持 adapter bytes，但 `workitem` callback 仍让
+    只读子命令隐式 refresh。WI-213 只登记并恢复非范围 diff；其 fresh-main 后必须先用独立 T58/WI/PR
+    关闭 GAP-15，再创建 T66 implementation WI 并进入 T61A。不得把缺陷修复混进 formal 或减重产品 PR。

@@ -2044,6 +2044,10 @@ specs:
   path: specs/212-reduction-candidate-selection
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
+- id: 213-programservice-bounded-stage-reduction
+  path: specs/213-programservice-bounded-stage-reduction
+  depends_on:
+  - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
   generated_at: '2026-07-19T10:37:55Z'
   generated_by: ai-sdlc program truth sync
