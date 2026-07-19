@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T19:58:00Z
-- Reason: WI214 closure source 已提交并完成 truth 预同步/manifest exact RED
+- Updated: 2026-07-19T19:10:22Z
+- Reason: WI214 formal terminal gates 已通过，准备冻结 final review identity
 - Goal: 关闭 GAP-15/T58，保持五个 workitem 只读入口零副作用且 init/link 零回归
-- State: closure source=693c5b8e；pre-sync ready 1126/1126；manifest exact 两值已机械修正；待 receipt commit/terminal sync
+- State: terminal manifest=d655435a；truth ready/fresh 1126/1126；全部 formal gates 绿；待 gate receipt commit 后 final sync/audit/双审
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-docs
@@ -81,6 +81,12 @@
 - Pre-sync on closure source `693c5b8e`：snapshot=`096da662...b418`、ready、inventory=`1126/1126`、
   missing/unmapped=`0/0`、close=`214/214`；manifest exact 首跑只因旧 `1121/213` 期望失败，已机械 `+2/-2`。
 - 本 execution receipt 改变 source，故该 snapshot 不作为 terminal；提交 receipt/test 后必须重新 sync/audit。
+- Terminal sync manifest commit=`d655435a`、snapshot=`207390ac...28f7`；随后 manifest exact：
+  `1 passed in 103.89s`，formal baseline：`24 passed in 11.57s`。
+- Terminal audit=`ready/fresh`、inventory=`1126/1126`、unmapped/missing=`0/0`、layers=`214/214`；
+  validate PASS、constraints no BLOCKERs、manifest Ruff/diff-check/scope/parity/Cursor/clean 全绿。
+- 本 gate receipt 提交后再做一次 final sync/audit；最终 snapshot hash 只进入外部 review/PR receipt，
+  不反写 tracked source，避免自引用 stale 循环。
 
 ## Blockers / Risks
 
@@ -94,9 +100,8 @@
 
 ## Exact Next Steps
 
-1. 提交 pre-sync receipt、manifest snapshot与 manifest exact 两值修正，确认 clean source identity。
-2. 对该 clean HEAD 执行 terminal `program truth sync --execute --yes` 并提交 final snapshot。
-3. 跑 manifest exact、constraints、validate/truth、scope/parity/Cursor/clean gates；提交必要 gate receipt。
-4. 计算 final current identity，让 Pascal/Confucius 从零双审到同 identity PASS0。
-5. Push formal PR、@codex review、等待 required checks，merge 并 detached fresh-main。
-6. 仅从 formal fresh main 创建 dev branch/worktree，先 RED 后一处 callback GREEN。
+1. 提交本 gate receipt 与 byte-identical handoff，确认 clean source identity。
+2. 对 clean source 执行 final truth sync，提交 manifest-only snapshot并 audit fresh。
+3. 计算 final current identity，让 Pascal/Confucius 从零双审到同 identity PASS0。
+4. Push formal PR、@codex review、等待 required checks，merge 并 detached fresh-main。
+5. 仅从 formal fresh main 创建 dev branch/worktree，先 RED 后一处 callback GREEN。

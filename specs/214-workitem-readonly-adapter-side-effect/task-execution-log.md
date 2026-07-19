@@ -2,7 +2,7 @@
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
 **创建日期**：2026-07-19
-**当前状态**：formal authoring；产品代码未修改
+**当前状态**：formal terminal gates 已通过；final current-identity 双审待执行；产品代码未修改
 
 ## 1. 固定归档规则
 
@@ -182,3 +182,19 @@
   `214/214`，不修改 test logic、capability、release registry 或产品断言。
 - 本段 receipt 本身会改变 tracked execution source，因此首个 snapshot 只作为预同步证据；提交本段与机械
   test 期望后必须再执行 terminal truth sync，并只以后一 snapshot 进入 final audit/review，避免陈旧自称。
+
+## 12. Batch 2026-07-19-008：formal terminal gates
+
+- Pre-sync receipt 与 manifest exact 机械期望提交=`3510706e`；随后对 clean source 执行 terminal
+  `program truth sync --execute --yes`，生成 snapshot=`207390ac6a810121f058ef43ceff0cb4e41eb194c8fcd7a2d75d395fa42d28f7`，
+  inventory=`1126/1126`、unmapped/missing=`0/0`、各层=`214/214`，manifest-only 提交=`d655435a`。
+- `uv run --python 3.11 pytest tests/integration/test_repo_program_manifest.py -q`：PASS，`1 passed in 103.89s`。
+- 既有 formal baseline：`test_cli_workitem_init.py + test_cli_workitem_link.py + test_cli_hooks.py`：PASS，
+  `24 passed in 11.57s`；未运行实现期 RED/GREEN。
+- `program truth audit`：`ready/fresh`，release-target audit ready，inventory=`1126/1126`、
+  unmapped/missing=`0/0`、spec/plan/tasks/execution/close=`214/214`。
+- `program validate`：PASS；`verify constraints`：no BLOCKERs；manifest test Ruff：PASS；`git diff --check`：PASS。
+- Scope gate：`src/**` 零差异；`tests/**` 仅 manifest exact 两个数值机械 `+2/-2`；root/scoped handoff
+  byte-identical；Cursor SHA=`d5f04acf...0b6a` 且相对 `origin/main` diff=0；worktree clean。
+- 本 gate receipt 提交后必须再 sync/audit 一次；该次生成的 manifest-only identity 才是 final review target。
+  为避免自引用循环，最终 snapshot hash 只进入评审/PR 外部 receipt，不再反写本 tracked execution source。
