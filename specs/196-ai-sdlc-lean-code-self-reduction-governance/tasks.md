@@ -112,8 +112,8 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T63 单个 helper/DTO/test 重复族（按 family 继续） | standalone + T61A/B | GAP-05/WP-03 | L1 | T51、T52 已满足；WI-205、WI-206、WI-210、WI-211 各完成一个 family | WI-211 / PR #153 / merge `cd64d8aa`：10→1 mapping body、10 aliases、23 calls 不变、产品 net -122、双 Agent/Codex/22 checks/fresh-main；新 family 仍须重复族清零、目标切片 LOC -10%、全量测试 |
 | T64 单个 Loop Store family | standalone + T61A/B | GAP-05/WP-04 | L2 | T51、T52 | store differential、LOC -10%、恢复/损坏输入测试 |
 | T65 单个 baseline 候选 go/no-go | standalone + T61A/B on Go | GAP-06/WP-05 | L2 | T51、T52 | Go=`completed_reduction`；单项 No-Go=`cancelled_no_go`；六项全 No-Go=`closed_no_viable_reduction` |
-| T66 单个 ProgramService 领域切片 | standalone + T61A/B | GAP-03/WP-06 | L3 | T51、T52 + 真实重叠子项 | 迁移职责 -90%、RC-04 结构改善、稳定发布、删旧后回退演练 |
-| T67 单个 Program Stage family | standalone + T61A/B | GAP-04/WP-07 | L3 | T51、T52 + 真实重叠子项 | 镜像 LOC -70%、33 命令兼容、稳定发布、删旧后回退演练 |
+| T66 单个 ProgramService 领域切片 | standalone + T61A/B | GAP-03/WP-06 | L3 | T51、T52 + 真实重叠子项 | 迁移职责 -90%、RC-04 结构改善；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与回退演练，删除前不得关闭 |
+| T67 单个 Program Stage family | standalone + T61A/B | GAP-04/WP-07 | L3 | T51、T52 + 真实重叠子项 | 镜像 LOC -70%、33 命令兼容；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与回退演练，删除前不得关闭 |
 
 **全局恢复门禁**：T57/WI-209、WI-210 与 WI-211 closure fresh-main acceptance 已完成；表中 T61A、
 T62A～T62C、T63～T67 的新实例已恢复选择，但仍须逐项满足各自依赖、sponsor、RC 与原子 WI/branch/PR。

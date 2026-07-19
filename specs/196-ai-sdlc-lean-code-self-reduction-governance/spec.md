@@ -120,7 +120,7 @@ WP-03～WP-07 的每个减重候选在编码前冻结以下字段；缺一项不
 - **RC-03 预算**：最大新增手写 LOC、模块和公共抽象数量，以及预计删除量。
 - **RC-04 结果阈值**：重复类切片必须消除选定重复族且目标切片净 LOC 至少下降 10%。结构类切片除原文件中被迁移职责 LOC/方法数下降至少 90% 外，还必须满足以下至少一项：切片产品 LOC 净下降 10%、聚合圈复杂度下降 15%、跨领域依赖边下降 20%、选定重复分支 100% 消除；纯移动一律 No-Go。
 - **RC-05 临时膨胀**：shadow 期间最多增加目标切片基线的 15% 或 1,000 行手写产品代码，取较小值；超出则缩小切片。旧实现删除前工作包不得关闭。
-- **RC-06 保护成本**：WP-01/WP-02 新增的手写产品、test/harness/normalizer LOC 合计不得超过已通过候选审查并纳入具体 RC 的预计删除代码 25%，且路线图累计绝对上限 1,500 行；fixture/snapshot 文件每个冻结 CC 场景最多 2 个，版本库内规范化 snapshot 累计不超过 2 MiB。超限时缩小范围或复用现有测试，不得扩大预算分母。
+- **RC-06 保护成本**：适用矩阵要求 RC-06 的候选，其新增手写产品、test/harness/normalizer LOC 合计不得超过已通过候选审查并纳入具体 RC 的预计删除代码 25%，且路线图累计绝对上限 1,500 行；fixture/snapshot 文件每个冻结 CC 场景最多 2 个，版本库内规范化 snapshot 累计不超过 2 MiB。超限时缩小范围或复用现有测试，不得扩大预算分母。
 - **RC-07 文件约束**：新增手写文件不超过 400 行、新增函数不超过 50 行；无三个当前调用者不得新增公共抽象。
 - **RC-08 总体终态**：仅用于路线图组合终态，不作为单个子项关闭条件。路线图关闭时手写产品 LOC 相对基线净下降至少 10%；选定重复族全部关闭；`program_service.py` 与 `program_cmd.py` 均降到 400 行以内。
 - **RC-09 停止投资**：预测或实测不能达到该子项适用的 RC-04～RC-07，或会使 RC-08 组合终态不可达，或保护成本超过收益时，停止该方案并保留旧实现，不得以结构准备续投。校验器只解析适用矩阵声明的字段。
@@ -145,7 +145,7 @@ WP-03～WP-07 的每个减重候选在编码前冻结以下字段；缺一项不
 |---|---|---|
 | L1 | 完全相同 helper、测试参数化 | 定向 characterization + 全量回归 |
 | L2 | store 公共逻辑、baseline 候选、Lean Gate | 目标切片 Golden/differential + 回退适配 |
-| L3 | ProgramService 分域、stage engine | shadow 双跑、单切片切换、稳定发布、独立删旧 PR |
+| L3 | ProgramService 分域、stage engine | shadow 双跑、单切片切换、主线预发布稳定周期、独立删旧 PR |
 | L4 | 删除公共命令、改变 schema/状态/安全边界 | 不属于减重；另立迁移/功能项并由用户批准 |
 
 GAP-07、GAP-08 的缺陷修复按合同可独立或并行启动，且每个缺陷必须先写能复现原行为的定向 characterization test。两项现已分别由 WI-197、WI-198 关闭，WP-01A 的基础 barrier 已满足；后续候选仍须满足各自 impact analysis 与 sponsor/admission 条件。
@@ -167,7 +167,7 @@ T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy
 - **FR-04**：WP-01 只覆盖目标切片实际影响的契约；Phase A 在编码前捕获旧基线，Phase B 必须绑定候选 commit/tree hash 并作为同一候选 PR 的 pre-merge gate。
 - **FR-05**：WP-02 的代码指标与 NC/CC/RC admission 两个规则族都按 report-only、warning、blocking 演进，状态和回退独立；每阶段冻结 versioned expected delta，未列入 delta 的兼容差异仍为 BLOCKER。
 - **FR-06**：WP-05 必须先做 go/no-go；预测不满足 RC 时直接取消，不预设 YAML/JSON 是答案。
-- **FR-07**：WP-06、WP-07 每次只处理一个领域或 stage family，并在同一工作包完成稳定期与旧实现删除。
+- **FR-07**：WP-06、WP-07 每次只处理一个领域或 stage family，并在同一工作包完成主线预发布稳定周期与旧实现删除。这里的稳定周期不是版本发布：candidate PR 合并且 legacy 保留后，必须完成 required cross-platform CI、wheel/sdist、clean install、offline smoke、代表性 sibling project smoke 及 selector rollback/reapply；随后才允许独立 deletion PR。删除后重复同等安装包与回退验证，删除前不得关闭工作包。
 - **FR-08**：每个子 WI 进入 execute 前必须具备进入、非目标、具体验证命令、完成、停止、回退和 evidence URI 合同。只有合同 admission gate 处于 `active + verified` 时才替代人工评审；未激活、禁用、降级、回退或健康检查失败时，L1/L2 普通项自动恢复一个独立合同 reviewer，L3 或影响 CC-05/CC-06 的高风险项自动恢复两个 Agent。
 - **FR-09**：所有实现 PR 均遵守仓库 mainline PR/check/review/heartbeat 协议；L3 额外经过本地专职只读 reviewer。
 - **FR-10**：双 Agent 评审记录必须包含 agent、维度、目标哈希、时间、findings、处置和 verdict；内容变化使旧 PASS 失效。
@@ -211,3 +211,7 @@ T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy
 8. WI-210 与 WI-211 closure fresh-main 均已满足恢复门禁；WI-211 已关闭一个 T63
    mapping-dedupe family 并将实际 raw 净减 122 计入 RC-08 family ledger。后续候选选择已恢复，
    但必须使用新的独立原子 WI/branch/PR；不得关闭 GAP-05、WI-196、RC-08 或提前发布版本。
+9. RC-08 前禁止 tag、GitHub Release、PyPI 发布和全局 CLI 更新。为避免 L3 “先稳定发布再删旧”与该
+   禁令互锁，WP-06/WP-07 的一个稳定周期仅指 FR-07 定义的主线预发布稳定周期；candidate 与 deletion
+   仍属于同一工作包，deletion 后还要验证安装包、offline/sibling smoke 与 rollback/reapply。该解释不
+   构成版本发布，也不允许提前关闭 GAP-03、GAP-04、WI-196 或 RC-08。

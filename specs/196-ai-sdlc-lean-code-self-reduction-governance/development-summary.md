@@ -68,7 +68,12 @@
 - RC-08 family ledger 已记录 WI-205 `net -109`、WI-206 `net -209`、WI-210 `net -213`、WI-211
   `net -122`，累计产品 raw `net -653`；这只是已关闭重复族的局部收益，不代表路线整体达到 10% 或
   两个超大文件降到 400 行。
-- WI-211 closure PR #154 已合并为 `626adb70` 并通过 detached fresh-main 验收；下一原子项选择门禁已恢复。
+- WI-211 closure PR #154 已合并为 `626adb70`，lifecycle reconciliation PR #155 已合并为 `32742a25`；
+  双 Agent、Codex、required checks 与 detached fresh-main 验收均通过，下一原子项选择门禁已恢复。
   后续仍须按真实收益、证明成本与 sponsor 从新的 T63/T65/WP-06/WP-07 候选中选择独立 WI。不得恢复
   已 No-Go 且缺少 sponsor 的 T62A，也不得关闭 GAP-05/WI-196、宣称 RC-08 达成或发布版本。
+- WI-212 只冻结下一候选与修复 L3 路线合同死锁：WP-06/WP-07 的“稳定发布周期”改为主线预发布
+  稳定周期，要求 candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、
+  offline/sibling smoke 与 selector rollback/reapply，再以独立 PR 删旧并重复同等安装与回退证明。
+  RC-08 前仍禁止 tag、GitHub Release、PyPI 发布与全局 CLI 更新；该合同修订不关闭 GAP-03/GAP-04。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
