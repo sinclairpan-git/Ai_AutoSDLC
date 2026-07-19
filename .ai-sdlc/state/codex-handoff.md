@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T21:47:17Z
-- Reason: Round 2 correction source 与 pre-sync gates 已完成，准备 terminal truth sync
+- Updated: 2026-07-19T22:03:12Z
+- Reason: Round 3 唯一 continuity finding 已修正；terminal truth 固化后直接进入新身份双审
 - Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
-- State: Correction source f828a39e 已提交且 exact V4b/validate/constraints/manifest/scope gates 通过；truth 按预期 stale
+- State: Round 2 correction 与 terminal truth/audit/gates 已完成；Round 3 仅 P3 continuity 已修正，等待新身份双审
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: codex/214-format-gate-amendment
@@ -45,12 +45,15 @@
 - Amendment Round 2 exact identity `5cad2581`/tree `4625216c`：Pascal FAIL2、Confucius FAIL4；range
   end/delete、native failure、dirty candidate、case-insensitive path 与 stale next-step findings 均成立，已完成
   最小修正。Correction source `f828a39e`；exact fenced V4b PASS、validate PASS、constraints no blockers、
-  manifest exact 1 passed in 97.18s、formatter 273/133、scope/parity/Cursor/diff-check 全绿；truth 待 terminal sync。
+  manifest exact 1 passed in 97.18s、formatter 273/133、scope/parity/Cursor/diff-check 全绿。
+- Terminal truth snapshot=`e83564cb...f532b`、audit=`ready/fresh`、inventory=`1126/1126`、missing/unmapped=
+  `0/0`、各层=`214/214`；terminal manifest exact=`1 passed in 101.78s`，final fenced V4b PASS。
+- Amendment Round 3 exact identity `67455e7e`/tree `be44ca48`：Pascal/Confucius 均 FAIL1，仅指出 continuity
+  仍是 pre-sync；V4b/scope/truth/T66 无额外 finding。Continuity 已最小修正，旧 verdict 退役。
 
 ## Blockers / Risks
 
-- Correction 尚未 terminal truth sync；formal amendment 双 PASS0、PR/CI/merge/detached fresh-main 前不得
-  继续 implementation mainline。
+- Formal amendment 双 PASS0、PR/CI/merge/detached fresh-main 前不得继续 implementation mainline。
 - handoff CLI 依据旧 WI208 checkpoint 写错 scoped copy；已用 apply_patch 恢复 WI208/resume-pack，并直接维护
   当前 WI214 root/scoped byte-identical，禁止把错误路由变化带入 amendment。
 
@@ -60,10 +63,10 @@
 - Confucius/SAFETY implementation pre-review：FAIL4，产品范围 PASS；三组测试证据已修正，V4 矛盾由本 amendment 处理。
 - Amendment final review Round 1：Pascal FAIL2、Confucius FAIL1；修正后必须对新 committed clean identity 从零复审。
 - Amendment final review Round 2：Pascal FAIL2、Confucius FAIL4；两份 verdict 已退役，修正后再次从零复审。
+- Amendment final review Round 3：Pascal FAIL1、Confucius FAIL1；唯一 continuity P3 已修正，旧 verdict 已退役。
 
 ## Exact Next Steps
 
-- 提交 pre-sync receipt，执行 terminal truth sync/audit，复核 clean/scope/parity/Cursor 并冻结新 identity。
-- 让 Pascal/LEAN 与 Confucius/SAFETY 对该 committed+clean identity 从零双审到 PASS0。
+- 让 Pascal/LEAN 与 Confucius/SAFETY 对 terminal truth 后同一 committed+clean identity 从零双审到 PASS0。
 - 双 PASS0 后开 PR、请求 Codex current-head review、等待 required checks、merge 并 detached fresh-main。
 - 从 amendment fresh-main 重放/变基 dev worktree，再完成 implementation terminal truth 与最终双审。

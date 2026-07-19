@@ -290,3 +290,16 @@
   `d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a` 且相对 formal merge 零差异。
 - Pre-sync truth audit 按预期 `stale`，current recompute=`ready`、inventory=`1126/1126`、missing/unmapped=
   `0/0`、各层=`214/214`。提交本 receipt 后执行 terminal truth sync；最终 snapshot 不反写 tracked source。
+
+## 20. Batch 2026-07-19-016：V4 amendment final review Round 3 FAIL
+
+- Exact identity：HEAD=`67455e7e381f0424d9de137fdf094307ad41375c`、tree=
+  `be44ca486bc832d81b3e0d08af56c6bc54471815`、clean；Pascal/LEAN 与 Confucius/SAFETY 均=`FAIL1`
+  （P3×1），两份 verdict 全部退役。
+- 唯一重叠 finding 成立：terminal truth 已 sync 且 audit=`ready/fresh`，但 development summary 与双 handoff
+  仍停留在 pre-sync 状态，可能让续接 agent 重复执行 truth。两位 reviewer 对 V4b 语法、end-exclusive、
+  deletion boundary、native failure/output、committed+clean frozen candidate、ancestor/diff/cleanup、Ordinal path、
+  scope/truth/T66 均未发现额外问题。
+- 最小修正只更新 summary、append-only log 与 byte-identical 双 handoff；持久 Exact Next Steps 直接从新身份
+  双审开始。该 source commit 后紧跟 terminal truth sync 与 manifest-only commit；最终 snapshot 不再反写 tracked
+  source，避免自引用 stale 循环。
