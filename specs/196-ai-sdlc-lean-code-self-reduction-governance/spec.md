@@ -233,5 +233,6 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     parent+child formal-six 双 PASS、mainline/fresh-main receipt 与后续 T61A 双 readiness GO 后才授权
     candidate；formal 本身不关闭 T66/GAP-03，不恢复旧 WI-203/WI-204 hash，也不发布版本。
 11. WI-213 formal 验证新发现 GAP-15：`program validate` 已保持 adapter bytes，但 `workitem` callback 仍让
-    只读子命令隐式 refresh。WI-213 只登记并恢复非范围 diff；其 fresh-main 后必须先用独立 T58/WI/PR
-    关闭 GAP-15，再创建 T66 implementation WI 并进入 T61A。不得把缺陷修复混进 formal 或减重产品 PR。
+    只读子命令隐式 refresh。WI-213 只登记并恢复非范围 diff；其 lifecycle reconciliation
+    fresh-main 后必须先用独立 T58/WI/PR 关闭 GAP-15，再创建 T66 implementation WI 并进入
+    T61A。不得把缺陷修复混进 formal 或减重产品 PR。

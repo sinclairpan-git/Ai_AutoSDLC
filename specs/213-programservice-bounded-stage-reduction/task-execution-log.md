@@ -259,3 +259,31 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
   rollback、offline、GAP-15 和发布边界均闭合。
 - 随后创建 `development-summary.md` 并更新 T31～T41 状态，因此 Round 5 降为 authoring receipt；最终
   formal-six 变化后必须重新提交、同步 truth、跑门禁并在 T44 由双方对 current identity 再次 PASS0。
+
+## 12. Batch 2026-07-19-011：formal mainline 与 fresh-main acceptance
+
+- Codex 对旧头 `6c242f9c` 的成立 P2 促使 child/parent summary 区分已完成 terminal gates 与待交付
+  lifecycle；Round 8 双方再指出 current-state/PR body 时序问题，均做最小修正。
+- 最终 Round 9 reviewed HEAD/tree=`94acfdf424932d354bde33f2bd9a8a554fa63fb8`/
+  `9d1c0f6915e31bf79d2d2fd768adc5a5ca8ffe05`，formal-six=
+  `283b623babe7b98eb8d62acb79af2cea79e56d36941cb5269ad3ffbd5f61f099`；Pascal/LEAN 与
+  Confucius/SAFETY 均 PASS、findings=0。
+- Codex current-head provenance P2 声称 snapshot revision `a638be64` 不可达；本地
+  `merge-base --is-ancestor` 与 GitHub commit/compare API 证明它是 `94acfdf4` 的直接父提交。两名 Agent
+  独立一致 REJECT，无文件修改；两个 review thread 均 resolved。
+- PR #158 required/compatibility checks=`13/13 success`，squash merge=`450d49885bba028ea7f4e9e3d0896c158a536862`；
+  merge tree=`9d1c0f69` 与 reviewed tree 相同。
+- Detached fresh-main `450d4988`、Python 3.14.3：targeted=`165 passed, 474 deselected in 4.15s`、manifest
+  exact=`1 passed in 110.90s`，constraints/validate/truth=`ready/fresh 1121/1121`、unmapped/missing=`0/0`、
+  scope/handoff parity/Cursor/clean 全绿；版本未变。
+- T42～T45 完成；WI213 formal-only 关闭。本 lifecycle reconciliation fresh-main 后，唯一下一项才是
+  独立 T58/GAP-15；T58 fresh-main 前不得进入 T66 T61A，且 GAP-03、WI196、RC-08 与
+  发布继续 open。
+
+## 13. Batch 2026-07-19-012：lifecycle 对抗复审 Round 1
+
+- Review identity=`90b65eba`/tree `94399b8a`/formal-six=`fe6e04fb...ff32`。Pascal/LEAN 发现
+  handoff 要求重复提交已提交 receipt；Confucius/SAFETY 发现 T58 在 lifecycle reconciliation
+  交付前过早授权，以及 handoff current base/changed-files 滞后。
+- 三项 finding 全部成立，只修正授权时序与 continuity 事实；产品、测试、预算、
+  workflow、依赖与版本不变。旧 verdict 退役，修正后必须对新 identity 双 PASS0。
