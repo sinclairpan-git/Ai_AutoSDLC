@@ -170,3 +170,35 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
 - Parent WI196 登记 GAP-15/T58；child formal 冻结“WI213 fresh-main → T58 fresh-main → T66 T61A”。
 - WI213 不修改 source/test logic；T58 必须独立 WI/branch/PR、TDD、双 Agent、CI/Codex/fresh-main。
 - 已完成的 `plan-check` success evidence 保留；在 T58 关闭前不重复运行该命令污染 formal worktree。
+
+## 7. Batch 2026-07-19-006：formal Round 1 双 FAIL 与最小修订
+
+### 7.1 受审身份
+
+- HEAD=`0ab64e9180a979f5711b1d3423e06c85f82fc630`
+- tree=`53ac0a441b9b91d78f6490b71af8ba848f1be92a`
+- formal-six combined SHA-256=`7c37b888c8b8eab82d641ebe83f3588cf5ac7c1084d9db9a0578eca9edf86b96`
+- 审查前后工作树 clean；两位 reviewer 均只读且身份匹配。
+
+### 7.2 Findings 与 disposition
+
+- Pascal/LEAN：2 findings，`FAIL`。成立项为 parent canonical 示例仍指 WI211，以及 child SC-005 与
+  GAP-15 唯一下一步矛盾。
+- Confucius/SAFETY：7 findings，`FAIL`。除 canonical 重合项外，还包括 Python callable/DTO surface 未
+  可执行证明、late-bound `self` dispatch 未冻结、deletion merge 前无法真实 revert 最终 mainline、T61A
+  NO-GO 删除唯一证据、offline 仅覆盖运行未覆盖 no-index 安装、T58 未冻结 `init/link` 负路径时序。
+- 九条 reviewer 报告合并为八个唯一 finding，全部由源码/测试事实证实，未拒绝任何意见。
+
+### 7.3 最小修订
+
+- Canonical PowerShell 示例机械切到 WI213；SC-005 只授权 T58，T58 fresh-main 后才授权 T66 WI。
+- T61A/B 增加版本化 `inspect/dataclasses` Python-surface manifest 与 execute/writer late-bound dispatch 矩阵；
+  不新增公共抽象、不放宽 proof≤190，超限仍 No-Go。
+- T61A NO-GO 先固化 commit/tree/raw hash/verdict/closure receipt，不删除唯一证据。
+- Candidate/deletion 安装使用受控 wheelhouse、断网 `--no-index --find-links`，覆盖 sdist build isolation。
+- Deletion current head 先审查/CI/merge，再对精确 merge commit 在一次性隔离 worktree 实际 revert；随后
+  回 deletion fresh-main，双态验证后才关闭 T66。
+- T58 矩阵补五只读命令的 help/invalid-input，并冻结 `init/link` valid/负路径 hook 次数、时序、输出、
+  退出码与写入；任一行为变化必须 explicit expected delta。
+
+本轮任一 formal-six 变化已使 Round 1 两份 verdict 同时失效；修订提交后必须由双方对新 identity 从零复审。

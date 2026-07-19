@@ -117,6 +117,11 @@ src/ai_sdlc/core/
 typed constructor/callback 由 ProgramService 显式传入。禁止底部/延迟循环 import、字符串 method dispatch、
 `getattr`、stage-name branching、运行时 registration 或 YAML-driven DSL。
 
+现有 public-to-public 调用保持 late-bound：execute 默认 request 必须经 `self.build_*`，writer 默认
+request/result 必须经 `self.build_*`/`self.execute_*` 解析后再作为 callback 注入 private engine；显式传参
+继续绕过相应默认构造。不得从 module-level binding 直接调用并旁路 subclass override、`patch.object`、调用
+次数/顺序或异常传播。
+
 ### 5.2 差异表达
 
 静态 definition 只含当前九 stage 的：artifact/step path、state/result/summary key、upstream key、固定文本和
@@ -147,8 +152,9 @@ WI 或直接写产品。
 ### Phase 1：T58 / GAP-15 独立修复（下游执行）
 
 1. 从 formal fresh main 创建独立 branch/worktree/canonical WI。
-2. 用 real-hook fixture 对 `plan-check/guard/close-check/branch-check/truth-check` 建立 adapter/config/
-   working-tree bytes 与输出 RED；固定 `init/link` 既有 hook 语义。
+2. 用 real-hook fixture 对 `plan-check/guard/close-check/branch-check/truth-check` 及 help/invalid-input 建立
+   adapter/config/working-tree bytes 与输出 RED；固定 `init/link` valid、missing option、dirty/preflight、
+   no project、no checkpoint、hook exception 的 hook 次数/时序、退出码、输出与写入。
 3. 只修正 workitem subapp 的 read/write dispatch；不改 adapter 算法、ProgramService 或 T66 测试。
 4. 双 Agent、targeted/full/Ruff/constraints、平台、PR/Codex/checks/merge/detached fresh-main 全绿后关闭。
 
@@ -160,11 +166,13 @@ WI 或直接写产品。
 1. 从 T58 fresh main 创建独立 branch/worktree和 canonical WI，不复制第二套 contract。
 2. 在任何产品代码前，重跑 165 tests；捕获 direct-service/full-CLI 双根 baseline、raw tree/bytes、异常、
    调用顺序、写入/中断/重试和 p50/p95。
-3. 冻结 normalizer、fixture、toolchain、architecture ledger 与 expected zero-delta。
+3. 冻结 normalizer、fixture、toolchain、architecture ledger 与 expected zero-delta；生成 public callable/DTO
+   版本化 Python-surface manifest，并捕获 execute/writer late-bound `self` dispatch 的 subclass/spy 矩阵。
 4. 证明预计 product≤522、proof≤190、无禁止结构；两 reviewer 对同一 proof identity 双 `GO`。
 
 **停止**：任一 reviewer NO-GO、proof/architecture 超预算、legacy 不稳定或隔离写边界不可靠。
-**回退**：删除 T61A-only proof branch；运行时未修改。
+**回退**：NO-GO 先持久化不可变 receipt、commit/tree、raw-evidence hash、review verdict 和关闭状态，再放弃
+产品路线；不得删除唯一证据载体，运行时保持未修改。
 
 ### Phase 3：TDD candidate shadow
 
@@ -180,7 +188,8 @@ WI 或直接写产品。
 ### Phase 4：T61B、candidate PR 与 fresh-main
 
 1. 固定 candidate commit/tree，在 byte-identical 双根跑九 stage direct/full-chain differential。
-2. 比较 dataclass、exception、transcript、raw bytes、tree/mode、call order、副作用、p50/p95。
+2. 比较 Python-surface manifest、late-bound dispatch、dataclass、exception、transcript、raw bytes、tree/mode、
+   call order、副作用、p50/p95。
 3. 执行 legacy→candidate→legacy→candidate；每次重跑目标矩阵。
 4. Run 165、full、Ruff、constraints、validate、truth、manifest；双 reviewer current identity PASS0。
 5. Candidate 默认 candidate、legacy 完整保留，走 PR/Codex/check/merge/fresh-main。
@@ -191,8 +200,9 @@ WI 或直接写产品。
 ### Phase 5：主线预发布稳定周期
 
 对 candidate merge tree 运行 required cross-platform、wheel/sdist、两个 clean install、offline smoke、
-两个有选择理由的 sibling project 和 selector rollback/reapply。安装产物必须包含 private module，离线运行
-不能回读源码 checkout。该阶段无 tag/Release/PyPI/global CLI。
+两个有选择理由的 sibling project 和 selector rollback/reapply。安装产物必须包含 private module；构建/运行
+依赖先进入受控 wheelhouse，断网 clean env 以 `--no-index --find-links` 分别安装 wheel/sdist，且 build
+isolation、Python-surface smoke 与离线运行均不能联网或回读源码 checkout。该阶段无 tag/Release/PyPI/global CLI。
 
 **停止**：任一平台、包、offline、sibling、性能或 rollback 失败；修复仍在 candidate work package，
 不得开始 deletion。
@@ -203,10 +213,12 @@ WI 或直接写产品。
 2. 删除 45 个 legacy full body、18 个失活 private method、legacy selector branch 和仅 legacy 使用的 glue；
    保留 27 public facade。
 3. 复算 terminal≤720、net delete≥2,918、ProgramService responsibility reduction≥3,278、branch proxy≤90。
-4. 重跑 T61 differential、165/full/Ruff/governance、平台/build/clean-install/offline/sibling。
-5. 在隔离 worktree 实际 revert deletion PR，证明 legacy route；再应用 candidate selector rollback/reapply；
-   最后恢复 deletion tree并验证 clean。
-6. 双 reviewer、Codex/checks、merge、detached fresh-main 全绿后才关闭 implementation WI/T66。
+4. 重跑 Python surface/T61 differential、165/full/Ruff/governance、平台/build/no-index offline install/sibling。
+5. 双 reviewer、Codex/checks 对 deletion current head 全绿后 merge；此时 T66 仍 active。
+6. 从精确 deletion merge commit 建立一次性隔离 rollback worktree/branch，实际 revert merge commit，证明
+   legacy route 与 selector rollback/reapply；销毁临时回退工作区后回到 deletion fresh-main，重复关键
+   surface/differential/install/clean 验证。
+7. post-merge rollback receipt 与 deletion fresh-main 均全绿后才关闭 implementation WI/T66。
 
 **回退顺序**：先 revert deletion PR 恢复 legacy，再 selector 指回 legacy；必要时再 revert candidate PR。
 
@@ -223,15 +235,16 @@ T66 完成只更新 GAP-03/RC ledger；GAP-04～06、其他 ProgramService domai
 | 45-symbol baseline | Python AST physical/executable/header/branch | 任一集合/数字漂移未解释 |
 | call graph | AST Call + outside-service scan | private 外部消费者或公共 surface 漏项 |
 | legacy tests | 精确 `-k` selector 165 | 数量不是 106+59 或任一失败 |
+| Python surface | versioned inspect/dataclasses manifest + late-bound subclass/spy | signature/DTO/dispatch 任一差异 |
 | service differential | 双根 dataclass/exception/call/tree/raw bytes | 任一未批准差异 |
 | CLI differential | 9 help/mode/failure/full chain stdout/stderr/exit | 任一未批准差异 |
 | authorization | dry-run/confirm/execute/write order/external sentinel | 新写入或越权 |
 | recovery | write boundaries + KeyboardInterrupt/SystemExit/process termination | retry/final tree 不一致 |
 | performance | warm-up + ≥20 samples p50/p95 | p95 > baseline 110% 且复测成立 |
 | budget | per-commit AST/LOC/branch ledger | product>522、proof>190、terminal>720 |
-| package/platform | three OS + wheel/sdist clean/offline | import/resource/encoding/PowerShell failure |
+| package/platform | three OS + wheel/sdist + wheelhouse no-index offline install | 联网/checkout/import/resource/encoding/PowerShell failure |
 | sibling | ≥2 chosen projects, installed artifact | 使用 checkout 或任一 smoke 失败 |
-| rollback | selector round-trip；post-delete actual revert | 只给理论说明或恢复失败 |
+| rollback | selector round-trip；exact deletion merge post-merge actual revert | 只反转未合并分支或恢复失败 |
 | governance | constraints/validate/truth/manifest/parity/scope | non-ready、unmapped、unexpected missing/diff |
 
 ## 8. Formal identity 与对抗评审

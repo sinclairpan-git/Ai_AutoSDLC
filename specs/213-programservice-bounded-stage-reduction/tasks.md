@@ -63,15 +63,17 @@ related_doc:
 - **状态**：completed
 - **依赖**：T21
 - **验收**：T61A 在产品编码前；双临时根、raw evidence、异常/写序/副作用/中断/重试、≥20次 p50/p95；
+  public callable/DTO Python-surface manifest 与 execute/writer late-bound `self` dispatch 矩阵完整；
   LEAN/SAFETY 同 proof identity 双 GO 后才可编码；T61B 绑定 candidate commit/tree，零未批准差异。
-- **回退**：T61A NO-GO 时删除 proof branch，运行时零改动。
+- **回退**：T61A NO-GO 先固化 commit/tree/raw hash/verdict/closure receipt，保留唯一证据；运行时零改动。
 
 ### T23 冻结 candidate、稳定周期、deletion 与 release 顺序
 
 - **状态**：completed
 - **依赖**：T22
 - **验收**：candidate 先 legacy 后 candidate；candidate merge legacy retained；主线预发布稳定周期无版本；
-  deletion 独立 PR；删除后 actual revert + selector rollback/reapply；RC-08 全局终态前不发布。
+  wheelhouse `--no-index` 断网安装 wheel/sdist；deletion 独立 PR；删除 merge 后对精确 merge commit actual
+  revert + selector rollback/reapply，再回 deletion fresh-main；RC-08 全局终态前不发布。
 - **停止**：平台/build/install/offline/sibling/rollback 任一失败不得 deletion/close。
 
 ### T24 同步父 WI196 当前路线
@@ -157,12 +159,12 @@ related_doc:
 
 | 顺序 | 下游 gate | 必须满足 |
 |---:|---|---|
-| 1 | T58/GAP-15 | standalone RED/GREEN；五只读命令 bytes stable；fresh-main |
-| 2 | T61A | no product code；legacy baseline + proof budget + dual readiness GO |
+| 1 | T58/GAP-15 | standalone RED/GREEN；五只读+help/invalid bytes stable；init/link 负路径时序；fresh-main |
+| 2 | T61A | no product code；Python surface/late-bound baseline + proof budget + dual readiness GO |
 | 3 | candidate shadow | default legacy；逐 stage TDD；product≤522 |
 | 4 | T61B/candidate PR | zero delta；selector round-trip；legacy retained |
 | 5 | pre-release stability | platform/build/clean/offline/sibling；无公开版本 |
-| 6 | deletion PR | terminal≤720/net≥2918；post-delete actual rollback |
+| 6 | deletion PR | terminal≤720/net≥2918；merge 后 exact-merge actual rollback |
 | 7 | T66 close | deletion fresh-main 后才 completed_reduction |
 | 8 | release | 仅 WI196/RC-08 全部完成后 |
 

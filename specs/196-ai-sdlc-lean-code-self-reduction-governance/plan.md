@@ -154,9 +154,13 @@ T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷
 - **风险/范围**：L2 / CC-05；只调整 `workitem` subapp adapter hook 的只读/写命令分发。
 - **非目标**：不修改 adapter 同步算法、生成内容、`program` 分发、workitem handler 领域逻辑或 T66 产品代码。
 - **进入**：在 clean fixture 先 RED 证明 `plan-check/guard/close-check/branch-check/truth-check` 至少当前
-  `plan-check` 会改变 adapter bytes/working tree；同时固定 `init/link` 既有写语义和输出。
-- **验证/完成**：五个只读命令前后 adapter/config/working tree bytes 不变且不输出 install receipt；`init/link`
-  仍在既有授权边界调用 hook；targeted/full/Ruff/constraints、跨平台与 detached fresh-main clean 全绿。
+  `plan-check` 会改变 adapter bytes/working tree；同时冻结 `init/link` 的 valid、missing option、dirty/preflight、
+  no project、no checkpoint、hook exception 矩阵，以及 hook 次数/时序、退出码、输出与写入。`init` 仅在
+  branch/clean/duplicate preflight 成功后调用 hook；`link` 当前在 handler guard 前调用，改变任一负路径必须
+  先登记 explicit expected delta。
+- **验证/完成**：五个只读命令及其 help/invalid-input 前后 adapter/config/working tree bytes 不变且不输出
+  install receipt；`init/link` 的冻结矩阵零未批准差异；targeted/full/Ruff/constraints、跨平台与 detached
+  fresh-main clean 全绿。
 - **停止/回退**：若修复要求关闭全部 workitem adapter、修改 adapter 算法或扩大到其他 CLI family，则回到
   design；revert T58 独立实现 PR。
 - **证据**：command matrix RED/GREEN、real-hook byte hash、输出/退出码、dirty-state、双 Agent、PR/CI/fresh-main。
@@ -286,11 +290,11 @@ fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B
 - Parent-only review target 为父 `spec.md + plan.md + tasks.md`。当前 child authoring 修改父 formal 时，
   target 唯一扩展为 child 与父各三文件。canonical combined 算法唯一：repo-relative path 按 ordinal
   升序；每行是 `<lowercase file sha256><two spaces><repo-relative path>\n`；对全部 UTF-8 行再次做 SHA-256。
-  当前 WI211 在 worktree 根使用；后续 active child 必须机械替换 `$child`，不得发明第二套算法：
+  当前 WI213 在 worktree 根使用；后续 active child 必须机械替换 `$child`，不得发明第二套算法：
 
   ```powershell
   $parent = 'specs/196-ai-sdlc-lean-code-self-reduction-governance'
-  $child = 'specs/211-shared-mapping-dedupe'
+  $child = 'specs/213-programservice-bounded-stage-reduction'
   $files = @("$parent/spec.md", "$parent/plan.md", "$parent/tasks.md", "$child/spec.md", "$child/plan.md", "$child/tasks.md") | Sort-Object
   $rows = foreach ($file in $files) { "$((Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash.ToLowerInvariant())  $file" }
   $payload = [Text.Encoding]::UTF8.GetBytes(($rows -join "`n") + "`n")

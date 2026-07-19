@@ -202,7 +202,8 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
 - **SC-09**：GAP-12 由 WI-207 关闭、GAP-13 由 WI-208 关闭、GAP-14 由 WI-209 关闭；任一项不得借
   另一项的测试、waiver 或 PR 伪装为已完成，且三者均不得计入 RC-08 产品 LOC 减重。
 - **SC-10**：GAP-15 由 T58 独立关闭；五个只读 `workitem` 命令不得改变 adapter/config/working tree，
-  `init/link` 写语义保持，且 T58 fresh-main 前不得进入 T66 T61A。
+  其 help/invalid-input 同样无 refresh；`init/link` 的 valid/负路径 hook 次数、时序、输出、退出码与写语义
+  零未批准差异，且 T58 fresh-main 前不得进入 T66 T61A。
 
 ## 10. 冻结决策
 
