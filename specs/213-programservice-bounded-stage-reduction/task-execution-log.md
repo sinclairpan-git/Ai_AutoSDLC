@@ -287,3 +287,17 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
   交付前过早授权，以及 handoff current base/changed-files 滞后。
 - 三项 finding 全部成立，只修正授权时序与 continuity 事实；产品、测试、预算、
   workflow、依赖与版本不变。旧 verdict 退役，修正后必须对新 identity 双 PASS0。
+
+## 14. Batch 2026-07-19-013：lifecycle mainline 与 WI214 handoff
+
+- 最终 lifecycle reviewed identity=`762a3fa52b52288bb5dbec8f6305d65349760064`、tree=
+  `901dfa8f3267792362316bc962705abf77380316`、formal-six=
+  `e51befd27416e0f75533e4b97548ef452fa0056033633487944491db4a949431`；Pascal/LEAN 与
+  Confucius/SAFETY 均 PASS、findings=0。
+- PR #159 的 Codex P2 错误声称 snapshot source `4f113788` 不可达；本地 ancestry、GitHub commit/
+  compare API 与两名 reviewer 独立核验均证明实际链为 `4f113788 -> bd1a7084 -> 762a3fa5`，finding
+  被一致拒绝并 resolved。Required checks 全绿，squash merge=`d5ad7616f7f39f68365d6d39f8701a86c1f599e7`。
+- Detached fresh-main `d5ad7616`、tree=`901dfa8f`：constraints/validate/truth `ready/fresh 1121/1121`、
+  targeted=`165 passed`、manifest exact=`1 passed`、scope/handoff parity/Cursor/clean 全绿。
+- Lifecycle reconciliation 已关闭，正式授权从该 main 创建 T58/WI214；当前 WI214 formal active，
+  其 implementation fresh-main 前仍不得进入 T66 T61A，版本发布仍禁止。
