@@ -2053,10 +2053,10 @@ specs:
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
-  generated_at: '2026-07-19T23:02:08Z'
+  generated_at: '2026-07-19T23:22:26Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 7e50c826
+  repo_revision: 62e9402b
   authoring_hash: a59fdb298fc649f0c089aec2bf3fa9253926a9a085939f48cadbce02dbf63df2
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
@@ -2099,7 +2099,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 2c006fcbae1b5c5b8f6b4bc554246c44171e3bdc75e36a935e9009698fc126bc
+  snapshot_hash: 951ee35e5df34df0a9d42c0110f7b0d3bcab79ea93986397ad9f3d20b2557115
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2117,8 +2117,8 @@ truth_snapshot:
     mapped_sources: 1126
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3687
-    deferred_signal_count: 6646
+    phase_signal_count: 3688
+    deferred_signal_count: 6647
     non_goal_signal_count: 394
     layer_totals:
       blueprint: 1
@@ -11770,8 +11770,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 214-workitem-readonly-adapter-side-effect
-      phase_signal_count: 16
-      deferred_signal_count: 18
+      phase_signal_count: 17
+      deferred_signal_count: 19
       non_goal_signal_count: 0
     - path: specs/214-workitem-readonly-adapter-side-effect/development-summary.md
       source_type: development_summary
