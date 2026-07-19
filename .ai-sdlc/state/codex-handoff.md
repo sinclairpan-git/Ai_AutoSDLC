@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T13:16:51Z
-- Reason: WI213 final Round 6 双方同一 continuity finding 已修正
-- Goal: 冻结 T66 九阶段 ProgramService 减重正式合同并完成同 identity 双审、PR、fresh-main
-- State: terminal truth/final local gates 全绿；等待 final identity 双审与 PR delivery
+- Updated: 2026-07-19T15:41:00Z
+- Reason: 处理 PR #158 Codex P2 stale lifecycle summary finding
+- Goal: 完成 WI213 formal PR #158 的 current-head 复审、合并与 detached fresh-main 验收
+- State: 两份 stale summary 已最小修正；等待新 identity 门禁、双审与 current-head GitHub review
 - Stage: decompose
 - Work Item: 213-programservice-bounded-stage-reduction
 - Branch: feature/213-programservice-bounded-stage-reduction-docs
@@ -73,12 +73,16 @@
   manifest test 唯一 diff=`+2/-2`。
 - Closure source 初检：constraints no BLOCKER、program validate PASS、diff/parity/adapter/scope/placeholder 全绿。
 - program-manifest 已登记 WI213 depends_on WI196，并已 terminal sync/audit 为 ready/fresh。
+- PR #158 旧头 `6c242f9c` 的 required checks 已有 10/12 success、0 failure；Codex 行级 P2 指出 child/parent
+  summary 将已完成 terminal truth/final gates 误写为未完成，finding 成立并已做两处最小修正。
 
 ## Blockers / Risks
 
 - Feasibility reviewer 已 final GO，但 module 只有12行预测余量；T61A 中 module>360 即 No-Go。
-- Source docs 保持 commit `ada79cdf` 后字节不变；T42～T45 状态保守保持 pending，actual PR/fresh-main 后由
-  独立 lifecycle reconciliation 回写，避免改 source 使 terminal snapshot stale 或预写 future receipt。
+- Codex P2 要求两份 development summary 在 `ada79cdf` 后发生最小事实修正；旧 Round 7/Codex identity
+  因此退役，新 identity 必须重新同步 truth、双审与 GitHub current-head review。
+- T42～T45 状态保守保持 pending，actual PR/fresh-main 后由独立 lifecycle reconciliation 回写，避免预写
+  future receipt。
 - GAP-15/T58 尚未修复；在其独立 mainline/fresh-main receipt 前，T66 implementation WI/T61A 被阻断。
 - 360/522/712/720 任一被代码事实证明不可达时，必须最小修订或 RC-09 No-Go，不能扩大分母。
 - 任一 formal-six 变化使 Pascal/Confucius verdict 同时失效。
@@ -89,13 +93,14 @@
 - Round 5 authoring identity 已取得 Pascal/Confucius 双 PASS0；closure 变化后该 receipt 已退为历史。
 - Final Round 6 对 `4d2e98f7`/tree `52280c71`/formal-six `283b623b...f099` 双方各 FAIL1，意见统一为
   handoff stale state/漏列 test；本次两份 byte-identical correction 已处置，尚无 final PASS。
+- Final Round 7 对 `6c242f9c`/tree `4cff00a8`/formal-six `283b623b...f099` 双方 PASS0；PR #158 Codex
+  随后提出 1 个成立的 stale-summary P2，本次修正使 Round 7 与旧 Codex review 退役。
 - 原 WI212 review 摘要已由 WI212 execution/summary/mainline 保存，未删除产品源码注释。
 
 ## Exact Next Steps
 
-1. 若 handoff-only correction 尚未提交则提交；否则确认 current identity committed+clean、formal-six 仍为
-   `283b623b...f099`、source docs 自 `ada79cdf` 后无变化。
-2. Pascal/Confucius 对该 current identity 做 final Round 7 双 PASS0。
-3. Push/PR、Codex review、required-check heartbeat、merge、detached fresh-main。
-4. 独立 lifecycle reconciliation 只回写已发生 receipt/任务状态并重新收敛 truth。
-5. Formal lifecycle fresh-main 后创建 T58/GAP-15 WI；T58 fresh-main 后才创建 T66 implementation WI/T61A。
+1. 检查 diff/parity/scope，运行 targeted、constraints、validate 与 truth gates；按需重新 sync terminal truth。
+2. 提交并推送两份 summary 与 byte-identical handoff 的最小修正。
+3. Pascal/Confucius 对同一新 committed+clean identity 从零复审，必须再次双 PASS0。
+4. 对 PR #158 重新请求 Codex current-head review，守候 required checks 全绿后 merge，并执行 detached fresh-main。
+5. 独立 lifecycle reconciliation 只回写已发生 receipt；其 fresh-main 后创建 T58，T58 fresh-main 后才进入 T66 T61A。

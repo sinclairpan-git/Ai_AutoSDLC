@@ -1,7 +1,8 @@
 # 开发摘要：ProgramService 九阶段精益减重正式合同
 
 **功能编号**：`213-programservice-bounded-stage-reduction`
-**状态**：formal contract 本地完成；mainline PR / detached fresh-main 待交付
+**状态**：formal contract 本地门禁与最终双审已完成；PR #158 current-head 复审、merge / detached
+fresh-main 待交付
 
 ## 本地已交付
 
@@ -28,13 +29,17 @@
   `f17e24baf9747488a7a178d175bead33daf8db84`，formal-six=
   `674407cf6ac8c2f726a3975dc6fffeac0cc88786bf50a19d0e1687d09684cf27`；双方均
   `PASS`、actionable findings=0。
-- 本 summary 与 task 状态会形成新的 final formal identity，因此 Round 5 只作为 authoring receipt；PR 前
-  仍由双方对最终 current HEAD/tree/formal-six 再次 PASS0。
+- Round 5 只作为 authoring receipt；Round 7 最终冻结身份 HEAD/tree=`6c242f9c3c231120863216c8acff505f074f4f7b`/
+  `4cff00a892f0aa58b35a9ecfba957a8ee8aa1d84`、formal-six=
+  `283b623babe7b98eb8d62acb79af2cea79e56d36941cb5269ad3ffbd5f61f099`，双方再次
+  `PASS`、actionable findings=0。
 
 ## 未完成边界
 
-- 尚未完成 program truth terminal sync、最终本地门禁、PR/Codex/required checks/merge 或 detached
-  fresh-main；不得将本 summary 当作这些 future receipt。
+- Program truth terminal sync、最终本地门禁与 Round 7 双审已完成：truth=`ready/fresh 1121/1121`、
+  unmapped/missing=`0/0`，manifest exact、165 个目标测试、constraints 与 validate 均通过。
+- PR #158 已创建；本 summary 的 current-head 修订仍须重新取得双 Agent、Codex 与 required checks 通过，
+  随后才可 merge 并执行 detached fresh-main 验收，不得把这些后续步骤写成已发生 receipt。
 - 本 WI 没有产品代码、selector、candidate、legacy deletion、版本/tag/Release/PyPI 或全局 CLI 更新。
 - GAP-15、T58、T61A/B、T66、GAP-03、WI196、RC-08 和总体版本发布均保持 open。
 - Formal mainline/fresh-main 完成后的唯一下一项是创建独立 T58/GAP-15 WI；T58 fresh-main 后才可创建
