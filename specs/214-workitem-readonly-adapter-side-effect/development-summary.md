@@ -41,3 +41,5 @@
 - 尚未开始：RED/GREEN、产品 callback、测试实现、implementation/lifecycle PR、T66 T61A。
 - GAP-15/T58、T66、GAP-03、WI196、RC-08 与 release 均保持 open；当前禁止版本/tag/Release/PyPI/
   共享 CLI 更新。
+- Implementation 预审发现 formal V4 错把主线 273 个历史 formatter-red 文件设为全库零债务门禁；独立
+  amendment 仅改为 changed-file strict + legacy baseline-delta，不授权格式化非范围文件或放宽其他门禁。

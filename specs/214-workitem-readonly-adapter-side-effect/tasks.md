@@ -92,8 +92,9 @@ related_doc:
   `plan-check normal` production A/B bytes/hash/status exact；共享 partial-write 与 `init/link` 全矩阵零未批准差异。
 - **精确 targeted**：`uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`
 - **全量/静态门禁**：`uv run --python 3.11 pytest -q`；`uv run --python 3.11 ruff check src tests`；
-  `uv run --python 3.11 ruff format --check src tests`；`uv run --python 3.11 ai-sdlc verify constraints`；
-  `git diff --check`。
+  `uv run --python 3.11 ruff format --check tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py`；对 formal base 已 formatter-red 的 `workitem_cmd.py` 与
+  `test_cli_workitem_init.py` 运行 `ruff format --diff` baseline-delta，要求无新增 overlap hunk且全库 debt 不高于
+  base 的 273；`uv run --python 3.11 ai-sdlc verify constraints`；`git diff --check`。
 
 ## Batch 3：implementation truth、review 与 mainline
 

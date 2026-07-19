@@ -91,12 +91,14 @@ project-config bytes 的 SHA-256、`git status --porcelain=v1 -uall`、stdout/st
 - `V1`：`uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`
 - `V2`：`uv run --python 3.11 pytest -q`
 - `V3`：`uv run --python 3.11 ruff check src tests`
-- `V4`：`uv run --python 3.11 ruff format --check src tests`
+- `V4a`：`uv run --python 3.11 ruff format --check tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py`
+- `V4b`：`uv run --python 3.11 ruff format --diff src/ai_sdlc/cli/workitem_cmd.py tests/integration/test_cli_workitem_init.py`；这两个 legacy 文件在 formal base `d7f8b163` 已 formatter-red，故本命令是 baseline-delta 证据而非零退出门禁。受审 diff 不得新增与 `origin/main...HEAD` 修改行重叠的 formatter hunk；全库诊断的 formatter-red 文件数不得高于 base 的 273。
 - `V5`：`uv run --python 3.11 ai-sdlc verify constraints`
 - `V6`：`git diff --check`
 
 V1 的 RED 只允许新 dispatch assertions 失败；`init/link` legacy characterization 必须保持绿。GREEN、
-implementation final identity 和 fresh-main 均重跑 V1～V6；跨平台 required checks 重跑 full pytest。
+implementation final identity 和 fresh-main 均重跑 V1～V3、V4a/V4b、V5～V6；跨平台 required checks
+重跑 full pytest。不得为使历史全库 formatter 诊断变绿而格式化非范围文件。
 
 ## 6. 分阶段执行
 

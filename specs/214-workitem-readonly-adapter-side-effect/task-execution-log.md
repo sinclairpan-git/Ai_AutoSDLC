@@ -228,3 +228,16 @@
 - 不新增测试文件、fixture/DSL、产品抽象或测试笛卡尔积；15 sentinel、代表性 production A/B、共享
   partial-write 与 targeted 命令不变。Formal-six 变化使 Round 6 双 PASS 同时退役，必须重跑 truth/gates/
   双审并推送新头后回复、解决 thread、重新 `@codex review`。
+
+## 15. Batch 2026-07-19-011：formal V4 baseline-delta amendment
+
+- Implementation 预审确认原 V4 在 formal base `d7f8b163` 已不可满足：锁定 Ruff 0.15.7 执行全库
+  `ruff format --check src tests` 得到 273 个 formatter-red 文件；把历史文件全部格式化会违反 WI214 的
+  单函数产品边界并制造无关 diff。
+- Pascal/LEAN 认为产品与矩阵无过度实现；Confucius/SAFETY 将该矛盾定为成立 P2 formal/gate finding。
+- 本 amendment 仅把 V4 修正为“新增/可清洁文件严格 format-check + 两个 touched legacy-red 文件
+  formatter hunk baseline-delta + 全库 debt 不增加”。不放宽 Ruff lint、测试、constraints 或 diff-check，
+  不修改产品、测试、依赖、workflow、版本、GAP-15/T58/T66 状态。
+- Amendment pre-commit gates：`program validate` PASS、`verify constraints` no BLOCKERs、manifest exact
+  `1 passed in 105.58s`、全库 formatter diagnostic 仍为 `273 red/133 green`、`src/tests/deps/workflow`
+  零差异、root/scoped handoff byte-identical、Cursor base SHA/diff 与 `git diff --check` 全绿。
