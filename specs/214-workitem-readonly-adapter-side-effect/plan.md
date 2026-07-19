@@ -104,11 +104,14 @@ implementation final identity 和 fresh-main 均重跑 V1～V3、V4a/V4b、V5～
 #### V4b fixed-base 可执行程序
 
 T21 在 RED 前把 `FORMAT_BASE_SHA` 冻结为本 amendment 的 detached fresh-main exact SHA，写入 implementation
-execution log 与 handoff；dev、PR、merge、fresh-main 始终使用该固定 SHA。以下 PowerShell 程序要求 candidate
-formatter-red 路径集合是 base 集合的子集，并对两个 legacy-red 文件的每个 candidate changed range 执行
-Ruff range check。路径统一为 `/` 且排序去重；任一新增 red path、range format failure 或 base 不可达均失败。
+execution log 与 handoff；dev、PR、merge、fresh-main 始终使用该固定 SHA。以下 PowerShell 程序只接受
+committed+clean candidate，冻结其 SHA，要求 candidate formatter-red 路径集合是 base 集合的大小写敏感子集，
+并对两个 legacy-red 文件的每个 candidate changed range 执行 Ruff range check。路径统一为 `/` 且按大小写
+敏感方式排序去重；任一工具异常、新增 red path、range format failure、不可解析输出或 base 不可达均失败。
 
 ```powershell
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 $env:FORMAT_BASE_SHA = "<amendment detached fresh-main exact SHA>"
 $legacyFiles = @(
   "src/ai_sdlc/cli/workitem_cmd.py",
@@ -119,43 +122,93 @@ $baseDir = Join-Path ([IO.Path]::GetTempPath()) ("wi214-format-" + [guid]::NewGu
 function Get-FormatterRedPaths([string]$root) {
   Push-Location $root
   try {
-    @(& uv run --python 3.11 ruff format --check src tests 2>&1) |
-      Where-Object { $_ -match '^Would reformat:\s+(.+)$' } |
-      ForEach-Object { $Matches[1].Replace('\', '/') } |
-      Sort-Object -Unique
+    $output = @(& uv run --python 3.11 ruff format --check src tests 2>&1)
+    $code = $LASTEXITCODE
+    if ($code -notin @(0, 1)) { throw "ruff format failed with exit $code" }
+    $paths = @($output |
+      ForEach-Object {
+        $match = [regex]::Match([string]$_, '^Would reformat:\s+(.+)$')
+        if ($match.Success) { $match.Groups[1].Value.Replace('\', '/') }
+      } |
+      Sort-Object -Unique -CaseSensitive)
+    $summary = [regex]::Match(
+      ($output -join "`n"), '(?m)^(?<count>\d+) files? would be reformatted(?:,|$)')
+    if ($code -eq 1 -and
+        (-not $summary.Success -or [int]$summary.Groups['count'].Value -ne $paths.Count)) {
+      throw "unparseable ruff formatter-red output"
+    }
+    if ($code -eq 0 -and $paths.Count -ne 0) {
+      throw "inconsistent ruff formatter-clean output"
+    }
+    $paths
   } finally { Pop-Location }
 }
+
+$status = @(& git status --porcelain=v1 --untracked-files=all)
+if ($LASTEXITCODE -ne 0) { throw "cannot inspect candidate worktree" }
+if ($status.Count -ne 0) { throw "candidate worktree must be committed and clean" }
+$candidateSha = (& git rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0) { throw "cannot freeze candidate SHA" }
+& git merge-base --is-ancestor $env:FORMAT_BASE_SHA $candidateSha
+if ($LASTEXITCODE -ne 0) { throw "FORMAT_BASE_SHA is not a candidate ancestor" }
 
 git worktree add --detach $baseDir $env:FORMAT_BASE_SHA
 if ($LASTEXITCODE -ne 0) { throw "FORMAT_BASE_SHA is not reachable" }
 try {
   $baseRed = @(Get-FormatterRedPaths $baseDir)
   $candidateRed = @(Get-FormatterRedPaths (Get-Location).Path)
-  $newRed = @(Compare-Object $baseRed $candidateRed |
-    Where-Object SideIndicator -eq '=>')
-  if ($newRed) { throw "new formatter-red paths: $($newRed.InputObject -join ', ')" }
+  $baseSet = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+  foreach ($path in $baseRed) { $null = $baseSet.Add($path) }
+  $newRed = @($candidateRed | Where-Object { -not $baseSet.Contains($_) })
+  if ($newRed) { throw "new formatter-red paths: $($newRed -join ', ')" }
 
   foreach ($file in $legacyFiles) {
-    $patch = (& git diff --unified=0 "$env:FORMAT_BASE_SHA...HEAD" -- $file) -join "`n"
-    foreach ($match in [regex]::Matches(
-      $patch, '(?m)^@@ [^+]*\+(?<start>\d+)(?:,(?<count>\d+))? @@')) {
+    $patch = @(& git diff --unified=0 "$env:FORMAT_BASE_SHA...$candidateSha" -- $file)
+    if ($LASTEXITCODE -ne 0) { throw "cannot diff $file" }
+    $matches = [regex]::Matches(
+      ($patch -join "`n"), '(?m)^@@ [^+]*\+(?<start>\d+)(?:,(?<count>\d+))? @@')
+    if ($patch.Count -ne 0 -and $matches.Count -eq 0) {
+      throw "cannot parse changed ranges for $file"
+    }
+    foreach ($match in $matches) {
       $start = [int]$match.Groups['start'].Value
       $count = if ($match.Groups['count'].Success) {
         [int]$match.Groups['count'].Value
       } else { 1 }
-      if ($count -eq 0) { continue }
-      $end = $start + $count - 1
-      uv run --python 3.11 ruff format --check --range "$start-$end" $file
-      if ($LASTEXITCODE -ne 0) { throw "formatter debt in $file range $start-$end" }
+      if ($count -eq 0) {
+        if (-not (Test-Path -LiteralPath $file -PathType Leaf)) {
+          throw "legacy file removed: $file"
+        }
+        $lineCount = @(Get-Content -LiteralPath $file).Count
+        $rangeStart = if ($lineCount -eq 0) {
+          1
+        } else {
+          [Math]::Min([Math]::Max(1, $start), $lineCount)
+        }
+        $endExclusive = if ($lineCount -eq 0) {
+          2
+        } else {
+          [Math]::Min($lineCount + 1, $rangeStart + 2)
+        }
+      } else {
+        $rangeStart = $start
+        $endExclusive = $start + $count
+      }
+      uv run --python 3.11 ruff format --check --range "$rangeStart-$endExclusive" $file
+      if ($LASTEXITCODE -ne 0) {
+        throw "formatter debt in $file range $rangeStart-$endExclusive"
+      }
     }
   }
 } finally {
   git worktree remove --force $baseDir
+  if ($LASTEXITCODE -ne 0) { throw "cannot remove formatter base worktree" }
 }
 ```
 
-Implementation reviewed HEAD 必须记录本程序的 base/candidate red path 集合摘要与每个 emitted range；merge 后先
-证明 merge tree 等于 reviewed tree，再在 detached fresh-main 对相同 `FORMAT_BASE_SHA` 重跑，不复用动态 diff。
+Implementation reviewed HEAD 必须记录本程序冻结的 candidate SHA、base/candidate red path 集合摘要与每个
+emitted range；merge 后先证明 merge tree 等于 reviewed tree，再在 detached fresh-main 对相同
+`FORMAT_BASE_SHA` 重跑，不复用动态 diff。
 
 ## 6. 分阶段执行
 

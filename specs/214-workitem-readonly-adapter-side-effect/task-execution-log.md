@@ -261,3 +261,20 @@
 - Ruff 0.15.7 全库诊断仍为 `273 red/133 green`；`src/tests/deps/workflow` 零差异、root/scoped parity、
   Cursor base SHA/diff 与 diff-check 全绿。更新本 receipt/summary/handoff 后再做最终 truth sync；最终 snapshot
   不反写 tracked source，避免自引用 stale 循环。
+
+## 18. Batch 2026-07-19-014：V4 amendment final review Round 2 FAIL
+
+- Exact identity：HEAD=`5cad25819114d81387734aafbdf0cb91ddd202dd`、tree=
+  `4625216c042bfbf2c881a31efe1c281749aa3d9c`、clean。Pascal/LEAN=`FAIL2`；
+  Confucius/SAFETY=`FAIL4`，旧 verdict 全部退役。
+- 双方重叠 P1 成立：Ruff `--range` end exclusive，但脚本用 `start+count-1`，单行 hunk 退化为空区间；
+  `count=0` 又跳过纯删除边界。修正为非删除 `endExclusive=start+count`，纯删除覆盖 candidate 边界邻行。
+- Confucius 的三项 fail-open finding 成立：native Ruff/git failure 未完整判定、dirty candidate 的 working-tree
+  修改不进入 fixed-base...HEAD ranges、PowerShell 默认大小写不敏感可折叠 Linux case-only path。修正程序要求
+  strict/error-stop、candidate committed+clean 并冻结 SHA、Ruff 仅接受可解释的 exit 0/1 与计数一致输出、
+  git/cleanup 失败即阻断、Ordinal red-path subset。
+- Pascal P3 成立：summary/handoff 仍把已完成的 Round 1 terminal truth 写入 next steps。修正为如实记录 original
+  formal PR #160 已 merge/fresh-main、amendment Round 1 terminal gates 已完成，下一步只保留本 correction 的
+  truth/gates 与新身份双审。
+- 本轮只修正 child plan/tasks/summary/log 与双 handoff；不修改 src/tests、依赖、workflow、版本或 lifecycle
+  状态。Correction 提交后先实跑 exact PowerShell，再重新 truth/audit/gates 并对全新 clean identity 双审。

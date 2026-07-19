@@ -95,9 +95,9 @@ related_doc:
 - **精确 targeted**：`uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`
 - **全量/静态门禁**：`uv run --python 3.11 pytest -q`；`uv run --python 3.11 ruff check src tests`；
   `uv run --python 3.11 ruff format --check tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py`；对 formal base 已 formatter-red 的 `workitem_cmd.py` 与
-  `test_cli_workitem_init.py` 执行 plan §5.3 的 fixed-base V4b 程序，要求 candidate red path set 是 base set
-  子集且全部 candidate changed range format-check 通过；`uv run --python 3.11 ai-sdlc verify constraints`；
-  `git diff --check`。
+  `test_cli_workitem_init.py` 在 committed+clean identity 执行 plan §5.3 的 fixed-base V4b 程序，要求
+  candidate red path set 是 base set 的大小写敏感子集、工具退出与输出可解释，且全部 candidate changed/
+  deletion-boundary range format-check 通过；`uv run --python 3.11 ai-sdlc verify constraints`；`git diff --check`。
 
 ## Batch 3：implementation truth、review 与 mainline
 
