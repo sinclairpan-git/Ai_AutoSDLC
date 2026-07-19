@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T18:52:00Z
-- Reason: 处置 WI214 formal Round 1 五项成立 finding
+- Updated: 2026-07-19T19:12:00Z
+- Reason: 处置 WI214 formal Round 2 三项成立 finding并消除重复证据
 - Goal: 关闭 GAP-15/T58，保持五个 workitem 只读入口零副作用且 init/link 零回归
-- State: Round 1 Pascal FAIL1 + Confucius FAIL4；五项均已最小修订且 gates 通过；产品/测试尚未修改；待 commit/Round 2
+- State: Round 2 Pascal FAIL2 + Confucius FAIL1；三项均已最小修订且 gates 通过；产品/测试尚未修改；待 commit/Round 3
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-docs
@@ -43,9 +43,9 @@
 - Implementation 顺序为 terminal truth/handoff/gates -> committed+clean identity -> 双 PASS0 -> PR；
   review 后任何内容变化都先重跑 gate/truth 再重审。
 - 测试布局固定为一个新增参数化 adapter-dispatch 文件 + 两个既有 init/link 文件；V1 targeted 命令已冻结。
-- 五个 normal 除 sentinel/no-op 外必须运行 real production hook 的 guarded bytes/hash/status 对比。
-- init/link exception 拆为 project-config PermissionError warning+continue（保留 partial write）和其他异常传播；
-  WI214 不事务化 adapter。
+- 15 格 sentinel 覆盖全部命令；production real-hook 只对原始 `plan-check normal` 做一组 A/B，避免五次重复。
+- 共享 hook 层只补一例 config-lock partial-write；init/link 只验证 warning-return 与 raise 的继续/中断顺序，
+  不复制 adapter 内部 fixture且不事务化 adapter。
 - Pascal/LEAN 与 Confucius/SAFETY 必须审同一 committed+clean identity；任一受审文件变化使双方 verdict 同时失效。
 - T58 不计减重收益，不关闭 T66/GAP-03/WI196/RC-08，不触发版本发布。
 
@@ -67,6 +67,10 @@
   Confucius FAIL4，五项均 ACCEPT，旧 verdict 退役。
 - Round 1 correction gates：program validate PASS、constraints no BLOCKER、diff-check、scope、handoff parity、
   Cursor base SHA/diff、frontmatter 全绿；`src/tests` diff=0。
+- Round 2 identity=`144c8c50`/tree `37de73e3`/formal-six `53d85b2a...246c`；Pascal FAIL2、
+  Confucius FAIL1。三阶段 canonical、代表性 real-hook 与共享 partial-write 三项全部 ACCEPT，旧 verdict 退役。
+- Round 2 correction gates：program validate PASS、constraints no BLOCKER、frontmatter、diff-check、scope、
+  handoff parity、Cursor base SHA/diff 全绿；`src/tests` diff=0。
 
 ## Blockers / Risks
 
@@ -80,8 +84,8 @@
 
 ## Exact Next Steps
 
-1. 提交 Round 1 correction，确认 committed+clean identity。
-2. 计算新 parent+child formal-six identity，派 Pascal/LEAN 与 Confucius/SAFETY 独立 Round 2。
+1. 提交 Round 2 correction，确认 committed+clean identity。
+2. 计算新 parent+child formal-six identity，派 Pascal/LEAN 与 Confucius/SAFETY 独立 Round 3。
 3. 处置成立 finding；每次内容变化重新提交并让双方对新 identity 从零复审，直到同 identity 双 PASS0。
 4. 创建 closure material，truth sync/manifest exact/constraints/validate/parity/scope/clean gates，再做 final current-identity 双审。
 5. Push formal PR、@codex review、等待 required checks，merge 并 detached fresh-main。

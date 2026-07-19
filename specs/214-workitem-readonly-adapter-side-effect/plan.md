@@ -12,7 +12,8 @@ related_doc:
 
 ## 1. 概述
 
-先用 formal PR 冻结最窄兼容合同，再从 formal fresh main 创建 dev 分支。实现只让
+先用 formal PR 冻结最窄兼容合同，再从 formal fresh main 创建 dev 分支，implementation fresh-main 后用
+独立 lifecycle reconciliation PR 承载关闭事实。实现只让
 `_workitem_before_command()` 为当前唯一依赖 callback 的写命令 `link` 消费 hook；测试证明五个只读入口从
 hook 1 次变为 0 次，同时 `init/link` 的全部适用控制流零差异。T58 完成后只解除 T66 T61A 的前置阻断，
 不计减重收益。
@@ -68,23 +69,26 @@ if ctx.invoked_subcommand != "link":
 GREEN 要求 call=0、marker 不存在、adapter/config/tracked/untracked tree snapshot 不变。使用 no-op hook 在
 byte-identical 临时项目重放同参数，逐字节比较 stdout/stderr/exit；不复制 handler 业务 fixture。
 
-五个 normal case 还须以 `@pytest.mark.real_ide_hook` 运行 production hook：两份 byte-identical 临时项目
-分别作为 real/no-op 根，预置“若 hook 执行必产生变更”的 Cursor managed fixture；捕获 guarded adapter/
-project-config bytes 的 SHA-256、`git status --porcelain=v1 -uall`、stdout/stderr/exit，并要求 candidate exact。
+仅原始复现 `plan-check normal` 以 `@pytest.mark.real_ide_hook` 运行一组 production/no-op A/B：两份
+byte-identical 临时项目预置“若 hook 执行必产生变更”的 Cursor managed fixture；捕获 guarded adapter/
+project-config bytes 的 SHA-256、`git status --porcelain=v1 -uall`、stdout/stderr/exit并要求 candidate exact。
+其余四个 normal 的同一 callback 分支由 15 格 sentinel 覆盖，不重复昂贵 production fixture。
 
 ### 5.2 `init/link` 兼容矩阵
 
+- 共享 `tests/unit/test_cli_hooks.py` 只补一例 production partial-write：真实 `apply_adapter` 后令
+  `_persist_config` 触发 project-config `PermissionError`，断言 guarded bytes 与 warning；既有三例继续覆盖
+  config-lock return、unexpected exception、non-config PermissionError。
 - `init`：只在 `test_cli_workitem_init.py` 复用 valid、missing title、dirty/wrong branch、no-project、duplicate；
-  补两类异常。受控 project-config `PermissionError` 让 production `apply_adapter` 写入后在 `_persist_config`
-  失败，断言 warning、partial bytes、继续 scaffold；其他异常断言原样传播、scaffold 不开始且不补偿前缀写入。
+  注入“warning 后 return”和“raise”两种 hook outcome，只断言本次分发的 call order、继续 scaffold或不开始。
 - `link`：只在 `test_cli_workitem_link.py` 复用 valid/missing/no-checkpoint；补 help/unknown option、call order、
-  dirty、no-project及同样两类异常。受控 config lock 后继续各自 handler 路径，其他异常在 handler 前传播。
+  dirty、no-project及同样两种 hook outcome；只断言 handler 继续或在 handler 前传播，不复制 partial-write fixture。
 - 只新增分发/顺序证明，不复制 handler 的业务断言；所有 baseline assertion 必须先在未改产品源码时通过或
   作为预期 RED 明确失败。
 
 ### 5.3 冻结验证命令
 
-- `V1`：`uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py -q`
+- `V1`：`uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`
 - `V2`：`uv run --python 3.11 pytest -q`
 - `V3`：`uv run --python 3.11 ruff check src tests`
 - `V4`：`uv run --python 3.11 ruff format --check src tests`
@@ -112,9 +116,10 @@ implementation final identity 和 fresh-main 均重跑 V1～V6；跨平台 requi
 
 1. 从 formal fresh main 创建 `feature/214-workitem-readonly-adapter-side-effect-dev` 与独立 worktree。
 2. 创建唯一新测试文件 `test_cli_workitem_adapter_dispatch.py` 并只在既有 init/link 文件补时序断言；
-   产品源码未改时运行 V1 RED，记录失败格、real-hook hash/write/output evidence。
+   产品源码未改时运行 V1 RED，记录失败格、代表性 real-hook hash/write/output evidence。
 3. 仅把 `_workitem_before_command()` 收敛为 `link` 才继续，禁止修改其他产品函数。
-4. 跑 V1～V6 GREEN：15 格、五个 real-hook normal、`init/link` 两类异常矩阵、full、Ruff、constraints。
+4. 跑 V1～V6 GREEN：15 格、一组 `plan-check` real-hook A/B、共享 partial-write、`init/link` 两类 outcome、
+   full、Ruff、constraints。
 5. 复核产品 diff 只有一个函数，无公共符号/依赖/配置/版本变化。
 
 **停止**：需要改 adapter 算法、handler、root callback、其他 CLI family 或新增抽象。
@@ -154,6 +159,7 @@ src/ai_sdlc/cli/workitem_cmd.py
 tests/integration/test_cli_workitem_init.py
 tests/integration/test_cli_workitem_link.py
 tests/integration/test_cli_workitem_adapter_dispatch.py
+tests/unit/test_cli_hooks.py
 ```
 
 Formal/lifecycle 可修改 WI214、WI196、WI213 对账文档、program manifest/truth、root/scoped handoff及

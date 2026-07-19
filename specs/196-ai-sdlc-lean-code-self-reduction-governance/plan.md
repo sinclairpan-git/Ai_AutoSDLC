@@ -160,9 +160,9 @@ T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷
   branch/clean/duplicate preflight 成功后调用 hook；`link` 当前在 handler guard 前调用，改变任一负路径必须
   先登记 explicit expected delta。
 - **验证/完成**：五个只读命令及其 help/invalid-input 前后 adapter/config/working tree bytes 不变且不输出
-  install receipt；五个 normal 有 production real-hook byte/hash/status；`init/link` 区分 config-lock
-  warning+continue 与其他 exception propagation，冻结矩阵零未批准差异；targeted/full/Ruff/constraints、
-  跨平台与 detached fresh-main clean 全绿。
+  install receipt；原始 `plan-check normal` 有一组 production/no-op real-hook byte/hash/status A/B；共享 hook
+  层一例冻结 config-lock partial-write，`init/link` 只验证 warning+continue 与其他 exception propagation 的
+  分发顺序；targeted/full/Ruff/constraints、跨平台与 detached fresh-main clean 全绿。
 - **停止/回退**：若修复要求关闭全部 workitem adapter、修改 adapter 算法或扩大到其他 CLI family，则回到
   design；implementation fresh-main 后用独立 lifecycle PR 关闭。未关闭时直接 revert implementation；已关闭时
   先 revert/修正 closure receipt 重开 GAP-15，再 revert implementation。

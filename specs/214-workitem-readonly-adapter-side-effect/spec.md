@@ -35,7 +35,7 @@ RC-08 或版本发布。
    当前唯一依赖它的写命令 `link` 调用 hook；`init` 继续由自身 handler 管理，其余当前命令均不调用。
 2. 对每个只读命令覆盖 normal、`--help` 与一个 invalid-input 路径；证明 hook count=`0`、adapter/config/
    working-tree bytes 不变、无 install receipt，handler 自身 stdout/stderr/exit 与 no-op-hook 基线相同；
-   normal 路径还须在临时项目运行 production hook 的 real-byte fixture。
+   原始复现路径 `plan-check normal` 还须在临时项目运行一组 production-hook real-byte A/B fixture。
 3. 冻结并回归 `init/link` 的 hook 次数、顺序、输出、退出码与写入集合；把 project-config
    `PermissionError` 的 warning+continue 与其他 exception 的 propagate 两类分开验证。
 4. 完成 TDD RED→GREEN、双 Agent 对抗审查、targeted/full/Ruff/constraints、跨平台 CI、PR/Codex、
@@ -90,10 +90,11 @@ receipt 是本缺陷的一部分，删除它是唯一批准的输出差异。std
 | `link` 其他 hook exception | 1 | 原类型/消息传播；handler 不开始，不回滚 hook 前缀写入 |
 
 受控异常仅指 `run_ide_adapter_if_initialized()` 识别到目标为
-`.ai-sdlc/project/config/project-config.yaml` 的 `PermissionError`。fixture 必须让真实 `apply_adapter` 先写
-guarded adapter，再令 `_persist_config` 失败，逐字节冻结 warning、partial-write set、handler continuation 与
-最终 exit；其他 `PermissionError` 和 unexpected exception 都属于传播路径。WI214 不新增事务、补偿或回滚
-adapter 内部部分写入。
+`.ai-sdlc/project/config/project-config.yaml` 的 `PermissionError`。共享 hook 层只增加一例：真实
+`apply_adapter` 先写 guarded adapter，再令 `_persist_config` 失败，逐字节冻结 warning 与 partial-write set。
+`init/link` integration 不重复 adapter 内部 fixture，只注入“warning 后 return”或“raise”的受控 hook，验证各自
+handler 是否继续、call order、最终输出/exit/write set。其他 `PermissionError` 和 unexpected exception 都属于
+传播路径。WI214 不新增事务、补偿或回滚 adapter 内部部分写入。
 
 除“只读 hook 1→0”外，任何 stdout、stderr、exit code、call order、exception type/message、文件集合、
 文件 bytes 或 git 状态差异均为未批准差异并阻断合并。
@@ -102,16 +103,18 @@ adapter 内部部分写入。
 
 - **FR-001**：五个冻结只读命令在 normal/help/invalid 三类入口都不得调用 adapter hook。
 - **FR-002**：五个只读命令在写入型 sentinel hook 下必须保持 adapter/config/working-tree bytes 不变且不出现
-  marker；其 normal 路径还必须以 `@pytest.mark.real_ide_hook` 在 byte-identical 临时项目运行 production hook，
-  证明 guarded adapter/config bytes、stdout/stderr/exit 与 git status 相对 no-op-hook 基线 exact。
+  marker；原始 `plan-check normal` 还必须以 `@pytest.mark.real_ide_hook` 在 byte-identical 临时项目运行一组
+  production/no-op A/B，证明 guarded adapter/config bytes、stdout/stderr/exit 与 git status exact。
 - **FR-003**：五个只读 handler 的业务输出、错误输出和退出码必须与同 revision no-op-hook 基线逐字节一致。
-- **FR-004**：`init/link` 必须满足 §3.2 全矩阵，分别证明受控 config-lock warning+continue 和其他异常传播；
-  不得通过改测试、吞异常、事务化既有部分写入或延后断言伪造兼容。
+- **FR-004**：共享 hook 层只证明一次 config-lock partial-write+warning；`init/link` 必须满足 §3.2 全矩阵，
+  分别证明受控 warning+continue 和其他异常传播的分发顺序；不得吞异常、事务化既有部分写入或复制 adapter
+  内部 fixture。
 - **FR-005**：实现必须是 `workitem` callback 内的直接 `ctx.invoked_subcommand != "link"` 判断；不得建立
   命令名单、全局 classifier 或新抽象层。未来命令必须显式决定是否需要写副作用，不能默认消费 hook。
 - **FR-006**：TDD 必须先在未改产品源码的 identity 上得到能证明 GAP-15 的 RED，再做最小 GREEN。
-- **FR-007**：formal 与实现都必须由 Pascal/LEAN 和 Confucius/SAFETY 对同一 committed+clean identity
-  独立审查；任一受审文件变化使双方 verdict 同时失效，直到双 PASS 且 actionable findings=0。
+- **FR-007**：formal、implementation 与 lifecycle reconciliation 都必须由 Pascal/LEAN 和
+  Confucius/SAFETY 对同一 committed+clean identity 独立审查；任一受审文件变化使双方 verdict 同时失效，
+  直到双 PASS 且 actionable findings=0。
 - **FR-008**：formal 使用 docs branch/PR；实现从 formal fresh main 建 dev branch/PR；implementation
   fresh-main 后从 main 建独立 lifecycle reconciliation branch/PR。三个阶段都必须完成 final current-identity
   双审、Codex、required checks、merge 与 detached fresh-main。
@@ -124,8 +127,8 @@ adapter 内部部分写入。
 
 ## 5. 成功标准
 
-- **SC-001**：`5 × 3 = 15` 个只读 CLI 入口全部 hook count=`0`、sentinel bytes/clean-tree 不变；五个 normal
-  路径另有 real production hook 的 guarded bytes/hash/status 证明。
+- **SC-001**：`5 × 3 = 15` 个只读 CLI 入口全部 hook count=`0`、sentinel bytes/clean-tree 不变；代表性的
+  `plan-check normal` 另有一组 real production hook 的 guarded bytes/hash/status A/B 证明。
 - **SC-002**：15 个入口的 stdout/stderr/exit 与 no-op-hook 基线 exact match；唯一删除内容是 adapter receipt。
 - **SC-003**：§3.2 的适用场景全部有自动化断言，`init/link` 未批准差异为 0。
 - **SC-004**：产品实现只改一个既有函数，不新增产品文件、公共符号、依赖、配置或版本；新增判断直接可读。

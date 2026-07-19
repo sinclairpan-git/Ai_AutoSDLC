@@ -121,3 +121,28 @@
 - 五项全部接受并做最小合同修订；没有扩到 adapter 算法、root callback、handler、ProgramService/T66、
   依赖、workflow 或版本。
 - Round 1 两份 verdict 与 identity 全部退役；修订提交后必须由 Pascal/Confucius 对新身份从零复审。
+
+## 8. Batch 2026-07-19-004：formal 对抗评审 Round 2 双 FAIL
+
+### 8.1 受审身份
+
+- HEAD=`144c8c5080a90f8819639204be0ab1b12a4acd1c`
+- tree=`37de73e387fcd55fd19df20909eba04c2500ad1b`
+- parent+child formal-six=`53d85b2a46b54deb0b05f53789c2517a17d879ec015f0829fee898ab174b246c`
+- Pascal/LEAN=`FAIL`、findings=2；Confucius/SAFETY=`FAIL`、findings=1；同 identity、clean、只读。
+
+### 8.2 Findings 与处置
+
+1. Confucius P2 成立：tasks 完成定义与 FR-007 仍残留两阶段措辞，可能让 lifecycle 修订逃逸重审；
+   改为 formal/implementation/lifecycle 三阶段均 mainline/fresh-main且同 identity 双 PASS0，并把 T41
+   明确为登记 implementation receipt。
+2. Pascal P2 成立：15 格已覆盖同一 callback 分支，再跑五个 production/no-op 双项目是重复乘积；
+   real-hook 收敛为原始 `plan-check normal` 一组代表性 A/B，其他四个 normal 由 sentinel 覆盖。
+3. Pascal P2 成立：在 init/link 各复制 production partial-write fixture 越过分发边界；共享
+   `test_cli_hooks.py` 只补一例 partial-write，init/link 只注入 return/raise outcome 验证继续或中断顺序。
+
+### 8.3 结论
+
+- Round 1 的五项 finding 已被双方确认实质闭合；Round 2 三项新增 finding 全部接受并继续减去重复证据。
+- 精确 targeted 命令加入 `tests/unit/test_cli_hooks.py`；仍只有一个新增测试文件，不新增测试 DSL/fixture framework。
+- Formal-six 已变化，Round 2 verdict 全部退役；提交后必须对新 identity 进行 Round 3 双审。

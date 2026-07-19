@@ -7,7 +7,8 @@ related_doc:
 # 任务分解：Workitem 只读命令 Adapter 副作用隔离
 
 **编号**：`214-workitem-readonly-adapter-side-effect`
-**完成定义**：formal 与 implementation 分别 mainline/fresh-main；GAP-15 关闭；不等于 T66/RC-08/release 完成
+**完成定义**：formal、implementation、lifecycle reconciliation 均 mainline/fresh-main；GAP-15 关闭；
+不等于 T66/RC-08/release 完成
 
 ## Batch 1：formal current-main 冻结
 
@@ -30,8 +31,9 @@ related_doc:
 
 - **状态**：completed
 - **依赖**：T12
-- **验收**：15 格只读矩阵只允许 hook 1→0 与 adapter receipt/write 消失；五个 normal 有 production
-  real-hook byte/hash/status；`init/link` 区分 config-lock warning+continue 与其他异常传播且 §3.2 零差异；
+- **验收**：15 格只读矩阵只允许 hook 1→0 与 adapter receipt/write 消失；代表性 `plan-check normal` 有
+  production real-hook A/B；共享 hook 层只补一例 partial-write；`init/link` 区分 warning+continue 与其他
+  异常传播且 §3.2 零差异；
   normalizer=none，stdout/stderr/exit exact。
 - **停止**：需要全局 classifier、第二 CLI family 或 handler 变化即回 design。
 
@@ -65,8 +67,8 @@ related_doc:
 - **状态**：pending
 - **依赖**：T21
 - **验收**：产品源码未改；唯一新文件=`tests/integration/test_cli_workitem_adapter_dispatch.py`；15 格在
-  legacy 上因 hook/write/receipt 至少一项按预期失败；五个 normal real-hook fixture 记录 guarded SHA/
-  status/output；`init/link` 在既有两个测试文件完成 call order、两类异常与 write set 的绿色 characterization。
+  legacy 上因 hook/write/receipt 至少一项按预期失败；`plan-check normal` 一组 real-hook A/B 记录 guarded
+  SHA/status/output；共享 hook 层一例 partial-write；`init/link` 既有文件只补 call order 与两类 outcome。
 - **约束**：优先参数化与复用 fixture；不得复制五套 handler 业务测试。
 
 ### T23 实施唯一 callback 修正
@@ -82,8 +84,8 @@ related_doc:
 - **状态**：pending
 - **依赖**：T23
 - **验收**：15 格 hook=0、sentinel/config/tree bytes stable、no-op-hook stdout/stderr/exit exact；
-  五个 normal production real-hook bytes/hash/status exact；`init/link` 全矩阵零未批准差异。
-- **精确 targeted**：`uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py -q`
+  `plan-check normal` production A/B bytes/hash/status exact；共享 partial-write 与 `init/link` 全矩阵零未批准差异。
+- **精确 targeted**：`uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`
 - **全量/静态门禁**：`uv run --python 3.11 pytest -q`；`uv run --python 3.11 ruff check src tests`；
   `uv run --python 3.11 ruff format --check src tests`；`uv run --python 3.11 ai-sdlc verify constraints`；
   `git diff --check`。
@@ -95,7 +97,7 @@ related_doc:
 - **状态**：pending
 - **依赖**：T24
 - **验收**：先完成 execution log、real-hook/RED/GREEN receipt、program truth、root/scoped handoff；再跑
-  `uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py -q`、
+  `uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`、
   `uv run --python 3.11 pytest -q`、Ruff check/format、constraints、validate/truth、manifest exact、scope/
   parity/Cursor/clean，最后提交并冻结 terminal identity。
 
@@ -106,7 +108,7 @@ related_doc:
 - **验收**：Pascal/LEAN 与 Confucius/SAFETY 对 T31 后同一 committed+clean identity 双 PASS0；任何修订先
   重跑相关 gate/truth 再重审。Codex reviewed current head 无 actionable finding、required checks success、
   merge；detached fresh-main 重跑
-  `uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py -q`
+  `uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`
   及 full/Ruff/治理/real-hook bytes/clean-tree。
 - **完成边界**：只声明 implementation accepted；GAP-15/T58 仍 active，T66 T61A 仍 blocked。
 
@@ -117,8 +119,8 @@ related_doc:
 - **状态**：pending
 - **依赖**：T32
 - **分支**：`codex/214-workitem-readonly-adapter-side-effect-lifecycle`，从 implementation fresh main 创建。
-- **验收**：只写 child/parent lifecycle docs、truth/continuity与 manifest exact 机械期望；登记 reviewed/
-  merge/fresh-main receipt，把 parent T58/GAP-15 标记 completed/closed；`src/tests` 零差异。
+- **验收**：只写 child/parent lifecycle docs、truth/continuity与 manifest exact 机械期望；登记 implementation
+  reviewed/merge/fresh-main receipt，把 parent T58/GAP-15 标记 completed/closed；`src/tests` 零差异。
 
 ### T42 lifecycle final 双审、PR 与 fresh-main
 
