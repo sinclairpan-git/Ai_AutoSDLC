@@ -44,7 +44,8 @@ related_doc:
 - **范围**：只记录 current-main A/B、根因边界、恢复动作和独立 T58 顺序，不修改 runtime/source。
 - **验收**：`program validate` 前后 SHA=`d5f04acf...0b6a`；`workitem plan-check --json` 后 SHA=
   `02d9656d...e134` 且 adapter `+18/-6`；恢复后相对 base diff=0；parent GAP-15/T58 已登记。
-- **后续门禁**：WI213 fresh-main 后先关闭 T58；其 fresh-main 前不得创建 T66 implementation WI/T61A。
+- **后续门禁**：WI213 lifecycle reconciliation fresh-main 后先关闭 T58；其 fresh-main 前
+  不得创建 T66 implementation WI/T61A。
 
 ## Batch 2：正式 Reduction Contract
 
@@ -128,7 +129,8 @@ related_doc:
 - **状态**：completed
 - **依赖**：T34
 - **范围**：child execution log/development summary、parent writeback、root/scoped handoff。
-- **验收**：summary 只声明正式合同完成；handoff byte-identical；唯一下一步是创建 T58/GAP-15 WI；
+- **验收**：summary 只声明正式合同完成；handoff byte-identical；lifecycle reconciliation
+  fresh-main 后唯一下一步是创建 T58/GAP-15 WI；
   不声明产品、T66、GAP-03、WI196、RC-08 或 release 完成。
 
 ### T42 绑定 program truth
@@ -164,7 +166,8 @@ related_doc:
 - **状态**：completed
 - **依赖**：T44
 - **验收**：merge tree=reviewed tree；constraints/validate/truth/manifest/scope/parity/clean 全绿；版本仍不变。
-- **唯一后续**：创建独立 T58/GAP-15 WI；T58 fresh-main 后才创建 T66 implementation WI，从 T61A 开始。
+- **唯一后续**：本 lifecycle reconciliation fresh-main 后创建独立 T58/GAP-15 WI；T58
+  fresh-main 后才创建 T66 implementation WI，从 T61A 开始。
 - **完成**：detached `450d4988` tree=`9d1c0f69` 与 reviewed tree 相同；Python 3.14 targeted=`165 passed`、
   manifest exact=`1 passed`，constraints/validate/truth=`ready/fresh 1121/1121`、scope/parity/Cursor/clean 全绿；
   版本未变。

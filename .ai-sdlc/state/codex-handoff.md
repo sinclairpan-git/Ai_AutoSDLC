@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T16:58:48Z
-- Reason: 回写 WI213 formal PR #158 mainline 与 detached fresh-main 的已发生 receipt
+- Updated: 2026-07-19T17:11:50Z
+- Reason: 处置 WI213 lifecycle 对抗复审 Round 1 的三项成立 finding
 - Goal: 完成 WI213 formal lifecycle reconciliation，然后从 fresh main 创建独立 T58/GAP-15
-- State: lifecycle source/truth 与全部本地门禁已完成；当前待同 identity 双审、PR/Codex/checks/merge 与 fresh-main
+- State: 过早 T58 授权、handoff 重复提交与 stale base/scope 已做最小修正；待提交、truth/gates 与同 identity 双审
 - Stage: decompose
 - Work Item: 213-programservice-bounded-stage-reduction
 - Branch: codex/213-programservice-bounded-stage-reduction-lifecycle
@@ -11,7 +11,6 @@
 ## Changed Files
 
 - specs/213-programservice-bounded-stage-reduction/spec.md
-- specs/213-programservice-bounded-stage-reduction/plan.md
 - specs/213-programservice-bounded-stage-reduction/tasks.md
 - specs/213-programservice-bounded-stage-reduction/task-execution-log.md
 - specs/213-programservice-bounded-stage-reduction/development-summary.md
@@ -21,8 +20,6 @@
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
 - program-manifest.yaml
-- tests/integration/test_repo_program_manifest.py
-- .ai-sdlc/project/config/project-state.yaml
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/213-programservice-bounded-stage-reduction/codex-handoff.md
 
@@ -30,7 +27,8 @@
 
 - WI213 是 formal-only receipt；不改产品。后续唯一 implementation WI 承担 T61A、candidate、
   主线预发布稳定周期和独立 legacy-deletion PR，删除前不得关闭 T66。
-- current main=e184c8e2；45 methods=3638 physical/3305 executable/branch386；165 legacy tests 通过。
+- formal measurement baseline=`e184c8e2`；current lifecycle base/merged main=`450d4988`；45 methods=
+  3638 physical/3305 executable/branch386；165 legacy tests 通过。
 - 当前合同上限：private module360、candidate facade addition72、terminal facade body45、binding/glue90、
   shadow product522、proof190、product+proof712、terminal720、net delete2918、ProgramService reduction3278。
 - 设计只允许 private descriptor + explicit constructor/callback injection；cross strategy 与 bounded
@@ -38,7 +36,7 @@
 - workitem init/plan-check 的非范围 Cursor adapter refresh 已精确恢复；terminal truth sync 已在 source commit
   `ada79cdf` 完成并由 final commit audit 证明 fresh。
 - 新登记 GAP-15：`program validate` 不改 adapter bytes，但 `workitem plan-check --json` 会在 handler 前隐式
-  refresh；WI213 不修 source，formal fresh-main 后先独立完成 T58，再进入 T66 T61A。
+  refresh；WI213 不修 source，本 lifecycle reconciliation fresh-main 后先独立完成 T58，再进入 T66 T61A。
 - Round 1 八个唯一 finding 全部成立：补 Python surface/late-bound dispatch、post-merge deletion revert、
   NO-GO 证据保留、no-index offline install、T58 负路径时序，并修正 WI213 hash 示例/授权矛盾。
 - Round 2 新发现并修正 legacy `value or fallback` truthiness/clock normalizer，以及跨进程不可复算的
@@ -116,11 +114,15 @@
   Confucius 均 PASS0。Codex 成立 P2 已修正；provenance P2 被本地/GitHub DAG 与两名 Agent
   独立证伪，review threads 已 resolved。
 - 当前 lifecycle reconciliation 会产生新 identity，尚待对完整 lifecycle diff 重新双审。
+- Lifecycle Round 1 对 `90b65eba`/tree `94399b8a`/formal-six `fe6e04fb...ff32`：Pascal
+  FAIL1、Confucius FAIL2。三项均成立：重复提交指令、T58 过早授权、stale base/scope；
+  已做最小修正，旧 verdict 退役。
 - 原 WI212 review 摘要已由 WI212 execution/summary/mainline 保存，未删除产品源码注释。
 
 ## Exact Next Steps
 
-1. 提交本次 gate receipt handoff，确认 committed+clean identity 与 formal-six。
-2. Pascal/Confucius 对该同一 lifecycle identity 独立复审，必须双 PASS0。
-3. 推送并创建 lifecycle PR，完成 Codex current-head review、required checks、merge 与 detached fresh-main。
-4. lifecycle fresh-main 后从 main 创建独立 T58/GAP-15 WI；T58 fresh-main 后才进入 T66 T61A。
+1. 若本轮三项 finding correction 仍未提交，只提交一次；已提交则 no-op。
+2. 在 correction source commit 上同步 truth，完成 gates 并确认 committed+clean identity/formal-six。
+3. Pascal/Confucius 对该同一 lifecycle identity 独立复审，必须双 PASS0。
+4. 推送并创建 lifecycle PR，完成 Codex current-head review、required checks、merge 与 detached fresh-main。
+5. lifecycle fresh-main 后从 main 创建独立 T58/GAP-15 WI；T58 fresh-main 后才进入 T66 T61A。

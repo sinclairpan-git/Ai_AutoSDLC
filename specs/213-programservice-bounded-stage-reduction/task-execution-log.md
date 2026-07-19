@@ -276,5 +276,14 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
 - Detached fresh-main `450d4988`、Python 3.14.3：targeted=`165 passed, 474 deselected in 4.15s`、manifest
   exact=`1 passed in 110.90s`，constraints/validate/truth=`ready/fresh 1121/1121`、unmapped/missing=`0/0`、
   scope/handoff parity/Cursor/clean 全绿；版本未变。
-- T42～T45 完成；WI213 formal-only 关闭。唯一下一项是独立 T58/GAP-15；T58 fresh-main 前不得进入
-  T66 T61A，且 GAP-03、WI196、RC-08 与发布继续 open。
+- T42～T45 完成；WI213 formal-only 关闭。本 lifecycle reconciliation fresh-main 后，唯一下一项才是
+  独立 T58/GAP-15；T58 fresh-main 前不得进入 T66 T61A，且 GAP-03、WI196、RC-08 与
+  发布继续 open。
+
+## 13. Batch 2026-07-19-012：lifecycle 对抗复审 Round 1
+
+- Review identity=`90b65eba`/tree `94399b8a`/formal-six=`fe6e04fb...ff32`。Pascal/LEAN 发现
+  handoff 要求重复提交已提交 receipt；Confucius/SAFETY 发现 T58 在 lifecycle reconciliation
+  交付前过早授权，以及 handoff current base/changed-files 滞后。
+- 三项 finding 全部成立，只修正授权时序与 continuity 事实；产品、测试、预算、
+  workflow、依赖与版本不变。旧 verdict 退役，修正后必须对新 identity 双 PASS0。

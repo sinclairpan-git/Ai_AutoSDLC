@@ -82,6 +82,7 @@
   release 授权。
 - WI-213 已以 Round 9 双 PASS、PR #158、13/13 checks、merge `450d4988` 与 detached fresh-main 完成
   formal-only lifecycle，冻结 T66 terminal≤720、净删≥2,918；truth=`ready/fresh 1121/1121`、
-  unmapped/missing=`0/0`，merge/reviewed tree=`9d1c0f69`。当前唯一下一项是独立 T58/GAP-15；其
-  fresh-main 前不得进入 T66 T61A，且本项不授权提前发布。
+  unmapped/missing=`0/0`，merge/reviewed tree=`9d1c0f69`。本 lifecycle reconciliation 完成双审/
+  mainline/fresh-main 后，唯一下一项才是独立 T58/GAP-15；其 fresh-main 前不得进入
+  T66 T61A，且本项不授权提前发布。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

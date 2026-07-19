@@ -1,7 +1,7 @@
 # 开发摘要：ProgramService 九阶段精益减重正式合同
 
 **功能编号**：`213-programservice-bounded-stage-reduction`
-**状态**：formal contract mainline / detached fresh-main 已完成；唯一下一项为独立 T58/GAP-15
+**状态**：formal contract mainline / detached fresh-main 已完成；lifecycle reconciliation 收口中
 
 ## 本地已交付
 
@@ -42,5 +42,5 @@
   验证 merge/reviewed tree=`9d1c0f69` 且 truth/tests/scope/parity/clean 全绿。
 - 本 WI 没有产品代码、selector、candidate、legacy deletion、版本/tag/Release/PyPI 或全局 CLI 更新。
 - GAP-15、T58、T61A/B、T66、GAP-03、WI196、RC-08 和总体版本发布均保持 open。
-- Formal mainline/fresh-main 完成后的唯一下一项是创建独立 T58/GAP-15 WI；T58 fresh-main 后才可创建
-  T66 implementation WI。
+- 本 lifecycle reconciliation 取得双审/mainline/fresh-main 后，唯一下一项才是创建独立
+  T58/GAP-15 WI；T58 fresh-main 后才可创建 T66 implementation WI。
