@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T09:15:49Z
-- Reason: WI212 Round 3 split verdict findings 最小处置
+- Updated: 2026-07-19T09:21:59Z
+- Reason: WI212 Round 4 split verdict continuity findings 最小处置
 - Goal: 完成候选选择、父 L3 合同修订、同 identity 双审、PR 与 detached fresh-main 验收
-- State: Round 3 Pascal PASS0/Confucius FAIL2 已退役；两项 finding 已修正，等待双方新 identity 复审
+- State: Round 4 Pascal PASS0/Confucius FAIL2 已退役；continuity findings 已修正，等待 current identity 双审
 - Stage: verify
 - Work Item: 212-reduction-candidate-selection
 - Branch: feature/212-reduction-candidate-selection-docs
@@ -42,10 +42,12 @@
   两位 reviewer 在形成 verdict 前已中止。表格现与 Carver 精确调用/文件计数及 RC-09 结论一致。
 - 随后 exact HEAD/tree=`5d2279a1`/`79e28268` 得到 Pascal PASS0、Confucius FAIL2；T12 Deferred
   冲突和 log 重复冻结 identity finding 已接受。tasks 变化使该 split verdict 双方同时退役。
+- Round 4 exact HEAD/tree=`9579fac0`/`61ac2a70` 得到 Pascal PASS0、Confucius FAIL2；旧 handoff
+  Round 3 指向与 log 三文件失效边界 finding 已接受，当前恢复入口改为 round-agnostic。
 
 ## Blockers / Risks
 
-- Round 3 双 PASS 前不得创建 T66 formal、修改产品、push 或建 PR。
+- Current identity 双 PASS 前不得创建 T66 formal、修改产品、push 或建 PR。
 - 任一 formal 六文件变化使两方 verdict 同时失效；root/scoped handoff 必须 byte-identical。
 - active child 尚缺 development summary；terminal truth sync 前 manifest exact 必须保持预期 RED。
 - GAP-03～06、WI-196、RC-08 与 release 均 open；全局 CLI 仍为 v0.9.6。
@@ -60,7 +62,7 @@
 ## Exact Next Steps
 
 1. 以恢复时已提交且 clean 的 current HEAD/tree 为唯一身份，复算 parent §9 formal-six，确认 base diff 无行尾空格；已满足时不得改写证据或制造新 identity。
-2. Pascal/Confucius 对相同 Round 3 HEAD/tree/formal-six 从零评审；任一 finding 成立则最小修复并双方重审。
+2. Pascal/Confucius 对相同 current HEAD/tree/formal-six 从零评审；任一 finding 成立则最小修复并双方重审。
 3. 双 PASS 后更新任务/日志，创建 child development summary，机械替换 manifest test 两值，保持 +2/-2。
 4. 执行一次 truth sync，更新两份 byte-identical handoff，跑 constraints/validate/truth/manifest/scope/parity。
 5. current HEAD 再双审；随后 push/PR、Codex review/check heartbeat、merge 与 detached fresh-main 验收。

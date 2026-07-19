@@ -10,7 +10,7 @@
 - 任一 `src/workflow/provider/runtime rule` 或测试逻辑/LOC 变化均为 blocker；test 唯一例外为
   manifest inventory/close 两值 `+2/-2` 等量替换。
 - 所有历史 candidate/claim 只作证据，不得恢复。
-- Formal 三文件变化使两个对抗 Agent 的既有 PASS 同时失效。
+- Parent+child formal-six 任一文件变化使两个对抗 Agent 的既有 PASS 同时失效。
 - 每批完成后先验证、再更新本日志、再提交；不得预写未来提交哈希。
 
 ## 2. Batch 2026-07-19-001：fresh-main 身份与路线审计
@@ -183,3 +183,13 @@ product+proof≤686≤`floor(2947×25%)=736`，余量≥50。
 - 两项 finding 均接受：T12 不再把已 fail-closed 的 T63 写成 Deferred；当前状态和待完成动作改为复审
   已冻结 identity，而不是重复生成 identity。候选矩阵、预算、测试例外、稳定周期和产品 scope 不变。
 - tasks 属于 formal-six；本次最小修订后 Pascal/Confucius 必须对新 canonical identity 从零复审。
+
+## 10. Batch 2026-07-19-007：Round 4 split verdict
+
+- exact HEAD/tree=`9579fac0`/`61ac2a70`，formal-six=
+  `f7c38d07bb969690698586ac1d81bce8b97d5a622a9235b06e1fed96c27b593c`；Pascal PASS0、
+  Confucius FAIL2，任一内容修订使双方 verdict 同时退役。
+- 两项 finding 均接受：execution 固定边界从错误的“三文件”统一为 parent+child formal-six；两份
+  handoff 的阻断与下一步改为 round-agnostic current identity，不再指向已退役 Round 3。
+- formal-six 本轮不变，但 HEAD/tree/diff 与 continuity 变化；为满足用户“意见统一且通过”，两位 reviewer
+  仍必须对相同新 current identity 从零复审，不能保留 Pascal 旧 PASS。
