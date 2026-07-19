@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T16:47:22Z
+- Updated: 2026-07-19T16:58:48Z
 - Reason: 回写 WI213 formal PR #158 mainline 与 detached fresh-main 的已发生 receipt
 - Goal: 完成 WI213 formal lifecycle reconciliation，然后从 fresh main 创建独立 T58/GAP-15
-- State: lifecycle source=`beb61390`、truth=`b61e429d...d0ff` 已完成；当前待本地门禁、同 identity 双审、PR 与 fresh-main
+- State: lifecycle source/truth 与全部本地门禁已完成；当前待同 identity 双审、PR/Codex/checks/merge 与 fresh-main
 - Stage: decompose
 - Work Item: 213-programservice-bounded-stage-reduction
 - Branch: codex/213-programservice-bounded-stage-reduction-lifecycle
@@ -88,6 +88,9 @@
   manifest exact=`1 passed in 110.90s`，constraints/validate/truth/scope/parity/Cursor/clean 全绿。
 - Lifecycle source commit=`beb61390`；truth sync=`ready`、snapshot=`b61e429d...d0ff`、inventory=
   `1121/1121`、unmapped/missing=`0/0`、spec/plan/tasks/execution/close=`213/213`。
+- Lifecycle gates：constraints no BLOCKER、program validate PASS、truth audit=`ready/fresh 1121/1121`；
+  targeted=`165 passed, 474 deselected in 8.45s`，manifest exact=`1 passed in 155.19s`；diff/scope/
+  handoff parity/Cursor/source ancestry/clean 全绿。
 
 ## Blockers / Risks
 
@@ -117,7 +120,7 @@
 
 ## Exact Next Steps
 
-1. 提交 manifest + byte-identical handoff，运行 constraints/validate/truth/manifest exact/165 baseline/diff/scope/parity/Cursor/clean 门禁。
-2. Pascal/Confucius 对同一 committed+clean lifecycle identity 独立复审，必须双 PASS0。
+1. 提交本次 gate receipt handoff，确认 committed+clean identity 与 formal-six。
+2. Pascal/Confucius 对该同一 lifecycle identity 独立复审，必须双 PASS0。
 3. 推送并创建 lifecycle PR，完成 Codex current-head review、required checks、merge 与 detached fresh-main。
 4. lifecycle fresh-main 后从 main 创建独立 T58/GAP-15 WI；T58 fresh-main 后才进入 T66 T61A。
