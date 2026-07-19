@@ -118,9 +118,10 @@ typed constructor/callback 由 ProgramService 显式传入。禁止底部/延迟
 `getattr`、stage-name branching、运行时 registration 或 YAML-driven DSL。
 
 现有 public-to-public 调用保持 late-bound：execute 默认 request 必须经 `self.build_*`，writer 默认
-request/result 必须经 `self.build_*`/`self.execute_*` 解析后再作为 callback 注入 private engine；显式传参
-继续绕过相应默认构造。不得从 module-level binding 直接调用并旁路 subclass override、`patch.object`、调用
-次数/顺序或异常传播。
+request/result 必须经 `self.build_*`/`self.execute_*` 解析后再作为 callback 注入 private engine。是否 fallback
+严格保留 legacy `provided_value or callback()` truthiness：`None` 与 falsey 显式对象仍 fallback，truthy 值才
+绕过；`generated_at` 同样保留 `provided_value or utc_now_z()`。不得从 module-level binding 直接调用并旁路
+subclass override、`patch.object`、clock spy、调用次数/顺序或异常传播。
 
 ### 5.2 差异表达
 
@@ -167,7 +168,8 @@ WI 或直接写产品。
 2. 在任何产品代码前，重跑 165 tests；捕获 direct-service/full-CLI 双根 baseline、raw tree/bytes、异常、
    调用顺序、写入/中断/重试和 p50/p95。
 3. 冻结 normalizer、fixture、toolchain、architecture ledger 与 expected zero-delta；生成 public callable/DTO
-   版本化 Python-surface manifest，并捕获 execute/writer late-bound `self` dispatch 的 subclass/spy 矩阵。
+   版本化 Python-surface manifest（可移植 source/behavior digest，禁止 identity/address repr），并捕获
+   execute/writer late-bound `self` dispatch 的 `None`/truthy/falsey/clock subclass/spy 矩阵。
 4. 证明预计 product≤522、proof≤190、无禁止结构；两 reviewer 对同一 proof identity 双 `GO`。
 
 **停止**：任一 reviewer NO-GO、proof/architecture 超预算、legacy 不稳定或隔离写边界不可靠。

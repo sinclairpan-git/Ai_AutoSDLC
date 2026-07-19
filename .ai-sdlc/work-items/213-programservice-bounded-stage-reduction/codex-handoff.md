@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T12:33:44Z
-- Reason: WI213 formal Round 1 双 FAIL 已核验并完成最小合同修订
+- Updated: 2026-07-19T12:42:15Z
+- Reason: WI213 formal Round 2 split verdict 的两个安全 finding 已修订
 - Goal: 冻结 T66 九阶段 ProgramService 减重正式合同并完成同 identity 双审、PR、fresh-main
-- State: Round 1 Pascal FAIL(2)/Confucius FAIL(7) 均已处置；等待修订提交与同 identity Round 2
+- State: Round 2 Pascal PASS0/Confucius FAIL2 已同时失效；等待 truthiness/canonical fingerprint 修订提交与 Round 3
 - Stage: decompose
 - Work Item: 213-programservice-bounded-stage-reduction
 - Branch: feature/213-programservice-bounded-stage-reduction-docs
@@ -36,6 +36,8 @@
   refresh；WI213 不修 source，formal fresh-main 后先独立完成 T58，再进入 T66 T61A。
 - Round 1 八个唯一 finding 全部成立：补 Python surface/late-bound dispatch、post-merge deletion revert、
   NO-GO 证据保留、no-index offline install、T58 负路径时序，并修正 WI213 hash 示例/授权矛盾。
+- Round 2 新发现并修正 legacy `value or fallback` truthiness/clock normalizer，以及跨进程不可复算的
+  `__post_init__ identity`；改用 source/behavior canonical fingerprint，仍受 proof≤190 限制。
 - RC-08 前仍禁止版本/tag/Release/PyPI/全局 CLI；GAP-03、WI196 与发布保持 open。
 
 ## Commands / Tests
@@ -50,13 +52,14 @@
   adapter base-byte diff 均通过。首次 uv 默认 cache 因 sandbox 只读失败，改用 workspace `.uv-cache` 后通过。
 - Round 1 修订后复验：constraints no BLOCKER、program validate PASS、diff-check、handoff parity、adapter
   base-byte 与 scope path 全部通过；未运行已知有 GAP-15 副作用的 workitem read-only 命令。
+- Round 2 修订后复验同样通过 constraints/validate/diff/parity/adapter/scope；产品、测试、workflow、依赖零 diff。
 - program-manifest 已登记 WI213 depends_on WI196；未 sync。
 
 ## Blockers / Risks
 
 - Feasibility reviewer 已 final GO，但 module 只有12行预测余量；T61A 中 module>360 即 No-Go。
-- Round 1 受审 identity=`0ab64e91`/tree `53ac0a44`/formal-six `7c37b888...6b96`；两份 FAIL 已失效，
-  修订必须提交为新 clean identity 后从零双审。
+- Round 2 受审 identity=`fd421ea6`/tree `1fabfec6`/formal-six `3db6ef58...fdd5`；Pascal PASS0 与
+  Confucius FAIL2 均已失效，修订提交后双方必须对 Round 3 identity 从零复审。
 - GAP-15/T58 尚未修复；在其独立 mainline/fresh-main receipt 前，T66 implementation WI/T61A 被阻断。
 - 360/522/712/720 任一被代码事实证明不可达时，必须最小修订或 RC-09 No-Go，不能扩大分母。
 - 任一 formal-six 变化使 Pascal/Confucius verdict 同时失效。
@@ -73,7 +76,7 @@
 ## Exact Next Steps
 
 1. 运行修订后的 diff/traceability/scope/constraints 初检；不重复执行已知会写盘的 workitem read-only 命令。
-2. 提交 Round 2 clean identity，计算新 formal-six hash。
-3. Pascal/Confucius 对新相同 identity 从零评审，修订至双 PASS0。
+2. 提交 Round 3 clean identity，计算新 formal-six hash。
+3. Pascal/Confucius 对 Round 3 相同 identity 从零评审，修订至双 PASS0。
 4. Terminal summary/truth/manifest/handoff、current identity 双审、PR/check/merge/fresh-main。
 5. Formal fresh-main 后创建独立 T58/GAP-15 WI；T58 fresh-main 后才创建 T66 implementation WI/T61A。

@@ -202,3 +202,25 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
   退出码与写入；任一行为变化必须 explicit expected delta。
 
 本轮任一 formal-six 变化已使 Round 1 两份 verdict 同时失效；修订提交后必须由双方对新 identity 从零复审。
+
+## 8. Batch 2026-07-19-007：formal Round 2 split verdict 与 truthiness 修订
+
+### 8.1 受审身份与结论
+
+- HEAD=`fd421ea6f1f7b50bd7a42243b72640bff8c7bf09`
+- tree=`1fabfec635d2eb88eed28d7d3f2ace84d1948c78`
+- formal-six combined SHA-256=`3db6ef5816ec21daa8281e784d109a7bdfbbdc4ff13c249a3fdd7fb1ec9efdd5`
+- Pascal/LEAN：`PASS`、findings=0；Confucius/SAFETY：`FAIL`、findings=2。两者 identity 匹配且只读。
+- 内容变化使 Pascal PASS 与 Confucius FAIL 同时失效；不得拼接 Pascal Round 2 与未来安全 verdict。
+
+### 8.2 新 findings 与处置
+
+1. Legacy 九组 writer/executor 使用 `value or fallback`，先前“显式参数绕过”错误忽略 falsey object；同时
+   宽泛 `generated_at` normalizer 会吞掉 `is None` 回归。修订为 `None/truthy/falsey` request/result 和
+   `generated_at=None/""/固定 truthy` clock-spy 矩阵；只允许规范化实证来自默认时钟的值，caller truthy
+   时间逐字节比较。
+2. `__post_init__ identity` 不可跨进程。修订为 presence/module/qualname/signature/source SHA-256/行为
+   digest；field default/default_factory 使用 MISSING/typed literal/callable canonical 编码；source 不可读
+   fail-closed，禁止 `id()` 或含地址 `repr()`。
+
+两项均成立并完成最小合同修正；不新增公共抽象、不放宽 proof≤190，Round 3 必须同 identity 双 PASS0。
