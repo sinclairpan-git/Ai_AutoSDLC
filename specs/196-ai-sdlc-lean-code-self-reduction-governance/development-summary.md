@@ -68,7 +68,7 @@
 - RC-08 family ledger 已记录 WI-205 `net -109`、WI-206 `net -209`、WI-210 `net -213`、WI-211
   `net -122`，累计产品 raw `net -653`；这只是已关闭重复族的局部收益，不代表路线整体达到 10% 或
   两个超大文件降到 400 行。
-- WI-211 closure mainline/fresh-main 前不选择下一原子项；之后仍须按真实收益、证明成本与 sponsor 从新的
-  T63/T65/WP-06/WP-07 候选中选择独立 WI。不得恢复已 No-Go 且缺少 sponsor 的 T62A，也不得关闭
-  GAP-05/WI-196、宣称 RC-08 达成或发布版本。
+- WI-211 closure PR #154 已合并为 `626adb70` 并通过 detached fresh-main 验收；下一原子项选择门禁已恢复。
+  后续仍须按真实收益、证明成本与 sponsor 从新的 T63/T65/WP-06/WP-07 候选中选择独立 WI。不得恢复
+  已 No-Go 且缺少 sponsor 的 T62A，也不得关闭 GAP-05/WI-196、宣称 RC-08 达成或发布版本。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

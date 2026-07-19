@@ -7,9 +7,9 @@ related_doc:
 
 **编号**：`211-shared-mapping-dedupe` | **日期**：2026-07-18
 **来源**：`spec.md + plan.md`
-**当前授权**：Batch 0～3 与 T41 已完成，T42 closure 双审待执行；closure 只允许 child/parent
-docs、truth/continuity 与 manifest test 的 missing `1→0`、close layer `210→211` 两条机械期望，
-不得修改产品代码或其他测试逻辑
+**当前授权**：Batch 0～4 全部完成；closure PR #154 已合并并通过 detached fresh-main 验收。
+本次 post-merge reconciliation 只允许同步已完成的生命周期证据，不得修改产品代码、测试逻辑、
+RC-08 ledger 或开放边界
 
 ## 批次图
 
@@ -178,15 +178,22 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ### T42 Closure 双 Agent / Codex / CI
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T41。
 - **验收**：Pascal/Confucius 同 identity PASS；Codex current-head clean；required checks全绿。
+- **证据**：reviewed HEAD/tree=`ed7934fccb7161f85ad391c4466a658add2e1247`/
+  `57973d2ff1d334ae87b9cd8384684cfc2bfc0b7e`；Pascal/Confucius 均 PASS、findings=none；Codex
+  reviewed commit `ed7934fccb` 未发现 major issue；PR #154 的 13/13 checks success。
 
 ### T43 Closure merge / fresh-main
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T42。
 - **验收**：closure merge；fresh-main docs/truth/manifest/clean guard PASS；随后才允许选择下一原子项。
+- **证据**：PR #154 squash merge=`626adb70cb9e7333e5bd690765b4336c1f260769`；detached fresh main
+  Python 3.11.15 上 constraints、validate、truth `ready/fresh 1111/1111`、manifest exact、Ruff、
+  protected/src/test-scope/handoff parity 与 clean guard 全绿；merge tree 与 reviewed tree 同为
+  `57973d2ff1d334ae87b9cd8384684cfc2bfc0b7e`。
 
 ## 合同映射
 
