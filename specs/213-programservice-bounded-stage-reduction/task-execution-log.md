@@ -224,3 +224,15 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
    fail-closed，禁止 `id()` 或含地址 `repr()`。
 
 两项均成立并完成最小合同修正；不新增公共抽象、不放宽 proof≤190，Round 3 必须同 identity 双 PASS0。
+
+## 9. Batch 2026-07-19-008：formal Round 3 同一 fingerprint finding
+
+- 受审 identity：HEAD=`178e805be9cda71e066387db6a77f02086a368e1`；tree=
+  `52183d315cfc2d5da4d6ba9ac38074b977db26f6`；formal-six=
+  `614c5158c91fa40904219146c7a10e8562a3de1192e8ae01a167fad0b5ebc388`；clean、只读。
+- Pascal/LEAN 与 Confucius/SAFETY 均 `FAIL`、各 findings=1，意见统一：统一 source hash 会让必须改 body 的
+  public facade 永远不通过，且 `inspect.getsource(builtins.list/dict)` 必然失败，使 legacy T61A 直接 No-Go。
+- 成立并最小修订为三类 schema：public API 只比 surface+behavior；DTO `__post_init__` 因禁止修改而比
+  source-or-normalized-code+behavior；当前内建 factory 仅 allowlist `builtins.list/dict` stable tag+behavior。
+  未知 callable 才 fail-closed，仍禁止 identity/address repr，proof≤190 不变。
+- Formal-six 已变化，Round 3 两个 FAIL 只保留为历史；Round 4 必须对新 committed+clean identity 从零双审。

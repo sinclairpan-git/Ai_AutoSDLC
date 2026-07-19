@@ -168,8 +168,9 @@ WI 或直接写产品。
 2. 在任何产品代码前，重跑 165 tests；捕获 direct-service/full-CLI 双根 baseline、raw tree/bytes、异常、
    调用顺序、写入/中断/重试和 p50/p95。
 3. 冻结 normalizer、fixture、toolchain、architecture ledger 与 expected zero-delta；生成 public callable/DTO
-   版本化 Python-surface manifest（可移植 source/behavior digest，禁止 identity/address repr），并捕获
-   execute/writer late-bound `self` dispatch 的 `None`/truthy/falsey/clock subclass/spy 矩阵。
+   版本化 Python-surface manifest（public=surface/behavior；DTO hook=source-or-code/behavior；仅 allowlist
+   `builtins.list/dict` factory tag；禁止 identity/address repr），并捕获 execute/writer late-bound `self`
+   dispatch 的 `None`/truthy/falsey/clock subclass/spy 矩阵。
 4. 证明预计 product≤522、proof≤190、无禁止结构；两 reviewer 对同一 proof identity 双 `GO`。
 
 **停止**：任一 reviewer NO-GO、proof/architecture 超预算、legacy 不稳定或隔离写边界不可靠。

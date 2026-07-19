@@ -63,9 +63,10 @@ related_doc:
 - **状态**：completed
 - **依赖**：T21
 - **验收**：T61A 在产品编码前；双临时根、raw evidence、异常/写序/副作用/中断/重试、≥20次 p50/p95；
-  public callable/DTO Python-surface manifest 使用 module/qualname/signature/source/behavior canonical digest，
-  禁用 identity/address repr；execute/writer late-bound `self` dispatch 覆盖 `None`/truthy/falsey request/result
-  与 `generated_at=None/""/固定值` 的 clock spy 矩阵，保持 legacy truthiness；
+  Python-surface manifest 分为 public surface/behavior、DTO hook source-or-code/behavior、allowlisted
+  `builtins.list/dict` factory tag，未知 callable fail-closed 且禁用 identity/address repr；execute/writer
+  late-bound `self` dispatch 覆盖 `None`/truthy/falsey request/result 与 `generated_at=None/""/固定值` 的
+  clock spy 矩阵，保持 legacy truthiness；
   LEAN/SAFETY 同 proof identity 双 GO 后才可编码；T61B 绑定 candidate commit/tree，零未批准差异。
 - **回退**：T61A NO-GO 先固化 commit/tree/raw hash/verdict/closure receipt，保留唯一证据；运行时零改动。
 
