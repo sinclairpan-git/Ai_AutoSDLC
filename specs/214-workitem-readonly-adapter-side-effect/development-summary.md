@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal/amendment 已 merge/fresh-main；implementation T21～T31 completed，待 final identity 双审/PR
+**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 修正跨平台测试夹具后重新验收
 
 ## 已冻结合同
 
@@ -56,3 +56,9 @@
   V4b 对 13 个 changed ranges 全绿，无全库历史格式化或范围扩张。
 - Terminal continuity source=`581cf344`、首个 truth snapshot=`034f3464...d732`；最终 reviewed identity 只允许
   manifest-only truth refresh，持久下一步从双审开始，避免重复 sync。
+- Implementation Round 2 对 `8d09b7bb` 同身份双 PASS0，Codex current-head 也未发现 major issue；但 PR #162
+  Compatibility Gate 在 Ubuntu/macOS 宽终端稳定暴露 production/no-op A/B 使用不同绝对临时路径，导致 Rich
+  表格路径与列宽不同。产品行为和 bytes/clean-tree 断言均通过，失败只在 stdout 假对比。
+- 本地 `COLUMNS=200` 复现 RED 后，测试改为在同一已确认 clean 的 repo 上顺序执行 no-op 与真实 hook，保留
+  exact stdout/stderr/exit/bytes/tree 合同并净删 13 行；宽终端单测与 49 项矩阵已转绿。该变更使旧双审与
+  Codex review 退役，必须完成 full/gates、truth 与新身份双审后再更新 PR #162。

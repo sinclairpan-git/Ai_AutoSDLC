@@ -356,3 +356,19 @@
 - 两位 reviewer 对产品一行最小性、479 行测试的合同映射、exact output/bytes/write-set/order、V4、truth/scope/
   parity 与 lifecycle/T66 均无其他 finding；Confucius 亲自重跑 targeted=`49 passed in 11.13s`。
 - 修正后再次 terminal truth sync，并对新 identity 重跑全部 T31 gates；不得复用本轮 SAFETY PASS。
+
+## 25. Batch 2026-07-19-021：PR #162 跨平台夹具缺陷修正
+
+- Round 2 final identity=`8d09b7bba8e98b5c7858084ee8e6d3c705645e8b`/tree=
+  `10e877b573e5568f418535b90841e6626546fe2b`，Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0；PR #162
+  Codex reviewed exact `8d09b7bba8` 未发现 major issue、review threads=0。
+- Compatibility Gate 的 Ubuntu 3.11/3.12 与 macOS 3.11/3.12 均只失败
+  `test_plan_check_real_cursor_hook_matches_no_op_without_writes`：两个独立 repo 的绝对路径分别含
+  `baseline`/`candidate`，Rich 在宽终端输出完整路径并产生不同列宽，`candidate.stdout == baseline.stdout`
+  因夹具输入不同而误报；其余 3301 项通过，产品 bytes/tree assertions 在失败前已通过。
+- 本地 `COLUMNS=200` 精确复现=`1 failed in 1.01s`。最小修正删除 `shutil.copytree` 与第二套 repo，让 no-op
+  与真实 hook 在同一 repo 顺序运行；首轮 no-op 后先验证 guarded bytes/tree 未变，因此第二轮输入严格相同，
+  exact stdout/stderr/exit 合同保持且测试净删 13 行，产品、依赖、workflow、版本均零变化。
+- 修正后宽终端单测=`1 passed in 0.96s`、targeted=`49 passed in 16.00s`、Ruff lint/format PASS。旧双审和
+  Codex review 随 identity 变化退役；提交 continuity/test、terminal truth 与全部 gate 后必须同身份重新双审，
+  再 push PR #162 并重新请求 Codex current-head review。
