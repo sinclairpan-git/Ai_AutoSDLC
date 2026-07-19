@@ -160,13 +160,16 @@ T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷
   branch/clean/duplicate preflight 成功后调用 hook；`link` 当前在 handler guard 前调用，改变任一负路径必须
   先登记 explicit expected delta。
 - **验证/完成**：五个只读命令及其 help/invalid-input 前后 adapter/config/working tree bytes 不变且不输出
-  install receipt；`init/link` 的冻结矩阵零未批准差异；targeted/full/Ruff/constraints、跨平台与 detached
-  fresh-main clean 全绿。
+  install receipt；五个 normal 有 production real-hook byte/hash/status；`init/link` 区分 config-lock
+  warning+continue 与其他 exception propagation，冻结矩阵零未批准差异；targeted/full/Ruff/constraints、
+  跨平台与 detached fresh-main clean 全绿。
 - **停止/回退**：若修复要求关闭全部 workitem adapter、修改 adapter 算法或扩大到其他 CLI family，则回到
-  design；revert T58 独立实现 PR。
-- **证据**：command matrix RED/GREEN、real-hook byte hash、输出/退出码、dirty-state、双 Agent、PR/CI/fresh-main。
+  design；implementation fresh-main 后用独立 lifecycle PR 关闭。未关闭时直接 revert implementation；已关闭时
+  先 revert/修正 closure receipt 重开 GAP-15，再 revert implementation。
+- **证据**：command matrix RED/GREEN、real-hook byte hash、输出/退出码、dirty-state、双 Agent、formal/
+  implementation/lifecycle 三阶段 PR/CI/fresh-main。
 
-T58 不计 Reduction Contract 收益；其 fresh-main receipt 是 WI-213 后续 T66 T61A 的硬前置。
+T58 不计 Reduction Contract 收益；其 lifecycle fresh-main receipt 是 WI-213 后续 T66 T61A 的硬前置。
 
 ## 5. WP-01：最小充分 Characterization / Golden / Differential
 

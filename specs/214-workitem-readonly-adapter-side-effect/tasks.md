@@ -30,7 +30,8 @@ related_doc:
 
 - **状态**：completed
 - **依赖**：T12
-- **验收**：15 格只读矩阵只允许 hook 1→0 与 adapter receipt/write 消失；`init/link` §3.2 适用矩阵零差异；
+- **验收**：15 格只读矩阵只允许 hook 1→0 与 adapter receipt/write 消失；五个 normal 有 production
+  real-hook byte/hash/status；`init/link` 区分 config-lock warning+continue 与其他异常传播且 §3.2 零差异；
   normalizer=none，stdout/stderr/exit exact。
 - **停止**：需要全局 classifier、第二 CLI family 或 handler 变化即回 design。
 
@@ -63,8 +64,9 @@ related_doc:
 
 - **状态**：pending
 - **依赖**：T21
-- **验收**：产品源码未改；15 格只读矩阵在 legacy 上因 hook/write/receipt 至少一项按预期失败；
-  `init/link` baseline 矩阵通过并记录 call order/write set。
+- **验收**：产品源码未改；唯一新文件=`tests/integration/test_cli_workitem_adapter_dispatch.py`；15 格在
+  legacy 上因 hook/write/receipt 至少一项按预期失败；五个 normal real-hook fixture 记录 guarded SHA/
+  status/output；`init/link` 在既有两个测试文件完成 call order、两类异常与 write set 的绿色 characterization。
 - **约束**：优先参数化与复用 fixture；不得复制五套 handler 业务测试。
 
 ### T23 实施唯一 callback 修正
@@ -80,40 +82,63 @@ related_doc:
 - **状态**：pending
 - **依赖**：T23
 - **验收**：15 格 hook=0、sentinel/config/tree bytes stable、no-op-hook stdout/stderr/exit exact；
-  `init/link` 全矩阵零未批准差异；workitem targeted、full、Ruff、constraints 全绿。
+  五个 normal production real-hook bytes/hash/status exact；`init/link` 全矩阵零未批准差异。
+- **精确 targeted**：`uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py -q`
+- **全量/静态门禁**：`uv run --python 3.11 pytest -q`；`uv run --python 3.11 ruff check src tests`；
+  `uv run --python 3.11 ruff format --check src tests`；`uv run --python 3.11 ai-sdlc verify constraints`；
+  `git diff --check`。
 
-## Batch 3：implementation review、PR 与关闭
+## Batch 3：implementation truth、review 与 mainline
 
-### T31 implementation 双 Agent 对抗评审
+### T31 冻结 implementation terminal truth 与本地门禁
 
 - **状态**：pending
 - **依赖**：T24
-- **验收**：Pascal/LEAN 与 Confucius/SAFETY 对同一 committed+clean implementation identity 双 PASS0；
-  成立 finding 最小修正后重跑相关 RED/GREEN/回归并对新 identity 从零复审。
+- **验收**：先完成 execution log、real-hook/RED/GREEN receipt、program truth、root/scoped handoff；再跑
+  `uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py -q`、
+  `uv run --python 3.11 pytest -q`、Ruff check/format、constraints、validate/truth、manifest exact、scope/
+  parity/Cursor/clean，最后提交并冻结 terminal identity。
 
-### T32 implementation truth、PR、CI、merge 与 fresh-main
+### T32 implementation 最终双审、PR、CI、merge 与 fresh-main
 
 - **状态**：pending
 - **依赖**：T31
-- **验收**：truth/manifest/handoff/范围门禁全绿；Codex reviewed current head 无 actionable finding；
-  required checks success；merge；detached fresh-main 重跑 targeted/full/治理/bytes/clean-tree。
+- **验收**：Pascal/LEAN 与 Confucius/SAFETY 对 T31 后同一 committed+clean identity 双 PASS0；任何修订先
+  重跑相关 gate/truth 再重审。Codex reviewed current head 无 actionable finding、required checks success、
+  merge；detached fresh-main 重跑
+  `uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py -q`
+  及 full/Ruff/治理/real-hook bytes/clean-tree。
+- **完成边界**：只声明 implementation accepted；GAP-15/T58 仍 active，T66 T61A 仍 blocked。
 
-### T33 关闭 GAP-15 并恢复 T66 前置路线
+## Batch 4：lifecycle reconciliation 与关闭
+
+### T41 创建独立 lifecycle reconciliation
 
 - **状态**：pending
 - **依赖**：T32
-- **验收**：parent T58/GAP-15 只在 fresh-main receipt 后标记 completed/closed；WI214 summary/执行日志/
-  truth/continuity 一致；唯一下一步是创建 T66 implementation WI 并先执行 T61A 双 readiness。
+- **分支**：`codex/214-workitem-readonly-adapter-side-effect-lifecycle`，从 implementation fresh main 创建。
+- **验收**：只写 child/parent lifecycle docs、truth/continuity与 manifest exact 机械期望；登记 reviewed/
+  merge/fresh-main receipt，把 parent T58/GAP-15 标记 completed/closed；`src/tests` 零差异。
+
+### T42 lifecycle final 双审、PR 与 fresh-main
+
+- **状态**：pending
+- **依赖**：T41
+- **验收**：truth/handoff/gates 先完成；Pascal/Confucius 对 final current identity 双 PASS0；Codex/
+  required checks/merge/detached fresh-main 全绿后，唯一下一步才是创建 T66 implementation WI并先执行
+  T61A 双 readiness。
+- **回退**：lifecycle 已 merge 时先 revert/修正 closure receipt 以重开 GAP-15、阻断 T66，再 revert
+  implementation PR；不得留下 closed truth。
 - **边界**：不声明 T66、GAP-03、WI196、RC-08 或 release 完成，不发布版本。
 
 ## 追踪矩阵
 
 | 规范 | 任务 |
 |---|---|
-| FR-001～FR-003、SC-001～SC-002 | T12～T13、T22、T24 |
-| FR-004、SC-003 | T13、T22、T24 |
+| FR-001～FR-003、SC-001～SC-002 | T12～T13、T22、T24、T31～T32 |
+| FR-004、SC-003 | T13、T22、T24、T31～T32 |
 | FR-005～FR-006、SC-004 | T13、T22～T23 |
-| FR-007、SC-006 | T14、T31 |
-| FR-008～FR-009、SC-005～SC-006 | T15、T21、T32 |
-| FR-010、SC-007 | T15、T33 |
-| NC-01～NC-06 / CC-05 / GAP-15 | T11～T33 |
+| FR-007、SC-006 | T14～T15、T31～T32、T41～T42 |
+| FR-008～FR-009、SC-005～SC-006 | T15、T21、T31～T32、T41～T42 |
+| FR-010～FR-011、SC-007 | T15、T32、T41～T42 |
+| NC-01～NC-06 / CC-05 / GAP-15 | T11～T42 |

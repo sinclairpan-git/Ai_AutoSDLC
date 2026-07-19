@@ -91,3 +91,33 @@
 - 已完成 git 提交：是；authoring commit=`d3acfedea507a23bb30d53d84906c11a0c03c41a`。
 - branch：`merge-pending`
 - worktree：`retained(formal authoring)`
+
+## 7. Batch 2026-07-19-003：formal 对抗评审 Round 1 双 FAIL
+
+### 7.1 受审身份
+
+- HEAD=`1603d4b1eaa345373fac70c5a9dc207d30f7b3cf`
+- tree=`2d109ccd74703dfab5315ae702ada1663a626c71`
+- parent+child formal-six=`aa24fb807312573246bbafbe5fc5619b0c041dda6613305811b966de08622f63`
+- Pascal/LEAN=`FAIL`、actionable findings=1；Confucius/SAFETY=`FAIL`、actionable findings=4。
+- 两人独立核对同一 committed+clean identity，审查期间零编辑、零真实 adapter 调用。
+
+### 7.2 Findings 与处置
+
+1. Pascal P2 成立：child 未冻结具体 targeted 命令和测试布局。处置为唯一新增参数化
+   `test_cli_workitem_adapter_dispatch.py`，init/link 只改既有测试文件，并在 plan/tasks 写 V1～V6 精确命令。
+2. Confucius P1 成立：implementation fresh-main 后没有合法 PR 承载 closure。新增独立 lifecycle
+   reconciliation branch/PR、双审/Codex/checks/fresh-main；回退顺序先重开 truth 再 revert implementation。
+3. Confucius P1 成立：旧顺序在双审后才同步 truth/handoff。修订为先 terminal truth/handoff/gates，再冻结
+   committed+clean identity 双审；任何后续内容变化都重跑 gate/truth 并让双方从零复审。
+4. Confucius P1 成立：hook exception 未区分 project-config `PermissionError` 的 warning+continue 与其他
+   exception propagation。新增 production `apply_adapter` 先写、`_persist_config` 失败的 partial-write/输出/
+   continuation fixture；其他异常保留原类型/消息与前缀写入，不引入事务化。
+5. Confucius P2 成立：sentinel 不能替代 parent 要求的 real-hook byte evidence。五个 normal 增加
+   `@pytest.mark.real_ide_hook` 的 byte-identical 临时根、guarded SHA/status/stdout/stderr/exit exact 证明。
+
+### 7.3 结论
+
+- 五项全部接受并做最小合同修订；没有扩到 adapter 算法、root callback、handler、ProgramService/T66、
+  依赖、workflow 或版本。
+- Round 1 两份 verdict 与 identity 全部退役；修订提交后必须由 Pascal/Confucius 对新身份从零复审。

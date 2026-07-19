@@ -60,7 +60,7 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 | GAP-12 | 已关闭 | WI-207：formal PR #140、implementation PR #139、test-isolation repair PR #141；merge `8d8b8f96` 的 fresh-main real-hook/focused/full/Ruff/治理门禁全绿且 repository state clean | T55 已完成；回退 PR #139 或 #141 会重开本项 | 否 |
 | GAP-13 | 已关闭 | WI-208 / PR #143 / merge `f51c176a`：共同 builder 以 canonical sources portable/lossless 重建 root/scoped resume-pack，保留 branch、active files、context 与 raw-byte convergence | T56 已完成；fresh-main relocation/focused/full/Ruff/治理门禁全绿，保护文件与 clean state 不变；回退 PR #143 会重开本项 | 否 |
 | GAP-14 | 已关闭 | `comment_policy._is_comment_line()` 曾按 stripped diff line 判断前缀；WI-209 在 `main@85bdedac` 复现 single/double quoted scalar 续行均产生 1 finding，而 PyYAML token 实际跨越该内容行 | T57 / WI-209：formal PR #145/merge `46156c24` 与 implementation PR #146/merge `31aad572`；Round 15 双 Agent、Codex current-head、22/22 checks 与 fresh-main focused/full/Ruff/治理/clean-state 全部通过；回退 PR #146 会重开，且本项不计 RC-08 | 否 |
-| GAP-15 | 基础缺陷（active） | `main@e184c8e2`：`program validate` 前后 `.cursor/rules/ai-sdlc.mdc` SHA-256 均为 `d5f04acf...0b6a`；只读 `workitem plan-check --json` 却输出 `IDE adapter (cursor): installed 1 file(s)` 并将 SHA 改为 `02d9656d...e134`，产生 `+18/-6` tracked diff。根因是 `workitem` callback 对除 `init` 外全部子命令无条件调用 adapter hook | T58 / WI-214：独立 formal+implementation branch/PR；只隔离 `plan-check/guard/close-check/branch-check/truth-check` 的隐式 refresh，保留 `init/link` 既有写语义；implementation fresh-main 前不关闭 | 否 |
+| GAP-15 | 基础缺陷（active） | `main@e184c8e2`：`program validate` 前后 `.cursor/rules/ai-sdlc.mdc` SHA-256 均为 `d5f04acf...0b6a`；只读 `workitem plan-check --json` 却输出 `IDE adapter (cursor): installed 1 file(s)` 并将 SHA 改为 `02d9656d...e134`，产生 `+18/-6` tracked diff。根因是 `workitem` callback 对除 `init` 外全部子命令无条件调用 adapter hook | T58 / WI-214：独立 formal、implementation、lifecycle reconciliation branch/PR；只隔离 `plan-check/guard/close-check/branch-check/truth-check` 的隐式 refresh，保留 `init/link` 既有写语义；lifecycle fresh-main 前不关闭 | 否 |
 
 每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
 
@@ -203,7 +203,8 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
   另一项的测试、waiver 或 PR 伪装为已完成，且三者均不得计入 RC-08 产品 LOC 减重。
 - **SC-10**：GAP-15 由 T58 独立关闭；五个只读 `workitem` 命令不得改变 adapter/config/working tree，
   其 help/invalid-input 同样无 refresh；`init/link` 的 valid/负路径 hook 次数、时序、输出、退出码与写语义
-  零未批准差异，且 T58 fresh-main 前不得进入 T66 T61A。
+  零未批准差异；real-hook byte evidence 与 config-lock warning+continue/其他异常传播均须覆盖，且独立
+  lifecycle reconciliation fresh-main 前不得进入 T66 T61A。
 
 ## 10. 冻结决策
 
@@ -235,5 +236,5 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
 11. WI-213 formal 验证新发现 GAP-15：`program validate` 已保持 adapter bytes，但 `workitem` callback 仍让
     只读子命令隐式 refresh。WI-213 只登记并恢复非范围 diff；其 lifecycle reconciliation 已由
     PR #159 / merge `d5ad7616` 与 detached fresh-main 完成。当前唯一执行项是 T58/WI-214；其
-    implementation fresh-main 后才可创建 T66 implementation WI 并进入 T61A。不得把缺陷修复混进
-    T66 减重产品 PR。
+    implementation fresh-main 后还须独立 lifecycle reconciliation PR/fresh-main，关闭 truth 后才可创建
+    T66 implementation WI 并进入 T61A。不得把缺陷修复混进 T66 减重产品 PR。

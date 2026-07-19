@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T18:22:00Z
-- Reason: 提交 WI214 formal authoring 并通过首轮结构/治理门禁
+- Updated: 2026-07-19T18:52:00Z
+- Reason: 处置 WI214 formal Round 1 五项成立 finding
 - Goal: 关闭 GAP-15/T58，保持五个 workitem 只读入口零副作用且 init/link 零回归
-- State: T11-T13 completed；authoring commit=d3acfede；产品/测试尚未修改；待 correction commit 后双 Agent 对抗评审
+- State: Round 1 Pascal FAIL1 + Confucius FAIL4；五项均已最小修订且 gates 通过；产品/测试尚未修改；待 commit/Round 2
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-docs
@@ -37,7 +37,15 @@
 - 不维护五命令名单，不新增 classifier/registry/decorator/配置/依赖/版本，也不改 adapter 算法、handler、root callback 或 ProgramService/T66。
 - 唯一批准差异是五个只读入口 hook 1->0 以及 adapter receipt/write 消失；handler stdout/stderr/exit 与 no-op-hook 基线 exact。
 - init/link valid、missing、dirty/preflight、no-project、no-checkpoint、hook exception 的适用矩阵全部零未批准差异；init no-checkpoint 明确 N/A。
-- formal 与 implementation 分 branch/PR；formal final fresh-main 后才创建 dev branch并以 RED 测试开始。
+- formal、implementation、lifecycle reconciliation 分 branch/PR；formal final fresh-main 后才创建 dev branch并以 RED 测试开始。
+- Implementation fresh-main 后必须有独立 lifecycle reconciliation branch/PR 承载 closed truth；其
+  fresh-main 前 GAP-15/T58 仍 active、T66 仍 blocked。
+- Implementation 顺序为 terminal truth/handoff/gates -> committed+clean identity -> 双 PASS0 -> PR；
+  review 后任何内容变化都先重跑 gate/truth 再重审。
+- 测试布局固定为一个新增参数化 adapter-dispatch 文件 + 两个既有 init/link 文件；V1 targeted 命令已冻结。
+- 五个 normal 除 sentinel/no-op 外必须运行 real production hook 的 guarded bytes/hash/status 对比。
+- init/link exception 拆为 project-config PermissionError warning+continue（保留 partial write）和其他异常传播；
+  WI214 不事务化 adapter。
 - Pascal/LEAN 与 Confucius/SAFETY 必须审同一 committed+clean identity；任一受审文件变化使双方 verdict 同时失效。
 - T58 不计减重收益，不关闭 T66/GAP-03/WI196/RC-08，不触发版本发布。
 
@@ -54,7 +62,11 @@
 - `uv run --python 3.11 ai-sdlc program validate`：PASS。
 - `uv run --python 3.11 ai-sdlc verify constraints`：首轮发现 handoff 删除旧 review 标题未记理由；补 tracked execution-log 理由后 `no BLOCKERs`。
 - `git diff --check` 首次发现 Markdown hard-break trailing spaces；已移除，待 correction commit。
-- 尚未运行 RED/GREEN、targeted/full/truth；formal authoring review 尚未开始。
+- 尚未运行 RED/GREEN、targeted/full/truth；formal Round 1 已完成但未通过。
+- Round 1 identity=`1603d4b1`/tree `2d109ccd`/formal-six `aa24fb80...2f63`；Pascal FAIL1、
+  Confucius FAIL4，五项均 ACCEPT，旧 verdict 退役。
+- Round 1 correction gates：program validate PASS、constraints no BLOCKER、diff-check、scope、handoff parity、
+  Cursor base SHA/diff、frontmatter 全绿；`src/tests` diff=0。
 
 ## Blockers / Risks
 
@@ -68,8 +80,8 @@
 
 ## Exact Next Steps
 
-1. 提交 whitespace、execution-log 与 handoff gate receipt correction；确认 committed+clean。
-2. 计算 parent+child formal-six identity，派 Pascal/LEAN 与 Confucius/SAFETY 独立评审。
+1. 提交 Round 1 correction，确认 committed+clean identity。
+2. 计算新 parent+child formal-six identity，派 Pascal/LEAN 与 Confucius/SAFETY 独立 Round 2。
 3. 处置成立 finding；每次内容变化重新提交并让双方对新 identity 从零复审，直到同 identity 双 PASS0。
 4. 创建 closure material，truth sync/manifest exact/constraints/validate/parity/scope/clean gates，再做 final current-identity 双审。
 5. Push formal PR、@codex review、等待 required checks，merge 并 detached fresh-main。
