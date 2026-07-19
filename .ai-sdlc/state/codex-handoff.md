@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T13:00:43Z
-- Reason: WI213 Round 5 authoring 双 PASS 后创建 terminal closure material
+- Updated: 2026-07-19T13:09:18Z
+- Reason: WI213 terminal truth sync 已收敛，进入 final gates
 - Goal: 冻结 T66 九阶段 ProgramService 减重正式合同并完成同 identity 双审、PR、fresh-main
-- State: Round 5 authoring 双 PASS；T31～T41 completed，等待一次 terminal truth sync 与 final identity 双审
+- State: terminal truth/final local gates 全绿；等待 final identity 双审与 PR delivery
 - Stage: decompose
 - Work Item: 213-programservice-bounded-stage-reduction
 - Branch: feature/213-programservice-bounded-stage-reduction-docs
@@ -64,13 +64,19 @@
 - Round 3 修订后复验同样通过；三类 fingerprint 仅改 formal/evidence，不新增 runtime/test 逻辑。
 - Round 4 YAGNI 修订后 constraints/validate/diff/parity/adapter/scope 仍全绿。
 - Round 5 两位 reviewer 均 PASS/findings=0；随后只新增 closure docs/task 状态，尚未运行 terminal truth sync。
+- Terminal truth sync on source commit `ada79cdf`：ready、snapshot=`5d8de963...e853f`、inventory=
+  `1121/1121`、unmapped/missing=`0/0`、layers spec/plan/tasks/execution/close=`213/213`。
+- Final gates：manifest exact `1 passed in 91.88s`；165 baseline `165 passed, 474 deselected in 2.68s`；
+  constraints no BLOCKER、validate PASS、truth audit ready/fresh `1121/1121`、diff/parity/adapter/source-freeze 全绿；
+  manifest test 唯一 diff=`+2/-2`。
 - Closure source 初检：constraints no BLOCKER、program validate PASS、diff/parity/adapter/scope/placeholder 全绿。
 - program-manifest 已登记 WI213 depends_on WI196；未 sync。
 
 ## Blockers / Risks
 
 - Feasibility reviewer 已 final GO，但 module 只有12行预测余量；T61A 中 module>360 即 No-Go。
-- Round 5 authoring 双 PASS 已完成，但 closure 变更尚未 committed；T42/T43/T44/T45 仍 pending。
+- Source docs 保持 commit `ada79cdf` 后字节不变；T42～T45 状态保守保持 pending，actual PR/fresh-main 后由
+  独立 lifecycle reconciliation 回写，避免改 source 使 terminal snapshot stale 或预写 future receipt。
 - GAP-15/T58 尚未修复；在其独立 mainline/fresh-main receipt 前，T66 implementation WI/T61A 被阻断。
 - 360/522/712/720 任一被代码事实证明不可达时，必须最小修订或 RC-09 No-Go，不能扩大分母。
 - 任一 formal-six 变化使 Pascal/Confucius verdict 同时失效。
@@ -86,8 +92,8 @@
 
 ## Exact Next Steps
 
-1. 对 closure source 跑 diff/scope/parity/constraints 初检；不运行 GAP-15 workitem read-only 命令。
-2. 创建 closure commit，然后在该 terminal source identity 上执行唯一一次 `program truth sync --execute --yes`。
-3. 机械更新 manifest exact inventory/close 两值，完成 T42/T43、提交 final clean identity。
-4. Pascal/Confucius 对 final current identity 双 PASS0，再走 PR/Codex/checks/merge/fresh-main。
-5. Formal fresh-main 后创建独立 T58/GAP-15 WI；T58 fresh-main 后才创建 T66 implementation WI/T61A。
+1. 提交 manifest/test/handoff final identity；source docs 自 `ada79cdf` 后保持不变。
+2. Pascal/Confucius 对 final current identity/formal-six=`283b623b...f099` 双 PASS0。
+3. Push/PR、Codex review、required-check heartbeat、merge、detached fresh-main。
+4. 独立 lifecycle reconciliation 只回写已发生 receipt/任务状态并重新收敛 truth。
+5. Formal lifecycle fresh-main 后创建 T58/GAP-15 WI；T58 fresh-main 后才创建 T66 implementation WI/T61A。
