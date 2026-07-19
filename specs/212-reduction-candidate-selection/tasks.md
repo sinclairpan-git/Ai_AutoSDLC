@@ -102,7 +102,8 @@
 - **状态**：pending
 - **依赖**：T41
 - **步骤**：一次 truth sync；manifest/project-state/文档单一提交链；禁止重复 sync 制造 identity。
-- **验收**：truth `ready/fresh`、source inventory complete；active pre-close/closure 只出现父合同允许的精确状态。
+- **验收**：truth `ready/fresh`、source inventory complete；active pre-close/closure 只出现父合同允许的精确状态；
+  `test_repo_program_manifest.py` 只机械替换 inventory/close 两值，diff=`+2/-2`，无测试逻辑/LOC 增量。
 
 ### T43 运行最终本地门禁
 

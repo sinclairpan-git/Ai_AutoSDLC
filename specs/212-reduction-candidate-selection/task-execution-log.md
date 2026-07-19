@@ -147,6 +147,15 @@ facade body≤81、import/selector glue≤5，合计 shadow additions≤466≤54
 
 ## 6. 当前待完成
 
-- 写回 WI-196 的 L3 pre-release stability cycle 窄修。
 - 生成 formal identity，执行双 Agent 对抗评审直到同 identity 双 PASS。
 - 完成 truth/continuity/closure、PR、Codex/CI 与 detached fresh-main 验收。
+
+## 7. Batch 2026-07-19-004：pre-close manifest exact 预期失败
+
+- authoring commit `46860df3` 上 constraints no BLOCKER、program validate PASS；truth current recompute
+  complete=`1116/1116`、unmapped=0、唯一 active-child summary missing=1、close=`211/212`，snapshot stale。
+- manifest exact 按旧 main 期望 `1111/1111/0/0`、close=`211/211` 运行，得到 `1 failed`；这是未生成
+  child `development-summary.md` 前的预期 RED，不是通过证据。
+- 该 RED 同时暴露 child formal 把 `tests/**` 全禁、与父 FR-12 允许两处机械真值替换的矛盾。Round 1
+  review identity 已立即中止并退役；正式修订只允许 terminal inventory/close 两值 `+2/-2` 等量替换，
+  不增加测试逻辑或 LOC。新 formal-six identity 必须由两位 reviewer 从零复算。

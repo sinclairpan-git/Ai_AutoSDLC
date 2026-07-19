@@ -30,7 +30,8 @@
 
 ### 2.2 明确非目标
 
-- 不修改 `src/`、`tests/`、workflow、provider、runtime rule 或发布配置。
+- 不修改 `src/`、测试逻辑、workflow、provider、runtime rule 或发布配置。唯一测试例外是父 FR-12
+  允许的 `test_repo_program_manifest.py` inventory/close 两个精确值等量替换，不增加逻辑或 LOC。
 - 不实现候选、不新增 harness、不切换路由、不删除 legacy、不发布版本。
 - 不恢复旧 spike、旧 candidate hash、WI-203/WI-204 sponsor 或 WI-202 claim。
 - 不以本工作项关闭 GAP-03～GAP-06、WI-196 或 RC-08。
@@ -125,7 +126,8 @@ T63 的两行 Pydantic validator wrapper 不视为可直接删除的 exact famil
 - **FR-002**：候选排序必须同时使用预计净删除、RC-06 保护成本、风险和对 RC-08 两个大文件的贡献。
 - **FR-003**：T62A、WI-203/WI-204 的旧 sponsor/claim/hash 不得复活或转移。
 - **FR-004**：只允许一个 Conditional Go；其余候选必须有可审计 disposition。
-- **FR-005**：本工作项不得修改产品、测试、工作流、provider、runtime rule 或发布面。
+- **FR-005**：本工作项不得修改产品、测试逻辑、工作流、provider、runtime rule 或发布面；唯一测试
+  例外是父 FR-12 允许的 manifest inventory/close 两个精确值等量替换，不增加逻辑或 LOC。
 - **FR-006**：父路线必须采用 §5 的预发布稳定周期，解除 L3 删除与版本禁令死锁，但不得放宽差分、回退或最终发布门禁。
 - **FR-006A**：父 RC-06 的文字范围必须与适用矩阵一致；25%、路线累计 1,500 行及 fixture/snapshot 上限不得放宽。
 - **FR-007**：两个对抗 Agent 必须对同一 child/parent formal-six identity findings=0；六文件任一内容变化使双方 PASS 同时失效。
@@ -136,7 +138,8 @@ T63 的两行 Pydantic validator wrapper 不视为可直接删除的 exact famil
 - **SC-001**：候选矩阵覆盖 T63～T67，T62A 排除理由明确，无未处置候选。
 - **SC-002**：T66 的 45-symbol/3,638/3,305 测量可由仓库脚本重算，预算公式无负余量或重复计费。
 - **SC-003**：父路线 L3 流程不再要求在 RC-08 前发布版本，也不允许无稳定周期直接删旧；RC-06 文字范围与适用矩阵一致。
-- **SC-004**：`src/`、`tests/`、workflow、provider、runtime rule diff 为零。
+- **SC-004**：`src/`、workflow、provider、runtime rule diff 为零；test diff 精确等于 manifest
+  inventory/close 两个值替换且 `+2/-2`、逻辑与 LOC 不变。
 - **SC-005**：constraints、program validate、truth audit、manifest exact、diff/path/parity 门禁通过。
 - **SC-006**：LEAN/YAGNI 与 SAFETY/COMPAT 两位 reviewer 对同一 identity 均 PASS、findings=0。
 - **SC-007**：WI212 合并后只允许创建一个新的 T66 formal work item；发布仍被 RC-08 阻断。
