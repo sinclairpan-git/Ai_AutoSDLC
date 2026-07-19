@@ -215,3 +215,16 @@
   partial-write、init/link outcomes、三阶段与回退合同最小充分；`src/**` 零差异。
 - 本轮两份 verdict 全部退役。修正提交后必须重新 truth/gates，并让双方对新 HEAD/tree 与同一 canonical
   combined hash 从零复审；产品实现仍禁止。
+
+## 14. Batch 2026-07-19-010：PR #160 Codex current-head P2
+
+- PR #160 reviewed commit=`88b57c0a`；Codex 在 `plan.md` 指出一个 P2：V1 包含完整
+  `test_cli_workitem_init.py`，其中 `test_workitem_non_init_runs_adapter_before_handler_once` 仍固化
+  `plan-check` hook=1/receipt，而 formal 只允许既有 init/link 文件补时序，未授权删除或迁移该旧合同。
+- 本地核验测试 426～439 行确认 finding 成立：link-only 产品谓词必使旧断言失败；若不改 formal，GREEN
+  只能在“保留必红测试”与“越权改测试”之间二选一。
+- 最小修正只在 child plan/tasks 显式授权：删除这一条旧非-init 测试，由唯一新 dispatch 文件的参数化
+  `plan-check normal` 格承接反转断言；其他 init/link 变更仍限 hook 时序与两类 outcome。
+- 不新增测试文件、fixture/DSL、产品抽象或测试笛卡尔积；15 sentinel、代表性 production A/B、共享
+  partial-write 与 targeted 命令不变。Formal-six 变化使 Round 6 双 PASS 同时退役，必须重跑 truth/gates/
+  双审并推送新头后回复、解决 thread、重新 `@codex review`。

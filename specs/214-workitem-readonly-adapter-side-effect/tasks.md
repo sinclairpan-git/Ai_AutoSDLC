@@ -71,7 +71,9 @@ related_doc:
 - **依赖**：T21
 - **验收**：产品源码未改；唯一新文件=`tests/integration/test_cli_workitem_adapter_dispatch.py`；15 格在
   legacy 上因 hook/write/receipt 至少一项按预期失败；`plan-check normal` 一组 real-hook A/B 记录 guarded
-  SHA/status/output；共享 hook 层一例 partial-write；`init/link` 既有文件只补 call order 与两类 outcome。
+  SHA/status/output；共享 hook 层一例 partial-write；删除 `test_cli_workitem_init.py` 中过时的
+  `test_workitem_non_init_runs_adapter_before_handler_once`，其反转断言由新 dispatch 文件的参数化
+  `plan-check normal` 格承接；除此迁移外，`init/link` 既有文件只补 call order 与两类 outcome。
 - **约束**：优先参数化与复用 fixture；不得复制五套 handler 业务测试。
 
 ### T23 实施唯一 callback 修正

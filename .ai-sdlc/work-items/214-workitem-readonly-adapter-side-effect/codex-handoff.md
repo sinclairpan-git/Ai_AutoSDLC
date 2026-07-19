@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T19:23:54Z
-- Reason: WI214 formal final Round 5 findings 已处置，准备重跑 truth/gates
+- Updated: 2026-07-19T19:43:47Z
+- Reason: PR #160 Codex P2 已验证并最小修正，准备重跑 truth/gates/双审
 - Goal: 关闭 GAP-15/T58，保持五个 workitem 只读入口零副作用且 init/link 零回归
-- State: Round 5 LEAN FAIL1/SAFETY FAIL2 已最小修正；产品/测试合同不变；待 commit、truth/gates 与双审
+- State: Round 6 双 PASS0 已因 Codex current-head P2 formal 修正退役；产品未改；待 commit、truth/gates 与双审
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-docs
@@ -91,6 +91,10 @@
   两项成立问题为 T66 gate 被写弱到 implementation fresh-main，以及 review prompt 使用了非 canonical
   combined 算法。Current summary/handoff 已改 lifecycle fresh-main，历史 logs 追加 superseding correction；
   后续 combined identity 只按 parent plan §9 canonical 算法计算。
+- Round 6 exact identity=`88b57c0a`/tree `8cba2364`/canonical combined=`c31a3aea...7d`；
+  Pascal/LEAN 与 Confucius/SAFETY 双 PASS0。PR #160 Codex 对同头提出成立 P2：既有 init 测试仍有
+  `plan-check` hook=1 旧断言，formal 未授权迁移。Child plan/tasks 已显式允许只删除该旧测试并由新
+  dispatch `plan-check normal` 参数格承接；Round 6 verdict 退役。
 
 ## Blockers / Risks
 
@@ -104,8 +108,8 @@
 
 ## Exact Next Steps
 
-1. 提交 Round 5 correction 与 byte-identical handoff，确认 clean source identity。
+1. 提交 Codex P2 correction 与 byte-identical handoff，确认 clean source identity。
 2. 对 clean source 重跑 truth sync/audit、manifest exact 与全部 formal gates。
 3. 按 parent plan §9 canonical 算法计算 combined identity，让 Pascal/Confucius 从零双审到 PASS0。
-4. Push formal PR、@codex review、等待 required checks，merge 并 detached fresh-main。
-5. 仅从 formal fresh main 创建 dev branch/worktree，先 RED 后一处 callback GREEN。
+4. Push PR #160 新头，回复并解决旧 thread，重新 `@codex review`，等待 current-head required checks。
+5. Merge 并 detached fresh-main；仅从 formal fresh main 创建 dev branch/worktree，先 RED 后一处 callback GREEN。

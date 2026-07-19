@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal contract authoring 已双 PASS0；truth/PR/fresh-main 收口中；产品实现未开始
+**当前状态**：formal PR #160 Codex P2 已最小修正；重新 truth/双审/checks 中；产品实现未开始
 
 ## 已冻结合同
 
@@ -29,12 +29,15 @@
   Pascal/LEAN 与 Confucius/SAFETY 均 PASS、actionable findings=0。
 - Round 4 是 authoring receipt；本 summary/T14/T15/truth/handoff 变化后，formal PR 前必须对 final current
   identity 重新双审，不能拼接历史 verdict。
+- Round 5 修正 T66 lifecycle 准入与 canonical review identity；Round 6 同一 identity 双 PASS0。PR #160
+  Codex current-head P2 又发现既有 init 测试中的 `plan-check` 旧断言未获迁移授权；formal 已显式允许删除
+  该单一旧测试并由新 dispatch 参数格承接，Round 6 verdict 因 formal 变化全部退役。
 
 ## 完成与未完成边界
 
 - 已完成：current-main 根因、范围、expected delta、最小设计、测试与异常矩阵、生命周期/回退合同、
   authoring 对抗评审收敛。
-- 尚未完成：terminal truth sync、final current-identity 双审、formal PR/Codex/checks/merge/fresh-main。
+- 尚未完成：修正后 terminal truth、final current-identity 双审、PR #160 Codex/checks/merge/fresh-main。
 - 尚未开始：RED/GREEN、产品 callback、测试实现、implementation/lifecycle PR、T66 T61A。
 - GAP-15/T58、T66、GAP-03、WI196、RC-08 与 release 均保持 open；当前禁止版本/tag/Release/PyPI/
   共享 CLI 更新。

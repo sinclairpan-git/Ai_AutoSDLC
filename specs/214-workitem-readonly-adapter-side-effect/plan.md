@@ -115,8 +115,10 @@ implementation final identity 和 fresh-main 均重跑 V1～V6；跨平台 requi
 ### Phase 1：dev TDD 与最小实现
 
 1. 从 formal fresh main 创建 `feature/214-workitem-readonly-adapter-side-effect-dev` 与独立 worktree。
-2. 创建唯一新测试文件 `test_cli_workitem_adapter_dispatch.py` 并只在既有 init/link 文件补时序断言；
-   产品源码未改时运行 V1 RED，记录失败格、代表性 real-hook hash/write/output evidence。
+2. 创建唯一新测试文件 `test_cli_workitem_adapter_dispatch.py`；删除既有 init 测试文件中冻结错误合同的
+   `test_workitem_non_init_runs_adapter_before_handler_once`，由新文件的参数化 `plan-check normal` 格承接反转
+   后的分发断言。除此迁移外，既有 init/link 文件只补 hook 时序与两类 outcome；产品源码未改时运行
+   V1 RED，记录失败格、代表性 real-hook hash/write/output evidence。
 3. 仅把 `_workitem_before_command()` 收敛为 `link` 才继续，禁止修改其他产品函数。
 4. 跑 V1～V6 GREEN：15 格、一组 `plan-check` real-hook A/B、共享 partial-write、`init/link` 两类 outcome、
    full、Ruff、constraints。
