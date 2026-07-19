@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T05:33:12Z
-- Reason: WI211 implementation已合并并完成fresh-main acceptance，T41 closure truth/docs已物化且门禁全绿
+- Updated: 2026-07-19T05:54:03Z
+- Reason: closure Round1统一生命周期finding已最小修复，T41与当前T42入口一致
 - Goal: 完成WI211 closure同identity双对抗评审、mainline交付与fresh-main docs acceptance
-- State: closure只含child/parent docs、truth/continuity与manifest test两条机械期望；产品零diff，clean tip待双审
+- State: T41已completed，T42/T43保持pending；产品零diff，承载本handoff的clean tip待Round2双审
 - Stage: verify
 - Work Item: 211-shared-mapping-dedupe
 - Branch: codex/211-shared-mapping-dedupe-closure
@@ -39,8 +39,8 @@
 - implementation fresh-main：direct `104 passed in 1.13s`、impact `1163 passed in 99.78s`、full `3277 passed, 3 skipped in 728.11s`
 - implementation fresh-main：Ruff、constraints、validate、truth ready/fresh、manifest exact、reviewed blob/ledger、clean-state全部PASS
 - 初始`uv run`自动选择Python 3.14.3后被主动停止；exit 130仅来自中断。重建Python 3.11.15环境后完整重跑并只采纳后者证据
-- closure truth sync：ready/fresh，1111/1111 mapped，unmapped/missing=0/0，close=211/211，snapshot=`825161b0...daca`
-- closure：Ruff、diff-check、scope guard、constraints、validate、truth audit、manifest exact `1 passed in 123.96s`全部PASS
+- closure truth sync：ready/fresh，1111/1111 mapped，unmapped/missing=0/0，close=211/211，snapshot=`7bac220c...38c7`
+- closure：Ruff、diff-check、scope guard、constraints、validate、truth audit、manifest exact `1 passed in 99.20s`全部PASS
 - scope guard：`src/`零diff；tests只改`tests/integration/test_repo_program_manifest.py`两条等量期望
 
 ## Blockers / Risks
@@ -51,7 +51,9 @@
 ## Local PR Review
 - implementation Round5：Pascal `LEAN PASS/findings=0`、Confucius `SAFETY PASS/findings=0`
 - PR #153旧head Codex P2指出handoff恢复步骤滞后；focused修复经Round4双FAIL确认、Round5双PASS闭环
-- current closure identity尚未双审；implementation PASS不得冒充closure PASS
+- closure Round1旧head=`7c25fdea`：Pascal `LEAN FAIL/findings=1`、Confucius `SAFETY FAIL/findings=1`，共同finding为T41已完成但tasks仍标`in progress`；其余范围/证据无finding
+- disposition：仅将T41改为`completed`、顶部授权切到T42待审并同步truth/handoff；T42/T43仍pending，产品/测试逻辑/ledger/open边界不变。Round1结论不沿用
+- current closure identity尚未双审；implementation PASS与Round1结论均不得冒充Round2 PASS
 
 ## Exact Next Steps
 - Pascal/Confucius对同一clean closure identity从零双审；任一finding成立则最小修复并让双方对新identity全重审

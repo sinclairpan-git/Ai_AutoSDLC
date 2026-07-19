@@ -7,7 +7,7 @@ related_doc:
 
 **编号**：`211-shared-mapping-dedupe` | **日期**：2026-07-18
 **来源**：`spec.md + plan.md`
-**当前授权**：Batch 0～3 已完成，T41 closure truth/docs in progress；closure 只允许 child/parent
+**当前授权**：Batch 0～3 与 T41 已完成，T42 closure 双审待执行；closure 只允许 child/parent
 docs、truth/continuity 与 manifest test 的 missing `1→0`、close layer `210→211` 两条机械期望，
 不得修改产品代码或其他测试逻辑
 
@@ -171,7 +171,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ### T41 Closure truth/docs
 
-- **状态**：in progress。
+- **状态**：completed。
 - **依赖**：T32。
 - **范围**：独立 closure branch；产品零 diff；物化 child summary、parent ledger、manifest close source与handoff。
 - **边界**：只关闭一个 T63 family；GAP-05/WI196/RC-08/release保持 open。
