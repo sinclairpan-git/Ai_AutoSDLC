@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T19:10:22Z
-- Reason: WI214 formal terminal gates 已通过，准备冻结 final review identity
+- Updated: 2026-07-19T19:23:54Z
+- Reason: WI214 formal final Round 5 findings 已处置，准备重跑 truth/gates
 - Goal: 关闭 GAP-15/T58，保持五个 workitem 只读入口零副作用且 init/link 零回归
-- State: terminal manifest=d655435a；truth ready/fresh 1126/1126；全部 formal gates 绿；待 gate receipt commit 后 final sync/audit/双审
+- State: Round 5 LEAN FAIL1/SAFETY FAIL2 已最小修正；产品/测试合同不变；待 commit、truth/gates 与双审
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-docs
@@ -30,7 +30,7 @@
 ## Key Decisions
 
 - WI213 lifecycle reconciliation 已由双 PASS0、PR #159、merge d5ad7616 与 detached fresh-main 收口。
-- GAP-15/T58 当前唯一执行项为 WI214；其 implementation fresh-main 前 T66 T61A 继续阻断。
+- GAP-15/T58 当前唯一执行项为 WI214；其 lifecycle reconciliation fresh-main 前 T66 T61A 继续阻断。
 - 根因是 workitem 子应用 callback 对除 init 外全部已识别命令消费 adapter hook。
 - 五个只读命令为 plan-check、guard、close-check、branch-check、truth-check；normal/help/invalid 都须 hook=0。
 - 最小实现只让 callback 在 invoked_subcommand == link 时消费 hook；init 继续在自身 handler 的 preflight 后消费。
@@ -87,6 +87,10 @@
   validate PASS、constraints no BLOCKERs、manifest Ruff/diff-check/scope/parity/Cursor/clean 全绿。
 - 本 gate receipt 提交后再做一次 final sync/audit；最终 snapshot hash 只进入外部 review/PR receipt，
   不反写 tracked source，避免自引用 stale 循环。
+- Round 5 exact identity=`1629723a`/tree `9f07a556`；Pascal/LEAN FAIL1、Confucius/SAFETY FAIL2。
+  两项成立问题为 T66 gate 被写弱到 implementation fresh-main，以及 review prompt 使用了非 canonical
+  combined 算法。Current summary/handoff 已改 lifecycle fresh-main，历史 logs 追加 superseding correction；
+  后续 combined identity 只按 parent plan §9 canonical 算法计算。
 
 ## Blockers / Risks
 
@@ -100,8 +104,8 @@
 
 ## Exact Next Steps
 
-1. 提交本 gate receipt 与 byte-identical handoff，确认 clean source identity。
-2. 对 clean source 执行 final truth sync，提交 manifest-only snapshot并 audit fresh。
-3. 计算 final current identity，让 Pascal/Confucius 从零双审到同 identity PASS0。
+1. 提交 Round 5 correction 与 byte-identical handoff，确认 clean source identity。
+2. 对 clean source 重跑 truth sync/audit、manifest exact 与全部 formal gates。
+3. 按 parent plan §9 canonical 算法计算 combined identity，让 Pascal/Confucius 从零双审到 PASS0。
 4. Push formal PR、@codex review、等待 required checks，merge 并 detached fresh-main。
 5. 仅从 formal fresh main 创建 dev branch/worktree，先 RED 后一处 callback GREEN。

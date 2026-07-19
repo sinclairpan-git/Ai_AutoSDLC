@@ -45,5 +45,5 @@
 - Lifecycle reconciliation 最终 identity=`762a3fa5`/tree `901dfa8f`/formal-six=`e51befd2...9431`，
   Pascal/LEAN 与 Confucius/SAFETY 双 PASS0；PR #159 required checks 全绿并 squash merge=`d5ad7616`，
   detached fresh-main 的 truth/tests/scope/parity/Cursor/clean 全绿。
-- 当前已从 `d5ad7616` 创建独立 T58/GAP-15 WI214 formal；其 implementation fresh-main 后才可创建
-  T66 implementation WI。
+- 当前已从 `d5ad7616` 创建独立 T58/GAP-15 WI214 formal；只有其 lifecycle reconciliation
+  fresh-main 后才可创建 T66 implementation WI。

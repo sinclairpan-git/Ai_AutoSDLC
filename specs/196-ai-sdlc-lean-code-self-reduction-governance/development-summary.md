@@ -84,5 +84,5 @@
   formal-only lifecycle，冻结 T66 terminal≤720、净删≥2,918；truth=`ready/fresh 1121/1121`、
   unmapped/missing=`0/0`，merge/reviewed tree=`9d1c0f69`。Lifecycle reconciliation 又以双 PASS、
   PR #159、merge `d5ad7616` 与 detached fresh-main 收口。当前独立 T58/GAP-15 WI214 formal active；
-  其 implementation fresh-main 前不得进入 T66 T61A，且本项不授权提前发布。
+  其 lifecycle reconciliation fresh-main 前不得进入 T66 T61A，且本项不授权提前发布。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

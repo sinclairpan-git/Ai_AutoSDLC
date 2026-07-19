@@ -301,3 +301,11 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
   targeted=`165 passed`、manifest exact=`1 passed`、scope/handoff parity/Cursor/clean 全绿。
 - Lifecycle reconciliation 已关闭，正式授权从该 main 创建 T58/WI214；当前 WI214 formal active，
   其 implementation fresh-main 前仍不得进入 T66 T61A，版本发布仍禁止。
+
+## 15. Batch 2026-07-19-014：WI214 下游准入措辞 superseding correction
+
+- §14 末句把 T66 阻断只写到 WI214 implementation fresh-main，弱于 WI214 已冻结的三阶段关闭合同；
+  该历史句保留但由本段取代。
+- 当前唯一有效门禁为：WI214 formal、implementation、lifecycle reconciliation 均 mainline/fresh-main，
+  且 lifecycle reconciliation fresh-main 明确关闭 GAP-15/T58 后，才可创建 T66 implementation WI并进入 T61A。
+- 本修正只校准 current truth/continuity，不修改 WI213 已验收事实、产品、测试、预算、依赖或版本。

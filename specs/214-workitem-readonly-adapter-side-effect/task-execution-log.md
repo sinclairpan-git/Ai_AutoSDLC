@@ -198,3 +198,20 @@
   byte-identical；Cursor SHA=`d5f04acf...0b6a` 且相对 `origin/main` diff=0；worktree clean。
 - 本 gate receipt 提交后必须再 sync/audit 一次；该次生成的 manifest-only identity 才是 final review target。
   为避免自引用循环，最终 snapshot hash 只进入评审/PR 外部 receipt，不再反写本 tracked execution source。
+
+## 13. Batch 2026-07-19-009：formal final review Round 5 双 FAIL
+
+- Exact reviewed identity：HEAD=`1629723a283bd65a5ab20961f58f33072c99bb0d`、tree=
+  `9f07a556a3b1761bc96a6d08fc06fd64da4ffc52`、clean。Pascal/LEAN=`FAIL1`；
+  Confucius/SAFETY=`FAIL2`。
+- 本轮 prompt 误用“路径+原文”得到 `77c8a19f...f075`，不是 parent plan §9 唯一 canonical combined
+  算法。按“ordinal path；逐文件 SHA/path 行；整体 SHA”复算同六文件为
+  `c31a3aeaf484dc11450fd5633b8cada4091e8ad560d89bb4766ebe38a278ff7d`。内容身份可核对，但本轮不能登记为
+  canonical same-identity PASS；后续双方只使用 canonical 算法。
+- 两位 reviewer 的重叠成立 finding：WI213/parent current summary、handoff 与两份 append-only execution log
+  把 T66 阻断写弱到 implementation fresh-main，可能绕过 T41/T42。Current summary/handoff 直接改为 lifecycle
+  reconciliation fresh-main；历史 log 不改旧句，只追加 superseding correction。
+- 除上述两类问题外，双方一致确认 link-only 单谓词、15 sentinel + 1 production A/B + 1 shared
+  partial-write、init/link outcomes、三阶段与回退合同最小充分；`src/**` 零差异。
+- 本轮两份 verdict 全部退役。修正提交后必须重新 truth/gates，并让双方对新 HEAD/tree 与同一 canonical
+  combined hash 从零复审；产品实现仍禁止。
