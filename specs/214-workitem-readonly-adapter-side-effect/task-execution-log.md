@@ -170,3 +170,15 @@
   rollback 均最小充分且无残余矛盾。
 - 本 receipt 证明 authoring contract 已收敛。随后新增 summary、更新 T14/T15、同步 truth/handoff 会改变
   final current identity；Round 4 不得冒充 T15 最终 review，必须在 terminal gates 后再次同身份双 PASS0。
+
+## 11. Batch 2026-07-19-007：closure source 与 truth 预同步
+
+- Closure source commit=`693c5b8e2df658500203e53b6064402d8d5a47d3`，包含 development summary、
+  T14 completed/T15 in_progress 与 byte-identical root/scoped handoff；`src/tests` 当时零差异。
+- `program truth sync --execute --yes`：state=`ready`、snapshot=
+  `096da66288c306bab4218e0823a4283158ba265398048048deeb19827af7b418`、repo revision=`693c5b8e`、
+  inventory=`1126/1126`、unmapped/missing=`0/0`、spec/plan/tasks/execution/close=`214/214`。
+- Manifest exact 首跑按预期 RED：仍冻结 `1121/1121` 与 close `213/213`；只机械改为 `1126/1126` 和
+  `214/214`，不修改 test logic、capability、release registry 或产品断言。
+- 本段 receipt 本身会改变 tracked execution source，因此首个 snapshot 只作为预同步证据；提交本段与机械
+  test 期望后必须再执行 terminal truth sync，并只以后一 snapshot 进入 final audit/review，避免陈旧自称。

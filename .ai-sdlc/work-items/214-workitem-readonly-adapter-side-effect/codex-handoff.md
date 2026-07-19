@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T19:40:00Z
-- Reason: WI214 formal Round 4 authoring 双 PASS0 后创建 closure material
+- Updated: 2026-07-19T19:58:00Z
+- Reason: WI214 closure source 已提交并完成 truth 预同步/manifest exact RED
 - Goal: 关闭 GAP-15/T58，保持五个 workitem 只读入口零副作用且 init/link 零回归
-- State: Round 4 authoring 双 PASS0；development summary/T14-T15 已更新；待 source commit、truth sync、terminal gates/final review
+- State: closure source=693c5b8e；pre-sync ready 1126/1126；manifest exact 两值已机械修正；待 receipt commit/terminal sync
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-docs
@@ -78,6 +78,9 @@
   Cursor base SHA/diff 全绿；`src/tests` diff=0。
 - Round 4 identity=`3a2b2b6f`/tree `e99e0ef9`/formal-six `82351757...9d79`；Pascal/LEAN 与
   Confucius/SAFETY 均 PASS0。Closure material 变化使该 receipt 降为 authoring PASS，final identity 必须重审。
+- Pre-sync on closure source `693c5b8e`：snapshot=`096da662...b418`、ready、inventory=`1126/1126`、
+  missing/unmapped=`0/0`、close=`214/214`；manifest exact 首跑只因旧 `1121/213` 期望失败，已机械 `+2/-2`。
+- 本 execution receipt 改变 source，故该 snapshot 不作为 terminal；提交 receipt/test 后必须重新 sync/audit。
 
 ## Blockers / Risks
 
@@ -91,9 +94,9 @@
 
 ## Exact Next Steps
 
-1. 提交 closure source，确认 clean source identity。
-2. 执行一次 terminal `program truth sync --execute --yes`，提交 snapshot/机械 manifest exact 期望。
-3. 跑 manifest exact、constraints、validate/truth、scope/parity/Cursor/clean gates；提交必要 receipt。
+1. 提交 pre-sync receipt、manifest snapshot与 manifest exact 两值修正，确认 clean source identity。
+2. 对该 clean HEAD 执行 terminal `program truth sync --execute --yes` 并提交 final snapshot。
+3. 跑 manifest exact、constraints、validate/truth、scope/parity/Cursor/clean gates；提交必要 gate receipt。
 4. 计算 final current identity，让 Pascal/Confucius 从零双审到同 identity PASS0。
 5. Push formal PR、@codex review、等待 required checks，merge 并 detached fresh-main。
 6. 仅从 formal fresh main 创建 dev branch/worktree，先 RED 后一处 callback GREEN。
