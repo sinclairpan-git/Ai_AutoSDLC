@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T17:11:50Z
+- Updated: 2026-07-19T17:21:11Z
 - Reason: 处置 WI213 lifecycle 对抗复审 Round 1 的三项成立 finding
 - Goal: 完成 WI213 formal lifecycle reconciliation，然后从 fresh main 创建独立 T58/GAP-15
-- State: Round 1 三项 finding 已最小修正，correction source/truth 已完成；待本地 gates 与同 identity 双审
+- State: Round 1 三项 finding 已最小修正，correction source/truth/gates 全绿；待同 identity 双审
 - Stage: decompose
 - Work Item: 213-programservice-bounded-stage-reduction
 - Branch: codex/213-programservice-bounded-stage-reduction-lifecycle
@@ -86,12 +86,14 @@
   manifest exact=`1 passed in 110.90s`，constraints/validate/truth/scope/parity/Cursor/clean 全绿。
 - Lifecycle source commit=`beb61390`；truth sync=`ready`、snapshot=`b61e429d...d0ff`、inventory=
   `1121/1121`、unmapped/missing=`0/0`、spec/plan/tasks/execution/close=`213/213`。
-- Lifecycle gates：constraints no BLOCKER、program validate PASS、truth audit=`ready/fresh 1121/1121`；
+- Pre-review lifecycle gates：constraints no BLOCKER、program validate PASS、truth audit=`ready/fresh 1121/1121`；
   targeted=`165 passed, 474 deselected in 8.45s`，manifest exact=`1 passed in 155.19s`；diff/scope/
   handoff parity/Cursor/source ancestry/clean 全绿。
 - Round 1 correction source=`4f113788`；truth sync=`ready`、snapshot=`7b7af6ae...d4f9`，inventory=
-  `1121/1121`、unmapped/missing=`0/0`、spec/plan/tasks/execution/close=`213/213`。上一条 lifecycle
-  gates 只属于修订前 identity，当前 identity 须重跑。
+  `1121/1121`、unmapped/missing=`0/0`、spec/plan/tasks/execution/close=`213/213`。
+- Round 1 correction gates：constraints no BLOCKER、validate PASS、truth=`ready/fresh 1121/1121`；
+  targeted=`165 passed, 474 deselected in 3.42s`，manifest exact=`1 passed in 103.44s`；diff/scope/
+  handoff parity/Cursor/clean 全绿。
 
 ## Blockers / Risks
 
@@ -124,8 +126,7 @@
 
 ## Exact Next Steps
 
-1. 若当前 manifest/handoff receipt 仍未提交，只提交一次；已提交则 no-op。
-2. 完成 correction identity 的 gates 并确认 committed+clean identity/formal-six。
-3. Pascal/Confucius 对该同一 lifecycle identity 独立复审，必须双 PASS0。
-4. 推送并创建 lifecycle PR，完成 Codex current-head review、required checks、merge 与 detached fresh-main。
-5. lifecycle fresh-main 后从 main 创建独立 T58/GAP-15 WI；T58 fresh-main 后才进入 T66 T61A。
+1. 若当前 gate-receipt handoff 仍未提交，只提交一次；已提交则 no-op；确认 clean identity/formal-six。
+2. Pascal/Confucius 对该同一 lifecycle identity 独立复审，必须双 PASS0。
+3. 推送并创建 lifecycle PR，完成 Codex current-head review、required checks、merge 与 detached fresh-main。
+4. lifecycle fresh-main 后从 main 创建独立 T58/GAP-15 WI；T58 fresh-main 后才进入 T66 T61A。
