@@ -18,7 +18,8 @@
 - **状态**：completed
 - **依赖**：T11
 - **范围**：AST exact-body family、调用者、物理/非空 LOC、RC-06 预测；复核 Loop Store 既有 No-Go。
-- **验收**：字段级 validator wrapper 不被误算为可直接删除；小型 L1 family 只作 Deferred，不阻塞高收益结构切片。
+- **验收**：字段级 validator wrapper 不被误算为可直接删除；当前扫描的 T63 family 按合并
+  product+proof 全部 RC-09 No-Go，不得以“低风险”或“小收益 Deferred”绕过 RC-06。
 - **验证**：AST group recipe + `rg` 调用者 + 历史 T63/T64 receipt。
 
 ### T13 审计 T65 六个 baseline builder

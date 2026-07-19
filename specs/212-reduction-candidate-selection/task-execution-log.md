@@ -2,7 +2,7 @@
 
 **功能编号**：`212-reduction-candidate-selection`
 **创建日期**：2026-07-19
-**当前状态**：Round 2 双 FAIL 已处置，Round 3 formal identity 待冻结；产品实现未授权
+**当前状态**：current formal identity 已冻结；Round 3 split verdict findings 处置中；产品实现未授权
 
 ## 1. 固定边界
 
@@ -149,7 +149,7 @@ product+proof≤686≤`floor(2947×25%)=736`，余量≥50。
 
 ## 6. 当前待完成
 
-- 冻结 Round 3 formal identity，执行双 Agent 对抗评审直到同 identity 双 PASS。
+- 对 finding 修订后的 current identity 执行双 Agent 对抗评审，直到同 identity 双 PASS。
 - 完成 truth/continuity/closure、PR、Codex/CI 与 detached fresh-main 验收。
 
 ## 7. Batch 2026-07-19-004：pre-close manifest exact 预期失败
@@ -174,3 +174,12 @@ product+proof≤686≤`floor(2947×25%)=736`，余量≥50。
   但按当前合并口径将 WI211 product23 纳入，历史保守 subtotal=184、含 T66≤870。
 - 新建 WI212 root/scoped byte-identical handoff，并清除 child 新增行尾空格；任何 formal 六文件变化都
   要求 Pascal/Confucius 对 Round 3 新 identity 从零复审。
+
+## 9. Batch 2026-07-19-006：Round 3 split verdict
+
+- exact HEAD/tree=`5d2279a1`/`79e28268`，formal-six=
+  `a125dc311c86673d557853d1f2d1aca6affc20602652d7b4b9411179059495cb`；Pascal PASS0、
+  Confucius FAIL2，内容修订使双方 verdict 同时退役。
+- 两项 finding 均接受：T12 不再把已 fail-closed 的 T63 写成 Deferred；当前状态和待完成动作改为复审
+  已冻结 identity，而不是重复生成 identity。候选矩阵、预算、测试例外、稳定周期和产品 scope 不变。
+- tasks 属于 formal-six；本次最小修订后 Pascal/Confucius 必须对新 canonical identity 从零复审。

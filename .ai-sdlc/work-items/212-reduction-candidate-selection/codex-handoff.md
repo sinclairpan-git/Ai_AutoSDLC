@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T09:08:49Z
-- Reason: WI212 Round 3 前清除退役 disposition 与初稿 consumer 计数
+- Updated: 2026-07-19T09:15:49Z
+- Reason: WI212 Round 3 split verdict findings 最小处置
 - Goal: 完成候选选择、父 L3 合同修订、同 identity 双审、PR 与 detached fresh-main 验收
-- State: Round 2 双 FAIL 已接受；Round 3 首次派发在 verdict 前中止，证据表已修正；产品实现未授权
+- State: Round 3 Pascal PASS0/Confucius FAIL2 已退役；两项 finding 已修正，等待双方新 identity 复审
 - Stage: verify
 - Work Item: 212-reduction-candidate-selection
 - Branch: feature/212-reduction-candidate-selection-docs
@@ -40,6 +40,8 @@
   Confucius FAIL4；所有 findings 已按最小范围处置，旧 verdict 退役。
 - Round 3 首次派发后根线程发现 early scan table 仍写退役 Deferred、T65 consumer 仍是初稿计数；
   两位 reviewer 在形成 verdict 前已中止。表格现与 Carver 精确调用/文件计数及 RC-09 结论一致。
+- 随后 exact HEAD/tree=`5d2279a1`/`79e28268` 得到 Pascal PASS0、Confucius FAIL2；T12 Deferred
+  冲突和 log 重复冻结 identity finding 已接受。tasks 变化使该 split verdict 双方同时退役。
 
 ## Blockers / Risks
 
