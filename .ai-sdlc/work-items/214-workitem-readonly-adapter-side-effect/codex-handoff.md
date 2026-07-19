@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T21:39:58Z
-- Reason: Amendment Round 2 双 FAIL 已完成最小文档修正，准备提交并重跑 terminal truth/gates
+- Updated: 2026-07-19T21:47:17Z
+- Reason: Round 2 correction source 与 pre-sync gates 已完成，准备 terminal truth sync
 - Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
-- State: Round 2 verdict 已退役；range/failure/dirty/case-sensitive 假绿与陈旧状态已修正，尚未对新 source 提交实跑 gate
+- State: Correction source f828a39e 已提交且 exact V4b/validate/constraints/manifest/scope gates 通过；truth 按预期 stale
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: codex/214-format-gate-amendment
@@ -44,12 +44,13 @@
   inventory 1126/1126、manifest exact 1 passed、validate/constraints/scope/parity/Cursor 全绿、formatter 273/133。
 - Amendment Round 2 exact identity `5cad2581`/tree `4625216c`：Pascal FAIL2、Confucius FAIL4；range
   end/delete、native failure、dirty candidate、case-insensitive path 与 stale next-step findings 均成立，已完成
-  最小 source 修正，尚待提交/实跑。
+  最小修正。Correction source `f828a39e`；exact fenced V4b PASS、validate PASS、constraints no blockers、
+  manifest exact 1 passed in 97.18s、formatter 273/133、scope/parity/Cursor/diff-check 全绿；truth 待 terminal sync。
 
 ## Blockers / Risks
 
-- 新 correction 尚未提交和实跑；formal amendment 双 PASS0、PR/CI/merge/detached fresh-main 前不得继续
-  implementation mainline。
+- Correction 尚未 terminal truth sync；formal amendment 双 PASS0、PR/CI/merge/detached fresh-main 前不得
+  继续 implementation mainline。
 - handoff CLI 依据旧 WI208 checkpoint 写错 scoped copy；已用 apply_patch 恢复 WI208/resume-pack，并直接维护
   当前 WI214 root/scoped byte-identical，禁止把错误路由变化带入 amendment。
 
@@ -62,7 +63,7 @@
 
 ## Exact Next Steps
 
-- 提交 Round 2 correction source；以 actual fixed base 实跑 exact PowerShell，并重跑 truth/audit/治理门禁。
-- 冻结新的 committed+clean terminal identity，让 Pascal/LEAN 与 Confucius/SAFETY 从零双审到 PASS0。
+- 提交 pre-sync receipt，执行 terminal truth sync/audit，复核 clean/scope/parity/Cursor 并冻结新 identity。
+- 让 Pascal/LEAN 与 Confucius/SAFETY 对该 committed+clean identity 从零双审到 PASS0。
 - 双 PASS0 后开 PR、请求 Codex current-head review、等待 required checks、merge 并 detached fresh-main。
 - 从 amendment fresh-main 重放/变基 dev worktree，再完成 implementation terminal truth 与最终双审。

@@ -278,3 +278,15 @@
   truth/gates 与新身份双审。
 - 本轮只修正 child plan/tasks/summary/log 与双 handoff；不修改 src/tests、依赖、workflow、版本或 lifecycle
   状态。Correction 提交后先实跑 exact PowerShell，再重新 truth/audit/gates 并对全新 clean identity 双审。
+
+## 19. Batch 2026-07-19-015：Round 2 correction pre-sync gates
+
+- Correction source commit=`f828a39ea140547b7a12d4839bc485e72020b2ec`；从 plan.md 原始 fenced block
+  抽取 exact PowerShell，仅把尚未产生的 amendment fresh-main placeholder 临时替换为当前可达 formal merge
+  `d7f8b16371662dd04cfd0e9a6b918cb7f92a5e9f`，执行 PASS；未维护替代脚本。
+- `program validate` PASS；`verify constraints` no BLOCKERs；manifest exact=`1 passed in 97.18s`；Ruff 0.15.7
+  全库诊断=`273 red/133 green`；`git diff --check` PASS。
+- `src/tests/deps/workflow` 相对 formal merge 零差异；root/scoped handoff byte-identical；两份 Cursor rule SHA=
+  `d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a` 且相对 formal merge 零差异。
+- Pre-sync truth audit 按预期 `stale`，current recompute=`ready`、inventory=`1126/1126`、missing/unmapped=
+  `0/0`、各层=`214/214`。提交本 receipt 后执行 terminal truth sync；最终 snapshot 不反写 tracked source。
