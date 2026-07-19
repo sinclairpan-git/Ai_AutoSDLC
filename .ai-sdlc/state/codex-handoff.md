@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T09:25:00Z
-- Reason: WI212 Round 5 共同 current-state finding 最小处置
+- Updated: 2026-07-19T09:43:52Z
+- Reason: WI212 terminal truth/local gates 全绿，准备 current HEAD 终审
 - Goal: 完成候选选择、父 L3 合同修订、同 identity 双审、PR 与 detached fresh-main 验收
-- State: Round 5 Pascal/Confucius 双 FAIL1 已退役；共同 state finding 已修正，等待 current identity 双审
+- State: terminal truth ready/fresh、manifest/constraints/validate/scope 全绿；current HEAD 终审待执行
 - Stage: verify
 - Work Item: 212-reduction-candidate-selection
 - Branch: feature/212-reduction-candidate-selection-docs
@@ -16,7 +16,7 @@
 - .ai-sdlc/project/config/project-state.yaml
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/212-reduction-candidate-selection/codex-handoff.md
-- tests/integration/test_repo_program_manifest.py（仅 terminal inventory/close 两值，尚未修改）
+- tests/integration/test_repo_program_manifest.py（仅 terminal inventory/close 两值等量替换）
 
 ## Key Decisions
 
@@ -46,12 +46,18 @@
   Round 3 指向与 log 三文件失效边界 finding 已接受，当前恢复入口改为 round-agnostic。
 - Round 5 exact HEAD/tree=`306f768e`/`d8772c98` 得到 Pascal/Confucius 双 FAIL1；唯一共同 finding
   为 execution 顶层状态仍指 Round 3，现已改为 round-agnostic current review pending。
+- Round 6 exact HEAD/tree=`a3cfbfc9`/`32b75650`、formal-six=`f7c38d07...7b593c`；Pascal 与
+  Confucius 均 PASS0。动态 closure materials 会改变 current identity，PR 前须再次双审。
+- Pre-sync constraints/validate/manifest/scope/parity/diff-check 全绿；current truth ready、1116/1116、
+  missing/unmapped=0/0、close=212/212，persisted snapshot stale 是唯一未完成本地门禁。
+- Terminal sync snapshot=`6b88dc3d...722b633`；audit ready/fresh、1116/1116、missing/unmapped=0/0、
+  close=212/212；sync 后 manifest `1 passed in 103.60s`，constraints/validate/scope/parity 全绿。
 
 ## Blockers / Risks
 
 - Current identity 双 PASS 前不得创建 T66 formal、修改产品、push 或建 PR。
 - 任一 formal 六文件变化使两方 verdict 同时失效；root/scoped handoff 必须 byte-identical。
-- active child 尚缺 development summary；terminal truth sync 前 manifest exact 必须保持预期 RED。
+- child summary 已物化；persisted truth sync 前 snapshot stale，禁止把 current recompute 冒充 fresh。
 - GAP-03～06、WI-196、RC-08 与 release 均 open；全局 CLI 仍为 v0.9.6。
 - PowerShell host 仍有既知 .NET regex assembly 问题；本地使用 Python 3.11/zsh fallback，CI 仍覆盖 Windows。
 
@@ -63,9 +69,8 @@
 
 ## Exact Next Steps
 
-1. 以恢复时已提交且 clean 的 current HEAD/tree 为唯一身份，复算 parent §9 formal-six，确认 base diff 无行尾空格；已满足时不得改写证据或制造新 identity。
-2. Pascal/Confucius 对相同 current HEAD/tree/formal-six 从零评审；任一 finding 成立则最小修复并双方重审。
-3. 双 PASS 后更新任务/日志，创建 child development summary，机械替换 manifest test 两值，保持 +2/-2。
-4. 执行一次 truth sync，更新两份 byte-identical handoff，跑 constraints/validate/truth/manifest/scope/parity。
-5. current HEAD 再双审；随后 push/PR、Codex review/check heartbeat、merge 与 detached fresh-main 验收。
-6. 仅在 WI212 mainline 验收后创建新的 T66 formal WI；不得在本分支实现或发布版本。
+1. 复核 receipt writeback 后 persisted truth 仍 ready/fresh；不得再次 truth sync。
+2. 提交唯一 clean current identity，确认 test仅+2/-2、禁止路径零差异和 handoff byte-identical。
+3. Pascal/Confucius 对相同 current HEAD/tree/formal-six 从零终审；任一 finding 成立则最小修复并双方重审。
+4. 双 PASS 后 push/PR、Codex review/check heartbeat、merge 与 detached fresh-main 验收。
+5. 仅在 WI212 mainline 验收后创建新的 T66 formal WI；不得在本分支实现或发布版本。

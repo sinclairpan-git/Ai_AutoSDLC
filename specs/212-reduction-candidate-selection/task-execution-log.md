@@ -2,7 +2,7 @@
 
 **功能编号**：`212-reduction-candidate-selection`
 **创建日期**：2026-07-19
-**当前状态**：current formal identity 已冻结；等待双方对 current identity 复审；产品实现未授权
+**当前状态**：terminal local gates 全绿；等待 current HEAD 双审与 mainline PR；产品实现未授权
 
 ## 1. 固定边界
 
@@ -201,3 +201,40 @@ product+proof≤686≤`floor(2947×25%)=736`，余量≥50。
   FAIL1，唯一共同 finding 为顶层 current state 仍写死已退役 Round 3。
 - finding 已接受：顶层状态改为 round-agnostic 的“current identity 已冻结、等待双方复审”；历史 round
   只保留在 batch receipt，不再驱动恢复动作。内容变化后双方旧 FAIL identity 退役，须复审新 HEAD。
+
+## 12. Batch 2026-07-19-009：Round 6 同 identity 双 PASS
+
+- exact HEAD/tree=`a3cfbfc9f07823cc0e97b1ccb3b3706632c5c7f0`/
+  `32b75650e4a49ef41b2d724d4ba9c57259f1a5cd`，diff blob=
+  `e220b9a833a05d622d7228dc69eb6c22488c8330`，formal-six=
+  `f7c38d07bb969690698586ac1d81bce8b97d5a622a9235b06e1fed96c27b593c`。
+- Pascal/LEAN 与 Confucius/SAFETY 独立从零复算同一 identity，均 PASS、actionable findings=0；
+  constraints no BLOCKER、program validate PASS、scope/parity/diff-check/clean-state 全绿。
+- 该 PASS 允许进入 terminal closure materials，不授权 T66 产品实现或发布。tasks/summary/test/truth 动态
+  收口会改变 current HEAD/formal-six，因此 PR 前仍须让双方对最终 current identity 再审。
+
+## 13. Batch 2026-07-19-010：terminal closure materials
+
+- 物化 `development-summary.md`；manifest test 只把 inventory `1111→1116`、close `211→212` 两个
+  terminal expectation 等量替换，预期 Git diff=`+2/-2`，不增加测试逻辑或 LOC。
+- root/scoped handoff 保持 byte-identical；下一步先运行 pre-sync gates，再一次性 truth sync。不得在
+  persisted snapshot ready/fresh 前把本 batch 写成最终 PASS，也不得重复 sync 制造 identity。
+
+## 14. Batch 2026-07-19-011：pre-sync terminal gates
+
+- constraints no BLOCKER、program validate PASS；current truth recompute 为 ready，inventory=
+  `1116/1116`、unmapped/missing=`0/0`、close=`212/212`，persisted snapshot 按预期仍 stale。
+- manifest exact=`1 passed in 109.28s`；test diff 精确=`+2/-2`；产品/workflow/provider/runtime rule/
+  AGENTS/pyproject/lock 零差异，root/scoped handoff byte-identical，diff-check 与路径白名单通过。
+- T42/T43 source 已终态化；下一动作只执行一次 `program truth sync --execute --yes`，随后 audit/manifest/
+  constraints/validate。若 sync 失败则回退本批状态，不得重复 sync 或把 current recompute 冒充 fresh。
+
+## 15. Batch 2026-07-19-012：terminal truth receipt
+
+- 唯一 terminal truth sync 成功：snapshot=
+  `6b88dc3dd80212e412ed5955e34ab8783b24b8a50cef62e42e50b5b62722b633`；audit=`ready/fresh`，
+  inventory=`1116/1116`、unmapped/missing=`0/0`、close=`212/212`。
+- sync 后 manifest exact=`1 passed in 103.60s`，constraints no BLOCKER、program validate PASS；test
+  diff=`+2/-2`，禁止路径零差异，handoff parity、diff-check 与 clean-commit scope 全绿。
+- 本条只写回已发生 receipt，不改变 source inventory 集合；写回后必须复核 persisted snapshot 仍 fresh。
+  下一步是提交 current identity 并让 Pascal/Confucius 从零终审，不得再执行 truth sync。

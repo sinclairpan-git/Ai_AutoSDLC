@@ -68,7 +68,7 @@
 
 ### T32 LEAN/YAGNI 独立审查
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T31
 - **Reviewer**：Pascal
 - **检查**：候选排序、收益/预算、是否过度实现、是否小收益拖延结构主线、恢复入口。
@@ -76,7 +76,7 @@
 
 ### T33 SAFETY/COMPAT 独立审查
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T31
 - **Reviewer**：Confucius
 - **检查**：功能/CLI/artifact/状态/授权/平台/离线/回退证据，发布禁令和旧 claim 边界。
@@ -84,23 +84,26 @@
 
 ### T34 处置 finding 并同 identity 复审
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T32、T33
 - **规则**：正确 finding 做最小修正；错误/扩范围建议记录拒绝证据；六文件变化使双方旧 verdict 同时失效。
 - **完成**：同一 identity 上 Pascal/Confucius 均 PASS、findings=0。
+- **证据**：Round 6 HEAD/tree=`a3cfbfc9f07823cc0e97b1ccb3b3706632c5c7f0`/
+  `32b75650e4a49ef41b2d724d4ba9c57259f1a5cd`，formal-six=
+  `f7c38d07bb969690698586ac1d81bce8b97d5a622a9235b06e1fed96c27b593c`；两位 reviewer 均 PASS0。
 
 ## Batch 4：truth、PR 与 fresh-main 验收
 
 ### T41 同步 continuity 与 closure
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T34
 - **范围**：root/scoped handoff、WI212 execution log、development summary、parent writeback。
 - **验收**：handoff byte-identical；只声明候选选择完成，不声明 T66 实现或路线关闭。
 
 ### T42 绑定 program truth 并冻结 clean identity
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T41
 - **步骤**：一次 truth sync；manifest/project-state/文档单一提交链；禁止重复 sync 制造 identity。
 - **验收**：truth `ready/fresh`、source inventory complete；active pre-close/closure 只出现父合同允许的精确状态；
@@ -108,7 +111,7 @@
 
 ### T43 运行最终本地门禁
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T42
 - **验证**：
   - `ai-sdlc verify constraints`
