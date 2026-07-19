@@ -2,7 +2,7 @@
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
 **创建日期**：2026-07-19
-**当前状态**：formal terminal gates 已通过；final current-identity 双审待执行；产品代码未修改
+**当前状态**：一行产品实现与 T21～T31 已完成；implementation final current-identity 双审中
 
 ## 1. 固定归档规则
 
@@ -344,3 +344,15 @@
   lint/V4a/V4b、constraints、validate/audit、manifest exact、scope/parity/Cursor/diff-check。任一失败即不得送审；
   成功结果作为 reviewer/PR 外部 receipt，不再修改 tracked source。
 - T31 完成边界不关闭 GAP-15/T58；T32 implementation fresh-main 前 lifecycle/T66 继续 blocked。
+
+## 24. Batch 2026-07-19-020：implementation final review Round 1 FAIL
+
+- Exact identity：HEAD=`7b33ec6784548ba624852293c5b79f78883e0a39`、tree=
+  `b8d0690c05b8a654335b08c2b5831e401147e114`、clean；Pascal/LEAN=`FAIL1`（P3×1），
+  Confucius/SAFETY=`PASS0`。因 identity 将变化，两份 verdict 同时退役。
+- Pascal 唯一 finding 成立：本日志顶部仍称“产品代码未修改”，双 handoff 首个 next step 仍要求重复已经通过
+  的 terminal gates。最小修正只把状态改为一行实现/T21～T31 completed，并让持久 next step 直接从新身份
+  双审开始。
+- 两位 reviewer 对产品一行最小性、479 行测试的合同映射、exact output/bytes/write-set/order、V4、truth/scope/
+  parity 与 lifecycle/T66 均无其他 finding；Confucius 亲自重跑 targeted=`49 passed in 11.13s`。
+- 修正后再次 terminal truth sync，并对新 identity 重跑全部 T31 gates；不得复用本轮 SAFETY PASS。

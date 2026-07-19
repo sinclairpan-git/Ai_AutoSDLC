@@ -1,7 +1,7 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T22:59:17Z
-- Reason: Implementation terminal source 已冻结；final manifest-only truth 后直接进入同身份双审
+- Updated: 2026-07-19T23:20:00Z
+- Reason: Implementation Round 1 唯一 continuity P3 已修正；新 terminal identity 直接双审
 - Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
 - State: T21-T31 completed；一行产品修复、回归与 terminal continuity 已冻结，等待 final identity 双审
 - Stage: decompose
@@ -43,6 +43,8 @@
 - Terminal source=`581cf344`；首个 truth snapshot=`034f3464...d732`、inventory=`1126/1126`、manifest-only
   commit=`e68ae027`；final manifest refresh 后不再反写 tracked source。
 - Cursor protected rule SHA 保持 `d5f04acf...0b6a`；final identity 只有全部 T31 gates 通过才可送审。
+- Final gates on `7b33ec67`：targeted=`49 passed in 16.43s`、full=`3302 passed, 3 skipped in 682.71s`、
+  truth ready/fresh、manifest exact=`1 passed in 102.45s`、Ruff/V4/constraints/scope/clean 全绿。
 
 ## Blockers / Risks
 
@@ -55,10 +57,10 @@
 - Pascal/LEAN implementation pre-review：FAIL2，产品最小性 PASS；两项断言精度 finding 已在暂停的 dev worktree 修正。
 - Confucius/SAFETY implementation pre-review：FAIL4，产品范围 PASS；三组测试证据已修正，V4 矛盾由本 amendment 处理。
 - Amendment Round 4 final：同一 `e4ca3e42` identity 双 PASS0；仅作为 amendment receipt，不替代 implementation review。
+- Implementation Round 1：Pascal FAIL1（仅 continuity P3）、Confucius PASS0；identity 变化使两份 verdict 均退役。
 
 ## Exact Next Steps
 
-- 对 final manifest-only truth 后的 committed+clean identity 完成 targeted/full/Ruff/V4/constraints/truth/scope gates，
-  让 Pascal/LEAN 与 Confucius/SAFETY 从零审到 PASS0。
+- 让 Pascal/LEAN 与 Confucius/SAFETY 对新 terminal committed+clean identity 从零审到 PASS0。
 - 双 PASS0 后开 implementation PR、请求 Codex current-head review、等待 checks、merge 并 detached fresh-main。
 - Implementation fresh-main 通过后创建独立 lifecycle reconciliation；不得提前关闭 GAP-15/T58 或放行 T66。
