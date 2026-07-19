@@ -25,6 +25,9 @@ related_doc:
 - 只修改 spec §2.1 的 10 个模块、`utils/helpers.py` 与一个既有 unit test；产品/测试均不新增文件。
 - 新增注释仅在解释非显然边界时使用简体中文；本项 exact helper 无需复述式注释。
 - 23 个调用表达式、CLI、artifact、schema、状态、授权和平台行为零未批准差异。
+- 除10个目标 alias imports 与23 calls外，`src/` product/runtime external private consumers=0；tracked identity
+  test 精确允许2次 private attribute reads；§3.3 disposable harness 每次进程允许1次代表binding lookup并运行
+  4-case。其他 import/attribute/wildcard/monkeypatch/introspection 消费均禁止。
 - 产品 raw/non-empty additions≤25/23；representative identity test=4 non-empty；formal executable harness=27
   non-empty；保护成本31=`floor(127×25%)`，总 proof/product raw additions≤58、hard cap=60；truth test仅两行等量机械替换。
 - GAP-09～GAP-11 impact analysis 缺失、不确定或 truth 漂移时 fail-closed。
@@ -74,12 +77,19 @@ formal PR 不得含 `src/ai_sdlc/**` 或 implementation test diff。
 ### 3.1 从 formal merge 创建实现工作树
 
 使用 exact fresh `origin/main` 创建 `feature/211-shared-mapping-dedupe`。记录 HEAD/tree、Python/OS/uv、
-10 defs、23 calls、body/full/call digest、72 importers、private consumers、目标文件和受保护文件 blob。
+10 defs、23 calls、body/full/call digest、72 importers、授权目标边界之外的 product/runtime consumers=0、
+tracked identity attribute reads=0、disposable harness binding lookup=1/进程、目标文件和受保护文件 blob。
 Python 3.11 的结构 digest 必须逐字采用 spec §2.1 的 AST payload recipe；其中 call nodes 必须同时满足
 `isinstance(node, ast.Call)`、`isinstance(node.func, ast.Name)` 与
 `node.func.id == "_dedupe_mapping_items"`。先核对 body/full/call 分别为 `6602b868...`、`6fb4192d...`、
 `a62a6dee...`，再捕获实现 base；Python 3.12 因 `FunctionDef.type_params` 不复用 3.11 full digest，只做
 同解释器 baseline/candidate AST payload 相等和 10→1/23 calls 结构断言；不得用 grep 文本替代。
+
+consumer scan 只按本 family 的精确模块所有权计数：10个目标模块从 `utils.helpers` 的同名 alias import 是授权
+边界；其外任一 `src/` 对 helper/目标模块 private symbol 的 import、attribute、wildcard 或 monkeypatch string
+均计为 product/runtime external consumer。tracked proof 只在 §3.2 exact test FunctionDef 中计
+`_dedupe_mapping_items` 的 `ast.Attribute` loads，baseline/revert=0、candidate/reapply=2；§3.3 marker block 的
+representative binding lookup 单独计1/进程。仓库中 telemetry 等其他所有权下的同名函数不计入本 family。
 
 ### 3.2 写唯一 failing test
 
@@ -93,9 +103,10 @@ def test_mapping_item_dedupe_uses_one_shared_binding() -> None:
     assert observation_provider._dedupe_mapping_items is theme_artifacts._dedupe_mapping_items
 ```
 
-在现有 import 区增加 `observation_provider` 与 `theme_artifacts` 两个 module alias，共4 non-empty LOC。
-运行该 exact nodeid，期望 baseline 只因两个对象不同而失败；candidate 的 AST/identity gate 另行断言全部
-10 个 alias 指向 `utils.helpers`。import/collection/fixture error 不算 RED。
+在现有 import 区增加 `observation_provider` 与 `theme_artifacts` 两个 module alias，共4 non-empty LOC。断言左右
+各产生一次 private attribute read，合计2次且只比较 identity；这是唯一批准的 tracked proof consumer。运行该 exact
+nodeid，期望 baseline 只因两个对象不同而失败；candidate 的 AST/identity gate 另行断言全部10 个 alias 指向
+`utils.helpers`。import/collection/fixture error 不算 RED。
 
 ### 3.3 捕获行为与导入基线
 
@@ -183,7 +194,9 @@ from ai_sdlc.utils.helpers import _dedupe_mapping_items as _dedupe_mapping_items
 
 1. 运行 identity nodeid，期望 PASS。
 2. 运行 Ruff changed paths、`git diff --check`。
-3. 复算结构：目标 exact body=1、10 alias binding、23 calls、call digest不变、external consumer=0。
+3. 复算结构：目标 exact body=1、10 alias binding、23 calls、call digest不变、授权目标边界之外的 `src/`
+   product/runtime external consumers=0、唯一 tracked identity attribute reads=2；disposable harness另按§3.3保持
+   binding lookup=1/进程。
 4. 复算 diff：目标 raw additions≤25/deletions≥147、non-empty additions≤23/deletions≥127；
    超限立即停止，不靠删测试抵消。
 5. 提交只含产品与 identity test 的 `implementation_commit/tree`；该提交可独立 revert，之后不得改写产品。
@@ -192,11 +205,16 @@ from ai_sdlc.utils.helpers import _dedupe_mapping_items as _dedupe_mapping_items
 
 1. 在 `implementation_tree` 上逐字执行 §3.3 recipe；当前 Python 3.11 期望4 observations、digest=
    `8c6d3e21ef597673c767e39a3919864242daed6014d13b1400a95eafabdb54e0`，且 JSONL 与 baseline 字节相等。
-2. 重跑 104 direct、23-file/1163 impact、72 cold imports、full pytest、Ruff、constraints、validate、truth。
-3. 在 disposable clone checkout `implementation_commit` 后 revert 它：tree OID=baseline；重跑结构、4-case diff、
-   103 direct、1162 impact、72 imports。
-4. reapply 同一 commit：tree OID=`implementation_tree`；重跑4-case、104 direct、1163 impact、72 imports。
-5. 回到主实现 worktree，新建唯一 receipt，只绑定 baseline、`implementation_commit/tree`、revert/reapply 与证据；
+2. 重跑consumer scan（product/runtime=0、tracked=2、harness=1/进程）、104 direct、23-file/1163 impact、
+   72 cold imports、full pytest、Ruff、constraints、validate、truth。
+3. 在 disposable clone checkout `implementation_commit` 后 revert 它：tree OID=baseline；重跑结构、consumer
+   scan product-runtime/tracked/harness=`0/0/1`、4-case diff、103 direct、1162 impact、72 imports。
+4. reapply 同一 commit：tree OID=`implementation_tree`；重跑consumer scan
+   product-runtime/tracked/harness=`0/2/1`、4-case、104 direct、
+   1163 impact、72 imports。
+5. 回到主实现 worktree，新建唯一 receipt，只绑定 baseline、`implementation_commit/tree`、revert/reapply、
+   授权目标边界之外的 product/runtime consumers=0、tracked identity attribute reads baseline/revert=0 与
+   candidate/reapply=2、disposable harness binding lookup=1/进程、证据；
    evidence commit chain 同步 receipt、AGENTS.md 强制的 root/scoped handoff 及必要机械 truth/manifest，最终
    clean tip 为 `evidence_review_head/tree`。receipt 禁止写入自身所在 evidence commit/tree/hash；review
    envelope 单独绑定 receipt、root/scoped handoff 与 truth/manifest blobs。该 chain 禁止产品或行为测试变化。
@@ -217,12 +235,12 @@ from ai_sdlc.utils.helpers import _dedupe_mapping_items as _dedupe_mapping_items
 
 | 路径 | 必须证明 | 命令/证据 |
 |---|---|---|
-| identity RED/GREEN | 10 distinct→1 shared；module=`utils.helpers` | exact unit nodeid |
+| identity RED/GREEN | 10 distinct→1 shared；module=`utils.helpers`；tracked attribute reads=2 | exact unit nodeid |
 | mapping 语义 | unique implementation 的 truthiness/事件+过滤/首次+显式key-order probe/Unicode、JSON异常、浅复制 | 4-case JSONL differential |
 | 直接行为 | 10 target test files 场景不减 | baseline/revert 103；candidate/reapply 104 |
 | 影响行为 | observation/verification/artifact/CLI/Program | 固定23 files；baseline/revert 1162；candidate/reapply 1163 |
 | 共享叶子 import | 全部 72 importer 无失败/输出 | cold-import receipt |
-| 结构/预算 | 10→1、23 calls不变、net达到阈值 | AST + numstat + non-empty counter |
+| 结构/预算 | 10→1、23 calls不变、授权边界外 product/runtime consumers=0、tracked reads当前阶段=0/2、harness lookup=1/进程、net达到阈值 | AST + consumer scan + numstat + non-empty counter |
 | 回退 | baseline/implementation tree 精确恢复；evidence identity不自引用 | disposable clone + receipt blob |
 | 治理 | GAP-09～11、truth、source inventory | constraints/validate/truth/manifest |
 | 平台 | Python 3.11/3.12、macOS/Linux/Windows | required GitHub checks |

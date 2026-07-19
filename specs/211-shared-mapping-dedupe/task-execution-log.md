@@ -179,6 +179,28 @@
   `104 direct/1163 impact/72 imports`；不修改 executable harness、产品/测试范围、预算或证据 identity 模型。
   Pascal 对第六轮其余 lean 合同无 finding；双方旧结论因内容变化失效，进入第七轮从零复审。
 
+## Batch 2026-07-19-012：Implementation Round1 双审 finding 与 formal amendment
+
+- 被审 implementation commit=`4ba9387d7111d0c57efbbefd26216fe44827b68b`、tree=
+  `ad6b76fd70a28749d09b24471912761df790b8fa`；evidence HEAD=`4a8874e0b85fc7a7ec75c66058458d3eca121d7f`、
+  tree=`15b1e5c7a1549132150d7febf05b006bdc3e373a`、formal-six=`53d0dba52c...a1a7`。
+- Pascal=`LEAN FAIL/findings=1`；Confucius=`SAFETY FAIL/findings=2`，本 implementation identity 整体失效。
+  共同 finding：terminal handoff 的下一步仍要求重复已经完成的 handoff-only evidence commit。
+- Safety 额外 finding：receipt 把 external attribute consumers 写成0，但唯一 identity test 实际对两个代表模块
+  各读取一次 private callable；formal 同时要求 attribute consumer=0 与该测试，产品/运行时零值和 proof-only
+  两次读取未分栏，证据口径矛盾。
+- 两位 reviewer 独立复算10→1/10 aliases/23 calls、raw net -122、non-empty net -104、4-case 502-byte
+  JSONL、103/104 direct、1162/1163 impact、72 imports、rollback/reapply tree、Ruff、full、truth 与 manifest；
+  产品实现、公共行为、预算和回退无 finding。
+- disposition：不在 implementation PR 偷改 formal；从 exact main 创建独立
+  `feature/211-shared-mapping-dedupe-formal-amendment`，只把 consumer 合同收窄为授权目标边界之外的 `src/`
+  product/runtime=0，单列 tracked identity attribute reads baseline/revert=0、candidate/reapply=2 与既有
+  disposable harness binding lookup=1/进程，并要求receipt分栏。amendment 不修改产品/测试、harness、
+  digest、预算或减重范围；内容变化使旧 formal 与 implementation 双审结论不得复用。
+- amendment executable consumer scanner 对 baseline=`25de0823` 与 candidate=`4ba9387d` 复算：授权 alias
+  imports=10、candidate授权边界外 product/runtime consumers=0、tracked test attribute/call reads 为
+  baseline `0/0`、candidate `2/0`、formal harness representative binding attribute lookup=1；与新阶段矩阵一致。
+
 ## 不随执行批次过期的门禁顺序
 
 1. formal source 或证据变化后，先做 truth sync/audit、manifest exact 与本地门禁，再提交 clean identity；
