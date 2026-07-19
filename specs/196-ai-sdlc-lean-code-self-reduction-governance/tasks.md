@@ -104,7 +104,7 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T55 隔离 program implicit adapter side effect（已完成） | standalone | GAP-12 | L2 / CC-05 | 已满足 | WI-207；PR #139 + repair PR #141 / merge `8d8b8f96`；fresh-main full 3224/3、repository state clean |
 | T56 建立 portable/lossless resume reconstruction（已完成） | standalone | GAP-13 | L2 | 已满足 | WI-208 / PR #143 / merge `f51c176a`；canonical source、relocation/focused/full、双 Agent、Codex、22/22 checks、fresh-main clean |
 | T57 修复 YAML quoted-scalar comment-policy false positive（已完成） | standalone | GAP-14 | L2 | T56 与 formal PR #145/merge `46156c24` 已满足；Round 15 candidate/replay 同树且 Pascal/Confucius 双 PASS；PR #146 Codex current-head clean、22/22 checks、merge `31aad572` 与 fresh-main acceptance 全部通过 | WI-209 / PR #146；old/new 对称 quoted token span、quoted/plain/literal/real-comment、默认/quotePath=false 空格与 mixed escape characterization + focused/full/constraints/cross-platform/fresh-main clean；回退 PR #146 会重开 |
-| T58 隔离 workitem 只读 adapter side effect（open） | standalone | GAP-15 | L2 / CC-05 | WI-213 formal mainline/fresh-main | 五个只读命令含 help/invalid bytes/output/clean-tree RED→GREEN；`init/link` valid/missing/dirty/no-project/no-checkpoint/hook-exception 时序零差异；双 Agent/Codex/CI/fresh-main |
+| T58 隔离 workitem 只读 adapter side effect（open） | standalone | GAP-15 | L2 / CC-05 | 已满足：WI-213 PR #158 / merge `450d4988` / fresh-main | 五个只读命令含 help/invalid bytes/output/clean-tree RED→GREEN；`init/link` valid/missing/dirty/no-project/no-checkpoint/hook-exception 时序零差异；双 Agent/Codex/CI/fresh-main |
 | T61A 捕获目标切片旧行为 | embedded gate | GAP-02/WP-01A | L1/L2 | T51、T52 + fail-closed impact analysis；T66 额外依赖 T58 fresh-main | 固定环境、allowlist、surface/Golden 基线 |
 | T61B 候选实现 differential 与回退演练 | embedded pre-merge gate | GAP-02/WP-01B | L1～L3 | T61A + candidate hash | 零未批准差异、rollback receipt；未通过不得 merge/close |
 | T62A code + contract report-only（open） | standalone | GAP-01/WP-02 | L1/L2 | T61A + 新/替代 sponsor + 父合同重新双审 | WI-202 候选 RC-09 No-Go；重启项须分类/合同缺口报告、历史零误阻断、RC-06 预算 |
@@ -113,16 +113,16 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T63 单个 helper/DTO/test 重复族（按 family 继续） | standalone + T61A/B | GAP-05/WP-03 | L1 | T51、T52 已满足；WI-205、WI-206、WI-210、WI-211 各完成一个 family | WI-211 / PR #153 / merge `cd64d8aa`：10→1 mapping body、10 aliases、23 calls 不变、产品 net -122、双 Agent/Codex/22 checks/fresh-main；新 family 仍须重复族清零、目标切片 LOC -10%、全量测试 |
 | T64 单个 Loop Store family | standalone + T61A/B | GAP-05/WP-04 | L2 | T51、T52 | store differential、LOC -10%、恢复/损坏输入测试 |
 | T65 单个 baseline 候选 go/no-go | standalone + T61A/B on Go | GAP-06/WP-05 | L2 | T51、T52 | Go=`completed_reduction`；单项 No-Go=`cancelled_no_go`；六项全 No-Go=`closed_no_viable_reduction` |
-| T66 单个 ProgramService 领域切片（formal active） | standalone formal + implementation T61A/B + independent deletion PR | GAP-03/WP-06 | L3 | WI-213 formal 双 PASS/mainline/fresh-main；T58/GAP-15 fresh-main；后续 T61A 双 readiness GO | WI-213 冻结九 stage/45 methods、terminal≤720、净删≥2,918；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与真实回退演练，删除前不得关闭 |
+| T66 单个 ProgramService 领域切片（formal complete；implementation blocked） | standalone formal + implementation T61A/B + independent deletion PR | GAP-03/WP-06 | L3 | WI-213 formal 已满足；T58/GAP-15 fresh-main；后续 T61A 双 readiness GO | WI-213 冻结九 stage/45 methods、terminal≤720、净删≥2,918；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与真实回退演练，删除前不得关闭 |
 | T67 单个 Program Stage family | standalone + T61A/B | GAP-04/WP-07 | L3 | T51、T52 + 真实重叠子项 | 镜像 LOC -70%、33 命令兼容；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与回退演练，删除前不得关闭 |
 
 **全局恢复门禁**：T57/WI-209、WI-210、WI-211 与 WI-212 candidate-selection fresh-main acceptance
 已完成；表中 T61A、
 T62A～T62C、T63～T67 的新实例已恢复选择，但仍须逐项满足各自依赖、sponsor、RC 与原子 WI/branch/PR。
 WI-211 已完成一个 T63 family；下一原子项必须从 fresh main 重新选择，不得沿用旧 spike 或已撤销 claim。
-WI-212 已唯一选择 T66 bounded-stage ProgramService domain；WI-213 formal-only 已在 current main
-重新复算并冻结候选合同，但尚未完成双审/mainline/fresh-main。WI-213 验证发现并登记 GAP-15；formal receipt
-完成后先创建独立 T58 WI，T58 fresh-main 后才允许创建一个 T66 implementation WI。该 WI 未完成 T61A 双
+WI-212 已唯一选择 T66 bounded-stage ProgramService domain；WI-213 formal-only 已在 PR #158 /
+merge `450d4988` 完成双审/mainline/fresh-main。WI-213 验证发现并登记 GAP-15；当前先创建独立 T58 WI，
+T58 fresh-main 后才允许创建一个 T66 implementation WI。该 WI 未完成 T61A 双
 readiness GO 前不得写产品，candidate/stability/deletion 未全部完成前不得关闭 T66。
 既有已完成 receipt 不受影响；各行保留的历史 T51/T52 依赖已满足，不需要重复执行。
 

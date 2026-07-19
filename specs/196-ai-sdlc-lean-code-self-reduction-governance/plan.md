@@ -231,9 +231,9 @@ T58 不计 Reduction Contract 收益；其 fresh-main receipt 是 WI-213 后续 
 
 ### WP-06：ProgramService 单领域切片（L3）
 
-- **当前状态**：WI-212 已唯一选择九个 bounded frontend stage；WI-213 正在 current main 上执行
-  formal-only 准入，目标 45 methods=`3,638/3,305`、terminal≤720、产品净删≥2,918。WI-213 未双审/
-  mainline/fresh-main 前不授权产品；随后先由独立 T58 关闭 GAP-15，才可创建唯一 implementation WI。
+- **当前状态**：WI-212 已唯一选择九个 bounded frontend stage；WI-213 formal-only 已在 PR #158 /
+  merge `450d4988` 完成双审、mainline 与 detached fresh-main，冻结 45 methods=`3,638/3,305`、
+  terminal≤720、产品净删≥2,918。当前先由独立 T58 关闭 GAP-15，才可创建唯一 implementation WI。
   该 WI 必须先 T61A 和双 readiness GO，随后 candidate PR 保留 legacy、完成主线预发布稳定周期，再以
   独立 PR 删除 legacy。
 - **范围**：每个子 WI 只迁移一个领域；`ProgramService` 暂作薄 facade。

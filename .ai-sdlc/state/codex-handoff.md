@@ -1,12 +1,12 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T16:04:00Z
-- Reason: 处理 PR #158 Codex P2 与 Round 8 continuity/PR lifecycle findings
-- Goal: 完成 WI213 formal PR #158 的 current-head 复审、合并与 detached fresh-main 验收
-- State: stale summary 与 terminal truth 已修正；下一门禁是对 resulting committed+clean identity 双审，再推送并刷新 PR 证据
+- Updated: 2026-07-19T16:47:22Z
+- Reason: 回写 WI213 formal PR #158 mainline 与 detached fresh-main 的已发生 receipt
+- Goal: 完成 WI213 formal lifecycle reconciliation，然后从 fresh main 创建独立 T58/GAP-15
+- State: formal PR #158 已双审、检查、合并并通过 fresh-main；当前只收口文档/truth，待本地门禁、双审、PR 与 fresh-main
 - Stage: decompose
 - Work Item: 213-programservice-bounded-stage-reduction
-- Branch: feature/213-programservice-bounded-stage-reduction-docs
+- Branch: codex/213-programservice-bounded-stage-reduction-lifecycle
 
 ## Changed Files
 
@@ -48,6 +48,9 @@
 - Round 4 删除当前无场景的 DTO normalized-code fallback；DTO source unreadable 直接阻断，减少 proof 分支。
 - Round 5 同 identity `e00aea25`/`f17e24ba`/`674407cf...cf27` 已获 Pascal/Confucius 双 PASS0；closure
   material 改变受审文件后该 verdict 降为 authoring receipt，final identity 必须再次双审。
+- Round 9 最终 formal identity=`94acfdf4`/tree `9d1c0f69`/formal-six `283b623b...f099`；
+  Pascal/Confucius 双 PASS0，PR #158 13/13 checks success，squash merge=`450d4988`，detached
+  fresh-main 通过且 merge/reviewed tree 相同。
 - RC-08 前仍禁止版本/tag/Release/PyPI/全局 CLI；GAP-03、WI196 与发布保持 open。
 
 ## Commands / Tests
@@ -79,14 +82,16 @@
   inventory=`1121/1121`、unmapped/missing=`0/0`、close=`213/213`，Cursor SHA 仍为 `d5f04acf...0b6a`。
 - 目标测试=`165 passed, 474 deselected in 2.62s`；manifest exact=`1 passed in 96.09s`；constraints
   no BLOCKER、program validate PASS、scope/handoff parity/diff-check 全绿。
+- Round 9 两位 reviewer 对 `94acfdf4`/`9d1c0f69`/`283b623b...f099` 均 PASS0；PR #158
+  13/13 checks success，merge=`450d4988`，merge tree 等于 reviewed tree。
+- Detached fresh-main `450d4988` / Python 3.14.3；targeted=`165 passed, 474 deselected in 4.15s`，
+  manifest exact=`1 passed in 110.90s`，constraints/validate/truth/scope/parity/Cursor/clean 全绿。
 
 ## Blockers / Risks
 
 - Feasibility reviewer 已 final GO，但 module 只有12行预测余量；T61A 中 module>360 即 No-Go。
-- Codex P2 要求两份 development summary 在 `ada79cdf` 后发生最小事实修正；旧 Round 7/Codex identity
-  因此退役，新 identity 必须重新同步 truth、双审与 GitHub current-head review。
-- T42～T45 状态保守保持 pending，actual PR/fresh-main 后由独立 lifecycle reconciliation 回写，避免预写
-  future receipt。
+- 当前 lifecycle reconciliation 会改变 parent+child formal-six；在新 committed+clean identity
+  取得 Pascal/Confucius 双 PASS0、Codex/current-head checks 与 fresh-main 前，不得开始 T58。
 - GAP-15/T58 尚未修复；在其独立 mainline/fresh-main receipt 前，T66 implementation WI/T61A 被阻断。
 - 360/522/712/720 任一被代码事实证明不可达时，必须最小修订或 RC-09 No-Go，不能扩大分母。
 - 任一 formal-six 变化使 Pascal/Confucius verdict 同时失效。
@@ -102,12 +107,16 @@
 - Round 8 对 `68fb8126`/tree `03b546cb`/formal-six `283b623b...f099`：Pascal 与 Confucius 均 FAIL2；
   共同 finding 为 handoff 仍要求重复提交，Pascal 另指出 child summary 顶部假称 current 最终双审，Confucius
   另指出 PR #158 正文仍把退役 `6c242f9c` 当最终身份。三项均接受并按最小范围处置。
+- Round 9 对 `94acfdf4`/tree `9d1c0f69`/formal-six `283b623b...f099`：Pascal 与
+  Confucius 均 PASS0。Codex 成立 P2 已修正；provenance P2 被本地/GitHub DAG 与两名 Agent
+  独立证伪，review threads 已 resolved。
+- 当前 lifecycle reconciliation 会产生新 identity，尚待对完整 lifecycle diff 重新双审。
 - 原 WI212 review 摘要已由 WI212 execution/summary/mainline 保存，未删除产品源码注释。
 
 ## Exact Next Steps
 
-1. 确认本轮最小修正已形成 committed+clean identity；若仍是未提交 working-tree correction，只提交一次。
-2. Pascal/Confucius 对 resulting identity 从零复审，必须再次双 PASS0；此后不再改本地文件。
-3. 双 PASS 后推送，并把 PR #158 正文更新为真实 current HEAD/tree/双审状态，再请求 Codex review。
-4. 守候 current-head required checks 全绿后 merge，执行 detached fresh-main 验收。
-5. 独立 lifecycle reconciliation 只写已发生 receipt；其 fresh-main 后创建 T58，T58 fresh-main 后才进入 T66 T61A。
+1. 提交 lifecycle source docs + byte-identical handoff，在该 source commit 上执行一次 truth sync。
+2. 运行 constraints/validate/truth/manifest exact/165 baseline/diff/scope/parity/Cursor/clean 门禁。
+3. Pascal/Confucius 对同一 committed+clean lifecycle identity 独立复审，必须双 PASS0。
+4. 推送并创建 lifecycle PR，完成 Codex current-head review、required checks、merge 与 detached fresh-main。
+5. lifecycle fresh-main 后从 main 创建独立 T58/GAP-15 WI；T58 fresh-main 后才进入 T66 T61A。

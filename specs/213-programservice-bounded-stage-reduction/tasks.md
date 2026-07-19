@@ -133,32 +133,41 @@ related_doc:
 
 ### T42 绑定 program truth
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T41
 - **步骤**：只在 terminal source identity 上执行一次 truth sync；机械更新 manifest exact inventory/close 两值。
 - **验收**：inventory complete、unmapped/missing=0/0、close=N/N、snapshot fresh；测试 diff 仅两值 `+2/-2`，
   不增逻辑/LOC；WI213 depends_on WI196。
+- **完成**：最终 source commit=`a638be64`，snapshot=`7038d31f...48e2e`，inventory/close=`1121/1121`/
+  `213/213`，unmapped/missing=`0/0`；manifest test 仅 `+2/-2`。
 
 ### T43 运行最终本地门禁
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T42
 - **验证**：constraints、program validate/truth、manifest exact、165 baseline、diff-check、scope whitelist、
   handoff parity、formal 未决标记/traceability、clean worktree。
+- **完成**：constraints/validate/truth、`165 passed`、manifest exact、scope/parity/Cursor/clean 全绿。
 
 ### T44 双 review current HEAD、PR 与 merge
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T43
 - **验收**：两位本地 reviewer 对 current HEAD/tree/formal-six PASS0；Codex reviewed current head 无 actionable
   finding；required checks 100% success；squash merge。任一文件变化回 T31。
+- **完成**：Round 9 HEAD/tree=`94acfdf4`/`9d1c0f69`、formal-six=`283b623b...f099`，Pascal/Confucius
+  双 PASS0；PR #158 current-head Codex 的成立 P2 已修正，错误 provenance P2 经本地/GitHub DAG 与双 Agent
+  一致证伪；两线程 resolved，13/13 checks success，squash merge=`450d4988`。
 
 ### T45 detached fresh-main 验收
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T44
 - **验收**：merge tree=reviewed tree；constraints/validate/truth/manifest/scope/parity/clean 全绿；版本仍不变。
 - **唯一后续**：创建独立 T58/GAP-15 WI；T58 fresh-main 后才创建 T66 implementation WI，从 T61A 开始。
+- **完成**：detached `450d4988` tree=`9d1c0f69` 与 reviewed tree 相同；Python 3.14 targeted=`165 passed`、
+  manifest exact=`1 passed`，constraints/validate/truth=`ready/fresh 1121/1121`、scope/parity/Cursor/clean 全绿；
+  版本未变。
 
 ## 下游强制 handoff（不属于 WI213 完成任务）
 
