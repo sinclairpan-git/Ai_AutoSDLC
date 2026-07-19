@@ -1,6 +1,6 @@
 # Development Summary：WI-212 Reduction Candidate Selection
 
-**状态**：候选选择与父合同修订已完成本地双审；mainline PR/fresh-main 验收待完成
+**状态**：候选选择与父合同修订已完成 mainline 与 detached fresh-main 验收
 
 ## 已交付
 
@@ -28,10 +28,22 @@
   `f7c38d07bb969690698586ac1d81bce8b97d5a622a9235b06e1fed96c27b593c`；两位 reviewer 均
   PASS、actionable findings=0。
 
-## 未完成边界
+## Mainline 与 fresh-main receipt
 
-- T66 产品实现必须在 WI212 mainline/fresh-main 验收后创建新的独立 formal WI；本分支不得实现。
+- 终态 reviewed HEAD/tree=`11dd8f9bbee0120157820b055b88f02b3f2e7951`/
+  `db0dd990a6f4e9243006dc522c36d4d9a7f74278`；Pascal/LEAN 与 Confucius/SAFETY 对同一 identity
+  均 PASS、findings=0。
+- PR #156 的 Codex reviewed current commit `11dd8f9bbe` 未发现 major issue，13/13 checks success；
+  squash merge=`51903b8f1819922a46a65973f1e0a11421fc7669`。
+- detached fresh main `51903b8f`、Python 3.11.15：merge tree 与 reviewed tree 一致；constraints、
+  validate、truth `ready/fresh 1116/1116`、unmapped/missing=`0/0`、close=`212/212`、manifest exact
+  `1 passed in 98.37s`、产品/工作流/依赖零差异、测试 `+2/-2`、handoff parity 与 clean guard 全绿。
+
+## 后续边界
+
+- WI212 仅允许后续创建新的 T66 bounded-stage formal WI；formal 仍须基于 current main 重新复算
+  准入、T61A/B、预算、回退与双审，WI212 本身不授权产品实现。
 - GAP-03～GAP-06、WI-196、RC-08 与版本发布保持 open；`program_service.py` / `program_cmd.py` 的
   400 行终态仍未达到。
-- mainline PR、Codex current-head、required checks、merge 与 detached fresh-main receipt 完成前，
-  WI212 不得被用作 T66 execute 或发布授权。
+- 本 lifecycle reconciliation 只同步已经发生的 PR/fresh-main 事实；不得修改产品、测试逻辑、
+  RC-08 ledger、开放 GAP 或发布状态。

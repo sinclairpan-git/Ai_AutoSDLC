@@ -2045,10 +2045,10 @@ specs:
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
-  generated_at: '2026-07-19T09:37:41Z'
+  generated_at: '2026-07-19T10:37:55Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: a3cfbfc9
+  repo_revision: 51903b8f
   authoring_hash: 3652826f0d4bfee83d4cebc27e27050279c72bf81a63a67e871c8e34befdf374
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
@@ -2091,7 +2091,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 6b88dc3dd80212e412ed5955e34ab8783b24b8a50cef62e42e50b5b62722b633
+  snapshot_hash: d71a51bbee475d6bfe2fdbf38c2867c30103f9d20c7b089729c374591a1933b4
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2110,7 +2110,7 @@ truth_snapshot:
     unmapped_sources: 0
     missing_sources: 0
     phase_signal_count: 3656
-    deferred_signal_count: 6594
+    deferred_signal_count: 6598
     non_goal_signal_count: 393
     layer_totals:
       blueprint: 1
@@ -10989,7 +10989,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 196-ai-sdlc-lean-code-self-reduction-governance
       phase_signal_count: 0
-      deferred_signal_count: 1
+      deferred_signal_count: 2
       non_goal_signal_count: 0
     - path: specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
       source_type: execution_log
@@ -11673,7 +11673,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 212-reduction-candidate-selection
       phase_signal_count: 0
-      deferred_signal_count: 3
+      deferred_signal_count: 4
       non_goal_signal_count: 0
     - path: specs/212-reduction-candidate-selection/development-summary.md
       source_type: development_summary
@@ -11682,7 +11682,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 212-reduction-candidate-selection
       phase_signal_count: 0
-      deferred_signal_count: 2
+      deferred_signal_count: 4
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc

@@ -125,15 +125,22 @@
 
 ### T44 双 review current HEAD、PR 与 merge
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T43
 - **验收**：两个本地 reviewer 对 current HEAD/tree PASS；Codex reviewed current head 无 actionable finding；全部 required checks 成功；squash merge。
+- **证据**：Pascal/LEAN 与 Confucius/SAFETY 对 HEAD/tree=`11dd8f9b`/`db0dd990` 均
+  PASS、findings=0；PR #156 的 Codex reviewed current commit `11dd8f9bbe` 无 major issue，
+  13/13 checks success，squash merge=`51903b8f1819922a46a65973f1e0a11421fc7669`。
 
 ### T45 detached fresh-main 验收
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T44
 - **验收**：merge tree=reviewed tree；constraints/validate/truth/manifest/scope/parity/clean 全绿。
+- **证据**：detached `main@51903b8f` 使用 Python 3.11.15 验证；merge/reviewed tree 均为
+  `db0dd990a6f4e9243006dc522c36d4d9a7f74278`，truth=`ready/fresh 1116/1116`、
+  unmapped/missing=`0/0`、close=`212/212`，manifest exact=`1 passed in 98.37s`；产品、工作流、
+  依赖零差异，测试仅 `+2/-2`，handoff parity 与 clean guard 通过。
 - **后续**：只创建新的 T66 bounded-stage formal WI；不得直接在 WI212 分支实现或发布。
 
 ## 追踪矩阵

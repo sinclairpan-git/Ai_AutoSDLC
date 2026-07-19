@@ -1,76 +1,69 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T09:53:01Z
-- Reason: WI212 terminal split verdict no-op next-step finding 最小处置
-- Goal: 完成候选选择、父 L3 合同修订、同 identity 双审、PR 与 detached fresh-main 验收
-- State: terminal Pascal PASS0/Confucius FAIL1 已退役；no-op next step 已删除，等待 current HEAD 双审
+- Updated: 2026-07-19T10:47:36Z
+- Reason: 删除已完成提交的 no-op 恢复步骤，current clean identity 直接进入双审
+- Goal: 完成 WI212 lifecycle reconciliation 的 truth 绑定、同 identity 双审、PR 与 fresh-main 验收
+- State: T44/T45 已 completed；terminal gates 全绿，current HEAD 已 committed+clean，等待双审
 - Stage: verify
 - Work Item: 212-reduction-candidate-selection
-- Branch: feature/212-reduction-candidate-selection-docs
+- Branch: codex/212-lifecycle-reconciliation
 
 ## Changed Files
 
-- specs/212-reduction-candidate-selection/{spec.md,plan.md,tasks.md,task-execution-log.md}
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}
-- program-manifest.yaml
-- .ai-sdlc/project/config/project-state.yaml
+- specs/212-reduction-candidate-selection/tasks.md
+- specs/212-reduction-candidate-selection/task-execution-log.md
+- specs/212-reduction-candidate-selection/development-summary.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- program-manifest.yaml（唯一 truth sync 的机械派生）
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/212-reduction-candidate-selection/codex-handoff.md
-- tests/integration/test_repo_program_manifest.py（仅 terminal inventory/close 两值等量替换）
 
 ## Key Decisions
 
-- fresh-main baseline=`32742a25`；产品 107,321 LOC，RC-08 仍至少差 10,588 行。
-- T62A 无 sponsor；T63/T64 与六个 T65 在 product+proof 合并 RC-06 后均为当前 No-Go。
-- 唯一下一候选为 T66 九阶段 bounded-stage ProgramService domain：45 methods、3,638 physical、
-  3,305 executable；public header 225 原位保留，终态≤691、净删≥2,947。
-- T66 shadow additions≤466≤545；product+proof≤686≤736；历史保守 subtotal=184，含候选≤870≤1,500。
-- WP-06/WP-07 使用主线预发布稳定周期，不创建 tag/Release/PyPI/全局 CLI；candidate+deletion 同包，
-  legacy deletion 前不得关闭。
+- WI212 终态 reviewed HEAD/tree=`11dd8f9bbee0120157820b055b88f02b3f2e7951`/
+  `db0dd990a6f4e9243006dc522c36d4d9a7f74278`；Pascal/LEAN 与 Confucius/SAFETY 均 PASS0。
+- PR #156 Codex reviewed current commit `11dd8f9bbe` 无 major issue，13/13 checks success；
+  squash merge=`51903b8f1819922a46a65973f1e0a11421fc7669`。
+- detached fresh main merge/reviewed tree 一致；T44/T45 实际已完成，本分支只纠正生命周期真值。
+- 只恢复新的 T66 bounded-stage formal WI 创建；不得在 WI212 或本 reconciliation 分支修改产品。
+- GAP-03～GAP-06、WI-196、RC-08、400 行目标与 release 保持 open；全局 CLI 仍为 v0.9.6。
 
 ## Commands / Tests
 
-- AST 复算：五子族 9/9/9/9/9，physical/executable=`3638/3305`；public physical/executable=
-  `2928/2703`，header=225。
-- `ai-sdlc verify constraints`：no BLOCKERs；`program validate`：PASS。
-- pre-close truth recompute：1116/1116、unmapped=0、唯一 summary missing=1、close=211/212；snapshot stale。
-- manifest exact pre-close RED：旧期望 1111/1111、211/211，实际 1116/1116/missing1、211/212；
-  未冒充 PASS，terminal 只允许两值 +2/-2。
-- Round 2 exact HEAD/tree=`6c1c9b35`/`c64c438b`、formal-six=`104c020b...50774`：Pascal FAIL5、
-  Confucius FAIL4；所有 findings 已按最小范围处置，旧 verdict 退役。
-- Round 3 首次派发后根线程发现 early scan table 仍写退役 Deferred、T65 consumer 仍是初稿计数；
-  两位 reviewer 在形成 verdict 前已中止。表格现与 Carver 精确调用/文件计数及 RC-09 结论一致。
-- 随后 exact HEAD/tree=`5d2279a1`/`79e28268` 得到 Pascal PASS0、Confucius FAIL2；T12 Deferred
-  冲突和 log 重复冻结 identity finding 已接受。tasks 变化使该 split verdict 双方同时退役。
-- Round 4 exact HEAD/tree=`9579fac0`/`61ac2a70` 得到 Pascal PASS0、Confucius FAIL2；旧 handoff
-  Round 3 指向与 log 三文件失效边界 finding 已接受，当前恢复入口改为 round-agnostic。
-- Round 5 exact HEAD/tree=`306f768e`/`d8772c98` 得到 Pascal/Confucius 双 FAIL1；唯一共同 finding
-  为 execution 顶层状态仍指 Round 3，现已改为 round-agnostic current review pending。
-- Round 6 exact HEAD/tree=`a3cfbfc9`/`32b75650`、formal-six=`f7c38d07...7b593c`；Pascal 与
-  Confucius 均 PASS0。动态 closure materials 会改变 current identity，PR 前须再次双审。
-- Pre-sync constraints/validate/manifest/scope/parity/diff-check 全绿；current truth ready、1116/1116、
-  missing/unmapped=0/0、close=212/212，persisted snapshot stale 是唯一未完成本地门禁。
-- Terminal sync snapshot=`6b88dc3d...722b633`；audit ready/fresh、1116/1116、missing/unmapped=0/0、
-  close=212/212；sync 后 manifest `1 passed in 103.60s`，constraints/validate/scope/parity 全绿。
-- Terminal HEAD/tree=`f9bf5963`/`71fab867` 得到 Pascal PASS0、Confucius FAIL1；唯一 finding 是继续
-  要求提交已 committed+clean identity，现已删除；内容变化使双方旧 verdict 退役。
+- PR #156：Codex current-head clean；六个 cross-platform、三个 core smoke、Windows cmd/pwsh、
+  verify 与 Compatibility Gate 共 13/13 success。
+- detached fresh main `51903b8f`、Python 3.11.15：constraints no BLOCKER、program validate PASS。
+- truth audit=`ready/fresh`，inventory=`1116/1116`、unmapped/missing=`0/0`、close=`212/212`。
+- manifest exact=`1 passed in 98.37s`；merge/reviewed tree=`db0dd990`。
+- 产品/工作流/AGENTS/依赖/锁文件零差异；manifest test 仅 `+2/-2`；handoff parity 与 clean guard PASS。
+- reconciliation pre-sync：constraints/validate PASS，current truth ready、persisted snapshot stale，manifest
+  exact=`1 passed in 96.16s`；唯一 truth sync 成功写入 snapshot=`d71a51bb...1933b4`。
+- reconciliation terminal：constraints no BLOCKER、validate PASS、truth=`ready/fresh 1116/1116`、
+  unmapped/missing=`0/0`、close=`212/212`，manifest exact=`1 passed in 98.60s`。
 
 ## Blockers / Risks
 
-- Current identity 双 PASS 前不得创建 T66 formal、修改产品、push 或建 PR。
-- 任一 formal 六文件变化使两方 verdict 同时失效；root/scoped handoff 必须 byte-identical。
-- child summary 已物化；persisted truth sync 前 snapshot stale，禁止把 current recompute 冒充 fresh。
-- GAP-03～06、WI-196、RC-08 与 release 均 open；全局 CLI 仍为 v0.9.6。
-- PowerShell host 仍有既知 .NET regex assembly 问题；本地使用 Python 3.11/zsh fallback，CI 仍覆盖 Windows。
+- 当前无外部 blocker；任一受审文件变化使双方 verdict 同时失效。
+- 当前 source identity 已 fresh，不得重复 sync；仅当有效 finding 修改 truth source 时，才为新 identity
+  执行一次 rebind sync。
+- 产品、测试逻辑、RC-08 ledger、开放 GAP、版本与发布状态不得变化。
+- PowerShell host 仍有既知 .NET regex assembly 问题；本地使用 Python 3.11/zsh fallback，CI 覆盖 Windows。
 
 ## Local PR Review
 
-- removed comment reason: `.ai-sdlc/state/codex-handoff.md` 中 WI211 reconciliation 的旧 Goal、State、
-  Changed Files、review receipt 和 Exact Next Steps 已由 PR #155 完成；本次替换为 WI212 当前恢复入口，
-  等价历史事实保留在 WI196/WI212 execution log，避免中断后错误返回已关闭工作项。
+- WI212 terminal identity：Pascal/LEAN 与 Confucius/SAFETY 对相同 HEAD/tree/formal-six 均
+  PASS、findings=0。
+- PR #156 Codex reviewed commit `11dd8f9bbe` 未发现 major issue；当前 reconciliation 内容变化后，
+  旧 verdict 只能作为历史 receipt，不能冒充本分支 PASS。
+- 本 reconciliation 必须由 Pascal 从 LEAN/YAGNI、Confucius 从 SAFETY/COMPAT 对同一 clean
+  HEAD/tree/diff 重新独立审查，直到双方均 PASS0。
 
 ## Exact Next Steps
 
-1. Pascal/Confucius 对相同 current HEAD/tree/formal-six 从零终审；任一 finding 成立则最小修复并双方重审。
-2. 双 PASS 后 push/PR、Codex review/check heartbeat、merge 与 detached fresh-main 验收。
-3. 仅在 WI212 mainline 验收后创建新的 T66 formal WI；不得在本分支实现或发布版本。
+1. Pascal/Confucius 对当前 committed+clean 的同一 HEAD/tree/diff 从零双审。
+2. 任一 finding 成立则最小修复；若修改 truth source，为新 identity 执行一次 rebind sync，复跑 gates、
+   提交后让双方全重审。未修改 source 时不得 sync。
+3. 双 PASS 后 push/PR、Codex review/check heartbeat、merge 与 detached fresh-main 验收。
+4. reconciliation 关闭后才创建新的 T66 formal WI；不得直接实现或发布。
