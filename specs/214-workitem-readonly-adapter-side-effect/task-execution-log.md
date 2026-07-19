@@ -303,3 +303,31 @@
 - 最小修正只更新 summary、append-only log 与 byte-identical 双 handoff；持久 Exact Next Steps 直接从新身份
   双审开始。该 source commit 后紧跟 terminal truth sync 与 manifest-only commit；最终 snapshot 不再反写 tracked
   source，避免自引用 stale 循环。
+
+## 21. Batch 2026-07-19-017：V4 amendment PASS、PR 与 fresh-main
+
+- Final identity：HEAD=`e4ca3e4276067d832483cad4266783476c3b9ffe`、tree=
+  `1bef978ff9f33747b4a9586fb6da3fb28db77769`、clean；Pascal/LEAN 与 Confucius/SAFETY Round 4 同身份
+  `PASS0`、actionable findings=0。
+- PR #161 Codex reviewed exact `e4ca3e4276` 无 major issue、review threads=0；10 个 required checks 全绿，
+  包括 Ubuntu/macOS/Windows Python 3.11/3.12、Windows cmd/pwsh、verify 与 aggregate gate。
+- Squash merge=`8999efcf2feccab88f8b957601b0be379032a1b7`；merge tree 与 reviewed tree 完全一致。Detached
+  fresh-main truth=`ready/fresh`、inventory=`1126/1126`、manifest exact=`1 passed in 103.64s`、validate/
+  constraints/V4b/parity/Cursor/clean 全绿。
+- `FORMAT_BASE_SHA` 自此冻结为 `8999efcf2feccab88f8b957601b0be379032a1b7`；amendment T15 完成，
+  只授权 implementation，GAP-15/T58 与 T66 状态不变。
+
+## 22. Batch 2026-07-19-018：implementation RED/GREEN 与 full gates
+
+- Dev branch clean rebase 到 amendment fresh-main；test-only commit=`8f4f63dd`、product commit=`bd8a0de2`。
+  Test-only detached replay 精确 RED=`16 failed, 33 passed in 16.27s`：15 个 read-only sentinel case 均因
+  legacy hook 被消费而失败，另 1 个 production Cursor A/B 因真实写入失败；其余 init/link/hook 33 项保持绿。
+- 产品修正只把 `_workitem_before_command()` 的 guard 改为 `ctx.invoked_subcommand != "link"`；一行产品 diff，
+  无 command list、helper/classifier、公共符号、依赖、配置、版本或 handler 变化。
+- GREEN targeted=`49 passed in 15.14s`；full=`3302 passed, 3 skipped in 673.22s`；Ruff lint PASS、V4a
+  三文件 strict format PASS、constraints no BLOCKERs、`git diff --check` PASS。
+- V4b 使用固定 base `8999efcf...a1b7` 与 frozen candidate `bd8a0de2` PASS；candidate red paths 是 base 的
+  Ordinal 子集。Emitted exclusive ranges：product=`63-64`；init=`22-23, 167-168, 169-185, 187-189,
+  351-352, 353-371, 373-375, 447-453, 454-457, 458-462, 463-468, 469-487`，全部 formatter-clean。
+- T21～T24 完成。下一步只做 implementation terminal truth/handoff/gates 与同身份双审；在 T32
+  fresh-main 前 GAP-15/T58 仍 active、T66 T61A 仍 blocked。
