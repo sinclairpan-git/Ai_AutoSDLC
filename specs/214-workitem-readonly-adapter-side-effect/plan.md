@@ -6,8 +6,8 @@ related_doc:
 ---
 # 实施计划：Workitem 只读命令 Adapter 副作用隔离
 
-**编号**：`214-workitem-readonly-adapter-side-effect`  
-**日期**：2026-07-19  
+**编号**：`214-workitem-readonly-adapter-side-effect`
+**日期**：2026-07-19
 **规格**：`specs/214-workitem-readonly-adapter-side-effect/spec.md`
 
 ## 1. 概述
@@ -86,7 +86,7 @@ if ctx.invoked_subcommand != "link":
 5. 同步 formal truth/handoff，跑治理门禁，再对 final current identity 双审 PASS0。
 6. push formal PR、请求 Codex review、等待 required checks、merge，detached fresh-main 复验。
 
-**禁止**：本阶段修改 `src/**` 或测试逻辑。  
+**禁止**：本阶段修改 `src/**` 或测试逻辑。
 **回退**：revert formal PR；GAP-15/T58 保持 open。
 
 ### Phase 1：dev TDD 与最小实现
@@ -97,7 +97,7 @@ if ctx.invoked_subcommand != "link":
 4. 跑 GREEN：15 格只读矩阵、`init/link` 矩阵、现有 workitem integration tests、full suite、Ruff、constraints。
 5. 复核产品 diff 只有一个函数，无公共符号/依赖/配置/版本变化。
 
-**停止**：需要改 adapter 算法、handler、root callback、其他 CLI family 或新增抽象。  
+**停止**：需要改 adapter 算法、handler、root callback、其他 CLI family 或新增抽象。
 **回退**：revert 单一实现 commit；formal 仍有效，T66 保持阻断。
 
 ### Phase 2：实现对抗审查与 mainline

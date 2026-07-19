@@ -1,9 +1,9 @@
 # 功能规格：Workitem 只读命令 Adapter 副作用隔离
 
-**功能编号**：`214-workitem-readonly-adapter-side-effect`  
-**日期**：2026-07-19  
-**类型**：WI-196 / T58 / GAP-15 / L2 / 非减重缺陷修复  
-**状态**：formal authoring；产品实现须等待同一身份双 Agent PASS0 与 formal fresh-main  
+**功能编号**：`214-workitem-readonly-adapter-side-effect`
+**日期**：2026-07-19
+**类型**：WI-196 / T58 / GAP-15 / L2 / 非减重缺陷修复
+**状态**：formal authoring；产品实现须等待同一身份双 Agent PASS0 与 formal fresh-main
 **输入**：独立修复五个 `workitem` 只读命令的隐式 adapter refresh，保留 `init/link` 全部既有语义。
 
 ## 1. 目标与依据

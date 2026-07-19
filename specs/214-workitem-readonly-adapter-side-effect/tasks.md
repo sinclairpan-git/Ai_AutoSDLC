@@ -6,7 +6,7 @@ related_doc:
 ---
 # 任务分解：Workitem 只读命令 Adapter 副作用隔离
 
-**编号**：`214-workitem-readonly-adapter-side-effect`  
+**编号**：`214-workitem-readonly-adapter-side-effect`
 **完成定义**：formal 与 implementation 分别 mainline/fresh-main；GAP-15 关闭；不等于 T66/RC-08/release 完成
 
 ## Batch 1：formal current-main 冻结

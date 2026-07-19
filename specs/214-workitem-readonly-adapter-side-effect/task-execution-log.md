@@ -1,7 +1,7 @@
 # 任务执行日志：Workitem 只读命令 Adapter 副作用隔离
 
-**功能编号**：`214-workitem-readonly-adapter-side-effect`  
-**创建日期**：2026-07-19  
+**功能编号**：`214-workitem-readonly-adapter-side-effect`
+**创建日期**：2026-07-19
 **当前状态**：formal authoring；产品代码未修改
 
 ## 1. 固定归档规则
@@ -88,6 +88,6 @@
 
 ## 6. 提交与 disposition
 
-- 已完成 git 提交：否（本批提交须同时包含 formal/state/manifest/parent 最小对账）。
+- 已完成 git 提交：是；authoring commit=`d3acfedea507a23bb30d53d84906c11a0c03c41a`。
 - branch：`merge-pending`
 - worktree：`retained(formal authoring)`
