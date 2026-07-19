@@ -2,26 +2,27 @@
 
 **功能编号**：`211-shared-mapping-dedupe`
 **创建日期**：2026-07-18
-**状态**：formal review candidate；实现尚未授权
+**状态**：completed_reduction；formal PR #151/#152、implementation PR #153 与 fresh-main acceptance 已完成
 **父项**：WI-196 `T63 / WP-03 / GAP-05`
 **基线 revision**：`236cd00e8f2e9514487d237b47d4cbbf6fb5fe91`
 
 ## 1. 决策摘要
 
-当前 `main` 存在一个完全同形的私有 mapping 去重函数族：10 个顶层
+冻结基线 `main@236cd00e` 存在一个完全同形的私有 mapping 去重函数族：10 个顶层
 `_dedupe_mapping_items(values: object) -> list[dict[str, object]]`、10 个模块、120 行产品代码、
 23 个直接调用。10 个函数的完整 AST body digest 均为
 `6602b8688426cf7ae803c793f9b86a3c3f6759abde0a638ab5953bdf1b58f200`，完整 FunctionDef digest
 均为 `6fb4192df6b37d095c3aedf17ac60046f05d3dfc43f3ed38a26f8e4170018929`。
 
-本项只在现有 `src/ai_sdlc/utils/helpers.py` 中保留一份 exact body，并让 10 个目标模块以同名 private
-alias 复用。10 个模块已经依赖该 helper 模块，因此不新增模块依赖方向；23 个调用表达式、参数、返回值、
-异常、artifact、CLI、状态与授权边界全部保持。一次性隔离 spike 实测产品 raw `+25/-147/net -122`、
-non-empty `+23/-127/net -104`，直接测试 `103 passed`，23 文件影响切片 `1162 passed`，72 个现有
-`utils.helpers` importer 的 baseline/candidate cold import 均无失败或输出。
+本项已在现有 `src/ai_sdlc/utils/helpers.py` 中保留一份 exact body，并让 10 个目标模块以同名 private
+alias 复用。10 个模块原本已经依赖该 helper 模块，因此没有新增模块依赖方向；23 个调用表达式、参数、
+返回值、异常、artifact、CLI、状态与授权边界全部保持。实现产品 raw `+25/-147/net -122`、non-empty
+`+23/-127/net -104`；candidate direct/impact 为104/1163，72 个 `utils.helpers` importer 的
+baseline/candidate/revert/reapply cold import 均无失败或输出。
 
-Pascal 从精简/YAGNI 维度、Confucius 从兼容/证明/回退维度独立复算后，均只推荐该 family。14-module
-exact-text、11-module `_write_yaml`、T65、T66 与 T67 当前均不进入本项；T62A 仍因无 sponsor 禁止恢复。
+Pascal 从精简/YAGNI 维度、Confucius 从兼容/证明/回退维度对最终 implementation evidence identity
+独立复算后均 PASS、findings=none。14-module exact-text、11-module `_write_yaml`、T65、T66 与 T67
+未进入本项；T62A 仍因无 sponsor 禁止恢复。
 
 ## 2. 冻结范围
 

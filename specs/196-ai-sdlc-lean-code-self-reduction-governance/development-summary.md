@@ -8,8 +8,8 @@
 
 - 冻结统一 gap 台账、NC/CC/RC 合同、原子子项与对抗评审规则。
 - 治理基线 PR：`#120`；merge commit：`4dd0f1c9`。
-- GAP-07～GAP-11 已分别由 WI-197～WI-201 合入并关闭；WI-210 closure 已物化预登记的
-  `development-summary.md`，truth inventory 保持 complete、unmapped=0，并将 pre-close missing 恢复为 0。
+- GAP-07～GAP-11 已分别由 WI-197～WI-201 合入并关闭；WI-211 closure 已物化预登记的
+  `development-summary.md`，truth inventory 保持 complete、unmapped=0，并将本项 pre-close missing 恢复为 0。
 - WI-203 / PR #126 已冻结减重候选和保护预算 sponsor；不等于候选实现或删除完成。
 - WI-205 / PR #134 / merge `aa156afe` 已关闭一个 T63 artifact path 重复族，产品净减少 109 行，
   fresh-main 全量 `3220 passed, 3 skipped`；这不是 GAP-05 或路线整体关闭。
@@ -30,6 +30,12 @@
   `+39/-252/net -213`、non-empty `+35/-196/net -161`。Round 3 双 Agent、Codex current-head、22/22
   checks、rollback/reapply 与 fresh-main targeted `1283 passed`、full `3276 passed, 3 skipped`、治理/
   clean-state 全部通过；回退 PR #149 会重开该 family。
+- WI-211 已以 `completed_reduction` 关闭一个 T63 family：formal PR #151/merge `25de0823`、consumer
+  amendment PR #152/merge `96908f2c`、implementation PR #153/merge `cd64d8aa`。10 个 exact
+  mapping-dedupe body 收敛为 1 个 private helper + 10 个模块局部 alias，23 calls 不变，产品 raw
+  `+25/-147/net -122`、non-empty `+23/-127/net -104`。最终双 Agent、Codex current-head、22/22
+  checks、rollback/reapply 与 fresh-main direct 104、impact 1163、full `3277 passed, 3 skipped`、治理/
+  clean-state 全部通过；回退 PR #153 会重开该 family。
 - **历史（已退役）**：WI-207 Round 4 formal 被 Pascal/Confucius 同哈希双 FAIL；Round 5 随后把
   managed dry-run 唯一例外、pre-import `create=True` 隔离及 solution-confirm 全部门禁后/request 前刷新
   写成可执行合同，旧 verdict 同时失效。
@@ -59,11 +65,10 @@
   `+121/+200`、normalized `+128/+198`，5 private helper、零新产品/测试文件、零公共抽象；Round 15
   candidate/replay 同树且双 Agent PASS，PR #146 的 Codex current-head、22/22 checks 与 fresh-main
   `3275 passed, 3 skipped` 全部通过。回退对应 implementation PR 会重开各自 GAP。
-- RC-08 family ledger 已记录 WI-205 `net -109`、WI-206 `net -209`、WI-210 `net -213`，累计产品
-  raw `net -531`；这只是已关闭重复族的局部收益，不代表路线整体达到 10% 或两个超大文件降到 400 行。
-- WI-211 已选择一个独立 T63 mapping-dedupe candidate：10 exact defs/120 LOC/23 calls，formal spike
-  raw net -122/non-empty net -104，Pascal/Confucius 均只批准进入 formal。该预测不计入上面的已关闭
-  ledger；formal/implementation/closure 未全部验收前不得声称 completed reduction。
-- 下一步是完成 WI-211 formal 同 identity 双审与 mainline acceptance；不得恢复已 No-Go 且缺少 sponsor
-  的 T62A，也不得关闭 GAP-05/WI-196、宣称 RC-08 达成或发布版本。
+- RC-08 family ledger 已记录 WI-205 `net -109`、WI-206 `net -209`、WI-210 `net -213`、WI-211
+  `net -122`，累计产品 raw `net -653`；这只是已关闭重复族的局部收益，不代表路线整体达到 10% 或
+  两个超大文件降到 400 行。
+- WI-211 closure mainline/fresh-main 前不选择下一原子项；之后仍须按真实收益、证明成本与 sponsor 从新的
+  T63/T65/WP-06/WP-07 候选中选择独立 WI。不得恢复已 No-Go 且缺少 sponsor 的 T62A，也不得关闭
+  GAP-05/WI-196、宣称 RC-08 达成或发布版本。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

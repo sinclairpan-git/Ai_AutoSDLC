@@ -16,12 +16,13 @@ related_doc:
 行为语料、identity TDD、T61B rollback/reapply、全量/跨平台/PR 证据证明等价。
 **技术栈**：Python 3.11+、标准库 `json`、pytest、Ruff、uv、Git/GitHub Actions。
 **风险**：L1 实现 / L2 证明面；无公共 API 变化。
+**当前阶段**：closure；implementation PR #153 已合并并通过 detached fresh-main acceptance。
 
 ## 全局约束
 
-- 基线必须是 formal PR 合并并完成 fresh-main acceptance 后的精确 `origin/main`；当前选择基线为
-  `236cd00e8f2e9514487d237b47d4cbbf6fb5fe91`，实现 base 将在 formal merge 后重新冻结。
-- formal、implementation、closure 分三个独立 branch/worktree/PR；implementation 不从未合并 formal 分支派生。
+- 候选选择基线为 `236cd00e8f2e9514487d237b47d4cbbf6fb5fe91`；formal amendment 合并后，implementation
+  精确 base 为 `96908f2c207dd8e03411d8acd489b2101a5787cf`。
+- formal、implementation、closure 使用三个独立 branch/worktree/PR；implementation 没有从未合并 formal 分支派生。
 - 只修改 spec §2.1 的 10 个模块、`utils/helpers.py` 与一个既有 unit test；产品/测试均不新增文件。
 - 新增注释仅在解释非显然边界时使用简体中文；本项 exact helper 无需复述式注释。
 - 23 个调用表达式、CLI、artifact、schema、状态、授权和平台行为零未批准差异。

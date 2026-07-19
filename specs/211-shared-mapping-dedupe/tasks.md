@@ -7,7 +7,9 @@ related_doc:
 
 **编号**：`211-shared-mapping-dedupe` | **日期**：2026-07-18
 **来源**：`spec.md + plan.md`
-**当前授权**：只允许 formal docs/truth/continuity；formal PR 合并并 fresh-main 验收前不得进入 execute
+**当前授权**：Batch 0～3 与 T41 已完成，T42 closure 双审待执行；closure 只允许 child/parent
+docs、truth/continuity 与 manifest test 的 missing `1→0`、close layer `210→211` 两条机械期望，
+不得修改产品代码或其他测试逻辑
 
 ## 批次图
 
@@ -54,7 +56,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ### T03 Formal 双 Agent 评审
 
-- **状态**：in progress。
+- **状态**：completed。
 - **依赖**：T02/T02A。
 - **reviewer A**：Pascal / 精简收益、直接性、YAGNI、预算。
 - **reviewer B**：Confucius / 兼容、安全、导入、证据与回退。
@@ -63,7 +65,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ### T04 Formal 门禁与 PR
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T03。
 - **范围**：child/parent docs、manifest/truth、project seq、root/scoped handoff；manifest test至多两条机械值。
 - **验证**：constraints、validate、truth ready/fresh、manifest exact、diff-check、protected zero diff、handoff parity。
@@ -73,14 +75,14 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ### T11 从 formal merge main 创建实现分支
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T04 mainline merge + fresh-main acceptance。
 - **完成**：独立 `feature/211-shared-mapping-dedupe` worktree；冻结 base/toolchain/protected blobs。
 - **停止**：分支早于 formal merge 创建则删除重建。
 
 ### T12 捕获 T61A 基线
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T11。
 - **完成**：10/10/120/23、Python 3.11 固定 digest + Python 3.12 同解释器 AST equality、授权目标边界之外的
   `src/` product/runtime consumer=0、tracked identity attribute reads=0、72 importers、`plan.md` §3.3 唯一27
@@ -91,7 +93,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ### T13 Identity TDD RED
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T12。
 - **文件**：现有 `tests/unit/test_frontend_contract_observation_provider.py`。
 - **验收**：新增一个4 non-empty LOC identity test；baseline 只因两个代表模块 objects 不同失败；该测试精确
@@ -100,7 +102,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ### T14 最小 GREEN
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T13。
 - **产品**：`utils/helpers.py` exact body；10 alias imports；删 10 local bodies 与 7失活 `json` imports。
 - **禁止**：23 calls、公共 surface、其他 family、产品/测试新文件。
@@ -110,7 +112,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ### T21 Implementation differential
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T14。
 - **验收**：implementation 4-case JSONL 与同环境 baseline 字节完全一致；Python 3.11 digest=
   `8c6d3e21ef...54e0`；104 direct、
@@ -118,7 +120,7 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ### T22 Rollback/reapply rehearsal
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T21 + exact `implementation_commit/tree`。
 - **验收**：disposable clone revert tree=baseline、reapply tree=`implementation_tree`；revert 重跑结构/consumer
   scan product-runtime/tracked/harness=`0/0/1`/4-case/103 direct/1162 impact/72 imports，reapply 重跑consumer
@@ -132,38 +134,44 @@ Batch 0 Formal ──mainline receipt──> Batch 1 T61A/TDD
 
 ### T23 全量与 GAP 防回归
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T22。
 - **验证**：full pytest、Ruff、constraints、validate、truth、manifest；GAP-09～11 admission 全绿；Git clean。
 
 ### T24 同 identity 双 Agent PASS
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T23。
 - **验收**：Pascal/Confucius 对 exact `implementation_commit/tree`、`evidence_review_head/tree`、diff、
   formal-six、receipt blob、truth 均 PASS/findings=none。
 - **规则**：内容变化使双方 PASS 失效；修复后全量复审。
+- **证据**：最终 reviewed HEAD=`fbfb07e7fa878331bd4ce48862890d7ef0e3741c`、tree=
+  `f4c0b60d9d2be9a8cc364e55e2ab709f1cb5eda4`；Pascal/Confucius 均 PASS、findings=none。
 
 ## Batch 3：PR 与 fresh main
 
 ### T31 Implementation PR
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T24。
 - **验收**：push、PR、Codex current-head 无 actionable findings；required checks 和跨平台矩阵全绿。
+- **证据**：PR #153；Codex 对 current head `fbfb07e7` 两次均未发现 major issue，22/22 checks
+  success，merge=`cd64d8aad415853102cf3c8dc647af34759ad197`。
 
 ### T32 Merge 与 fresh-main acceptance
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T31。
 - **验收**：PR merge；detached `origin/main` 重跑4-case/104/1163/full/Ruff/constraints/validate/truth/
   manifest/clean；product ledger 与 reviewed `implementation_tree` 一致，receipt 与 evidence review blob一致。
+- **证据**：detached `main@cd64d8aa`、Python 3.11.15：direct 104、impact 1163、full
+  `3277 passed, 3 skipped in 728.11s`；4-case、Ruff、治理、manifest、blob/ledger 与 clean-state 全绿。
 
 ## Batch 4：Closure
 
 ### T41 Closure truth/docs
 
-- **状态**：pending。
+- **状态**：completed。
 - **依赖**：T32。
 - **范围**：独立 closure branch；产品零 diff；物化 child summary、parent ledger、manifest close source与handoff。
 - **边界**：只关闭一个 T63 family；GAP-05/WI196/RC-08/release保持 open。

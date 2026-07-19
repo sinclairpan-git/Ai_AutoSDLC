@@ -207,3 +207,23 @@
 2. Pascal/Confucius 必须从零审查同一 HEAD/tree/formal-six/diff/truth，任一 finding 使双方结论同时失效；
 3. 只有同 identity 双 PASS/findings=none 才允许 push/formal PR；PR merge/fresh-main 前 implementation 禁止。
 4. 精确运行态、snapshot 与下一动作只写 root/scoped byte-identical handoff，避免 execution source 自证循环。
+
+## Batch 2026-07-19-013：Implementation mainline acceptance 与 closure 物化
+
+- Formal PR #151/merge `25de0823b5412affa9a2b165b74dc0e4e7335157` 冻结候选；consumer 证据口径
+  amendment PR #152/merge `96908f2c207dd8e03411d8acd489b2101a5787cf` 通过双 Agent、Codex、10/10
+  checks 与 fresh-main 验收。
+- Implementation commit/tree=`36b342caa8900790f06cb29fd3e514c49944d063`/
+  `cbacdd4d271327b06ff28d04a1ee03e342b91a9f`；最终 evidence HEAD/tree=`fbfb07e7fa878331bd4ce48862890d7ef0e3741c`/
+  `f4c0b60d9d2be9a8cc364e55e2ab709f1cb5eda4`。Pascal/Confucius Round 5 对同一 identity 均
+  PASS、findings=none；PR #153 的 Codex current-head 两次未发现 major issue，22/22 checks success，
+  merge=`cd64d8aad415853102cf3c8dc647af34759ad197`。
+- detached fresh main `cd64d8aa` 显式使用 Python 3.11.15：4-case 4 rows/502 bytes/digest
+  `8c6d3e21...54e0`，direct 104、impact 1163、full `3277 passed, 3 skipped in 728.11s`；Ruff、
+  constraints、validate、truth ready/fresh、manifest、reviewed blob/ledger 与 clean-state 全绿。初始
+  `uv run` 自动选择 Python 3.14.3 后即停止并重建3.11环境，exit 130中断结果不计验收证据。
+- 产品 raw/non-empty `+25/-147/net -122` / `+23/-127/net -104`，10 bodies→1 shared body + 10 aliases，
+  23 calls 不变；rollback/reapply tree 精确，唯一 receipt 与reviewed blob一致。
+- closure 只物化 child/parent docs、truth/continuity 与 manifest test 两条机械期望，产品零 diff；登记一个
+  `completed_reduction` family 后 RC-08 raw family ledger 累计 `net -653`。GAP-05、WI-196、RC-08、
+  release 与无 sponsor 的 T62A 均保持 open；下一原子项仅在 closure merge/fresh-main 后选择。

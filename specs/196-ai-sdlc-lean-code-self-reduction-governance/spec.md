@@ -50,7 +50,7 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 | GAP-02 | 兼容缺口 | 现有测试分散，缺少目标切片统一的 CLI/artifact/状态/副作用 differential 基线 | WP-01：最小充分 Characterization/Golden | 是 |
 | GAP-03 | 结构臃肿 | `src/ai_sdlc/core/program_service.py` 17,369 行、249 方法 | WP-06：逐领域切片、保留 facade、稳定后删旧实现 | 是 |
 | GAP-04 | 结构臃肿 | `src/ai_sdlc/cli/program_cmd.py` 7,062 行；33 个公共 program 命令与 77 对相似长命令候选 | WP-07：逐 stage family 双跑与收敛 | 是 |
-| GAP-05 | 重复实现（active） | WI-205、WI-206、WI-210 已各关闭一个 exact family；WI-211 formal 当前冻结 10-module mapping-dedupe 候选，120 LOC/23 calls，spike raw net -122、non-empty net -104；该预测不计入已完成 ledger | WP-03/WP-04：只合并语义和失败模式一致的重复族；WI-211 必须先完成 formal 双审、T61A/B、implementation 与 closure，回退对应 implementation PR 会重开该 family | 是 |
+| GAP-05 | 重复实现（active） | WI-205、WI-206、WI-210、WI-211 已各关闭一个 exact family；WI-211 / PR #153 / merge `cd64d8aa` 将 10 个 mapping-dedupe body 收敛为 1 个共享实现和 10 个 alias，23 calls 不变，产品 raw/non-empty 净删 122/104 且 fresh-main 全绿 | WP-03/WP-04：只合并语义和失败模式一致的重复族；回退对应 implementation PR 会重开该 family，其余候选仍须逐族证明 | 是 |
 | GAP-06 | 单一真值源候选 | `frontend_page_ui_schema.py`、`frontend_cross_provider_consistency.py`、`frontend_quality_platform.py`、`frontend_provider_expansion.py`、`frontend_provider_runtime_adapter.py`、`frontend_theme_token_governance.py` 的 6 个 `build_p*_baseline` builder | WP-05：对该有限候选集逐项 go/no-go；只有净减重合同成立才实施 | 条件性 |
 | GAP-07 | 已关闭 | WI-197 / PR #121 / merge `4802596f`：adapter mutation 不再与 clean-tree preflight 自冲突 | T51 已完成；权威证据见 WI-197 execution log §6.3～6.7 | 否 |
 | GAP-08 | 已关闭 | WI-198 / PR #122 / merge `68150d3f`：resume working set 以 active linked WI 为准 | T52 已完成；权威证据见 WI-198 execution log §3～§8 | 否 |
