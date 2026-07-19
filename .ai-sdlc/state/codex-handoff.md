@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T15:50:00Z
-- Reason: 处理 PR #158 Codex P2 stale lifecycle summary finding
+- Updated: 2026-07-19T16:04:00Z
+- Reason: 处理 PR #158 Codex P2 与 Round 8 continuity/PR lifecycle findings
 - Goal: 完成 WI213 formal PR #158 的 current-head 复审、合并与 detached fresh-main 验收
-- State: 两份 stale summary 已最小修正且 terminal truth/目标测试/manifest exact 已重建；等待提交新 identity、双审与 current-head GitHub review
+- State: stale summary 与 terminal truth 已修正；下一门禁是对 resulting committed+clean identity 双审，再推送并刷新 PR 证据
 - Stage: decompose
 - Work Item: 213-programservice-bounded-stage-reduction
 - Branch: feature/213-programservice-bounded-stage-reduction-docs
@@ -99,12 +99,15 @@
   handoff stale state/漏列 test；本次两份 byte-identical correction 已处置，尚无 final PASS。
 - Final Round 7 对 `6c242f9c`/tree `4cff00a8`/formal-six `283b623b...f099` 双方 PASS0；PR #158 Codex
   随后提出 1 个成立的 stale-summary P2，本次修正使 Round 7 与旧 Codex review 退役。
+- Round 8 对 `68fb8126`/tree `03b546cb`/formal-six `283b623b...f099`：Pascal 与 Confucius 均 FAIL2；
+  共同 finding 为 handoff 仍要求重复提交，Pascal 另指出 child summary 顶部假称 current 最终双审，Confucius
+  另指出 PR #158 正文仍把退役 `6c242f9c` 当最终身份。三项均接受并按最小范围处置。
 - 原 WI212 review 摘要已由 WI212 execution/summary/mainline 保存，未删除产品源码注释。
 
 ## Exact Next Steps
 
-1. 提交 terminal truth manifest 与 byte-identical handoff，复核 clean/current identity/truth audit。
-2. Pascal/Confucius 对同一新 committed+clean identity 从零复审，必须再次双 PASS0。
-3. 推送后对 PR #158 重新请求 Codex current-head review，守候 required checks 全绿后 merge。
-4. 执行 detached fresh-main 验收；独立 lifecycle reconciliation 只回写已发生 receipt。
-5. Lifecycle fresh-main 后创建 T58；T58 fresh-main 后才进入 T66 T61A。
+1. 确认本轮最小修正已形成 committed+clean identity；若仍是未提交 working-tree correction，只提交一次。
+2. Pascal/Confucius 对 resulting identity 从零复审，必须再次双 PASS0；此后不再改本地文件。
+3. 双 PASS 后推送，并把 PR #158 正文更新为真实 current HEAD/tree/双审状态，再请求 Codex review。
+4. 守候 current-head required checks 全绿后 merge，执行 detached fresh-main 验收。
+5. 独立 lifecycle reconciliation 只写已发生 receipt；其 fresh-main 后创建 T58，T58 fresh-main 后才进入 T66 T61A。

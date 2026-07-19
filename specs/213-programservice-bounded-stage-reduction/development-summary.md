@@ -1,8 +1,8 @@
 # 开发摘要：ProgramService 九阶段精益减重正式合同
 
 **功能编号**：`213-programservice-bounded-stage-reduction`
-**状态**：formal contract 本地门禁与最终双审已完成；PR #158 current-head 复审、merge / detached
-fresh-main 待交付
+**状态**：formal contract 本地门禁已完成；Round 7 双审 receipt 因 current-head 修订退役，PR #158
+current-head 双审、Codex、checks、merge / detached fresh-main 待交付
 
 ## 本地已交付
 
