@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T21:19:23Z
-- Reason: Amendment final review Round 1 成立 finding 已按 fixed-base 最小修正
+- Updated: 2026-07-19T21:26:03Z
+- Reason: Amendment Round 1 corrections 已完成 terminal truth/gates，准备新身份双审
 - Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
-- State: Amendment Round 1 verdict 已退役；fixed-base 可执行程序已写入，等待重新 truth/gates 与同身份双审
+- State: Fixed-base correction terminal truth/gates 全绿；Round 1 verdict 已退役，等待新 committed clean identity 双审
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: codex/214-format-gate-amendment
@@ -37,6 +37,8 @@
 - Amendment 当前 `git diff --check` PASS；Cursor SHA=`d5f04acf...0b6a`、相对 base diff=0。
 - Amendment Round 1 exact identity `a91bbba3`/tree `b7203feb`：Pascal FAIL2、Confucius FAIL1；动态 base、
   count-only 与陈旧 next-step findings 均成立，已最小修正，旧 verdict 全部退役。
+- Correction source `389a4ff8`、snapshot `5726fa4b...b3f2`、manifest `766fa8c4`；audit ready/fresh、
+  inventory 1126/1126、manifest exact 1 passed、validate/constraints/scope/parity/Cursor 全绿、formatter 273/133。
 
 ## Blockers / Risks
 
@@ -52,8 +54,7 @@
 
 ## Exact Next Steps
 
-- 提交 Round 1 corrections，同步 truth 并完成 amendment terminal gates。
-- 将 terminal truth/gates receipt 更新为 review-ready 后再同步一次，避免 handoff 陈旧或 truth stale。
-- 让 Pascal/LEAN 与 Confucius/SAFETY 对同一 amendment identity 双审到 PASS0。
+- 提交 review-ready receipt，并做最终 truth sync/audit 以冻结 clean terminal identity。
+- 让 Pascal/LEAN 与 Confucius/SAFETY 对该同一 amendment identity 双审到 PASS0。
 - 双 PASS0 后开 PR、请求 Codex current-head review、等待 required checks、merge 并 detached fresh-main。
 - 从 amendment fresh-main 重放/变基 dev worktree，再完成 implementation terminal truth 与最终双审。

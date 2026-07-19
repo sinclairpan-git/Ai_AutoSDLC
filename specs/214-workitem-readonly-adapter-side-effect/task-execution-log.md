@@ -252,3 +252,12 @@
 - 最小修正冻结 amendment fresh-main `FORMAT_BASE_SHA`，以 exact PowerShell 程序比较规范化 red path set
   subset，并对两个 legacy 文件的 fixed-base changed ranges 执行 Ruff range check；handoff/summary 在新一轮
   terminal sync 后改为 review-ready。Round 1 两份 verdict 同时退役，产品/测试仍零差异。
+
+## 17. Batch 2026-07-19-013：V4 amendment Round 1 correction terminal gates
+
+- Correction source=`389a4ff8`；truth sync snapshot=`5726fa4b...b3f2`，manifest commit=`766fa8c4`。
+- `program truth audit`=`ready/fresh`、inventory=`1126/1126`、missing/unmapped=`0/0`、各层=`214/214`；
+  `program validate` PASS、`verify constraints` no BLOCKERs、manifest exact=`1 passed in 102.45s`。
+- Ruff 0.15.7 全库诊断仍为 `273 red/133 green`；`src/tests/deps/workflow` 零差异、root/scoped parity、
+  Cursor base SHA/diff 与 diff-check 全绿。更新本 receipt/summary/handoff 后再做最终 truth sync；最终 snapshot
+  不反写 tracked source，避免自引用 stale 循环。
