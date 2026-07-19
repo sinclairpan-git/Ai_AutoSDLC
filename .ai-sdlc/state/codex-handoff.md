@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T03:44:31Z
-- Reason: WI211 implementation Round2统一finding已修复并通过terminal gates
+- Updated: 2026-07-19T04:17:11Z
+- Reason: PR #153 Codex current-head review的handoff滞后finding已接受并完成最小修复
 - Goal: 完成WI211共享mapping去重的双对抗评审、mainline交付与fresh-main验收
-- State: protected proof成员缺口已在唯一receipt中修复；产品/测试未变，承载本handoff的clean tip是待双审的新evidence identity
+- State: 产品/测试/receipt未变；Round3旧head曾获双PASS，但Codex指出两份handoff仍保留过期next steps，当前handoff-only新identity待双对抗复审后推送
 - Stage: verify
 - Work Item: 211-shared-mapping-dedupe
 - Branch: feature/211-shared-mapping-dedupe
@@ -50,7 +50,7 @@
 - receipt JSON/jq/self-binding guard PASS；证据脚本曾错误假设candidate owner仍在目标模块，修正为helper后四阶段字节直比PASS
 
 ## Blockers / Risks
-- 当前无执行blocker；任一review finding成立都使双方结论失效，修复后必须从新identity全重审
+- 当前无执行blocker；handoff内容变化已使Round3旧head双PASS失效，当前新identity必须由双方重新评审
 - T62A/WI202无sponsor，禁止恢复；GAP-05/WI196/RC-08与release保持open
 
 ## Local PR Review
@@ -58,8 +58,12 @@
 - formal amendment已由Pascal/Confucius同identity双PASS，并经PR #152、Codex current-head、10/10 checks与fresh-main验收
 - implementation Round2：Pascal `LEAN FAIL/findings=1`、Confucius `SAFETY FAIL/findings=1`，共同finding为protected combined digest未列6个成员路径；其余门禁均无finding
 - disposition：唯一receipt新增排序后的6个path→baseline/candidate SHA映射，并从该集合重算combined digest；receipt-only修复后terminal gates全绿
-- 当前新evidence identity尚未双审；旧PASS/FAIL identity不得覆盖当前receipt/handoff
+- implementation Round3旧head=`9404f4e9727f491a88c82bc29830fd4b5b0bfad1`：Pascal `LEAN PASS/findings=0`、Confucius `SAFETY PASS/findings=0`
+- PR #153已创建且21项checks启动；Codex审查旧head提出1个P2：两份handoff仍称“待双审”，会让恢复会话重复已完成步骤；finding成立
+- disposition：仅同步更新两份handoff为post-review/PR实际状态；产品、测试、receipt及已通过的行为证据不变。因证据身份变化，Round3双PASS不沿用
 
 ## Exact Next Steps
-- Pascal/Confucius对同一implementation/evidence identity从零双审；任一finding成立则最小修复并让双方从新identity全重审
-- 双PASS后push/PR、请求Codex current-head review、持续heartbeat至required checks全绿，merge后做detached fresh-main acceptance
+- 对handoff-only修复运行parity、diff-check及治理轻量门禁并提交；确认产品/测试/receipt相对Round3旧head零变化
+- Pascal/Confucius对该同一新identity重新双审；任一finding成立则最小修复并让双方从更新后的identity全重审
+- 双PASS后推送PR #153、重新请求Codex current-head review，持续heartbeat至当前head审查无finding且required checks全绿
+- merge后做detached fresh-main acceptance
