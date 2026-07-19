@@ -158,3 +158,15 @@
   fresh-main 后，与 lifecycle closure 合同冲突。Finding 成立，只把该句改为 lifecycle reconciliation
   fresh-main 关闭；不改 child 设计、测试矩阵、源码或路线预算。
 - 单行 formal 变化使 Round 3 两份 verdict 同时退役；提交后必须对新 identity 进行 Round 4 双审。
+
+## 10. Batch 2026-07-19-006：formal Round 4 authoring 双 PASS
+
+- identity：HEAD=`3a2b2b6f653a97755eab5d82f2522a1a85a4acc6`、tree=
+  `e99e0ef9f0bca54aa55b2b273b67c637d8fae38a`、formal-six=
+  `823517573a2522b4496877cb46e4a09b7e3432cfa75ef7d4674b4dec7b199d79`；clean、只读。
+- Pascal/LEAN=`PASS`、findings=0；Confucius/SAFETY=`PASS`、findings=0。
+- 双方一致确认：link-only 一处谓词；15 sentinel + 1 representative production A/B + 1 shared
+  partial-write；init/link outcome；truth-before-review；formal/implementation/lifecycle 三阶段与 truth-first
+  rollback 均最小充分且无残余矛盾。
+- 本 receipt 证明 authoring contract 已收敛。随后新增 summary、更新 T14/T15、同步 truth/handoff 会改变
+  final current identity；Round 4 不得冒充 T15 最终 review，必须在 terminal gates 后再次同身份双 PASS0。

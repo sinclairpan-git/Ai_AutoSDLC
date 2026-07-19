@@ -39,16 +39,19 @@ related_doc:
 
 ### T14 formal 双 Agent 对抗评审
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T13
 - **review target**：parent+child 各 `spec.md + plan.md + tasks.md` 的同一 committed+clean identity。
 - **Pascal/LEAN**：范围、直接性、测试复用、是否过度抽象/过度测试、回退是否原子。
 - **Confucius/SAFETY**：help/invalid 解析时机、init/link 负路径、输出/bytes/异常/平台/回退。
 - **通过**：双方同 identity `PASS`、actionable findings=0；任一受审文件变化后双方从零复审。
+- **完成**：Round 4 HEAD/tree=`3a2b2b6f`/`e99e0ef9`、formal-six=`82351757...9d79`；
+  Pascal/LEAN 与 Confucius/SAFETY 均 PASS0。Closure material 改变受审文件后该 receipt 仅保留为
+  authoring PASS，T15 final current identity 必须再次双审。
 
 ### T15 formal truth、PR 与 fresh-main
 
-- **状态**：pending
+- **状态**：in_progress
 - **依赖**：T14
 - **验收**：constraints/validate/truth/manifest/scope/parity/Cursor/clean 全绿；final identity 再双 PASS0；
   Codex current-head 与 required checks 全绿；merge/reviewed tree 一致；detached fresh-main 通过。

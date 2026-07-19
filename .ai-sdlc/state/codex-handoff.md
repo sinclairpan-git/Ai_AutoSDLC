@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T19:28:00Z
-- Reason: 处置 WI214 formal Round 3 唯一 lifecycle 措辞 finding
+- Updated: 2026-07-19T19:40:00Z
+- Reason: WI214 formal Round 4 authoring 双 PASS0 后创建 closure material
 - Goal: 关闭 GAP-15/T58，保持五个 workitem 只读入口零副作用且 init/link 零回归
-- State: Round 3 Pascal PASS0 + Confucius FAIL1；唯一 parent lifecycle 措辞已修正且 gates 通过；待 commit/Round 4
+- State: Round 4 authoring 双 PASS0；development summary/T14-T15 已更新；待 source commit、truth sync、terminal gates/final review
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-docs
@@ -76,6 +76,8 @@
   reconciliation fresh-main，Round 3 双方 verdict 同时退役。
 - Round 3 correction gates：program validate PASS、constraints no BLOCKER、diff-check、scope、handoff parity、
   Cursor base SHA/diff 全绿；`src/tests` diff=0。
+- Round 4 identity=`3a2b2b6f`/tree `e99e0ef9`/formal-six `82351757...9d79`；Pascal/LEAN 与
+  Confucius/SAFETY 均 PASS0。Closure material 变化使该 receipt 降为 authoring PASS，final identity 必须重审。
 
 ## Blockers / Risks
 
@@ -89,9 +91,9 @@
 
 ## Exact Next Steps
 
-1. 提交单行 correction 与 receipt，确认 committed+clean identity。
-2. 计算新 parent+child formal-six identity，派 Pascal/LEAN 与 Confucius/SAFETY 独立 Round 4。
-3. 处置成立 finding；每次内容变化重新提交并让双方对新 identity 从零复审，直到同 identity 双 PASS0。
-4. 创建 closure material，truth sync/manifest exact/constraints/validate/parity/scope/clean gates，再做 final current-identity 双审。
+1. 提交 closure source，确认 clean source identity。
+2. 执行一次 terminal `program truth sync --execute --yes`，提交 snapshot/机械 manifest exact 期望。
+3. 跑 manifest exact、constraints、validate/truth、scope/parity/Cursor/clean gates；提交必要 receipt。
+4. 计算 final current identity，让 Pascal/Confucius 从零双审到同 identity PASS0。
 5. Push formal PR、@codex review、等待 required checks，merge 并 detached fresh-main。
 6. 仅从 formal fresh main 创建 dev branch/worktree，先 RED 后一处 callback GREEN。
