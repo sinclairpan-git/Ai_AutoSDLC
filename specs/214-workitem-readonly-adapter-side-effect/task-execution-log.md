@@ -228,3 +228,78 @@
 - 不新增测试文件、fixture/DSL、产品抽象或测试笛卡尔积；15 sentinel、代表性 production A/B、共享
   partial-write 与 targeted 命令不变。Formal-six 变化使 Round 6 双 PASS 同时退役，必须重跑 truth/gates/
   双审并推送新头后回复、解决 thread、重新 `@codex review`。
+
+## 15. Batch 2026-07-19-011：formal V4 baseline-delta amendment
+
+- Implementation 预审确认原 V4 在 formal base `d7f8b163` 已不可满足：锁定 Ruff 0.15.7 执行全库
+  `ruff format --check src tests` 得到 273 个 formatter-red 文件；把历史文件全部格式化会违反 WI214 的
+  单函数产品边界并制造无关 diff。
+- Pascal/LEAN 认为产品与矩阵无过度实现；Confucius/SAFETY 将该矛盾定为成立 P2 formal/gate finding。
+- 本 amendment 仅把 V4 修正为“新增/可清洁文件严格 format-check + 两个 touched legacy-red 文件
+  formatter hunk baseline-delta + 全库 debt 不增加”。不放宽 Ruff lint、测试、constraints 或 diff-check，
+  不修改产品、测试、依赖、workflow、版本、GAP-15/T58/T66 状态。
+- Amendment pre-commit gates：`program validate` PASS、`verify constraints` no BLOCKERs、manifest exact
+  `1 passed in 105.58s`、全库 formatter diagnostic 仍为 `273 red/133 green`、`src/tests/deps/workflow`
+  零差异、root/scoped handoff byte-identical、Cursor base SHA/diff 与 `git diff --check` 全绿。
+
+## 16. Batch 2026-07-19-012：V4 amendment final review Round 1 FAIL
+
+- Exact identity：HEAD=`a91bbba3d4c23e69e69b22cd35573c01ed205dbe`、tree=
+  `b7203febeb8cd8ce28a36243dad4dd8dc61738c1`、clean；Pascal/LEAN=`FAIL2`、Confucius/SAFETY=`FAIL1`。
+- 双方重叠 P2 成立：V4b 使用动态 `origin/main...HEAD`，fresh-main 会退化为空 diff；只比较 273 个 red
+  文件也允许路径一增一减抵消或 legacy-red 文件内部新增债务。
+- Pascal P3 成立：summary/handoff 仍把已完成的 terminal truth/gates 写成下一步，续接状态陈旧。
+- 最小修正冻结 amendment fresh-main `FORMAT_BASE_SHA`，以 exact PowerShell 程序比较规范化 red path set
+  subset，并对两个 legacy 文件的 fixed-base changed ranges 执行 Ruff range check；handoff/summary 在新一轮
+  terminal sync 后改为 review-ready。Round 1 两份 verdict 同时退役，产品/测试仍零差异。
+
+## 17. Batch 2026-07-19-013：V4 amendment Round 1 correction terminal gates
+
+- Correction source=`389a4ff8`；truth sync snapshot=`5726fa4b...b3f2`，manifest commit=`766fa8c4`。
+- `program truth audit`=`ready/fresh`、inventory=`1126/1126`、missing/unmapped=`0/0`、各层=`214/214`；
+  `program validate` PASS、`verify constraints` no BLOCKERs、manifest exact=`1 passed in 102.45s`。
+- Ruff 0.15.7 全库诊断仍为 `273 red/133 green`；`src/tests/deps/workflow` 零差异、root/scoped parity、
+  Cursor base SHA/diff 与 diff-check 全绿。更新本 receipt/summary/handoff 后再做最终 truth sync；最终 snapshot
+  不反写 tracked source，避免自引用 stale 循环。
+
+## 18. Batch 2026-07-19-014：V4 amendment final review Round 2 FAIL
+
+- Exact identity：HEAD=`5cad25819114d81387734aafbdf0cb91ddd202dd`、tree=
+  `4625216c042bfbf2c881a31efe1c281749aa3d9c`、clean。Pascal/LEAN=`FAIL2`；
+  Confucius/SAFETY=`FAIL4`，旧 verdict 全部退役。
+- 双方重叠 P1 成立：Ruff `--range` end exclusive，但脚本用 `start+count-1`，单行 hunk 退化为空区间；
+  `count=0` 又跳过纯删除边界。修正为非删除 `endExclusive=start+count`，纯删除覆盖 candidate 边界邻行。
+- Confucius 的三项 fail-open finding 成立：native Ruff/git failure 未完整判定、dirty candidate 的 working-tree
+  修改不进入 fixed-base...HEAD ranges、PowerShell 默认大小写不敏感可折叠 Linux case-only path。修正程序要求
+  strict/error-stop、candidate committed+clean 并冻结 SHA、Ruff 仅接受可解释的 exit 0/1 与计数一致输出、
+  git/cleanup 失败即阻断、Ordinal red-path subset。
+- Pascal P3 成立：summary/handoff 仍把已完成的 Round 1 terminal truth 写入 next steps。修正为如实记录 original
+  formal PR #160 已 merge/fresh-main、amendment Round 1 terminal gates 已完成，下一步只保留本 correction 的
+  truth/gates 与新身份双审。
+- 本轮只修正 child plan/tasks/summary/log 与双 handoff；不修改 src/tests、依赖、workflow、版本或 lifecycle
+  状态。Correction 提交后先实跑 exact PowerShell，再重新 truth/audit/gates 并对全新 clean identity 双审。
+
+## 19. Batch 2026-07-19-015：Round 2 correction pre-sync gates
+
+- Correction source commit=`f828a39ea140547b7a12d4839bc485e72020b2ec`；从 plan.md 原始 fenced block
+  抽取 exact PowerShell，仅把尚未产生的 amendment fresh-main placeholder 临时替换为当前可达 formal merge
+  `d7f8b16371662dd04cfd0e9a6b918cb7f92a5e9f`，执行 PASS；未维护替代脚本。
+- `program validate` PASS；`verify constraints` no BLOCKERs；manifest exact=`1 passed in 97.18s`；Ruff 0.15.7
+  全库诊断=`273 red/133 green`；`git diff --check` PASS。
+- `src/tests/deps/workflow` 相对 formal merge 零差异；root/scoped handoff byte-identical；两份 Cursor rule SHA=
+  `d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a` 且相对 formal merge 零差异。
+- Pre-sync truth audit 按预期 `stale`，current recompute=`ready`、inventory=`1126/1126`、missing/unmapped=
+  `0/0`、各层=`214/214`。提交本 receipt 后执行 terminal truth sync；最终 snapshot 不反写 tracked source。
+
+## 20. Batch 2026-07-19-016：V4 amendment final review Round 3 FAIL
+
+- Exact identity：HEAD=`67455e7e381f0424d9de137fdf094307ad41375c`、tree=
+  `be44ca486bc832d81b3e0d08af56c6bc54471815`、clean；Pascal/LEAN 与 Confucius/SAFETY 均=`FAIL1`
+  （P3×1），两份 verdict 全部退役。
+- 唯一重叠 finding 成立：terminal truth 已 sync 且 audit=`ready/fresh`，但 development summary 与双 handoff
+  仍停留在 pre-sync 状态，可能让续接 agent 重复执行 truth。两位 reviewer 对 V4b 语法、end-exclusive、
+  deletion boundary、native failure/output、committed+clean frozen candidate、ancestor/diff/cleanup、Ordinal path、
+  scope/truth/T66 均未发现额外问题。
+- 最小修正只更新 summary、append-only log 与 byte-identical 双 handoff；持久 Exact Next Steps 直接从新身份
+  双审开始。该 source commit 后紧跟 terminal truth sync 与 manifest-only commit；最终 snapshot 不再反写 tracked
+  source，避免自引用 stale 循环。

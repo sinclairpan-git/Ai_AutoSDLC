@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal PR #160 Codex P2 已最小修正；重新 truth/双审/checks 中；产品实现未开始
+**当前状态**：formal PR #160 已 merge/fresh-main；V4 amendment Round 2 correction 与 terminal gates 已完成，待新身份双审；产品实现暂停
 
 ## 已冻结合同
 
@@ -36,8 +36,17 @@
 ## 完成与未完成边界
 
 - 已完成：current-main 根因、范围、expected delta、最小设计、测试与异常矩阵、生命周期/回退合同、
-  authoring 对抗评审收敛。
-- 尚未完成：修正后 terminal truth、final current-identity 双审、PR #160 Codex/checks/merge/fresh-main。
-- 尚未开始：RED/GREEN、产品 callback、测试实现、implementation/lifecycle PR、T66 T61A。
+  authoring 对抗评审收敛；formal PR #160 merge、detached fresh-main；amendment Round 2 correction 与 terminal
+  truth/audit/gates。
+- 尚未完成：amendment continuity correction 后同一 final identity 双 PASS0、PR/checks/merge/detached fresh-main。
+- 已开始但暂停：RED/GREEN、产品 callback 与测试实现；须等待 amendment fresh-main 后重放、复验。尚未开始：
+  implementation/lifecycle PR、T66 T61A。
 - GAP-15/T58、T66、GAP-03、WI196、RC-08 与 release 均保持 open；当前禁止版本/tag/Release/PyPI/
   共享 CLI 更新。
+- Implementation 预审发现 formal V4 错把主线 273 个历史 formatter-red 文件设为全库零债务门禁；独立
+  amendment 仅改为 changed-file strict + legacy baseline-delta，不授权格式化非范围文件或放宽其他门禁。
+- Amendment final review Round 1 对 `a91bbba3` 一致否决动态 base/count-only 判定；当前改为固定
+  `FORMAT_BASE_SHA`、red path set subset 与 changed-range Ruff check；terminal truth/gates 已全绿。Round 2
+  对 `5cad2581` 否决 range 终点/删除边界、native failure、dirty candidate 与路径大小写假绿，并指出 summary/
+  handoff 下一步陈旧；成立项已最小修正并通过 terminal gates。Round 3 对 `67455e7e` 的技术审查无新增问题，
+  两位 reviewer 均只报 P3 continuity 仍停留在 pre-sync；本次同步修正后，Round 3 verdict 全部退役。
