@@ -1,6 +1,6 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T07:02:19Z
+- Updated: 2026-07-19T07:24:55Z
 - Reason: PR #154 已合并且 fresh-main 已验收，修复 WI211 mainline 生命周期事实漂移
 - Goal: 完成 post-merge evidence reconciliation、同 identity 双审、PR 与 fresh-main 验收
 - State: T41～T43 已完成；当前分支只同步已发生事实，产品/测试逻辑/ledger 零变化
@@ -44,10 +44,12 @@
 
 ## Local PR Review
 - completion audit：Pascal/LEAN 与 Confucius/SAFETY 独立确认唯一当前直接矛盾是 WI211 T42/T43/summary/handoff 未写回 PR #154 事实
-- reconciliation 新 identity 尚未评审；旧 implementation/closure PASS 不能冒充本次 PASS
+- reconciliation 首轮受审 identity=`f06beee595f30124306ee088bb86c95fb97d8601`/`4196ec2d75ba1f1b139b30252544acc23143559a`；Pascal/LEAN 与 Confucius/SAFETY 均 FAIL（actionable findings=1）
+- 双方唯一同意 finding：原 Exact Next Steps 重复要求已经完成的 truth sync/manifest bind/clean identity；本轮只修正这一恢复入口
+- 任何本轮文档变化都会使首轮结论失效；旧 implementation/closure/首轮 reconciliation 结论都不能冒充新 identity PASS
 
 ## Exact Next Steps
-- 完成 docs truth sync、manifest/constraints/validate/truth/scope/clean gates并提交唯一 clean identity
-- Pascal/Confucius 对同一 HEAD/tree/diff 从零评审；任一 finding 成立则最小修复后双方全重审
+- 以恢复时已提交且 clean 的当前 HEAD/tree 为唯一受审 identity；先确认 `git status --short` 为空且 truth 为 `ready/fresh`，已满足时不得重复 truth sync 或制造新 identity
+- Pascal/Confucius 对该同一 HEAD/tree/diff 从零评审；任一 finding 成立则最小修复、重新绑定 truth 后双方全重审
 - 双 PASS 后 push/PR，等待 Codex current-head 与 required checks 全绿，merge 后 detached fresh-main 验收
 - reconciliation 关闭后新建只读 candidate-selection WI；不得提前实现 T62A 或发布版本
