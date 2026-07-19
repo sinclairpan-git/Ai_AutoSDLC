@@ -211,9 +211,9 @@ T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷
 - **范围**：每个子 WI 只迁移一个领域；`ProgramService` 暂作薄 facade。
 - **非目标**：不同时迁移第二领域，不改变公共调用方、CLI 或 artifact 合同。
 - **进入**：WP-01A 完成；只依赖与该领域真实重叠的 WP-03～WP-05 子项，不等待无关低风险任务。
-- **切换**：旧/新 shadow → 单入口切换 → 受影响 smoke → 一个稳定发布周期 → 独立删旧 PR。
+- **切换**：旧/新 shadow → 单入口切换 → 受影响 smoke → 一个主线预发布稳定周期 → 独立删旧 PR。该周期要求 candidate 已合入且 legacy 仍保留，并通过 required cross-platform CI、wheel/sdist、clean install、offline smoke、代表性 sibling project smoke 与 selector rollback/reapply；不创建版本、tag、GitHub Release、PyPI 发布或全局 CLI 更新。
 - **完成**：迁移职责在原文件的 LOC/方法数下降至少 90%，并达到 RC-04 至少一项结构改善阈值；新文件/函数符合 RC-07，纯移动 No-Go。
-- **停止/回退**：跨两个领域、差异不为零或临时膨胀超 RC-05 时缩小切片；删旧前 facade 指回旧实现，删旧后 revert legacy-deletion PR 并回滚对应发布。rollback receipt 必须覆盖最终删除状态。
+- **停止/回退**：跨两个领域、差异不为零或临时膨胀超 RC-05 时缩小切片；删旧前 facade 指回旧实现，删旧后先 revert legacy-deletion PR，再回退 candidate PR。deletion 后必须重复同等安装包、offline/sibling smoke 与 rollback/reapply；rollback receipt 覆盖最终删除状态。
 - **终态**：逐切片推进，直到 `program_service.py` 符合 400 行约束。
 - **证据**：domain map、dependency diff、shadow result、release smoke、legacy deletion receipt。
 
@@ -222,9 +222,9 @@ T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷
 - **范围**：每个子 WI 只处理一个同语义 stage family；33 个公共命令全部保留。
 - **非目标**：不删除/改名公共命令，不用 family 特判堆出新的通用 executor。
 - **进入**：WP-01A 完成；stage family 的输入、失败和 artifact 语义已证明一致。
-- **切换**：dry-run 双跑 → artifact 双跑 → 单 family 切换 → 稳定发布 → 独立删旧 PR。
+- **切换**：dry-run 双跑 → artifact 双跑 → 单 family 切换 → 主线预发布稳定周期 → 独立删旧 PR。该周期要求 candidate 已合入且 legacy 仍保留，并通过 required cross-platform CI、wheel/sdist、clean install、offline smoke、代表性 sibling project smoke 与 selector rollback/reapply；不创建版本、tag、GitHub Release、PyPI 发布或全局 CLI 更新。
 - **完成**：目标 family 镜像实现 LOC 至少下降 70%，产品 LOC 净下降，CLI surface/退出码/提示零未批准差异。
-- **停止/回退**：executor 出现 family 特判、语义差异或超 RC-05 时停止；删旧前命令路由切回旧 handler，删旧后 revert legacy-deletion PR 并回滚对应发布。rollback receipt 必须覆盖最终删除状态。
+- **停止/回退**：executor 出现 family 特判、语义差异或超 RC-05 时停止；删旧前命令路由切回旧 handler，删旧后先 revert legacy-deletion PR，再回退 candidate PR。deletion 后必须重复同等安装包、offline/sibling smoke 与 rollback/reapply；rollback receipt 覆盖最终删除状态。
 - **终态**：逐 family 推进，直到 `program_cmd.py` 符合 400 行约束。
 - **证据**：family matrix、33 命令 surface、shadow diff、release smoke、legacy deletion receipt。
 
