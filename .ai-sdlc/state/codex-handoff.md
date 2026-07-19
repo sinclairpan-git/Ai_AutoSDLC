@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T04:17:11Z
-- Reason: PR #153 Codex current-head review的handoff滞后finding已接受并完成最小修复
+- Updated: 2026-07-19T04:31:25Z
+- Reason: WI211 Round4统一finding已最小修复，移除handoff中已经完成的门禁/提交步骤
 - Goal: 完成WI211共享mapping去重的双对抗评审、mainline交付与fresh-main验收
-- State: 产品/测试/receipt未变；Round3旧head曾获双PASS，但Codex指出两份handoff仍保留过期next steps，当前handoff-only新identity待双对抗复审后推送
+- State: 产品/测试/receipt未变；Codex P2及Round4统一finding已闭环，当前handoff-only clean tip待双对抗复审后推送PR #153
 - Stage: verify
 - Work Item: 211-shared-mapping-dedupe
 - Branch: feature/211-shared-mapping-dedupe
@@ -61,9 +61,10 @@
 - implementation Round3旧head=`9404f4e9727f491a88c82bc29830fd4b5b0bfad1`：Pascal `LEAN PASS/findings=0`、Confucius `SAFETY PASS/findings=0`
 - PR #153已创建且21项checks启动；Codex审查旧head提出1个P2：两份handoff仍称“待双审”，会让恢复会话重复已完成步骤；finding成立
 - disposition：仅同步更新两份handoff为post-review/PR实际状态；产品、测试、receipt及已通过的行为证据不变。因证据身份变化，Round3双PASS不沿用
+- implementation Round4旧head=`0059998b8b698239fd0446a9546d071c3cbabed4`：Pascal `LEAN FAIL/findings=1`、Confucius `SAFETY FAIL/findings=1`，共同finding为Exact Next Steps仍把已经完成的handoff-only门禁/提交列为待办；其余范围与门禁无finding
+- disposition：两份handoff同步删除该已完成步骤，next steps直接从当前identity双审开始；产品、测试、receipt仍为零变化，Round4结论不沿用
 
 ## Exact Next Steps
-- 对handoff-only修复运行parity、diff-check及治理轻量门禁并提交；确认产品/测试/receipt相对Round3旧head零变化
 - Pascal/Confucius对该同一新identity重新双审；任一finding成立则最小修复并让双方从更新后的identity全重审
 - 双PASS后推送PR #153、重新请求Codex current-head review，持续heartbeat至当前head审查无finding且required checks全绿
 - merge后做detached fresh-main acceptance
