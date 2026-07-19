@@ -1,7 +1,7 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T13:09:18Z
-- Reason: WI213 terminal truth sync 已收敛，进入 final gates
+- Updated: 2026-07-19T13:16:51Z
+- Reason: WI213 final Round 6 双方同一 continuity finding 已修正
 - Goal: 冻结 T66 九阶段 ProgramService 减重正式合同并完成同 identity 双审、PR、fresh-main
 - State: terminal truth/final local gates 全绿；等待 final identity 双审与 PR delivery
 - Stage: decompose
@@ -21,6 +21,7 @@
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
 - program-manifest.yaml
+- tests/integration/test_repo_program_manifest.py
 - .ai-sdlc/project/config/project-state.yaml
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/213-programservice-bounded-stage-reduction/codex-handoff.md
@@ -34,7 +35,8 @@
   shadow product522、proof190、product+proof712、terminal720、net delete2918、ProgramService reduction3278。
 - 设计只允许 private descriptor + explicit constructor/callback injection；cross strategy 与 bounded
   strategy 各一，不允许反射、循环 import、stage-name if/match、DSL、DTO 移动或公共开关。
-- workitem init 的非范围 Cursor adapter refresh 已精确恢复；truth sync 尚未运行。
+- workitem init/plan-check 的非范围 Cursor adapter refresh 已精确恢复；terminal truth sync 已在 source commit
+  `ada79cdf` 完成并由 final commit audit 证明 fresh。
 - 新登记 GAP-15：`program validate` 不改 adapter bytes，但 `workitem plan-check --json` 会在 handler 前隐式
   refresh；WI213 不修 source，formal fresh-main 后先独立完成 T58，再进入 T66 T61A。
 - Round 1 八个唯一 finding 全部成立：补 Python surface/late-bound dispatch、post-merge deletion revert、
@@ -63,14 +65,14 @@
 - Round 2 修订后复验同样通过 constraints/validate/diff/parity/adapter/scope；产品、测试、workflow、依赖零 diff。
 - Round 3 修订后复验同样通过；三类 fingerprint 仅改 formal/evidence，不新增 runtime/test 逻辑。
 - Round 4 YAGNI 修订后 constraints/validate/diff/parity/adapter/scope 仍全绿。
-- Round 5 两位 reviewer 均 PASS/findings=0；随后只新增 closure docs/task 状态，尚未运行 terminal truth sync。
+- Round 5 两位 reviewer 均 PASS/findings=0；随后新增 closure docs/task 状态，当时尚未运行 terminal truth sync。
 - Terminal truth sync on source commit `ada79cdf`：ready、snapshot=`5d8de963...e853f`、inventory=
   `1121/1121`、unmapped/missing=`0/0`、layers spec/plan/tasks/execution/close=`213/213`。
 - Final gates：manifest exact `1 passed in 91.88s`；165 baseline `165 passed, 474 deselected in 2.68s`；
   constraints no BLOCKER、validate PASS、truth audit ready/fresh `1121/1121`、diff/parity/adapter/source-freeze 全绿；
   manifest test 唯一 diff=`+2/-2`。
 - Closure source 初检：constraints no BLOCKER、program validate PASS、diff/parity/adapter/scope/placeholder 全绿。
-- program-manifest 已登记 WI213 depends_on WI196；未 sync。
+- program-manifest 已登记 WI213 depends_on WI196，并已 terminal sync/audit 为 ready/fresh。
 
 ## Blockers / Risks
 
@@ -84,16 +86,16 @@
 
 ## Local PR Review
 
-- `.ai-sdlc/state/codex-handoff.md` 原 WI212 Local PR Review 段已随 active work item 切换删除：其摘要是
-  WI212 双 PASS 与 PR #156 历史 receipt，已在 WI212 execution/summary 和 mainline 保留；继续复制会把旧
-  verdict 误作 WI213 current review。WI213 当前只有 feasibility GO，Pascal/Confucius formal verdict 尚不存在。
-- `.ai-sdlc/work-items/213-programservice-bounded-stage-reduction/codex-handoff.md` 使用同一说明；未删除产品
-  源码注释。后续 formal-six committed+clean 后才登记 WI213 双 review。
+- Round 5 authoring identity 已取得 Pascal/Confucius 双 PASS0；closure 变化后该 receipt 已退为历史。
+- Final Round 6 对 `4d2e98f7`/tree `52280c71`/formal-six `283b623b...f099` 双方各 FAIL1，意见统一为
+  handoff stale state/漏列 test；本次两份 byte-identical correction 已处置，尚无 final PASS。
+- 原 WI212 review 摘要已由 WI212 execution/summary/mainline 保存，未删除产品源码注释。
 
 ## Exact Next Steps
 
-1. 提交 manifest/test/handoff final identity；source docs 自 `ada79cdf` 后保持不变。
-2. Pascal/Confucius 对 final current identity/formal-six=`283b623b...f099` 双 PASS0。
+1. 若 handoff-only correction 尚未提交则提交；否则确认 current identity committed+clean、formal-six 仍为
+   `283b623b...f099`、source docs 自 `ada79cdf` 后无变化。
+2. Pascal/Confucius 对该 current identity 做 final Round 7 双 PASS0。
 3. Push/PR、Codex review、required-check heartbeat、merge、detached fresh-main。
 4. 独立 lifecycle reconciliation 只回写已发生 receipt/任务状态并重新收敛 truth。
 5. Formal lifecycle fresh-main 后创建 T58/GAP-15 WI；T58 fresh-main 后才创建 T66 implementation WI/T61A。
