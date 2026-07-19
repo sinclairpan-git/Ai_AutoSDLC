@@ -210,6 +210,32 @@
   },
   "protected_surfaces": {
     "file_count": 6,
+    "files_sha256": {
+      ".ai-sdlc/state/resume-pack.yaml": {
+        "baseline": "9f0d4beb91932b4669a36ea68e770dbfa3e6e7974ff4147dd904f523376bd6d3",
+        "candidate": "9f0d4beb91932b4669a36ea68e770dbfa3e6e7974ff4147dd904f523376bd6d3"
+      },
+      ".ai-sdlc/work-items/208-resume-pack-portable-lossless-reconstruction/codex-handoff.md": {
+        "baseline": "d0d7011cae6ea788c1db2ec2dc767558a6d15cc826c2a713cd3503336d334b9b",
+        "candidate": "d0d7011cae6ea788c1db2ec2dc767558a6d15cc826c2a713cd3503336d334b9b"
+      },
+      ".cursor/rules/ai-sdlc.md": {
+        "baseline": "d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a",
+        "candidate": "d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a"
+      },
+      ".cursor/rules/ai-sdlc.mdc": {
+        "baseline": "d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a",
+        "candidate": "d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a"
+      },
+      "src/ai_sdlc/cli/program_cmd.py": {
+        "baseline": "5e66dcff00a7fe54716691dc3ebd470c2bcc4651e1a6a5ed7bd9693d8de519af",
+        "candidate": "5e66dcff00a7fe54716691dc3ebd470c2bcc4651e1a6a5ed7bd9693d8de519af"
+      },
+      "src/ai_sdlc/core/program_service.py": {
+        "baseline": "5ba8f5c82d1d11e29b611f588f63785593492a155f18eeff43121267de562be1",
+        "candidate": "5ba8f5c82d1d11e29b611f588f63785593492a155f18eeff43121267de562be1"
+      }
+    },
     "baseline_combined_sha256": "1be62fe2a22dca1674cd1dabb475c6624e245cd639347005fbc53b21384680bc",
     "candidate_combined_sha256": "1be62fe2a22dca1674cd1dabb475c6624e245cd639347005fbc53b21384680bc",
     "tree_oids": {
