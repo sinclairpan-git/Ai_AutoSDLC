@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,6 +18,7 @@ from ai_sdlc.core.frontend_contract_observation_runtime_policy import (
     assess_frontend_contract_observation_source,
 )
 from ai_sdlc.models.state import Checkpoint
+from ai_sdlc.utils.helpers import _dedupe_mapping_items as _dedupe_mapping_items
 from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_SCOPE_CHECKPOINT = "checkpoint"
@@ -37,20 +37,6 @@ FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_FRESHNESS_TIMESTAMP_ONLY = "timestamp_only"
 FRONTEND_CONTRACT_RUNTIME_ATTACHMENT_WRITE_POLICY_EXPLICIT_OPT_IN = (
     "explicit_opt_in_required"
 )
-
-
-def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:
-    deduped: list[dict[str, object]] = []
-    seen: set[str] = set()
-    for value in values or []:
-        if not isinstance(value, dict):
-            continue
-        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
-        if key in seen:
-            continue
-        seen.add(key)
-        deduped.append(dict(value))
-    return deduped
 
 
 @dataclass(frozen=True, slots=True)

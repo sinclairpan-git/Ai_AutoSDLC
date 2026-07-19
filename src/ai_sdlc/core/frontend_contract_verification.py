@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -14,6 +13,7 @@ from ai_sdlc.core.frontend_contract_observation_provider import (
 )
 from ai_sdlc.gates.frontend_contract_gate import FrontendContractGate
 from ai_sdlc.models.gate import GateResult
+from ai_sdlc.utils.helpers import _dedupe_mapping_items as _dedupe_mapping_items
 from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 
 FRONTEND_CONTRACT_SOURCE_NAME = "frontend contract verification"
@@ -32,20 +32,6 @@ FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_SOURCE_PROFILE_MISMATCH = (
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_VALID_EMPTY = "valid_empty"
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_DRIFT = "drift"
 FRONTEND_CONTRACT_DIAGNOSTIC_STATUS_CLEAN = "clean"
-
-
-def _dedupe_mapping_items(values: object) -> list[dict[str, object]]:
-    deduped: list[dict[str, object]] = []
-    seen: set[str] = set()
-    for value in values or []:
-        if not isinstance(value, dict):
-            continue
-        key = json.dumps(value, sort_keys=True, ensure_ascii=False)
-        if key in seen:
-            continue
-        seen.add(key)
-        deduped.append(dict(value))
-    return deduped
 
 
 @dataclass(frozen=True, slots=True)
