@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T09:21:59Z
-- Reason: WI212 Round 4 split verdict continuity findings 最小处置
+- Updated: 2026-07-19T09:25:00Z
+- Reason: WI212 Round 5 共同 current-state finding 最小处置
 - Goal: 完成候选选择、父 L3 合同修订、同 identity 双审、PR 与 detached fresh-main 验收
-- State: Round 4 Pascal PASS0/Confucius FAIL2 已退役；continuity findings 已修正，等待 current identity 双审
+- State: Round 5 Pascal/Confucius 双 FAIL1 已退役；共同 state finding 已修正，等待 current identity 双审
 - Stage: verify
 - Work Item: 212-reduction-candidate-selection
 - Branch: feature/212-reduction-candidate-selection-docs
@@ -44,6 +44,8 @@
   冲突和 log 重复冻结 identity finding 已接受。tasks 变化使该 split verdict 双方同时退役。
 - Round 4 exact HEAD/tree=`9579fac0`/`61ac2a70` 得到 Pascal PASS0、Confucius FAIL2；旧 handoff
   Round 3 指向与 log 三文件失效边界 finding 已接受，当前恢复入口改为 round-agnostic。
+- Round 5 exact HEAD/tree=`306f768e`/`d8772c98` 得到 Pascal/Confucius 双 FAIL1；唯一共同 finding
+  为 execution 顶层状态仍指 Round 3，现已改为 round-agnostic current review pending。
 
 ## Blockers / Risks
 

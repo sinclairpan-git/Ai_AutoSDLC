@@ -2,7 +2,7 @@
 
 **功能编号**：`212-reduction-candidate-selection`
 **创建日期**：2026-07-19
-**当前状态**：current formal identity 已冻结；Round 3 split verdict findings 处置中；产品实现未授权
+**当前状态**：current formal identity 已冻结；等待双方对 current identity 复审；产品实现未授权
 
 ## 1. 固定边界
 
@@ -193,3 +193,11 @@ product+proof≤686≤`floor(2947×25%)=736`，余量≥50。
   handoff 的阻断与下一步改为 round-agnostic current identity，不再指向已退役 Round 3。
 - formal-six 本轮不变，但 HEAD/tree/diff 与 continuity 变化；为满足用户“意见统一且通过”，两位 reviewer
   仍必须对相同新 current identity 从零复审，不能保留 Pascal 旧 PASS。
+
+## 11. Batch 2026-07-19-008：Round 5 双 FAIL 同一 finding
+
+- exact HEAD/tree=`306f768e`/`d8772c98`，formal-six 保持
+  `f7c38d07bb969690698586ac1d81bce8b97d5a622a9235b06e1fed96c27b593c`；Pascal/Confucius 均
+  FAIL1，唯一共同 finding 为顶层 current state 仍写死已退役 Round 3。
+- finding 已接受：顶层状态改为 round-agnostic 的“current identity 已冻结、等待双方复审”；历史 round
+  只保留在 batch receipt，不再驱动恢复动作。内容变化后双方旧 FAIL identity 退役，须复审新 HEAD。
