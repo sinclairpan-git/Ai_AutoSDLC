@@ -208,5 +208,6 @@ T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy
    sponsor，并重新冻结和双审父合同；在此之前按 FR-08 为 CC-05/CC-06 保留两个独立 reviewer。
 7. WI-206 关闭后依次执行 WI-207/GAP-12、WI-208/GAP-13、WI-209/GAP-14；三个基础修复完成后才
    恢复新的 T63/T65/WP-06/WP-07 原子减重选择，RC-08 全路线终态前不发布版本。
-8. WI-210 closure fresh-main 已满足恢复门禁；WI-211 只冻结一个 T63 mapping-dedupe family。formal、
-   implementation、closure 未全部合并验收前，不得把 spike 预测计入 RC-08 ledger，也不得关闭 GAP-05。
+8. WI-210 与 WI-211 closure fresh-main 均已满足恢复门禁；WI-211 已关闭一个 T63
+   mapping-dedupe family 并将实际 raw 净减 122 计入 RC-08 family ledger。后续候选选择已恢复，
+   但必须使用新的独立原子 WI/branch/PR；不得关闭 GAP-05、WI-196、RC-08 或提前发布版本。

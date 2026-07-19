@@ -227,3 +227,16 @@
 - closure 只物化 child/parent docs、truth/continuity 与 manifest test 两条机械期望，产品零 diff；登记一个
   `completed_reduction` family 后 RC-08 raw family ledger 累计 `net -653`。GAP-05、WI-196、RC-08、
   release 与无 sponsor 的 T62A 均保持 open；下一原子项仅在 closure merge/fresh-main 后选择。
+
+## Batch 2026-07-19-014：Closure mainline 与 post-merge lifecycle reconciliation
+
+- Closure Round 2 reviewed HEAD/tree=`ed7934fccb7161f85ad391c4466a658add2e1247`/
+  `57973d2ff1d334ae87b9cd8384684cfc2bfc0b7e`；Pascal 与 Confucius 均 PASS、findings=none。
+- PR #154 的 Codex current-head review 对 `ed7934fccb` 未发现 major issue，13/13 checks success；
+  squash merge=`626adb70cb9e7333e5bd690765b4336c1f260769`。
+- detached fresh main、Python 3.11.15：constraints、program validate、truth `ready/fresh`、source
+  `1111/1111`、unmapped/missing=`0/0`、close=`211/211`、manifest exact、Ruff、protected/src/
+  test-scope/handoff parity 与 clean guard 全绿；HEAD=`origin/main`，tree 与 reviewed tree 完全一致。
+- mainline 的 T42/T43、summary 与 handoff 仍保留 pre-merge 文案；本 reconciliation 只同步上述已发生
+  外部事实和下一恢复入口，产品/测试逻辑/ledger/open 边界零变化。内容变化后由 Pascal/Confucius 对
+  reconciliation 新 identity 从零复审，双 PASS 前不得 push。

@@ -1,7 +1,7 @@
 # 开发摘要：共享 Mapping 去重重复族减重
 
 **功能编号**：`211-shared-mapping-dedupe`
-**状态**：completed_reduction；closure PR 待交付
+**状态**：completed_reduction；closure PR #154 已合并并通过 fresh-main 验收
 
 ## 交付结果
 
@@ -9,6 +9,9 @@
   PR #152 合并为 `96908f2c207dd8e03411d8acd489b2101a5787cf`。
 - Implementation PR #153 合并为 `cd64d8aad415853102cf3c8dc647af34759ad197`；Codex current-head
   review 两次均未发现 major issue，22/22 checks success。
+- Closure PR #154 合并为 `626adb70cb9e7333e5bd690765b4336c1f260769`；最终 reviewed
+  HEAD/tree=`ed7934fc`/`57973d2f`，Pascal/Confucius 均 PASS、findings=none，Codex current-head
+  clean，13/13 checks success。
 - 10 个 exact private mapping-dedupe body 收敛为 `utils/helpers.py` 中 1 个共享实现和 10 个模块局部
   alias；23 个调用表达式不变。产品 raw `+25/-147/net -122`，non-empty `+23/-127/net -104`。
 - 未新增产品/测试文件、公共导出、wrapper、配置或 suppression；唯一 identity characterization 在既有
@@ -34,3 +37,8 @@ manifest exact、reviewed blob/ledger 与 clean-state 均通过。
 
 本项以 `completed_reduction` 关闭一个 T63/WP-03 family。它不关闭 GAP-05、WI-196、RC-08 或版本
 发布，也不恢复无 sponsor 的 T62A；回退 PR #153 会重开本 family。
+
+Closure detached fresh main `626adb70` 使用 Python 3.11.15 验证：constraints、program validate、truth
+`ready/fresh 1111/1111`、manifest exact、Ruff、protected/src/test-scope/handoff parity 与 clean guard
+全部通过；merge tree 与 reviewed closure tree 均为 `57973d2f`。T42/T43 已完成，后续候选选择恢复，
+但必须新建独立原子 WI 并重新完成准入与双审。
