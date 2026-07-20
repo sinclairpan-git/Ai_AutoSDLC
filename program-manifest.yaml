@@ -2057,11 +2057,11 @@ specs:
   depends_on:
   - 213-programservice-bounded-stage-reduction
 truth_snapshot:
-  generated_at: '2026-07-20T07:12:11Z'
+  generated_at: '2026-07-20T09:27:48Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: cf240cdc
-  authoring_hash: a59fdb298fc649f0c089aec2bf3fa9253926a9a085939f48cadbce02dbf63df2
+  repo_revision: 60f11328
+  authoring_hash: b1b855ec08169aad0a96cfe69cf4f6e5605563d776994208a837406b09ccec1c
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 01c3db2eed14ae56d4d4e493386fc2293d4b33c42f54e5a58d115f50127f76ee
@@ -2103,7 +2103,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 6b4ee864336183c07e2c21027b485e8ac94b71fc5c4e2089acec980e8a03edb9
+  snapshot_hash: dccdb6899c3397e5a30c9f79441c3f7cf4b0199020335fad8df537dbd24914e2
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2117,31 +2117,31 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1126
-    mapped_sources: 1126
+    total_sources: 1131
+    mapped_sources: 1131
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3697
-    deferred_signal_count: 6659
-    non_goal_signal_count: 394
+    phase_signal_count: 3700
+    deferred_signal_count: 6666
+    non_goal_signal_count: 395
     layer_totals:
       blueprint: 1
-      spec: 214
-      plan: 214
-      tasks: 214
-      execution: 214
-      close: 214
+      spec: 215
+      plan: 215
+      tasks: 215
+      execution: 215
+      close: 215
       requirements: 2
       defect: 3
       design: 8
       release: 42
     layer_materialized:
       blueprint: 1
-      spec: 214
-      plan: 214
-      tasks: 214
-      execution: 214
-      close: 214
+      spec: 215
+      plan: 215
+      tasks: 215
+      execution: 215
+      close: 215
       requirements: 2
       defect: 3
       design: 8
@@ -11785,6 +11785,51 @@ truth_snapshot:
       mapping_ref: 214-workitem-readonly-adapter-side-effect
       phase_signal_count: 2
       deferred_signal_count: 3
+      non_goal_signal_count: 0
+    - path: specs/215-programservice-bounded-stage-reduction-implementation/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 215-programservice-bounded-stage-reduction-implementation
+      phase_signal_count: 1
+      deferred_signal_count: 2
+      non_goal_signal_count: 1
+    - path: specs/215-programservice-bounded-stage-reduction-implementation/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 215-programservice-bounded-stage-reduction-implementation
+      phase_signal_count: 2
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/215-programservice-bounded-stage-reduction-implementation/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 215-programservice-bounded-stage-reduction-implementation
+      phase_signal_count: 0
+      deferred_signal_count: 3
+      non_goal_signal_count: 0
+    - path: specs/215-programservice-bounded-stage-reduction-implementation/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 215-programservice-bounded-stage-reduction-implementation
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/215-programservice-bounded-stage-reduction-implementation/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: true
+      mapping_ref: 215-programservice-bounded-stage-reduction-implementation
+      phase_signal_count: 0
+      deferred_signal_count: 0
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
