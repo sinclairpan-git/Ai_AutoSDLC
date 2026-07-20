@@ -665,3 +665,27 @@
 - 修正后 cross group=`33 passed, 3346 deselected`，累计 exact union=`238 passed, 3141 deselected`；
   Ruff、diff-check、engine mypy全绿。原`6e3c661b`双审结论退役；须固定新 product checkpoint，重跑
   full/immutable A-B/全部治理门并取得同一新 clean identity 双 PASS0。
+
+## 43. Batch 2026-07-20-041：typed-binding remediation final evidence
+
+- 新 product checkpoint=`e1bec128d833c5942f2985b77bf9b7cfcd4afdea` / tree=
+  `828469f0a3ece0b9711ce94b2fc15acb3436a12b`；ProgramService/engine blobs=
+  `23a4968b63651f8fbfebc3174bf737dcce40984e` / `977cad2c25da95b0c2329ca97b9a3b071e70630b`。
+  frozen conftest/unit/CLI 与 config blobs均保持C1不变。
+- 宽终端、Python3.11 clean full=`3376 passed, 3 skipped in 707.95s`，无failure/error，repository
+  teardown guard通过；测试后 product checkpoint worktree clean。
+- immutable legacy/current 分别为`7922956d/cc3c6b7f`与`e1bec128/828469f0`，各自Python3.11和imported
+  module均来自独立detached worktree；使用同一candidate tests、`--import-mode=importlib`、独立basetemp/
+  JUnit、`PYTHONHASHSEED=0`、`TZ=UTC`。两腿分别=`238 passed, 474 deselected in 3.10s/3.40s`。
+- JUnit locator=`/tmp/ai-sdlc-wi215-r1-ab-e1bec128/{legacy,current}.xml`，均39,436 bytes，SHA256=
+  `d3d35bfb...963c1` / `5d49d9c7...abb84`；outcome均=`238/0/0/0`，ordered classname/name SHA256均=
+  `88065f18699b62fdbf82c3eee102548e2d7c7f51a5fc7b16fa801df88e8a8d13`。stderr均0 bytes/hash=
+  `e3b0c442...b855`。
+- 移除各35个pytest便利symlink后，raw locator为同目录`legacy/`与`current/`；每腿=
+  `767 files / 717,475 bytes`，排序tree SHA256均=
+  `ed594c678114f2314c60f594094cd78e0be9c5cc4ce5db9905c6f4e585905a35`，`diff -qr`退出0。
+- 全仓 Ruff PASS；constraints=`ok=true/blockers=0/advisories=0`；program validate PASS；plan-check=
+  `drift=false/pending_todos=0`。新 engine strict mypy=0；legacy/candidate ProgramService strict mypy仍同为
+  62 errors，证明本 Rx 无类型债增量。
+- 本段进入 formal 后执行 final truth sync/audit 与 manifest exact，再提交 records identity；此后不得改
+  product/test/config/formal evidence，直到同 SHA LEAN/SAFETY 复审完成。

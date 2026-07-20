@@ -30,7 +30,8 @@
   私有 Protocol/具体泛型修正，`all(tuple)`已恢复直接布尔条件。candidate engine mypy=0，
   ProgramService strict mypy与legacy同为62 error、增量0。
 - 修正后 target/product/proof/combined=`371/441/287/728`，branch=48、最大函数49；定向33与累计238
-  已重跑全绿。旧 full/A-B/治理证据因产品 blob 变化退役，须对新 checkpoint完整重跑。
+  已重跑全绿。新 checkpoint full=`3376 passed, 3 skipped`；A/B两腿各238通过，JUnit顺序和raw tree
+  逐字节相同；Ruff/constraints/validate/plan全绿。
 
 ## 兼容与减重边界
 
@@ -45,8 +46,7 @@
 
 ## 下一步
 
-1. 提交 typed-binding remediation product checkpoint，固定新 immutable identity。
-2. 重跑 full、legacy/current A/B、Ruff/constraints/validate/plan/truth/manifest 与 scope/clean。
-3. 提交 final R1 records，取得 Pascal/LEAN 与 Confucius/SAFETY 对同一 clean R1 identity 的双 PASS0；
+1. 对 final evidence 执行 truth sync/audit、manifest exact 与 scope/clean。
+2. 提交 final R1 records，取得 Pascal/LEAN 与 Confucius/SAFETY 对同一 clean R1 identity 的双 PASS0；
    通过后才允许进入
    guarded_registry C2/R2。
