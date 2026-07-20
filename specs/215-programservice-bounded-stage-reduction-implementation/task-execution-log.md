@@ -365,3 +365,15 @@
 - 双basetemp实际结果=`165 passed, 474 deselected in 2.64s`与`2.62s`；九组计数仍为
   `16/19/19/19/19/19/20/17/17`，public/DTO=`27/27`，budget combined=`728≤729`。
 - 本段只登记canonical receipt；receipt尚未提交，最终proof commit/tree、治理全门与T61A双readiness GO待完成。
+
+## 26. Batch 2026-07-20-024：Proof commit终端门禁全绿
+
+- Receipt/truth提交=`ed1ed1f84f1d0c6ae911aa9dd5ffd83d7764d58d`/tree=
+  `2d2b62ae8c9dfd92248912ef93f3edb3af23be15`；clean tree上canonical verify exit0、no_go record/verify均exit1。
+- Exact selector=`165 passed, 474 deselected in 2.63s`；recorder与全仓Ruff PASS；全量pytest首次误设
+  `AI_SDLC_DISABLE_UPDATE_CHECK=1`，使self-update测试预期success却得到disabled，该轮作废。去掉错误环境后
+  单节点=`1 passed`，最终全量=`3303 passed, 3 skipped in 642.12s`。
+- `verify constraints`无BLOCKER、`program validate` PASS、plan-check=`drift=false/pending=0`、truth audit=
+  `ready/fresh 1131/1131/0/0`、manifest exact=`1 passed in 96.21s`，worktree保持clean。
+- Harness SHA=`bde479b5...5938`、receipt SHA=`26a03649...2663`；产品源码/目标行为测试仍零diff。
+  下一步只允许records-only truth提交与同一final proof tuple双review，不允许提前写产品。

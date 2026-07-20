@@ -415,3 +415,9 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
 
 - `0c810465`上LEAN PASS0、SAFETY FAIL1；finding仅为WI215 summary把待实现harness/receipt误写成已交付。
 - 已最小修正summary，不改formal合同或产品；HEAD/tree变化后双方必须重审同一新clean identity。
+
+## 28. Batch 2026-07-20-027：T61A proof终端门禁全绿
+
+- WI215 recorder=170 LOC、canonical receipt combined=728；proof commit=`ed1ed1f8`上verify/no_go、exact165、
+  Ruff、全量`3303 passed, 3 skipped`及全部治理门禁通过，产品与目标测试零diff。
+- 仅剩records-only truth固化与final tuple LEAN/SAFETY双readiness GO；双GO前T66产品实现仍阻断。
