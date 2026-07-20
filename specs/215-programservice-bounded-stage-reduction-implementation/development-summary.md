@@ -1,7 +1,7 @@
 # 开发摘要：ProgramService 九阶段直接减重
 
 **功能编号**：`215-programservice-bounded-stage-reduction-implementation`
-**状态**：cross-spec R1 同 identity 双 PASS0；guarded-registry C2 待同 identity 双审
+**状态**：cross-spec R1 已完成；guarded-registry C2 FAIL1 缺口已补齐，待 final gates 与同 identity 复审
 
 ## 当前事实
 
@@ -37,6 +37,14 @@
 - C2 在上一 reviewed 产品上仅做覆盖映射，不修改产品或冻结测试：`guarded_registry` public/CLI
   exact group=`26 passed, 686 deselected`，与已完成 cross-spec 的累计组=`59 passed, 653 deselected`；
   19 个 baseline 与 7 个共享 characterization 节点全部保留。
+- C2 no-code identity=`6bcdb477/f17f065b` 的 LEAN/SAFETY 均为 `FAIL1`：缺 guarded-registry
+  skipped/partial、非法 target、step fault/retry、returned failed不可达证据与该 stage 输出 loader。
+- 最小修正保留原26节点并净增11个 public 节点，当前 group=`37 passed`、累计=`70 passed`、九stage
+  exact union=`249`；四类临时 mutation 分别得到3/2/4/1+1个预期失败后恢复产品原哈希。
+- 测试 helper 复用使 test checkpoint 实际 diff=`151 additions/207 deletions`；独立 Ruff 格式化双副本
+  复算 proof=`285≤290`，product+proof=`441+285=726≤729`，没有为补缺口增加测试臃肿。
+- C2 clean full=`3387 passed, 3 skipped in 693.78s`；immutable legacy/current产品两腿各249通过，
+  JUnit节点顺序与raw tree逐字节一致。当前只待治理、truth/manifest records与同identity双审。
 
 ## 兼容与减重边界
 
@@ -51,7 +59,5 @@
 
 ## 下一步
 
-1. 固定 C2 no-code characterization checkpoint，取得 Pascal/LEAN 与 Confucius/SAFETY 对同一 clean
-   identity 的双 `PASS0`。
-2. 双审通过后才进入 guarded-registry R2；R2 只扩展唯一 private engine 并删除该 stage 五个重复 body，
-   冻结测试不得改变。
+1. 完成 C2 Ruff/constraints/validate/plan/truth/manifest、scope/clean，提交 final records identity。
+2. 由相同 Pascal/LEAN 与 Confucius/SAFETY 复审同一 clean identity；双 `PASS0` 后才进入 R2。

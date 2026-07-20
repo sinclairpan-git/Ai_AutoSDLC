@@ -56,10 +56,10 @@ related_doc:
 
 每项都先完成当前 stage coverage mapping/`Cx`，再完成只改实现的 `Rx`：
 
-| Task | Stage | Baseline | C1 union | 状态 |
+| Task | Stage | Baseline | 当前 Cx union | 状态 |
 |---|---|---:|---:|---|
 | T21 | `cross_spec_writeback` | 16 | 33 | completed |
-| T22 | `guarded_registry` | 19 | 26 | characterization_review |
+| T22 | `guarded_registry` | 19 | 37 | characterization_review |
 | T23 | `broader_governance` | 19 | 26 | pending |
 | T24 | `final_governance` | 19 | 26 | pending |
 | T25 | `writeback_persistence` | 19 | 26 | pending |

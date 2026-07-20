@@ -704,3 +704,35 @@
   mkdir/write_text fault 与 retry，以及 CLI dry-run/execute/write。
 - C2 沿用 C1 已验证的七类共享 mutation 证据，不新增测试或临时 proof；冻结 test/config blobs保持不变。
   下一步只提交 no-code characterization records，并由相同 LEAN/SAFETY identity 复核；双 PASS0 前禁止 R2。
+
+## 45. Batch 2026-07-20-043：C2 双 FAIL1 最小补强
+
+- C2 no-code review identity=`6bcdb47700151d40aefa0e3e2ce7c15de9300cea` / tree=
+  `f17f065b136df222dad73ae20195452753ea43f9`。Pascal/LEAN=`FAIL1`、Confucius/SAFETY=`FAIL1`；共同
+  finding为26节点未冻结guarded-registry自身的skipped/partial、invalid/non-manifest/outside-root target、
+  step fault/retry和returned failed不可达；SAFETY另指出该 stage 输出loader未由下游public builder覆盖。
+- 修正只改`tests/unit/test_program_service.py`，产品、DTO/public、CLI、config均未改。输出loader矩阵增加
+  `broader_governance` consumer的missing/malformed/non-mapping 3节点；guarded execute增加skipped/partial
+  2节点、invalid ID/missing manifest/outside-root/path mismatch 4节点、mkdir/write_text fault+retry 2节点。
+- 原26个guarded节点逐ID全部保留；修正后group=`37 passed, 686 deselected`，cross+guarded累计=
+  `70 passed, 653 deselected`，九stage exact union=`249/723`。test checkpoint=
+  `756def015601b729baadad962af0fc050ebdfcd8` / tree=`f0d831409d1454d2207585cfff9d7075ed5c69cd`，
+  test blob=`c15122c50b6269954e40fbe852ea59130aea8800`。
+- 临时mutation均在产品legacy body上执行并立即恢复：guarded输出loader直接返回空mapping=`3 failed`；
+  跳过skipped/partial分支=`2 failed`；绕过target/spec path guard=`4 failed`；吞掉mkdir与write_text异常分别
+  `1 failed`。恢复后ProgramService/engine blobs仍为`23a4968b...984e`/`977cad2c...630b`。
+- helper复用保持所有原断言并消除四套视觉/无障碍setup重复；test checkpoint实际diff=
+  `151 additions/207 deletions`。对formal base=`dbc02c65`与candidate=`756def01`独立副本执行Ruff format后，
+  conftest=`26/0`、unit=`555/296`，自然净proof=`285≤290`；product/proof/combined=`441/285/726≤729`。
+- clean Python3.11 full=`3387 passed, 3 skipped in 693.78s`，repository teardown guard通过，运行后clean。
+- immutable A腿产品=`7922956d/cc3c6b7f`，B腿产品=`e1bec128/828469f0`，candidate tests来自`756def01`；
+  两腿Python与imported ProgramService均来自各自worktree，均=`249 passed, 474 deselected`，耗时=
+  `2.97s/3.36s`。JUnit均=`249/0/0/0`，ordered classname/name SHA256均=
+  `6cdd64354fb465c7e4ddcb965844f0f7390b3b3734e41c287d0c1b9355e22abb`。
+- JUnit locator=`/tmp/ai-sdlc-wi215-c2-ab-756def01/{legacy,current}.xml`，均41,433 bytes，SHA256=
+  `aac18ec6...22e17`/`43b2ff9d...88644`；stdout均356 bytes，stderr均0 bytes/hash=`e3b0c442...b855`。
+  移除两腿各35个pytest便利symlink后，raw各=`780 files/732745 bytes`，排序tree SHA256均=
+  `20b3a671e3e14da7fedc73f86a1bc391025f6419e89219a73467f4d6e475fb6f`，diff count=0。
+- returned `failed`控制流证据：每个可执行step在写前计数；正常写后立即登记路径，所以正常返回只能是
+  completed/partial；无可执行step为blocked；mkdir/write_text fault直接传播且无completed artifact，
+  因而`executable_steps>0`同时`written_paths=[]`且无异常返回不可达，R2必须删除该dead branch。
