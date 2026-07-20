@@ -489,3 +489,17 @@
 - 首次full误带`AI_SDLC_DISABLE_UPDATE_CHECK=1`且窄终端，得到15个与C1无关的update-advisor/换行失败；
   去除该变量并固定宽终端后定向=`31 passed, 1 skipped`，完整重跑=`3366 passed, 3 skipped`。前一轮
   明确作废，不修改产品或断言迎合环境污染。
+
+## 35. Batch 2026-07-20-033：C1 immutable legacy/current 两腿
+
+- C1 source/records identity=`ef1705547d891a9e14546f60a80096eedeb7ff6a` / tree=
+  `e38f88280c248a9aba6ab3ccb780aa2a4f0880fa`；test blob unit=`ba117498...fb01`、CLI保持=
+  `9628711c...1f3`。独立 detached worktree 为legacy=`7922956d/cc3c6b7f`、current=`ef170554/e38f8828`。
+- 首轮两腿均=`228 passed, 474 deselected`，JUnit counts=`228/0/0/0`、ordered classname/name SHA=
+  `00e22b70...12e4`一致；raw tree只因既有writer的真实`utc_now_z()`相差数秒而不一致。
+- 不增加normalizer或忽略字段；在共享`tests/conftest.py`仅对九stage且排除thread/archive cleanup的节点
+  注入固定时钟，新增28行，proof累计=`204+28=232≤290`。当前selector仍=`228 passed`。
+- 修正后两腿分别=`228 passed in 2.85s`与`2.84s`；JUnit counts与ordered node SHA相同，移除pytest
+  `current`便利symlink后原生basetemp `diff -qr` exit=0，即raw artifact tree逐字节一致。产品仍零diff。
+- 该fixture与本段改变C1 identity；必须提交、truth sync、复跑最终两腿/full/governance并对同identity双审，
+  旧C1 evidence不得冒充最终PASS。

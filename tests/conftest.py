@@ -16,6 +16,18 @@ _MANAGED_REPOSITORY_PATHS = (
     ".github/copilot-instructions.md",
 )
 
+_BOUNDED_STAGE_NODE_TOKENS = (
+    "cross_spec_writeback",
+    "guarded_registry",
+    "broader_governance",
+    "final_governance",
+    "writeback_persistence",
+    "persisted_write_proof",
+    "final_proof_publication",
+    "final_proof_closure",
+    "final_proof_archive",
+)
+
 _PathState = dict[str, tuple[str, str]]
 
 
@@ -133,6 +145,22 @@ def isolated_user_agentops_profile(
         "AGENTOPS_KEY_ID",
     ):
         monkeypatch.delenv(key, raising=False)
+
+
+@pytest.fixture(autouse=True)
+def stable_bounded_stage_clock(
+    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    node_id = request.node.nodeid
+    if "thread_archive" in node_id or "project_cleanup" in node_id:
+        return
+    if not any(token in node_id for token in _BOUNDED_STAGE_NODE_TOKENS):
+        return
+    from ai_sdlc.core import program_service
+
+    monkeypatch.setattr(
+        program_service, "utc_now_z", lambda: "2026-04-04T06:30:00Z"
+    )
 
 
 @pytest.fixture()

@@ -16,8 +16,9 @@
   每个 Rx 原生 legacy/current 两腿、exact/full/governance、同 SHA 双审，失败回到上一 reviewed tree。
 - 当前 `src/**`、`program_cmd.py` 和两份目标行为测试相对 behavior legacy 仍零差异；尚未创建 private engine。
 - Formal identity `dbc02c65` 已获 LEAN/SAFETY 同身份双 `PASS0`；只授权 tests-only C1。
-- C1 在单一共享参数化矩阵中新增63个九阶段用例/204行，冻结truthy/falsey、经`self` late-bound、
-  clock次数/顺序/异常与mkdir/write首次fault后无artifact、同输入retry字节等价；产品仍零差异。
+- C1 在单一共享参数化矩阵中新增63个九阶段用例/204行，并用28行共享fixture冻结既有阶段节点时钟；
+  proof累计232行，覆盖truthy/falsey、经`self` late-bound、clock次数/顺序/异常、mkdir/write首次fault
+  后无artifact、同输入retry字节等价与legacy/current raw artifact同字节；产品仍零差异。
 
 ## 兼容与减重边界
 

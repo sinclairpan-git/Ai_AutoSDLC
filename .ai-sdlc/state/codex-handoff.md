@@ -3,7 +3,7 @@
 - Updated: 2026-07-20T16:22:00Z
 - Reason: RC-10 formal双PASS后执行tests-only C1 characterization
 - Goal: 固定C1同identity双PASS，再以九个Rx安全减重ProgramService
-- State: formal base `dbc02c65`双PASS；C1新增63个共享nodes/204 LOC并完成三类mutation RED，产品零差异
+- State: formal base `dbc02c65`双PASS；C1为63 nodes/232 proof LOC，legacy/current raw tree已同字节，产品零差异
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -48,10 +48,12 @@
 - `793bc533`同身份评审：SAFETY=`PASS0`；LEAN=`FAIL1`仅因固定归档规则和WI213 summary仍以现在时引用
   已退役T61A。本records tree已把三处改为RC-10 gate/历史语义；identity变化后两 verdict均退役并重审。
 - `dbc02c65`/`92a80f70`最终formal identity获LEAN/SAFETY双`PASS0`、findings=0，冻结为implementation-base。
-- C1 tests-only=`+204/-0`，63个新nodes与原165累计228；`or`→`is None`、绕过`self`、eager clock三类
-  临时mutation均RED，恢复后63/228全绿；产品source hash与legacy一致。
+- C1 tests-only核心=`+204/-0`，共享时钟fixture=`+28/-0`，proof累计232；63个新nodes与原165累计228；
+  `or`→`is None`、绕过`self`、eager clock三类临时mutation均RED，恢复后63/228全绿。
 - Full首轮因错误继承update-disable/窄终端参数作废；清洁环境定向=`31 passed, 1 skipped`，最终full=
   `3366 passed, 3 skipped in 690.95s`，无C1失败。
+- Detached legacy/current首轮228双PASS但raw YAML时钟不同；拒绝normalizer，固定九stage测试时钟后两腿=
+  `228/228`、JUnit counts=`228/0/0/0`、node SHA=`00e22b70...12e4`、raw basetemp `diff -qr`=0。
 
 ## Blockers / Risks
 
