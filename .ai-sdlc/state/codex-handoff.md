@@ -28,7 +28,7 @@
 - 删除`scripts/program_bounded_stage_t61a.py`与T61A receipt。
 - 改写`specs/215-*/{spec,plan,tasks,development-summary,task-execution-log}.md`。
 - 修订`specs/196-*`与`specs/213-*`的canonical RC-10条款、summary与execution log。
-- root/scoped handoff；truth/manifest已同步，当前结果回写后需最后一次机械sync。
+- root/scoped handoff与truth/manifest records按当前source commit机械同步；不引入产品变化。
 
 ## Evidence
 
@@ -42,6 +42,9 @@
   diff=`+603/-1094`，净删491行治理/证明资产。
 - `c0ff5f28`同身份评审：LEAN仅发现状态陈旧；SAFETY另要求显式冻结late-bound/truthiness、clock、
   fault/retry与完整public/DTO denylist；未发现产品实现或RC-10路线级新问题。
+- 当前formal remediation source=`b9e3582ac5aeec08679d09559e33b95cbd9682de` / tree=
+  `4da3d9a7194c2250b60663acdb2eafbf2f55832e`。首次manifest exact断言通过但teardown发现snapshot仍指
+  `c0ff5f28`；未绕过守卫，改以source commit后再sync records的两提交方式收口。
 
 ## Blockers / Risks
 

@@ -451,3 +451,13 @@
   参数化 characterization 和三类必需 mutation；扩全 public/DTO denylist。`src/**` 与目标行为测试继续零差异。
 - 只有新的 committed+clean identity 通过治理门并取得同 identity LEAN/SAFETY 双 PASS0，才允许冻结
   implementation-base 并进入 `C1`；此前禁止产品代码。
+
+## 32. Batch 2026-07-20-030：Formal remediation source 与 truth 自引用诊断
+
+- 最小修订 source commit/tree=`b9e3582ac5aeec08679d09559e33b95cbd9682de`/
+  `4da3d9a7194c2250b60663acdb2eafbf2f55832e`；八份 formal/continuity 文件=`+60/-28`，无产品或测试差异。
+- pre-commit manifest exact 的测试断言通过，但 teardown 守卫报 `tracked:program-manifest.yaml`：当时
+  snapshot 仍记录前一 source `c0ff5f28`。根因是 formal dirty tree 先于 source commit 执行 truth sync，
+  不是产品或断言失败。
+- 未修改/跳过仓库状态守卫；先提交 formal source，再从该 source 同步包含本段 continuity 的 records，
+  最终只对 committed+clean records identity 复跑 audit/manifest exact 与双审。
