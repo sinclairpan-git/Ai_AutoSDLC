@@ -372,3 +372,15 @@
 - 修正后宽终端单测=`1 passed in 0.96s`、targeted=`49 passed in 16.00s`、Ruff lint/format PASS。旧双审和
   Codex review 随 identity 变化退役；提交 continuity/test、terminal truth 与全部 gate 后必须同身份重新双审，
   再 push PR #162 并重新请求 Codex current-head review。
+
+## 26. Batch 2026-07-19-022：夹具修正 terminal gates 与 LEAN continuity FAIL
+
+- Test/continuity correction=`ffdd9cef`，truth snapshot=
+  `bf71628554e3ec1ab8b99d339249e53200e071c38921f947532aad5ef8ae447a`，manifest-only commit=
+  `33a37b53df52ac9daec93225d4b78c32ff8d9ebc`、tree=`90e5e9509a1c78d96e12fbd74320c619470b1bba`。
+- Exact identity terminal gates：`COLUMNS=200` targeted=`49 passed in 15.82s`、full=
+  `3302 passed, 3 skipped in 674.46s`；Ruff lint/V4a/V4b、constraints、validate、truth=`ready/fresh`
+  1126/1126、manifest exact=`1 passed in 102.03s`、11-file scope/handoff parity/Cursor/clean 全绿。
+- LEAN Round 3=`FAIL1`（P3×1）：双 handoff 和 summary 仍把上述已完成 gates 写成下一步；代码与测试本身、
+  同 repo A/B 防假绿、产品一行最小性和净删 13 行均通过。Finding 成立，只修正文档/continuity 并刷新
+  terminal truth；旧 LEAN verdict 与已中止的 SAFETY 审查全部退役，新 identity 必须从零双审。

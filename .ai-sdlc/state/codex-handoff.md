@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-19T23:46:45Z
-- Reason: PR #162 跨平台失败已定位为 A/B 测试临时路径误差；最小测试修正进入重新验收
+- Updated: 2026-07-20T00:05:17Z
+- Reason: PR #162 测试夹具修正的 terminal gates 已完成；直接进入新身份双审
 - Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
-- State: T21-T31 completed；PR #162 首轮 CI 揭示测试夹具缺陷，产品一行修复不变，等待新身份完整验收
+- State: T21-T31 completed；测试夹具修正与 terminal gates 全绿，产品一行修复不变，等待新身份双审
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-dev
@@ -49,6 +49,9 @@
   pytest 均因 real-hook A/B 比较不同绝对临时路径而失败，旧 Codex/双审 identity 随测试修正退役。
 - 本地以 `COLUMNS=200` 精确复现 RED；改为同一 clean repo 顺序运行 no-op/real hook 后，宽终端单测=
   `1 passed in 0.96s`、targeted=`49 passed in 16.00s`，Ruff lint/format PASS，且测试净删 13 行。
+- 修正后 terminal identity=`33a37b53`/tree=`90e5e950`：宽终端 targeted=`49 passed in 15.82s`、full=
+  `3302 passed, 3 skipped in 674.46s`；Ruff/V4a/V4b、constraints、validate、truth ready/fresh 1126/1126、
+  manifest exact=`1 passed in 102.03s`、scope/parity/Cursor/clean 全绿。
 
 ## Blockers / Risks
 
@@ -68,8 +71,7 @@
 
 ## Exact Next Steps
 
-- 提交测试/continuity 修正，执行 terminal truth sync，并在新 committed+clean identity 重跑 full、Ruff/V4、
-  constraints、truth/manifest/scope/parity/Cursor/clean。
-- 让 Pascal/LEAN 与 Confucius/SAFETY 对新 identity 从零审到 PASS0；推送 PR #162 并重新请求 Codex review。
+- 让 Pascal/LEAN 与 Confucius/SAFETY 对本 continuity correction 后的新 identity 从零审到 PASS0。
+- 双 PASS0 后推送 PR #162 并重新请求 Codex current-head review。
 - current-head 双 PASS0/Codex/checks 全绿后 merge 并 detached fresh-main。
 - Implementation fresh-main 通过后创建独立 lifecycle reconciliation；不得提前关闭 GAP-15/T58 或放行 T66。

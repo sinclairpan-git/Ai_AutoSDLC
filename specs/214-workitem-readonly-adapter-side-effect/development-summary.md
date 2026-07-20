@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 修正跨平台测试夹具后重新验收
+**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 修正夹具且 terminal gates 全绿，待双审
 
 ## 已冻结合同
 
@@ -61,4 +61,6 @@
   表格路径与列宽不同。产品行为和 bytes/clean-tree 断言均通过，失败只在 stdout 假对比。
 - 本地 `COLUMNS=200` 复现 RED 后，测试改为在同一已确认 clean 的 repo 上顺序执行 no-op 与真实 hook，保留
   exact stdout/stderr/exit/bytes/tree 合同并净删 13 行；宽终端单测与 49 项矩阵已转绿。该变更使旧双审与
-  Codex review 退役，必须完成 full/gates、truth 与新身份双审后再更新 PR #162。
+  Codex review 退役。修正后 terminal identity 的宽终端 full=`3302 passed/3 skipped`，Ruff/V4、constraints、
+  validate、truth/manifest、scope/parity/Cursor/clean 全绿；当前只剩 continuity correction 后的新身份双审与
+  PR #162 current-head 复审/CI。
