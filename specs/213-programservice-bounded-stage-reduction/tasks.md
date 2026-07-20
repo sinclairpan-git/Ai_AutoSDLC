@@ -185,6 +185,9 @@ related_doc:
 | 7 | T66 close | deletion fresh-main 后才 completed_reduction |
 | 8 | release | 仅 WI196/RC-08 全部完成后 |
 
+当前 T58/GAP-15 在本 closure receipt merge 时 completed/closed；T66 仍 blocked，receipt detached fresh-main
+通过后才允许创建 implementation WI并开始 T61A。
+
 ## 追踪矩阵
 
 | 规范 | 任务 |

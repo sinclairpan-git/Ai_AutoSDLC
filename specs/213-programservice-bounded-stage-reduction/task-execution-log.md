@@ -325,3 +325,14 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
   T66 blocked；delivery detached fresh-main 后另建 main-derived closure receipt branch/PR。
 - 只有 receipt 自身同身份双审、Codex/checks、merge/detached fresh-main 全绿，才关闭 GAP-15/T58并恢复
   T66 WI/T61A 准入。T66 产品、GAP-03、WI196、RC-08 与 release 仍保持 open。
+
+## 18. Batch 2026-07-20-017：WI214 delivery mainline 与 closure receipt
+
+- WI214 delivery final HEAD/tree=`1d99b798`/`3f6698d7` 同身份 LEAN/SAFETY PASS0；PR #163 exact-head
+  10/10 checks 全绿并按用户授权采用本地 SDLC 双审替代继续等待远端 Codex 最终文字回执，squash
+  merge=`60fe6d90`。
+- Detached fresh-main tree 一致，constraints/validate/truth=`ready/fresh 1126/1126`、manifest exact、
+  scope/parity/Cursor/clean 全绿。
+- 本 closure receipt merge 关闭 GAP-15/T58，但 T66 仍 blocked；receipt detached fresh-main 通过后才允许
+  创建 T66 implementation WI并执行 T61A 双 readiness。失败立即回退 receipt；不关闭 GAP-03/WI196/
+  RC-08，不发布版本。

@@ -529,3 +529,17 @@
   GAP-15，禁止创建 T66。
 - 本修正不改变当前 delivery 的 T42 in_progress、T58 active、T66 blocked，也不改产品、测试、依赖、
   workflow、版本或 release。提交后机械刷新 truth、重验治理门禁并对新 identity 从零双审。
+
+## 38. Batch 2026-07-20-034：lifecycle delivery mainline 与 closure receipt source
+
+- Delivery final reviewed HEAD/tree=`1d99b79878280f53e2f163b3eeb58c45a8af5612`/
+  `3f6698d70536c7641f2320159713be2ae83c218c`，Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0，
+  actionable findings=0。`@codex review` 已取得 eyes reaction，未产生 review/thread；用户明确要求不再无限
+  等待，并授权以 exact-head 本地 SDLC 双审作为评审门禁，CI 仍不可跳过。
+- PR #163 exact-head 10/10 checks 全绿，squash merge=`60fe6d908d06ebd768616f9d51ba4c2cc3b2f4d0`；
+  delivery 分支保留。Detached fresh-main tree 与 reviewed tree 相同，constraints no BLOCKER、validate PASS、
+  truth=`ready/fresh 1126/1126`、manifest exact=`1 passed`、scope/parity/Cursor/clean 全绿。
+- 当前 main-derived closure receipt 候选只修改 child/parent lifecycle truth、continuity 与 manifest；其 merge
+  是 T42/GAP-15/T58 completed/closed 的唯一生效点，T66 保持 blocked。Receipt detached fresh-main 失败时
+  必须立即 revert/correct receipt 以重开 GAP-15；通过后才允许创建 T66 implementation WI并执行 T61A 双
+  readiness。T66、GAP-03、WI196、RC-08 与 release 仍 open。
