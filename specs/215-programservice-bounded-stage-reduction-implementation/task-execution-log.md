@@ -736,3 +736,14 @@
 - returned `failed`控制流证据：每个可执行step在写前计数；正常写后立即登记路径，所以正常返回只能是
   completed/partial；无可执行step为blocked；mkdir/write_text fault直接传播且无completed artifact，
   因而`executable_steps>0`同时`written_paths=[]`且无异常返回不可达，R2必须删除该dead branch。
+- Final governance：全仓Ruff PASS；constraints=`ok=true/blockers=0/advisories=0`；program validate PASS；
+  plan-check=`drift=false/pending_todos=0`。source checkpoint truth sync生成snapshot=
+  `4ab61c0d24a6c6291a7107d70e8975d6138051a1e3b4431d573ed87d3285cea5`，audit=`ready/fresh
+  1131/1131/0/0`；clean records identity上的manifest exact=`1 passed in 109.35s`，测试后scope/clean为空。
+- records identity=`5622ba10877483bc3bef368547671bdd429d31dc` / tree=
+  `e4c9a7d1bb2b007966115c4aec0028b434343314` 得到LEAN=`PASS0/findings=0`、SAFETY=`FAIL1`；唯一finding是
+  final truth/manifest/scope/clean结果未写回execution/summary/handoff且handoff仍引用R1 snapshot。本笔只做
+  records-only收口；产品`23a4968b...984e`/`977cad2c...630b`与tests`2f9083d3...e642`/
+  `c15122c5...800`/`9628711c...1f3`保持不变，新identity必须重新取得同SHA双PASS0。
+- records-only文档进入truth source后再次执行sync；final snapshot的权威值只读取同一提交中的
+  `program-manifest.yaml:truth_snapshot.snapshot_hash`，避免把自引用hash硬编码回source造成无穷漂移。

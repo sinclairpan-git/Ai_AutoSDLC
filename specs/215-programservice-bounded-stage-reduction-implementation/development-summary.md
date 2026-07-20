@@ -1,7 +1,7 @@
 # 开发摘要：ProgramService 九阶段直接减重
 
 **功能编号**：`215-programservice-bounded-stage-reduction-implementation`
-**状态**：cross-spec R1 已完成；guarded-registry C2 FAIL1 缺口已补齐，待 final gates 与同 identity 复审
+**状态**：cross-spec R1 已完成；guarded-registry C2 行为与全部门禁已闭合，待 records-only 同 identity 复审
 
 ## 当前事实
 
@@ -44,7 +44,11 @@
 - 测试 helper 复用使 test checkpoint 实际 diff=`151 additions/207 deletions`；独立 Ruff 格式化双副本
   复算 proof=`285≤290`，product+proof=`441+285=726≤729`，没有为补缺口增加测试臃肿。
 - C2 clean full=`3387 passed, 3 skipped in 693.78s`；immutable legacy/current产品两腿各249通过，
-  JUnit节点顺序与raw tree逐字节一致。当前只待治理、truth/manifest records与同identity双审。
+  JUnit节点顺序与raw tree逐字节一致。Ruff/constraints/validate/plan全绿；pre-records truth=
+  `ready/fresh 1131/1131/0/0`、snapshot=`4ab61c0d...5cea5`，manifest exact=`1 passed in 109.35s`，
+  scope/clean通过；records-only resync后的权威final snapshot以`program-manifest.yaml`为准。
+- records identity=`5622ba10/e4c9a7d1` 已获 LEAN=`PASS0`；SAFETY=`FAIL1`仅指出上述final gate
+  provenance尚未写回文档。本次只做records-only收口，产品与测试blobs不变。
 
 ## 兼容与减重边界
 
@@ -59,5 +63,5 @@
 
 ## 下一步
 
-1. 完成 C2 Ruff/constraints/validate/plan/truth/manifest、scope/clean，提交 final records identity。
+1. 提交 C2 final provenance records，并在新 clean identity 上复跑truth audit/manifest exact。
 2. 由相同 Pascal/LEAN 与 Confucius/SAFETY 复审同一 clean identity；双 `PASS0` 后才进入 R2。
