@@ -87,7 +87,7 @@
   amendment PR #161 与 implementation PR #162 / merge `2845fedc` 已完成；reviewed/merge tree=
   `03b4a1ff`，detached fresh-main full=`3303 passed, 3 skipped`、targeted=`50 passed`、truth=`ready/fresh
   1126/1126` 且全部门禁全绿。Lifecycle delivery merge/fresh-main 后另建 closure receipt branch/PR；
-  只有 receipt 自身双审、Codex/checks、merge/detached fresh-main 全绿才关闭 GAP-15/T58。此后唯一下一步
-  是新建 T66 implementation WI并先取得 T61A 双 readiness GO；T66/GAP-03/WI196/RC-08/release 仍未完成，
-  本项不授权提前发布。
+  receipt 双审、Codex/checks 全绿后 merge并关闭 GAP-15/T58，但 T66 仍 blocked；receipt detached fresh-main
+  通过后才允许新建 T66 implementation WI并先取得 T61A 双 readiness GO，失败立即回退 receipt。
+  T66/GAP-03/WI196/RC-08/release 仍未完成，本项不授权提前发布。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

@@ -121,12 +121,14 @@ handler 是否继续、call order、最终输出/exit/write set。其他 `Permis
   merge 与 detached fresh-main。
 - **FR-009**：implementation truth/handoff 与本地门禁必须在 final 双审之前完成；其后任一内容变化都使双方
   verdict 失效。Implementation 与 delivery PR 均不得把 GAP-15/T58 写成 closed/completed 或把 T66 写成 ready。
-- **FR-010**：只有 closure receipt 自身双审、Codex/checks、merge 与 detached fresh-main 全绿，才关闭
-  T58/GAP-15并授权创建 T66 implementation WI/T61A；delivery fresh-main 只授权创建 receipt，RC-08 前不得发布版本。
+- **FR-010**：closure receipt 在同身份双审、Codex/checks 全绿后 merge，merge 是 T58/GAP-15
+  closed/completed 的唯一生效点；T66 继续 blocked，只有 receipt detached fresh-main 通过后才授权创建
+  T66 implementation WI/T61A。Fresh-main 失败必须先 revert/correct receipt 以重开 GAP-15，RC-08 前不得发布版本。
 - **FR-011**：回退必须区分三态：implementation 已 merge、delivery 未 merge 时直接 revert implementation；
   delivery 已 merge但 receipt 未生效时先 revert/correct delivery receipt source，再 revert implementation，不得
-  回退不存在的 closure receipt；closure receipt 已生效时先 revert/correct receipt 以重开 GAP-15并阻断 T66，
-  再依次 revert delivery 与 implementation。
+  回退不存在的 closure receipt；closure receipt 已 merge（包括 fresh-main pending/failed）时先 revert/correct
+  receipt 以重开 GAP-15并阻断 T66，再依次 revert delivery 与 implementation。Receipt fresh-main 失败必须
+  立即执行第三态回退，禁止创建 T66 WI。
 
 ## 5. 成功标准
 
@@ -139,14 +141,15 @@ handler 是否继续、call order、最终输出/exit/write set。其他 `Permis
   Cursor base bytes 与 clean-tree 全绿。
 - **SC-006**：formal、implementation、lifecycle delivery 与 closure receipt 的 final current identity 均取得
   双 Agent PASS0；各 PR 的 Codex/CI/merge/fresh-main 均有可追溯 receipt。
-- **SC-007**：parent GAP-15/T58 只在 closure receipt 自身 merge/detached fresh-main 后标记关闭；T66 T61A
-  仅在该关闭事实后恢复，delivery fresh-main 不得提前解除阻断。
+- **SC-007**：parent GAP-15/T58 只在 closure receipt merge 后标记关闭；T66 T61A 仅在 receipt detached
+  fresh-main 通过后恢复。Delivery fresh-main 或 receipt merge 均不得提前创建 T66 WI。
 
 ## 6. 停止、回退与发布边界
 
 若实现需要修改 adapter 算法、root callback、handler、第二 CLI family，或无法保持 §3.2 零差异，立即停止并
 回到 formal，不用扩范围掩盖问题。Formal PR 可独立 revert。Implementation 已 merge、delivery 未 merge 时
 直接 revert implementation；delivery 已 merge但 receipt 未生效时先 revert/correct delivery source，再 revert
-implementation，不得回退不存在的 closure receipt；receipt 已生效时先 revert/correct receipt，明确重开
-GAP-15、阻断尚未开始或正在进行的 T66，再依次 revert delivery 与 implementation，禁止留下“代码已回退但
-truth 仍 closed”。WI214 局部完成不触发 tag、GitHub Release、PyPI 或共享 CLI 更新。
+implementation，不得回退不存在的 closure receipt；receipt 已 merge（含 fresh-main pending/failed）时先
+revert/correct receipt，明确重开 GAP-15、阻断尚未开始或正在进行的 T66，再依次 revert delivery 与
+implementation。Receipt fresh-main 失败必须立即走该回退，禁止留下“代码已回退但 truth 仍 closed”。WI214
+局部完成不触发 tag、GitHub Release、PyPI 或共享 CLI 更新。

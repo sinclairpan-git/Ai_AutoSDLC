@@ -516,3 +516,16 @@
   未生效、receipt 已生效三态，禁止回退不存在的 receipt。
 - 本修正不改变当前 T42 in_progress、T58 active、T66 blocked，也不改产品、测试、依赖、workflow、版本或
   release。提交后机械刷新 truth、重验治理门禁并对新 committed+clean identity 从零双审。
+
+## 37. Batch 2026-07-19-033：lifecycle Round 5 split verdict 与 receipt 单一生效点
+
+- 受审 identity HEAD/tree=`c7237b59c60c071032567c3cf641fab0cd22cdb6`/
+  `1c66a94ca4bff4cf412bdfed544202d087c18e23`、clean；Confucius/SAFETY=`PASS0`，
+  Pascal/LEAN=`FAIL1`。Identity 将变化，两份 verdict 同时退役。
+- LEAN finding 成立：receipt 不能既在 branch 预写 completed/closed，又要求自身 detached fresh-main 后才写
+  这些状态；receipt 已 merge但 fresh-main 失败的回退也必须先修正已进入 main 的关闭状态。
+- 最小修正把 receipt merge 固定为 GAP-15/T58 completed/closed 的唯一生效点，T66 继续 blocked；receipt
+  detached fresh-main 只作为创建 T66 WI 的后置门禁。Fresh-main 失败立即 revert/correct receipt 以重开
+  GAP-15，禁止创建 T66。
+- 本修正不改变当前 delivery 的 T42 in_progress、T58 active、T66 blocked，也不改产品、测试、依赖、
+  workflow、版本或 release。提交后机械刷新 truth、重验治理门禁并对新 identity 从零双审。

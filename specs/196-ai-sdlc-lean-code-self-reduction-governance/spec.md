@@ -60,7 +60,7 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 | GAP-12 | 已关闭 | WI-207：formal PR #140、implementation PR #139、test-isolation repair PR #141；merge `8d8b8f96` 的 fresh-main real-hook/focused/full/Ruff/治理门禁全绿且 repository state clean | T55 已完成；回退 PR #139 或 #141 会重开本项 | 否 |
 | GAP-13 | 已关闭 | WI-208 / PR #143 / merge `f51c176a`：共同 builder 以 canonical sources portable/lossless 重建 root/scoped resume-pack，保留 branch、active files、context 与 raw-byte convergence | T56 已完成；fresh-main relocation/focused/full/Ruff/治理门禁全绿，保护文件与 clean state 不变；回退 PR #143 会重开本项 | 否 |
 | GAP-14 | 已关闭 | `comment_policy._is_comment_line()` 曾按 stripped diff line 判断前缀；WI-209 在 `main@85bdedac` 复现 single/double quoted scalar 续行均产生 1 finding，而 PyYAML token 实际跨越该内容行 | T57 / WI-209：formal PR #145/merge `46156c24` 与 implementation PR #146/merge `31aad572`；Round 15 双 Agent、Codex current-head、22/22 checks 与 fresh-main focused/full/Ruff/治理/clean-state 全部通过；回退 PR #146 会重开，且本项不计 RC-08 | 否 |
-| GAP-15 | 关闭材料就绪（closure receipt fresh-main 前保持 active） | `main@e184c8e2`：`program validate` 前后 `.cursor/rules/ai-sdlc.mdc` SHA-256 均为 `d5f04acf...0b6a`；只读 `workitem plan-check --json` 却输出 `IDE adapter (cursor): installed 1 file(s)` 并将 SHA 改为 `02d9656d...e134`，产生 `+18/-6` tracked diff。根因是 `workitem` callback 对除 `init` 外全部子命令无条件调用 adapter hook | T58 / WI-214：formal PR #160、amendment PR #161、implementation PR #162；reviewed tree=`03b4a1ff`，本地 LEAN/SAFETY 同身份 PASS0，22/22 checks，merge=`2845fedc`；detached fresh-main full=`3303 passed, 3 skipped`，targeted=`50 passed`，truth=`ready/fresh 1126/1126`，全部门禁全绿；只隔离五个只读命令的隐式 refresh，保留 `init/link` 既有写语义；delivery fresh-main 后另建 receipt，receipt fresh-main 后才关闭 | 否 |
+| GAP-15 | 关闭材料就绪（closure receipt merge 前保持 active） | `main@e184c8e2`：`program validate` 前后 `.cursor/rules/ai-sdlc.mdc` SHA-256 均为 `d5f04acf...0b6a`；只读 `workitem plan-check --json` 却输出 `IDE adapter (cursor): installed 1 file(s)` 并将 SHA 改为 `02d9656d...e134`，产生 `+18/-6` tracked diff。根因是 `workitem` callback 对除 `init` 外全部子命令无条件调用 adapter hook | T58 / WI-214：formal PR #160、amendment PR #161、implementation PR #162；reviewed tree=`03b4a1ff`，本地 LEAN/SAFETY 同身份 PASS0，22/22 checks，merge=`2845fedc`；detached fresh-main full=`3303 passed, 3 skipped`，targeted=`50 passed`，truth=`ready/fresh 1126/1126`，全部门禁全绿；只隔离五个只读命令的隐式 refresh，保留 `init/link` 既有写语义；delivery fresh-main 后另建 receipt，receipt merge 时关闭，receipt fresh-main 后才可创建 T66 WI | 否 |
 
 每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
 
@@ -237,6 +237,6 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     只读子命令隐式 refresh。WI-213 只登记并恢复非范围 diff；其 lifecycle reconciliation 已由
     PR #159 / merge `d5ad7616` 与 detached fresh-main 完成。独立 T58/WI-214 的 formal PR #160、amendment
     PR #161 与 implementation PR #162 / merge `2845fedc` 已完成；lifecycle delivery merge/fresh-main 后
-    另建独立 closure receipt branch/PR，只有 receipt 自身双审、Codex/checks、merge/detached fresh-main
-    全绿才关闭 GAP-15/T58。此后唯一下一步是创建 T66 implementation WI并先完成 T61A 双 readiness，
-    仍不得把缺陷修复计入 T66 减重收益。
+    另建独立 closure receipt branch/PR；receipt 双审、Codex/checks 全绿后 merge，该 merge 关闭 GAP-15/T58，
+    但 T66 仍 blocked。Receipt detached fresh-main 通过后，唯一下一步才是创建 T66 implementation WI并先完成
+    T61A 双 readiness；失败必须回退 receipt，仍不得把缺陷修复计入 T66 减重收益。

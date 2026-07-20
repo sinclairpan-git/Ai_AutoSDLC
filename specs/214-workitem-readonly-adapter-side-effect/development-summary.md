@@ -16,8 +16,9 @@
 - Formal、implementation、lifecycle delivery 分独立 branch/PR；delivery fresh-main 后再以独立 receipt
   branch/PR 落盘关闭。每阶段都 truth/gates first、final current-identity 双 PASS0、Codex/current-head
   checks、merge 与 detached fresh-main。
-- Lifecycle receipt fresh-main 才关闭 GAP-15/T58并授权创建 T66 WI/T61A。关闭后回退必须先重开 truth/
-  阻断 T66，再 revert implementation，禁止代码与状态分裂。
+- Lifecycle receipt merge 是 GAP-15/T58 关闭的唯一生效点；receipt detached fresh-main 通过才授权创建
+  T66 WI/T61A，失败立即 revert/correct receipt 并保持 T66 blocked。关闭后回退必须先重开 truth/阻断 T66，
+  再 revert implementation，禁止代码与状态分裂。
 
 ## 对抗评审
 
@@ -44,9 +45,10 @@
 - 已完成：implementation terminal truth/handoff/source freeze、同身份本地双 PASS0、PR #162 的 22/22 checks、
   squash merge `2845fedc` 与 detached fresh-main。当前 lifecycle delivery branch 只标记 closure-ready；
   GAP-15/T58 仍 active、T66 仍 blocked。
-- Delivery merge/fresh-main 后另建独立 closure receipt branch/PR；只有 receipt 自身双审、Codex/checks、
-  merge/detached fresh-main 全绿，才关闭 GAP-15/T58并授权创建独立 T66 implementation WI、先执行 T61A
-  双 readiness。T66、GAP-03、WI196、RC-08 与 release 仍保持 open，禁止版本/tag/Release/PyPI/共享 CLI 更新。
+- Delivery merge/fresh-main 后另建独立 closure receipt branch/PR；receipt 双审、Codex/checks 全绿后 merge，
+  该 merge 关闭 GAP-15/T58，但 T66 仍 blocked。Receipt detached fresh-main 通过才授权创建独立 T66
+  implementation WI、先执行 T61A 双 readiness；失败立即回退 receipt。T66、GAP-03、WI196、RC-08 与
+  release 仍保持 open，禁止版本/tag/Release/PyPI/共享 CLI 更新。
 - Implementation 预审发现 formal V4 错把主线 273 个历史 formatter-red 文件设为全库零债务门禁；独立
   amendment 仅改为 changed-file strict + legacy baseline-delta，不授权格式化非范围文件或放宽其他门禁。
 - Amendment final review Round 1 对 `a91bbba3` 一致否决动态 base/count-only 判定；当前改为固定

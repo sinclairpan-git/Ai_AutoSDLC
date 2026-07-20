@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T06:15:00Z
-- Reason: lifecycle Round 4 canonical 四单元与三态回退 finding 已最小修正
+- Updated: 2026-07-20T06:35:00Z
+- Reason: lifecycle Round 5 receipt 单一生效点 finding 已最小修正
 - Goal: 关闭 GAP-15/T58，并只恢复 T66 独立 implementation WI 的 T61A readiness 准入
-- State: fail-closed source/truth/gates 已完成；canonical 四单元/三态回退已对齐，新身份直接进入双审
+- State: fail-closed source/truth/gates 已完成；receipt merge/后置 fresh-main 语义已对齐，新身份直接进入双审
 - Stage: verify
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: codex/214-workitem-readonly-adapter-side-effect-lifecycle
@@ -39,8 +39,8 @@
   `50 passed`，Ruff/V4/constraints/validate/truth/manifest/scope/parity/Cursor/clean 全绿。
 - PR #162 的事故期本地双审替代 Codex 是用户批准的一次性例外，不自动扩展到 lifecycle 或发布。
 - 本 lifecycle 只改 child/parent lifecycle docs、continuity、truth/manifest；`src/tests` 必须零差异。
-- Lifecycle fresh-main 前 T42 保持 in_progress、GAP-15/T58 保持 closure-ready/active、T66 保持 blocked；
-  实际 fresh-main 后才落盘 completed/closed/ready receipt。
+- Delivery 始终保持 T42 in_progress、GAP-15/T58 active、T66 blocked；closure receipt merge 是
+  completed/closed 的唯一生效点，T66 仍 blocked，receipt detached fresh-main 通过后才恢复准入。
 - T66、GAP-03、WI196、RC-08 与 release 仍 open；禁止版本/tag/Release/PyPI/共享 CLI 更新。
 
 ## Commands / Tests
@@ -61,12 +61,14 @@
   指导 delivery branch 提前关闭/放行。已改为 delivery fresh-main 后再建独立 receipt PR；旧 verdict 退役。
 - Round 4 exact `e27aa4e5`：Pascal/LEAN=`FAIL2`、Confucius/SAFETY=`FAIL1`；共同 finding 是 canonical
   spec/parent 仍为三阶段且回退缺 delivery-merged/receipt-pending。已统一四单元与三态回退，旧 verdict 退役。
+- Round 5 exact `c7237b59`：Confucius/SAFETY=`PASS0`、Pascal/LEAN=`FAIL1`；唯一 finding 是 receipt
+  self-gate。已固定 receipt merge 关闭、detached fresh-main 仅放行 T66，旧 verdict 退役。
 
 ## Blockers / Risks
 
 - Pascal/Confucius 对修正后新 identity 双 PASS0 前不得 push。
-- Delivery PR 与后续 receipt PR 各自 required checks、Codex review、merge/detached fresh-main 前，closure
-  不得视为对 main 生效。
+- Delivery PR merge/fresh-main 前只保持 closure-ready；receipt PR 双审、Codex/checks 全绿后 merge才让
+  closure 对 main 生效。Receipt detached fresh-main 前 T66 仍 blocked，失败立即回退 receipt。
 - OpenAI 事故若继续影响 lifecycle Codex 接单，不得静默沿用 PR #162 的一次性例外。
 - handoff CLI 仍可能按旧 WI208 checkpoint 错写 scoped copy；本轮直接维护 WI214 root/scoped byte-identical。
 
@@ -75,5 +77,5 @@
 - 让 Pascal/LEAN 与 Confucius/SAFETY 对同一 committed+clean identity 从零审到 PASS0。
 - 双 PASS0 后 push/open lifecycle delivery PR，取得 required checks 与 Codex current-head review，再
   merge/detached fresh-main。
-- Delivery fresh-main 后创建独立 closure receipt branch/PR；其双审、Codex/checks、merge/fresh-main 全绿后，
-  才创建 T66 implementation WI并先执行 T61A 双 readiness。
+- Delivery fresh-main 后创建独立 closure receipt branch/PR；其双审、Codex/checks 全绿后 merge并关闭
+  GAP-15/T58，receipt detached fresh-main 通过后才创建 T66 implementation WI并先执行 T61A 双 readiness。

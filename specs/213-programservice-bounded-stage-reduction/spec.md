@@ -14,8 +14,8 @@ artifact、授权和错误语义。
 
 WI213 **只交付 formal receipt**。本分支不得修改 `src/**`、产品测试逻辑、workflow、provider、runtime
 rule、依赖、版本或发布配置。只有 WI213 的正式 PR 已合入 `main`、detached fresh-main 验收通过，且
-GAP-15 已由独立 T58 delivery 与 closure receipt 两个 PR 关闭，且 receipt 通过 detached fresh-main 验收，
-才允许创建唯一 T66 implementation WI；
+GAP-15 由独立 T58 delivery 与 closure receipt 两个 PR 关闭；receipt merge 是关闭生效点，其 detached
+fresh-main 通过后才允许创建唯一 T66 implementation WI；
 该 WI 还必须在写产品代码前完成 T61A，并取得 LEAN 与 SAFETY 两位 reviewer 的 readiness `GO`，才允许
 进入 candidate 实现。
 

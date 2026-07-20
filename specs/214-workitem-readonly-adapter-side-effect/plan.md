@@ -259,13 +259,15 @@ emitted range；merge 后先证明 merge tree 等于 reviewed tree，再在 deta
    Confucius 对 final committed+clean lifecycle identity 双审 PASS0。
 4. push lifecycle delivery PR、Codex current-head review、required checks、merge、detached fresh-main；只有该
    fresh-main 通过后，才从新 main 创建独立 receipt branch/PR，落盘 GAP-15/T58 closed/completed、T42
-   completed 与 T66 ready。Receipt 本身也必须同身份双审、Codex/checks、merge/detached fresh-main；全部通过后
-   才创建独立 T66 implementation WI并先执行 T61A 双 readiness。
+   completed，T66 保持 blocked。Receipt 本身也必须同身份双审、Codex/checks；merge 是关闭状态唯一生效点。
+   Merge 后 detached fresh-main 通过才创建独立 T66 implementation WI并先执行 T61A 双 readiness；若失败，
+   立即 revert/correct receipt 以重开 GAP-15，T66 继续 blocked。
 
 **回退**：implementation 已 merge、delivery 未 merge时直接 revert implementation PR；delivery 已 merge但
 receipt 未生效时先 revert/correct delivery source，再 revert implementation，不得回退不存在的 closure
-receipt；receipt 已生效时先 revert/correct receipt 以重开 GAP-15并阻断 T66，再依次 revert delivery 与
-implementation。不得留下 closed truth 指向 legacy behavior。
+receipt；receipt 已 merge（含 fresh-main pending/failed）时先 revert/correct receipt 以重开 GAP-15并阻断
+T66，再依次 revert delivery 与 implementation。Receipt fresh-main 失败必须立即执行第三态回退，不得留下
+closed truth 指向 legacy behavior。
 
 ## 7. 证据与路径边界
 
