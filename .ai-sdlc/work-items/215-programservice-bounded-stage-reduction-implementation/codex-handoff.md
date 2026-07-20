@@ -1,13 +1,13 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T22:59:00Z
+- Updated: 2026-07-20T23:00:00Z
 - Reason: C2 no-code 双 FAIL1 后完成最小 public characterization 补强
 - Goal: 完成 guarded_registry C2 final gates 并取得同 identity LEAN/SAFETY PASS0
-- State: C2 tests/mutations/full/A-B全绿，待治理、truth/manifest records与同identity复审
+- State: C2 tests/mutations/full/A-B/治理全绿，待truth/manifest records与同identity复审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- Current HEAD: `756def015601b729baadad962af0fc050ebdfcd8`
+- Current HEAD: `03965527ac91ac40f80684ba5b5eab33bfdbd70f`
 
 ## Current Decisions
 
@@ -46,13 +46,14 @@
 - mutation RED=`loader 3/state 2/path 4/mkdir 1/write_text 1`；恢复后产品blobs不变。
 - proof/product/combined=`285/441/726`；full=`3387 passed, 3 skipped in 693.78s`。
 - immutable legacy/current各249通过；JUnit节点hash相同，raw tree各780 files/732745 bytes且hash相同。
+- 全仓Ruff、constraints、program validate、plan-check=`drift=false/pending=0`均通过。
 
 ## Blockers / Risks
 
-- 当前仅C2 formal/handoff records变脏；产品仍为reviewed R1 blobs，test checkpoint=`756def01`。
+- 当前仅两份handoff待truth records；产品仍为reviewed R1 blobs，test checkpoint=`756def01`。
 - C2 双 PASS0 前不得开始 guarded_registry R2。
 
 ## Exact Next Steps
 
-1. 运行Ruff/constraints/validate/plan/truth/manifest，复核scope/clean并提交C2 final records identity。
+1. 执行truth sync/audit、manifest exact，复核scope/clean并提交C2 final records identity。
 2. 同一 Pascal/LEAN 与 Confucius/SAFETY 复审同一 clean SHA；双PASS0后才进入R2。
