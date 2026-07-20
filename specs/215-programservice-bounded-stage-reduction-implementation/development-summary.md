@@ -1,7 +1,7 @@
 # 开发摘要：ProgramService 九阶段直接减重
 
 **功能编号**：`215-programservice-bounded-stage-reduction-implementation`
-**状态**：RC-10 formal 双PASS；C1 characterization review，产品实现仍阻断
+**状态**：RC-10 formal 双PASS；C1双审意见已修正，待新identity复审，产品实现仍阻断
 
 ## 当前事实
 
@@ -16,9 +16,11 @@
   每个 Rx 原生 legacy/current 两腿、exact/full/governance、同 SHA 双审，失败回到上一 reviewed tree。
 - 当前 `src/**`、`program_cmd.py` 和两份目标行为测试相对 behavior legacy 仍零差异；尚未创建 private engine。
 - Formal identity `dbc02c65` 已获 LEAN/SAFETY 同身份双 `PASS0`；只授权 tests-only C1。
-- C1 在单一共享参数化矩阵中新增63个九阶段用例/204行，并用28行共享fixture冻结既有阶段节点时钟；
-  proof累计232行，覆盖truthy/falsey、经`self` late-bound、clock次数/顺序/异常、mkdir/write首次fault
-  后无artifact、同输入retry字节等价与legacy/current raw artifact同字节；产品仍零差异。
+- C1 保留63个共享九阶段节点，并为首stage补7个public节点；结构去重后Ruff自然格式proof=`270≤290`，
+  当前union=`235`。覆盖truthy/falsey、经`self` late-bound、clock顺序/异常、missing/malformed/
+  non-mapping、可达状态、relative/outside-root、write fault与retry；产品仍零差异。
+- `cross_spec_writeback` 的 returned `failed` 无公开可达输入：成功写入必登记路径，失败直接传播。C1冻结
+  真实fault语义，首个Rx删除该dead branch，不伪造状态。
 
 ## 兼容与减重边界
 
@@ -33,7 +35,7 @@
 
 ## 下一步
 
-1. 将 C1 tests-only tree 固定为 committed+clean identity，并以 immutable legacy/current 两腿复核。
+1. 将修正后的 C1 tests-only tree 固定为 committed+clean identity，复跑full与immutable legacy/current两腿。
 2. 取得 Pascal/LEAN 与 Confucius/SAFETY 对同一 C1 identity 的双 PASS0，冻结测试blob/node IDs与
    public/DTO denylist。
 3. C1 双PASS后才允许首个 `cross_spec_writeback` Rx；在该Rx前不写engine。

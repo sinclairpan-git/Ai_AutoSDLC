@@ -158,9 +158,7 @@ def stable_bounded_stage_clock(
         return
     from ai_sdlc.core import program_service
 
-    monkeypatch.setattr(
-        program_service, "utc_now_z", lambda: "2026-04-04T06:30:00Z"
-    )
+    monkeypatch.setattr(program_service, "utc_now_z", lambda: "2026-04-04T06:30:00Z")
 
 
 @pytest.fixture()

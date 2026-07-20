@@ -45,6 +45,9 @@ related_doc:
   fault 后无 completed artifact与同输入 retry 等价。
 - 先在 legacy source 上 PASS；至少用 `or`→`is None`、绕过 `self` callback、eager clock evaluation
   临时 mutation 证明会 RED。
+- 首stage补齐7个 public 节点；loader fail-closed、可达状态、outside-root 与 write-fault 四类临时 mutation
+  分别出现预期 RED。returned `failed` 以公开控制流证据登记为不可达，`Rx` 必须删除该 dead branch。
+- 原63个共享节点与165个基线节点均保留；当前 union=`235`，Ruff自然格式 proof=`270≤290`。
 - 不 import private engine，不改 `src/**`，不删除/rename/skip/xfail/deselect 原165节点。
 - 提交 `C1`，双审后冻结 test tree/blob/node IDs，以及 public name/signature/annotations/defaults/
   docstring/module/qualname 与整个 DTO definition 的逐 stage denylist。
@@ -53,17 +56,17 @@ related_doc:
 
 每项都先完成当前 stage coverage mapping/`Cx`，再完成只改实现的 `Rx`：
 
-| Task | Stage | Existing nodes | 状态 |
-|---|---|---:|---|
-| T21 | `cross_spec_writeback` | 16 | pending |
-| T22 | `guarded_registry` | 19 | pending |
-| T23 | `broader_governance` | 19 | pending |
-| T24 | `final_governance` | 19 | pending |
-| T25 | `writeback_persistence` | 19 | pending |
-| T26 | `persisted_write_proof` | 19 | pending |
-| T27 | `final_proof_publication` | 20 | pending |
-| T28 | `final_proof_closure` | 17 | pending |
-| T29 | `final_proof_archive` | 17 | pending |
+| Task | Stage | Baseline | C1 union | 状态 |
+|---|---|---:|---:|---|
+| T21 | `cross_spec_writeback` | 16 | 30 | pending |
+| T22 | `guarded_registry` | 19 | 26 | pending |
+| T23 | `broader_governance` | 19 | 26 | pending |
+| T24 | `final_governance` | 19 | 26 | pending |
+| T25 | `writeback_persistence` | 19 | 26 | pending |
+| T26 | `persisted_write_proof` | 19 | 26 | pending |
+| T27 | `final_proof_publication` | 20 | 27 | pending |
+| T28 | `final_proof_closure` | 17 | 24 | pending |
+| T29 | `final_proof_archive` | 17 | 24 | pending |
 
 每个 task 的完成定义：
 

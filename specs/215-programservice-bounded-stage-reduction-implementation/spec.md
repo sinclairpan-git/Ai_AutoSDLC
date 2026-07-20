@@ -78,6 +78,11 @@ PASS0 且 findings=0，才允许进入下一 stage。任何身份变化使旧 ve
   artifact 必须与 legacy 一致；
 - public/DTO 只用 public API/CLI 验证；测试不得 import private engine。
 
+若某个 legacy 状态分支无法由 public 输入正常返回，coverage mapping 必须给出控制流证据，并用 public
+fault/retry 冻结实际可观察语义；对应 `Rx` 直接删除该不可达分支，不得通过 private helper、内部容器篡改或
+异常吞噬伪造可达状态。`cross_spec_writeback` 的 returned `failed` 属于此类：可执行目标在写入前计数，
+成功写入后立即登记路径，写入失败则向上传播，因此不存在正常返回 `failed` 的 public 输入。
+
 每类新增断言必须用临时 mutation 证明会 RED；至少覆盖 `or` 改为 `is None`、绕过 `self` callback、
 eager clock evaluation。Public method 的 name/signature/annotations/defaults/docstring/module/qualname 与整个
 DTO class definition 默认属于逐 stage diff denylist。若无法机器保证，才允许增加一份紧凑参数化 contract

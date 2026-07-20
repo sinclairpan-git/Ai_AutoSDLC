@@ -516,3 +516,17 @@
   `ready/fresh 1131/1131/0/0`、manifest exact=`1 passed in 99.06s`；产品仍相对legacy零diff。
 - Full=`3366 passed, 3 skipped`在C1 core source上完成；之后唯一测试语义变化是28行固定时钟fixture，
   其全部影响节点已由final identity两腿228/228覆盖。当前只待C1同identity双审，仍不授权engine/Rx。
+
+## 37. Batch 2026-07-20-035：C1 双审 FAIL1 最小修正
+
+- `727f8417`同identity评审：Pascal/LEAN=`FAIL1`，指出proof按Ruff自然格式为`298>290`；
+  Confucius/SAFETY=`FAIL1`，指出首个cross-spec Rx前尚缺loader、状态与outside-root冻结。
+- 共享九stage case改为fixture+默认seed，cross-spec重复setup收敛到单helper；不压行、不删节点。按formal base
+  `dbc02c65`与candidate临时副本分别执行固定Ruff format后，conftest/unit净增=`26+244=270≤290`。
+- 首stage新增7 nodes：missing/malformed/non-mapping各1、skipped/confirmation_required/partial各1、
+  outside-root 1；completed/blocked/relative/non-manifest沿用原节点，union由228增至235，原165不变。
+- 四类临时mutation均RED并立即恢复：loader fail-closed=`3 failed`；skipped/confirmation/partial=
+  `3 failed`；outside-root guard=`1 failed`；吞掉write fault=`1 failed`。恢复后exact union=
+  `235 passed, 474 deselected`，产品blob=`7b2ac507...9c6`与behavior legacy逐字节一致。
+- blanket `monkeypatch.undo()`改为局部`monkeypatch.context()`，不再中途撤销HOME/AgentOps/固定时钟fixture。
+  returned `failed`经双审确认公开结构不可达；C1冻结write fault传播/零receipt/retry等价，首Rx删除dead branch。

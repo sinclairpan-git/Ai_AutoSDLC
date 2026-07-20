@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -9306,19 +9305,59 @@ def test_execute_frontend_provider_patch_apply_does_not_write_artifact_by_defaul
     ).is_file()
 
 
+def _cross_spec_service(root: Path, **seed_kwargs: object) -> ProgramService:
+    for relative_path in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (root / relative_path).mkdir(parents=True)
+    _write_frontend_provider_patch_apply_artifact(root, **seed_kwargs)
+    return ProgramService(root)
+
+
+@pytest.mark.parametrize(
+    ("artifact_content", "warning_kind"),
+    [
+        pytest.param(None, "missing", id="missing"),
+        pytest.param("[", "invalid", id="malformed"),
+        pytest.param("[]\n", "invalid", id="non_mapping"),
+    ],
+)
+def test_build_frontend_cross_spec_writeback_request_fails_closed_for_unusable_artifact(
+    tmp_path: Path,
+    artifact_content: str | None,
+    warning_kind: str,
+) -> None:
+    relative_path = Path("incoming/provider-patch.yaml")
+    artifact_path = tmp_path / relative_path
+    if artifact_content is not None:
+        artifact_path.parent.mkdir(parents=True)
+        artifact_path.write_text(artifact_content, encoding="utf-8")
+
+    svc = ProgramService(tmp_path)
+    request = svc.build_frontend_cross_spec_writeback_request(
+        _manifest(), artifact_path=relative_path
+    )
+    result = svc.execute_frontend_cross_spec_writeback(
+        _manifest(), request=request, confirmed=True
+    )
+
+    assert (request.required, request.writeback_state, request.apply_result) == (
+        False,
+        "missing_artifact",
+        "missing_artifact",
+    )
+    assert request.artifact_source_path == relative_path.as_posix()
+    assert warning_kind in request.warnings[0]
+    assert (result.passed, result.writeback_state, result.orchestration_result) == (
+        False,
+        "blocked",
+        "blocked",
+    )
+    assert not list(tmp_path.rglob("frontend-provider-writeback.md"))
+
+
 def test_build_frontend_cross_spec_writeback_request_requires_explicit_confirmation(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_provider_patch_apply_artifact(
-        tmp_path,
-        apply_result="applied",
-        patch_apply_state="completed",
-        remaining_blockers=[],
-    )
-
-    svc = ProgramService(tmp_path)
+    svc = _cross_spec_service(tmp_path)
     request = svc.build_frontend_cross_spec_writeback_request(_manifest())
 
     assert request.required is True
@@ -9434,17 +9473,9 @@ def test_build_frontend_cross_spec_writeback_request_preserves_visual_a11y_issue
 
 def test_execute_frontend_cross_spec_writeback_writes_spec_receipts_when_confirmed(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_provider_patch_apply_artifact(
-        tmp_path,
-        apply_result="applied",
-        patch_apply_state="completed",
-        remaining_blockers=[],
-    )
-
-    svc = ProgramService(tmp_path)
+    svc = _cross_spec_service(tmp_path)
     result = svc.execute_frontend_cross_spec_writeback(_manifest(), confirmed=True)
 
     assert result.passed is True
@@ -9455,24 +9486,73 @@ def test_execute_frontend_cross_spec_writeback_writes_spec_receipts_when_confirm
         "wrote 1 cross-spec writeback file(s) from canonical patch apply artifact"
     ]
     assert result.written_paths == ["specs/001-auth/frontend-provider-writeback.md"]
-    assert (tmp_path / "specs" / "001-auth" / "frontend-provider-writeback.md").is_file()
+    receipt_path = tmp_path / "specs" / "001-auth" / "frontend-provider-writeback.md"
+    assert receipt_path.is_file()
     assert result.remaining_blockers == []
     assert result.source_linkage["cross_spec_writeback_state"] == "completed"
+
+    expected = receipt_path.read_bytes()
+    receipt_path.unlink()
+
+    def _fail_write(*_args: object, **_kwargs: object) -> None:
+        raise OSError("write_text failed")
+
+    with monkeypatch.context() as fault_patch:
+        fault_patch.setattr(Path, "write_text", _fail_write)
+        with pytest.raises(OSError, match="write_text failed"):
+            svc.execute_frontend_cross_spec_writeback(_manifest(), confirmed=True)
+        assert not receipt_path.exists()
+
+    retry = svc.execute_frontend_cross_spec_writeback(_manifest(), confirmed=True)
+    assert retry == result
+    assert receipt_path.read_bytes() == expected
+
+
+@pytest.mark.parametrize("case", ["skipped", "confirmation_required", "partial"])
+def test_execute_frontend_cross_spec_writeback_freezes_reachable_state_matrix(
+    tmp_path: Path,
+    case: str,
+) -> None:
+    svc = _cross_spec_service(tmp_path)
+    request = svc.build_frontend_cross_spec_writeback_request(_manifest())
+    confirmed = case != "confirmation_required"
+    if case == "skipped":
+        request = replace(
+            request,
+            required=False,
+            confirmation_required=False,
+            written_paths=[],
+            steps=[],
+        )
+    elif case == "partial":
+        request = replace(request, remaining_blockers=["upstream blocker"])
+
+    result = svc.execute_frontend_cross_spec_writeback(
+        _manifest(), request=request, confirmed=confirmed
+    )
+    expected = {
+        "skipped": ("not_started", "skipped", True),
+        "confirmation_required": ("confirmation_required", "blocked", False),
+        "partial": ("partial", "partial", False),
+    }[case]
+    assert (
+        result.writeback_state,
+        result.orchestration_result,
+        result.passed,
+    ) == expected
+    receipt = tmp_path / "specs" / "001-auth" / "frontend-provider-writeback.md"
+    assert receipt.exists() is (case == "partial")
 
 
 def test_execute_frontend_cross_spec_writeback_blocks_until_patch_apply_is_applied(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_provider_patch_apply_artifact(
+    svc = _cross_spec_service(
         tmp_path,
         apply_result="deferred",
         patch_apply_state="deferred",
         remaining_blockers=["spec 001-auth remediation still required"],
     )
-
-    svc = ProgramService(tmp_path)
     result = svc.execute_frontend_cross_spec_writeback(_manifest(), confirmed=True)
 
     assert result.passed is False
@@ -9486,20 +9566,32 @@ def test_execute_frontend_cross_spec_writeback_blocks_until_patch_apply_is_appli
     assert not (tmp_path / "specs" / "001-auth" / "frontend-provider-writeback.md").exists()
 
 
+@pytest.mark.parametrize(
+    ("step_path", "blocker"),
+    [
+        pytest.param(
+            ".ai-sdlc/memory",
+            "path does not match manifest spec path: .ai-sdlc/memory",
+            id="non_manifest",
+        ),
+        pytest.param(
+            "../outside",
+            "resolves outside workspace root: ../outside",
+            id="outside_root",
+        ),
+    ],
+)
 def test_execute_frontend_cross_spec_writeback_rejects_non_manifest_spec_paths(
     tmp_path: Path,
+    step_path: str,
+    blocker: str,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_provider_patch_apply_artifact(
+    svc = _cross_spec_service(
         tmp_path,
-        apply_result="applied",
-        patch_apply_state="completed",
-        remaining_blockers=[],
         steps=[
             {
                 "spec_id": "001-auth",
-                "path": ".ai-sdlc/memory",
+                "path": step_path,
                 "patch_availability_state": "patches_generated",
                 "pending_inputs": ["frontend_contract_observations"],
                 "suggested_next_actions": ["review generated provider patch plan"],
@@ -9510,33 +9602,20 @@ def test_execute_frontend_cross_spec_writeback_rejects_non_manifest_spec_paths(
             }
         ],
     )
-
-    svc = ProgramService(tmp_path)
     result = svc.execute_frontend_cross_spec_writeback(_manifest(), confirmed=True)
 
     assert result.passed is False
     assert result.writeback_state == "blocked"
     assert result.orchestration_result == "blocked"
     assert result.written_paths == []
-    assert result.remaining_blockers == [
-        "cross-spec writeback step 001-auth path does not match manifest spec path: .ai-sdlc/memory"
-    ]
+    assert result.remaining_blockers == [f"cross-spec writeback step 001-auth {blocker}"]
     assert not (tmp_path / ".ai-sdlc" / "memory" / "frontend-provider-writeback.md").exists()
 
 
 def test_write_frontend_cross_spec_writeback_artifact_emits_canonical_yaml(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_provider_patch_apply_artifact(
-        tmp_path,
-        apply_result="applied",
-        patch_apply_state="completed",
-        remaining_blockers=[],
-    )
-
-    svc = ProgramService(tmp_path)
+    svc = _cross_spec_service(tmp_path)
     request = svc.build_frontend_cross_spec_writeback_request(_manifest())
     result = svc.execute_frontend_cross_spec_writeback(
         _manifest(),
@@ -9686,16 +9765,7 @@ def test_write_frontend_cross_spec_writeback_artifact_preserves_visual_a11y_issu
 def test_execute_frontend_cross_spec_writeback_does_not_write_artifact_by_default(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_provider_patch_apply_artifact(
-        tmp_path,
-        apply_result="applied",
-        patch_apply_state="completed",
-        remaining_blockers=[],
-    )
-
-    svc = ProgramService(tmp_path)
+    svc = _cross_spec_service(tmp_path)
     result = svc.execute_frontend_cross_spec_writeback(_manifest(), confirmed=True)
 
     assert result.writeback_state == "completed"
@@ -16695,9 +16765,9 @@ def _write_frontend_provider_runtime_artifact(
 def _write_frontend_provider_patch_apply_artifact(
     root: Path,
     *,
-    apply_result: str,
-    patch_apply_state: str,
-    remaining_blockers: list[str],
+    apply_result: str = "applied",
+    patch_apply_state: str = "completed",
+    remaining_blockers: list[str] | None = None,
     steps: list[dict[str, object]] | None = None,
 ) -> None:
     default_steps: list[dict[str, object]] = [
@@ -16758,7 +16828,7 @@ def _write_frontend_provider_patch_apply_artifact(
                 "apply_result": apply_result,
                 "apply_summaries": apply_summaries,
                 "written_paths": written_paths,
-                "remaining_blockers": list(remaining_blockers),
+                "remaining_blockers": list(remaining_blockers or []),
                 "warnings": warnings,
                 "steps": list(steps or default_steps),
                 "source_linkage": {
@@ -16778,9 +16848,9 @@ def _write_frontend_provider_patch_apply_artifact(
 def _write_frontend_cross_spec_writeback_artifact(
     root: Path,
     *,
-    orchestration_result: str,
-    writeback_state: str,
-    remaining_blockers: list[str],
+    orchestration_result: str = "completed",
+    writeback_state: str = "completed",
+    remaining_blockers: list[str] | None = None,
     apply_result: str | None = None,
     steps: list[dict[str, object]] | None = None,
 ) -> None:
@@ -16852,7 +16922,7 @@ def _write_frontend_cross_spec_writeback_artifact(
                 "orchestration_summaries": orchestration_summaries,
                 "existing_written_paths": existing_written_paths,
                 "written_paths": written_paths,
-                "remaining_blockers": list(remaining_blockers),
+                "remaining_blockers": list(remaining_blockers or []),
                 "warnings": warnings,
                 "steps": list(effective_steps),
                 "source_linkage": {
@@ -16872,9 +16942,9 @@ def _write_frontend_cross_spec_writeback_artifact(
 def _write_frontend_guarded_registry_artifact(
     root: Path,
     *,
-    registry_result: str,
-    registry_state: str,
-    remaining_blockers: list[str],
+    registry_result: str = "completed",
+    registry_state: str = "completed",
+    remaining_blockers: list[str] | None = None,
     steps: list[dict[str, object]] | None = None,
 ) -> None:
     default_steps: list[dict[str, object]] = [
@@ -16922,7 +16992,7 @@ def _write_frontend_guarded_registry_artifact(
                 ],
                 "existing_written_paths": [],
                 "written_paths": [],
-                "remaining_blockers": list(remaining_blockers),
+                "remaining_blockers": list(remaining_blockers or []),
                 "warnings": [
                     "guarded registry baseline does not update registries yet"
                 ],
@@ -16944,9 +17014,9 @@ def _write_frontend_guarded_registry_artifact(
 def _write_frontend_broader_governance_artifact(
     root: Path,
     *,
-    governance_result: str,
-    governance_state: str,
-    remaining_blockers: list[str],
+    governance_result: str = "completed",
+    governance_state: str = "completed",
+    remaining_blockers: list[str] | None = None,
     steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
@@ -16994,7 +17064,7 @@ def _write_frontend_broader_governance_artifact(
                 ],
                 "existing_written_paths": [],
                 "written_paths": [],
-                "remaining_blockers": list(remaining_blockers),
+                "remaining_blockers": list(remaining_blockers or []),
                 "warnings": [
                     "broader governance baseline does not execute final governance actions yet"
                 ],
@@ -17017,9 +17087,9 @@ def _write_frontend_broader_governance_artifact(
 def _write_frontend_final_governance_artifact(
     root: Path,
     *,
-    final_governance_result: str,
-    final_governance_state: str,
-    remaining_blockers: list[str],
+    final_governance_result: str = "completed",
+    final_governance_state: str = "completed",
+    remaining_blockers: list[str] | None = None,
     steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
@@ -17067,7 +17137,7 @@ def _write_frontend_final_governance_artifact(
                 ],
                 "existing_written_paths": [],
                 "written_paths": [],
-                "remaining_blockers": list(remaining_blockers),
+                "remaining_blockers": list(remaining_blockers or []),
                 "warnings": [
                     "final governance baseline does not execute code rewrite persistence yet"
                 ],
@@ -17090,9 +17160,9 @@ def _write_frontend_final_governance_artifact(
 def _write_frontend_writeback_persistence_artifact(
     root: Path,
     *,
-    persistence_result: str,
-    persistence_state: str,
-    remaining_blockers: list[str],
+    persistence_result: str = "completed",
+    persistence_state: str = "completed",
+    remaining_blockers: list[str] | None = None,
     steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
@@ -17140,7 +17210,7 @@ def _write_frontend_writeback_persistence_artifact(
                 ],
                 "existing_written_paths": [],
                 "written_paths": [],
-                "remaining_blockers": list(remaining_blockers),
+                "remaining_blockers": list(remaining_blockers or []),
                 "warnings": [
                     "writeback persistence baseline does not produce persisted write proof yet"
                 ],
@@ -17163,9 +17233,9 @@ def _write_frontend_writeback_persistence_artifact(
 def _write_frontend_persisted_write_proof_artifact(
     root: Path,
     *,
-    proof_result: str,
-    proof_state: str,
-    remaining_blockers: list[str],
+    proof_result: str = "completed",
+    proof_state: str = "completed",
+    remaining_blockers: list[str] | None = None,
     steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
@@ -17213,7 +17283,7 @@ def _write_frontend_persisted_write_proof_artifact(
                 ],
                 "existing_written_paths": [],
                 "written_paths": [],
-                "remaining_blockers": list(remaining_blockers),
+                "remaining_blockers": list(remaining_blockers or []),
                 "warnings": [
                     "persisted write proof baseline does not persist proof artifacts yet"
                 ],
@@ -17236,9 +17306,9 @@ def _write_frontend_persisted_write_proof_artifact(
 def _write_frontend_final_proof_publication_artifact(
     root: Path,
     *,
-    publication_result: str,
-    publication_state: str,
-    remaining_blockers: list[str],
+    publication_result: str = "completed",
+    publication_state: str = "completed",
+    remaining_blockers: list[str] | None = None,
     steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
@@ -17286,7 +17356,7 @@ def _write_frontend_final_proof_publication_artifact(
                 ],
                 "existing_written_paths": [],
                 "written_paths": [],
-                "remaining_blockers": list(remaining_blockers),
+                "remaining_blockers": list(remaining_blockers or []),
                 "warnings": [
                     "final proof publication baseline does not persist publication artifacts yet"
                 ],
@@ -17309,9 +17379,9 @@ def _write_frontend_final_proof_publication_artifact(
 def _write_frontend_final_proof_closure_artifact(
     root: Path,
     *,
-    closure_result: str,
-    closure_state: str,
-    remaining_blockers: list[str],
+    closure_result: str = "completed",
+    closure_state: str = "completed",
+    remaining_blockers: list[str] | None = None,
     steps: list[dict[str, object]] | None = None,
 ) -> None:
     artifact_path = (
@@ -17358,7 +17428,7 @@ def _write_frontend_final_proof_closure_artifact(
                     "no final proof closure actions executed in final proof closure baseline"
                 ],
                 "written_paths": [],
-                "remaining_blockers": list(remaining_blockers),
+                "remaining_blockers": list(remaining_blockers or []),
                 "warnings": [
                     "final proof closure baseline does not persist closure artifacts yet"
                 ],
@@ -17451,102 +17521,75 @@ def _write_frontend_final_proof_archive_artifact(
     )
 
 
-_BOUNDED_STAGE_CHARACTERIZATION_CASES = [
-    pytest.param(
-        "cross_spec_writeback", _write_frontend_provider_patch_apply_artifact,
-        {"apply_result": "applied", "patch_apply_state": "completed", "remaining_blockers": []}, id="cross_spec_writeback",
-    ),
-    pytest.param(
-        "guarded_registry", _write_frontend_cross_spec_writeback_artifact,
-        {"orchestration_result": "completed", "writeback_state": "completed", "remaining_blockers": []}, id="guarded_registry",
-    ),
-    pytest.param(
-        "broader_governance", _write_frontend_guarded_registry_artifact,
-        {"registry_result": "completed", "registry_state": "completed", "remaining_blockers": []}, id="broader_governance",
-    ),
-    pytest.param(
-        "final_governance", _write_frontend_broader_governance_artifact,
-        {"governance_result": "completed", "governance_state": "completed", "remaining_blockers": []}, id="final_governance",
-    ),
-    pytest.param(
-        "writeback_persistence", _write_frontend_final_governance_artifact,
-        {"final_governance_result": "completed", "final_governance_state": "completed", "remaining_blockers": []}, id="writeback_persistence",
-    ),
-    pytest.param(
-        "persisted_write_proof", _write_frontend_writeback_persistence_artifact,
-        {"persistence_result": "completed", "persistence_state": "completed", "remaining_blockers": []}, id="persisted_write_proof",
-    ),
-    pytest.param(
-        "final_proof_publication", _write_frontend_persisted_write_proof_artifact,
-        {"proof_result": "completed", "proof_state": "completed", "remaining_blockers": []}, id="final_proof_publication",
-    ),
-    pytest.param(
-        "final_proof_closure", _write_frontend_final_proof_publication_artifact,
-        {"publication_result": "completed", "publication_state": "completed", "remaining_blockers": []}, id="final_proof_closure",
-    ),
-    pytest.param(
-        "final_proof_archive", _write_frontend_final_proof_closure_artifact,
-        {"closure_result": "completed", "closure_state": "completed", "remaining_blockers": []}, id="final_proof_archive",
-    ),
-]
+_BOUNDED_STAGE_SEEDS = {
+    "cross_spec_writeback": _write_frontend_provider_patch_apply_artifact,
+    "guarded_registry": _write_frontend_cross_spec_writeback_artifact,
+    "broader_governance": _write_frontend_guarded_registry_artifact,
+    "final_governance": _write_frontend_broader_governance_artifact,
+    "writeback_persistence": _write_frontend_final_governance_artifact,
+    "persisted_write_proof": _write_frontend_writeback_persistence_artifact,
+    "final_proof_publication": _write_frontend_persisted_write_proof_artifact,
+    "final_proof_closure": _write_frontend_final_proof_publication_artifact,
+    "final_proof_archive": _write_frontend_final_proof_closure_artifact,
+}
 
 
-def _prepare_bounded_stage_characterization(
-    root: Path,
-    stage: str,
-    seed: Callable[..., None],
-    seed_kwargs: dict[str, object],
-) -> tuple[ProgramService, ProgramManifest, object, object, Callable[..., Path], Path]:
-    (root / "specs" / "001-auth").mkdir(parents=True)
-    seed(root, **seed_kwargs)
-    service = ProgramService(root)
+@pytest.fixture(params=tuple(_BOUNDED_STAGE_SEEDS))
+def bounded_stage_case(
+    tmp_path: Path, request: pytest.FixtureRequest
+) -> SimpleNamespace:
+    stage = request.param
+    (tmp_path / "specs" / "001-auth").mkdir(parents=True)
+    _BOUNDED_STAGE_SEEDS[stage](tmp_path)
+    service = ProgramService(tmp_path)
     manifest = _manifest()
     request = getattr(service, f"build_frontend_{stage}_request")(manifest)
     result = getattr(service, f"execute_frontend_{stage}")(
         manifest, request=request, confirmed=True
     )
     writer = getattr(service, f"write_frontend_{stage}_artifact")
-    return service, manifest, request, result, writer, root / f"{stage}.yaml"
-
-
-@pytest.mark.parametrize("stage,seed,seed_kwargs", _BOUNDED_STAGE_CHARACTERIZATION_CASES)
-def test_bounded_stage_writers_bypass_late_bound_defaults_for_truthy_values(
-    tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
-    stage: str,
-    seed: Callable[..., None],
-    seed_kwargs: dict[str, object],
-) -> None:
-    service, manifest, request, result, writer, output_path = (
-        _prepare_bounded_stage_characterization(tmp_path, stage, seed, seed_kwargs)
+    return SimpleNamespace(
+        stage=stage,
+        service=service,
+        manifest=manifest,
+        request=request,
+        result=result,
+        writer=writer,
+        output_path=tmp_path / f"{stage}.yaml",
     )
+
+
+def test_bounded_stage_writers_bypass_late_bound_defaults_for_truthy_values(
+    monkeypatch: pytest.MonkeyPatch,
+    bounded_stage_case: SimpleNamespace,
+) -> None:
+    case = bounded_stage_case
 
     def _unexpected(*_args: object, **_kwargs: object) -> object:
         raise AssertionError("truthy explicit value must bypass its fallback")
 
     monkeypatch.setattr(program_service_module, "utc_now_z", _unexpected)
-    monkeypatch.setattr(service, f"build_frontend_{stage}_request", _unexpected)
-    monkeypatch.setattr(service, f"execute_frontend_{stage}", _unexpected)
-    writer(
-        manifest, request=request, result=result,
-        generated_at="2026-04-04T06:00:00Z", output_path=output_path,
+    monkeypatch.setattr(
+        case.service, f"build_frontend_{case.stage}_request", _unexpected
+    )
+    monkeypatch.setattr(case.service, f"execute_frontend_{case.stage}", _unexpected)
+    case.writer(
+        case.manifest,
+        request=case.request,
+        result=case.result,
+        generated_at="2026-04-04T06:00:00Z",
+        output_path=case.output_path,
     )
 
-    payload = yaml.safe_load(output_path.read_text(encoding="utf-8"))
+    payload = yaml.safe_load(case.output_path.read_text(encoding="utf-8"))
     assert payload["generated_at"] == "2026-04-04T06:00:00Z"
 
 
-@pytest.mark.parametrize("stage,seed,seed_kwargs", _BOUNDED_STAGE_CHARACTERIZATION_CASES)
 def test_bounded_stage_writers_use_self_defaults_for_falsey_values_in_order(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    stage: str,
-    seed: Callable[..., None],
-    seed_kwargs: dict[str, object],
+    bounded_stage_case: SimpleNamespace,
 ) -> None:
-    service, manifest, request, result, writer, output_path = (
-        _prepare_bounded_stage_characterization(tmp_path, stage, seed, seed_kwargs)
-    )
+    case = bounded_stage_case
     calls: list[str] = []
 
     def _clock() -> str:
@@ -17554,44 +17597,42 @@ def test_bounded_stage_writers_use_self_defaults_for_falsey_values_in_order(
         return "2026-04-04T06:05:00Z"
 
     def _build(actual_manifest: ProgramManifest) -> object:
-        assert actual_manifest is manifest
+        assert actual_manifest is case.manifest
         calls.append("build")
-        return request
+        return case.request
 
     def _execute(
         actual_manifest: ProgramManifest, *, request: object, confirmed: bool
     ) -> object:
-        assert actual_manifest is manifest
+        assert actual_manifest is case.manifest
         assert request is not None
         assert confirmed is False
         calls.append("execute")
-        return result
+        return case.result
 
     monkeypatch.setattr(program_service_module, "utc_now_z", _clock)
-    monkeypatch.setattr(service, f"build_frontend_{stage}_request", _build)
-    monkeypatch.setattr(service, f"execute_frontend_{stage}", _execute)
-    writer(
-        manifest, request=0, result=[], generated_at="", output_path=output_path
+    monkeypatch.setattr(case.service, f"build_frontend_{case.stage}_request", _build)
+    monkeypatch.setattr(case.service, f"execute_frontend_{case.stage}", _execute)
+    case.writer(
+        case.manifest,
+        request=0,
+        result=[],
+        generated_at="",
+        output_path=case.output_path,
     )
 
     assert calls == ["clock", "build", "execute"]
-    payload = yaml.safe_load(output_path.read_text(encoding="utf-8"))
+    payload = yaml.safe_load(case.output_path.read_text(encoding="utf-8"))
     assert payload["generated_at"] == "2026-04-04T06:05:00Z"
 
 
 @pytest.mark.parametrize("fault_at", ["clock", "build", "execute"])
-@pytest.mark.parametrize("stage,seed,seed_kwargs", _BOUNDED_STAGE_CHARACTERIZATION_CASES)
 def test_bounded_stage_writer_default_exceptions_propagate_in_order(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    stage: str,
-    seed: Callable[..., None],
-    seed_kwargs: dict[str, object],
+    bounded_stage_case: SimpleNamespace,
     fault_at: str,
 ) -> None:
-    service, manifest, request, result, writer, output_path = (
-        _prepare_bounded_stage_characterization(tmp_path, stage, seed, seed_kwargs)
-    )
+    case = bounded_stage_case
     calls: list[str] = []
 
     def _step(name: str, value: object) -> object:
@@ -17601,57 +17642,56 @@ def test_bounded_stage_writer_default_exceptions_propagate_in_order(
         return value
 
     monkeypatch.setattr(
-        program_service_module, "utc_now_z",
+        program_service_module,
+        "utc_now_z",
         lambda: _step("clock", "2026-04-04T06:10:00Z"),
     )
     monkeypatch.setattr(
-        service, f"build_frontend_{stage}_request",
-        lambda _manifest: _step("build", request),
+        case.service,
+        f"build_frontend_{case.stage}_request",
+        lambda _manifest: _step("build", case.request),
     )
     monkeypatch.setattr(
-        service, f"execute_frontend_{stage}",
-        lambda _manifest, **_kwargs: _step("execute", result),
+        case.service,
+        f"execute_frontend_{case.stage}",
+        lambda _manifest, **_kwargs: _step("execute", case.result),
     )
 
     with pytest.raises(RuntimeError, match=f"{fault_at} failed"):
-        writer(manifest, output_path=output_path)
+        case.writer(case.manifest, output_path=case.output_path)
 
     assert calls == ["clock", "build", "execute"][: calls.index(fault_at) + 1]
-    assert not output_path.exists()
+    assert not case.output_path.exists()
 
 
 @pytest.mark.parametrize("fault_operation", ["mkdir", "write_text"])
-@pytest.mark.parametrize("stage,seed,seed_kwargs", _BOUNDED_STAGE_CHARACTERIZATION_CASES)
 def test_bounded_stage_writer_fault_retry_matches_successful_artifact(
-    tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
-    stage: str,
-    seed: Callable[..., None],
-    seed_kwargs: dict[str, object],
+    bounded_stage_case: SimpleNamespace,
     fault_operation: str,
 ) -> None:
-    _, manifest, request, result, writer, output_path = (
-        _prepare_bounded_stage_characterization(tmp_path, stage, seed, seed_kwargs)
-    )
+    case = bounded_stage_case
     write_kwargs = {
-        "request": request, "result": result,
-        "generated_at": "2026-04-04T06:15:00Z", "output_path": output_path,
+        "request": case.request,
+        "result": case.result,
+        "generated_at": "2026-04-04T06:15:00Z",
+        "output_path": case.output_path,
     }
-    writer(manifest, **write_kwargs)
-    expected = output_path.read_bytes()
-    output_path.unlink()
+    case.writer(case.manifest, **write_kwargs)
+    expected = case.output_path.read_bytes()
+    case.output_path.unlink()
 
     def _fail(*_args: object, **_kwargs: object) -> None:
         raise OSError(f"{fault_operation} failed")
 
-    monkeypatch.setattr(Path, fault_operation, _fail)
-    with pytest.raises(OSError, match=f"{fault_operation} failed"):
-        writer(manifest, **write_kwargs)
-    assert not output_path.exists()
+    with monkeypatch.context() as fault_patch:
+        fault_patch.setattr(Path, fault_operation, _fail)
+        with pytest.raises(OSError, match=f"{fault_operation} failed"):
+            case.writer(case.manifest, **write_kwargs)
+        assert not case.output_path.exists()
 
-    monkeypatch.undo()
-    writer(manifest, **write_kwargs)
-    assert output_path.read_bytes() == expected
+    case.writer(case.manifest, **write_kwargs)
+    assert case.output_path.read_bytes() == expected
 
 
 def _write_frontend_final_proof_archive_project_cleanup_seed_artifact(

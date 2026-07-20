@@ -1,71 +1,47 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T16:22:00Z
-- Reason: RC-10 formal双PASS后执行tests-only C1 characterization
-- Goal: 固定C1同identity双PASS，再以九个Rx安全减重ProgramService
-- State: C1 final evidence已完成；63 nodes/232 proof LOC、legacy/current raw同字节，待同identity双审，产品零差异
+- Updated: 2026-07-20T17:45:00Z
+- Reason: C1 local review FAIL1 remediation checkpoint
+- Goal: 完成C1双审修正并取得同identity LEAN/SAFETY PASS0
+- State: 两项FAIL1已在测试层最小修正；产品源码与behavior legacy逐字节一致，尚未授权engine/Rx
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- HEAD: 恢复时运行`git rev-parse HEAD`；handoff自身提交会改变HEAD，禁止嵌入自失效SHA
 - Behavior Base: `7922956d3e248a93c3190240259850ab3498ec9f` / tree `cc3c6b7f7e63dd040034938ff6bb6827f067e41c`
 
 ## Current Decisions
 
-- 本地Pascal/LEAN与Confucius/SAFETY同SHA双PASS和required checks是合入硬门；远端Codex仅附加信号。
-- `fadf8456` final readiness双NO-GO：状态记录陈旧；170行recorder存在格式豁免/压行，Ruff自然格式587行。
-- 风险分层spike移出surface/DTO明细后仍286物理/407自然格式，custom proof体系按RC-09退役。
-- RC-10已获两位reviewer设计级ACCEPT：九stage各自tests-first Cx和direct Rx；每个Rx在同一diff扩展
-  唯一private engine并删除当前重复body，不保留双实现、selector、dead branch或持久proof framework。
-- 每stage用immutable legacy/current两个独立worktree、同一public tests、原生JUnit/raw artifact、
-  exact165/full/governance和同SHA双审；失败回到上一reviewed tree。
-- 预算不变：product≤522、proof≤290、combined≤729、route cumulative≤1500、terminal≤720、
-  net delete≥2918、responsibility reduction≥3278、branch≤90、新/改函数≤50。
+- 本地Pascal/LEAN与Confucius/SAFETY同SHA双PASS0是合入硬门；远端Codex仅附加，不无限等待。
+- 九stage坚持tests-first `Cx` + direct `Rx`；C1双PASS前禁止private engine和任何产品实现。
+- returned `failed`在cross-spec legacy公开控制流中结构不可达；C1冻结write fault传播、零receipt与retry，
+  首个Rx删除dead branch，不通过private helper或异常吞噬伪造语义。
 - T66/GAP-03/WI196/RC-08/release保持open；禁止version/tag/Release/PyPI/shared CLI。
 
 ## Changed Files
 
-- 删除`scripts/program_bounded_stage_t61a.py`与T61A receipt。
-- 改写`specs/215-*/{spec,plan,tasks,development-summary,task-execution-log}.md`。
-- 修订`specs/196-*`与`specs/213-*`的canonical RC-10条款、summary与execution log。
-- root/scoped handoff与truth/manifest records按当前source commit机械同步；不引入产品变化。
+- `tests/unit/test_program_service.py`：共享case/seed与cross-spec setup结构去重，新增7个public节点，
+  blanket `monkeypatch.undo()`改为局部fault context。
+- `tests/conftest.py`：仅自然格式化既有九stage固定时钟fixture。
+- `specs/215-*`：记录coverage mapping、自然格式预算、mutation与首Rx dead-branch边界。
+- root/scoped handoff保持逐字节一致；`src/**`无保留差异。
 
 ## Evidence
 
-- 原recorder=`170 physical`，max line=`452`，Ruff natural=`587`，format-check失败。
-- 风险分层spike=`286 physical`，Ruff natural=`407`，仍不满足recorder≤180。
-- Behavior legacy commit/tree当前可达且在`origin/main`；产品与两份目标行为测试相对legacy零diff。
-- 旧proof identity上全量=`3303 passed, 3 skipped`、exact165和治理门均通过，但readiness已被双NO-GO退役。
-- RC-10 formal当前constraints/validate/plan-check通过；truth=`ready/fresh 1131/1131/0/0`；exact165=
-  `165 passed, 474 deselected in 2.65s`；manifest exact=`1 passed in 113.90s`。
-- Formal source tree=`42b253a0`；formal-six=`75d60ac9...519e`、formal-three=`2875f9ac...7090`；
-  diff=`+603/-1094`，净删491行治理/证明资产。
-- `c0ff5f28`同身份评审：LEAN仅发现状态陈旧；SAFETY另要求显式冻结late-bound/truthiness、clock、
-  fault/retry与完整public/DTO denylist；未发现产品实现或RC-10路线级新问题。
-- 当前formal remediation source=`b9e3582ac5aeec08679d09559e33b95cbd9682de` / tree=
-  `4da3d9a7194c2250b60663acdb2eafbf2f55832e`。首次manifest exact断言通过但teardown发现snapshot仍指
-  `c0ff5f28`；未绕过守卫，改以source commit后再sync records的两提交方式收口。
-- `793bc533`同身份评审：SAFETY=`PASS0`；LEAN=`FAIL1`仅因固定归档规则和WI213 summary仍以现在时引用
-  已退役T61A。本records tree已把三处改为RC-10 gate/历史语义；identity变化后两 verdict均退役并重审。
-- `dbc02c65`/`92a80f70`最终formal identity获LEAN/SAFETY双`PASS0`、findings=0，冻结为implementation-base。
-- C1 tests-only核心=`+204/-0`，共享时钟fixture=`+28/-0`，proof累计232；63个新nodes与原165累计228；
-  `or`→`is None`、绕过`self`、eager clock三类临时mutation均RED，恢复后63/228全绿。
-- Full首轮因错误继承update-disable/窄终端参数作废；清洁环境定向=`31 passed, 1 skipped`，最终full=
-  `3366 passed, 3 skipped in 690.95s`，无C1失败。
-- Detached legacy/current首轮228双PASS但raw YAML时钟不同；拒绝normalizer，固定九stage测试时钟后两腿=
-  `228/228`、JUnit counts=`228/0/0/0`、node SHA=`00e22b70...12e4`、raw basetemp `diff -qr`=0。
-- Final C1 evidence source=`a3f14263/8059edf6`；test blobs conftest/unit/CLI=`06eb419f`/`ba117498`/
-  `9628711c`。Final两腿=`228/228`、raw diff=0；Ruff/constraints/validate/plan/truth/manifest均PASS。
+- LEAN原finding：Ruff自然格式proof=`298>290`；修正后formal-base/candidate格式副本净增=
+  `conftest 26 + unit 244 = 270≤290`，无压行或节点删除。
+- SAFETY原finding：首Rx缺missing/malformed/non-mapping、可达状态和outside-root冻结；已新增7 nodes。
+- 原63共享节点、原165节点均保留；exact union=`235 passed, 474 deselected`。
+- Mutation RED：loader fail-closed=`3 failed`；skipped/confirmation/partial=`3 failed`；outside-root=
+  `1 failed`；吞掉write fault=`1 failed`。全部用`apply_patch`恢复。
+- Ruff check PASS；聚焦cross-spec+bounded-stage=`81 passed`；产品blob=`7b2ac507...9c6`与legacy相同。
 
 ## Blockers / Risks
 
-- C1尚缺committed+clean identity上的LEAN/SAFETY双PASS0；此前禁止engine/Rx。
-- Parent文档保留被§0明确覆盖的历史T61A文字；reviewer须确认不存在仍具执行歧义的旧授权。
+- 仍需source/records提交、clean identity上的full、治理门、immutable legacy/current A/B与同SHA双审。
 - 共享`.venv`固定`uv run --python 3.11`顺序执行，不并行不同解释器。
 
 ## Exact Next Steps
 
-1. 若worktree不clean，只完成本批final C1 evidence的truth records；若clean，解析current HEAD/tree并确认
-   三个test blob仍为`06eb419f`/`ba117498`/`9628711c`。
-2. Pascal/LEAN与Confucius/SAFETY对同一current C1 identity双PASS0；finding则最小修正并重审。
-3. 双PASS后冻结C1 test blob/node IDs与public/DTO denylist，才开始首个cross-spec Rx与唯一private engine。
+1. 提交C1 tests/docs/handoff source，truth sync后提交records并保持clean。
+2. 运行full、Ruff、constraints、validate、plan/truth/manifest与detached legacy/current A/B。
+3. Pascal/LEAN与Confucius/SAFETY对同一clean identity双PASS0；此前禁止engine/Rx。
