@@ -478,3 +478,15 @@
   truth/gates 与唯一下一步，补全路径并保持两份 byte-identical。
 - 本修正不改 src/tests/workflow/依赖/版本/release。提交后重新 truth sync、治理门禁，并对新
   committed+clean identity 从零双审；双 PASS0 前不得 push。
+
+## 34. Batch 2026-07-19-030：lifecycle Round 2 split verdict 与 stale next step 修正
+
+- 受审 identity HEAD/tree=`2c47be6bb57ce03076e73142aa4726fad3d6ac85`/
+  `bc760a32179ececdf532f483efe373bd392a07e8`、clean；Pascal/LEAN=`FAIL1`，
+  Confucius/SAFETY=`PASS0`。Identity 将变化，两份 verdict 同时退役。
+- SAFETY 独立确认 13-file scope、protected zero diff、truth=`ready/fresh 1126/1126`、fail-closed 状态、
+  回退、事故例外与发布边界均通过。
+- LEAN 唯一 finding 成立：双 handoff Exact Next 仍要求重复当前 identity 已完成的 terminal truth/gates。
+  最小修正只删除该步骤，让唯一下一步直接从新身份双审开始；不改其他 source 或状态。
+- 修正提交后机械刷新 truth并重验治理门禁，随后对新 committed+clean identity 从零双审；双 PASS0 前
+  不得 push。
