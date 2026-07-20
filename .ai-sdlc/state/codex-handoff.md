@@ -3,11 +3,11 @@
 - Updated: 2026-07-20T22:09:00Z
 - Reason: R1 双 PASS0 后进入 guarded-registry C2 no-code characterization
 - Goal: 固定 guarded_registry C2 覆盖映射并取得同 identity LEAN/SAFETY PASS0
-- State: R1 已完成；C2 exact/cumulative 全绿，待 no-code records identity 与同identity双审
+- State: R1 已完成；C2 source checkpoint 已提交、exact/cumulative全绿，待truth records与同identity双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- Current HEAD: `0630fb0ab5170b09321085fc47be0f24ee95a4e2`
+- Current HEAD: `1c6319d4033ada3d79080add13518d7fffa81182`
 
 ## Current Decisions
 
@@ -41,13 +41,14 @@
 - final truth=`ready/fresh 1131/1131/0/0`，snapshot hash=`d22cf16a...d16f2`；manifest exact=
   `1 passed in 104.51s`。
 - C2 exact public/CLI group=`26 passed, 686 deselected`；与 R1 累计=`59 passed, 653 deselected`。
+- C2 no-code source checkpoint=`1c6319d4/8099048a`；Ruff、constraints、validate、plan-check全绿。
 
 ## Blockers / Risks
 
-- 当前仅 C2 records 变脏，产品与冻结测试仍为 reviewed R1 blobs。
+- 当前仅两份 handoff 待 final truth records，产品与冻结测试仍为 reviewed R1 blobs。
 - C2 双 PASS0 前不得开始 guarded_registry R2。
 
 ## Exact Next Steps
 
-1. 同步 scoped handoff，复核 frozen blobs/scope/clean，提交 C2 no-code records identity。
+1. 执行 truth sync/audit、manifest exact，复核 frozen blobs/scope/clean并提交 C2 records identity。
 2. 同一 Pascal/LEAN 与 Confucius/SAFETY 审同一 clean SHA；双 PASS0 后才进入 R2。
