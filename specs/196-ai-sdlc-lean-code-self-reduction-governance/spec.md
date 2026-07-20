@@ -161,7 +161,7 @@ T56 只处理 continuity canonical reconstruction；T57 只处理 comment-policy
 GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP-12 回归：`program validate` 的
 只读 bytes 仍稳定，但 `workitem` subapp callback 在只读子命令进入 handler 前无条件刷新 adapter。T58 必须
 在独立 WI/branch/PR 中以 RED/GREEN bytes、输出与 clean-tree 证明关闭；WI-213 只登记事实并恢复 adapter
-到 base bytes，不实施修复。由于该缺陷会污染 T61A baseline，T58 fresh-main receipt 是 T66 T61A 的硬前置。
+到 base bytes，不实施修复。由于该缺陷会污染 T61A baseline，T58 closure receipt fresh-main 是 T66 T61A 的硬前置。
 
 兼容、安全或授权边界不得用 waiver 绕过。GAP-09～GAP-11 已由 WI-199～WI-201 关闭，不再是开放阻断依赖；后续目标切片仍须落盘 inheritance、adapter consumption 与 source inventory 的防回归影响分析。分析缺失或不确定，或 truth 再次出现对应 blocker、unmapped 或 §3 允许边界之外的 missing source 时，必须 fail-closed、登记 owner/证据并重开对应 GAP；truth 保持关闭条件时不得重复执行 T53A/T53B/T54。
 
@@ -204,7 +204,7 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
 - **SC-10**：GAP-15 由 T58 独立关闭；五个只读 `workitem` 命令不得改变 adapter/config/working tree，
   其 help/invalid-input 同样无 refresh；`init/link` 的 valid/负路径 hook 次数、时序、输出、退出码与写语义
   零未批准差异；real-hook byte evidence 与 config-lock warning+continue/其他异常传播均须覆盖，且独立
-  lifecycle reconciliation fresh-main 前不得进入 T66 T61A。
+  lifecycle delivery 后的 closure receipt 自身双审、Codex/checks、merge/detached fresh-main 前不得进入 T66 T61A。
 
 ## 10. 冻结决策
 

@@ -164,12 +164,14 @@ T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷
   层一例冻结 config-lock partial-write，`init/link` 只验证 warning+continue 与其他 exception propagation 的
   分发顺序；targeted/full/Ruff/constraints、跨平台与 detached fresh-main clean 全绿。
 - **停止/回退**：若修复要求关闭全部 workitem adapter、修改 adapter 算法或扩大到其他 CLI family，则回到
-  design；implementation fresh-main 后用独立 lifecycle PR 关闭。未关闭时直接 revert implementation；已关闭时
-  先 revert/修正 closure receipt 重开 GAP-15，再 revert implementation。
+  design；implementation fresh-main 后先做独立 lifecycle delivery，delivery fresh-main 后再做 closure receipt。
+  Delivery 未 merge时直接 revert implementation；delivery 已 merge但 receipt 未生效时先 revert/correct
+  delivery source，再 revert implementation；receipt 已生效时先 revert/correct receipt 重开 GAP-15、阻断 T66，
+  再依次 revert delivery 与 implementation。
 - **证据**：command matrix RED/GREEN、real-hook byte hash、输出/退出码、dirty-state、双 Agent、formal/
-  implementation/lifecycle 三阶段 PR/CI/fresh-main。
+  implementation/lifecycle delivery/closure receipt 四个交付单元的 PR/CI/fresh-main。
 
-T58 不计 Reduction Contract 收益；其 lifecycle fresh-main receipt 是 WI-213 后续 T66 T61A 的硬前置。
+T58 不计 Reduction Contract 收益；其 closure receipt fresh-main 是 WI-213 后续 T66 T61A 的硬前置。
 
 ## 5. WP-01：最小充分 Characterization / Golden / Differential
 
@@ -238,7 +240,8 @@ T58 不计 Reduction Contract 收益；其 lifecycle fresh-main receipt 是 WI-2
 - **当前状态**：WI-212 已唯一选择九个 bounded frontend stage；WI-213 formal-only 已在 PR #158 /
   merge `450d4988` 完成，lifecycle reconciliation 也已由 PR #159 / merge `d5ad7616` 与 detached
   fresh-main 收口，冻结 45 methods=`3,638/3,305`、terminal≤720、产品净删≥2,918。当前独立
-  T58/WI-214 active；其 lifecycle reconciliation fresh-main 关闭 GAP-15 后，才创建唯一 T66 implementation WI。
+  T58/WI-214 active；其 lifecycle delivery 后的 closure receipt fresh-main 关闭 GAP-15 后，才创建唯一 T66
+  implementation WI。
   该 WI 必须先 T61A 和双 readiness GO，随后 candidate PR 保留 legacy、完成主线预发布稳定周期，再以
   独立 PR 删除 legacy。
 - **范围**：每个子 WI 只迁移一个领域；`ProgramService` 暂作薄 facade。

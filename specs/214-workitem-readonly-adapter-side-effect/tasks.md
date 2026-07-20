@@ -7,8 +7,8 @@ related_doc:
 # 任务分解：Workitem 只读命令 Adapter 副作用隔离
 
 **编号**：`214-workitem-readonly-adapter-side-effect`
-**完成定义**：formal、implementation、lifecycle reconciliation 均 mainline/fresh-main；GAP-15 关闭；
-不等于 T66/RC-08/release 完成
+**完成定义**：formal、implementation、lifecycle delivery 与 closure receipt 四个独立交付单元均
+mainline/fresh-main；只有 receipt fresh-main 后 GAP-15 关闭；不等于 T66/RC-08/release 完成
 
 ## Batch 1：formal current-main 冻结
 
@@ -144,8 +144,8 @@ related_doc:
 - **依赖**：T32
 - **分支**：`codex/214-workitem-readonly-adapter-side-effect-lifecycle`，从 implementation fresh main 创建。
 - **验收**：只写 child/parent lifecycle docs、truth/continuity与 manifest exact 机械期望；登记 implementation
-  reviewed/merge/fresh-main receipt，把 parent T58/GAP-15 标记 closure-ready 且在本 lifecycle fresh-main 前
-  保持 active；`src/tests` 零差异。
+  reviewed/merge/fresh-main receipt，把 parent T58/GAP-15 标记 closure-ready 且在 delivery 与后续 closure
+  receipt fresh-main 前保持 active；`src/tests` 零差异。
 - **完成**：从 exact main `2845fedc` 创建 `codex/214-workitem-readonly-adapter-side-effect-lifecycle`；
   变更白名单仅含 WI214/WI196/WI213 lifecycle docs、双 handoff、truth/manifest，`src/tests` 零差异。
 
@@ -156,8 +156,9 @@ related_doc:
 - **验收**：delivery 与后续 receipt 均 truth/handoff/gates first；Pascal/Confucius 对各自 final current
   identity 双 PASS0；各自 Codex/required checks/merge/detached fresh-main 全绿。只有 receipt fresh-main 后，
   唯一下一步才是创建 T66 implementation WI并先执行 T61A 双 readiness。
-- **回退**：lifecycle 已 merge 时先 revert/修正 closure receipt 以重开 GAP-15、阻断 T66，再 revert
-  implementation PR；不得留下 closed truth。
+- **回退**：delivery 未 merge时直接 revert implementation；delivery 已 merge但 receipt 未生效时先
+  revert/correct delivery source，再 revert implementation，不得回退不存在的 receipt；receipt 已生效时先
+  revert/correct receipt 以重开 GAP-15、阻断 T66，再依次 revert delivery 与 implementation。不得留下 closed truth。
 - **边界**：不声明 T66、GAP-03、WI196、RC-08 或 release 完成，不发布版本。
 - **完成定义**：本 delivery source 在 truth/handoff/gates、同身份双 PASS0、PR checks/merge 与 detached
   fresh-main 全部成功后，只授权创建 main-derived receipt branch/PR；receipt 以同等门禁 merge/detached

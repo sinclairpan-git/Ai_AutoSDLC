@@ -503,3 +503,16 @@
   也必须双审、Codex/checks、merge/fresh-main 后才允许创建 T66 WI/T61A。
 - 本修正不改当前机器状态、产品、测试、workflow、依赖、版本或 release。提交后机械刷新 truth、重验治理
   门禁并对新 committed+clean identity 从零双审；双 PASS0 前不得 push。
+
+## 36. Batch 2026-07-19-032：lifecycle Round 4 双 FAIL 与 canonical 四单元合同
+
+- 受审 identity HEAD/tree=`e27aa4e57f39eff3225bfbcb95e3e03454a8325f`/
+  `3e5e8bf3331d336eba2ab150c08eb2f5aef7e908`、clean；Pascal/LEAN=`FAIL2`，
+  Confucius/SAFETY=`FAIL1`。意见统一且全部成立，旧 verdict 同时退役。
+- Canonical child spec 与 parent SC/plan 仍写“三阶段/单一 lifecycle PR”，未强制 closure receipt 独立
+  双审、Codex/checks、merge/detached fresh-main；回退也未区分 delivery 已 merge、receipt 未生效状态。
+- 最小修正统一为 formal、implementation、lifecycle delivery、closure receipt 四个独立交付单元；只有
+  receipt fresh-main 才 closed/completed/ready。回退冻结 delivery 未 merge、delivery 已 merge但 receipt
+  未生效、receipt 已生效三态，禁止回退不存在的 receipt。
+- 本修正不改变当前 T42 in_progress、T58 active、T66 blocked，也不改产品、测试、依赖、workflow、版本或
+  release。提交后机械刷新 truth、重验治理门禁并对新 committed+clean identity 从零双审。

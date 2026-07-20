@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T05:55:00Z
-- Reason: lifecycle Round 3 SAFETY plan 时序 finding 已最小修正
+- Updated: 2026-07-20T06:15:00Z
+- Reason: lifecycle Round 4 canonical 四单元与三态回退 finding 已最小修正
 - Goal: 关闭 GAP-15/T58，并只恢复 T66 独立 implementation WI 的 T61A readiness 准入
-- State: fail-closed source/truth/gates 已完成；Round 3 plan 时序已修正，新身份直接进入双审
+- State: fail-closed source/truth/gates 已完成；canonical 四单元/三态回退已对齐，新身份直接进入双审
 - Stage: verify
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: codex/214-workitem-readonly-adapter-side-effect-lifecycle
@@ -20,9 +20,13 @@
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
 - specs/213-programservice-bounded-stage-reduction/development-summary.md
+- specs/213-programservice-bounded-stage-reduction/plan.md
+- specs/213-programservice-bounded-stage-reduction/spec.md
 - specs/213-programservice-bounded-stage-reduction/task-execution-log.md
+- specs/213-programservice-bounded-stage-reduction/tasks.md
 - specs/214-workitem-readonly-adapter-side-effect/development-summary.md
 - specs/214-workitem-readonly-adapter-side-effect/plan.md
+- specs/214-workitem-readonly-adapter-side-effect/spec.md
 - specs/214-workitem-readonly-adapter-side-effect/task-execution-log.md
 - specs/214-workitem-readonly-adapter-side-effect/tasks.md
 
@@ -55,6 +59,8 @@
   重复已完成的 terminal truth/gates。Finding 已只删除该一步；identity 变化使两 verdict 同时退役。
 - Round 3 exact `8ab05f3c`：Pascal/LEAN=`PASS0`；Confucius/SAFETY=`FAIL1`，唯一 finding 是 plan 仍会
   指导 delivery branch 提前关闭/放行。已改为 delivery fresh-main 后再建独立 receipt PR；旧 verdict 退役。
+- Round 4 exact `e27aa4e5`：Pascal/LEAN=`FAIL2`、Confucius/SAFETY=`FAIL1`；共同 finding 是 canonical
+  spec/parent 仍为三阶段且回退缺 delivery-merged/receipt-pending。已统一四单元与三态回退，旧 verdict 退役。
 
 ## Blockers / Risks
 

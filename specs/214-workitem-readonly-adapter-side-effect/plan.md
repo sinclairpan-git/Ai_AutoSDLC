@@ -262,9 +262,10 @@ emitted range；merge 后先证明 merge tree 等于 reviewed tree，再在 deta
    completed 与 T66 ready。Receipt 本身也必须同身份双审、Codex/checks、merge/detached fresh-main；全部通过后
    才创建独立 T66 implementation WI并先执行 T61A 双 readiness。
 
-**回退**：implementation 已 merge但 lifecycle 未 merge时直接 revert implementation PR；lifecycle 已 merge
-时先 revert/修正 lifecycle receipt，重开 GAP-15并阻断 T66，再 revert implementation PR。不得留下 closed
-truth 指向 legacy behavior。
+**回退**：implementation 已 merge、delivery 未 merge时直接 revert implementation PR；delivery 已 merge但
+receipt 未生效时先 revert/correct delivery source，再 revert implementation，不得回退不存在的 closure
+receipt；receipt 已生效时先 revert/correct receipt 以重开 GAP-15并阻断 T66，再依次 revert delivery 与
+implementation。不得留下 closed truth 指向 legacy behavior。
 
 ## 7. 证据与路径边界
 
