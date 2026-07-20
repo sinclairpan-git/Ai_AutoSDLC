@@ -596,3 +596,25 @@
   root/scoped handoff同字节。`15d8a784`评审得到LEAN=`PASS0`、SAFETY=`FAIL1`，唯一finding是本段证据
   未进入execution log；行为、loader、状态、路径、fault/retry与fixture无其他问题。本段补齐该finding，
   Batch 38 pending已完成；因records identity变化，双审结论须在新clean HEAD重新取得。
+
+## 40. Batch 2026-07-20-038：C1 双 PASS0 与 cross-spec R1 产品实现
+
+- C1 final committed+clean identity=`fa7f7d039c31ec9d821c5475e297342277f61b40` / tree=
+  `0f4653342a5b7de787573e194d5a09f450101842`；Pascal/LEAN=`PASS0`、Confucius/SAFETY=`PASS0`，
+  findings=0。首个产品 Rx 因此解锁；远端 Codex review 仅作增量信号，不再作为无限等待门。
+- R1 只新增唯一 private `src/ai_sdlc/core/_program_bounded_stage.py`，并把 cross-spec 五个目标方法直接
+  委托给 typed binding/engine；删除重复 build/execute/write/payload/load body 与失活 provider-patch
+  loader。未修改冻结测试、DTO/public 签名、其他 stage body、CLI、依赖、workflow 或 release 状态。
+- 两位本地 reviewer 对初稿计量独立给出 HARD FAIL：candidate=`417 LOC / 59 branch` 未严格低于 legacy
+  `392/50`，不得以未来 stage 复用摊销。按相同 AST recipe 收敛后，五 facade=`59/6`、全部 active engine
+  methods=`326/42`，R1 target slice=`385/48`，两项均严格下降；所有新增/修改函数最大=`49≤50`。
+- 当前真实 retained product=`367 engine physical + 47 service added = 414≤522`；C1 proof=`287≤290`；
+  combined=`701≤729`。不存在 selector/registry/DSL/reflection/string method lookup、service/CLI import、
+  public abstraction、新依赖或 returned `failed` dead branch。
+- 冻结 test blobs 与 C1 HEAD 完全相同：conftest=`2f9083d3...e642`、unit=`d1459fe4...b37`、CLI=
+  `9628711c...1f3`。R1 当前 group=`33 passed, 3346 deselected`，累计 exact union=
+  `238 passed, 3141 deselected`；Ruff 与 diff-check PASS。
+- 宽终端、Python3.11 full 命令=`COLUMNS=240 LINES=60 uv run --python 3.11 pytest -q`，退出0，结果=
+  `3376 passed, 3 skipped in 819.26s`，无 failure/error，repository teardown guard通过。
+- 本段只固定 pre-A/B 产品事实；待提交 immutable R1 identity 后，仍须执行 legacy/current 两腿、全部治理门、
+  truth/manifest 与同 identity LEAN/SAFETY 正式双审。双 PASS0 前不得开始 guarded_registry C2/R2。

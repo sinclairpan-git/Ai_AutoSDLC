@@ -15,6 +15,7 @@ from pathlib import Path
 import yaml
 
 from ai_sdlc.branch.git_client import GitClient, GitError
+from ai_sdlc.core import _program_bounded_stage as _bounded_stage
 from ai_sdlc.core.config import YamlStore, load_project_config
 from ai_sdlc.core.frontend_browser_gate_runtime import (
     BrowserGateProbeRunner,
@@ -2016,6 +2017,36 @@ class ProgramService:
         self.root = root.resolve()
         self.manifest_path = manifest_path or (self.root / "program-manifest.yaml")
         self.browser_gate_probe_runner = browser_gate_probe_runner
+
+    def _frontend_cross_spec_writeback_engine(
+        self,
+        specs: list[ProgramSpecRef] | tuple[()],
+    ) -> _bounded_stage.BoundedStageEngine:
+        binding = _bounded_stage.BoundedStageBinding(
+            PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_ARTIFACT_REL_PATH,
+            PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH,
+            PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_FILENAME,
+            ProgramFrontendCrossSpecWritebackRequestStep,
+            ProgramFrontendCrossSpecWritebackRequest,
+            ProgramFrontendCrossSpecWritebackResult,
+            self._render_frontend_cross_spec_writeback_content,
+            utc_now_z,
+            self.build_frontend_cross_spec_writeback_request,
+            self.execute_frontend_cross_spec_writeback,
+            self._build_frontend_cross_spec_writeback_artifact_payload,
+            self._resolve_project_relative_path,
+        )
+        return _bounded_stage.BoundedStageEngine(
+            self.root,
+            self.manifest_path,
+            specs,
+            binding,
+            _unique_strings,
+            _normalize_string_list,
+            _normalize_mapping_list,
+            _normalize_string_mapping,
+            _relative_to_root_or_str,
+        )
 
     def load_manifest(self) -> ProgramManifest:
         return YamlStore.load(self.manifest_path, ProgramManifest)
@@ -10281,96 +10312,8 @@ const $i = (text: string) => text;
         artifact_path: Path | None = None,
     ) -> ProgramFrontendCrossSpecWritebackRequest:
         """Build the guarded cross-spec writeback request from patch apply artifact."""
-        effective_artifact_path = artifact_path or (
-            self.root / PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_ARTIFACT_REL_PATH
-        )
-        if not effective_artifact_path.is_absolute():
-            effective_artifact_path = self.root / effective_artifact_path
-
-        relative_artifact_path = _relative_to_root_or_str(self.root, effective_artifact_path)
-        payload, warnings = self._load_frontend_provider_patch_apply_artifact_payload(
-            effective_artifact_path
-        )
-        if payload is None:
-            return ProgramFrontendCrossSpecWritebackRequest(
-                required=False,
-                confirmation_required=False,
-                writeback_state="missing_artifact",
-                apply_result="missing_artifact",
-                artifact_source_path=relative_artifact_path,
-                artifact_generated_at="",
-                warnings=warnings,
-                source_linkage={
-                    "provider_patch_apply_artifact_path": relative_artifact_path,
-                    "cross_spec_writeback_state": "missing_artifact",
-                },
-            )
-
-        artifact_generated_at = str(payload.get("generated_at", "")).strip()
-        apply_result = str(payload.get("apply_result", "")).strip() or "unknown"
-        written_paths = _normalize_string_list(payload.get("written_paths", []))
-        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
-        steps: list[ProgramFrontendCrossSpecWritebackRequestStep] = []
-        spec_by_id = {spec.id: spec for spec in manifest.specs}
-        for step_payload in _normalize_mapping_list(payload.get("steps", [])):
-            spec_id = str(step_payload.get("spec_id", "")).strip()
-            if not spec_id:
-                continue
-            path = str(step_payload.get("path", "")).strip()
-            if not path:
-                spec = spec_by_id.get(spec_id)
-                path = spec.path if spec is not None else ""
-            source_linkage = _normalize_string_mapping(step_payload.get("source_linkage", {}))
-            source_linkage.update(
-                {
-                    "provider_patch_apply_artifact_path": relative_artifact_path,
-                    "provider_patch_apply_artifact_generated_at": artifact_generated_at,
-                    "cross_spec_writeback_state": "not_started",
-                }
-            )
-            steps.append(
-                ProgramFrontendCrossSpecWritebackRequestStep(
-                    spec_id=spec_id,
-                    path=path,
-                    writeback_state="not_started",
-                    pending_inputs=_normalize_string_list(
-                        step_payload.get("pending_inputs", [])
-                    ),
-                    suggested_next_actions=_normalize_string_list(
-                        step_payload.get("suggested_next_actions", [])
-                    ),
-                    plain_language_blockers=_normalize_string_list(
-                        step_payload.get("plain_language_blockers", [])
-                    ),
-                    recommended_next_steps=_normalize_string_list(
-                        step_payload.get("recommended_next_steps", [])
-                    ),
-                    source_linkage=source_linkage,
-                )
-            )
-
-        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
-        source_linkage.update(
-            {
-                "provider_patch_apply_artifact_path": relative_artifact_path,
-                "provider_patch_apply_artifact_generated_at": artifact_generated_at,
-                "cross_spec_writeback_state": "not_started",
-                "confirmation_required": str(bool(steps or written_paths or remaining_blockers)).lower(),
-            }
-        )
-        return ProgramFrontendCrossSpecWritebackRequest(
-            required=bool(steps or written_paths or remaining_blockers),
-            confirmation_required=bool(steps or written_paths or remaining_blockers),
-            writeback_state="not_started",
-            apply_result=apply_result,
-            artifact_source_path=relative_artifact_path,
-            artifact_generated_at=artifact_generated_at,
-            written_paths=written_paths,
-            steps=steps,
-            remaining_blockers=remaining_blockers,
-            warnings=_unique_strings([*warnings, *_normalize_string_list(payload.get("warnings", []))]),
-            source_linkage=source_linkage,
-        )
+        engine = self._frontend_cross_spec_writeback_engine(manifest.specs)
+        return engine.build(artifact_path)
 
     def execute_frontend_cross_spec_writeback(
         self,
@@ -10383,167 +10326,10 @@ const $i = (text: string) => text;
         effective_request = request or self.build_frontend_cross_spec_writeback_request(
             manifest
         )
-        if effective_request.warnings and not effective_request.artifact_generated_at:
-            return ProgramFrontendCrossSpecWritebackResult(
-                passed=False,
-                confirmed=confirmed,
-                writeback_state="blocked",
-                orchestration_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
-                warnings=_unique_strings(list(effective_request.warnings)),
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "cross_spec_writeback_state": "blocked",
-                    "orchestration_result": "blocked",
-                },
-            )
-        if not effective_request.required:
-            return ProgramFrontendCrossSpecWritebackResult(
-                passed=True,
-                confirmed=confirmed,
-                writeback_state="not_started",
-                orchestration_result="skipped",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=[],
-                warnings=_unique_strings(list(effective_request.warnings)),
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "cross_spec_writeback_state": "not_started",
-                    "orchestration_result": "skipped",
-                },
-            )
-        if not confirmed:
-            return ProgramFrontendCrossSpecWritebackResult(
-                passed=False,
-                confirmed=False,
-                writeback_state="confirmation_required",
-                orchestration_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
-                warnings=_unique_strings([*effective_request.warnings, "cross-spec writeback requires explicit confirmation"]),
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "cross_spec_writeback_state": "confirmation_required",
-                    "orchestration_result": "blocked",
-                },
-            )
-        if effective_request.apply_result not in {"applied", "completed"}:
-            return ProgramFrontendCrossSpecWritebackResult(
-                passed=False,
-                confirmed=True,
-                writeback_state="blocked",
-                orchestration_result="blocked",
-                written_paths=[],
-                remaining_blockers=_unique_strings(
-                    [
-                        *effective_request.remaining_blockers,
-                        "cross-spec writeback requires applied patch artifact "
-                        f"(apply_result={effective_request.apply_result or 'unknown'})",
-                    ]
-                ),
-                warnings=_unique_strings(list(effective_request.warnings)),
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "cross_spec_writeback_state": "blocked",
-                    "orchestration_result": "blocked",
-                },
-            )
-        written_paths: list[str] = []
-        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
-        warnings = _unique_strings(list(effective_request.warnings))
-        executable_steps = 0
-        spec_by_id = {spec.id: spec for spec in manifest.specs}
-
-        for step in effective_request.steps:
-            if not step.spec_id:
-                remaining_blockers.append(
-                    "cross-spec writeback step missing spec_id; writeback skipped"
-                )
-                continue
-            manifest_spec = spec_by_id.get(step.spec_id)
-            if manifest_spec is None:
-                remaining_blockers.append(
-                    f"cross-spec writeback step {step.spec_id} missing manifest spec"
-                )
-                continue
-            path_text = str(step.path).strip()
-            if not path_text:
-                remaining_blockers.append(
-                    f"cross-spec writeback step {step.spec_id} missing spec path"
-                )
-                continue
-            expected_spec_dir = self._resolve_project_relative_path(manifest_spec.path)
-            spec_dir = (self.root / path_text).resolve()
-            try:
-                spec_dir.relative_to(self.root)
-            except ValueError:
-                remaining_blockers.append(
-                    "cross-spec writeback step "
-                    f"{step.spec_id} resolves outside workspace root: {path_text}"
-                )
-                continue
-            if spec_dir != expected_spec_dir:
-                remaining_blockers.append(
-                    "cross-spec writeback step "
-                    f"{step.spec_id} path does not match manifest spec path: {path_text}"
-                )
-                continue
-            if not spec_dir.is_dir():
-                remaining_blockers.append(
-                    f"cross-spec writeback step {step.spec_id} missing spec directory: {path_text}"
-                )
-                continue
-            executable_steps += 1
-            target_path = spec_dir / PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_FILENAME
-            target_path.write_text(
-                self._render_frontend_cross_spec_writeback_content(
-                    request=effective_request,
-                    step=step,
-                ),
-                encoding="utf-8",
-            )
-            written_paths.append(_relative_to_root_or_str(self.root, target_path))
-
-        if executable_steps == 0:
-            writeback_state = "blocked"
-            orchestration_result = "blocked"
-            orchestration_summaries = [
-                "no executable cross-spec writeback targets available from canonical patch apply artifact"
-            ]
-        elif not remaining_blockers and len(written_paths) == executable_steps:
-            writeback_state = "completed"
-            orchestration_result = "completed"
-            orchestration_summaries = [
-                f"wrote {len(written_paths)} cross-spec writeback file(s) from canonical patch apply artifact"
-            ]
-        elif written_paths:
-            writeback_state = "partial"
-            orchestration_result = "partial"
-            orchestration_summaries = [
-                f"wrote {len(written_paths)} of {executable_steps} cross-spec writeback file(s) from canonical patch apply artifact"
-            ]
-        else:
-            writeback_state = "failed"
-            orchestration_result = "failed"
-            orchestration_summaries = [
-                f"wrote 0 of {executable_steps} cross-spec writeback file(s) from canonical patch apply artifact"
-            ]
-
-        return ProgramFrontendCrossSpecWritebackResult(
-            passed=orchestration_result == "completed",
-            confirmed=True,
-            writeback_state=writeback_state,
-            orchestration_result=orchestration_result,
-            orchestration_summaries=orchestration_summaries,
-            written_paths=_unique_strings(written_paths),
-            remaining_blockers=_unique_strings(remaining_blockers),
-            warnings=warnings,
-            source_linkage={
-                **dict(effective_request.source_linkage),
-                "cross_spec_writeback_state": writeback_state,
-                "orchestration_result": orchestration_result,
-            },
+        engine = self._frontend_cross_spec_writeback_engine(manifest.specs)
+        return engine.execute(
+            effective_request,
+            confirmed=confirmed,
         )
 
     def write_frontend_cross_spec_writeback_artifact(
@@ -10556,38 +10342,14 @@ const $i = (text: string) => text;
         output_path: Path | None = None,
     ) -> Path:
         """Persist the canonical cross-spec writeback artifact."""
-        effective_generated_at = generated_at or utc_now_z()
-        effective_request = request or self.build_frontend_cross_spec_writeback_request(
-            manifest
-        )
-        effective_result = result or self.execute_frontend_cross_spec_writeback(
+        engine = self._frontend_cross_spec_writeback_engine(manifest.specs)
+        return engine.write(
             manifest,
-            request=effective_request,
-            confirmed=not effective_request.confirmation_required,
+            request=request,
+            result=result,
+            generated_at=generated_at,
+            output_path=output_path,
         )
-        if effective_request.confirmation_required and not effective_result.confirmed:
-            raise ValueError(
-                "cross-spec writeback artifact requires an explicitly confirmed result"
-            )
-
-        artifact_path = output_path or (
-            self.root / PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH
-        )
-        if not artifact_path.is_absolute():
-            artifact_path = self.root / artifact_path
-        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
-        payload = self._build_frontend_cross_spec_writeback_artifact_payload(
-            request=effective_request,
-            result=effective_result,
-            generated_at=effective_generated_at,
-            artifact_path=relative_artifact_path,
-        )
-        artifact_path.parent.mkdir(parents=True, exist_ok=True)
-        artifact_path.write_text(
-            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
-            encoding="utf-8",
-        )
-        return artifact_path
 
     def _render_frontend_provider_patch_apply_step_content(
         self,
@@ -15202,47 +14964,8 @@ const $i = (text: string) => text;
         generated_at: str,
         artifact_path: str,
     ) -> dict[str, object]:
-        source_linkage = {
-            **dict(request.source_linkage),
-            **dict(result.source_linkage),
-            "cross_spec_writeback_artifact_path": artifact_path,
-            "cross_spec_writeback_artifact_generated_at": generated_at,
-        }
-        return {
-            "generated_at": generated_at,
-            "manifest_path": _relative_to_root_or_str(self.root, self.manifest_path),
-            "artifact_source_path": request.artifact_source_path,
-            "artifact_generated_at": request.artifact_generated_at,
-            "required": request.required,
-            "confirmation_required": request.confirmation_required,
-            "confirmed": result.confirmed,
-            "apply_result": request.apply_result,
-            "writeback_state": result.writeback_state,
-            "orchestration_result": result.orchestration_result,
-            "orchestration_summaries": _unique_strings(
-                list(result.orchestration_summaries)
-            ),
-            "existing_written_paths": _unique_strings(list(request.written_paths)),
-            "written_paths": _unique_strings(list(result.written_paths)),
-            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
-            "warnings": _unique_strings([*request.warnings, *result.warnings]),
-            "steps": [
-                {
-                    "spec_id": step.spec_id,
-                    "path": step.path,
-                    "writeback_state": step.writeback_state,
-                    "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": _unique_strings(
-                        list(step.suggested_next_actions)
-                    ),
-                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
-                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
-                    "source_linkage": dict(step.source_linkage),
-                }
-                for step in request.steps
-            ],
-            "source_linkage": source_linkage,
-        }
+        engine = self._frontend_cross_spec_writeback_engine(())
+        return engine.payload(request, result, generated_at, artifact_path)
 
     def _build_frontend_guarded_registry_artifact_payload(
         self,
@@ -15784,69 +15507,12 @@ const $i = (text: string) => text;
             )
         return payload, []
 
-    def _load_frontend_provider_patch_apply_artifact_payload(
-        self,
-        artifact_path: Path,
-    ) -> tuple[dict[str, object] | None, list[str]]:
-        if not artifact_path.exists():
-            return (
-                None,
-                [
-                    "missing provider patch apply artifact: "
-                    + _relative_to_root_or_str(self.root, artifact_path)
-                ],
-            )
-        try:
-            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        except Exception as exc:
-            return (
-                None,
-                [
-                    "invalid provider patch apply artifact: "
-                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
-                ],
-            )
-        if not isinstance(payload, dict):
-            return (
-                None,
-                [
-                    "invalid provider patch apply artifact: "
-                    + _relative_to_root_or_str(self.root, artifact_path)
-                ],
-            )
-        return payload, []
-
     def _load_frontend_cross_spec_writeback_artifact_payload(
         self,
         artifact_path: Path,
     ) -> tuple[dict[str, object] | None, list[str]]:
-        if not artifact_path.exists():
-            return (
-                None,
-                [
-                    "missing cross-spec writeback artifact: "
-                    + _relative_to_root_or_str(self.root, artifact_path)
-                ],
-            )
-        try:
-            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        except Exception as exc:
-            return (
-                None,
-                [
-                    "invalid cross-spec writeback artifact: "
-                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
-                ],
-            )
-        if not isinstance(payload, dict):
-            return (
-                None,
-                [
-                    "invalid cross-spec writeback artifact: "
-                    + _relative_to_root_or_str(self.root, artifact_path)
-                ],
-            )
-        return payload, []
+        engine = self._frontend_cross_spec_writeback_engine(())
+        return engine.load(artifact_path, artifact_label="cross-spec writeback")
 
     def _load_frontend_guarded_registry_artifact_payload(
         self,
