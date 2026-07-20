@@ -3,7 +3,7 @@
 - Updated: 2026-07-20T15:34:00Z
 - Reason: 修复RC-10首轮同身份LEAN/SAFETY评审的最小可操作意见
 - Goal: 先取得RC-10 formal同identity双PASS，再以九个Cx/Rx安全减重ProgramService
-- State: `c0ff5f28`首轮双审返回FAIL1/FAIL2；当前tree完成状态与characterization/denylist最小修订，产品零差异
+- State: `793bc533`第二轮SAFETY PASS0/LEAN FAIL1；当前records tree删除最后三处live T61A歧义，产品零差异
 - Stage: specify
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -45,6 +45,8 @@
 - 当前formal remediation source=`b9e3582ac5aeec08679d09559e33b95cbd9682de` / tree=
   `4da3d9a7194c2250b60663acdb2eafbf2f55832e`。首次manifest exact断言通过但teardown发现snapshot仍指
   `c0ff5f28`；未绕过守卫，改以source commit后再sync records的两提交方式收口。
+- `793bc533`同身份评审：SAFETY=`PASS0`；LEAN=`FAIL1`仅因固定归档规则和WI213 summary仍以现在时引用
+  已退役T61A。本records tree已把三处改为RC-10 gate/历史语义；identity变化后两 verdict均退役并重审。
 
 ## Blockers / Risks
 

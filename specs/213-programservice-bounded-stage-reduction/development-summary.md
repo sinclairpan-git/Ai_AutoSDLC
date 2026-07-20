@@ -53,7 +53,8 @@
   验证 merge/reviewed tree=`9d1c0f69` 且 truth/tests/scope/parity/clean 全绿。
 - 本 WI 没有产品代码、selector、candidate、legacy deletion、版本/tag/Release/PyPI 或全局 CLI 更新。
 - GAP-15/T58 以独立 closure receipt PR #164 / merge `7922956d` 及 detached fresh-main 关闭；唯一 T66
-  implementation WI215 已创建并进入 T61A。T61A/B、T66、GAP-03、WI196、RC-08 和总体版本发布均保持 open。
+  implementation WI215 随后曾进入现已退役的 T61A。该句只记录历史状态，当前执行权以后述 RC-10 为准；
+  T66、GAP-03、WI196、RC-08 和总体版本发布均保持 open。
 - Lifecycle reconciliation 最终 identity=`762a3fa5`/tree `901dfa8f`/formal-six=`e51befd2...9431`，
   Pascal/LEAN 与 Confucius/SAFETY 双 PASS0；PR #159 required checks 全绿并 squash merge=`d5ad7616`，
   detached fresh-main 的 truth/tests/scope/parity/Cursor/clean 全绿。
@@ -62,8 +63,8 @@
   targeted=`50 passed` 与治理门禁全绿。Lifecycle delivery tree=`3f6698d7` 同身份双 PASS0，PR #163
   exact-head 10/10 checks、merge=`60fe6d90` 与 detached fresh-main 全绿。Closure receipt PR #164
   reviewed HEAD/tree=`428a316a`/`cc3c6b7f`，同身份双 PASS0、Codex clean、required checks 全绿，merge=
-  `7922956d` 且 detached fresh-main 全绿。GAP-15/T58 已关闭；WI215 当前只做 T61A baseline/readiness，
-  双 GO 前不得写产品。
+  `7922956d` 且 detached fresh-main 全绿。GAP-15/T58 已关闭；WI215 曾停留在 T61A baseline/readiness，
+  该路线现已由 RC-10 取代；RC-10 同identity双PASS并冻结implementation-base前不得写产品，之后先只做 C1。
 - 下游 WI215 的 custom T61A proof 在最终 readiness review 中暴露压行预算规避：自然格式587行，进一步
   风险分层仍为407行。该路线已 `cancelled_no_go`；LEAN/SAFETY 设计级一致接受 RC-10 direct reduction，
   用九个 Cx/Rx、immutable legacy/current两腿、同SHA双审与squash revert替代runtime双实现/selector/

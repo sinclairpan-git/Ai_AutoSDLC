@@ -9,7 +9,8 @@
 - 每批开始前预读constitution、WI196、WI213与本WI current formal。
 - 每批记录base/HEAD/tree、范围、命令、结果、finding disposition、预算、回退和精确下一步。
 - Pascal/Confucius只裁决同一committed+clean identity；任一受审source变化使两 verdict同时退役。
-- T61A双readiness GO前`src/**`必须相对legacy base零差异。
+- RC-10 formal同identity双PASS并冻结implementation-base前，`src/**`与两份目标行为测试必须相对
+  behavior legacy零diff；随后只允许`C1` characterization，首个`Rx`前不写engine。
 - Future merge/hash不预写；实际发生后只追加到log/summary/continuity，不反写已冻结formal合同。
 
 ## 2. Batch 2026-07-20-001：Receipt fresh-main 与 WI215 初始化
@@ -461,3 +462,13 @@
   不是产品或断言失败。
 - 未修改/跳过仓库状态守卫；先提交 formal source，再从该 source 同步包含本段 continuity 的 records，
   最终只对 committed+clean records identity 复跑 audit/manifest exact 与双审。
+
+## 33. Batch 2026-07-20-031：RC-10 第二轮同身份评审
+
+- Identity=`793bc533ba59bb34fd03d0d7ce4a1ceba987d555` / tree=
+  `458d587fc01d50c763424437a0d7ae9e3394d54c`，formal-six=`75d60ac9...519e`、formal-three=
+  `8b97878b...fa1f`；worktree clean，治理门、exact165、truth/manifest exact 全绿。
+- Confucius/SAFETY=`PASS0`，上一轮 characterization/denylist finding 已闭合；Pascal/LEAN=`FAIL1`，仅发现
+  本log固定规则与WI213 summary仍以现在时引用已 `cancelled_no_go` 的T61A，可能使恢复执行永久阻断。
+- 该finding成立；本批仅把三处当前执行语义改为RC-10 gate并明确T61A是已退役历史，不改formal九文件、
+  产品或测试。身份变化使本轮两 verdict 同时退役，须对新 committed+clean identity 从零双审。
