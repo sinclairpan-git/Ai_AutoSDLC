@@ -20,8 +20,12 @@ related_doc:
 - Canonical 合同是 WI213 `spec.md + plan.md + tasks.md`；本计划不得放宽其 CC/RC。
 - 双 readiness GO 前 `src/**` 零差异，两份目标行为测试 blob 不变；`tests/**` 只允许 manifest
   inventory/close 数字机械替换，不得改变逻辑或物理 LOC。
-- Recorder≤160 LOC；全部新增 test/harness/normalizer≤190；private engine≤360；glue≤90；candidate
+- Recorder目标≤230、硬上限250；全部新增 test/harness/normalizer目标≤263、硬上限290；private engine≤360；glue≤90；candidate
   route/facade≤72；peak product≤522。
+- Product+proof组合硬上限仍为729；个别hard cap不能相加使用。当前candidate product shadow为
+  `330 engine + 85 proven-lower-bound glue + 51 route/facade = 466`；
+  T61A使用`shadow + actual current proof + frozen future proof reserve≤729`，T33使用actual+actual；proof每
+  超出一行，product至少等量下降，否则RC-06 NO-GO。
 - Terminal≤720、净删≥2,918、ProgramService responsibility reduction≥3,278、branch proxy≤90。
 - 只允许一个 private 产品模块；每个新/修改函数≤50行；禁止公共抽象、反射分发、DSL、registry、循环 import。
 - Candidate 与 deletion 是同一 T66 work package 的两个独立 PR；删除前不关闭 T66。
@@ -70,7 +74,7 @@ inventory/close 数字机械替换，或 WI213 dependency/预算被放宽。
 ### 3.2 TDD 编写唯一 recorder
 
 1. 先运行不存在的 recorder 命令，RED 必须只因文件不存在。
-2. 以≤160 LOC实现显式九 stage inventory；public surface必须包含signature、parameter、return、raw
+2. 以目标≤230、hard cap250实现显式九 stage inventory；public surface必须包含signature、parameter、return、raw
    annotations/doc/module/qualname/behavior；DTO必须包含fields顺序/default/factory、equality与post-init
    presence/module/qualname/signature/source/behavior。另覆盖private loader、upstream/steps/confirmation/
    outside-root、九CLI help/mode/failure/full-chain、双根raw、late-bound、fault/SystemExit/process termination/
@@ -87,12 +91,23 @@ inventory/close 数字机械替换，或 WI213 dependency/预算被放宽。
 7. Receipt顶层固定outcome/failure phase/completed checks/error/verdict/closure及三个带status/payload/hash的
    section；递归值域对bytes/Path/tuple/exception/type/callable使用spec §4唯一type tags，产品mapping顺序编码
    为entry数组，内容hash严格使用Python3.11 canonical JSON bytes。用非UTF-8 bytes等做往返/hash验收。
-8. 注入一个canonicalization/matrix failure和一个isolated termination，均须先temp+fsync+replace原子写
-   `closed_no_go` receipt再非零退出；`verify`必须保持no_go，不能升级。
+8. Expected termination使用parent nonce绑定的预声明case；产品fault callback完成后，IPC marker必须紧邻
+   harness-owned termination，且post-marker transcript/EOF/exit精确匹配；再于现有root-A/root-B内采集partial
+   tree并做fresh-child retry，全部匹配时完成`fault_recovery`。另以独立`record` invocation注入undeclared/
+   mismatched termination，先temp+fsync+replace原子写临时`closed_no_go` receipt再非零退出；`verify`必须
+   保持no_go，不能升级。Durable写入只由仍存活的receipt supervisor保证；supervisor自身不可清理死亡由
+   外部调用者记录exit/signal、现存文件hash和unclosed NO-GO。Pass必须同时满足receipt verify和exit 0；
+   非零/信号退出即使已有pass receipt也不得接受。每次invocation只能写一个authoritative receipt，最终只提交canonical baseline。
 9. Harness内置`program-bounded-stage-t61a.v1`的15个required check全序与section transition表；pass必须
    full list并唯一映射readiness_candidate/ready_for_review；no_go必须strict prefix、首个未完成phase并唯一
    映射no_go/closed_no_go，verify拒绝混合组合且不得信任receipt自报状态机。Performance check开始后到ID
    追加前0～20样本均为partial；注入第20样本后、finalize前故障验证durable receipt。
+10. 先用AST建立165 tests的`requirement ID -> node ID -> source SHA -> asserted outcome` mapping，只复用
+    有精确断言且全部实际seed/helper/fixture/autouse依赖都可绑定transitive source SHA set的现有测试；
+    无法精确解析的node不得复用。Fixture writer只负责seed，不调用`test_*`。Recorder补齐全部未覆盖矩阵。
+11. 每次`record`及pass `verify`只创建root-A/root-B两个行为根且normalizer table恰好两项；child/retry
+    复用这两根，negative invocation可创建自己的两根，no_go `verify`创建零根且normalizer table为空。
+    不得把receipt/IPC/evidence目录纳入normalizer。
 
 ### 3.3 Proof commit 与 readiness
 
@@ -102,7 +117,9 @@ inventory/close 数字机械替换，或 WI213 dependency/预算被放宽。
    spec/plan/tasks SHA、harness SHA、receipt file SHA、stable behavior SHA和observed-performance SHA。
    Formal SHA 均按spec §4/WI213 plan §8 的 per-file SHA line payload 算法计算。
 3. 重跑 recorder verification、165、constraints/validate/truth/manifest、Ruff、scope/clean。
-4. Pascal/LEAN 与 Confucius/SAFETY 对完全相同 tuple 各自裁决 `GO/NO-GO`；任何文件变化双 verdict 同时退役。
+4. 预算tuple另列candidate product shadow、actual current proof和逐文件/任务future proof reserve，三者≤729；
+   reserve不得因产品尚未编码而置0。Pascal/LEAN 与 Confucius/SAFETY 对完全相同 tuple 各自裁决
+   `GO/NO-GO`；任何文件变化双 verdict 同时退役。
 
 **完成**：双 `GO`、actionable findings=0；否则保留 legacy并停止，不能写产品代码。
 

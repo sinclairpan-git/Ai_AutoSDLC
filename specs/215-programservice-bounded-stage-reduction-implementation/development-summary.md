@@ -12,14 +12,25 @@
 - Round 2 LEAN/SAFETY=`FAIL4/FAIL4`；Round 3=`PASS0/FAIL2`；Round 4=`PASS0/FAIL2`；Round 5=
   `FAIL1/FAIL2`；Round 6=`FAIL2/FAIL3`。所有成立 finding 已最小修正，旧 verdict 均退役，等待
   Round 7 对合同bytes同轮复审。Round 7=`PASS0/PASS0`、findings=0；评审事实writeback使该verdict退为
-  authoring receipt，等待Round 8仅复核writeback；仍不是最终T61A GO。
+  authoring receipt；Round 8 writeback复核=`PASS0/PASS0`、findings=0。Formal source=`60f11328`，truth=
+  `884c2c86`、snapshot=`dccdb689...914e2`、inventory=`1131/1131/0/0`。T61A file-missing RED已成立；
+  仍不是最终T61A GO。
+- 实现可行性对质发现旧160/190预算与完整矩阵不相容，且expected termination与无条件NO-GO互斥；
+  Pascal/LEAN与Confucius/SAFETY统一判旧合同`NO-GO`。Round 7/8 verdict已退役，formal已最小重开，
+  Round 9=`FAIL1/FAIL5`；Round 10=`FAIL1/FAIL1`。组合预算、supervisor死亡边界、双根模式、nonce marker、
+  helper/fixture identity及机械glue下界findings已最小修正。Round 11首次因主代理给错formal-six集合被双方
+  拒绝；恢复冻结identity后Round 11b=`PASS0/PASS0`、findings=0，authoring准入完成。
 - T61A committed+clean identity 的双 readiness GO 前，`src/**` 保持零差异，两份目标行为测试 blob
   保持不变；只允许 manifest exact inventory/close 数字机械替换。当前机械值=`1131/1131/0/0`、
   close=`215/215`，exact test=`1 passed in 99.06s`。
 
 ## 预算与边界
 
-- Recorder≤160 LOC；全部新增 test/harness/normalizer≤190；candidate peak product≤522；terminal≤720；
+- Recorder目标≤230/hard cap250；全部新增 test/harness/normalizer目标≤263/hard cap290；candidate peak product≤522；
+  product+proof组合硬门≤729；terminal≤720；
+- 当前candidate product shadow=466（330 engine+85 glue+51 route/facade）；T61A必须
+  `shadow + actual current proof + frozen future reserve≤729`，
+  T33使用actual product+actual proof，禁止在产品尚未编码时以actual product=0绕过。
   净删≥2,918；ProgramService responsibility reduction≥3,278。
 - 任一兼容矩阵、hash identity、预算或 reviewer verdict 失败即 NO-GO，保留 legacy，不放宽阈值。
 - Candidate、稳定期、独立 deletion 与 exact-merge actual rollback 未完成前，不关闭 T66/GAP-03/WI196/
@@ -27,6 +38,6 @@
 
 ## 下一步
 
-- 完成 Round 8 LEAN/SAFETY writeback复核并提交formal authoring source。
-- 提交 formal source，执行 truth sync 与 manifest exact 机械更新。
-- 先跑 recorder file-missing RED，再实现唯一 proof；最终同身份双 GO 前不写产品或目标行为测试。
+- 实现唯一≤250 LOC recorder与machine receipt，保持总proof≤290和pre-GO边界。
+- 完成record/verify、NO-GO故障、165与全部治理门禁，形成committed+clean proof identity。
+- Pascal/LEAN与Confucius/SAFETY对同一最终tuple双GO前不写产品或目标行为测试。

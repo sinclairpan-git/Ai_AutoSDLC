@@ -347,3 +347,16 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
 - 已从 exact fresh main 创建唯一 T66 implementation WI215；当前只写 formal/T61A proof 与 baseline
   receipt，`src/**`/产品测试零差异。最终 T61A 必须绑定 legacy/proof commit+tree、formal/evidence/harness
   hash，并取得 Pascal/LEAN 与 Confucius/SAFETY 同一身份双 GO 后才允许 candidate 实现。
+
+## 20. Batch 2026-07-20-019：WI215 T61A proof 可实现性修正回写
+
+- WI215 实现前对质证明旧 proof≤190 无法自然容纳已冻结完整矩阵，且 expected termination 与无条件
+  termination NO-GO 语义互斥；Pascal/LEAN 与 Confucius/SAFETY 对旧合同统一判 NO-GO，产品仍零改动。
+- Parent canonical 只把 proof 个别上限修为290，并保持 RC-06 的25%组合硬门 `product+proof≤729`；
+  product≤522、terminal≤720、净删≥2,918、responsibility reduction≥3,278与范围均未放宽。个别上限不得
+  相加使用，当前 product 预测496时 proof 必须≤233。
+- Termination 细节由 WI215 执行合同区分 expected sacrificial-child probe 与 unexpected termination；
+  parent兼容要求、双 readiness、candidate/deletion/rollback及release边界不变。旧formal-six verdict因bytes
+  变化退役，必须与WI215 formal-three一起重新同身份双审。
+- WI215 Round 9 发现组合门若不区分阶段会以产品尚未编码的actual=0误放行；parent已补T61A
+  `shadow+actual proof+frozen reserve≤729`与candidate `actual+actual≤729`，reserve不得记0规避。

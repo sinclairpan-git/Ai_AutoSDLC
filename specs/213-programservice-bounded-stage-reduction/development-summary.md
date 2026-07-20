@@ -9,8 +9,13 @@
   `3,638 physical / 3,305 executable / branch proxy 386`；165 个现有测试实跑通过。
 - 冻结单一 private module、27 个 public thin facade 和九组显式 binding 的最小结构；禁止反射、DSL、
   stage-name 分支、循环 import、DTO 移动、公共开关、新依赖或第二领域。
-- 冻结 `product≤522`、`proof≤190`、`product+proof≤712`、`terminal≤720`、`net delete≥2,918`、
+- 冻结 `product≤522`、`proof≤290`、`product+proof≤729`、`terminal≤720`、`net delete≥2,918`、
   `ProgramService responsibility reduction≥3,278`；任一超限立即 RC-09 No-Go，不扩大预算。
+- WI215 编码前可实现性复核把旧proof 190个别上限修正为290，但RC-06组合硬门仍为729；WI215使用
+  `330 engine + 85 proven glue + 51 route/facade = 466` shadow，使目标proof+reserve≤263。该回写不放宽25%分母、产品范围或删除目标，
+  旧formal verdict已退役并等待重审。
+- 阶段组合门进一步防止T61A以actual product=0绕过：readiness使用candidate shadow+actual proof+frozen
+  future reserve，candidate使用actual peak product+actual proof，二者均≤729。
 - T61A/B 覆盖 Python API/DTO surface、late-bound `self` truthiness/clock、CLI、artifact/raw bytes、授权、
   异常、中断恢复、平台、wheelhouse no-index offline install、sibling 与性能。
 - Candidate 合入时 legacy 保留；主线预发布稳定期后独立 deletion PR；删除合入后对精确 merge commit

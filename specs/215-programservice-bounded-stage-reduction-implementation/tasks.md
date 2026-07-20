@@ -29,7 +29,7 @@ related_doc:
   stability→deletion/rollback顺序、预算、NO-GO、回退与release边界完整。
 - **验证**：placeholder scan、constraints、validate、truth、manifest exact、scope/diff-check。
 
-### T03 Formal authoring commit（in_progress）
+### T03 Formal authoring commit（completed）
 
 - **依赖**：T02。
 - **验收**：逻辑单一commit；relative base为`7922956d`；`src/**`零差异、两份目标测试blob不变、
@@ -38,7 +38,7 @@ related_doc:
 
 ## Batch 1：T61A legacy baseline 与双 readiness
 
-### T11 冻结 legacy inventory（in_progress）
+### T11 冻结 legacy inventory（completed）
 
 - **文件**：只写execution log/后续receipt，不写产品。
 - **验收**：45 methods=`3,638/3,305/333/386`；27 public；27 DTO；18 private外部consumer=0；
@@ -52,7 +52,7 @@ related_doc:
 - **边界**：receipt尚不存在；本characterization不替代T14单一direct+CLI composite的20个原始样本，
   也不作为T61B基线。
 
-### T13 TDD 实现唯一 recorder（pending）
+### T13 TDD 实现唯一 recorder（in_progress）
 
 - **Create**：`scripts/program_bounded_stage_t61a.py`。
 - **RED**：命令只因文件不存在失败。
@@ -61,11 +61,16 @@ related_doc:
   qualname/signature/source/behavior；另覆盖private loaders、upstream与steps的missing/empty/valid/invalid、
   confirmation/outside-root、九CLI help/mode/failure/full-chain、direct/CLI双根、
   late-bound、fault/SystemExit/process termination/interrupt/retry、窗口化sentinel、raw tree/bytes和record/verify；
-  目标≤150、hard cap160、函数≤50。
+  目标≤230、hard cap250、函数≤50；总proof目标≤263、hard cap290。
 - **失败路径**：schema固定outcome/failure phase/completed checks/error/verdict/closure及stable/performance/raw
   三个status/payload/hash section；pass全complete，no_go按失败点使用not_started/partial/complete且raw至少
-  partial。内置spec §4 versioned 15-check全序/section transition；canonicalization/matrix fault与isolated
-  termination都由外层先原子持久化`closed_no_go`再非零退出。
+  partial。内置spec §4 versioned 15-check全序/section transition。Expected termination必须由parent nonce
+  绑定声明，marker紧邻harness termination，post-marker transcript/exit、partial tree与fresh-child retry全部
+  匹配时允许完成`fault_recovery`；undeclared/mismatch/timeout/retry failure由仍存活supervisor先原子持久化
+  `closed_no_go`再非零退出，supervisor自身不可清理死亡由外部调用者判unclosed NO-GO。
+- **复用**：165 tests只按exact node ID/source hash/assertion coverage逐项复用；fixture只seed，不调用
+  `test_*`；每个node必须绑定实际seed/helper/fixture/autouse的transitive source SHA set，无法精确绑定就
+  不得复用。不得以selector总通过替代新增矩阵。
 - **禁止**：第二harness/DSL/依赖/产品模块；未知normalizer/callable fallback。
 
 ### T14 生成机器 receipt（pending）
@@ -75,11 +80,15 @@ related_doc:
   `verify`只读并重放稳定行为，stable behavior hash一致；性能区独立hash但不要求duration跨运行一致；
   ≤2MiB、全部矩阵PASS；receipt不自绑定commit/tree/hash。Sentinel只包围seed后的被测调用，pytest/git/
   toolchain采集在窗口外。
-- **NO-GO验收**：至少注入一个canonicalization/matrix失败和一个isolated termination；两者均存在可由
-  `verify`校验的durable no_go receipt，completed checks/section status/hash/error准确，exit非零且不得升级为
-  pass。三个内容hash严格使用spec §4 canonical JSON bytes；产品mapping唯一编码为tagged object并在其
+- **NO-GO验收**：一次正常`record`生成唯一canonical pass candidate；canonicalization/matrix失败和
+  unexpected termination分别用独立负向`record`写caller-specified临时durable no_go receipt。每次invocation
+  仅一个authoritative output和root-A/root-B两根；三个receipt均可由`verify`按outcome校验，no_go非零且
+  不得升级为pass；no_go `verify`创建零行为根且normalizer table为空。三个内容hash严格使用spec §4 canonical
+  JSON bytes；产品mapping唯一编码为tagged object并在其
   entries数组保留顺序；
   非UTF-8 bytes/Path/tuple/exception args做type-tag往返与hash复算；非法check前缀/section状态必须被拒绝。
+- **进程验收**：pass=`authoritative receipt verify + exit 0`；任一非零/signal退出不得接受现存pass receipt。
+  有有效`closed_no_go`则closed；否则外部envelope记录exit/signal、现存文件hash和`unclosed_no_go`。
 - **边界验收**：pass/no_go与verdict/closure/failure/error必须双向唯一；performance第20样本写入后、summary/
   hash/check-ID前注入失败仍生成partial durable receipt。计时仅用同一父进程`perf_counter_ns()`，三段非负且
   total≥direct+CLI；wall clock或child自报duration必须失败。
@@ -88,7 +97,9 @@ related_doc:
 
 - **依赖**：T11～T14。
 - **验收**：formal+recorder+receipt+truth/continuity提交；`src/**`零差异、目标测试blob不变、manifest test
-  仅机械数字替换；recorder≤160，recorder+manifest diff新增行+后续candidate tests/helper总proof≤190；Ruff、
+  仅机械数字替换；recorder≤250，recorder+manifest diff新增行+后续candidate tests/helper总proof≤290，
+  且`candidate_product_shadow + actual_current_proof + reserved_future_proof≤729`；future reserve按后续
+  candidate test/helper/normalizer逐文件/任务冻结且不得记0规避；个别上限不得相加使用；Ruff、
   165、recorder verify、constraints/validate/truth/manifest/scope/parity/Cursor/clean全绿。
 - **identity**：按spec §4分列legacy/proof commit+tree、WI196+WI213 formal-six、WI215 formal-three、
   harness、receipt file、stable behavior和observed-performance hash。
@@ -134,7 +145,7 @@ related_doc:
 
 ### T33 Candidate terminal gates（pending）
 
-- **验收**：product≤522、proof≤190；exact tests/full/Ruff/constraints/validate/truth/manifest全绿；
+- **验收**：actual peak product≤522、actual proof≤290、actual product+proof≤729；exact tests/full/Ruff/constraints/validate/truth/manifest全绿；
   两本地reviewer同身份PASS0。
 
 ### T34 Candidate PR/merge/fresh-main（pending）

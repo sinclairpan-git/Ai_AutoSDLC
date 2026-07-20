@@ -169,3 +169,74 @@
   state machine、NO-GO原子落盘、双根normalizer、surface/DTO/CLI/异常/sentinel/formal hash与pre-GO冻结。
 - Round 7 是authoring合同准入，不是最终T61A readiness GO。由于本段与状态writeback改变受审bytes，
   Round 7 verdict退为authoring receipt；提交前必须对仅含writeback的新bytes再取得同轮双PASS0。
+
+## 11. Batch 2026-07-20-009：Round 8 双 PASS0、formal commits 与 T61A RED
+
+- Round 8 仅复核Round 7事实/任务writeback；Pascal/LEAN与Confucius/SAFETY同轮`PASS0`、findings=0，
+  均确认未把authoring receipt冒充最终T61A GO，pre-GO边界保持锁定。
+- Formal source commit=`60f1132830664504c83185d47dc452eb48c8800a`、tree=
+  `8704db2cffd24607e2c2317d35424a1317fb906c`；提交后worktree clean。
+- 在clean source commit执行truth sync：state=ready、snapshot=`dccdb689...914e2`、inventory=
+  `1131/1131`、missing/unmapped=`0/0`、layers spec/plan/tasks/execution/close=`215/215`；机械diff只有
+  `program-manifest.yaml`，truth commit=`884c2c86f8e89fcd5cb61a86a5d2248493dba7b0`、tree=
+  `f052e54d9940d43f8cd45b65211f9f3822e72fb9`。
+- T61A RED：`python scripts/program_bounded_stage_t61a.py record --route legacy --output <tmp>` exit=2，
+  唯一失败为文件不存在，输出文件不存在；RED成立。当前仍无`src/**`/目标测试/script产品实现差异。
+- 下一步只允许实现唯一≤160 LOC recorder并保持总proof≤190；receipt与最终readiness GO仍不存在。
+
+## 12. Batch 2026-07-20-010：T61A 实现可行性对质 NO-GO 与最小 formal correction
+
+- Pascal/LEAN最初认为150 LOC可行；Confucius/SAFETY逐项展开现有165 tests未覆盖的loader、outside-root、
+  late-bound、fault/termination、sentinel、raw和performance矩阵后拒绝该估算。Pascal按实际语句重算后撤回
+  原判断：自然可读实现下界约220～235 LOC，完整未复用展开约276 LOC；双方统一`NO-GO`。
+- 另发现合同语义冲突：pass要求真实SystemExit/process termination/KeyboardInterrupt partial+retry，但旧条款
+  又无条件要求parent观察任何termination即`closed_no_go`，同一次record无法同时满足。
+- 产品代码与目标行为测试仍为零差异；未通过压行、DSL、只记pytest hash或删矩阵绕过。旧Round 7/8 authoring
+  verdict因本次finding和formal bytes变化全部退役。
+- 最小修正只调整proof个别合同：recorder目标≤230/hard cap250，总proof目标≤270/hard cap290，product≤522、
+  terminal≤720、净删≥2,918、responsibility reduction≥3,278等产品预算不变。父RC-06的25%规则继续生效，
+  product+proof组合硬门保持≤729；当前product预测496时proof必须≤233，个别上限不得相加使用。
+- Termination拆为预声明expected sacrificial-child probe与unexpected termination。前者marker/exit/partial/retry
+  全匹配后可完成fault_recovery；后者固定写caller临时同-schema `closed_no_go` receipt。每invocation只写一个
+  authoritative receipt、只用root-A/root-B两行为根；最终只提交一个canonical baseline。
+- 165 tests只按requirement/node/source SHA/assertion coverage逐项复用；fixture只seed，缺失矩阵仍由recorder
+  实测。下一步对修正后的formal重新取得同一bytes LEAN/SAFETY双PASS0，未通过前仍不创建recorder或改产品。
+- 首次准备Round 9时发现WI213/WI196仍冻结190/712，已中止旧hash复审；parent canonical只同步proof个别
+  上限290与组合硬门729，不放宽RC-06的25%分母或产品范围，再计算新formal identity。
+
+## 13. Batch 2026-07-20-011：Authoring review Round 9 LEAN FAIL1 / SAFETY FAIL5
+
+- Round 9 identity formal-six=`e2dcf310...ca43`、formal-three=`51c86641...f9f2`由双方复算一致；
+  Pascal/LEAN=`FAIL1`、Confucius/SAFETY=`FAIL5`。共同P1是§8/SC遗漏组合预算终局门，产品尚未编码时
+  可能错误按actual product=0放行。
+- 其余SAFETY findings均成立：已死亡supervisor无法承诺原子写receipt；record/pass-verify两根与no-go
+  verify零根表述冲突；marker后到termination存在误认同exit真实崩溃窗口；coverage未绑定helper/fixture。
+- 最小修正冻结T61A三项组合门`candidate shadow + actual current proof + reserved future proof≤729`，T33改
+  actual+actual；shadow收紧为459，future reserve逐文件/任务非零登记。§8显式加入两个阶段的combined NO-GO。
+- Durable保证只属于仍存活的receipt-owning supervisor；其自身不可清理死亡由外部调用者判unclosed NO-GO。
+  Expected marker加入parent nonce、精确post-marker transcript/EOF和marker→harness termination相邻性。
+- Normalizer按模式固定两项或空表；复用node增加transitive helper/seed/fixture/autouse source SHA set，
+  无法精确绑定即不复用。Round 9 verdict全部退役，Round 10必须审新bytes。
+
+## 14. Batch 2026-07-20-012：Authoring review Round 10 双 FAIL1
+
+- Pascal/LEAN=`FAIL1`：candidate shadow使用glue 78，低于WI213已证明的83～85机械下界；其余Round 9
+  finding均关闭。Confucius/SAFETY=`FAIL1`：supervisor在写pass receipt后、正常exit前不可清理死亡时，
+  旧条款仍可能误接受磁盘pass，且与§8 receipt-first绝对规则冲突。
+- 两项均成立。Shadow改为`330 engine + 85 glue + 51 route/facade = 466`，terminal shadow=682、预计净删
+  2,956；总proof目标由270收紧为263，使目标组合仍为729，个别hard cap不变。
+- Pass现在必须同时满足authoritative receipt verify和process exit 0；任一非零/signal退出都不能接受pass。
+  有有效closed_no_go则closed，否则外部envelope记录exit/signal、现存文件hash和unclosed_no_go；§8明确
+  排除supervisor不可清理死亡的receipt-first承诺。Round 10 verdict退役，Round 11审新bytes。
+
+## 15. Batch 2026-07-20-013：Authoring review Round 11b 双 PASS0
+
+- 主代理首次发起Round 11时误把WI196 execution log/summary列入formal-six；两名reviewer均以`FAIL1`
+  拒绝错误identity。合同未改，按冻结算法恢复WI196与WI213各自`spec/plan/tasks`六文件。
+- 正确identity由双方独立复算一致：formal-six=
+  `2504969100c7e89dbc3d475afb4c8ac3ae51969a6db42f16db3be3b130db4285`，formal-three=
+  `4ad0c9a0154baa02023153b8ceab5736c8035a257babecf13b7387f10c8d6c11`。
+- Round 11b Pascal/LEAN=`PASS0`、Confucius/SAFETY=`PASS0`，均未发现可操作问题；85/466/263/729预算、
+  supervisor死亡封闭、pass receipt+exit 0、expected termination、两根/零根和coverage provenance全部通过。
+- 同批治理验证：constraints无BLOCKER、program validate PASS、plan-check pending=0/drift=NO、manifest exact=
+  `1 passed in 104.20s`；产品源码与目标行为测试仍为零差异。该结论仅完成authoring准入，不冒充最终T61A GO。

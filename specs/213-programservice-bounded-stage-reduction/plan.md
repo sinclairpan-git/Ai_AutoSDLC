@@ -174,7 +174,9 @@ WI 或直接写产品。
    版本化 Python-surface manifest（public=surface/behavior；DTO hook=source/behavior、source unreadable 即阻断；仅 allowlist
    `builtins.list/dict` factory tag；禁止 identity/address repr），并捕获 execute/writer late-bound `self`
    dispatch 的 `None`/truthy/falsey/clock subclass/spy 矩阵。
-4. 证明预计 product≤522、proof≤190、无禁止结构；两 reviewer 对同一 proof identity 双 `GO`。
+4. 证明candidate product shadow≤522、proof≤290，且
+   `shadow + actual current proof + frozen future proof reserve≤729`；future reserve逐文件/任务非零登记；
+   个别上限不得相加使用；两 reviewer 对同一 proof identity 双 `GO`。
 
 **停止**：任一 reviewer NO-GO、proof/architecture 超预算、legacy 不稳定或隔离写边界不可靠。
 **回退**：NO-GO 先持久化不可变 receipt、commit/tree、raw-evidence hash、review verdict 和关闭状态，再放弃
@@ -198,7 +200,8 @@ WI 或直接写产品。
    call order、副作用、p50/p95。
 3. 执行 legacy→candidate→legacy→candidate；每次重跑目标矩阵。
 4. Run 165、full、Ruff、constraints、validate、truth、manifest；双 reviewer current identity PASS0。
-5. Candidate 默认 candidate、legacy 完整保留，走 PR/Codex/check/merge/fresh-main。
+5. Candidate 默认 candidate、legacy 完整保留；`actual peak product + actual total proof≤729`后走
+   PR/Codex/check/merge/fresh-main。
 
 **完成**：candidate mainline 可用但 T66 仍 active。
 **回退**：selector-only commit 指回 legacy；不删除任何 legacy。
@@ -247,7 +250,7 @@ T66 完成只更新 GAP-03/RC ledger；GAP-04～06、其他 ProgramService domai
 | authorization | dry-run/confirm/execute/write order/external sentinel | 新写入或越权 |
 | recovery | write boundaries + KeyboardInterrupt/SystemExit/process termination | retry/final tree 不一致 |
 | performance | warm-up + ≥20 samples p50/p95 | p95 > baseline 110% 且复测成立 |
-| budget | per-commit AST/LOC/branch ledger | product>522、proof>190、terminal>720 |
+| budget | per-commit AST/LOC/branch ledger | product>522、proof>290、product+proof>729、terminal>720 |
 | package/platform | three OS + wheel/sdist + wheelhouse no-index offline install | 联网/checkout/import/resource/encoding/PowerShell failure |
 | sibling | ≥2 chosen projects, installed artifact | 使用 checkout 或任一 smoke 失败 |
 | rollback | selector round-trip；exact deletion merge post-merge actual revert | 只反转未合并分支或恢复失败 |
@@ -285,6 +288,6 @@ ordinal 升序；每行：
 
 ## 10. 开放问题与停止判定
 
-没有用户决策项。Formal 对抗 reviewer 可以提出范围内 finding；如果实际代码证明 360/522/712/720 任一
+没有用户决策项。Formal 对抗 reviewer 可以提出范围内 finding；如果实际代码证明 360/522/290/729/720 任一
 预算不可达，结论不是自动扩预算，而是 RC-09 No-Go 或回到新的 formal review。任何公共行为、L4 迁移或
 发布提前请求必须另行取得用户授权。

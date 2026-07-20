@@ -54,9 +54,11 @@ related_doc:
 - **状态**：completed
 - **依赖**：T12～T14
 - **验收**：一个 private module≤360；candidate facade addition≤72；terminal facade body≤45；
-  typed/path binding+glue≤90；product shadow≤522；product+proof≤712；terminal≤720；net delete≥2918；
+  typed/path binding+glue≤90；product shadow≤522；proof≤290；product+proof≤729；terminal≤720；net delete≥2918；
   ProgramService target responsibility reduction≥3278；
   branch proxy≤90；每函数≤50。
+- **阶段组合门**：T61A=`candidate shadow + actual current proof + frozen future reserve≤729`；candidate=
+  `actual peak product + actual total proof≤729`。Future reserve逐文件/任务非零登记，不得按actual product=0放行。
 - **停止**：反射、循环 import、stage-name branch、DSL、DTO 搬迁、第二领域、公共开关或预算不可达即 RC-09。
 
 ### T22 冻结 T61A/B 与 readiness gate

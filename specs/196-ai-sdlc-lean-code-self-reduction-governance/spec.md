@@ -229,7 +229,8 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     45 methods / 3,638 physical / 3,305 executable / branch proxy 386。Ruff 88 列反证确认九组显式
     DTO/path binding 的 mechanical lower bound 约83～85行，不能藏入预备5行；WI-213 因此冻结 private
     module≤360、candidate facade addition≤72、terminal facade body≤45、binding/glue≤90，并重算
-    shadow product≤522、product+proof≤712、terminal≤720、净删≥2,918。WI-212 的691/2,947与 WI-213
+    shadow product≤522、proof≤290、product+proof≤729、terminal≤720、净删≥2,918；个别上限不得相加使用。
+    WI-212 的691/2,947与 WI-213
     早期701/2,937仅保留为历史预估。该修订只有在
     parent+child formal-six 双 PASS、mainline/fresh-main receipt 与后续 T61A 双 readiness GO 后才授权
     candidate；formal 本身不关闭 T66/GAP-03，不恢复旧 WI-203/WI-204 hash，也不发布版本。

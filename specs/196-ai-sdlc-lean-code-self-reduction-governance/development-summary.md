@@ -92,4 +92,7 @@
   checks 全绿并 merge=`7922956d`；detached fresh-main truth=`ready/fresh 1126/1126` 与全部治理门禁全绿。
   GAP-15/T58 已关闭；唯一 T66 implementation WI215 已创建，当前停在 T61A 双 readiness 前且产品零改动。
   T66/GAP-03/WI196/RC-08/release 仍未完成，本项不授权提前发布。
+- WI215 编码前可实现性对质已统一否决旧160/190 proof合同；parent只把T66 proof个别上限修为290，
+  `product+proof≤729`的RC-06 25%组合硬门、路线累计≤1,500、产品与release边界均保持不变。修正后的
+  parent/child formal须重新同identity双审，未通过前不得进入candidate。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
