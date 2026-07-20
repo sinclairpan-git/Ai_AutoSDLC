@@ -1,6 +1,6 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T07:14:00Z
+- Updated: 2026-07-20T07:25:13Z
 - Reason: lifecycle delivery 已合入并通过 detached fresh-main，进入独立 closure receipt
 - Goal: 以本 receipt merge 关闭 GAP-15/T58；保持 T66 blocked，receipt fresh-main 后才恢复 T61A 准入
 - State: closure receipt source 与 terminal truth 已提交，等待治理门禁与同身份双审
@@ -26,6 +26,8 @@
 - PR #163 exact-head 10/10 checks 全绿；用户明确授权以本地 SDLC 双审替代继续等待远端 Codex 最终
   文字回执，squash merge=`60fe6d90`，分支保留。
 - PR #163 的本地替代只适用于 lifecycle delivery，不自动扩展到 closure receipt 或 release。
+- 用户现已对本 closure receipt 单独授权：以 current-head 本地 SDLC LEAN/SAFETY 同身份 PASS0 与
+  required checks 全绿替代等待远端 Codex 最终文字回执；该授权不扩展到 release。
 - Delivery detached fresh-main HEAD/tree=`60fe6d90`/`3f6698d7`，constraints/validate/truth、manifest exact、
   scope/parity/Cursor/clean 全绿。
 - 本 receipt merge 是 T42/GAP-15/T58 completed/closed 的唯一生效点；T66 继续 blocked。Receipt
@@ -48,13 +50,13 @@
   PASS0 前不得 push。
 - Receipt merge 前 completed/closed 只属于候选 main state；T66 不得解锁。Receipt merge 后 fresh-main
   失败必须优先回退 receipt，禁止创建 T66 WI。
-- Receipt 仍须取得 current-head Codex review 且无 actionable finding；若 Codex 再次不可用，不无限刷请求，
-  立即作为用户输入 blocker，只有取得单独授权后才可改变该门禁。
+- Receipt 不再以远端 Codex 最终文字回执为合入前提；必须保留 current-head 本地 SDLC LEAN/SAFETY
+  同身份 PASS0、required checks 全绿与无 actionable finding，任一未满足均不得合入。
 - handoff CLI 仍可能按旧 WI208 checkpoint 错写 scoped copy；本轮直接维护 WI214 root/scoped byte-identical。
 
 ## Exact Next Steps
 
 - 重跑 constraints/validate/truth/manifest/scope/parity/Cursor/clean；对 final committed+clean identity 取得
   Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0。
-- 双 PASS0 后 push/open receipt PR；取得 current-head Codex review 无 actionable finding且 checks 全绿后
-  merge，detached fresh-main 通过才创建 T66 implementation WI并先执行 T61A 双 readiness。
+- 双 PASS0 后 push/open receipt PR；required checks 全绿且无 actionable finding 后即可 merge，不再无限等待
+  远端 Codex；detached fresh-main 通过才创建 T66 implementation WI并先执行 T61A 双 readiness。
