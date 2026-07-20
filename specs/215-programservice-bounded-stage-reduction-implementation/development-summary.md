@@ -6,7 +6,7 @@
 ## 当前事实
 
 - WI214 closure receipt PR #164 / merge `7922956d` 与 detached fresh-main 已通过，GAP-15/T58 已关闭。
-- WI215 是唯一 T66 implementation WI；当前只交付 formal、proof harness 与 legacy baseline receipt。
+- WI215 是唯一 T66 implementation WI；当前仅交付 formal，proof harness 与 legacy baseline receipt 尚未生成。
 - Legacy inventory=`45 methods / 3,638 physical / 3,305 executable / branch 386`；目标 selector=
   `165 passed, 474 deselected`，两次独立 basetemp 均通过。
 - Round 2 LEAN/SAFETY=`FAIL4/FAIL4`；Round 3=`PASS0/FAIL2`；Round 4=`PASS0/FAIL2`；Round 5=

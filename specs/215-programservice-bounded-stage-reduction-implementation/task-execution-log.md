@@ -334,3 +334,10 @@
   `state=ready/snapshot=fresh`，manifest exact为`1 passed in 105.85s`。
 - 以上只闭合formal authoring与治理准入；仍须在最终committed+clean identity复核双PASS0，然后以TDD形成
   recorder/receipt和最终T61A双readiness GO，双GO前继续禁止产品代码。
+
+## 23. Batch 2026-07-20-021：Committed identity SAFETY FAIL1处置
+
+- Committed identity=`0c810465`/tree=`81c89ad2`，formal hashes仍为Round 17精确值；LEAN=`PASS0`、
+  SAFETY=`FAIL1`。唯一成立finding是development summary误把尚不存在的proof harness/receipt写成已交付。
+- 最小修正只把该句改为“当前仅交付formal，harness/receipt尚未生成”；formal spec/plan/tasks、产品、目标测试、
+  recorder合同和预算均未改变。旧LEAN PASS与SAFETY FAIL随HEAD/tree变化同时退役，必须对新clean identity双审。

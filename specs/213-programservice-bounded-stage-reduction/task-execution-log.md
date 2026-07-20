@@ -410,3 +410,8 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
 - Round 17 hash、handoff parity、protected-source/test零diff均复核；constraints/validate/plan-check通过。
 - Truth execute写入ready快照，audit=`ready/fresh`、inventory=`1131/1131/0/0`，manifest exact通过。
 - 当前闭合的是formal authoring，不替代WI215 recorder/receipt完成后的最终T61A双readiness GO。
+
+## 27. Batch 2026-07-20-026：Committed status真实性修正
+
+- `0c810465`上LEAN PASS0、SAFETY FAIL1；finding仅为WI215 summary把待实现harness/receipt误写成已交付。
+- 已最小修正summary，不改formal合同或产品；HEAD/tree变化后双方必须重审同一新clean identity。
