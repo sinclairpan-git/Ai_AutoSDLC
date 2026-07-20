@@ -23,6 +23,8 @@
 - T61A committed+clean identity 的双 readiness GO 前，`src/**` 保持零差异，两份目标行为测试 blob
   保持不变；只允许 manifest exact inventory/close 数字机械替换。当前机械值=`1131/1131/0/0`、
   close=`215/215`，exact test=`1 passed in 99.06s`。
+- Round 19 formal authoring在`49a1f861`上取得LEAN/SAFETY同identity双PASS0。唯一recorder已完成170行
+  GREEN与临时record/verify/no_go验证；canonical receipt仍须在recorder committed+clean后生成，尚非T61A GO。
 - Round 11b后的两版未提交recorder原型证明旧T61A仍属过度实现：第二版311 LOC且缺多项安全逻辑，完整
   自然下界约303～315 LOC，无法满足729组合硬门。Pascal/LEAN与Confucius/SAFETY统一`NO-GO`，原型已删除，
   产品与目标行为测试仍零差异。
@@ -47,6 +49,6 @@
 ## 下一步
 
 - Round 17 formal修订与truth/governance/manifest门禁已闭合；固化committed+clean identity并复核双PASS0。
-- 以TDD实现目标≤170/hard cap200的唯一recorder与machine receipt，保持总proof≤290和pre-GO边界。
+- 提交170行唯一recorder，在clean tree生成并验证canonical machine receipt，保持总proof≤290和pre-GO边界。
 - 完成record/verify、NO-GO故障、165与全部治理门禁，形成committed+clean proof identity。
 - Pascal/LEAN与Confucius/SAFETY对同一最终tuple双GO前不写产品或目标行为测试。

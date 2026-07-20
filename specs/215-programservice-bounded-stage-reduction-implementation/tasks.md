@@ -52,7 +52,7 @@ related_doc:
 - **边界**：receipt尚不存在；本characterization直接作为T14 performance section的20个原始样本，
   T61B仍须三方同机重采。
 
-### T13 TDD 实现唯一 recorder（in_progress）
+### T13 TDD 实现唯一 recorder（completed）
 
 - **Create**：`scripts/program_bounded_stage_t61a.py`。
 - **RED**：命令只因文件不存在失败。
@@ -66,7 +66,7 @@ related_doc:
   矩阵迁移至每stage/T61B三方replay，不在T61A重复实现。
 - **禁止**：第二harness/DSL/依赖/产品模块、typed canonicalizer、normalizer、per-node transitive AST mapper。
 
-### T14 生成机器 receipt（pending）
+### T14 生成机器 receipt（in_progress）
 
 - **Create**：`.ai-sdlc/work-items/215-programservice-bounded-stage-reduction-implementation/t61a-legacy-baseline-receipt.json`。
 - **验收**：`record`写schema v2唯一receipt；identity/structure/tests/performance/budget五个JSON-primitive

@@ -341,3 +341,15 @@
   SAFETY=`FAIL1`。唯一成立finding是development summary误把尚不存在的proof harness/receipt写成已交付。
 - 最小修正只把该句改为“当前仅交付formal，harness/receipt尚未生成”；formal spec/plan/tasks、产品、目标测试、
   recorder合同和预算均未改变。旧LEAN PASS与SAFETY FAIL随HEAD/tree变化同时退役，必须对新clean identity双审。
+
+## 24. Batch 2026-07-20-022：Round 19双PASS0与170行recorder GREEN
+
+- Continuity修正提交=`49a1f861`/tree=`4509a1bc`；Round 19 Pascal/LEAN与Confucius/SAFETY对该同一
+  committed+clean identity均`PASS0`、findings=0，明确仅批准formal authoring。
+- 唯一`scripts/program_bounded_stage_t61a.py`实现为170 physical LOC，最大函数32行；Ruff与`py_compile`通过。
+  临时record实测45=`3638/3305/333/386`、27 public、27 DTO、exact165九组计数正确、双basetemp exit0，
+  performance=`p50 3.062/p95 3.180`，预算=`170+2 current proof / reserve90 / product466 / combined728`。
+- 首次pass receipt因文件级`sort_keys=True`把五section重排为字母序，verify正确fail-closed；已只把receipt
+  文件写入改为保持插入顺序，section内容hash仍使用canonical sort。修正后record+verify均exit0。
+- `record --route candidate`原子写空prefix合法no_go并exit1；随后`verify --route legacy`保持no_go、文件SHA
+  不变且exit1。产品源码与两份目标行为测试继续零diff；canonical receipt须在recorder提交后的clean tree生成。
