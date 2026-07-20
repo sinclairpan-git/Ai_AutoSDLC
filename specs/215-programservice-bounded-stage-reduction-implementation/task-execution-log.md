@@ -618,3 +618,30 @@
   `3376 passed, 3 skipped in 819.26s`，无 failure/error，repository teardown guard通过。
 - 本段只固定 pre-A/B 产品事实；待提交 immutable R1 identity 后，仍须执行 legacy/current 两腿、全部治理门、
   truth/manifest 与同 identity LEAN/SAFETY 正式双审。双 PASS0 前不得开始 guarded_registry C2/R2。
+
+## 41. Batch 2026-07-20-039：R1 immutable A/B 与治理证据
+
+- R1 product checkpoint=`1e886c232e907cc01880b477252d28389f43a20d` / tree=
+  `2392fc998dd5315912d08601af819927c5180f65`；ProgramService/engine blobs=
+  `bc8dadea8e05c73bea5d7ad333019327e3e6d901` / `31a2a83b4968e6f668cbedbeb964e3a54ebc4855`。
+  冻结 conftest/unit/CLI blobs 仍为 `2f9083d3...e642` / `d1459fe4...b37` / `9628711c...1f3`。
+- detached legacy 腿=`/tmp/ai-sdlc-wi215-c1-legacy-7922956d`，commit/tree=
+  `7922956d3e248a93c3190240259850ab3498ec9f` / `cc3c6b7f7e63dd040034938ff6bb6827f067e41c`；
+  current 腿=`/tmp/ai-sdlc-wi215-r1-current-1e886c23`，commit/tree=`1e886c23` / `2392fc99`。
+  两腿 Python3.11 与 imported `program_service.py` 均来自各自 worktree，使用同一 candidate test path、
+  `--import-mode=importlib`、独立 basetemp/JUnit、`PYTHONHASHSEED=0` 与 `TZ=UTC`。
+- 两腿分别=`238 passed, 474 deselected in 2.98s` / `3.08s`；JUnit outcome均=`238/0/0/0`，
+  ordered classname/name SHA256均=`88065f18...8d13`。JUnit locator=
+  `/tmp/ai-sdlc-wi215-r1-ab-1e886c23/{legacy,current}.xml`，均39,436 bytes，SHA256分别=
+  `8d19cf1e...a43b` / `06d075e7...1810`；stderr均0 bytes且SHA256=`e3b0c442...b855`。
+- 移除两腿各35个pytest便利symlink后，raw locator为同目录`legacy/`与`current/`；每腿=
+  `767 files / 717,475 bytes`，排序后 `sha256 length relative-path` tree SHA256均=
+  `ed594c678114f2314c60f594094cd78e0be9c5cc4ce5db9905c6f4e585905a35`，`diff -qr`退出0。
+- Product checkpoint治理门：全仓 Ruff PASS；constraints=`ok=true/blockers=0/advisories=0`；program
+  validate PASS；plan-check=`drift=false/pending_todos=0`；truth audit=`ready/fresh 1131/1131/0/0`。
+  随后受控 truth sync 将 `repo_revision=1e886c23`、snapshot hash=
+  `d190139bbf6402c385e737dbfbe2e11a9f96e4df57dbb1090412d9681543b8db` 写入 manifest。
+- Evidence 写入后 truth sync/audit=`ready/fresh 1131/1131/0/0`，snapshot hash=
+  `c1fef3101dea2ce3c260872b7f26b83e6e77ba9730aeeb446c7cc62a37506d69`；manifest exact=
+  `1 passed in 107.80s`。本段文字进入 records 后再执行一次最终 sync/audit/manifest；此后不再改 formal
+  evidence。Full 与 A/B 产品/测试/config blobs不得变化。

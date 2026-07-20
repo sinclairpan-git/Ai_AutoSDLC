@@ -24,7 +24,8 @@
 - cross-spec R1 已新增唯一 private engine 并删除五个重复 body；两位 reviewer 对初稿 `417/59` 一致
   HARD FAIL，修正后 target slice=`385 LOC / 48 branch`，严格低于 legacy `392/50`；最大函数49行。
 - 当前 retained product/proof/combined=`414/287/701`，定向=`33 passed`、累计=`238 passed`、full=
-  `3376 passed, 3 skipped`；待 immutable A/B、治理门、clean identity 与本地双审。
+  `3376 passed, 3 skipped`；immutable A/B 两腿均238通过，JUnit节点顺序与raw tree逐字节一致；
+  Ruff/constraints/validate/plan/truth全绿，manifest exact=`1 passed`。待final records identity与本地双审。
 
 ## 兼容与减重边界
 
@@ -39,7 +40,7 @@
 
 ## 下一步
 
-1. 提交 cross-spec R1 产品与当前证据，固定 immutable candidate identity。
-2. 在独立 legacy/current worktree 运行冻结238节点，比较 provenance、JUnit、ordered nodes 与 raw tree。
-3. 跑全部治理门并取得 Pascal/LEAN 与 Confucius/SAFETY 对同一 clean R1 identity 的双 PASS0；通过后
-   才允许进入 guarded_registry C2/R2。
+1. 对最终 records 文字执行最后一次 truth sync、truth audit、manifest exact 与 scope/clean。
+2. 提交 final R1 records，核验 product/test/config blobs 与 checkpoint 不变。
+3. 取得 Pascal/LEAN 与 Confucius/SAFETY 对同一 clean R1 identity 的双 PASS0；通过后才允许进入
+   guarded_registry C2/R2。
