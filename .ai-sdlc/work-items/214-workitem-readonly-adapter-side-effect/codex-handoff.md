@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T07:03:00Z
+- Updated: 2026-07-20T07:14:00Z
 - Reason: lifecycle delivery 已合入并通过 detached fresh-main，进入独立 closure receipt
 - Goal: 以本 receipt merge 关闭 GAP-15/T58；保持 T66 blocked，receipt fresh-main 后才恢复 T61A 准入
-- State: closure receipt source 已落盘，等待 source commit、truth sync、治理门禁与同身份双审
+- State: closure receipt source 与 terminal truth 已提交，等待治理门禁与同身份双审
 - Stage: verify
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: codex/214-workitem-readonly-adapter-side-effect-closure-receipt
@@ -38,6 +38,8 @@
   inventory=`1126/1126`、missing/unmapped=`0/0`；manifest exact=`1 passed in 98.19s`。
 - Delivery fresh-main scope：18 个 lifecycle/truth/continuity 文件；`src/tests/workflow/依赖/版本/release`
   零差异；root/scoped handoff byte-identical；Cursor SHA=`d5f04acf...0b6a`；worktree clean。
+- Receipt source commit=`cf240cdc`；truth commit=`f7b5307c`，snapshot=`6b4ee864...03edb9`、
+  inventory=`1126/1126`、missing/unmapped=`0/0`，manifest 是唯一 truth-sync 机械差异。
 
 ## Blockers / Risks
 
@@ -49,7 +51,6 @@
 
 ## Exact Next Steps
 
-- 提交 receipt source，执行一次 terminal truth sync 并提交机械 manifest。
 - 重跑 constraints/validate/truth/manifest/scope/parity/Cursor/clean；对 final committed+clean identity 取得
   Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0。
 - 双 PASS0 后 push/open receipt PR；checks 全绿后 merge，detached fresh-main 通过才创建 T66
