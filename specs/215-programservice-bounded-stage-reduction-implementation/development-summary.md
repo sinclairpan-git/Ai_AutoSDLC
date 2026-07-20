@@ -25,6 +25,8 @@
   close=`215/215`，exact test=`1 passed in 99.06s`。
 - Round 19 formal authoring在`49a1f861`上取得LEAN/SAFETY同identity双PASS0。唯一recorder已完成170行
   GREEN与临时record/verify/no_go验证；canonical receipt仍须在recorder committed+clean后生成，尚非T61A GO。
+- Recorder已提交为`88b62144`，canonical receipt已生成并verify通过；receipt SHA=`26a03649...2663`、
+  exact165双跑全过、combined=`728`。Receipt与终端治理尚未提交，最终双readiness GO仍不存在。
 - Round 11b后的两版未提交recorder原型证明旧T61A仍属过度实现：第二版311 LOC且缺多项安全逻辑，完整
   自然下界约303～315 LOC，无法满足729组合硬门。Pascal/LEAN与Confucius/SAFETY统一`NO-GO`，原型已删除，
   产品与目标行为测试仍零差异。
@@ -49,6 +51,6 @@
 ## 下一步
 
 - Round 17 formal修订与truth/governance/manifest门禁已闭合；固化committed+clean identity并复核双PASS0。
-- 提交170行唯一recorder，在clean tree生成并验证canonical machine receipt，保持总proof≤290和pre-GO边界。
+- 提交canonical receipt/truth并完成T61A终端治理门禁，保持总proof≤290和pre-GO边界。
 - 完成record/verify、NO-GO故障、165与全部治理门禁，形成committed+clean proof identity。
 - Pascal/LEAN与Confucius/SAFETY对同一最终tuple双GO前不写产品或目标行为测试。

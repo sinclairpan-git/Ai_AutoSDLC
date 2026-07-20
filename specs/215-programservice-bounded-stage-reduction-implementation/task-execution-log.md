@@ -353,3 +353,15 @@
   文件写入改为保持插入顺序，section内容hash仍使用canonical sort。修正后record+verify均exit0。
 - `record --route candidate`原子写空prefix合法no_go并exit1；随后`verify --route legacy`保持no_go、文件SHA
   不变且exit1。产品源码与两份目标行为测试继续零diff；canonical receipt须在recorder提交后的clean tree生成。
+
+## 25. Batch 2026-07-20-023：Canonical T61A receipt生成
+
+- Recorder提交=`88b62144378ef87717772856dbf1e194053d0960`/tree=`f479af0923c0a3b2a83e8268dc5cf103f532fe85`；
+  在该clean tree执行canonical record与verify均exit0。
+- Receipt=`136,314 bytes`、SHA-256=`26a03649bae2fa36606810f9d4cdfea4fbf6f6e89c02b7a138cd1a67a5d02663`；
+  outcome=pass，section全序=`identity/structure/tests/performance/budget`。
+- Formal-six=`3aa2d6a3...d9abf`、formal-three=`d9b4339f...de19`；section hash依次为
+  `92e26368...12e3`、`841660de...6ec5`、`0cdec3d5...46ef`、`c07898e3...22fe`、`10f4beba...d4bc`。
+- 双basetemp实际结果=`165 passed, 474 deselected in 2.64s`与`2.62s`；九组计数仍为
+  `16/19/19/19/19/19/20/17/17`，public/DTO=`27/27`，budget combined=`728≤729`。
+- 本段只登记canonical receipt；receipt尚未提交，最终proof commit/tree、治理全门与T61A双readiness GO待完成。
