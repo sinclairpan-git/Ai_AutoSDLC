@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 最终本地审查的两项测试证据缺口已修正，待新身份 terminal gates 与双审
+**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 最终本地审查修正与 terminal gates 全绿，待新身份双审
 
 ## 已冻结合同
 
@@ -71,3 +71,6 @@
 - OpenAI 官方 Codex PR review 事故期间，用户明确批准 PR #162 采用一次性治理例外：以 final current-identity
   本地 Pascal/LEAN + Confucius/SAFETY 双 PASS0、完整本地门禁与远端 22/22 required checks 共同替代
   current-head GitHub Codex 回执；例外不自动扩展到 lifecycle 或后续发布阶段。
+- 修正后的 terminal identity `56367d96`：targeted=`50 passed`、full=`3303 passed/3 skipped`，Ruff lint、
+  V4a/V4b、constraints、program validate、truth=`ready/fresh` 1126/1126、manifest exact、scope/parity/Cursor/
+  clean 全绿。当前 continuity-only source 不再改 src/tests；其 terminal truth refresh 后以相同门禁重验再送双审。

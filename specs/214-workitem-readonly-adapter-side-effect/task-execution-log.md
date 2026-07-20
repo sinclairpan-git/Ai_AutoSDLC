@@ -427,3 +427,16 @@
 - OpenAI 官方 Codex PR review 事故仍在进行。用户明确批准 PR #162 的一次性治理例外：不再无限等待
   GitHub Codex，改以 final current-identity 本地 LEAN + SAFETY 双 PASS0、完整本地验证与远端 22/22
   required checks 共同作为 merge 门槛；本例外不自动扩展到 lifecycle 或发布阶段。
+
+## 30. Batch 2026-07-19-026：本地审查修正 terminal gates
+
+- Test/continuity source=`a71c3c3e`，truth refresh 后 terminal identity=
+  `56367d966b6f7755f9388da5b56702a01146ed30`/tree=`64305f84a0004951ee15d1b5b00e0fb1672a92b6`、clean。
+- Exact identity：`COLUMNS=200` targeted=`50 passed in 16.79s`、full=`3303 passed, 3 skipped in
+  644.45s`；80/200/300 列 real-hook A/B PASS；Ruff lint/V4a PASS；fixed-base V4b 的 base/candidate
+  formatter-red subset 与 13 个 emitted range 全绿；constraints no BLOCKERs；program validate PASS；truth=
+  `ready/fresh`、inventory=`1126/1126`、missing/unmapped=`0/0`、各层=`214/214`；manifest exact=
+  `1 passed in 92.54s`；diff/scope/handoff parity/Cursor/clean 全绿。
+- 本 continuity-only receipt 只把已完成门禁与唯一 next step 固化进 summary/log/byte-identical handoff，不改
+  src/tests/tooling。提交后必须再次 terminal truth sync，并在新 committed+clean identity 重验完整门禁；成功后
+  不再反写 tracked source，直接交 Pascal/LEAN 与 Confucius/SAFETY 同身份复审。

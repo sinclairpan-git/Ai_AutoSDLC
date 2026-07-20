@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T03:20:35Z
-- Reason: 最终本地审查的两项测试证据 finding 已最小修正；冻结新 source 后重跑 terminal gates
+- Updated: 2026-07-20T03:45:40Z
+- Reason: 最终本地审查修正的 terminal gates 已完成；固化 receipt 后直接进入新身份双审
 - Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
-- State: T21-T31 completed；两项测试证据修正 targeted/mutation 全绿，待新身份 terminal gates 与双审
+- State: T21-T31 completed；两项测试证据修正与 terminal gates 全绿，等待新身份双审
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-dev
@@ -59,10 +59,13 @@
   自动化与 config-lock warning byte-exact 两项 finding 均成立，旧 verdict 全部退役。
 - 两项最小测试修正的 mutation 均预期 RED；恢复产品源码后两项=`2 passed`、宽终端 targeted=`50 passed`
   且 80/200/300 列 real-hook A/B、Ruff/diff-check 全绿。被中止的 full 不是验收，final identity 必须重跑。
+- 修正 terminal identity=`56367d96`/tree=`64305f84`：targeted=`50 passed`、full=`3303 passed, 3 skipped`
+  且 Ruff/V4a/V4b、constraints、validate、truth ready/fresh 1126/1126、manifest exact、scope/parity/Cursor/
+  clean 全绿；本 continuity-only source 后再次重验，成功后不再反写 tracked source。
 
 ## Blockers / Risks
 
-- 新 identity terminal gates、双 PASS0、PR #162 22/22 checks、merge/detached fresh-main 前不得开始 lifecycle。
+- 新 identity 双 PASS0、PR #162 22/22 checks、merge/detached fresh-main 前不得开始 lifecycle。
 - 用户批准 PR #162 一次性治理例外：OpenAI 官方事故期间，本地 LEAN+SAFETY 同身份 PASS0 取代 current-head
   GitHub Codex 回执；例外不自动扩展到 lifecycle 或发布阶段。
 - handoff CLI 依据旧 WI208 checkpoint 写错 scoped copy；已用 apply_patch 恢复 WI208/resume-pack，并直接维护
@@ -83,7 +86,6 @@
 
 ## Exact Next Steps
 
-- 提交测试/continuity source，刷新 terminal truth/manifest并完整重跑 T31 gates。
 - 让 Pascal/LEAN 与 Confucius/SAFETY 对新 committed+clean identity 从零审到 PASS0。
 - 双 PASS0 且 PR #162 22/22 checks 全绿后，按用户批准的一次性例外直接 merge并 detached fresh-main。
 - Implementation fresh-main 通过后创建独立 lifecycle reconciliation；不得提前关闭 GAP-15/T58 或放行 T66。
