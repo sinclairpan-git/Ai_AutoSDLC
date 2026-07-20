@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T05:15:00Z
-- Reason: lifecycle Round 1 双 FAIL 成立；恢复 fail-closed 状态并修正 continuity
+- Updated: 2026-07-20T05:25:00Z
+- Reason: lifecycle Round 1 fail-closed 修正与治理门禁完成；冻结新身份复审入口
 - Goal: 关闭 GAP-15/T58，并只恢复 T66 独立 implementation WI 的 T61A readiness 准入
-- State: source/truth 首轮已提交且门禁通过；Round 1 修正已落盘，待提交与 terminal truth/gates
+- State: Round 1 修正已提交，truth/gates 全绿；continuity freeze 后直接进入新身份双审
 - Stage: verify
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: codex/214-workitem-readonly-adapter-side-effect-lifecycle
@@ -47,19 +47,20 @@
   `ready/fresh 1126/1126`、manifest exact=`1 passed in 100.35s`、scope/parity/Cursor/clean 全绿。
 - Round 1 exact `a6f2c6a6`：Pascal/LEAN=`FAIL2`、Confucius/SAFETY=`FAIL2`；共同 finding 是过早完成
   状态与 handoff 滞后/漏路径，均已做最小 source 修正，旧 verdict 退役。
+- Fail-closed correction=`1b896072`、truth checkpoint=`c563e84a`；truth=`ready/fresh 1126/1126`、
+  phase/deferred=`3695/6655`，constraints/validate PASS，manifest exact=`1 passed in 98.45s`，
+  diff/scope/parity/Cursor/clean 全绿；src/tests/workflow/依赖/版本/release 零差异。
 
 ## Blockers / Risks
 
-- Round 1 修正提交、terminal truth/gates 与 Pascal/Confucius 新身份双 PASS0 前不得 push。
+- Continuity freeze 的 terminal truth/gates 与 Pascal/Confucius 新身份双 PASS0 前不得 push。
 - lifecycle PR required checks、Codex review、merge/detached fresh-main 前 closure 不得视为对 main 生效。
 - OpenAI 事故若继续影响 lifecycle Codex 接单，不得静默沿用 PR #162 的一次性例外。
 - handoff CLI 仍可能按旧 WI208 checkpoint 错写 scoped copy；本轮直接维护 WI214 root/scoped byte-identical。
 
 ## Exact Next Steps
 
-- 提交 Round 1 correction，执行 terminal truth sync 并提交 manifest 机械刷新。
-- 重跑 constraints、validate、truth audit、manifest exact、diff/scope/parity/Cursor/clean gates。
-- 固化上述 terminal receipt 后不再改 tracked source，让 Pascal/LEAN 与 Confucius/SAFETY 对同一
-  committed+clean identity 从零审到 PASS0。
+- 对 continuity freeze 执行 terminal truth sync 与治理门禁；成功后不再修改 tracked source。
+- 让 Pascal/LEAN 与 Confucius/SAFETY 对同一 committed+clean identity 从零审到 PASS0。
 - 双 PASS0 后 push/open lifecycle PR，取得 required checks 与 Codex current-head review，再 merge/fresh-main。
 - 仅在 lifecycle fresh-main 完成后创建 T66 implementation WI并先执行 T61A 双 readiness。
