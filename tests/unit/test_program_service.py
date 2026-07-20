@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -17448,6 +17449,209 @@ def _write_frontend_final_proof_archive_artifact(
         ),
         encoding="utf-8",
     )
+
+
+_BOUNDED_STAGE_CHARACTERIZATION_CASES = [
+    pytest.param(
+        "cross_spec_writeback", _write_frontend_provider_patch_apply_artifact,
+        {"apply_result": "applied", "patch_apply_state": "completed", "remaining_blockers": []}, id="cross_spec_writeback",
+    ),
+    pytest.param(
+        "guarded_registry", _write_frontend_cross_spec_writeback_artifact,
+        {"orchestration_result": "completed", "writeback_state": "completed", "remaining_blockers": []}, id="guarded_registry",
+    ),
+    pytest.param(
+        "broader_governance", _write_frontend_guarded_registry_artifact,
+        {"registry_result": "completed", "registry_state": "completed", "remaining_blockers": []}, id="broader_governance",
+    ),
+    pytest.param(
+        "final_governance", _write_frontend_broader_governance_artifact,
+        {"governance_result": "completed", "governance_state": "completed", "remaining_blockers": []}, id="final_governance",
+    ),
+    pytest.param(
+        "writeback_persistence", _write_frontend_final_governance_artifact,
+        {"final_governance_result": "completed", "final_governance_state": "completed", "remaining_blockers": []}, id="writeback_persistence",
+    ),
+    pytest.param(
+        "persisted_write_proof", _write_frontend_writeback_persistence_artifact,
+        {"persistence_result": "completed", "persistence_state": "completed", "remaining_blockers": []}, id="persisted_write_proof",
+    ),
+    pytest.param(
+        "final_proof_publication", _write_frontend_persisted_write_proof_artifact,
+        {"proof_result": "completed", "proof_state": "completed", "remaining_blockers": []}, id="final_proof_publication",
+    ),
+    pytest.param(
+        "final_proof_closure", _write_frontend_final_proof_publication_artifact,
+        {"publication_result": "completed", "publication_state": "completed", "remaining_blockers": []}, id="final_proof_closure",
+    ),
+    pytest.param(
+        "final_proof_archive", _write_frontend_final_proof_closure_artifact,
+        {"closure_result": "completed", "closure_state": "completed", "remaining_blockers": []}, id="final_proof_archive",
+    ),
+]
+
+
+def _prepare_bounded_stage_characterization(
+    root: Path,
+    stage: str,
+    seed: Callable[..., None],
+    seed_kwargs: dict[str, object],
+) -> tuple[ProgramService, ProgramManifest, object, object, Callable[..., Path], Path]:
+    (root / "specs" / "001-auth").mkdir(parents=True)
+    seed(root, **seed_kwargs)
+    service = ProgramService(root)
+    manifest = _manifest()
+    request = getattr(service, f"build_frontend_{stage}_request")(manifest)
+    result = getattr(service, f"execute_frontend_{stage}")(
+        manifest, request=request, confirmed=True
+    )
+    writer = getattr(service, f"write_frontend_{stage}_artifact")
+    return service, manifest, request, result, writer, root / f"{stage}.yaml"
+
+
+@pytest.mark.parametrize("stage,seed,seed_kwargs", _BOUNDED_STAGE_CHARACTERIZATION_CASES)
+def test_bounded_stage_writers_bypass_late_bound_defaults_for_truthy_values(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    stage: str,
+    seed: Callable[..., None],
+    seed_kwargs: dict[str, object],
+) -> None:
+    service, manifest, request, result, writer, output_path = (
+        _prepare_bounded_stage_characterization(tmp_path, stage, seed, seed_kwargs)
+    )
+
+    def _unexpected(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("truthy explicit value must bypass its fallback")
+
+    monkeypatch.setattr(program_service_module, "utc_now_z", _unexpected)
+    monkeypatch.setattr(service, f"build_frontend_{stage}_request", _unexpected)
+    monkeypatch.setattr(service, f"execute_frontend_{stage}", _unexpected)
+    writer(
+        manifest, request=request, result=result,
+        generated_at="2026-04-04T06:00:00Z", output_path=output_path,
+    )
+
+    payload = yaml.safe_load(output_path.read_text(encoding="utf-8"))
+    assert payload["generated_at"] == "2026-04-04T06:00:00Z"
+
+
+@pytest.mark.parametrize("stage,seed,seed_kwargs", _BOUNDED_STAGE_CHARACTERIZATION_CASES)
+def test_bounded_stage_writers_use_self_defaults_for_falsey_values_in_order(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    stage: str,
+    seed: Callable[..., None],
+    seed_kwargs: dict[str, object],
+) -> None:
+    service, manifest, request, result, writer, output_path = (
+        _prepare_bounded_stage_characterization(tmp_path, stage, seed, seed_kwargs)
+    )
+    calls: list[str] = []
+
+    def _clock() -> str:
+        calls.append("clock")
+        return "2026-04-04T06:05:00Z"
+
+    def _build(actual_manifest: ProgramManifest) -> object:
+        assert actual_manifest is manifest
+        calls.append("build")
+        return request
+
+    def _execute(
+        actual_manifest: ProgramManifest, *, request: object, confirmed: bool
+    ) -> object:
+        assert actual_manifest is manifest
+        assert request is not None
+        assert confirmed is False
+        calls.append("execute")
+        return result
+
+    monkeypatch.setattr(program_service_module, "utc_now_z", _clock)
+    monkeypatch.setattr(service, f"build_frontend_{stage}_request", _build)
+    monkeypatch.setattr(service, f"execute_frontend_{stage}", _execute)
+    writer(
+        manifest, request=0, result=[], generated_at="", output_path=output_path
+    )
+
+    assert calls == ["clock", "build", "execute"]
+    payload = yaml.safe_load(output_path.read_text(encoding="utf-8"))
+    assert payload["generated_at"] == "2026-04-04T06:05:00Z"
+
+
+@pytest.mark.parametrize("fault_at", ["clock", "build", "execute"])
+@pytest.mark.parametrize("stage,seed,seed_kwargs", _BOUNDED_STAGE_CHARACTERIZATION_CASES)
+def test_bounded_stage_writer_default_exceptions_propagate_in_order(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    stage: str,
+    seed: Callable[..., None],
+    seed_kwargs: dict[str, object],
+    fault_at: str,
+) -> None:
+    service, manifest, request, result, writer, output_path = (
+        _prepare_bounded_stage_characterization(tmp_path, stage, seed, seed_kwargs)
+    )
+    calls: list[str] = []
+
+    def _step(name: str, value: object) -> object:
+        calls.append(name)
+        if name == fault_at:
+            raise RuntimeError(f"{name} failed")
+        return value
+
+    monkeypatch.setattr(
+        program_service_module, "utc_now_z",
+        lambda: _step("clock", "2026-04-04T06:10:00Z"),
+    )
+    monkeypatch.setattr(
+        service, f"build_frontend_{stage}_request",
+        lambda _manifest: _step("build", request),
+    )
+    monkeypatch.setattr(
+        service, f"execute_frontend_{stage}",
+        lambda _manifest, **_kwargs: _step("execute", result),
+    )
+
+    with pytest.raises(RuntimeError, match=f"{fault_at} failed"):
+        writer(manifest, output_path=output_path)
+
+    assert calls == ["clock", "build", "execute"][: calls.index(fault_at) + 1]
+    assert not output_path.exists()
+
+
+@pytest.mark.parametrize("fault_operation", ["mkdir", "write_text"])
+@pytest.mark.parametrize("stage,seed,seed_kwargs", _BOUNDED_STAGE_CHARACTERIZATION_CASES)
+def test_bounded_stage_writer_fault_retry_matches_successful_artifact(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    stage: str,
+    seed: Callable[..., None],
+    seed_kwargs: dict[str, object],
+    fault_operation: str,
+) -> None:
+    _, manifest, request, result, writer, output_path = (
+        _prepare_bounded_stage_characterization(tmp_path, stage, seed, seed_kwargs)
+    )
+    write_kwargs = {
+        "request": request, "result": result,
+        "generated_at": "2026-04-04T06:15:00Z", "output_path": output_path,
+    }
+    writer(manifest, **write_kwargs)
+    expected = output_path.read_bytes()
+    output_path.unlink()
+
+    def _fail(*_args: object, **_kwargs: object) -> None:
+        raise OSError(f"{fault_operation} failed")
+
+    monkeypatch.setattr(Path, fault_operation, _fail)
+    with pytest.raises(OSError, match=f"{fault_operation} failed"):
+        writer(manifest, **write_kwargs)
+    assert not output_path.exists()
+
+    monkeypatch.undo()
+    writer(manifest, **write_kwargs)
+    assert output_path.read_bytes() == expected
 
 
 def _write_frontend_final_proof_archive_project_cleanup_seed_artifact(

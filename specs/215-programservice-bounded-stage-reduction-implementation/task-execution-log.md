@@ -472,3 +472,20 @@
   本log固定规则与WI213 summary仍以现在时引用已 `cancelled_no_go` 的T61A，可能使恢复执行永久阻断。
 - 该finding成立；本批仅把三处当前执行语义改为RC-10 gate并明确T61A是已退役历史，不改formal九文件、
   产品或测试。身份变化使本轮两 verdict 同时退役，须对新 committed+clean identity 从零双审。
+
+## 34. Batch 2026-07-20-032：RC-10 双PASS与 C1 characterization
+
+- Formal implementation-base=`dbc02c65a6e648686736f4d4ed3f35e821c7b9e9` / tree=
+  `92a80f70d0cb9f62d1459c527e774e14829d16c9`；formal-six=`75d60ac9...519e`、formal-three=
+  `8b97878b...fa1f`。Pascal/LEAN=`PASS0`、Confucius/SAFETY=`PASS0`，findings=0，授权范围仅为C1。
+- C1只改`tests/unit/test_program_service.py`：共享九stage case表+4个参数化测试，共新增204 physical LOC、
+  展开63 nodes；无新文件、runner、snapshot schema或private import，proof=`204≤290`。
+- 新用例实跑=`63 passed, 406 deselected`；原165节点保持且新节点进入同一selector，累计=
+  `228 passed, 474 deselected`。Ruff PASS，`src/**`相对behavior legacy仍零diff。
+- 三类临时mutation均仅作用于cross-spec writer且立即用`apply_patch`恢复：`or`→`is None`、绕过`self`
+  builder、eager clock各自使对应新node=`1 failed`；恢复后63/228全绿，产品SHA与legacy一致。
+- 新矩阵同时证明truthy bypass、falsey fallback、clock→build→execute顺序/异常传播、mkdir/write首次fault
+  不留最终artifact，以及同输入retry与成功artifact逐字节一致。C1同identity双PASS前继续禁止engine/Rx。
+- 首次full误带`AI_SDLC_DISABLE_UPDATE_CHECK=1`且窄终端，得到15个与C1无关的update-advisor/换行失败；
+  去除该变量并固定宽终端后定向=`31 passed, 1 skipped`，完整重跑=`3366 passed, 3 skipped`。前一轮
+  明确作废，不修改产品或断言迎合环境污染。

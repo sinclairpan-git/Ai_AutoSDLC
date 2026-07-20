@@ -29,7 +29,7 @@ related_doc:
 - 同步 WI196/WI213/WI215；记录 `cancelled_no_go`，产品与目标测试保持零差异。
 - 运行 constraints/validate/truth/manifest/scope/clean，提交 committed+clean formal identity。
 
-### T06 RC-10 formal 双审（in_progress）
+### T06 RC-10 formal 双审（completed）
 
 - Pascal/LEAN：YAGNI、预算、逐 stage 净下降、无临时预算洗白。
 - Confucius/SAFETY：characterization、两腿、SHA 绑定、回退与 package/offline。
@@ -37,7 +37,7 @@ related_doc:
 
 ## Batch 1：Characterization 缺口
 
-### T11 Shared characterization RED/GREEN（pending）
+### T11 Shared characterization RED/GREEN（in_review）
 
 - 仅在真实缺口处增加参数化 public API/CLI tests：
   missing/malformed/non-mapping、六状态矩阵、invalid/relative/outside-root、默认确认、truthy bypass、

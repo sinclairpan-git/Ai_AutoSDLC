@@ -1,10 +1,10 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T15:34:00Z
-- Reason: 修复RC-10首轮同身份LEAN/SAFETY评审的最小可操作意见
-- Goal: 先取得RC-10 formal同identity双PASS，再以九个Cx/Rx安全减重ProgramService
-- State: `793bc533`第二轮SAFETY PASS0/LEAN FAIL1；当前records tree删除最后三处live T61A歧义，产品零差异
-- Stage: specify
+- Updated: 2026-07-20T16:22:00Z
+- Reason: RC-10 formal双PASS后执行tests-only C1 characterization
+- Goal: 固定C1同identity双PASS，再以九个Rx安全减重ProgramService
+- State: formal base `dbc02c65`双PASS；C1新增63个共享nodes/204 LOC并完成三类mutation RED，产品零差异
+- Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
 - HEAD: 恢复时运行`git rev-parse HEAD`；handoff自身提交会改变HEAD，禁止嵌入自失效SHA
@@ -47,16 +47,20 @@
   `c0ff5f28`；未绕过守卫，改以source commit后再sync records的两提交方式收口。
 - `793bc533`同身份评审：SAFETY=`PASS0`；LEAN=`FAIL1`仅因固定归档规则和WI213 summary仍以现在时引用
   已退役T61A。本records tree已把三处改为RC-10 gate/历史语义；identity变化后两 verdict均退役并重审。
+- `dbc02c65`/`92a80f70`最终formal identity获LEAN/SAFETY双`PASS0`、findings=0，冻结为implementation-base。
+- C1 tests-only=`+204/-0`，63个新nodes与原165累计228；`or`→`is None`、绕过`self`、eager clock三类
+  临时mutation均RED，恢复后63/228全绿；产品source hash与legacy一致。
+- Full首轮因错误继承update-disable/窄终端参数作废；清洁环境定向=`31 passed, 1 skipped`，最终full=
+  `3366 passed, 3 skipped in 690.95s`，无C1失败。
 
 ## Blockers / Risks
 
-- T06尚缺新的committed+clean identity上的LEAN/SAFETY双PASS0；禁止写测试或产品。
+- C1尚缺committed+clean identity上的LEAN/SAFETY双PASS0；此前禁止engine/Rx。
 - Parent文档保留被§0明确覆盖的历史T61A文字；reviewer须确认不存在仍具执行歧义的旧授权。
 - 共享`.venv`固定`uv run --python 3.11`顺序执行，不并行不同解释器。
 
 ## Exact Next Steps
 
-1. 若worktree不clean，完成当前最小修订的治理验证、truth sync与提交；若已clean，直接解析当前
-   HEAD/tree/formal hashes并复核parity/scope。
-2. Pascal/LEAN与Confucius/SAFETY对该同一identity双PASS0；finding则只做最小修正并重审。
-3. 双PASS后冻结implementation-base，才开始characterization-only T11/C1；仍先不写engine。
+1. 若worktree不clean，完成C1 tests-only提交与truth records；若clean，解析current HEAD/tree/test blob/nodes。
+2. 在immutable legacy/current独立环境复跑C1/累计228/full/governance；Pascal/Confucius同identity双PASS0。
+3. 双PASS后冻结C1 test blob/node IDs与public/DTO denylist，才开始首个cross-spec Rx与唯一private engine。
