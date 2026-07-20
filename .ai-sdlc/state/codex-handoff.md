@@ -22,6 +22,7 @@
 - specs/213-programservice-bounded-stage-reduction/development-summary.md
 - specs/213-programservice-bounded-stage-reduction/task-execution-log.md
 - specs/214-workitem-readonly-adapter-side-effect/development-summary.md
+- specs/214-workitem-readonly-adapter-side-effect/plan.md
 - specs/214-workitem-readonly-adapter-side-effect/task-execution-log.md
 - specs/214-workitem-readonly-adapter-side-effect/tasks.md
 
