@@ -542,3 +542,15 @@
 - Final gates：全仓Ruff、constraints、program validate、plan-check=`drift=false/pending=0`、truth=
   `ready/fresh 1131/1131/0/0`、manifest exact=`1 passed in 104.56s`；root/scoped handoff同字节。
   formal-six=`75d60ac9...519e`，formal-three=`e498a7f8...cf6c`，产品blob仍为legacy `7b2ac507...9c6`。
+
+## 38. Batch 2026-07-20-036：C1 输出loader SAFETY FAIL1 最小修正
+
+- `bccb6939`同identity评审：Pascal/LEAN=`PASS0`；Confucius/SAFETY=`FAIL1`，指出现有不可用artifact用例
+  只冻结provider-patch输入loader，首个Rx同时拥有的cross-spec输出loader仍缺missing/malformed/non-mapping。
+- 将原3节点public测试扩为输入/输出loader双consumer参数化矩阵，保留原3节点并净增3节点；两类consumer
+  都从public builder/execute进入，冻结`missing_artifact`、warning artifact kind、blocked结果和零markdown副作用。
+- 临时绕过cross-spec输出loader的exists/解析异常/mapping guard时，新增3节点全部RED；随后用`apply_patch`
+  恢复，产品blob重新核对为legacy `7b2ac507...9c6`。
+- 当前exact union=`238 passed, 474 deselected`，原63共享节点和165基线节点均保留；formal base/candidate
+  Ruff自然格式副本净增=`26+261=287≤290`。`bccb6939`旧双审结果因测试identity变化而失效，须重新提交
+  committed+clean identity、复跑full/immutable两腿/治理门，并取得同identity双`PASS0`。

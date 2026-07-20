@@ -55,8 +55,9 @@ closure、archive。
 2. 只有覆盖缺口才增加共享参数化测试；新增断言只调用 public API/CLI。
 3. 共享用例显式冻结 truthy bypass、`None`/falsey fallback、经 `self` 的 late-bound callback、
    `generated_at` 时钟调用次数/顺序/异常，以及首次 fault 后无 completed artifact、同输入 retry 等价。
-4. 首个 cross-spec `Cx` 另冻结 missing/malformed/non-mapping、skipped/confirmation/blocked/partial/
-   completed、relative/non-manifest/outside-root，以及写入 fault 传播；returned `failed` 记录为结构不可达。
+4. 首个 cross-spec `Cx` 另通过公开入口冻结provider-patch输入loader与cross-spec输出loader的
+   missing/malformed/non-mapping，并冻结skipped/confirmation/blocked/partial/completed、relative/
+   non-manifest/outside-root及写入fault传播；returned `failed` 记录为结构不可达。
 5. 在 legacy 产品源码上运行并 PASS；至少用 `or`→`is None`、绕过 `self` callback、eager clock
    evaluation 临时 mutation 证明缺陷会被捕获。
 6. 提交 tests-only checkpoint；冻结 test tree/blob/node IDs，不允许 `Rx` 修改断言；同时冻结 public

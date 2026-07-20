@@ -9320,38 +9320,55 @@ def _cross_spec_service(root: Path, **seed_kwargs: object) -> ProgramService:
         pytest.param("[]\n", "invalid", id="non_mapping"),
     ],
 )
-def test_build_frontend_cross_spec_writeback_request_fails_closed_for_unusable_artifact(
+@pytest.mark.parametrize(
+    "consumer",
+    ["cross_spec_writeback", "guarded_registry"],
+    ids=["cross_spec_writeback_input", "cross_spec_writeback_output"],
+)
+def test_bounded_stage_input_loaders_fail_closed_for_unusable_artifact(
     tmp_path: Path,
     artifact_content: str | None,
     warning_kind: str,
+    consumer: str,
 ) -> None:
-    relative_path = Path("incoming/provider-patch.yaml")
+    relative_path = Path("incoming/upstream.yaml")
     artifact_path = tmp_path / relative_path
     if artifact_content is not None:
         artifact_path.parent.mkdir(parents=True)
         artifact_path.write_text(artifact_content, encoding="utf-8")
 
     svc = ProgramService(tmp_path)
-    request = svc.build_frontend_cross_spec_writeback_request(
-        _manifest(), artifact_path=relative_path
-    )
-    result = svc.execute_frontend_cross_spec_writeback(
-        _manifest(), request=request, confirmed=True
-    )
+    builder = getattr(svc, f"build_frontend_{consumer}_request")
+    request = builder(_manifest(), artifact_path=relative_path)
+    executor = getattr(svc, f"execute_frontend_{consumer}")
+    result = executor(_manifest(), request=request, confirmed=True)
+    is_registry = consumer == "guarded_registry"
+    state_attr = "registry_state" if is_registry else "writeback_state"
+    upstream_attr = "writeback_state" if is_registry else "apply_result"
+    outcome_attr = "registry_result" if is_registry else "orchestration_result"
+    artifact_kind = "cross-spec writeback" if is_registry else "provider patch apply"
 
-    assert (request.required, request.writeback_state, request.apply_result) == (
+    assert (
+        request.required,
+        getattr(request, state_attr),
+        getattr(request, upstream_attr),
+    ) == (
         False,
         "missing_artifact",
         "missing_artifact",
     )
     assert request.artifact_source_path == relative_path.as_posix()
-    assert warning_kind in request.warnings[0]
-    assert (result.passed, result.writeback_state, result.orchestration_result) == (
+    assert f"{warning_kind} {artifact_kind} artifact" in request.warnings[0]
+    assert (
+        result.passed,
+        getattr(result, state_attr),
+        getattr(result, outcome_attr),
+    ) == (
         False,
         "blocked",
         "blocked",
     )
-    assert not list(tmp_path.rglob("frontend-provider-writeback.md"))
+    assert not list(tmp_path.rglob("*.md"))
 
 
 def test_build_frontend_cross_spec_writeback_request_requires_explicit_confirmation(

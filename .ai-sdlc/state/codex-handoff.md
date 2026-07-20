@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T17:45:00Z
-- Reason: C1 local review FAIL1 remediation checkpoint
+- Updated: 2026-07-20T18:42:42Z
+- Reason: C1 output-loader SAFETY FAIL1 remediation checkpoint
 - Goal: 完成C1双审修正并取得同identity LEAN/SAFETY PASS0
-- State: 两项FAIL1已修正；clean full、治理门与immutable A/B全绿，待同identity双审
+- State: 最新SAFETY FAIL1已完成tests-only最小修正；待提交、重跑full/治理门/immutable A/B与同identity双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -19,21 +19,22 @@
 
 ## Changed Files
 
-- `tests/unit/test_program_service.py`：共享case/seed与cross-spec setup结构去重，新增7个public节点，
-  blanket `monkeypatch.undo()`改为局部fault context。
+- `tests/unit/test_program_service.py`：共享case/seed与cross-spec setup结构去重，新增10个public节点；输入与
+  输出loader均从public consumer冻结，blanket `monkeypatch.undo()`改为局部fault context。
 - `tests/conftest.py`：仅自然格式化既有九stage固定时钟fixture。
 - `specs/215-*`：记录coverage mapping、自然格式预算、mutation与首Rx dead-branch边界。
 - root/scoped handoff保持逐字节一致；`src/**`无保留差异。
 
 ## Evidence
 
-- LEAN原finding：Ruff自然格式proof=`298>290`；修正后formal-base/candidate格式副本净增=
-  `conftest 26 + unit 244 = 270≤290`，无压行或节点删除。
-- SAFETY原finding：首Rx缺missing/malformed/non-mapping、可达状态和outside-root冻结；已新增7 nodes。
-- 原63共享节点、原165节点均保留；exact union=`235 passed, 474 deselected`。
+- LEAN原finding：Ruff自然格式proof=`298>290`；最新formal-base/candidate格式副本净增=
+  `conftest 26 + unit 261 = 287≤290`，无压行或节点删除。
+- SAFETY最新finding：首Rx的cross-spec输出loader仍缺missing/malformed/non-mapping；已将原3节点扩为
+  输入/输出双consumer 6节点，输出loader临时mutation=`3 failed`并恢复。
+- 原63共享节点、原165节点均保留；exact union=`238 passed, 474 deselected`。
 - Mutation RED：loader fail-closed=`3 failed`；skipped/confirmation/partial=`3 failed`；outside-root=
   `1 failed`；吞掉write fault=`1 failed`。全部用`apply_patch`恢复。
-- Ruff check PASS；聚焦cross-spec+bounded-stage=`81 passed`；产品blob=`7b2ac507...9c6`与legacy相同。
+- 最新6个loader节点与exact union均PASS；产品blob=`7b2ac507...9c6`与legacy相同。
 - source commit=`7dbc3f85`；首次full功能断言=`3373 passed, 3 skipped`，但truth sync在session内更新
   `program-manifest.yaml`，teardown状态守卫报`1 error`，该轮明确作废且未绕过守卫。
 - records identity=`0a994488/53770c37` clean full=`3373 passed, 3 skipped`，teardown状态守卫通过。
@@ -44,11 +45,11 @@
 
 ## Blockers / Risks
 
-- 仍需提交final evidence continuity，并由同一Pascal/Confucius身份对新clean HEAD双审。
+- `bccb6939`的LEAN=`PASS0`、SAFETY=`FAIL1`已因测试identity变化失效；须在新clean HEAD重新双审。
 - 共享`.venv`固定`uv run --python 3.11`顺序执行，不并行不同解释器。
 
 ## Exact Next Steps
 
-1. 提交final evidence continuity，确认只改变log/handoff且test/product/config blobs不变。
-2. 复跑治理门与manifest exact，提交同一clean HEAD给Pascal/LEAN和Confucius/SAFETY。
+1. 提交latest tests-only修正与continuity，完成truth sync并固定clean identity。
+2. 复跑full、治理门、manifest exact与immutable legacy/current两腿，再提交同一clean HEAD双审。
 3. 双PASS0后才开始首个cross-spec Rx；否则最小修正并重新双审。

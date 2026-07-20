@@ -16,9 +16,9 @@
   每个 Rx 原生 legacy/current 两腿、exact/full/governance、同 SHA 双审，失败回到上一 reviewed tree。
 - 当前 `src/**`、`program_cmd.py` 和两份目标行为测试相对 behavior legacy 仍零差异；尚未创建 private engine。
 - Formal identity `dbc02c65` 已获 LEAN/SAFETY 同身份双 `PASS0`；只授权 tests-only C1。
-- C1 保留63个共享九阶段节点，并为首stage补7个public节点；结构去重后Ruff自然格式proof=`270≤290`，
-  当前union=`235`。覆盖truthy/falsey、经`self` late-bound、clock顺序/异常、missing/malformed/
-  non-mapping、可达状态、relative/outside-root、write fault与retry；产品仍零差异。
+- C1 保留63个共享九阶段节点，并为首stage补10个public节点；结构去重后Ruff自然格式proof=`287≤290`，
+  当前union=`238`。覆盖truthy/falsey、经`self` late-bound、clock顺序/异常、输入与输出loader的
+  missing/malformed/non-mapping、可达状态、relative/outside-root、write fault与retry；产品仍零差异。
 - `cross_spec_writeback` 的 returned `failed` 无公开可达输入：成功写入必登记路径，失败直接传播。C1冻结
   真实fault语义，首个Rx删除该dead branch，不伪造状态。
 
