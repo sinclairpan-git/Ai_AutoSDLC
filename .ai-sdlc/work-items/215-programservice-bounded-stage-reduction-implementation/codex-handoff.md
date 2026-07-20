@@ -1,13 +1,13 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T12:27:07Z
-- Reason: Committed复审SAFETY FAIL1已最小修正，正在生成新clean identity并重新双审
+- Updated: 2026-07-20T12:41:27Z
+- Reason: Round 18 continuity陈旧状态finding已修正，等待当前clean identity重新双审
 - Goal: 完成WI215 T61A双readiness，再在预算内实现九阶段ProgramService精益减重
-- State: `0c810465`复审LEAN PASS0/SAFETY FAIL1；唯一summary状态finding已修正，旧verdict退役；尚非最终T61A GO
+- State: Formal状态修正里程碑=`25ef9e3b`；Round 18 SAFETY PASS0/LEAN FAIL1，handoff陈旧状态已修正；尚非最终T61A GO
 - Stage: verify
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- HEAD: 500a388a68debf1ba77f6f0ef92822acd72dec81
+- HEAD: 恢复时运行`git rev-parse HEAD`；handoff自身提交会改变HEAD，禁止嵌入自失效SHA
 - Base: origin/main@7922956d3e248a93c3190240259850ab3498ec9f
 
 ## Changed Files
@@ -72,21 +72,20 @@
   为`drift=false/pending_todos=0`；旧记录中的`--id`在当前CLI不可用，已按`--help`改用`--wi`。
 - `program truth sync --execute --yes`写入snapshot `b83dda84...c6bf`，truth audit=`ready/fresh`、
   inventory=`1131/1131/0/0`；manifest exact=`1 passed in 105.85s`。
-- 风险分层文档与治理记录已提交为`500a388a`；`program-manifest.yaml`保留为下一笔新HEAD truth机械提交。
+- 风险分层文档=`500a388a`、对应truth=`0c810465`、状态真实性修正=`25ef9e3b`均已提交。
 - `0c810465`上SAFETY发现summary误报harness/receipt已交付；已只改为“当前仅交付formal，二者尚未生成”。
-- 当前`git diff --check` PASS；`src/**`、`tests/unit`、`tests/integration`无diff；root/scoped handoff将保持
+- `25ef9e3b`上SAFETY PASS0；LEAN发现handoff仍把已提交动作列为blocker/next且嵌入旧HEAD，finding成立。
+- 当前`src/**`和两份目标行为测试相对base零diff；manifest exact test仅机械`+2/-2`；root/scoped handoff
   byte-identical。
 
 ## Blockers / Risks
 
-- Summary修正尚未truth sync/提交，也尚未在新committed+clean HEAD/tree上取得双PASS0；完成前不能开始recorder。
+- 当前committed+clean identity以现场Git为准，仍须取得LEAN/SAFETY同身份双PASS0；完成前不能开始recorder。
 - Recorder/receipt/最终proof identity与T61A双readiness GO均不存在；不能改产品或目标行为测试。
-- `program-manifest.yaml`是truth sync机械变化，正式提交前必须复跑manifest exact与治理门禁。
 - 共享`.venv`不得并行运行不同`uv run`解释器；固定`uv run --python 3.11`顺序执行。
 
 ## Exact Next Steps
 
-- Truth sync并提交summary/manifest/handoff更新，确认新clean formal identity。
-- Pascal/LEAN与Confucius/SAFETY对新committed+clean HEAD/tree/formal hash重新双审。
+- 对任何在途handoff修正提交后的current clean HEAD/tree/formal hash，让Pascal/LEAN与Confucius/SAFETY重新双审。
 - 以TDD实现唯一≤200 LOC recorder，形成receipt和最终proof。
 - 对final committed+clean T61A tuple取得双GO后，才按九阶段进入产品实现与逐阶段三方回放。
