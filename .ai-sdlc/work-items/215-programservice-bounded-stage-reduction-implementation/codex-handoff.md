@@ -1,13 +1,14 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T23:08:00Z
-- Reason: C2 final SAFETY records-only FAIL1 收口
+- Updated: 2026-07-20T23:36:42Z
+- Reason: C2 final handoff provenance records-only 收口
 - Goal: 完成 guarded_registry C2 final gates 并取得同 identity LEAN/SAFETY PASS0
-- State: C2 行为与全部门禁全绿，待final provenance records identity与同identity复审
+- State: C2 行为、final provenance与全部门禁全绿，待同identity LEAN/SAFETY双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- Current HEAD: `5622ba10877483bc3bef368547671bdd429d31dc`
+- Review identity: 以当前 clean 工作树的 `git rev-parse HEAD` 与 `git rev-parse HEAD^{tree}` 为权威；
+  前置 truth source checkpoint 为 `5622ba10/e4c9a7d1`。
 
 ## Current Decisions
 
@@ -20,14 +21,17 @@
 - 五 facade 加全部 active engine 方法必须严格低于 legacy `392 LOC / 50 branch`，不得按未来复用摊销。
 - R1 final identity=`0630fb0a/7c94b85d` 已获 LEAN/SAFETY 同 identity 双 `PASS0/findings=0`。
 - C2 `6bcdb477` 双审均FAIL1；findings已转为11个public节点及四类mutation evidence。
-- C2 `5622ba10` LEAN=`PASS0`、SAFETY=`FAIL1`；唯一finding为final governance records陈旧。
+- C2 truth source checkpoint=`5622ba10/e4c9a7d1`；records-only identity `ed003ccb/567424e6`
+  的 LEAN=`PASS0`、SAFETY=`FAIL1`，唯一finding为本handoff中的已完成动作与身份字段陈旧。
 - C2 final双PASS0前不得修改guarded-registry产品实现。
 
 ## Changed Files
 
 - `tests/unit/test_program_service.py`：补guarded输出loader、状态、路径、step fault/retry；原节点全保留。
 - `specs/215-*/task-execution-log.md` 与 `development-summary.md`：记录FAIL1、mutation、预算、full/A-B。
-- 两份 handoff 保持逐字节一致；冻结测试、DTO/public surface、其他 stage、CLI、依赖均未修改。
+- 两份 handoff 删除已完成动作与自引用 `Current HEAD`，并保持逐字节一致。
+- `program-manifest.yaml` 仅同步 records-only truth；冻结测试、产品、DTO/public surface、其他 stage、
+  CLI、依赖均未修改。
 
 ## Evidence
 
@@ -54,10 +58,9 @@
 
 ## Blockers / Risks
 
-- 当前仅final provenance文档变脏；产品仍为reviewed R1 blobs，test checkpoint=`756def01`。
+- 无产品、测试或治理 blocker；仅当前 exact clean identity 尚待同 SHA 双审。
 - C2 双 PASS0 前不得开始 guarded_registry R2。
 
 ## Exact Next Steps
 
-1. 同步scoped handoff，truth sync后提交final provenance records；在clean identity复跑audit/manifest。
-2. 同一 Pascal/LEAN 与 Confucius/SAFETY 复审同一 clean SHA；双PASS0后才进入R2。
+1. 同一 Pascal/LEAN 与 Confucius/SAFETY 复审当前 committed+clean identity；双PASS0后进入R2。
