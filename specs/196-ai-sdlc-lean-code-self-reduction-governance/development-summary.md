@@ -95,4 +95,10 @@
 - WI215 编码前可实现性对质已统一否决旧160/190 proof合同；parent只把T66 proof个别上限修为290，
   `product+proof≤729`的RC-06 25%组合硬门、路线累计≤1,500、产品与release边界均保持不变。修正后的
   parent/child formal须重新同identity双审，未通过前不得进入candidate。
+- 后续两版未提交recorder原型进一步证明集中式T61A动态证明会自然增长至约303～315 LOC并突破组合硬门；
+  双方统一`NO-GO`。当前风险分层将T61A限为≤200 LOC的不可变基线，把原动态矩阵完整移到每阶段/T61B/
+  selector切换/deletion的三方回放；Round 12与13 findings后已补outer/leaf、三套isolated project命令、
+  checkout/import provenance与same-absolute-root-v1；随后补各腿pytest import隔离、receipt exact165直接执行、
+  file-qualified helper source SHA及capture/performance专职symbol。Round 17精确formal取得LEAN/SAFETY双PASS0；
+  reserve=90、recorder target=170，没有删除证据或放宽RC-06，产品仍零改动。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

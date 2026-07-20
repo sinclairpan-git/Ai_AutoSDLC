@@ -23,10 +23,18 @@
 - T61A committed+clean identity 的双 readiness GO 前，`src/**` 保持零差异，两份目标行为测试 blob
   保持不变；只允许 manifest exact inventory/close 数字机械替换。当前机械值=`1131/1131/0/0`、
   close=`215/215`，exact test=`1 passed in 99.06s`。
+- Round 11b后的两版未提交recorder原型证明旧T61A仍属过度实现：第二版311 LOC且缺多项安全逻辑，完整
+  自然下界约303～315 LOC，无法满足729组合硬门。Pascal/LEAN与Confucius/SAFETY统一`NO-GO`，原型已删除，
+  产品与目标行为测试仍零差异。
+- 风险分层方案已获两名reviewer原则性`PASS0`：T61A只冻结结构/身份/测试/性能/预算的不可变编码前基线；
+  原动态矩阵完整迁移到每个stage、T61B、默认selector切换与legacy deletion的三方回放，不删除兼容证据。
+  Round 14后Round 15双FAIL1，证明三条命令仍未实际选择165节点；修正后Round 16的LEAN初始FAIL经双方
+  复算确认是把grammar错误应用到全库存并被撤回。为消除歧义仍增加禁止子域断言；Round 17 formal-six=
+  `3aa2d6a3...d9abf`、formal-three=`abd28b97...dcadd`取得同identity LEAN/SAFETY双PASS0、findings=0。
 
 ## 预算与边界
 
-- Recorder目标≤230/hard cap250；全部新增 test/harness/normalizer目标≤263/hard cap290；candidate peak product≤522；
+- Recorder目标≤170/hard cap200；全部proof hard cap290，future reserve逐symbol固定90；candidate peak product≤522；
   product+proof组合硬门≤729；terminal≤720；
 - 当前candidate product shadow=466（330 engine+85 glue+51 route/facade）；T61A必须
   `shadow + actual current proof + frozen future reserve≤729`，
@@ -38,6 +46,7 @@
 
 ## 下一步
 
-- 实现唯一≤250 LOC recorder与machine receipt，保持总proof≤290和pre-GO边界。
+- Round 17 formal修订与truth/governance/manifest门禁已闭合；固化committed+clean identity并复核双PASS0。
+- 以TDD实现目标≤170/hard cap200的唯一recorder与machine receipt，保持总proof≤290和pre-GO边界。
 - 完成record/verify、NO-GO故障、165与全部治理门禁，形成committed+clean proof identity。
 - Pascal/LEAN与Confucius/SAFETY对同一最终tuple双GO前不写产品或目标行为测试。

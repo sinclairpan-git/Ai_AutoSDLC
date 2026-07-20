@@ -168,14 +168,13 @@ WI 或直接写产品。
 ### Phase 2：Implementation WI / T61A readiness（下游执行）
 
 1. 从 T58 fresh main 创建独立 branch/worktree和 canonical WI，不复制第二套 contract。
-2. 在任何产品代码前，重跑 165 tests；捕获 direct-service/full-CLI 双根 baseline、raw tree/bytes、异常、
-   调用顺序、写入/中断/重试和 p50/p95。
-3. 冻结 normalizer、fixture、toolchain、architecture ledger 与 expected zero-delta；生成 public callable/DTO
-   版本化 Python-surface manifest（public=surface/behavior；DTO hook=source/behavior、source unreadable 即阻断；仅 allowlist
-   `builtins.list/dict` factory tag；禁止 identity/address repr），并捕获 execute/writer late-bound `self`
-   dispatch 的 `None`/truthy/falsey/clock subclass/spy 矩阵。
+2. 在任何产品代码前，冻结exact165 ordered nodes、目标test/fixture/config blob、两个独立basetemp PASS和
+   selector warm-up+20原始duration。
+3. 冻结toolchain、architecture ledger与public callable/DTO结构manifest；唯一recorder≤200，只生成
+   JSON-primitive五section原子receipt/verify，不在T61A重复实现动态差分矩阵。
 4. 证明candidate product shadow≤522、proof≤290，且
-   `shadow + actual current proof + frozen future proof reserve≤729`；future reserve逐文件/任务非零登记；
+   `shadow + actual current proof + frozen future proof reserve≤729`；当前implementation WI以既有测试文件
+   中的唯一test-only runner承载三方replay并逐文件/symbol冻结future reserve=90；
    个别上限不得相加使用；两 reviewer 对同一 proof identity 双 `GO`。
 
 **停止**：任一 reviewer NO-GO、proof/architecture 超预算、legacy 不稳定或隔离写边界不可靠。
@@ -188,16 +187,22 @@ WI 或直接写产品。
 2. 新增唯一 private module，逐函数≤50；先接 `cross_spec_writeback` 证明特殊 strategy。
 3. 按 guarded→broader→final governance→persistence→persisted proof→publication→closure→archive 接入。
 4. 每个 public method 的内部 selector 初始默认 legacy；未迁移 stage 一律 legacy。
-5. 每阶段记录 commit、module/route/glue/total LOC、branch proxy、tests；product peak≤522。
+5. 每stage以既有测试文件中的唯一test-only runner和三套isolated project环境执行原始legacy、current
+   legacy、candidate完整dynamic matrix；leaf覆盖`pythonpath=<leg-root>/src`并用importlib mode，先验真
+   checkout/import/route provenance；从T61A receipt展开九组disjoint exact node IDs，分组前拒绝任何
+   thread_archive/project_cleanup node，三腿worker直接选择
+   candidate测试定义中的累计节点并逐项对账JUnit，T61B union精确106+59；两个测试文件各九个seed helper
+   逐symbol source SHA验真，仅为未输出ledger/性能增加capture，再以同一behavior root证明零差异；
+   同时记录commit、module/route/glue/total LOC、branch proxy、tests；product peak≤522。
 
 **停止**：需要第二 module/领域、DTO 移动、反射/DSL/stage branch、公共开关或任何差异。
 **回退**：selector 指回 legacy，删除 candidate module/guard；legacy body 始终在。
 
 ### Phase 4：T61B、candidate PR 与 fresh-main
 
-1. 固定 candidate commit/tree，在 byte-identical 双根跑九 stage direct/full-chain differential。
-2. 比较 Python-surface manifest、late-bound dispatch、dataclass、exception、transcript、raw bytes、tree/mode、
-   call order、副作用、p50/p95。
+1. 固定candidate commit/tree，以byte-identical seed三方运行原始legacy/current legacy/candidate。
+2. 三方比较Python-surface manifest、loader/builder、late-bound dispatch、dataclass、fault/termination/retry、
+   exception、transcript、raw bytes、tree/mode/write order、transient sentinel、副作用与p50/p95。
 3. 执行 legacy→candidate→legacy→candidate；每次重跑目标矩阵。
 4. Run 165、full、Ruff、constraints、validate、truth、manifest；双 reviewer current identity PASS0。
 5. Candidate 默认 candidate、legacy 完整保留；`actual peak product + actual total proof≤729`后走
@@ -222,12 +227,14 @@ isolation、Python-surface smoke 与离线运行均不能联网或回读源码 c
 2. 删除 45 个 legacy full body、18 个失活 private method、legacy selector branch 和仅 legacy 使用的 glue；
    保留 27 public facade。
 3. 复算 terminal≤720、net delete≥2,918、ProgramService responsibility reduction≥3,278、branch proxy≤90。
-4. 重跑 Python surface/T61 differential、165/full/Ruff/governance、平台/build/no-index offline install/sibling。
+4. 以T61A原始legacy、冻结pre-deletion candidate-merge current legacy、deletion-head candidate三腿重跑
+   完整dynamic matrix，并运行Python surface、165/full/Ruff/governance、平台/build/no-index offline install/sibling。
 5. 双 reviewer、Codex/checks 对 deletion current head 全绿后 merge；此时 T66 仍 active。
 6. 从精确 deletion merge commit 建立一次性隔离 rollback worktree/branch，实际 revert merge commit，证明
    legacy route 与 selector rollback/reapply；销毁临时回退工作区后回到 deletion fresh-main，重复关键
    surface/differential/install/clean 验证。
-7. post-merge rollback receipt 与 deletion fresh-main 均全绿后才关闭 implementation WI/T66。
+7. 回到deletion fresh-main后，仍以T61A原始legacy、冻结pre-deletion current legacy、fresh-main candidate
+   三腿重跑完整dynamic matrix；post-merge rollback receipt与deletion fresh-main全绿后才关闭implementation WI/T66。
 
 **回退顺序**：先 revert deletion PR 恢复 legacy，再 selector 指回 legacy；必要时再 revert candidate PR。
 
@@ -245,7 +252,7 @@ T66 完成只更新 GAP-03/RC ledger；GAP-04～06、其他 ProgramService domai
 | call graph | AST Call + outside-service scan | private 外部消费者或公共 surface 漏项 |
 | legacy tests | 精确 `-k` selector 165 | 数量不是 106+59 或任一失败 |
 | Python surface | versioned inspect/dataclasses manifest + late-bound subclass/spy | signature/DTO/dispatch 任一差异 |
-| service differential | 双根 dataclass/exception/call/tree/raw bytes | 任一未批准差异 |
+| service differential | 三方 dataclass/exception/call/tree/raw bytes | 任一未批准差异 |
 | CLI differential | 9 help/mode/failure/full chain stdout/stderr/exit | 任一未批准差异 |
 | authorization | dry-run/confirm/execute/write order/external sentinel | 新写入或越权 |
 | recovery | write boundaries + KeyboardInterrupt/SystemExit/process termination | retry/final tree 不一致 |

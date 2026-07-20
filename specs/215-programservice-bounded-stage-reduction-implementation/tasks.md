@@ -49,60 +49,43 @@ related_doc:
 
 - **依赖**：T11 selector健康。
 - **完成**：一次warm-up+20个成功selector样本及nearest-rank p50/p95，已写execution log。
-- **边界**：receipt尚不存在；本characterization不替代T14单一direct+CLI composite的20个原始样本，
-  也不作为T61B基线。
+- **边界**：receipt尚不存在；本characterization直接作为T14 performance section的20个原始样本，
+  T61B仍须三方同机重采。
 
 ### T13 TDD 实现唯一 recorder（in_progress）
 
 - **Create**：`scripts/program_bounded_stage_t61a.py`。
 - **RED**：命令只因文件不存在失败。
-- **GREEN**：实现explicit stage inventory；public逐项覆盖signature/parameter/return/raw annotations/doc/
-  module/qualname/behavior；DTO逐项覆盖fields顺序/default/factory/equality与post-init presence/module/
-  qualname/signature/source/behavior；另覆盖private loaders、upstream与steps的missing/empty/valid/invalid、
-  confirmation/outside-root、九CLI help/mode/failure/full-chain、direct/CLI双根、
-  late-bound、fault/SystemExit/process termination/interrupt/retry、窗口化sentinel、raw tree/bytes和record/verify；
-  目标≤230、hard cap250、函数≤50；总proof目标≤263、hard cap290。
-- **失败路径**：schema固定outcome/failure phase/completed checks/error/verdict/closure及stable/performance/raw
-  三个status/payload/hash section；pass全complete，no_go按失败点使用not_started/partial/complete且raw至少
-  partial。内置spec §4 versioned 15-check全序/section transition。Expected termination必须由parent nonce
-  绑定声明，marker紧邻harness termination，post-marker transcript/exit、partial tree与fresh-child retry全部
-  匹配时允许完成`fault_recovery`；undeclared/mismatch/timeout/retry failure由仍存活supervisor先原子持久化
-  `closed_no_go`再非零退出，supervisor自身不可清理死亡由外部调用者判unclosed NO-GO。
-- **复用**：165 tests只按exact node ID/source hash/assertion coverage逐项复用；fixture只seed，不调用
-  `test_*`；每个node必须绑定实际seed/helper/fixture/autouse的transitive source SHA set，无法精确绑定就
-  不得复用。不得以selector总通过替代新增矩阵。
-- **禁止**：第二harness/DSL/依赖/产品模块；未知normalizer/callable fallback。
+- **GREEN**：实现45-symbol AST inventory；public signature/parameter/return/raw annotations/doc/module/qualname；
+  DTO fields顺序/default/factory/equality与post-init presence/module/qualname/signature/source；formal/source/
+  dependency/toolchain identity；exact165 ordered nodes与目标test/fixture/config blob hash；双basetemp结果、既有
+  20样本原始duration、预算和工作树前后不变；按spec §4 anchored grammar冻结九组exact node IDs/count，
+  record/verify分组前拒绝任何thread_archive/project_cleanup node，并冻结两个测试文件各九个file-qualified
+  seed helper source SHA。目标≤170、hard cap200、函数≤50；总proof hard cap290。
+- **风险分层**：loader/builder/direct/CLI、late-bound、fault/termination、transient sentinel和raw tree动态
+  矩阵迁移至每stage/T61B三方replay，不在T61A重复实现。
+- **禁止**：第二harness/DSL/依赖/产品模块、typed canonicalizer、normalizer、per-node transitive AST mapper。
 
 ### T14 生成机器 receipt（pending）
 
 - **Create**：`.ai-sdlc/work-items/215-programservice-bounded-stage-reduction-implementation/t61a-legacy-baseline-receipt.json`。
-- **验收**：`record`一次写完整receipt与一个direct+CLI composite的20个真实样本/component duration；
-  `verify`只读并重放稳定行为，stable behavior hash一致；性能区独立hash但不要求duration跨运行一致；
-  ≤2MiB、全部矩阵PASS；receipt不自绑定commit/tree/hash。Sentinel只包围seed后的被测调用，pytest/git/
-  toolchain采集在窗口外。
-- **NO-GO验收**：一次正常`record`生成唯一canonical pass candidate；canonicalization/matrix失败和
-  unexpected termination分别用独立负向`record`写caller-specified临时durable no_go receipt。每次invocation
-  仅一个authoritative output和root-A/root-B两根；三个receipt均可由`verify`按outcome校验，no_go非零且
-  不得升级为pass；no_go `verify`创建零行为根且normalizer table为空。三个内容hash严格使用spec §4 canonical
-  JSON bytes；产品mapping唯一编码为tagged object并在其
-  entries数组保留顺序；
-  非UTF-8 bytes/Path/tuple/exception args做type-tag往返与hash复算；非法check前缀/section状态必须被拒绝。
-- **进程验收**：pass=`authoritative receipt verify + exit 0`；任一非零/signal退出不得接受现存pass receipt。
-  有有效`closed_no_go`则closed；否则外部envelope记录exit/signal、现存文件hash和`unclosed_no_go`。
-- **边界验收**：pass/no_go与verdict/closure/failure/error必须双向唯一；performance第20样本写入后、summary/
-  hash/check-ID前注入失败仍生成partial durable receipt。计时仅用同一父进程`perf_counter_ns()`，三段非负且
-  total≥direct+CLI；wall clock或child自报duration必须失败。
+- **验收**：`record`写schema v2唯一receipt；identity/structure/tests/performance/budget五个JSON-primitive
+  section及hash齐全，双basetemp 165/165、20原始duration、worktree不变、预算全部PASS；`verify`只读重算；≤2MiB。
+- **NO-GO验收**：可清理失败以temp+flush+fsync+replace写同schema no_go receipt并非零退出；不可清理死亡
+  由外部envelope记录exit/signal与现存文件hash。No-go sections只允许五section全序的空集/严格前缀，
+  已取得项hash必须有效；pass/error=null、no_go/non-empty error双向唯一；`verify(no_go)`保持no_go并非零，
+  缺失/损坏/跳项/混合状态绝不升级pass。Temp在target parent同文件系统，file fsync→replace→可用时dir fsync。
 
 ### T15 T61A proof commit 与终端门禁（pending）
 
 - **依赖**：T11～T14。
 - **验收**：formal+recorder+receipt+truth/continuity提交；`src/**`零差异、目标测试blob不变、manifest test
-  仅机械数字替换；recorder≤250，recorder+manifest diff新增行+后续candidate tests/helper总proof≤290，
-  且`candidate_product_shadow + actual_current_proof + reserved_future_proof≤729`；future reserve按后续
-  candidate test/helper/normalizer逐文件/任务冻结且不得记0规避；个别上限不得相加使用；Ruff、
+  仅机械数字替换；recorder≤200，recorder+manifest diff新增行+后续candidate tests/helper总proof≤290，
+  且`candidate_product_shadow + actual_current_proof + reserved_future_proof≤729`；future reserve按spec §4
+  逐文件/symbol固定90行；超出时等量降低product shadow，否则NO-GO；个别上限不得相加使用；Ruff、
   165、recorder verify、constraints/validate/truth/manifest/scope/parity/Cursor/clean全绿。
 - **identity**：按spec §4分列legacy/proof commit+tree、WI196+WI213 formal-six、WI215 formal-three、
-  harness、receipt file、stable behavior和observed-performance hash。
+  harness、receipt file与五个section hash。
 
 ### T16 LEAN/SAFETY 同身份 readiness（pending）
 
@@ -118,7 +101,14 @@ related_doc:
 
 - **依赖**：T16双GO。
 - **Test**：既有service/CLI测试文件中的最小candidate seam。
+- **Runner**：在既有integration文件创建spec §4固定outer/supplemental node，可在既有conftest创建唯一
+  test-only route/root fixture；worker从T61A receipt展开截至当前stage的累计exact node IDs，重写为candidate
+  test paths并追加supplemental nodes，使用plan §8三条isolated命令、同一behavior root、原生JUnit/raw目录。
+- **禁止**：supplemental调用test function或嵌套pytest；worker只跑一层pytest。JUnit必须逐项匹配expected
+  existing/supplemental node IDs且全部passed；九组union精确106+59，seed helper逐file/symbol/source SHA匹配。
 - **验收**：legacy PASS；candidate只因engine未实现FAIL；没有fixture/import假红。
+- **三方门**：当前stage GREEN前后必须在隔离原始legacy commit、current legacy route、candidate route运行
+  spec §4.2动态矩阵；先验真cwd/HEAD/tree/interpreter/module files/source SHA/route，任何未批准差异即停止。
 
 ### T22 创建唯一 private engine（pending）
 
@@ -130,7 +120,9 @@ related_doc:
 
 - **顺序**：guarded registry、broader governance、final governance、writeback persistence、persisted write
   proof、final proof publication、closure、archive。
-- **每项验收**：当前stage direct+CLI+differential通过；此前stage不回归；未迁移stage仍legacy；预算ledger更新。
+- **每项验收**：当前stage direct+CLI+differential通过；此前stage不回归；未迁移stage仍legacy；outer在三腿
+  各执行一次pytest worker，直接选择累计冻结existing nodes与supplemental nodes，spec §4.2完整矩阵零差异，
+  JUnit exact-node对账与raw tree hash入log；预算ledger更新。
 
 ### T31 九阶段 selector round-trip（pending）
 
@@ -140,7 +132,8 @@ related_doc:
 
 ### T32 T61B zero-delta（pending）
 
-- **验收**：surface/DTO/late-bound/exception/trace/raw tree/bytes/mode/side-effect零未批准差异；
+- **验收**：以唯一test-only runner执行原始legacy/current legacy/candidate三方spec §4.2完整矩阵，
+  原生JUnit/raw tree hash入log且零未批准差异；
   candidate p95≤baseline 110%或复测后判NO-GO。
 
 ### T33 Candidate terminal gates（pending）
@@ -172,17 +165,20 @@ related_doc:
 - **依赖**：T41/T42。
 - **分支**：从candidate merge精确commit新建独立deletion branch/worktree。
 - **验收**：删45 body、18 private、legacy selector/glue；保留27facade/DTO；terminal≤720、net≥2,918、
-  responsibility reduction≥3,278、branch≤90。
+  responsibility reduction≥3,278、branch≤90；冻结pre-deletion candidate-merge worktree/current legacy腿。
 
 ### T52 Deletion gates/PR/merge（pending）
 
-- **验收**：T61/165/full/Ruff/governance/platform/package/offline/sibling、本地双PASS、Codex/checks全绿；
+- **验收**：先在冻结T61A proof worktree运行recorder verify并登记HEAD/tree，禁止在deletion checkout重算
+  已删除的45-symbol基线；随后以T61A原始legacy、冻结pre-deletion candidate-merge current legacy、deletion-head candidate三腿
+  重跑spec §4.2完整矩阵；165/full/Ruff/governance/platform/package/offline/sibling、本地双PASS、Codex/checks全绿；
   merge后T66仍active。
 
 ### T53 Exact-merge actual rollback（pending）
 
 - **验收**：一次性worktree实际revert deletion merge；legacy route/surface/selector可用；回到deletion
-  fresh-main后重验关键矩阵；保留rollback receipt。
+  fresh-main后再以T61A原始legacy、冻结pre-deletion current legacy、fresh-main candidate三腿重验§4.2
+  完整矩阵；保留rollback receipt。
 
 ### T54 Lifecycle closure（pending）
 

@@ -11,9 +11,14 @@
   stage-name 分支、循环 import、DTO 移动、公共开关、新依赖或第二领域。
 - 冻结 `product≤522`、`proof≤290`、`product+proof≤729`、`terminal≤720`、`net delete≥2,918`、
   `ProgramService responsibility reduction≥3,278`；任一超限立即 RC-09 No-Go，不扩大预算。
-- WI215 编码前可实现性复核把旧proof 190个别上限修正为290，但RC-06组合硬门仍为729；WI215使用
-  `330 engine + 85 proven glue + 51 route/facade = 466` shadow，使目标proof+reserve≤263。该回写不放宽25%分母、产品范围或删除目标，
-  旧formal verdict已退役并等待重审。
+- WI215 编码前可实现性复核先否决旧proof 190个别上限，随后用两版未提交原型进一步证明“把全部动态
+  矩阵集中在T61A”会形成约303～315 LOC自然下界并突破729组合硬门。当前风险分层把recorder收敛为
+  目标≤180/hard cap200的不可变基线，全部proof hard cap290、future reserve合计≥27；RC-06组合硬门仍为729。
+- 原动态兼容矩阵完整迁移到每个stage、T61B、默认selector切换和legacy deletion的三方回放：isolated
+  frozen legacy、current legacy route、candidate route必须零未授权差异。两名reviewer已对方案原则PASS0，
+  Round 12～15持续修正后，Round 16的LEAN初始FAIL经复算撤回；显式禁止子域断言仍作为fail-closed增强。
+  Round 17 formal-six=`3aa2d6a3...d9abf`、formal-three=`abd28b97...dcadd`取得LEAN/SAFETY双PASS0，
+  findings=0。Reserve=90、recorder target=170；产品范围、25%分母和删除目标均未放宽。
 - 阶段组合门进一步防止T61A以actual product=0绕过：readiness使用candidate shadow+actual proof+frozen
   future reserve，candidate使用actual peak product+actual proof，二者均≤729。
 - T61A/B 覆盖 Python API/DTO surface、late-bound `self` truthiness/clock、CLI、artifact/raw bytes、授权、

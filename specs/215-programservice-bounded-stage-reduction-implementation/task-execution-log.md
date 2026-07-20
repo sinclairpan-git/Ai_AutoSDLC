@@ -240,3 +240,97 @@
   supervisor死亡封闭、pass receipt+exit 0、expected termination、两根/零根和coverage provenance全部通过。
 - 同批治理验证：constraints无BLOCKER、program validate PASS、plan-check pending=0/drift=NO、manifest exact=
   `1 passed in 104.20s`；产品源码与目标行为测试仍为零差异。该结论仅完成authoring准入，不冒充最终T61A GO。
+
+## 16. Batch 2026-07-20-014：T61A proof 过度实现复核与风险分层修正
+
+- Round 11b 后先后制作两版未提交 recorder 原型。第二版虽压至311 LOC，但仍缺完整状态转移、精确
+  provenance、真实public/DTO/raw/late-bound/termination/retry/performance等安全证据；继续补齐的自然下界
+  约303～315 LOC，连同manifest和future reserve会使组合量约793，超过RC-06硬门729。
+- Pascal/LEAN与Confucius/SAFETY据此对原T61A执行合同统一`NO-GO`；两版原型均已删除，未改`src/**`
+  或两份目标行为测试。禁止用压行、弱化证据、删除矩阵或扩大预算伪造可行性。
+- 风险分层修正把T61A收敛为编码前不可变基线：45方法结构、27个public surface、27个DTO结构、165节点
+  有序身份与真实测试结果、formal/source/toolchain/provenance hash、warmup+20性能基线、原子JSON receipt和
+  组合预算。recorder目标≤180/hard cap200，总proof hard cap290，future task reserve合计≥27。
+- 原动态矩阵未删除，迁移到每个stage、T61B、默认selector切换和legacy deletion前执行三方回放：冻结旧
+  commit/tree的isolated legacy、candidate checkout中的current legacy route、candidate route必须零未授权差异。
+  该结构避免共享facade/glue让legacy和candidate同错而被误判通过。
+- 两名reviewer对上述风险分层方案均给出`PASS0`。方案评审不替代精确文件字节评审；当前formal bytes仍须
+  重新计算identity并由双方从零复核，未取得同identity双PASS0前不得实现recorder或产品代码。
+
+## 17. Batch 2026-07-20-015：风险分层精确字节 Round 12 双 FAIL3 与修正
+
+- Round 12 formal-six=`802adc21...d3d8`、formal-three=`3bed3ac4...093f`由双方独立复算一致；
+  Pascal/LEAN=`FAIL3`、Confucius/SAFETY=`FAIL3`。共同finding是旧behavior/direct+CLI T61A措辞残留与
+  no_go五section早期失败语义不闭合；LEAN另发现三方runner/机器载体/reserve未可执行，SAFETY另发现
+  deletion删除legacy后current-legacy腿无来源。
+- 修正删除全部T61A动态hash/双根残留；readiness只绑定receipt file与五section hash。No-go sections只允许
+  五section全序的空集/严格前缀，已取得hash须有效；verify保持no_go并非零，绝不补算或升级pass。
+- 唯一test-only runner限既有integration测试文件和可选既有conftest seam；单pytest node记录并执行三条
+  subprocess命令，原生JUnit与未跟踪raw tree为机器载体，不新增脚本/测试文件/schema。Future reserve固定
+  48行，超出时须等量降低product shadow，否则NO-GO；T23～T30/T32均绑定完整§4.2。
+- Deletion current-head/fresh-main三腿固定为T61A原始legacy、冻结pre-deletion candidate-merge current
+  legacy、deletion candidate，merge前后均完整回放。修正后新formal-six=`b94b563b...0837`、formal-three=
+  `741c0308...d50e`，Round 13正在同identity复审；Round 12 verdict全部退役。
+
+## 18. Batch 2026-07-20-016：Round 13 LEAN FAIL2 / SAFETY FAIL3 与隔离runner闭环
+
+- Round 13双方独立复算formal-six=`b94b563b...0837`、formal-three=`741c0308...d50e`一致。LEAN=`FAIL2`：
+  runner没有冻结outer/leaf/三条命令，48行reserve无逐symbol自然估算。SAFETY=`FAIL3`：共享editable可能让
+  original腿误载candidate、deletion checkout错误重算T61A recorder、outcome/error与目录fsync未闭合。
+- 唯一runner现冻结outer/非递归leaf node、五类root输入、每腿commit/tree、test-only route和三条
+  `uv run --isolated --project/--directory <leg-root>`命令；先验真cwd/HEAD/tree/interpreter、三模块resolved
+  path/source SHA和route，再以同一重置绝对behavior root比较完整§4.2，comparison policy不使用normalizer。
+- Future reserve改为逐文件/symbol 80行：conftest fixture10、stage/fault data12、leaf command12、leg runner14、
+  provenance12、compare14、leaf/outer6；`466+actual current proof+80≤729`，实际超额只能等量降product或NO-GO。
+- Deletion recorder verify只在冻结T61A proof worktree；pass/error=null与no_go/non-empty双向唯一，target-parent
+  temp按file fsync→replace→可用时directory fsync。新formal-six=`cc524311...2179`、formal-three=
+  `44b4441e...2589`进入Round 14；Round 13 verdict退役。
+
+## 19. Batch 2026-07-20-017：Round 14 SAFETY PASS0 / LEAN FAIL2 与真实leaf职责
+
+- Round 14双方独立复算formal-six=`cc524311...2179`、formal-three=`44b4441e...2589`一致；SAFETY=`PASS0`、
+  LEAN=`FAIL2`。LEAN发现candidate test root的pytest `pythonpath=["src"]`仍可能污染旧腿，且80行表只预算
+  编排/比较，未明确完整矩阵采集和T61B性能职责；SAFETY PASS因后续bytes变化退役。
+- 三条leaf命令现强制`-o pythonpath=<leg-root>/src --import-mode=importlib`，并由command/provenance双重断言。
+  精确复用106 unit build/execute/write node families、59 integration CLI node families与九个具名stage seed
+  helpers；新增`_capture_three_way_case`只补未输出的late-bound/fault/termination/sentinel/network ledger，
+  `_sample_three_way_performance`专职T61B warm-up+20。
+- Future reserve按九个symbol重算为90行，recorder目标收紧170；组合门仍为
+  `466+actual current proof+90≤729`，不降低证据、不虚降product。新formal-six=`11003407...8799`、
+  formal-three=`e9ba27e6...b148`进入Round 15；Round 14 verdict全部退役。
+
+## 20. Batch 2026-07-20-018：Round 15 双 FAIL1 与 exact-node worker接线
+
+- Round 15双方独立复算formal-six=`11003407...8799`、formal-three=`e9ba27e6...b148`一致，LEAN/SAFETY
+  均`FAIL1`：合同声称复用165节点，但三条命令只选择supplemental leaf，存在节点完全未执行的共同阻断。
+- T61A receipt现按anchored primary-stage grammar冻结九个disjoint exact-node组，计数为
+  `16/19/19/19/19/19/20/17/17`，union精确`106+59=165`；同时冻结unit/integration两个文件各九个
+  file-qualified seed helper source SHA。
+- Outer从receipt展开截至当前stage的累计exact IDs、重写candidate绝对test paths并追加supplemental nodes；
+  三腿各只运行一层pytest worker。Supplemental禁止调用test function或嵌套pytest，只补ledger；JUnit必须
+  exact-node对账且全部passed，T61B执行exact165+九supplemental。
+- 新formal-six=`57598a05...e721`、formal-three=`34ddc951...f8cc`进入Round 16；Round 15 verdict退役。
+
+## 21. Batch 2026-07-20-019：Round 16更正与Round 17同身份双PASS0
+
+- Round 16 LEAN最初因archive grammar可能吞入排除子域给出`FAIL1`；SAFETY复算指出grammar输入已是selector
+  排除后的receipt exact165，九组实际完整且无重复。LEAN随后独立复核并撤回该FAIL，改判原identity `PASS0`。
+- 为消除实现歧义，仍做最小fail-closed增强：record/verify/worker在分组前显式断言selector来源，并拒绝任一
+  `thread_archive`/`project_cleanup` node。该修订不创建第二selector、不改变节点、runner或90行reserve。
+- Round 17双方独立复算formal-six=
+  `3aa2d6a3d647aaae22fba3a234071031bab68a342348251fbdd1362a299d9abf`、formal-three=
+  `abd28b97ba41387db4b936990f0c786ac4b250c49007a30e1d5b893309adcadd`一致，LEAN/SAFETY=`PASS0/PASS0`、
+  findings=0。实测collected/assigned/unique=`165/165/165`，forbidden/missing/duplicate=`0/0/0`，九组计数=
+  `16/19/19/19/19/19/20/17/17`。该结论是风险分层formal authoring准入，不冒充最终T61A readiness GO。
+
+## 22. Batch 2026-07-20-020：本地双审准入与治理门禁
+
+- 用户明确授权本地SDLC双对抗评审作为合入门槛；远端Codex只作附加信号，不再成为无限等待条件。
+- Round 17 formal hash复算仍为`3aa2d6a3...d9abf`/`abd28b97...dcadd`，root/scoped handoff byte-identical，
+  `src/**`与两份目标行为测试零diff，T61A recorder仍不存在。
+- `verify constraints`、`program validate`通过；`workitem plan-check --wi ... --json`为
+  `drift=false/pending_todos=0`。当前CLI不支持旧记录中的`--id`，已按`--help`使用`--wi`。
+- `program truth sync --execute --yes`写入ready快照，inventory=`1131/1131/0/0`；随后truth audit为
+  `state=ready/snapshot=fresh`，manifest exact为`1 passed in 105.85s`。
+- 以上只闭合formal authoring与治理准入；仍须在最终committed+clean identity复核双PASS0，然后以TDD形成
+  recorder/receipt和最终T61A双readiness GO，双GO前继续禁止产品代码。

@@ -360,3 +360,53 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
   变化退役，必须与WI215 formal-three一起重新同身份双审。
 - WI215 Round 9 发现组合门若不区分阶段会以产品尚未编码的actual=0误放行；parent已补T61A
   `shadow+actual proof+frozen reserve≤729`与candidate `actual+actual≤729`，reserve不得记0规避。
+
+## 21. Batch 2026-07-20-020：T61A过度证明合同风险分层
+
+- WI215两版未提交原型与LEAN/SAFETY复算证明：把全部动态兼容矩阵集中进T61A recorder会形成约303～315
+  LOC自然下界，并使组合量超过729；旧合同因此由双方统一`NO-GO`。原型已删除，产品与目标行为测试零改动。
+- Parent/child只调整验证分层，不删证据、不放宽产品/组合/terminal/净删门：T61A冻结不可变结构、身份、
+  165测试、性能、provenance与预算基线；recorder目标≤180/hard cap200，总proof hard cap290，future reserve
+  合计≥27。
+- 原public/DTO/loader/builder/direct/CLI/late-bound/fault/termination/transient sentinel动态矩阵迁移到每个
+  stage、T61B、默认selector切换及legacy deletion的三方回放，强制比较isolated frozen legacy、current
+  legacy route和candidate route，防止共享胶水同错。该方案已获双方原则性PASS0，仍待精确formal bytes双审。
+
+## 22. Batch 2026-07-20-021：风险分层 Round 12 双 FAIL3 回写
+
+- 精确formal-six=`802adc21...d3d8`、formal-three=`3bed3ac4...093f`上LEAN/SAFETY均`FAIL3`：旧T61A动态
+  身份残留、三方runner/reserve无承载、deletion后current legacy腿无来源、no_go verify不闭合均成立。
+- Parent/child现统一为receipt+五section T61A；唯一test-only runner使用既有测试文件、原生JUnit/raw tree，
+  future reserve固定48；deletion三腿冻结原始legacy/pre-deletion current legacy/deletion candidate；no_go
+  仅全序空集/严格前缀且verify非零不升级。新identity正在Round 13双审，产品与目标行为测试仍零改动。
+
+## 23. Batch 2026-07-20-022：Round 13 runner/import provenance修正
+
+- Round 13 LEAN=`FAIL2`、SAFETY=`FAIL3`；成立finding为runner协议/LOC不可复核、shared editable误导oracle、
+  deletion recorder root冲突及atomic result映射未闭合。
+- Parent/child现冻结outer/leaf与三套isolated project命令，每腿先验真checkout/import/route；同一绝对behavior
+  root reset且不使用normalizer。Future reserve逐symbol=80；deletion recorder只在T61A proof root；原子顺序与
+  outcome/error双向唯一。新identity进入Round 14，产品/目标测试仍零改动。
+
+## 24. Batch 2026-07-20-023：Round 14 pytest import与leaf采集职责修正
+
+- Round 14 SAFETY PASS0、LEAN FAIL2；candidate root pytest pythonpath可能污染旧腿，且80行reserve遗漏真实矩阵
+  capture/性能symbol，finding成立，全部旧verdict退役。
+- Leaf现覆盖各腿pythonpath并用importlib mode；精确复用106+59节点与九stage seed helper，只为未输出ledger
+  和T61B性能新增专职symbol。Reserve=90、recorder target=170，729组合硬门不变；新identity进入Round 15。
+
+## 25. Batch 2026-07-20-024：Round 15/16收敛与Round 17双PASS0
+
+- Round 15双FAIL1补齐三腿直接选择receipt exact nodes、JUnit逐项对账与file-qualified helper source SHA。
+- Round 16 LEAN关于archive grammar的FAIL经SAFETY指出输入域为已排除后的exact165，LEAN复核后撤回；仍增加
+  record/verify/worker显式拒绝两个排除子域的fail-closed断言，避免实现歧义。
+- Round 17 formal-six=`3aa2d6a3...d9abf`、formal-three=`abd28b97...dcadd`上LEAN/SAFETY双PASS0、
+  findings=0；165节点、九组计数与forbidden/missing/duplicate=0均实测一致。产品/目标测试仍零改动。
+
+## 26. Batch 2026-07-20-025：本地评审合入门与formal治理闭合
+
+- 用户确认本地Pascal/LEAN与Confucius/SAFETY同identity双PASS0、required checks与无actionable意见作为
+  合入门；远端Codex降为附加信号，不再无限阻断。
+- Round 17 hash、handoff parity、protected-source/test零diff均复核；constraints/validate/plan-check通过。
+- Truth execute写入ready快照，audit=`ready/fresh`、inventory=`1131/1131/0/0`，manifest exact通过。
+- 当前闭合的是formal authoring，不替代WI215 recorder/receipt完成后的最终T61A双readiness GO。

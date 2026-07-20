@@ -58,19 +58,23 @@ related_doc:
   ProgramService target responsibility reduction≥3278；
   branch proxy≤90；每函数≤50。
 - **阶段组合门**：T61A=`candidate shadow + actual current proof + frozen future reserve≤729`；candidate=
-  `actual peak product + actual total proof≤729`。Future reserve逐文件/任务非零登记，不得按actual product=0放行。
+  `actual peak product + actual total proof≤729`。当前implementation WI future reserve按可执行runner
+  逐文件/symbol固定90行；实际超出时等量降低product shadow，否则NO-GO。
 - **停止**：反射、循环 import、stage-name branch、DSL、DTO 搬迁、第二领域、公共开关或预算不可达即 RC-09。
 
 ### T22 冻结 T61A/B 与 readiness gate
 
 - **状态**：completed
 - **依赖**：T21
-- **验收**：T61A 在产品编码前；双临时根、raw evidence、异常/写序/副作用/中断/重试、≥20次 p50/p95；
-  Python-surface manifest 分为 public surface/behavior、DTO hook source/behavior（source unreadable 即阻断）、allowlisted
-  `builtins.list/dict` factory tag，未知 callable fail-closed 且禁用 identity/address repr；execute/writer
-  late-bound `self` dispatch 覆盖 `None`/truthy/falsey request/result 与 `generated_at=None/""/固定值` 的
-  clock spy 矩阵，保持 legacy truthiness；
-  LEAN/SAFETY 同 proof identity 双 GO 后才可编码；T61B 绑定 candidate commit/tree，零未批准差异。
+- **验收**：T61A在产品编码前；唯一recorder≤200，冻结45-symbol/public/DTO结构、exact165 ordered nodes与
+  test/fixture/config blob、两个独立basetemp PASS、≥20次selector原始duration、五section原子receipt；
+  动态loader/builder/direct/CLI、late-bound、fault/termination/retry、sentinel/raw矩阵下沉到每stage/T61B，
+  必须由既有测试文件中的唯一test-only runner和三套isolated project环境执行原始legacy/current legacy/
+  candidate完整矩阵；leaf覆盖各腿pythonpath并使用importlib mode，先验真checkout/import/route provenance；
+  从T61A receipt展开九个disjoint exact-node组，分组前拒绝thread_archive/project_cleanup node，worker
+  直接选择candidate测试定义并以JUnit逐项对账，T61B
+  union精确106+59；两个测试文件各九个helper逐symbol source SHA验真，只补未输出ledger/性能capture，再以
+  同一behavior root和raw hash留证；不得新增脚本/测试文件/receipt schema；双GO后才可编码。
 - **回退**：T61A NO-GO 先固化 commit/tree/raw hash/verdict/closure receipt，保留唯一证据；运行时零改动。
 
 ### T23 冻结 candidate、稳定周期、deletion 与 release 顺序
@@ -79,7 +83,8 @@ related_doc:
 - **依赖**：T22
 - **验收**：candidate 先 legacy 后 candidate；candidate merge legacy retained；主线预发布稳定周期无版本；
   wheelhouse `--no-index` 断网安装 wheel/sdist；deletion 独立 PR；删除 merge 后对精确 merge commit actual
-  revert + selector rollback/reapply，再回 deletion fresh-main；RC-08 全局终态前不发布。
+  revert + selector rollback/reapply；deletion current-head/fresh-main三腿固定为T61A原始legacy、冻结
+  pre-deletion current legacy、deletion candidate；再回deletion fresh-main；RC-08全局终态前不发布。
 - **停止**：平台/build/install/offline/sibling/rollback 任一失败不得 deletion/close。
 
 ### T24 同步父 WI196 当前路线

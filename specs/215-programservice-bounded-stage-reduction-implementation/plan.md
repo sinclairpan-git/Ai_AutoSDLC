@@ -20,11 +20,12 @@ related_doc:
 - Canonical 合同是 WI213 `spec.md + plan.md + tasks.md`；本计划不得放宽其 CC/RC。
 - 双 readiness GO 前 `src/**` 零差异，两份目标行为测试 blob 不变；`tests/**` 只允许 manifest
   inventory/close 数字机械替换，不得改变逻辑或物理 LOC。
-- Recorder目标≤230、硬上限250；全部新增 test/harness/normalizer目标≤263、硬上限290；private engine≤360；glue≤90；candidate
+- Recorder目标≤170、硬上限200；全部新增 test/harness/normalizer硬上限290；private engine≤360；glue≤90；candidate
   route/facade≤72；peak product≤522。
 - Product+proof组合硬上限仍为729；个别hard cap不能相加使用。当前candidate product shadow为
   `330 engine + 85 proven-lower-bound glue + 51 route/facade = 466`；
-  T61A使用`shadow + actual current proof + frozen future proof reserve≤729`，T33使用actual+actual；proof每
+  T61A使用`shadow + actual current proof + frozen future proof reserve≤729`，future reserve固定90行，
+  T33使用actual+actual；proof每
   超出一行，product至少等量下降，否则RC-06 NO-GO。
 - Terminal≤720、净删≥2,918、ProgramService responsibility reduction≥3,278、branch proxy≤90。
 - 只允许一个 private 产品模块；每个新/修改函数≤50行；禁止公共抽象、反射分发、DSL、registry、循环 import。
@@ -37,17 +38,19 @@ related_doc:
 
 | 文件 | 职责 | 阶段 |
 |---|---|---|
-| `scripts/program_bounded_stage_t61a.py` | 唯一 T61A/T61B recorder、normalizer 与 receipt generator | T61A 起 |
+| `scripts/program_bounded_stage_t61a.py` | 唯一 T61A 最小baseline recorder与receipt verifier | T61A |
 | `.ai-sdlc/work-items/215-programservice-bounded-stage-reduction-implementation/t61a-legacy-baseline-receipt.json` | 机器生成 legacy raw evidence；不自绑定自身 hash | T61A |
 | `src/ai_sdlc/core/_program_bounded_stage.py` | 唯一 private definitions、cross-spec strategy、bounded strategy 与 engine | candidate |
 | `src/ai_sdlc/core/program_service.py` | 现有 DTO；九组显式 binding；27 public facade/selector；删除期移除 legacy body | candidate/deletion |
 | `tests/unit/test_program_service.py` | 复用 106 legacy tests；candidate 只加最小 RED/differential seam | candidate |
-| `tests/integration/test_cli_program.py` | 复用 59 CLI tests；保持九命令 surface/exit/stdout/stderr | candidate |
+| `tests/integration/test_cli_program.py` | 复用59 CLI tests；承载唯一test-only三方runner；保持九命令surface/exit/stdout/stderr | candidate |
+| `tests/conftest.py` | 最多增加test-only route/root seam；产品不得读取 | candidate |
 | `tests/integration/test_repo_program_manifest.py` | 只机械替换 WI215 inventory/close 精确数字；不改逻辑/LOC | formal |
 | `specs/215-*/task-execution-log.md` | identity、命令、结果、finding、预算与回退的唯一人工执行归档 | 全阶段 |
 | `specs/215-*/development-summary.md` | pre-close current truth；不宣称 T61A/T66 完成 | 全阶段 |
 
-不新增第二个 proof/helper/test DSL、第二个产品模块或第二份 receipt schema。
+不新增第二个proof/helper/test DSL、第二个产品模块、第二份receipt schema或新测试文件。Future reserve按
+spec §4逐文件/symbol固定90行；任一symbol自然实现超额时必须等量降低product shadow，否则NO-GO。
 
 ## 2. Phase 0：Canonical WI 与准入
 
@@ -68,57 +71,37 @@ inventory/close 数字机械替换，或 WI213 dependency/预算被放宽。
 1. 在创建 proof code 前运行 WI213 精确 selector，必须为 `165 passed, 474 deselected`。
 2. Python 3.11 AST 复算45 methods及调用图：`3,638/3,305/333/386`，18 private 外部 consumer=0。
 3. 记录 Python/OS/uv/pytest/Pydantic/Typer/PyYAML、`uv.lock`、`pyproject.toml` 和三份 legacy source/test hash。
-4. 用两个独立 `--basetemp` 重跑 exact 165，均必须通过；额外 selector warm-up+20 只作健康
-   characterization，不替代 recorder 的可重放 composite 性能对象。
+4. 用两个独立 `--basetemp` 重跑 exact 165，均必须通过；selector warm-up+20 原始duration作为T61A
+   性能基线，T61B三方同机重采。
 
 ### 3.2 TDD 编写唯一 recorder
 
-1. 先运行不存在的 recorder 命令，RED 必须只因文件不存在。
-2. 以目标≤230、hard cap250实现显式九 stage inventory；public surface必须包含signature、parameter、return、raw
-   annotations/doc/module/qualname/behavior；DTO必须包含fields顺序/default/factory、equality与post-init
-   presence/module/qualname/signature/source/behavior。另覆盖private loader、upstream/steps/confirmation/
-   outside-root、九CLI help/mode/failure/full-chain、双根raw、late-bound、fault/SystemExit/process termination/
-   interrupt/retry和sentinel matrix；每函数≤50行。
-3. Recorder 只写调用者指定的临时/evidence路径，绝不写 `src`、`tests`、seed root或 sibling sentinel。
-4. `record` 一次写outcome-conditioned receipt；pass三个section均complete，no_go按failure phase把
-   stable/performance标为not_started/partial/complete，raw evidence至少partial；sentinel只包围seed后的被测
-   调用，pytest/git/toolchain采集在窗口外。
-5. `verify` 只读receipt并重放稳定行为区；`stable_behavior_sha256`必须一致。性能区使用一个可重放
-   direct+CLI composite，warm-up后20次；同一父进程用`time.perf_counter_ns()`顺序包围direct/CLI/total，
-   每次保留非负component/total真实duration并断言total≥direct+CLI，再计算独立
-   `observed_performance_sha256`；不要求duration或整份receipt跨运行相同。
-6. 生成唯一 `t61a-legacy-baseline-receipt.json`；检查≤2 MiB、未知 normalizer/callable=0。
-7. Receipt顶层固定outcome/failure phase/completed checks/error/verdict/closure及三个带status/payload/hash的
-   section；递归值域对bytes/Path/tuple/exception/type/callable使用spec §4唯一type tags，产品mapping顺序编码
-   为entry数组，内容hash严格使用Python3.11 canonical JSON bytes。用非UTF-8 bytes等做往返/hash验收。
-8. Expected termination使用parent nonce绑定的预声明case；产品fault callback完成后，IPC marker必须紧邻
-   harness-owned termination，且post-marker transcript/EOF/exit精确匹配；再于现有root-A/root-B内采集partial
-   tree并做fresh-child retry，全部匹配时完成`fault_recovery`。另以独立`record` invocation注入undeclared/
-   mismatched termination，先temp+fsync+replace原子写临时`closed_no_go` receipt再非零退出；`verify`必须
-   保持no_go，不能升级。Durable写入只由仍存活的receipt supervisor保证；supervisor自身不可清理死亡由
-   外部调用者记录exit/signal、现存文件hash和unclosed NO-GO。Pass必须同时满足receipt verify和exit 0；
-   非零/信号退出即使已有pass receipt也不得接受。每次invocation只能写一个authoritative receipt，最终只提交canonical baseline。
-9. Harness内置`program-bounded-stage-t61a.v1`的15个required check全序与section transition表；pass必须
-   full list并唯一映射readiness_candidate/ready_for_review；no_go必须strict prefix、首个未完成phase并唯一
-   映射no_go/closed_no_go，verify拒绝混合组合且不得信任receipt自报状态机。Performance check开始后到ID
-   追加前0～20样本均为partial；注入第20样本后、finalize前故障验证durable receipt。
-10. 先用AST建立165 tests的`requirement ID -> node ID -> source SHA -> asserted outcome` mapping，只复用
-    有精确断言且全部实际seed/helper/fixture/autouse依赖都可绑定transitive source SHA set的现有测试；
-    无法精确解析的node不得复用。Fixture writer只负责seed，不调用`test_*`。Recorder补齐全部未覆盖矩阵。
-11. 每次`record`及pass `verify`只创建root-A/root-B两个行为根且normalizer table恰好两项；child/retry
-    复用这两根，negative invocation可创建自己的两根，no_go `verify`创建零根且normalizer table为空。
-    不得把receipt/IPC/evidence目录纳入normalizer。
+1. 先运行不存在的recorder命令，RED必须只因文件不存在。
+2. 以目标≤170、hard cap200实现45-symbol inventory、public/DTO结构指纹、formal/source/dependency/toolchain
+   identity、exact165 ordered nodes与目标test/fixture/config blob hash、双basetemp命令结果、20个原始duration、
+   proof/combined预算和工作树前后不变证明；按spec §4 anchored grammar冻结九组exact node IDs/count及两个
+   测试文件各九个seed helper的file/symbol/source SHA；record/verify在分组前均拒绝任何`thread_archive`/
+   `project_cleanup` node，再断言九组计数和disjoint union；每函数≤50。
+3. 不在T61A重复实现loader/builder/direct/CLI、late-bound、fault/termination或sentinel动态矩阵；按spec §4.2
+   将其冻结到每stage/T61B的原始legacy/current legacy/candidate三方replay。
+4. `record`只写调用者指定evidence路径；schema v2使用identity/structure/tests/performance/budget五个
+   JSON-primitive section及canonical hash。`verify`只读重算，不重写性能样本或receipt。
+5. Pass要求`error=null`、五section、双basetemp、预算、worktree不变与exit0；no_go要求非空error且只允许五section全序的空集/严格
+   前缀且已取得hash有效，temp+flush+fsync+replace后非零退出；`verify(no_go)`保持no_go并非零，绝不
+   补算/升级pass；temp位于target parent，file fsync→replace→平台支持时directory fsync；不可清理死亡由外部envelope记录。
+6. 生成唯一`t61a-legacy-baseline-receipt.json`并检查≤2MiB；不得新增typed canonicalizer、normalizer、
+   transitive AST mapper、第二schema或第二harness。
 
 ### 3.3 Proof commit 与 readiness
 
 1. 提交 formal、recorder、receipt、manifest/truth 与 root/scoped handoff；worktree必须 clean，且
    `src/**`零差异、两份目标行为测试blob不变、manifest test仅机械数字替换。
 2. 固定 legacy commit/tree、proof commit/tree、WI196+WI213 canonical formal-six SHA、WI215
-   spec/plan/tasks SHA、harness SHA、receipt file SHA、stable behavior SHA和observed-performance SHA。
+   spec/plan/tasks SHA、harness SHA、receipt file SHA和五个section SHA。
    Formal SHA 均按spec §4/WI213 plan §8 的 per-file SHA line payload 算法计算。
 3. 重跑 recorder verification、165、constraints/validate/truth/manifest、Ruff、scope/clean。
-4. 预算tuple另列candidate product shadow、actual current proof和逐文件/任务future proof reserve，三者≤729；
-   reserve不得因产品尚未编码而置0。Pascal/LEAN 与 Confucius/SAFETY 对完全相同 tuple 各自裁决
+4. 预算tuple另列candidate product shadow、actual current proof和逐stage/T61B/stability任务future proof
+   reserve（固定90行），三者≤729；Pascal/LEAN与Confucius/SAFETY对完全相同tuple各自裁决
    `GO/NO-GO`；任何文件变化双 verdict 同时退役。
 
 **完成**：双 `GO`、actionable findings=0；否则保留 legacy并停止，不能写产品代码。
@@ -141,7 +124,9 @@ final_proof_archive` 顺序：
 1. 在既有两个测试文件写 candidate seam/differential RED；legacy path仍通过，candidate path因未实现失败。
 2. 运行单个 nodeid，确认 failure 是缺少当前最小 engine行为而不是fixture/import错误。
 3. 实现当前 stage 最小 definition/strategy/engine；未迁移 stage selector 仍为 legacy。
-4. 运行当前 stage direct/CLI、recorder current-stage differential、此前已迁移 stage集合。
+4. 通过spec §4冻结的outer/supplemental node和三条`uv run --isolated --project <leg-root>`worker命令执行三腿；先对
+   cwd/HEAD/tree/interpreter/resolved module file/source SHA/route做fail-closed attestation，再用同一重置后的
+   绝对behavior root、原生JUnit及未跟踪raw artifact证明当前stage和此前stage的§4.2完整矩阵零差异。
 5. 记录 module/route/glue/total LOC 与 branch；任一预算不可达立即 NO-GO，不扩大预算。
 6. 每个可独立审查的 stage批次提交一次；不得提交只有中间 routing、无通过测试的状态。
 
@@ -149,10 +134,10 @@ final_proof_archive` 顺序：
 
 ## 5. Phase 3：T61B 与 candidate PR
 
-1. 固定 candidate commit/tree；用 byte-identical baseline/candidate roots运行 recorder。
-2. Surface、DTO、late-bound、exception、trace、raw bytes/tree/mode、side-effect、p50/p95 未批准差异必须为0；
-   candidate p95>baseline 110%且复测成立即停止。
-3. 实际运行 legacy→candidate→legacy→candidate；每次重跑九 stage矩阵并保存 receipt。
+1. 固定candidate commit/tree；用同一test-only runner和byte-identical seed三方运行原始legacy/current
+   legacy/candidate，runner记录三条subprocess命令、原生JUnit与raw tree hash。
+2. Spec §4.2完整矩阵三方未批准差异必须为0；candidate p95使用同机三方样本，超过baseline 110%且复测成立即停止。
+3. 实际运行 legacy→candidate→legacy→candidate；每次重跑九stage完整矩阵，task log登记JUnit/raw tree hash。
 4. 将默认 selector切到 candidate，legacy body完整保留。
 5. 运行 exact165+新增tests、full suite、Ruff、constraints、validate/truth、manifest、双 PASS0。
 6. Push/open candidate PR；current-head Codex、required checks 全绿后 merge并 detached fresh-main。
@@ -177,10 +162,13 @@ final_proof_archive` 顺序：
 2. 删除45个 legacy full body、18个失活 private方法、legacy selector branch和仅legacy使用的glue；
    保留27 public facade/DTO。
 3. 复算 terminal≤720、net delete≥2,918、responsibility reduction≥3,278、branch≤90。
-4. 重跑 recorder/T61B、165/full/Ruff/governance/platform/package/offline/sibling和本地双审。
+4. 先在冻结T61A proof worktree运行recorder verify并登记其HEAD/tree；deletion checkout不得用自身重算
+   已删除的45-symbol基线。再以T61A原始legacy、冻结pre-deletion candidate-merge current legacy、
+   deletion-head candidate三腿重跑§4.2完整矩阵，并运行165/full/Ruff/governance/platform/package/offline/sibling和本地双审。
 5. Current-head Codex、required checks全绿后 merge；T66仍active。
-6. 从精确 deletion merge commit建一次性 rollback worktree，实际 revert deletion merge；证明legacy route、
-   surface与selector round-trip；随后回到 deletion fresh-main重验关键证据。
+6. 从精确deletion merge commit建一次性rollback worktree，实际revert deletion merge；证明legacy route、
+   surface与selector round-trip；随后回到deletion fresh-main，以T61A原始legacy、冻结pre-deletion
+   candidate-merge current legacy、fresh-main candidate三腿再次重验spec §4.2完整矩阵与关键证据。
 7. 只有 actual rollback receipt 与 deletion fresh-main全绿后，lifecycle receipt 才关闭WI215/T66并更新GAP-03。
 
 ## 8. 精确验证命令
@@ -200,6 +188,50 @@ uv run --python 3.11 ai-sdlc program truth audit
 uv run --python 3.11 pytest -q tests/integration/test_repo_program_manifest.py
 ```
 
+三方outer命令及其内部三条单层pytest worker模板固定如下；`<...>`均由当前stage ledger替换为绝对路径或精确hash：
+
+```powershell
+$env:AI_SDLC_THREE_WAY_ORIGINAL_ROOT = '<original-root>'
+$env:AI_SDLC_THREE_WAY_CURRENT_LEGACY_ROOT = '<current-legacy-root>'
+$env:AI_SDLC_THREE_WAY_CANDIDATE_ROOT = '<candidate-root>'
+$env:AI_SDLC_THREE_WAY_EVIDENCE_ROOT = '<untracked-evidence-root>'
+$env:AI_SDLC_THREE_WAY_BEHAVIOR_ROOT = '<single-resettable-behavior-root>'
+$env:AI_SDLC_THREE_WAY_ORIGINAL_COMMIT = '<original-commit>'
+$env:AI_SDLC_THREE_WAY_ORIGINAL_TREE = '<original-tree>'
+$env:AI_SDLC_THREE_WAY_CURRENT_LEGACY_COMMIT = '<current-legacy-commit>'
+$env:AI_SDLC_THREE_WAY_CURRENT_LEGACY_TREE = '<current-legacy-tree>'
+$env:AI_SDLC_THREE_WAY_CANDIDATE_COMMIT = '<candidate-commit>'
+$env:AI_SDLC_THREE_WAY_CANDIDATE_TREE = '<candidate-tree>'
+$Stage = '<stage>'
+uv run --python 3.11 pytest -p no:cacheprovider `
+  "tests/integration/test_cli_program.py::test_program_bounded_stage_three_way_replay[$Stage]" `
+  --basetemp "$env:AI_SDLC_THREE_WAY_EVIDENCE_ROOT/outer" `
+  --junitxml "$env:AI_SDLC_THREE_WAY_EVIDENCE_ROOT/outer.xml" -q
+
+$Nodes = @('<outer-expanded absolute candidate test node IDs from T61A receipt>', '<supplemental node IDs>')
+$env:AI_SDLC_TEST_PROGRAM_ROUTE = 'original'
+uv run --isolated --project $env:AI_SDLC_THREE_WAY_ORIGINAL_ROOT --directory $env:AI_SDLC_THREE_WAY_ORIGINAL_ROOT `
+  --python 3.11 python -I -m pytest -p no:cacheprovider -o "pythonpath=$env:AI_SDLC_THREE_WAY_ORIGINAL_ROOT/src" `
+  --import-mode=importlib @Nodes --rootdir $env:AI_SDLC_THREE_WAY_CANDIDATE_ROOT `
+  --basetemp "$env:AI_SDLC_THREE_WAY_EVIDENCE_ROOT/original/tmp" --junitxml "$env:AI_SDLC_THREE_WAY_EVIDENCE_ROOT/original.xml" -q
+$env:AI_SDLC_TEST_PROGRAM_ROUTE = 'legacy'
+uv run --isolated --project $env:AI_SDLC_THREE_WAY_CURRENT_LEGACY_ROOT --directory $env:AI_SDLC_THREE_WAY_CURRENT_LEGACY_ROOT `
+  --python 3.11 python -I -m pytest -p no:cacheprovider -o "pythonpath=$env:AI_SDLC_THREE_WAY_CURRENT_LEGACY_ROOT/src" `
+  --import-mode=importlib @Nodes --rootdir $env:AI_SDLC_THREE_WAY_CANDIDATE_ROOT `
+  --basetemp "$env:AI_SDLC_THREE_WAY_EVIDENCE_ROOT/current-legacy/tmp" --junitxml "$env:AI_SDLC_THREE_WAY_EVIDENCE_ROOT/current-legacy.xml" -q
+$env:AI_SDLC_TEST_PROGRAM_ROUTE = 'candidate'
+uv run --isolated --project $env:AI_SDLC_THREE_WAY_CANDIDATE_ROOT --directory $env:AI_SDLC_THREE_WAY_CANDIDATE_ROOT `
+  --python 3.11 python -I -m pytest -p no:cacheprovider -o "pythonpath=$env:AI_SDLC_THREE_WAY_CANDIDATE_ROOT/src" `
+  --import-mode=importlib @Nodes --rootdir $env:AI_SDLC_THREE_WAY_CANDIDATE_ROOT `
+  --basetemp "$env:AI_SDLC_THREE_WAY_EVIDENCE_ROOT/candidate/tmp" --junitxml "$env:AI_SDLC_THREE_WAY_EVIDENCE_ROOT/candidate.xml" -q
+```
+
+Outer从T61A receipt按spec §4 anchored grammar展开截至当前stage的累计exact node IDs，重写为candidate
+checkout绝对test paths并追加对应supplemental nodes；展开前再次拒绝`thread_archive`/`project_cleanup`；
+不得调用test function、嵌套pytest或选择outer。每腿
+JUnit须逐项等于expanded nodes且全部passed。每腿前重置同一behavior root，先验真provenance，再比较完整
+动态矩阵；共享`.venv`或解析到另一腿editable source立即失败。
+
 每次命令记录 exit code、duration、HEAD/tree和输出hash。PowerShell placeholder `<temp-json>` 必须替换为
 隔离临时路径，不能原样执行。
 
@@ -207,6 +239,6 @@ uv run --python 3.11 pytest -q tests/integration/test_repo_program_manifest.py
 
 - Formal/T61A proof、candidate、stability、deletion、rollback各自形成独立identity/receipt；不得预写future hash。
 - Receipt不嵌入自身commit/tree/hash；独立review envelope按spec §4分列legacy/proof commit+tree、两个
-  formal hash、harness/receipt/stable-behavior/observed-performance hash和verdict。
+  formal hash、harness/receipt file SHA、五个section SHA和verdict。
 - 任一受审文件变化使两位本地reviewer旧结论同时失效。
 - Candidate和deletion分支均保留；不删除本地分支。
