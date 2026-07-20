@@ -2,7 +2,7 @@
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
 **创建日期**：2026-07-19
-**当前状态**：一行产品实现与 T21～T31 已完成；implementation final current-identity 双审中
+**当前状态**：formal/amendment/implementation 已 merge/fresh-main；lifecycle reconciliation source ready
 
 ## 1. 固定归档规则
 
@@ -440,3 +440,28 @@
 - 本 continuity-only receipt 只把已完成门禁与唯一 next step 固化进 summary/log/byte-identical handoff，不改
   src/tests/tooling。提交后必须再次 terminal truth sync，并在新 committed+clean identity 重验完整门禁；成功后
   不再反写 tracked source，直接交 Pascal/LEAN 与 Confucius/SAFETY 同身份复审。
+
+## 31. Batch 2026-07-19-027：implementation 双 PASS、mainline 与 fresh-main
+
+- 最终 reviewed identity HEAD/tree=`75d6037514930c587e6138f833d8a99ec78ca604`/
+  `03b4a1ffc3d5997d2856e71f145d3fea6db51cf3`、clean；Pascal/LEAN 与 Confucius/SAFETY 同身份
+  `PASS0`，actionable findings=0。
+- Exact identity 本地 full=`3303 passed, 3 skipped in 707.62s`、targeted=`50 passed`，80/200/300 列
+  real-hook A/B、Ruff/V4a/fixed-base V4b、constraints、validate、truth=`ready/fresh 1126/1126`、manifest
+  exact、scope/parity/Cursor/clean 全绿；PR #162 required checks=`22/22 success`、review threads=0。
+- OpenAI 官方 Codex PR review 事故期间，用户批准本 PR 一次性治理例外：以 exact-head 本地双 PASS0、
+  完整本地门禁与 22/22 checks 替代 current-head GitHub Codex 回执。该例外不自动扩展到 lifecycle 或发布。
+- PR #162 squash merge=`2845fedcf46859b3945f327b8d8b96e9c7ca0dab`，implementation 分支未删除；
+  detached fresh-main tree 与 reviewed tree 相同，full=`3303 passed, 3 skipped in 707.39s`、targeted=
+  `50 passed in 16.42s`，其余实现门禁全绿。
+
+## 32. Batch 2026-07-19-028：lifecycle reconciliation source
+
+- 从 exact main `2845fedc` 创建 `codex/214-workitem-readonly-adapter-side-effect-lifecycle`；只对账
+  WI214/WI196/WI213 lifecycle docs、root/scoped handoff 与 truth/manifest，`src/tests` 零差异。
+- 本 source 将 GAP-15/T58 标记为以 lifecycle merge/fresh-main 生效的 closed/completed，并把 T66 从
+  implementation blocked 改为 ready；唯一授权是另建 T66 implementation WI，T61A 双 readiness GO 前
+  不得写产品代码。
+- T66、GAP-03、WI196、RC-08 与 release 仍为 open；不得创建版本/tag/GitHub Release/PyPI 或更新共享 CLI。
+- 下一步：提交 source、truth sync、治理/manifest/scope/parity/clean 门禁，再由 Pascal/LEAN 与
+  Confucius/SAFETY 对同一 committed+clean identity 从零双审；双 PASS0 前不得 push。

@@ -1,91 +1,61 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T03:45:40Z
-- Reason: 最终本地审查修正的 terminal gates 已完成；固化 receipt 后直接进入新身份双审
-- Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
-- State: T21-T31 completed；两项测试证据修正与 terminal gates 全绿，等待新身份双审
-- Stage: decompose
+- Updated: 2026-07-20T04:45:00Z
+- Reason: PR #162 implementation merge/fresh-main 完成；进入独立 lifecycle reconciliation
+- Goal: 关闭 GAP-15/T58，并只恢复 T66 独立 implementation WI 的 T61A readiness 准入
+- State: lifecycle source authored；等待提交、truth/gates 与同身份双审
+- Stage: verify
 - Work Item: 214-workitem-readonly-adapter-side-effect
-- Branch: feature/214-workitem-readonly-adapter-side-effect-dev
-- Base: origin/main@8999efcf2feccab88f8b957601b0be379032a1b7
+- Branch: codex/214-workitem-readonly-adapter-side-effect-lifecycle
+- Base: origin/main@2845fedcf46859b3945f327b8d8b96e9c7ca0dab
 
 ## Changed Files
 
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/214-workitem-readonly-adapter-side-effect/codex-handoff.md
-- program-manifest.yaml
-- src/ai_sdlc/cli/workitem_cmd.py
+- program-manifest.yaml（truth sync 后机械刷新）
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
+- specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
+- specs/213-programservice-bounded-stage-reduction/development-summary.md
+- specs/213-programservice-bounded-stage-reduction/task-execution-log.md
 - specs/214-workitem-readonly-adapter-side-effect/development-summary.md
 - specs/214-workitem-readonly-adapter-side-effect/task-execution-log.md
 - specs/214-workitem-readonly-adapter-side-effect/tasks.md
-- tests/integration/test_cli_workitem_adapter_dispatch.py
-- tests/integration/test_cli_workitem_init.py
-- tests/integration/test_cli_workitem_link.py
-- tests/unit/test_cli_hooks.py
 
 ## Key Decisions
 
-- Formal PR #160 与 V4 amendment PR #161 已 merge/fresh-main；implementation 唯一固定格式基线为
-  `FORMAT_BASE_SHA=8999efcf2feccab88f8b957601b0be379032a1b7`。
-- 产品只改 `_workitem_before_command()` 一处谓词：非 `link` 直接 return；`init` 继续由 handler 消费 hook。
-- 测试保持一个参数化 dispatch 文件、既有 init/link integration 与 hook unit，不新增 DSL/公共 fixture/产品抽象。
-- V4a 对三个可清洁测试文件 strict；V4b 对 base/candidate red-path Ordinal subset 与两个 legacy changed ranges
-  fail closed，禁止格式化 273 个历史 debt 文件。
-- Implementation fresh-main 前只声明代码候选通过；GAP-15/T58 仍 active、T66 T61A 仍 blocked。
+- Implementation final reviewed HEAD/tree=`75d60375`/`03b4a1ff`，Pascal/LEAN 与
+  Confucius/SAFETY 同身份 PASS0，actionable findings=0。
+- PR #162 22/22 checks success，squash merge=`2845fedc`；implementation 分支保留。
+- Detached fresh-main `2845fedc` tree 与 reviewed tree 相同；full=`3303 passed, 3 skipped`、targeted=
+  `50 passed`，Ruff/V4/constraints/validate/truth/manifest/scope/parity/Cursor/clean 全绿。
+- PR #162 的事故期本地双审替代 Codex 是用户批准的一次性例外，不自动扩展到 lifecycle 或发布。
+- 本 lifecycle 只改 child/parent lifecycle docs、continuity、truth/manifest；`src/tests` 必须零差异。
+- GAP-15/T58 的 closed/completed 以本 lifecycle merge/fresh-main 生效；之后只允许创建唯一 T66
+  implementation WI，T61A 双 readiness GO 前不得写产品。
+- T66、GAP-03、WI196、RC-08 与 release 仍 open；禁止版本/tag/Release/PyPI/共享 CLI 更新。
 
 ## Commands / Tests
 
-- Amendment final `e4ca3e42`/tree `1bef978f` 双 PASS0；PR #161 Codex/checks 全绿；merge/frozen base=
-  `8999efcf`，detached fresh-main truth/manifest/V4b/constraints/clean 全绿。
-- Test-only commit=`8f4f63dd`；detached RED=`16 failed, 33 passed in 16.27s`，失败范围与合同一致。
-- Product commit=`bd8a0de2`；targeted GREEN=`49 passed in 15.14s`；full=`3302 passed, 3 skipped in 673.22s`。
-- Ruff lint/V4a PASS；V4b 13 emitted ranges PASS；constraints no BLOCKERs；diff-check PASS。
-- Terminal source=`581cf344`；首个 truth snapshot=`034f3464...d732`、inventory=`1126/1126`、manifest-only
-  commit=`e68ae027`；final manifest refresh 后不再反写 tracked source。
-- Cursor protected rule SHA 保持 `d5f04acf...0b6a`；final identity 只有全部 T31 gates 通过才可送审。
-- Final gates on `7b33ec67`：targeted=`49 passed in 16.43s`、full=`3302 passed, 3 skipped in 682.71s`、
-  truth ready/fresh、manifest exact=`1 passed in 102.45s`、Ruff/V4/constraints/scope/clean 全绿。
-- PR #162 Codex reviewed exact `8d09b7bba8` 无 major issue；首轮 Compatibility Gate 的 Ubuntu/macOS
-  pytest 均因 real-hook A/B 比较不同绝对临时路径而失败，旧 Codex/双审 identity 随测试修正退役。
-- 本地以 `COLUMNS=200` 精确复现 RED；当前使用等长 `control/subject` 两个 byte-identical 隔离 repo，只
-  归一化绝对根路径后比较完整 stdout/stderr，保留 Rich 列宽与其余输出差异。
-- 修正后 terminal identity=`33a37b53`/tree=`90e5e950`：宽终端 targeted=`49 passed in 15.82s`、full=
-  `3302 passed, 3 skipped in 674.46s`；Ruff/V4a/V4b、constraints、validate、truth ready/fresh 1126/1126、
-  manifest exact=`1 passed in 102.03s`、scope/parity/Cursor/clean 全绿。
-- 双项目 correction identity=`36f49b62`/tree=`04ae4bea`：80/200/300 列单测 PASS、宽终端 targeted=
-  `49 passed in 16.47s`、full=`3302 passed, 3 skipped in 683.70s`；Ruff/V4a/V4b、constraints、validate、
-  truth ready/fresh 1126/1126、manifest exact=`1 passed in 110.91s`、scope/parity/Cursor/clean 全绿。
-- 最终本地审查 exact `98b7c6f2`：Pascal/LEAN=`PASS0`，Confucius/SAFETY=`FAIL2`；真实 no-project
-  自动化与 config-lock warning byte-exact 两项 finding 均成立，旧 verdict 全部退役。
-- 两项最小测试修正的 mutation 均预期 RED；恢复产品源码后两项=`2 passed`、宽终端 targeted=`50 passed`
-  且 80/200/300 列 real-hook A/B、Ruff/diff-check 全绿。被中止的 full 不是验收，final identity 必须重跑。
-- 修正 terminal identity=`56367d96`/tree=`64305f84`：targeted=`50 passed`、full=`3303 passed, 3 skipped`
-  且 Ruff/V4a/V4b、constraints、validate、truth ready/fresh 1126/1126、manifest exact、scope/parity/Cursor/
-  clean 全绿；本 continuity-only source 后再次重验，成功后不再反写 tracked source。
+- Implementation detached fresh-main：full=`3303 passed, 3 skipped in 707.39s`；targeted=
+  `50 passed in 16.42s`；truth=`ready/fresh 1126/1126`；全部门禁全绿。
+- Lifecycle branch created from exact `origin/main@2845fedc`；初始 worktree clean。
+- Lifecycle source authoring 进行中；尚未把本分支外部门禁或 review 写成已通过。
 
 ## Blockers / Risks
 
-- 新 identity 双 PASS0、PR #162 22/22 checks、merge/detached fresh-main 前不得开始 lifecycle。
-- 用户批准 PR #162 一次性治理例外：OpenAI 官方事故期间，本地 LEAN+SAFETY 同身份 PASS0 取代 current-head
-  GitHub Codex 回执；例外不自动扩展到 lifecycle 或发布阶段。
-- handoff CLI 依据旧 WI208 checkpoint 写错 scoped copy；已用 apply_patch 恢复 WI208/resume-pack，并直接维护
-  当前 WI214 root/scoped byte-identical，禁止把错误路由变化带入 implementation。
-
-## Local PR Review
-
-- Pascal/LEAN implementation pre-review：FAIL2，产品最小性 PASS；两项断言精度 finding 已在暂停的 dev worktree 修正。
-- Confucius/SAFETY implementation pre-review：FAIL4，产品范围 PASS；三组测试证据已修正，V4 矛盾由本 amendment 处理。
-- Amendment Round 4 final：同一 `e4ca3e42` identity 双 PASS0；仅作为 amendment receipt，不替代 implementation review。
-- Implementation Round 1：Pascal FAIL1（仅 continuity P3）、Confucius PASS0；identity 变化使两份 verdict 均退役。
-- Implementation Round 2：同一 `8d09b7bb` identity Pascal/Confucius 均 PASS0；PR #162 CI 促成测试修正后
-  两份 verdict 与 Codex current-head review 全部退役，必须从零重审。
-- Post-CI Round 4：Pascal continuity FAIL 已修正；Confucius SAFETY 对 `551d90b9` 报告同 repo A/B 偏离
-  plan 的“两份 byte-identical 临时项目”P3。Finding 成立，旧 review 均退役。
-- Final local review：Pascal 对 `98b7c6f2` PASS0；Confucius FAIL2 的 no-project 自动化与 warning byte-exact
-  finding 已仅以测试修正，产品源码保持不变；必须对新 committed+clean identity 从零双审。
+- truth sync、governance/manifest/scope/parity/clean gates 与 Pascal/Confucius 同身份双 PASS0 前不得 push。
+- lifecycle PR required checks、Codex review、merge/detached fresh-main 前 closure 不得视为对 main 生效。
+- OpenAI 事故若继续影响 lifecycle Codex 接单，不得静默沿用 PR #162 的一次性例外。
+- handoff CLI 仍可能按旧 WI208 checkpoint 错写 scoped copy；本轮直接维护 WI214 root/scoped byte-identical。
 
 ## Exact Next Steps
 
-- 让 Pascal/LEAN 与 Confucius/SAFETY 对新 committed+clean identity 从零审到 PASS0。
-- 双 PASS0 且 PR #162 22/22 checks 全绿后，按用户批准的一次性例外直接 merge并 detached fresh-main。
-- Implementation fresh-main 通过后创建独立 lifecycle reconciliation；不得提前关闭 GAP-15/T58 或放行 T66。
+- 完成 lifecycle source 自检并提交 source。
+- 执行 `uv run ai-sdlc program truth sync --execute --yes`，提交 manifest 机械刷新。
+- 运行 constraints、validate、truth audit、manifest exact、diff/scope/parity/Cursor/clean gates。
+- 让 Pascal/LEAN 与 Confucius/SAFETY 对同一 committed+clean identity 从零审到 PASS0。
+- 双 PASS0 后 push/open lifecycle PR，取得 required checks 与 Codex current-head review，再 merge/fresh-main。
+- 仅在 lifecycle fresh-main 完成后创建 T66 implementation WI并先执行 T61A 双 readiness。

@@ -309,3 +309,12 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
 - 当前唯一有效门禁为：WI214 formal、implementation、lifecycle reconciliation 均 mainline/fresh-main，
   且 lifecycle reconciliation fresh-main 明确关闭 GAP-15/T58 后，才可创建 T66 implementation WI并进入 T61A。
 - 本修正只校准 current truth/continuity，不修改 WI213 已验收事实、产品、测试、预算、依赖或版本。
+
+## 16. Batch 2026-07-19-015：WI214 implementation receipt 与 T66 准入恢复
+
+- WI214 final implementation reviewed HEAD/tree=`75d60375`/`03b4a1ff`，Pascal/LEAN 与
+  Confucius/SAFETY 同身份 PASS0；PR #162 22/22 checks，squash merge=`2845fedc`。
+- Detached fresh-main tree 与 reviewed tree 相同；full=`3303 passed, 3 skipped`、targeted=`50 passed`、
+  truth=`ready/fresh 1126/1126`，其余实现门禁全绿。
+- 本独立 lifecycle reconciliation merge/fresh-main 后关闭 GAP-15/T58。唯一下一步是新建 T66
+  implementation WI并先取得 T61A 双 readiness GO；T66/GAP-03/WI196/RC-08/release 仍保持 open。

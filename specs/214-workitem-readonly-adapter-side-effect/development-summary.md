@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 最终本地审查修正与 terminal gates 全绿，待新身份双审
+**当前状态**：formal/amendment 与 implementation 已 merge/fresh-main；lifecycle reconciliation 关闭材料已就绪
 
 ## 已冻结合同
 
@@ -40,9 +40,10 @@
 - 已完成：current-main 根因、范围、expected delta、最小设计、测试与异常矩阵、生命周期/回退合同、
   authoring 对抗评审收敛；formal PR #160 与 amendment PR #161 merge/detached fresh-main；implementation
   test-only/product 两提交、RED/GREEN、full/Ruff/V4/constraints。
-- 已完成：implementation terminal truth/handoff/source freeze；尚未完成 implementation 双审/PR/checks/merge/
-  fresh-main。尚未开始：lifecycle PR、T66 T61A。
-- GAP-15/T58、T66、GAP-03、WI196、RC-08 与 release 均保持 open；当前禁止版本/tag/Release/PyPI/
+- 已完成：implementation terminal truth/handoff/source freeze、同身份本地双 PASS0、PR #162 的 22/22 checks、
+  squash merge `2845fedc` 与 detached fresh-main。当前 lifecycle branch 只关闭 GAP-15/T58；T66 T61A 尚未开始。
+- 本 lifecycle merge/fresh-main 后 GAP-15/T58 关闭，并只授权创建独立 T66 implementation WI、先执行
+  T61A 双 readiness；T66、GAP-03、WI196、RC-08 与 release 仍保持 open，禁止版本/tag/Release/PyPI/
   共享 CLI 更新。
 - Implementation 预审发现 formal V4 错把主线 273 个历史 formatter-red 文件设为全库零债务门禁；独立
   amendment 仅改为 changed-file strict + legacy baseline-delta，不授权格式化非范围文件或放宽其他门禁。
@@ -74,3 +75,10 @@
 - 修正后的 terminal identity `56367d96`：targeted=`50 passed`、full=`3303 passed/3 skipped`，Ruff lint、
   V4a/V4b、constraints、program validate、truth=`ready/fresh` 1126/1126、manifest exact、scope/parity/Cursor/
   clean 全绿。当前 continuity-only source 不再改 src/tests；其 terminal truth refresh 后以相同门禁重验再送双审。
+- 最终 implementation review identity=`75d60375`/tree=`03b4a1ff`、clean，Pascal/LEAN 与
+  Confucius/SAFETY 同身份 PASS0、actionable findings=0；本地 full=`3303 passed, 3 skipped`，其余门禁全绿。
+- PR #162 在用户批准的事故期一次性治理例外下，以本地双 PASS0 + 完整本地门禁 + 22/22 checks 替代
+  current-head GitHub Codex 回执；squash merge=`2845fedc`，实现分支保留且 merge tree 与 reviewed tree 一致。
+- Detached fresh-main `2845fedc`：full=`3303 passed, 3 skipped in 707.39s`、targeted=`50 passed`，
+  Ruff/V4a/V4b、constraints、validate、truth=`ready/fresh 1126/1126`、manifest exact、scope/parity/Cursor/
+  clean 全绿。该 receipt 只完成 implementation，不计 RC-08 减重收益。
