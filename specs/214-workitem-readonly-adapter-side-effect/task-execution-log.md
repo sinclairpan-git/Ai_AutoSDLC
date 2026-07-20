@@ -398,3 +398,14 @@
   targeted=`49 passed in 15.51s`，Ruff lint/format PASS。
 - 相对 PR 首轮 reviewed identity `8d09b7bb`，该测试 correction 是 `+9/-4`，未新增公共 fixture/DSL/产品
   抽象；产品代码仍只有一行。提交测试/continuity、刷新 truth并重跑 terminal full/gates 后重新双审。
+
+## 28. Batch 2026-07-19-024：双项目 correction terminal gates
+
+- Source correction=`c2c9bc03`，truth snapshot=
+  `b9686071fe78277207f7b78bdf9face0d122f1e024a20538e8a3e1c3f00401b6`，manifest-only identity=
+  `36f49b6268d8bea543d2681a47b32b3e7f3691c0`/tree=`04ae4bea9474a30a15c80e16b97769d8f39de64c`。
+- Exact identity：80/200/300 列 real-hook A/B 单测 PASS；`COLUMNS=200` targeted=`49 passed in 16.47s`、
+  full=`3302 passed, 3 skipped in 683.70s`；Ruff lint/V4a/V4b、constraints、validate、truth=`ready/fresh`
+  1126/1126、manifest exact=`1 passed in 110.91s`、11-file scope/handoff parity/Cursor/clean 全绿。
+- 本 continuity correction 只把已完成证据写入 summary/log 与 byte-identical handoff，并把唯一 next step 设为
+  新 identity 双审；提交后刷新 truth并重跑相关治理门禁，src/tests/tooling 不再变化。

@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T00:15:38Z
-- Reason: SAFETY 指出的双项目隔离合同偏差已修正；新测试身份重新验收
+- Updated: 2026-07-20T00:31:59Z
+- Reason: 双项目夹具修正的 terminal gates 已完成；直接进入新身份双审
 - Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
-- State: T21-T31 completed；A/B 恢复双项目隔离并稳定跨终端输出，等待新身份 terminal gates
+- State: T21-T31 completed；双项目 A/B 与 terminal gates 全绿，等待新身份双审
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-dev
@@ -52,6 +52,9 @@
 - 修正后 terminal identity=`33a37b53`/tree=`90e5e950`：宽终端 targeted=`49 passed in 15.82s`、full=
   `3302 passed, 3 skipped in 674.46s`；Ruff/V4a/V4b、constraints、validate、truth ready/fresh 1126/1126、
   manifest exact=`1 passed in 102.03s`、scope/parity/Cursor/clean 全绿。
+- 双项目 correction identity=`36f49b62`/tree=`04ae4bea`：80/200/300 列单测 PASS、宽终端 targeted=
+  `49 passed in 16.47s`、full=`3302 passed, 3 skipped in 683.70s`；Ruff/V4a/V4b、constraints、validate、
+  truth ready/fresh 1126/1126、manifest exact=`1 passed in 110.91s`、scope/parity/Cursor/clean 全绿。
 
 ## Blockers / Risks
 
@@ -73,8 +76,7 @@
 
 ## Exact Next Steps
 
-- 提交双项目夹具/continuity 修正并刷新 terminal truth；对新 identity 重跑 full 与全部 gates。
-- 让 Pascal/LEAN 与 Confucius/SAFETY 对新 identity 从零审到 PASS0。
+- 让 Pascal/LEAN 与 Confucius/SAFETY 对本 continuity correction 后的新 identity 从零审到 PASS0。
 - 双 PASS0 后推送 PR #162 并重新请求 Codex current-head review。
 - current-head 双 PASS0/Codex/checks 全绿后 merge 并 detached fresh-main。
 - Implementation fresh-main 通过后创建独立 lifecycle reconciliation；不得提前关闭 GAP-15/T58 或放行 T66。

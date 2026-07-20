@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 双项目夹具修正重新验收
+**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 双项目夹具 terminal gates 全绿，待双审
 
 ## 已冻结合同
 
@@ -62,4 +62,6 @@
 - 本地 `COLUMNS=200` 复现 RED 后，首版修正改为同 repo 顺序 A/B，宽终端 full 与门禁全绿，但 SAFETY
   指出它偏离 plan 的“两份 byte-identical 临时项目”合同。当前不改 formal：恢复 `control/subject` 两个等长
   路径的隔离 repo，只把各自绝对根路径替换为统一 token 后比较完整 stdout/stderr；80/200/300 列单测、
-  宽终端 49 项矩阵与 Ruff 已通过。旧双审与 Codex review 退役，新 identity 必须重新 full/gates/双审。
+  宽终端 49 项矩阵与 Ruff 已通过。双项目 correction identity 的宽终端 full=`3302 passed/3 skipped`，
+  Ruff/V4、constraints、validate、truth/manifest、scope/parity/Cursor/clean 全绿；当前只剩 continuity correction
+  后的新身份双审与 PR #162 current-head 复审/CI。
