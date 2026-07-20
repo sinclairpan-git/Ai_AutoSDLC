@@ -421,3 +421,11 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
 - WI215 recorder=170 LOC、canonical receipt combined=728；proof commit=`ed1ed1f8`上verify/no_go、exact165、
   Ruff、全量`3303 passed, 3 skipped`及全部治理门禁通过，产品与目标测试零diff。
 - 仅剩records-only truth固化与final tuple LEAN/SAFETY双readiness GO；双GO前T66产品实现仍阻断。
+
+## 29. Batch 2026-07-20-028：T61A runtime NO-GO 与 RC-10 下游修订
+
+- `fadf8456` final readiness 被LEAN/SAFETY双NO-GO：recorder虽记170行，Ruff自然格式587行；风险分层
+  spike仍407行，custom proof路线违反RC-06/RC-09。
+- 两位reviewer设计级一致接受九阶段direct reduction：每stage tests-first Cx、direct Rx、immutable
+  legacy/current两腿、exact/full、同SHA双审；不保留shadow selector、双实现或第二deletion PR。
+- 当前同步parent/child formal并删除未合入proof资产；双PASS前产品仍零差异且禁止execute。

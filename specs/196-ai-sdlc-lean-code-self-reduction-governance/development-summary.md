@@ -102,3 +102,8 @@
   file-qualified helper source SHA及capture/performance专职symbol。Round 17精确formal取得LEAN/SAFETY双PASS0；
   reserve=90、recorder target=170，没有删除证据或放宽RC-06，产品仍零改动。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
+- WI215 最终 readiness 对抗评审发现170行 recorder 依赖全局格式豁免与最长452字符压行；Ruff自然格式
+  为587行。移出public/DTO明细后的风险分层 spike 仍为407行，证明 custom proof 路线本身违反
+  RC-06/RC-09。LEAN/SAFETY 已在设计层一致接受 RC-10：退役尚未合入的proof/shadow/selector/deletion
+  体系，改为九个 tests-first Cx + direct Rx，每stage legacy/current两腿、full与同SHA双审。当前仅修订
+  formal，产品与目标测试零差异；RC-10 formal双PASS前不得执行产品。

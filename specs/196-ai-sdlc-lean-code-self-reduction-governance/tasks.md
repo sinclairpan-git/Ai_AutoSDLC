@@ -7,6 +7,18 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 `providers/**`、`.github/workflows/**`。唯一测试例外是新增 canonical 五件套时机械更新
 `tests/integration/test_repo_program_manifest.py` 的 inventory/close 两个精确值，不得新增测试逻辑或行数。
 
+## T66 RC-10 修订
+
+本节覆盖本文件后续 T66 行及历史 `T61A/B` handoff；其他任务保持原义。
+
+- 旧 custom recorder/receipt/shadow/selector/deletion 路线=`cancelled_no_go`，原因是自然 proof 成本违反
+  RC-06；其资产须在首个产品 diff 前删除。
+- 当前任务是 WI215 RC-10 formal 同身份双审；双 PASS 前产品与目标行为测试零差异。
+- 后续九个 stage 各自 `Cx` characterization + `Rx` direct reduction；每个 Rx 需要 legacy/current 两腿、
+  exact165/full/governance 与同 SHA 双 PASS。
+- 最终 package/offline/sibling/cross-platform、squash revert rehearsal 与 detached fresh-main 全绿后，
+  才创建独立 lifecycle reconciliation；不发布版本。
+
 ## Batch 1：治理基线（已完成）
 
 ### T11 创建隔离工作区与 canonical 工作项
@@ -113,7 +125,7 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T63 单个 helper/DTO/test 重复族（按 family 继续） | standalone + T61A/B | GAP-05/WP-03 | L1 | T51、T52 已满足；WI-205、WI-206、WI-210、WI-211 各完成一个 family | WI-211 / PR #153 / merge `cd64d8aa`：10→1 mapping body、10 aliases、23 calls 不变、产品 net -122、双 Agent/Codex/22 checks/fresh-main；新 family 仍须重复族清零、目标切片 LOC -10%、全量测试 |
 | T64 单个 Loop Store family | standalone + T61A/B | GAP-05/WP-04 | L2 | T51、T52 | store differential、LOC -10%、恢复/损坏输入测试 |
 | T65 单个 baseline 候选 go/no-go | standalone + T61A/B on Go | GAP-06/WP-05 | L2 | T51、T52 | Go=`completed_reduction`；单项 No-Go=`cancelled_no_go`；六项全 No-Go=`closed_no_viable_reduction` |
-| T66 单个 ProgramService 领域切片（WI215 implementation active；T61A authoring） | standalone formal + implementation T61A/B + independent deletion PR | GAP-03/WP-06 | L3 | WI-213 formal、T58/GAP-15 closure receipt PR #164 / merge `7922956d` 及 detached fresh-main 已满足；WI215 已创建，T61A 双 readiness GO 前不得写产品 | WI-213 冻结九 stage/45 methods、terminal≤720、净删≥2,918；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与真实回退演练，删除前不得关闭 |
+| T66 单个 ProgramService 领域切片（WI215 RC-10 formal active） | standalone formal + 9×Cx/Rx + final PR | GAP-03/WP-06 | L3 | behavior legacy=`7922956d`；RC-10 formal 双 PASS 前不得写产品 | 每 stage direct delete + legacy/current A/B + exact/full + 双审；product≤522、proof≤290、combined≤729、terminal≤720、净删≥2,918；最终 package/offline/sibling/squash-revert/fresh-main |
 | T67 单个 Program Stage family | standalone + T61A/B | GAP-04/WP-07 | L3 | T51、T52 + 真实重叠子项 | 镜像 LOC -70%、33 命令兼容；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与回退演练，删除前不得关闭 |
 
 **全局恢复门禁**：T57/WI-209、WI-210、WI-211 与 WI-212 candidate-selection fresh-main acceptance
@@ -125,8 +137,8 @@ merge `450d4988` 完成，lifecycle reconciliation 也已在 PR #159 / merge `d5
 mainline 与 fresh-main。WI-214 formal PR #160、amendment PR #161、implementation PR #162 / merge
 `2845fedc` 及 detached fresh-main 已完成；lifecycle delivery PR #163 / merge `60fe6d90`、closure receipt
 PR #164 / merge `7922956d` 及 detached fresh-main 也已完成。GAP-15/T58 已关闭，唯一 T66 implementation
-WI215 已从 exact fresh main 创建；该 WI 未完成 T61A 双 readiness GO 前不得写产品，candidate/stability/
-deletion 未全部完成前不得关闭 T66。
+WI215 已从 exact fresh main 创建；旧 T61A/shadow/deletion 路线已按 RC-09 退役。RC-10 formal 双 PASS 前
+不得写产品；九阶段、最终交付与回退证据未全部完成前不得关闭 T66。
 既有已完成 receipt 不受影响；各行保留的历史 T51/T52 依赖已满足，不需要重复执行。
 
 每个目标切片必须先落盘 GAP-09～GAP-11 防回归 impact analysis；除当前 active child 唯一 mapped

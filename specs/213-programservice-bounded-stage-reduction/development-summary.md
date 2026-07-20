@@ -64,3 +64,7 @@
   reviewed HEAD/tree=`428a316a`/`cc3c6b7f`，同身份双 PASS0、Codex clean、required checks 全绿，merge=
   `7922956d` 且 detached fresh-main 全绿。GAP-15/T58 已关闭；WI215 当前只做 T61A baseline/readiness，
   双 GO 前不得写产品。
+- 下游 WI215 的 custom T61A proof 在最终 readiness review 中暴露压行预算规避：自然格式587行，进一步
+  风险分层仍为407行。该路线已 `cancelled_no_go`；LEAN/SAFETY 设计级一致接受 RC-10 direct reduction，
+  用九个 Cx/Rx、immutable legacy/current两腿、同SHA双审与squash revert替代runtime双实现/selector/
+  deletion。当前只修订parent/child formal，产品仍零差异；新formal双PASS前不授权execute。

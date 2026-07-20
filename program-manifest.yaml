@@ -2057,10 +2057,10 @@ specs:
   depends_on:
   - 213-programservice-bounded-stage-reduction
 truth_snapshot:
-  generated_at: '2026-07-20T13:44:21Z'
+  generated_at: '2026-07-20T14:58:03Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: ed1ed1f8
+  repo_revision: fadf8456
   authoring_hash: b1b855ec08169aad0a96cfe69cf4f6e5605563d776994208a837406b09ccec1c
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
@@ -2103,7 +2103,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 97492b155627943acc967b602e0dbf07e92fc0f655c21bbc4ce6579b573c8b87
+  snapshot_hash: 6a36b6cde1eb480c923a12d1ec8612202595f4b1d18b700a4cc849287ca62ad9
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2121,9 +2121,9 @@ truth_snapshot:
     mapped_sources: 1131
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3700
-    deferred_signal_count: 6670
-    non_goal_signal_count: 395
+    phase_signal_count: 3702
+    deferred_signal_count: 6671
+    non_goal_signal_count: 394
     layer_totals:
       blueprint: 1
       spec: 215
@@ -10983,7 +10983,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 196-ai-sdlc-lean-code-self-reduction-governance
       phase_signal_count: 0
-      deferred_signal_count: 9
+      deferred_signal_count: 10
       non_goal_signal_count: 1
     - path: specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
       source_type: plan_doc
@@ -11001,7 +11001,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 196-ai-sdlc-lean-code-self-reduction-governance
       phase_signal_count: 0
-      deferred_signal_count: 1
+      deferred_signal_count: 3
       non_goal_signal_count: 0
     - path: specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
       source_type: execution_log
@@ -11703,7 +11703,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 213-programservice-bounded-stage-reduction
       phase_signal_count: 0
-      deferred_signal_count: 3
+      deferred_signal_count: 4
       non_goal_signal_count: 0
     - path: specs/213-programservice-bounded-stage-reduction/plan.md
       source_type: plan_doc
@@ -11712,7 +11712,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 213-programservice-bounded-stage-reduction
       phase_signal_count: 3
-      deferred_signal_count: 6
+      deferred_signal_count: 5
       non_goal_signal_count: 0
     - path: specs/213-programservice-bounded-stage-reduction/tasks.md
       source_type: tasks_doc
@@ -11792,17 +11792,17 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 215-programservice-bounded-stage-reduction-implementation
-      phase_signal_count: 1
-      deferred_signal_count: 3
-      non_goal_signal_count: 1
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
     - path: specs/215-programservice-bounded-stage-reduction-implementation/plan.md
       source_type: plan_doc
       truth_layer: plan
       mapped: true
       exists: true
       mapping_ref: 215-programservice-bounded-stage-reduction-implementation
-      phase_signal_count: 2
-      deferred_signal_count: 2
+      phase_signal_count: 0
+      deferred_signal_count: 0
       non_goal_signal_count: 0
     - path: specs/215-programservice-bounded-stage-reduction-implementation/tasks.md
       source_type: tasks_doc
@@ -11811,7 +11811,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 215-programservice-bounded-stage-reduction-implementation
       phase_signal_count: 0
-      deferred_signal_count: 3
+      deferred_signal_count: 0
       non_goal_signal_count: 0
     - path: specs/215-programservice-bounded-stage-reduction-implementation/task-execution-log.md
       source_type: execution_log
@@ -11819,8 +11819,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 215-programservice-bounded-stage-reduction-implementation
-      phase_signal_count: 0
-      deferred_signal_count: 1
+      phase_signal_count: 5
+      deferred_signal_count: 6
       non_goal_signal_count: 0
     - path: specs/215-programservice-bounded-stage-reduction-implementation/development-summary.md
       source_type: development_summary

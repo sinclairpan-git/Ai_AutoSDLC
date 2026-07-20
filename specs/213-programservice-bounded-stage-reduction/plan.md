@@ -12,10 +12,26 @@ related_doc:
 **当前交付**：formal-only；不执行产品代码
 **风险**：L3
 
+## 0. RC-10 替代执行链
+
+本文历史 T61A/B/shadow/deletion 链已被 natural-format proof NO-GO 退役。最新唯一执行链为：
+
+```text
+RC-10 formal 双 PASS
+  -> behavior legacy + implementation-base freeze
+  -> 9 × (characterization Cx -> direct reduction Rx -> legacy/current A/B -> 双 PASS)
+  -> terminal/package/offline/sibling/squash-revert
+  -> final PR / squash / detached fresh-main
+  -> lifecycle reconciliation
+```
+
+每个 Rx 直接删除当前 stage 旧 body，不保留 runtime selector 或 legacy branch；失败回到上一 reviewed tree。
+预算与公共/DTO/CLI/artifact 合同继续沿用 spec §0 和原 Reduction Contract。
+
 ## 1. 策略
 
-WI213 先把 current-main 事实、最小设计、兼容矩阵、预算、T61A/B 和两 PR 删除路线冻结并经双 Agent
-对抗评审，再由 mainline receipt 授权后续唯一 implementation WI。顺序不可压缩为一个大 PR：
+WI213 原先冻结的 T61A/B 与两 PR 路线现仅作为已退役历史。RC-10 仍由双 Agent 先审 formal，再授权
+唯一 implementation WI，并把大改拆为九个可阻断 stage：
 
 ```text
 WI213 formal

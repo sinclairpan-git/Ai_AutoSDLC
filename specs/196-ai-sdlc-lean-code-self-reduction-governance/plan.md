@@ -4,6 +4,24 @@
 **规格**：`specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md`
 **性质**：治理总项路线图；运行时改动在独立子 work item 执行。
 
+## 0. T66 RC-10 路线修订
+
+T66 不再执行本文历史 WP-06 中的 `T61A/B → shadow selector → candidate保留legacy → deletion PR`。
+该路线因自然 proof 成本违反 RC-06，已 `cancelled_no_go`。最新执行顺序为：
+
+```text
+formal 同身份双 PASS
+  -> 冻结 behavior legacy 与 pre-product implementation-base
+  -> 九次 characterization Cx + direct reduction Rx
+  -> 每个 Rx legacy/current 两腿 + exact/full + 同 SHA 双审
+  -> platform/package/offline/sibling + squash revert rehearsal
+  -> final PR / squash / detached fresh-main
+  -> independent lifecycle reconciliation
+```
+
+每个 `Rx` 直接删除当前 stage 的重复职责，不新增 runtime selector 或双实现；失败回到上一 reviewed tree，
+较早阶段失败时回退连续后缀。预算与 terminal/net-delete 门保持 spec §0，不因 proof 退役放宽。
+
 ## 1. 执行策略
 
 采用“原子基础缺陷 → 切片级行为基线 → 低风险去重与高价值分域并行 → 单切片双跑 → 稳定后删除”的路径。
@@ -239,21 +257,19 @@ T66 T61A 的硬前置。
 
 ### WP-06：ProgramService 单领域切片（L3）
 
-- **当前状态**：WI-212 已唯一选择九个 bounded frontend stage；WI-213 formal-only 已在 PR #158 /
-  merge `450d4988` 完成，lifecycle reconciliation 也已由 PR #159 / merge `d5ad7616` 与 detached
-  fresh-main 收口，冻结 45 methods=`3,638/3,305`、terminal≤720、产品净删≥2,918。T58/WI-214 在本
-  closure receipt merge 时关闭；T66 仍 blocked，receipt detached fresh-main 通过后才创建唯一 T66
-  implementation WI。
-  该 WI 必须先 T61A 和双 readiness GO，随后 candidate PR 保留 legacy、完成主线预发布稳定周期，再以
-  独立 PR 删除 legacy。
+- **当前状态**：WI215 active；旧 T61A/shadow/deletion 路线因 proof 自身过度实现按 RC-09 退役，产品
+  仍零差异。当前只允许 RC-10 formal 修订；双 PASS 后才冻结 implementation-base 并进入首个 Cx。
 - **范围**：每个子 WI 只迁移一个领域；`ProgramService` 暂作薄 facade。
 - **非目标**：不同时迁移第二领域，不改变公共调用方、CLI 或 artifact 合同。
 - **进入**：WP-01A 完成；只依赖与该领域真实重叠的 WP-03～WP-05 子项，不等待无关低风险任务。
-- **切换**：旧/新 shadow → 单入口切换 → 受影响 smoke → 一个主线预发布稳定周期 → 独立删旧 PR。该周期要求 candidate 已合入且 legacy 仍保留，并通过 required cross-platform CI、wheel/sdist、clean install、offline smoke、代表性 sibling project smoke 与 selector rollback/reapply；不创建版本、tag、GitHub Release、PyPI 发布或全局 CLI 更新。
+- **执行**：九个 stage 各自 Cx/Rx；每个 Rx 直接删除当前重复 body，完成 legacy/current 两腿、full 与
+  同 SHA 双审后才继续。最终统一做 cross-platform、wheel/sdist、clean install、offline、sibling 与
+  squash/revert 演练；不创建版本、tag、GitHub Release、PyPI 发布或全局 CLI 更新。
 - **完成**：迁移职责在原文件的 LOC/方法数下降至少 90%，并达到 RC-04 至少一项结构改善阈值；新文件/函数符合 RC-07，纯移动 No-Go。
-- **停止/回退**：跨两个领域、差异不为零或临时膨胀超 RC-05 时缩小切片；删旧前 facade 指回旧实现，删旧后先 revert legacy-deletion PR，再回退 candidate PR。deletion 后必须重复同等安装包、offline/sibling smoke 与 rollback/reapply；rollback receipt 覆盖最终删除状态。
+- **停止/回退**：跨两个领域、差异不为零、节点弱化或预算超限即停；回到上一 reviewed stage tree。
+  合并后只精确 revert squash SHA，并证明回到 implementation-base。
 - **终态**：逐切片推进，直到 `program_service.py` 符合 400 行约束。
-- **证据**：domain map、dependency diff、shadow result、release smoke、legacy deletion receipt。
+- **证据**：domain map、每 stage Cx/Rx、原生 JUnit/raw hash、双审、package/offline/sibling 与 revert log。
 
 ### WP-07：Program Stage 单 family 切片（L3）
 

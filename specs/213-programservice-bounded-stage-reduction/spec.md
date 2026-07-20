@@ -6,6 +6,21 @@
 **类型**：WI-196 / WP-06 / T66 / GAP-03 / L3
 **基线**：`main@e184c8e27818aa7950fcc64dbb10fa7a65888f8c`
 
+## 0. RC-10 下游修订（2026-07-20）
+
+本节覆盖本文后续所有 `T61A/B`、candidate shadow、runtime selector、candidate保留legacy、独立 deletion PR
+描述。旧路线的 custom recorder 自然格式为587行，风险分层后仍为407行，违反 RC-06/RC-09，已记为
+`cancelled_no_go`；不得恢复或以压行/拆文件规避。
+
+WI215 改为九个 stage 直接重构：每 stage 先 `Cx` 冻结 characterization，再在 `Rx` 中扩展唯一 private
+engine并删除当前重复 body。每个 `Rx` 使用 immutable legacy/current 独立 worktree、同一 public tests、
+原生 JUnit/raw artifact、exact165/full/governance 和同 SHA LEAN/SAFETY 双 PASS。无双实现、selector、
+持久 controller/receipt 或第二 schema。
+
+预算不变：product≤522、proof≤290、product+proof≤729、route cumulative≤1,500、terminal≤720、
+净删≥2,918、新/改函数≤50。最终必须完成 platform/package/offline/sibling、等价 squash/revert、PR squash
+与 detached fresh-main；回退只精确 revert squash SHA，不发布版本。
+
 ## 1. 结论与授权边界
 
 本工作项把 WI212 选中的九阶段 `ProgramService` 切片冻结为可实现、可量化、可回退的正式合同。

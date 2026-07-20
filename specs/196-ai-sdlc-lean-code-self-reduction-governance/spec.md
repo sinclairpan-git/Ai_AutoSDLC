@@ -7,6 +7,24 @@
 **当前分支边界**：只修改治理文档和 AI-SDLC 真值文件；运行时代码和规则由后续独立 work item
 修改。测试默认同样后置，唯一例外是 FR-12 定义的 root exact truth 两个值机械更新。
 
+## 0. T66 / WP-06 RC-10 修订（2026-07-20）
+
+本节是 T66 的最新 canonical 例外，覆盖本文后续所有 T66 `T61A/B`、shadow、runtime selector、
+candidate-retain-legacy、independent deletion PR 描述；其他 work package 的既有规则不变。
+
+WI215 实证原 custom recorder 自然格式为587行；移出 surface/DTO 明细后的风险分层 spike 仍为407行，
+无法同时满足 proof≤290 与 product+proof≤729。该证明路线按 RC-09 记为 `cancelled_no_go`，不得通过
+压行、拆脚本、删除安全证据或先加后删抵扣预算继续投资。
+
+T66 改用 RC-10 直接减重：九个 stage 各自先冻结 characterization checkpoint，再以 reduction checkpoint
+在同一 diff 扩展唯一 private engine 并删除当前重复 body；不保留双实现、selector、dead branch 或持久
+proof framework。每 stage 都用 immutable legacy/current 两个独立 worktree、同一测试定义与原生
+JUnit/raw artifact 做 A/B，运行 exact165/full/governance，并对同一 commit 取得 LEAN/SAFETY 双 PASS。
+
+RC-05/06/07/09/10 仍全部适用：retained product≤522、proof≤290、product+proof≤729、路线累计≤1,500、
+terminal≤720、净删≥2,918、新/改函数≤50；每 stage 目标 LOC/branch 必须下降。合并前做 package/offline/
+sibling/cross-platform 与等价 squash/revert 演练；squash 后用精确 merge SHA 回退。当前不发布版本。
+
 ## 1. 问题与基线
 
 基线 revision：`c0f333c82c6f096ea8e74e57378eb7d7368f276c`。

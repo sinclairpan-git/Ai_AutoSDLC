@@ -10,6 +10,13 @@ related_doc:
 **交付类型**：formal-only；本 WI 禁止产品 execute
 **完成定义**：formal mainline receipt + detached fresh-main；不等于 T66 产品完成
 
+## RC-10 下游 handoff 修订
+
+旧 `T61A recorder/receipt → shadow selector → T61B → deletion PR` handoff 已 `cancelled_no_go`，不得执行。
+WI215 当前只做 RC-10 formal；同 identity 双 PASS 后才按九个 `Cx/Rx` 直接重构。每个 Rx 必须原生
+legacy/current 两腿、exact165/full/governance、LOC/branch/budget下降与同 SHA 双 PASS。最终
+package/offline/sibling/cross-platform、squash revert 与 detached fresh-main 全绿后才允许 lifecycle close。
+
 ## Batch 1：current-main 准入基线
 
 ### T11 初始化隔离 formal work item
@@ -184,17 +191,16 @@ related_doc:
 | 顺序 | 下游 gate | 必须满足 |
 |---:|---|---|
 | 1 | T58/GAP-15 | standalone RED/GREEN；五只读+help/invalid bytes stable；init/link 负路径时序；delivery + closure receipt fresh-main |
-| 2 | T61A | no product code；Python surface/late-bound baseline + proof budget + dual readiness GO |
-| 3 | candidate shadow | default legacy；逐 stage TDD；product≤522 |
-| 4 | T61B/candidate PR | zero delta；selector round-trip；legacy retained |
-| 5 | pre-release stability | platform/build/clean/offline/sibling；无公开版本 |
-| 6 | deletion PR | terminal≤720/net≥2918；merge 后 exact-merge actual rollback |
-| 7 | T66 close | deletion fresh-main 后才 completed_reduction |
+| 2 | RC-10 formal | retire proof apparatus；双 PASS；冻结 implementation-base |
+| 3 | 9×Cx/Rx | tests-first characterization；direct delete；legacy/current A/B；逐 stage 双 PASS |
+| 4 | terminal | surface/DTO/45 methods、full、platform/package/offline/sibling |
+| 5 | squash revert | fresh-main 等价 squash/revert 回到 implementation-base |
+| 6 | final PR | required checks、本地双审、squash、detached fresh-main |
+| 7 | T66 close | independent lifecycle reconciliation 后 completed_reduction |
 | 8 | release | 仅 WI196/RC-08 全部完成后 |
 
 T58/GAP-15 已由 closure receipt PR #164 / merge `7922956d` 及 detached fresh-main 完成关闭；唯一 T66
-implementation WI215 已创建并开始 T61A。T61A 同一 proof identity 的 LEAN/SAFETY 双 readiness GO 前，
-不得进入产品实现。
+implementation WI215 已创建；旧 T61A 路线退役，当前停在 RC-10 formal 双审前。双 PASS 前不得进入产品。
 
 ## 追踪矩阵
 
