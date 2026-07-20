@@ -60,7 +60,7 @@ def _run_workitem_adapter(ctx: typer.Context) -> None:
 @workitem_app.callback()
 def _workitem_before_command(ctx: typer.Context) -> None:
     """由子应用在参数解析后管理 adapter 调用时机。"""
-    if ctx.invoked_subcommand in (None, "init"):
+    if ctx.invoked_subcommand != "link":
         return
     _run_workitem_adapter(ctx)
 

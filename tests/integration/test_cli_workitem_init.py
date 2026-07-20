@@ -19,6 +19,7 @@ from typer.testing import CliRunner
 from ai_sdlc.cli.main import app
 from ai_sdlc.core.config import load_project_state
 from ai_sdlc.core.plan_check import parse_markdown_frontmatter
+from ai_sdlc.core.workitem_scaffold import WorkitemScaffolder
 from ai_sdlc.routers.bootstrap import init_project
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -157,24 +158,65 @@ def _checkout_branch(root: Path, branch_name: str) -> None:
 
 
 class TestCliWorkitemInit:
+    def test_workitem_init_blocks_before_hook_and_writes_outside_project(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        monkeypatch.chdir(root)
+        calls: list[str] = []
+
+        def _adapter(*, console: object) -> None:
+            _ = console
+            calls.append("adapter")
+
+        monkeypatch.setattr("ai_sdlc.cli.main.run_ide_adapter_if_initialized", _adapter)
+
+        with patch("ai_sdlc.cli.workitem_cmd.WorkitemScaffolder") as scaffolder:
+            result = runner.invoke(
+                app,
+                [
+                    "workitem",
+                    "init",
+                    "--title",
+                    "Direct Formal Entry",
+                ],
+            )
+
+        assert result.exit_code == 1
+        assert result.output == "Not inside an AI-SDLC project.\n"
+        assert calls == []
+        scaffolder.assert_not_called()
+        assert tuple(root.iterdir()) == ()
+
     def test_workitem_init_guides_formal_bootstrap_when_state_missing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         root = tmp_path / "repo"
         (root / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
         monkeypatch.chdir(root)
+        calls: list[str] = []
 
-        result = runner.invoke(
-            app,
-            [
-                "workitem",
-                "init",
-                "--title",
-                "Direct Formal Entry",
-            ],
-        )
+        def _adapter(*, console: object) -> None:
+            _ = console
+            calls.append("adapter")
+
+        monkeypatch.setattr("ai_sdlc.cli.main.run_ide_adapter_if_initialized", _adapter)
+
+        with patch("ai_sdlc.cli.workitem_cmd.WorkitemScaffolder.scaffold") as scaffold:
+            result = runner.invoke(
+                app,
+                [
+                    "workitem",
+                    "init",
+                    "--title",
+                    "Direct Formal Entry",
+                ],
+            )
 
         assert result.exit_code == 1
+        assert calls == []
+        scaffold.assert_not_called()
         assert "formal bootstrap" in result.output.lower()
         assert "project-state.yaml" in result.output
         assert "ai-sdlc init ." in result.output
@@ -337,20 +379,30 @@ class TestCliWorkitemInit:
         init_project(root)
         _init_git_repo(root)
         monkeypatch.chdir(root)
+        calls: list[str] = []
 
-        result = runner.invoke(
-            app,
-            [
-                "workitem",
-                "init",
-                "--title",
-                "Direct Formal Entry",
-                "--wi-id",
-                "008-direct-formal-entry",
-            ],
-        )
+        def _adapter(*, console: object) -> None:
+            _ = console
+            calls.append("adapter")
+
+        monkeypatch.setattr("ai_sdlc.cli.main.run_ide_adapter_if_initialized", _adapter)
+
+        with patch("ai_sdlc.cli.workitem_cmd.WorkitemScaffolder.scaffold") as scaffold:
+            result = runner.invoke(
+                app,
+                [
+                    "workitem",
+                    "init",
+                    "--title",
+                    "Direct Formal Entry",
+                    "--wi-id",
+                    "008-direct-formal-entry",
+                ],
+            )
 
         assert result.exit_code == 1
+        assert calls == []
+        scaffold.assert_not_called()
         assert "main" in result.output
         assert "docs branch" in result.output.lower()
         assert "feature/008-direct-formal-entry-docs" in result.output
@@ -423,20 +475,46 @@ class TestCliWorkitemInit:
         assert calls == []
         assert not (root / "adapter-proof.txt").exists()
 
-    def test_workitem_non_init_runs_adapter_before_handler_once(
-        self, adapter_receipt: tuple[Path, list[str]]
+    @pytest.mark.parametrize("hook_outcome", ["warning", "raise"])
+    def test_workitem_init_adapter_outcome_controls_scaffold_start(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        hook_outcome: str,
     ) -> None:
-        root, calls = adapter_receipt
-        plan = root / ".cursor" / "plans" / "p.md"
-        plan.parent.mkdir(parents=True)
-        plan.write_text("---\ntodos:\n  - id: x\n    content: Work\n    status: pending\n---\n", encoding="utf-8")
+        root = tmp_path / "repo"
+        root.mkdir()
+        init_project(root)
         _init_git_repo(root)
+        _checkout_branch(root, "feature/008-direct-formal-entry-docs")
+        monkeypatch.chdir(root)
+        order: list[str] = []
+        original_scaffold = WorkitemScaffolder.scaffold
 
-        result = runner.invoke(app, ["workitem", "plan-check", "--plan", str(plan)])
+        def _adapter(*, console: object) -> None:
+            order.append("adapter")
+            if hook_outcome == "raise":
+                raise RuntimeError("adapter failed")
+            console.print("adapter warning; continuing")  # type: ignore[attr-defined]
 
-        assert result.exit_code == 1
-        assert calls == ["adapter"]
-        assert "adapter-proof.txt" in result.output
+        def _scaffold(self: WorkitemScaffolder, **kwargs: object) -> object:
+            order.append("scaffold")
+            return original_scaffold(self, **kwargs)
+
+        monkeypatch.setattr("ai_sdlc.cli.main.run_ide_adapter_if_initialized", _adapter)
+        monkeypatch.setattr(WorkitemScaffolder, "scaffold", _scaffold)
+
+        result = runner.invoke(app, _INIT_ARGS)
+
+        if hook_outcome == "raise":
+            assert isinstance(result.exception, RuntimeError)
+            assert str(result.exception) == "adapter failed"
+            assert order == ["adapter"]
+            assert not (root / "specs" / "008-direct-formal-entry").exists()
+        else:
+            assert result.exit_code == 0
+            assert order == ["adapter", "scaffold"]
+            assert "adapter warning; continuing" in result.output
 
     def test_workitem_init_auto_generated_id_updates_project_state(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

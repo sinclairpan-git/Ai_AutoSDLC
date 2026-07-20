@@ -2,7 +2,7 @@
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
 **创建日期**：2026-07-19
-**当前状态**：formal terminal gates 已通过；final current-identity 双审待执行；产品代码未修改
+**当前状态**：一行产品实现与 T21～T31 已完成；implementation final current-identity 双审中
 
 ## 1. 固定归档规则
 
@@ -303,3 +303,140 @@
 - 最小修正只更新 summary、append-only log 与 byte-identical 双 handoff；持久 Exact Next Steps 直接从新身份
   双审开始。该 source commit 后紧跟 terminal truth sync 与 manifest-only commit；最终 snapshot 不再反写 tracked
   source，避免自引用 stale 循环。
+
+## 21. Batch 2026-07-19-017：V4 amendment PASS、PR 与 fresh-main
+
+- Final identity：HEAD=`e4ca3e4276067d832483cad4266783476c3b9ffe`、tree=
+  `1bef978ff9f33747b4a9586fb6da3fb28db77769`、clean；Pascal/LEAN 与 Confucius/SAFETY Round 4 同身份
+  `PASS0`、actionable findings=0。
+- PR #161 Codex reviewed exact `e4ca3e4276` 无 major issue、review threads=0；10 个 required checks 全绿，
+  包括 Ubuntu/macOS/Windows Python 3.11/3.12、Windows cmd/pwsh、verify 与 aggregate gate。
+- Squash merge=`8999efcf2feccab88f8b957601b0be379032a1b7`；merge tree 与 reviewed tree 完全一致。Detached
+  fresh-main truth=`ready/fresh`、inventory=`1126/1126`、manifest exact=`1 passed in 103.64s`、validate/
+  constraints/V4b/parity/Cursor/clean 全绿。
+- `FORMAT_BASE_SHA` 自此冻结为 `8999efcf2feccab88f8b957601b0be379032a1b7`；amendment T15 完成，
+  只授权 implementation，GAP-15/T58 与 T66 状态不变。
+
+## 22. Batch 2026-07-19-018：implementation RED/GREEN 与 full gates
+
+- Dev branch clean rebase 到 amendment fresh-main；test-only commit=`8f4f63dd`、product commit=`bd8a0de2`。
+  Test-only detached replay 精确 RED=`16 failed, 33 passed in 16.27s`：15 个 read-only sentinel case 均因
+  legacy hook 被消费而失败，另 1 个 production Cursor A/B 因真实写入失败；其余 init/link/hook 33 项保持绿。
+- 产品修正只把 `_workitem_before_command()` 的 guard 改为 `ctx.invoked_subcommand != "link"`；一行产品 diff，
+  无 command list、helper/classifier、公共符号、依赖、配置、版本或 handler 变化。
+- GREEN targeted=`49 passed in 15.14s`；full=`3302 passed, 3 skipped in 673.22s`；Ruff lint PASS、V4a
+  三文件 strict format PASS、constraints no BLOCKERs、`git diff --check` PASS。
+- V4b 使用固定 base `8999efcf...a1b7` 与 frozen candidate `bd8a0de2` PASS；candidate red paths 是 base 的
+  Ordinal 子集。Emitted exclusive ranges：product=`63-64`；init=`22-23, 167-168, 169-185, 187-189,
+  351-352, 353-371, 373-375, 447-453, 454-457, 458-462, 463-468, 469-487`，全部 formatter-clean。
+- T21～T24 完成。下一步只做 implementation terminal truth/handoff/gates 与同身份双审；在 T32
+  fresh-main 前 GAP-15/T58 仍 active、T66 T61A 仍 blocked。
+
+## 23. Batch 2026-07-19-019：implementation terminal source freeze
+
+- Execution/continuity source commit=`581cf344`；首个 truth sync snapshot=
+  `034f346489b0b9a233208098ab453a245928d222bd90040392625193ff80d732`、inventory=`1126/1126`、
+  missing/unmapped=`0/0`、各层=`214/214`，manifest-only commit=`e68ae027`。
+- 为避免 T31 永久停在 `in_progress` 或 final gate receipt 反写后立即令 truth stale，本 source 把 T31、summary 与
+  byte-identical handoff 预置为持久终态：final manifest-only sync 后直接进入同身份双审，不再要求续接 agent
+  重复 truth sync。
+- 本 source 后必须再次 terminal truth sync，并只在新的 committed+clean identity 上重跑 targeted/full、Ruff
+  lint/V4a/V4b、constraints、validate/audit、manifest exact、scope/parity/Cursor/diff-check。任一失败即不得送审；
+  成功结果作为 reviewer/PR 外部 receipt，不再修改 tracked source。
+- T31 完成边界不关闭 GAP-15/T58；T32 implementation fresh-main 前 lifecycle/T66 继续 blocked。
+
+## 24. Batch 2026-07-19-020：implementation final review Round 1 FAIL
+
+- Exact identity：HEAD=`7b33ec6784548ba624852293c5b79f78883e0a39`、tree=
+  `b8d0690c05b8a654335b08c2b5831e401147e114`、clean；Pascal/LEAN=`FAIL1`（P3×1），
+  Confucius/SAFETY=`PASS0`。因 identity 将变化，两份 verdict 同时退役。
+- Pascal 唯一 finding 成立：本日志顶部仍称“产品代码未修改”，双 handoff 首个 next step 仍要求重复已经通过
+  的 terminal gates。最小修正只把状态改为一行实现/T21～T31 completed，并让持久 next step 直接从新身份
+  双审开始。
+- 两位 reviewer 对产品一行最小性、479 行测试的合同映射、exact output/bytes/write-set/order、V4、truth/scope/
+  parity 与 lifecycle/T66 均无其他 finding；Confucius 亲自重跑 targeted=`49 passed in 11.13s`。
+- 修正后再次 terminal truth sync，并对新 identity 重跑全部 T31 gates；不得复用本轮 SAFETY PASS。
+
+## 25. Batch 2026-07-19-021：PR #162 跨平台夹具缺陷修正
+
+- Round 2 final identity=`8d09b7bba8e98b5c7858084ee8e6d3c705645e8b`/tree=
+  `10e877b573e5568f418535b90841e6626546fe2b`，Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0；PR #162
+  Codex reviewed exact `8d09b7bba8` 未发现 major issue、review threads=0。
+- Compatibility Gate 的 Ubuntu 3.11/3.12 与 macOS 3.11/3.12 均只失败
+  `test_plan_check_real_cursor_hook_matches_no_op_without_writes`：两个独立 repo 的绝对路径分别含
+  `baseline`/`candidate`，Rich 在宽终端输出完整路径并产生不同列宽，`candidate.stdout == baseline.stdout`
+  因夹具输入不同而误报；其余 3301 项通过，产品 bytes/tree assertions 在失败前已通过。
+- 本地 `COLUMNS=200` 精确复现=`1 failed in 1.01s`。最小修正删除 `shutil.copytree` 与第二套 repo，让 no-op
+  与真实 hook 在同一 repo 顺序运行；首轮 no-op 后先验证 guarded bytes/tree 未变，因此第二轮输入严格相同，
+  exact stdout/stderr/exit 合同保持且测试净删 13 行，产品、依赖、workflow、版本均零变化。
+- 修正后宽终端单测=`1 passed in 0.96s`、targeted=`49 passed in 16.00s`、Ruff lint/format PASS。旧双审和
+  Codex review 随 identity 变化退役；提交 continuity/test、terminal truth 与全部 gate 后必须同身份重新双审，
+  再 push PR #162 并重新请求 Codex current-head review。
+
+## 26. Batch 2026-07-19-022：夹具修正 terminal gates 与 LEAN continuity FAIL
+
+- Test/continuity correction=`ffdd9cef`，truth snapshot=
+  `bf71628554e3ec1ab8b99d339249e53200e071c38921f947532aad5ef8ae447a`，manifest-only commit=
+  `33a37b53df52ac9daec93225d4b78c32ff8d9ebc`、tree=`90e5e9509a1c78d96e12fbd74320c619470b1bba`。
+- Exact identity terminal gates：`COLUMNS=200` targeted=`49 passed in 15.82s`、full=
+  `3302 passed, 3 skipped in 674.46s`；Ruff lint/V4a/V4b、constraints、validate、truth=`ready/fresh`
+  1126/1126、manifest exact=`1 passed in 102.03s`、11-file scope/handoff parity/Cursor/clean 全绿。
+- LEAN Round 3=`FAIL1`（P3×1）：双 handoff 和 summary 仍把上述已完成 gates 写成下一步；代码与测试本身、
+  同 repo A/B 防假绿、产品一行最小性和净删 13 行均通过。Finding 成立，只修正文档/continuity 并刷新
+  terminal truth；旧 LEAN verdict 与已中止的 SAFETY 审查全部退役，新 identity 必须从零双审。
+
+## 27. Batch 2026-07-19-023：SAFETY 双项目隔离 finding 与修正
+
+- Continuity correction 后 identity=`551d90b93f615b85a6145aa4fa72d9e32b641fe0`/tree=
+  `99b0168b2ddf4043c5799b40383b0b7a50f252c7`，truth/manifest/targeted/Ruff/V4/constraints/scope 均通过，
+  且相对宽终端 full-pass identity `33a37b53` 的 src/tests/tooling 零差异。
+- SAFETY Round 4=`FAIL1`（P3×1）：同 repo 顺序 A/B 与 plan §5.2 的“两份 byte-identical 临时项目”不一致，
+  不能独立隔离 Git 内部状态。Finding 成立，不修改 formal；恢复两个隔离 repo，并把目录名设为等长的
+  `control/subject`，防止 Rich 表格列宽受路径长度影响。
+- stdout/stderr 仅把各自绝对根路径归一为 `<repo>` 后做完整相等比较；exit、guarded bytes、全 tree/status
+  仍严格比较，其他字符、空格、表格边界或 receipt 差异不会被吞掉。80/200/300 列单测均通过，宽终端
+  targeted=`49 passed in 15.51s`，Ruff lint/format PASS。
+- 相对 PR 首轮 reviewed identity `8d09b7bb`，该测试 correction 是 `+9/-4`，未新增公共 fixture/DSL/产品
+  抽象；产品代码仍只有一行。提交测试/continuity、刷新 truth并重跑 terminal full/gates 后重新双审。
+
+## 28. Batch 2026-07-19-024：双项目 correction terminal gates
+
+- Source correction=`c2c9bc03`，truth snapshot=
+  `b9686071fe78277207f7b78bdf9face0d122f1e024a20538e8a3e1c3f00401b6`，manifest-only identity=
+  `36f49b6268d8bea543d2681a47b32b3e7f3691c0`/tree=`04ae4bea9474a30a15c80e16b97769d8f39de64c`。
+- Exact identity：80/200/300 列 real-hook A/B 单测 PASS；`COLUMNS=200` targeted=`49 passed in 16.47s`、
+  full=`3302 passed, 3 skipped in 683.70s`；Ruff lint/V4a/V4b、constraints、validate、truth=`ready/fresh`
+  1126/1126、manifest exact=`1 passed in 110.91s`、11-file scope/handoff parity/Cursor/clean 全绿。
+- 本 continuity correction 只把已完成证据写入 summary/log 与 byte-identical handoff，并把唯一 next step 设为
+  新 identity 双审；提交后刷新 truth并重跑相关治理门禁，src/tests/tooling 不再变化。
+
+## 29. Batch 2026-07-19-025：最终本地审查测试证据收口
+
+- PR #162 current identity=`98b7c6f25df420d8cb7f3be6e9e516a7dc343441`/tree=
+  `6316f459fa31143c8dcbedfa792cc6ed7165e9fa`、clean；Pascal/LEAN=`PASS0`，Confucius/SAFETY=
+  `FAIL2`。两项 finding 均成立，旧 verdict 全部退役。
+- P2：既有 `init` missing-state 测试已创建 `.ai-sdlc/project/config`，不能证明 §3.2 的真实 no-project
+  `root is None` 路径。最小新增一例空目录 CLI 测试，冻结 exit=`1`、逐字输出、hook=`0`、scaffolder=`0`
+  与目录零写入；临时把 hook 移到 root check 前，得到预期 RED（`calls=['adapter']`），随后恢复产品源码。
+- P3：config-lock partial-write 测试先 `split/join` 再比较，会吞掉空格与换行漂移。最小改为稳定相对
+  `project-config.yaml` error path、固定 Console width=`500`，并直接比较 `console.export_text()` 与完整期望
+  字符串（含末尾换行）；临时把 warning 增加一个空格，得到预期 RED，随后恢复产品源码。
+- 修复态两项=`2 passed`，`COLUMNS=200` targeted=`50 passed in 15.58s`，80/200/300 列 real-hook A/B
+  均 PASS，Ruff lint、可清洁 hook unit format、diff-check 与产品源码零差异断言全绿。此前 full 在收到
+  finding 后于 67% 主动中止；当时 `2285 passed, 3 skipped` 只作诊断，不作为验收，final identity 必须完整重跑。
+- OpenAI 官方 Codex PR review 事故仍在进行。用户明确批准 PR #162 的一次性治理例外：不再无限等待
+  GitHub Codex，改以 final current-identity 本地 LEAN + SAFETY 双 PASS0、完整本地验证与远端 22/22
+  required checks 共同作为 merge 门槛；本例外不自动扩展到 lifecycle 或发布阶段。
+
+## 30. Batch 2026-07-19-026：本地审查修正 terminal gates
+
+- Test/continuity source=`a71c3c3e`，truth refresh 后 terminal identity=
+  `56367d966b6f7755f9388da5b56702a01146ed30`/tree=`64305f84a0004951ee15d1b5b00e0fb1672a92b6`、clean。
+- Exact identity：`COLUMNS=200` targeted=`50 passed in 16.79s`、full=`3303 passed, 3 skipped in
+  644.45s`；80/200/300 列 real-hook A/B PASS；Ruff lint/V4a PASS；fixed-base V4b 的 base/candidate
+  formatter-red subset 与 13 个 emitted range 全绿；constraints no BLOCKERs；program validate PASS；truth=
+  `ready/fresh`、inventory=`1126/1126`、missing/unmapped=`0/0`、各层=`214/214`；manifest exact=
+  `1 passed in 92.54s`；diff/scope/handoff parity/Cursor/clean 全绿。
+- 本 continuity-only receipt 只把已完成门禁与唯一 next step 固化进 summary/log/byte-identical handoff，不改
+  src/tests/tooling。提交后必须再次 terminal truth sync，并在新 committed+clean identity 重验完整门禁；成功后
+  不再反写 tracked source，直接交 Pascal/LEAN 与 Confucius/SAFETY 同身份复审。

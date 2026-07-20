@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import pytest
 from rich.console import Console
 
 from ai_sdlc.cli import cli_hooks
+from ai_sdlc.integrations import ide_adapter
 from ai_sdlc.routers.bootstrap import init_project
 
 
@@ -70,3 +72,70 @@ def test_adapter_hook_reraises_permission_errors_outside_project_config(
 
     with pytest.raises(PermissionError, match="AGENTS.md"):
         cli_hooks.run_ide_adapter_if_initialized(console=Console())
+
+
+def test_adapter_hook_warns_after_adapter_write_when_config_persist_is_locked(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    baseline_root = tmp_path / "baseline"
+    baseline_root.mkdir()
+    init_project(baseline_root)
+    candidate_root = tmp_path / "candidate"
+    shutil.copytree(baseline_root, candidate_root)
+    for root in (baseline_root, candidate_root):
+        (root / ".cursor").mkdir()
+
+    config_rel = Path(".ai-sdlc/project/config/project-config.yaml")
+    rule_rel = Path(".cursor/rules/ai-sdlc.mdc")
+    project_config = candidate_root / config_rel
+    config_before = project_config.read_bytes()
+
+    success_console = Console(record=True, width=200)
+    monkeypatch.chdir(baseline_root)
+    cli_hooks.run_ide_adapter_if_initialized(console=success_console)
+    expected_rule = (baseline_root / rule_rel).read_bytes()
+    assert (baseline_root / config_rel).read_bytes() != config_before
+
+    def _files(root: Path) -> dict[str, bytes]:
+        return {
+            path.relative_to(root).as_posix(): path.read_bytes()
+            for path in root.rglob("*")
+            if path.is_file()
+        }
+
+    before = _files(candidate_root)
+    canonical_rule = candidate_root / rule_rel
+    locked_error = PermissionError(
+        13,
+        "Access is denied",
+        config_rel.as_posix(),
+    )
+
+    def _locked_persist(*args: object, **kwargs: object) -> None:
+        _ = args, kwargs
+        assert canonical_rule.is_file()
+        raise locked_error
+
+    monkeypatch.setattr(ide_adapter, "_persist_config", _locked_persist)
+    monkeypatch.chdir(candidate_root)
+    console = Console(record=True, width=500)
+
+    cli_hooks.run_ide_adapter_if_initialized(console=console)
+
+    after = _files(candidate_root)
+    changed = {
+        path
+        for path in before.keys() | after.keys()
+        if before.get(path) != after.get(path)
+    }
+    assert changed == {rule_rel.as_posix()}
+    assert canonical_rule.read_bytes() == expected_rule
+    assert project_config.read_bytes() == config_before
+    expected_output = (
+        "AI-SDLC adapter metadata write skipped: project-config.yaml appears to "
+        f"be temporarily locked ({locked_error}). Current command will continue; "
+        "this does not mean code generation or the frontend build failed. Run "
+        "`ai-sdlc adapter status` later only when troubleshooting.\n"
+    )
+    assert console.export_text() == expected_output

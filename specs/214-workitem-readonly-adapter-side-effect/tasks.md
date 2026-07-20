@@ -51,25 +51,29 @@ related_doc:
 
 ### T15 formal truth、PR 与 fresh-main
 
-- **状态**：in_progress
+- **状态**：completed
 - **依赖**：T14
 - **验收**：constraints/validate/truth/manifest/scope/parity/Cursor/clean 全绿；final identity 再双 PASS0；
   Codex current-head 与 required checks 全绿；merge/reviewed tree 一致；detached fresh-main 通过。
 - **完成边界**：只授权 Phase 1；T58/GAP-15 仍 open，T66 T61A 仍 blocked。
+- **完成**：formal PR #160 merge=`d7f8b163`；V4 amendment PR #161 merge=`8999efcf`、tree 与 reviewed
+  `1bef978f` 一致；两阶段 Codex/checks/detached fresh-main 全绿。
 
 ## Batch 2：implementation TDD
 
 ### T21 从 formal fresh main 建 dev 隔离环境
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T15
 - **验收**：branch=`feature/214-workitem-readonly-adapter-side-effect-dev`；clean worktree；formal truth fresh。
 - **格式基线**：RED 前把 `FORMAT_BASE_SHA` 冻结为本 amendment detached fresh-main exact SHA，后续 dev/PR/
   merge/fresh-main 不得改用动态 `origin/main`。
+- **完成**：branch 已 clean rebase 到 amendment fresh-main；`FORMAT_BASE_SHA=
+  8999efcf2feccab88f8b957601b0be379032a1b7`。
 
 ### T22 建立 RED 分发与兼容证明
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T21
 - **验收**：产品源码未改；唯一新文件=`tests/integration/test_cli_workitem_adapter_dispatch.py`；15 格在
   legacy 上因 hook/write/receipt 至少一项按预期失败；`plan-check normal` 一组 real-hook A/B 记录 guarded
@@ -77,18 +81,21 @@ related_doc:
   `test_workitem_non_init_runs_adapter_before_handler_once`，其反转断言由新 dispatch 文件的参数化
   `plan-check normal` 格承接；除此迁移外，`init/link` 既有文件只补 call order 与两类 outcome。
 - **约束**：优先参数化与复用 fixture；不得复制五套 handler 业务测试。
+- **完成**：test-only commit=`8f4f63dd`；在 amendment base 后 detached replay 得到预期
+  `16 failed, 33 passed`，失败仅为 15 格 hook/write 与一组 real Cursor write。
 
 ### T23 实施唯一 callback 修正
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T22
 - **范围**：只把 `_workitem_before_command()` 收敛为 `ctx.invoked_subcommand != "link"` 时 return。
 - **验收**：一个既有产品函数变化；无命令名单、新产品文件、公共符号、classifier、依赖、配置或版本。
 - **回退**：revert 单一实现 commit。
+- **完成**：implementation commit=`bd8a0de2`；产品 diff 仅一行谓词，无新增产品符号或文件。
 
 ### T24 GREEN 与零差异回归
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T23
 - **验收**：15 格 hook=0、sentinel/config/tree bytes stable、no-op-hook stdout/stderr/exit exact；
   `plan-check normal` production A/B bytes/hash/status exact；共享 partial-write 与 `init/link` 全矩阵零未批准差异。
@@ -98,17 +105,21 @@ related_doc:
   `test_cli_workitem_init.py` 在 committed+clean identity 执行 plan §5.3 的 fixed-base V4b 程序，要求
   candidate red path set 是 base set 的大小写敏感子集、工具退出与输出可解释，且全部 candidate changed/
   deletion-boundary range format-check 通过；`uv run --python 3.11 ai-sdlc verify constraints`；`git diff --check`。
+- **完成**：targeted=`49 passed in 15.14s`；full=`3302 passed, 3 skipped in 673.22s`；Ruff lint/V4a、
+  fixed-base V4b 13 ranges、constraints 与 diff-check 全绿。
 
 ## Batch 3：implementation truth、review 与 mainline
 
 ### T31 冻结 implementation terminal truth 与本地门禁
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T24
 - **验收**：先完成 execution log、real-hook/RED/GREEN receipt、program truth、root/scoped handoff；再跑
   `uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`、
   `uv run --python 3.11 pytest -q`、Ruff check/format、constraints、validate/truth、manifest exact、scope/
   parity/Cursor/clean，最后提交并冻结 terminal identity。
+- **完成**：execution/continuity source 与 manifest 分离提交；final truth snapshot fresh 后对 committed+clean
+  identity 重跑全部列示门禁，结果作为双审外部 receipt，不反写 source。
 
 ### T32 implementation 最终双审、PR、CI、merge 与 fresh-main
 

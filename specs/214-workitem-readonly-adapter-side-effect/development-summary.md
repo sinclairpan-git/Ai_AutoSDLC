@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal PR #160 已 merge/fresh-main；V4 amendment Round 2 correction 与 terminal gates 已完成，待新身份双审；产品实现暂停
+**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 最终本地审查修正与 terminal gates 全绿，待新身份双审
 
 ## 已冻结合同
 
@@ -32,15 +32,16 @@
 - Round 5 修正 T66 lifecycle 准入与 canonical review identity；Round 6 同一 identity 双 PASS0。PR #160
   Codex current-head P2 又发现既有 init 测试中的 `plan-check` 旧断言未获迁移授权；formal 已显式允许删除
   该单一旧测试并由新 dispatch 参数格承接，Round 6 verdict 因 formal 变化全部退役。
+- V4 amendment Round 4 对 `e4ca3e42`/tree `1bef978f`，Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0；
+  PR #161 Codex current-head 无 finding、required checks 全绿，merge=`8999efcf` 且 detached fresh-main 通过。
 
 ## 完成与未完成边界
 
 - 已完成：current-main 根因、范围、expected delta、最小设计、测试与异常矩阵、生命周期/回退合同、
-  authoring 对抗评审收敛；formal PR #160 merge、detached fresh-main；amendment Round 2 correction 与 terminal
-  truth/audit/gates。
-- 尚未完成：amendment continuity correction 后同一 final identity 双 PASS0、PR/checks/merge/detached fresh-main。
-- 已开始但暂停：RED/GREEN、产品 callback 与测试实现；须等待 amendment fresh-main 后重放、复验。尚未开始：
-  implementation/lifecycle PR、T66 T61A。
+  authoring 对抗评审收敛；formal PR #160 与 amendment PR #161 merge/detached fresh-main；implementation
+  test-only/product 两提交、RED/GREEN、full/Ruff/V4/constraints。
+- 已完成：implementation terminal truth/handoff/source freeze；尚未完成 implementation 双审/PR/checks/merge/
+  fresh-main。尚未开始：lifecycle PR、T66 T61A。
 - GAP-15/T58、T66、GAP-03、WI196、RC-08 与 release 均保持 open；当前禁止版本/tag/Release/PyPI/
   共享 CLI 更新。
 - Implementation 预审发现 formal V4 错把主线 273 个历史 formatter-red 文件设为全库零债务门禁；独立
@@ -49,4 +50,27 @@
   `FORMAT_BASE_SHA`、red path set subset 与 changed-range Ruff check；terminal truth/gates 已全绿。Round 2
   对 `5cad2581` 否决 range 终点/删除边界、native failure、dirty candidate 与路径大小写假绿，并指出 summary/
   handoff 下一步陈旧；成立项已最小修正并通过 terminal gates。Round 3 对 `67455e7e` 的技术审查无新增问题，
-  两位 reviewer 均只报 P3 continuity 仍停留在 pre-sync；本次同步修正后，Round 3 verdict 全部退役。
+  两位 reviewer 均只报 P3 continuity 仍停留在 pre-sync；修正后 Round 4 同身份 PASS0，PR #161 已验收。
+- Implementation 在 `FORMAT_BASE_SHA=8999efcf...a1b7` 上重放：test-only `8f4f63dd` RED=
+  `16 failed/33 passed`；一行产品 commit `bd8a0de2` 后 targeted=`49 passed`、full=`3302 passed/3 skipped`；
+  V4b 对 13 个 changed ranges 全绿，无全库历史格式化或范围扩张。
+- Terminal continuity source=`581cf344`、首个 truth snapshot=`034f3464...d732`；最终 reviewed identity 只允许
+  manifest-only truth refresh，持久下一步从双审开始，避免重复 sync。
+- Implementation Round 2 对 `8d09b7bb` 同身份双 PASS0，Codex current-head 也未发现 major issue；但 PR #162
+  Compatibility Gate 在 Ubuntu/macOS 宽终端稳定暴露 production/no-op A/B 使用不同绝对临时路径，导致 Rich
+  表格路径与列宽不同。产品行为和 bytes/clean-tree 断言均通过，失败只在 stdout 假对比。
+- 本地 `COLUMNS=200` 复现 RED 后，首版修正改为同 repo 顺序 A/B，宽终端 full 与门禁全绿，但 SAFETY
+  指出它偏离 plan 的“两份 byte-identical 临时项目”合同。当前不改 formal：恢复 `control/subject` 两个等长
+  路径的隔离 repo，只把各自绝对根路径替换为统一 token 后比较完整 stdout/stderr；80/200/300 列单测、
+  宽终端 49 项矩阵与 Ruff 已通过。双项目 correction identity 的宽终端 full=`3302 passed/3 skipped`，
+  Ruff/V4、constraints、validate、truth/manifest、scope/parity/Cursor/clean 全绿。
+- 最终本地审查中，Pascal/LEAN 对 `98b7c6f2` 为 PASS0；Confucius/SAFETY 为 FAIL2：真实 no-project
+  `init` 缺自动化证明、config-lock warning 的空白归一化会漏掉换行漂移。两项均成立，已仅补测试：前者冻结
+  root 阻断前 hook/scaffold/write set 为零，后者使用稳定相对路径与固定 Console 宽度直接比较
+  `export_text()` 完整 bytes。两项 mutation 均得到预期 RED，修复态 targeted=`50 passed`；产品代码零变化。
+- OpenAI 官方 Codex PR review 事故期间，用户明确批准 PR #162 采用一次性治理例外：以 final current-identity
+  本地 Pascal/LEAN + Confucius/SAFETY 双 PASS0、完整本地门禁与远端 22/22 required checks 共同替代
+  current-head GitHub Codex 回执；例外不自动扩展到 lifecycle 或后续发布阶段。
+- 修正后的 terminal identity `56367d96`：targeted=`50 passed`、full=`3303 passed/3 skipped`，Ruff lint、
+  V4a/V4b、constraints、program validate、truth=`ready/fresh` 1126/1126、manifest exact、scope/parity/Cursor/
+  clean 全绿。当前 continuity-only source 不再改 src/tests；其 terminal truth refresh 后以相同门禁重验再送双审。
