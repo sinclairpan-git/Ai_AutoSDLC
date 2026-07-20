@@ -2005,6 +2005,10 @@ class ProgramSpecTruthReadinessResult:
         self.matched_capabilities = _unique_strings(self.matched_capabilities)
 
 
+_CrossSpecRequest = ProgramFrontendCrossSpecWritebackRequest
+_CrossSpecResult = ProgramFrontendCrossSpecWritebackResult
+
+
 class ProgramService:
     """Program-level helper service used by CLI `program` commands."""
 
@@ -2021,8 +2025,11 @@ class ProgramService:
     def _frontend_cross_spec_writeback_engine(
         self,
         specs: list[ProgramSpecRef] | tuple[()],
-    ) -> _bounded_stage.BoundedStageEngine:
+    ) -> _bounded_stage.BoundedStageEngine[_CrossSpecRequest, _CrossSpecResult]:
         binding = _bounded_stage.BoundedStageBinding(
+            self.root,
+            self.manifest_path,
+            {spec.id: spec.path for spec in specs},
             PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_ARTIFACT_REL_PATH,
             PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH,
             PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_FILENAME,
@@ -2035,18 +2042,13 @@ class ProgramService:
             self.execute_frontend_cross_spec_writeback,
             self._build_frontend_cross_spec_writeback_artifact_payload,
             self._resolve_project_relative_path,
-        )
-        return _bounded_stage.BoundedStageEngine(
-            self.root,
-            self.manifest_path,
-            specs,
-            binding,
             _unique_strings,
             _normalize_string_list,
             _normalize_mapping_list,
             _normalize_string_mapping,
             _relative_to_root_or_str,
         )
+        return _bounded_stage.BoundedStageEngine(binding)
 
     def load_manifest(self) -> ProgramManifest:
         return YamlStore.load(self.manifest_path, ProgramManifest)
@@ -10326,8 +10328,7 @@ const $i = (text: string) => text;
         effective_request = request or self.build_frontend_cross_spec_writeback_request(
             manifest
         )
-        engine = self._frontend_cross_spec_writeback_engine(manifest.specs)
-        return engine.execute(
+        return self._frontend_cross_spec_writeback_engine(manifest.specs).execute(
             effective_request,
             confirmed=confirmed,
         )
@@ -10342,8 +10343,7 @@ const $i = (text: string) => text;
         output_path: Path | None = None,
     ) -> Path:
         """Persist the canonical cross-spec writeback artifact."""
-        engine = self._frontend_cross_spec_writeback_engine(manifest.specs)
-        return engine.write(
+        return self._frontend_cross_spec_writeback_engine(manifest.specs).write(
             manifest,
             request=request,
             result=result,

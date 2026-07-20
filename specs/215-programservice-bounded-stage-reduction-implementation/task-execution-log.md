@@ -645,3 +645,23 @@
   `c1fef3101dea2ce3c260872b7f26b83e6e77ba9730aeeb446c7cc62a37506d69`；manifest exact=
   `1 passed in 107.80s`。本段文字进入 records 后再执行一次最终 sync/audit/manifest；此后不再改 formal
   evidence。Full 与 A/B 产品/测试/config blobs不得变化。
+
+## 42. Batch 2026-07-20-040：R1 双审 FAIL 修正
+
+- Formal review identity=`6e3c661bd1fb2a7bd1a1127c601ed1ecc262569a` / tree=
+  `8a50e2f9b283011eab6aa193d89ab182ad8b8517`，worktree clean。Pascal/LEAN=`FAIL2`：无约束
+  TypeVar 不构成真实 typed contract；`all((...))` 为 branch 计量牺牲可读性。Confucius/SAFETY=`FAIL1`：
+  同一 typed-binding 缺口使新 engine 增加47个 mypy error，错误 binding/DTO 组合无法静态发现。
+- 两项成立且不降级。最小修正仅触及 engine 与 cross-spec private factory：增加私有 Step/Request/Result
+  Protocol，把 factory 返回类型具体化；typed binding 收纳 root/manifest/spec path 与既有 callback；
+  `_result`集合收紧为`Sequence[str]`；yaml untyped import使用精确 error-code ignore。未改 frozen tests/DTO/public
+  surface/行为分支，未扩到 legacy ProgramService 类型债。
+- strict mypy实测：新 engine=`Success: no issues found`；同版本 legacy ProgramService 与 candidate
+  ProgramService均=`62 errors`，本 Rx mypy 增量=`0`。直接条件已恢复为
+  `request.warnings and not request.artifact_generated_at`，不再通过`all(tuple)`规避 AST branch。
+- 修正后 target slice：五 facade=`57/6`、全部 active engine methods=`314/42`，累计=`371 LOC / 48
+  branch`，严格低于 legacy=`392/50`；最大实现函数=`49≤50`。retained product=`394 engine physical +
+  47 service added =441≤522`，proof=`287≤290`，combined=`728≤729`。
+- 修正后 cross group=`33 passed, 3346 deselected`，累计 exact union=`238 passed, 3141 deselected`；
+  Ruff、diff-check、engine mypy全绿。原`6e3c661b`双审结论退役；须固定新 product checkpoint，重跑
+  full/immutable A-B/全部治理门并取得同一新 clean identity 双 PASS0。

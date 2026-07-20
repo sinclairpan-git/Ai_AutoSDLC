@@ -1,23 +1,58 @@
-from __future__ import annotations
-
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Generic, TypeVar
+from typing import Generic, NamedTuple, Protocol, TypeVar
 
-import yaml
-
-StepT = TypeVar("StepT")
-RequestT = TypeVar("RequestT")
-ResultT = TypeVar("ResultT")
+import yaml  # type: ignore[import-untyped]
 
 
-@dataclass(frozen=True)
-class BoundedStageBinding(Generic[StepT, RequestT, ResultT]):
+class _Step(Protocol):
+    spec_id: str
+    path: str
+    writeback_state: str
+    pending_inputs: list[str]
+    suggested_next_actions: list[str]
+    plain_language_blockers: list[str]
+    recommended_next_steps: list[str]
+    source_linkage: dict[str, str]
+
+
+class _Messages(Protocol):
+    source_linkage: dict[str, str]
+    written_paths: list[str]
+    remaining_blockers: list[str]
+    warnings: list[str]
+
+
+class _Request(_Messages, Protocol):
+    artifact_generated_at: str
+    required: bool
+    apply_result: str
+    artifact_source_path: str
+    confirmation_required: bool
+
+    @property
+    def steps(self) -> Sequence[_Step]: ...
+
+
+class _Result(_Messages, Protocol):
+    confirmed: bool
+    writeback_state: str
+    orchestration_result: str
+    orchestration_summaries: list[str]
+
+
+RequestT = TypeVar("RequestT", bound=_Request)
+ResultT = TypeVar("ResultT", bound=_Result)
+
+
+class BoundedStageBinding(NamedTuple, Generic[RequestT, ResultT]):
+    root: Path
+    manifest_path: Path
+    spec_paths: dict[str, str]
     input_artifact_path: str
     output_artifact_path: str
     target_filename: str
-    step_factory: Callable[..., StepT]
+    step_factory: Callable[..., _Step]
     request_factory: Callable[..., RequestT]
     result_factory: Callable[..., ResultT]
     render: Callable[..., str]
@@ -26,33 +61,23 @@ class BoundedStageBinding(Generic[StepT, RequestT, ResultT]):
     execute: Callable[..., ResultT]
     build_payload: Callable[..., dict[str, object]]
     resolve: Callable[[str | Path], Path]
+    unique: Callable[[list[str] | tuple[str, ...]], list[str]]
+    strings: Callable[[object], list[str]]
+    mappings: Callable[[object], list[dict[str, object]]]
+    linkage: Callable[[object], dict[str, str]]
+    relative: Callable[[Path, Path], str]
 
 
-class BoundedStageEngine(Generic[StepT, RequestT, ResultT]):
+class BoundedStageEngine(Generic[RequestT, ResultT]):
     def __init__(
         self,
-        root: Path,
-        manifest_path: Path,
-        specs: Sequence[object],
-        binding: BoundedStageBinding[StepT, RequestT, ResultT],
-        unique: Callable[[list[str] | tuple[str, ...]], list[str]],
-        strings: Callable[[object], list[str]],
-        mappings: Callable[[object], list[dict[str, object]]],
-        linkage: Callable[[object], dict[str, str]],
-        relative: Callable[[Path, Path], str],
+        binding: BoundedStageBinding[RequestT, ResultT],
     ) -> None:
-        self.root = root
-        self.manifest_path = manifest_path
-        self.spec_paths = {spec.id: spec.path for spec in specs}
         self.binding = binding
-        self.unique = unique
-        self.strings = strings
-        self.mappings = mappings
-        self.linkage = linkage
-        self.relative = relative
-
-    def _artifact_path(self, path: Path | None, default: str) -> Path:
-        return self.root / (path or default)
+        self.root = binding.root
+        self.unique, self.strings = binding.unique, binding.strings
+        self.mappings, self.linkage = binding.mappings, binding.linkage
+        self.relative = binding.relative
 
     def load(
         self, artifact_path: Path, *, artifact_label: str
@@ -68,14 +93,15 @@ class BoundedStageEngine(Generic[StepT, RequestT, ResultT]):
             return None, [f"invalid {artifact_label} artifact: {relative_path}"]
         return payload, []
 
-    def _steps(self, payload: dict[str, object], source_path: str) -> list[StepT]:
+    def _steps(self, payload: dict[str, object], source_path: str) -> list[_Step]:
         generated_at = str(payload.get("generated_at", "")).strip()
-        steps: list[StepT] = []
+        spec_paths = self.binding.spec_paths
+        steps: list[_Step] = []
         for item in self.mappings(payload.get("steps", [])):
             spec_id = str(item.get("spec_id", "")).strip()
             if not spec_id:
                 continue
-            path = str(item.get("path", "")).strip() or self.spec_paths.get(spec_id, "")
+            path = str(item.get("path", "")).strip() or spec_paths.get(spec_id, "")
             linkage = self.linkage(item.get("source_linkage", {}))
             linkage.update(
                 {
@@ -99,7 +125,7 @@ class BoundedStageEngine(Generic[StepT, RequestT, ResultT]):
         return steps
 
     def build(self, artifact_path: Path | None = None) -> RequestT:
-        path = self._artifact_path(artifact_path, self.binding.input_artifact_path)
+        path = self.root / (artifact_path or self.binding.input_artifact_path)
         source_path = self.relative(self.root, path)
         payload, warnings = self.load(path, artifact_label="provider patch apply")
         if payload is None:
@@ -155,7 +181,7 @@ class BoundedStageEngine(Generic[StepT, RequestT, ResultT]):
         confirmed: bool,
         state: str,
         outcome: str,
-        data: tuple[Sequence[object], ...],
+        data: tuple[Sequence[str], ...],
     ) -> ResultT:
         summaries, paths, blockers, warnings = data
         linkage = {
@@ -176,13 +202,14 @@ class BoundedStageEngine(Generic[StepT, RequestT, ResultT]):
         )
 
     def _early(self, request: RequestT, confirmed: bool) -> ResultT | None:
-        existing = (
+        existing: tuple[Sequence[str], ...] = (
             (),
             request.written_paths,
             request.remaining_blockers,
             request.warnings,
         )
-        if all((request.warnings, not request.artifact_generated_at)):
+        data = existing
+        if request.warnings and not request.artifact_generated_at:
             return self._result(
                 request, False, confirmed, "blocked", "blocked", existing
             )
@@ -222,7 +249,7 @@ class BoundedStageEngine(Generic[StepT, RequestT, ResultT]):
         executable = 0
         for step in request.steps:
             label = f"cross-spec writeback step {step.spec_id}".rstrip()
-            expected_path = self.spec_paths.get(step.spec_id)
+            expected_path = self.binding.spec_paths.get(step.spec_id)
             path_text = str(step.path).strip()
             if not step.spec_id:
                 blockers.append(f"{label} missing spec_id; writeback skipped")
@@ -314,7 +341,7 @@ class BoundedStageEngine(Generic[StepT, RequestT, ResultT]):
         ]
         return {
             "generated_at": generated_at,
-            "manifest_path": self.relative(self.root, self.manifest_path),
+            "manifest_path": self.relative(self.root, self.binding.manifest_path),
             "artifact_source_path": request.artifact_source_path,
             "artifact_generated_at": request.artifact_generated_at,
             "required": request.required,
@@ -352,7 +379,7 @@ class BoundedStageEngine(Generic[StepT, RequestT, ResultT]):
             raise ValueError(
                 "cross-spec writeback artifact requires an explicitly confirmed result"
             )
-        path = self._artifact_path(output_path, self.binding.output_artifact_path)
+        path = self.root / (output_path or self.binding.output_artifact_path)
         payload = self.binding.build_payload(
             request=effective_request,
             result=effective_result,
