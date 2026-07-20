@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 最终本地审查修正与 terminal gates 全绿，待新身份双审
+**当前状态**：formal/amendment 与 implementation 已 merge/fresh-main；lifecycle delivery 材料已就绪
 
 ## 已冻结合同
 
@@ -13,10 +13,12 @@
   output/exit/write set；不复制 adapter 内部 fixture、不新增事务化。
 - 测试布局固定为一个新增参数化 dispatch 文件、两个既有 init/link integration 文件和既有 hook unit 文件；
   V1 targeted、full、Ruff、constraints 与 diff-check 命令已明确。
-- Formal、implementation、lifecycle reconciliation 分三个 branch/PR；每阶段都 truth/gates first、final
-  current-identity 双 PASS0、Codex/current-head checks、merge 与 detached fresh-main。
-- Lifecycle fresh-main 才关闭 GAP-15/T58并授权 T66 T61A。关闭后回退必须先重开 truth/阻断 T66，再
-  revert implementation，禁止代码与状态分裂。
+- Formal、implementation、lifecycle delivery 分独立 branch/PR；delivery fresh-main 后再以独立 receipt
+  branch/PR 落盘关闭。每阶段都 truth/gates first、final current-identity 双 PASS0、Codex/current-head
+  checks、merge 与 detached fresh-main。
+- Lifecycle receipt merge 是 GAP-15/T58 关闭的唯一生效点；receipt detached fresh-main 通过才授权创建
+  T66 WI/T61A，失败立即 revert/correct receipt 并保持 T66 blocked。关闭后回退必须先重开 truth/阻断 T66，
+  再 revert implementation，禁止代码与状态分裂。
 
 ## 对抗评审
 
@@ -40,10 +42,13 @@
 - 已完成：current-main 根因、范围、expected delta、最小设计、测试与异常矩阵、生命周期/回退合同、
   authoring 对抗评审收敛；formal PR #160 与 amendment PR #161 merge/detached fresh-main；implementation
   test-only/product 两提交、RED/GREEN、full/Ruff/V4/constraints。
-- 已完成：implementation terminal truth/handoff/source freeze；尚未完成 implementation 双审/PR/checks/merge/
-  fresh-main。尚未开始：lifecycle PR、T66 T61A。
-- GAP-15/T58、T66、GAP-03、WI196、RC-08 与 release 均保持 open；当前禁止版本/tag/Release/PyPI/
-  共享 CLI 更新。
+- 已完成：implementation terminal truth/handoff/source freeze、同身份本地双 PASS0、PR #162 的 22/22 checks、
+  squash merge `2845fedc` 与 detached fresh-main。当前 lifecycle delivery branch 只标记 closure-ready；
+  GAP-15/T58 仍 active、T66 仍 blocked。
+- Delivery merge/fresh-main 后另建独立 closure receipt branch/PR；receipt 双审、Codex/checks 全绿后 merge，
+  该 merge 关闭 GAP-15/T58，但 T66 仍 blocked。Receipt detached fresh-main 通过才授权创建独立 T66
+  implementation WI、先执行 T61A 双 readiness；失败立即回退 receipt。T66、GAP-03、WI196、RC-08 与
+  release 仍保持 open，禁止版本/tag/Release/PyPI/共享 CLI 更新。
 - Implementation 预审发现 formal V4 错把主线 273 个历史 formatter-red 文件设为全库零债务门禁；独立
   amendment 仅改为 changed-file strict + legacy baseline-delta，不授权格式化非范围文件或放宽其他门禁。
 - Amendment final review Round 1 对 `a91bbba3` 一致否决动态 base/count-only 判定；当前改为固定
@@ -74,3 +79,10 @@
 - 修正后的 terminal identity `56367d96`：targeted=`50 passed`、full=`3303 passed/3 skipped`，Ruff lint、
   V4a/V4b、constraints、program validate、truth=`ready/fresh` 1126/1126、manifest exact、scope/parity/Cursor/
   clean 全绿。当前 continuity-only source 不再改 src/tests；其 terminal truth refresh 后以相同门禁重验再送双审。
+- 最终 implementation review identity=`75d60375`/tree=`03b4a1ff`、clean，Pascal/LEAN 与
+  Confucius/SAFETY 同身份 PASS0、actionable findings=0；本地 full=`3303 passed, 3 skipped`，其余门禁全绿。
+- PR #162 在用户批准的事故期一次性治理例外下，以本地双 PASS0 + 完整本地门禁 + 22/22 checks 替代
+  current-head GitHub Codex 回执；squash merge=`2845fedc`，实现分支保留且 merge tree 与 reviewed tree 一致。
+- Detached fresh-main `2845fedc`：full=`3303 passed, 3 skipped in 707.39s`、targeted=`50 passed`，
+  Ruff/V4a/V4b、constraints、validate、truth=`ready/fresh 1126/1126`、manifest exact、scope/parity/Cursor/
+  clean 全绿。该 receipt 只完成 implementation，不计 RC-08 减重收益。

@@ -1,7 +1,7 @@
 # 开发摘要：ProgramService 九阶段精益减重正式合同
 
 **功能编号**：`213-programservice-bounded-stage-reduction`
-**状态**：formal contract 与 lifecycle reconciliation mainline/fresh-main 均已完成；T58/WI214 active
+**状态**：formal contract 与 lifecycle reconciliation mainline/fresh-main 均已完成；T58/WI214 closure ready
 
 ## 本地已交付
 
@@ -15,8 +15,9 @@
   异常、中断恢复、平台、wheelhouse no-index offline install、sibling 与性能。
 - Candidate 合入时 legacy 保留；主线预发布稳定期后独立 deletion PR；删除合入后对精确 merge commit
   实际 revert，再回 deletion fresh-main 验证。删除前不关闭 T66。
-- Formal 验证新登记 GAP-15：`workitem` 只读子命令会隐式 refresh adapter。该缺陷由独立 T58/WI/PR
-  先关闭；其 fresh-main 前不创建 T66 implementation WI/T61A。
+- Formal 验证新登记 GAP-15：`workitem` 只读子命令会隐式 refresh adapter。独立 T58/WI214 的 formal、
+  amendment、implementation 与 detached fresh-main 已完成；lifecycle delivery 后的独立 closure receipt
+  merge 时关闭，receipt detached fresh-main 通过后才恢复 T66 准入。
 
 ## 对抗评审
 
@@ -41,9 +42,13 @@
 - PR #158 的 current-head review、13/13 checks 与 squash merge `450d4988` 已完成；detached fresh-main
   验证 merge/reviewed tree=`9d1c0f69` 且 truth/tests/scope/parity/clean 全绿。
 - 本 WI 没有产品代码、selector、candidate、legacy deletion、版本/tag/Release/PyPI 或全局 CLI 更新。
-- GAP-15、T58、T61A/B、T66、GAP-03、WI196、RC-08 和总体版本发布均保持 open。
+- GAP-15/T58 以 lifecycle delivery 后的独立 closure receipt merge 关闭；receipt detached fresh-main 通过后
+  才恢复 T66 WI/T61A 准入。T61A/B、T66、GAP-03、WI196、RC-08 和总体版本发布均保持 open。
 - Lifecycle reconciliation 最终 identity=`762a3fa5`/tree `901dfa8f`/formal-six=`e51befd2...9431`，
   Pascal/LEAN 与 Confucius/SAFETY 双 PASS0；PR #159 required checks 全绿并 squash merge=`d5ad7616`，
   detached fresh-main 的 truth/tests/scope/parity/Cursor/clean 全绿。
-- 当前已从 `d5ad7616` 创建独立 T58/GAP-15 WI214 formal；只有其 lifecycle reconciliation
-  fresh-main 后才可创建 T66 implementation WI。
+- WI214 final implementation reviewed HEAD/tree=`75d60375`/`03b4a1ff`，LEAN/SAFETY 同身份 PASS0；
+  PR #162 22/22 checks，squash merge=`2845fedc`；detached fresh-main full=`3303 passed, 3 skipped`、
+  targeted=`50 passed` 与治理门禁全绿。Lifecycle delivery fresh-main 后先完成独立 closure receipt PR；
+  receipt merge 关闭 GAP-15/T58，receipt detached fresh-main 后唯一下一步才是创建 T66 implementation WI
+  并先取得 T61A 双 readiness GO。

@@ -14,7 +14,8 @@ artifact、授权和错误语义。
 
 WI213 **只交付 formal receipt**。本分支不得修改 `src/**`、产品测试逻辑、workflow、provider、runtime
 rule、依赖、版本或发布配置。只有 WI213 的正式 PR 已合入 `main`、detached fresh-main 验收通过，且
-GAP-15 已由独立 T58 work item/PR 关闭并通过 fresh-main 验收，才允许创建唯一 T66 implementation WI；
+GAP-15 由独立 T58 delivery 与 closure receipt 两个 PR 关闭；receipt merge 是关闭生效点，其 detached
+fresh-main 通过后才允许创建唯一 T66 implementation WI；
 该 WI 还必须在写产品代码前完成 T61A，并取得 LEAN 与 SAFETY 两位 reviewer 的 readiness `GO`，才允许
 进入 candidate 实现。
 
@@ -268,15 +269,15 @@ WI 保持 active；WI213 formal receipt 不得被冒充为产品完成证据。
 - **SC-003**：formal spec/plan/tasks 无占位或未决用户选择；parent+child formal-six 同 identity 双 PASS、findings=0。
 - **SC-004**：constraints、program validate/truth、manifest exact、scope、handoff parity、diff-check 全绿；formal PR/Codex/checks/merge/fresh-main 有 receipt。
 - **SC-005**：formal 关闭 receipt 经 lifecycle reconciliation 双审/mainline/fresh-main 收口后，只授权
-  创建一个 T58/GAP-15 WI；T58 fresh-main 后才授权唯一 T66
+  创建一个 T58/GAP-15 WI；T58 closure receipt fresh-main 后才授权唯一 T66
   implementation WI，没有产品、selector、legacy deletion 或发布声明。
 - **SC-006**：最终 T66 只有在 candidate + pre-release stability + independent deletion + post-deletion rollback
   全部证明后才能 `completed_reduction`；rollback 必须针对精确 deletion merge commit，终态满足切片≤720、
   净删≥2,918、原文件职责减少≥3,278。
 - **SC-007**：WI213 formal 的 lifecycle reconciliation fresh-main 后，唯一下一执行项是
   T58/GAP-15；其五个只读命令 bytes/clean-tree
-  与 help/invalid-input 不变，且 `init/link` valid/负路径 hook 时序零未批准差异的 fresh-main receipt 完成前，
-  不创建 T66 implementation WI。
+  与 help/invalid-input 不变，且 `init/link` valid/负路径 hook 时序零未批准差异的 delivery 与 closure receipt
+  均完成、receipt detached fresh-main 通过前，不创建 T66 implementation WI。
 
 ## 11. 冻结决策
 

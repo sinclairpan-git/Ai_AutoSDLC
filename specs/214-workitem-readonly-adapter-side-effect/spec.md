@@ -3,7 +3,7 @@
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
 **日期**：2026-07-19
 **类型**：WI-196 / T58 / GAP-15 / L2 / 非减重缺陷修复
-**状态**：formal authoring Round 4 双 PASS0；closure/truth/PR/fresh-main 收口中，产品实现仍禁止
+**状态**：formal/amendment/implementation 已 merge/fresh-main；lifecycle delivery review-pending，closure receipt 未开始
 **输入**：独立修复五个 `workitem` 只读命令的隐式 adapter refresh，保留 `init/link` 全部既有语义。
 
 ## 1. 目标与依据
@@ -112,18 +112,23 @@ handler 是否继续、call order、最终输出/exit/write set。其他 `Permis
 - **FR-005**：实现必须是 `workitem` callback 内的直接 `ctx.invoked_subcommand != "link"` 判断；不得建立
   命令名单、全局 classifier 或新抽象层。未来命令必须显式决定是否需要写副作用，不能默认消费 hook。
 - **FR-006**：TDD 必须先在未改产品源码的 identity 上得到能证明 GAP-15 的 RED，再做最小 GREEN。
-- **FR-007**：formal、implementation 与 lifecycle reconciliation 都必须由 Pascal/LEAN 和
+- **FR-007**：formal、implementation、lifecycle delivery 与 closure receipt 四个独立交付单元都必须由 Pascal/LEAN 和
   Confucius/SAFETY 对同一 committed+clean identity 独立审查；任一受审文件变化使双方 verdict 同时失效，
   直到双 PASS 且 actionable findings=0。
 - **FR-008**：formal 使用 docs branch/PR；实现从 formal fresh main 建 dev branch/PR；implementation
-  fresh-main 后从 main 建独立 lifecycle reconciliation branch/PR。三个阶段都必须完成 final current-identity
-  双审、Codex、required checks、merge 与 detached fresh-main。
+  fresh-main 后从 main 建独立 lifecycle delivery branch/PR；delivery detached fresh-main 后再从 main 建独立
+  closure receipt branch/PR。四个交付单元都必须完成 final current-identity 双审、Codex、required checks、
+  merge 与 detached fresh-main。
 - **FR-009**：implementation truth/handoff 与本地门禁必须在 final 双审之前完成；其后任一内容变化都使双方
-  verdict 失效。Implementation PR 不得提前把 GAP-15/T58 写成 closed/completed。
-- **FR-010**：只有 lifecycle reconciliation fresh-main 才关闭 T58/GAP-15 并授权创建 T66 implementation
-  WI/T61A；RC-08 前不得发布版本。
-- **FR-011**：implementation merge 后、lifecycle merge 前的回退只 revert implementation PR；lifecycle 已
-  merge 时必须先 revert/修正 closure receipt 以重开 GAP-15并阻断 T66，再 revert implementation PR。
+  verdict 失效。Implementation 与 delivery PR 均不得把 GAP-15/T58 写成 closed/completed 或把 T66 写成 ready。
+- **FR-010**：closure receipt 在同身份双审、Codex/checks 全绿后 merge，merge 是 T58/GAP-15
+  closed/completed 的唯一生效点；T66 继续 blocked，只有 receipt detached fresh-main 通过后才授权创建
+  T66 implementation WI/T61A。Fresh-main 失败必须先 revert/correct receipt 以重开 GAP-15，RC-08 前不得发布版本。
+- **FR-011**：回退必须区分三态：implementation 已 merge、delivery 未 merge 时直接 revert implementation；
+  delivery 已 merge但 receipt 未生效时先 revert/correct delivery receipt source，再 revert implementation，不得
+  回退不存在的 closure receipt；closure receipt 已 merge（包括 fresh-main pending/failed）时先 revert/correct
+  receipt 以重开 GAP-15并阻断 T66，再依次 revert delivery 与 implementation。Receipt fresh-main 失败必须
+  立即执行第三态回退，禁止创建 T66 WI。
 
 ## 5. 成功标准
 
@@ -134,14 +139,17 @@ handler 是否继续、call order、最终输出/exit/write set。其他 `Permis
 - **SC-004**：产品实现只改一个既有函数，不新增产品文件、公共符号、依赖、配置或版本；新增判断直接可读。
 - **SC-005**：targeted、full、Ruff、constraints、program validate/truth、manifest exact、scope、handoff parity、
   Cursor base bytes 与 clean-tree 全绿。
-- **SC-006**：formal、implementation 与 lifecycle reconciliation 的 final current identity 均取得双 Agent
-  PASS0；各 PR 的 Codex/CI/merge/fresh-main 均有可追溯 receipt。
-- **SC-007**：parent GAP-15/T58 只在 lifecycle fresh-main 后标记关闭；T66 T61A 仅在该关闭事实后恢复。
+- **SC-006**：formal、implementation、lifecycle delivery 与 closure receipt 的 final current identity 均取得
+  双 Agent PASS0；各 PR 的 Codex/CI/merge/fresh-main 均有可追溯 receipt。
+- **SC-007**：parent GAP-15/T58 只在 closure receipt merge 后标记关闭；T66 T61A 仅在 receipt detached
+  fresh-main 通过后恢复。Delivery fresh-main 或 receipt merge 均不得提前创建 T66 WI。
 
 ## 6. 停止、回退与发布边界
 
 若实现需要修改 adapter 算法、root callback、handler、第二 CLI family，或无法保持 §3.2 零差异，立即停止并
-回到 formal，不用扩范围掩盖问题。Formal PR 可独立 revert；implementation 未形成 closure 时直接 revert
-实现 PR。Lifecycle 已关闭后，先 revert/修正 lifecycle receipt，明确重开 GAP-15、阻断尚未开始或正在进行的
-T66，再 revert 实现 PR，禁止留下“代码已回退但 truth 仍 closed”。WI214 局部完成不触发 tag、GitHub
-Release、PyPI 或共享 CLI 更新。
+回到 formal，不用扩范围掩盖问题。Formal PR 可独立 revert。Implementation 已 merge、delivery 未 merge 时
+直接 revert implementation；delivery 已 merge但 receipt 未生效时先 revert/correct delivery source，再 revert
+implementation，不得回退不存在的 closure receipt；receipt 已 merge（含 fresh-main pending/failed）时先
+revert/correct receipt，明确重开 GAP-15、阻断尚未开始或正在进行的 T66，再依次 revert delivery 与
+implementation。Receipt fresh-main 失败必须立即走该回退，禁止留下“代码已回退但 truth 仍 closed”。WI214
+局部完成不触发 tag、GitHub Release、PyPI 或共享 CLI 更新。

@@ -7,8 +7,9 @@ related_doc:
 # 任务分解：Workitem 只读命令 Adapter 副作用隔离
 
 **编号**：`214-workitem-readonly-adapter-side-effect`
-**完成定义**：formal、implementation、lifecycle reconciliation 均 mainline/fresh-main；GAP-15 关闭；
-不等于 T66/RC-08/release 完成
+**完成定义**：formal、implementation、lifecycle delivery 与 closure receipt 四个独立交付单元均 mainline；
+receipt merge 是 GAP-15 关闭的唯一生效点，receipt detached fresh-main 是创建 T66 WI 的后置门禁；不等于
+T66/RC-08/release 完成
 
 ## Batch 1：formal current-main 冻结
 
@@ -123,7 +124,7 @@ related_doc:
 
 ### T32 implementation 最终双审、PR、CI、merge 与 fresh-main
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T31
 - **验收**：Pascal/LEAN 与 Confucius/SAFETY 对 T31 后同一 committed+clean identity 双 PASS0；任何修订先
   重跑相关 gate/truth 再重审。Codex reviewed current head 无 actionable finding、required checks success、
@@ -131,27 +132,43 @@ related_doc:
   `uv run --python 3.11 pytest tests/integration/test_cli_workitem_adapter_dispatch.py tests/integration/test_cli_workitem_init.py tests/integration/test_cli_workitem_link.py tests/unit/test_cli_hooks.py -q`
   及 full/Ruff/治理/real-hook bytes/clean-tree。
 - **完成边界**：只声明 implementation accepted；GAP-15/T58 仍 active，T66 T61A 仍 blocked。
+- **完成**：final HEAD/tree=`75d60375`/`03b4a1ff` 同身份本地双 PASS0；PR #162 22/22 checks、
+  squash merge=`2845fedc`；detached fresh-main merge tree 相同，full=`3303 passed, 3 skipped` 与全部门禁全绿。
+  OpenAI 官方事故期间按用户批准的一次性例外，以 exact-head 本地双 PASS0 + 完整本地门禁 + 22/22 checks
+  替代未接单的 GitHub Codex current-head 回执；该例外不扩展到本 lifecycle 或发布。
 
 ## Batch 4：lifecycle reconciliation 与关闭
 
 ### T41 创建独立 lifecycle reconciliation
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T32
 - **分支**：`codex/214-workitem-readonly-adapter-side-effect-lifecycle`，从 implementation fresh main 创建。
 - **验收**：只写 child/parent lifecycle docs、truth/continuity与 manifest exact 机械期望；登记 implementation
-  reviewed/merge/fresh-main receipt，把 parent T58/GAP-15 标记 completed/closed；`src/tests` 零差异。
+  reviewed/merge/fresh-main receipt，把 parent T58/GAP-15 标记 closure-ready 且在 delivery 与后续 closure
+  receipt merge 前保持 active；`src/tests` 零差异。
+- **完成**：从 exact main `2845fedc` 创建 `codex/214-workitem-readonly-adapter-side-effect-lifecycle`；
+  变更白名单仅含 WI214/WI196/WI213 lifecycle docs、双 handoff、truth/manifest，`src/tests` 零差异。
 
-### T42 lifecycle final 双审、PR 与 fresh-main
+### T42 lifecycle delivery、closure receipt 与最终 fresh-main
 
-- **状态**：pending
+- **状态**：in_progress
 - **依赖**：T41
-- **验收**：truth/handoff/gates 先完成；Pascal/Confucius 对 final current identity 双 PASS0；Codex/
-  required checks/merge/detached fresh-main 全绿后，唯一下一步才是创建 T66 implementation WI并先执行
-  T61A 双 readiness。
-- **回退**：lifecycle 已 merge 时先 revert/修正 closure receipt 以重开 GAP-15、阻断 T66，再 revert
-  implementation PR；不得留下 closed truth。
+- **验收**：delivery 与后续 receipt 均 truth/handoff/gates first；Pascal/Confucius 对各自 final current
+  identity 双 PASS0；各自 Codex/required checks/merge 全绿。Delivery detached fresh-main 只授权创建 receipt；
+  receipt merge 后 GAP-15/T58 closed/completed 但 T66 仍 blocked，只有 receipt detached fresh-main 通过后，
+  唯一下一步才是创建 T66 implementation WI并先执行 T61A 双 readiness。
+- **回退**：delivery 未 merge时直接 revert implementation；delivery 已 merge但 receipt 未生效时先
+  revert/correct delivery source，再 revert implementation，不得回退不存在的 receipt；receipt 已 merge（含
+  fresh-main pending/failed）时先 revert/correct receipt 以重开 GAP-15、阻断 T66，再依次 revert delivery 与
+  implementation。Receipt fresh-main 失败必须立即回退 receipt，不得留下 closed truth。
 - **边界**：不声明 T66、GAP-03、WI196、RC-08 或 release 完成，不发布版本。
+- **完成定义**：本 delivery source 在 truth/handoff/gates、同身份双 PASS0、PR checks/merge 与 detached
+  fresh-main 全部成功后，只授权创建 main-derived receipt branch/PR；receipt merge 时本任务/GAP-15/T58
+  completed/closed，但 T66 保持 blocked。Receipt detached fresh-main 通过后才授权 T66 WI；失败立即回退 receipt。
+- **落盘顺序**：当前 delivery PR 始终保持 T42 in_progress、T58 active、T66 blocked；delivery detached
+  fresh-main 通过后，另建 main-derived receipt branch/PR 写入 completed/closed，T66 仍 blocked；receipt 自身
+  双审、Codex/checks 全绿后 merge 生效。Receipt detached fresh-main 通过才允许创建 T66 WI。
 
 ## 追踪矩阵
 

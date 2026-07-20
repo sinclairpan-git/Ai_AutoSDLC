@@ -2,7 +2,7 @@
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
 **创建日期**：2026-07-19
-**当前状态**：一行产品实现与 T21～T31 已完成；implementation final current-identity 双审中
+**当前状态**：formal/amendment/implementation 已 merge/fresh-main；lifecycle reconciliation source ready
 
 ## 1. 固定归档规则
 
@@ -440,3 +440,92 @@
 - 本 continuity-only receipt 只把已完成门禁与唯一 next step 固化进 summary/log/byte-identical handoff，不改
   src/tests/tooling。提交后必须再次 terminal truth sync，并在新 committed+clean identity 重验完整门禁；成功后
   不再反写 tracked source，直接交 Pascal/LEAN 与 Confucius/SAFETY 同身份复审。
+
+## 31. Batch 2026-07-19-027：implementation 双 PASS、mainline 与 fresh-main
+
+- 最终 reviewed identity HEAD/tree=`75d6037514930c587e6138f833d8a99ec78ca604`/
+  `03b4a1ffc3d5997d2856e71f145d3fea6db51cf3`、clean；Pascal/LEAN 与 Confucius/SAFETY 同身份
+  `PASS0`，actionable findings=0。
+- Exact identity 本地 full=`3303 passed, 3 skipped in 707.62s`、targeted=`50 passed`，80/200/300 列
+  real-hook A/B、Ruff/V4a/fixed-base V4b、constraints、validate、truth=`ready/fresh 1126/1126`、manifest
+  exact、scope/parity/Cursor/clean 全绿；PR #162 required checks=`22/22 success`、review threads=0。
+- OpenAI 官方 Codex PR review 事故期间，用户批准本 PR 一次性治理例外：以 exact-head 本地双 PASS0、
+  完整本地门禁与 22/22 checks 替代 current-head GitHub Codex 回执。该例外不自动扩展到 lifecycle 或发布。
+- PR #162 squash merge=`2845fedcf46859b3945f327b8d8b96e9c7ca0dab`，implementation 分支未删除；
+  detached fresh-main tree 与 reviewed tree 相同，full=`3303 passed, 3 skipped in 707.39s`、targeted=
+  `50 passed in 16.42s`，其余实现门禁全绿。
+
+## 32. Batch 2026-07-19-028：lifecycle reconciliation source
+
+- 从 exact main `2845fedc` 创建 `codex/214-workitem-readonly-adapter-side-effect-lifecycle`；只对账
+  WI214/WI196/WI213 lifecycle docs、root/scoped handoff 与 truth/manifest，`src/tests` 零差异。
+- 本 source 先把 GAP-15/T58 标记为 closure-ready、T42 保持 in_progress、T66 保持 blocked；只有
+  lifecycle merge/fresh-main 后才落盘 closed/completed 与 ready receipt。其后唯一授权是另建 T66
+  implementation WI，T61A 双 readiness GO 前不得写产品代码。
+- T66、GAP-03、WI196、RC-08 与 release 仍为 open；不得创建版本/tag/GitHub Release/PyPI 或更新共享 CLI。
+- 下一步：提交 source、truth sync、治理/manifest/scope/parity/clean 门禁，再由 Pascal/LEAN 与
+  Confucius/SAFETY 对同一 committed+clean identity 从零双审；双 PASS0 前不得 push。
+
+## 33. Batch 2026-07-19-029：lifecycle Round 1 双 FAIL 与 fail-closed 修正
+
+- 受审 identity HEAD/tree=`a6f2c6a60dcddf58d851ab8eb03672b979fe8d8b`/
+  `f7bb4049101041663c7eac219ccb1ae51ca8ed7a`、clean；Pascal/LEAN=`FAIL2`，
+  Confucius/SAFETY=`FAIL2`。两方意见重合且全部成立，旧 verdict 同时退役。
+- P1：T42 在其本轮双审、PR checks、merge/fresh-main 前标成 completed，parent T58/T66 的完成/ready
+  状态让 manifest deferred 过早减少 1。最小恢复为 T42 in_progress、T58 closure-ready/active、T66 blocked；
+  实际 lifecycle fresh-main 后才落盘完成与准入 receipt。
+- P2/P3：双 handoff 仍停在 source/truth 提交前，且 Changed Files 漏 WI196 plan。最小同步当前 commits、
+  truth/gates 与唯一下一步，补全路径并保持两份 byte-identical。
+- 本修正不改 src/tests/workflow/依赖/版本/release。提交后重新 truth sync、治理门禁，并对新
+  committed+clean identity 从零双审；双 PASS0 前不得 push。
+
+## 34. Batch 2026-07-19-030：lifecycle Round 2 split verdict 与 stale next step 修正
+
+- 受审 identity HEAD/tree=`2c47be6bb57ce03076e73142aa4726fad3d6ac85`/
+  `bc760a32179ececdf532f483efe373bd392a07e8`、clean；Pascal/LEAN=`FAIL1`，
+  Confucius/SAFETY=`PASS0`。Identity 将变化，两份 verdict 同时退役。
+- SAFETY 独立确认 13-file scope、protected zero diff、truth=`ready/fresh 1126/1126`、fail-closed 状态、
+  回退、事故例外与发布边界均通过。
+- LEAN 唯一 finding 成立：双 handoff Exact Next 仍要求重复当前 identity 已完成的 terminal truth/gates。
+  最小修正只删除该步骤，让唯一下一步直接从新身份双审开始；不改其他 source 或状态。
+- 修正提交后机械刷新 truth并重验治理门禁，随后对新 committed+clean identity 从零双审；双 PASS0 前
+  不得 push。
+
+## 35. Batch 2026-07-19-031：lifecycle Round 3 split verdict 与 plan 时序修正
+
+- 受审 identity HEAD/tree=`8ab05f3cdcf84800396eafe32b7812769872e8bd`/
+  `61d373feb5101c7fa1a3349aa8cfb4c3d4a51358`、clean；Pascal/LEAN=`PASS0`，
+  Confucius/SAFETY=`FAIL1`。Identity 将变化，两份 verdict 同时退役。
+- SAFETY 唯一 finding 成立：Phase 3 plan 仍指示在本轮双审、PR checks、merge/fresh-main 前写
+  closed/completed 与 T66 next，可能让未来 executor 重引入 Round 1 的机器状态假绿。
+- 最小修正把 delivery branch 固定为 T42 in_progress、T58 closure-ready/active、T66 blocked；只有 delivery
+  detached fresh-main 后，才从新 main 建独立 receipt branch/PR 写入 completed/closed/ready。Receipt 本身
+  也必须双审、Codex/checks、merge/fresh-main 后才允许创建 T66 WI/T61A。
+- 本修正不改当前机器状态、产品、测试、workflow、依赖、版本或 release。提交后机械刷新 truth、重验治理
+  门禁并对新 committed+clean identity 从零双审；双 PASS0 前不得 push。
+
+## 36. Batch 2026-07-19-032：lifecycle Round 4 双 FAIL 与 canonical 四单元合同
+
+- 受审 identity HEAD/tree=`e27aa4e57f39eff3225bfbcb95e3e03454a8325f`/
+  `3e5e8bf3331d336eba2ab150c08eb2f5aef7e908`、clean；Pascal/LEAN=`FAIL2`，
+  Confucius/SAFETY=`FAIL1`。意见统一且全部成立，旧 verdict 同时退役。
+- Canonical child spec 与 parent SC/plan 仍写“三阶段/单一 lifecycle PR”，未强制 closure receipt 独立
+  双审、Codex/checks、merge/detached fresh-main；回退也未区分 delivery 已 merge、receipt 未生效状态。
+- 最小修正统一为 formal、implementation、lifecycle delivery、closure receipt 四个独立交付单元；只有
+  receipt fresh-main 才 closed/completed/ready。回退冻结 delivery 未 merge、delivery 已 merge但 receipt
+  未生效、receipt 已生效三态，禁止回退不存在的 receipt。
+- 本修正不改变当前 T42 in_progress、T58 active、T66 blocked，也不改产品、测试、依赖、workflow、版本或
+  release。提交后机械刷新 truth、重验治理门禁并对新 committed+clean identity 从零双审。
+
+## 37. Batch 2026-07-19-033：lifecycle Round 5 split verdict 与 receipt 单一生效点
+
+- 受审 identity HEAD/tree=`c7237b59c60c071032567c3cf641fab0cd22cdb6`/
+  `1c66a94ca4bff4cf412bdfed544202d087c18e23`、clean；Confucius/SAFETY=`PASS0`，
+  Pascal/LEAN=`FAIL1`。Identity 将变化，两份 verdict 同时退役。
+- LEAN finding 成立：receipt 不能既在 branch 预写 completed/closed，又要求自身 detached fresh-main 后才写
+  这些状态；receipt 已 merge但 fresh-main 失败的回退也必须先修正已进入 main 的关闭状态。
+- 最小修正把 receipt merge 固定为 GAP-15/T58 completed/closed 的唯一生效点，T66 继续 blocked；receipt
+  detached fresh-main 只作为创建 T66 WI 的后置门禁。Fresh-main 失败立即 revert/correct receipt 以重开
+  GAP-15，禁止创建 T66。
+- 本修正不改变当前 delivery 的 T42 in_progress、T58 active、T66 blocked，也不改产品、测试、依赖、
+  workflow、版本或 release。提交后机械刷新 truth、重验治理门禁并对新 identity 从零双审。
