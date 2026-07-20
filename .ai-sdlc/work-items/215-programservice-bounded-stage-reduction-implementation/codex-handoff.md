@@ -1,13 +1,13 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T12:12:04Z
-- Reason: Round 17治理门禁全过，进入committed+clean身份固化与最终formal复核
+- Updated: 2026-07-20T12:13:18Z
+- Reason: 风险分层修正已提交，正在同步新HEAD truth并固化最终clean formal identity
 - Goal: 完成WI215 T61A双readiness，再在预算内实现九阶段ProgramService精益减重
-- State: Round 17 formal-six=`3aa2d6a3...d9abf`、formal-three=`abd28b97...dcadd`已获双PASS0；尚非最终T61A GO
+- State: 风险分层提交=`500a388a`；Round 17 formal双PASS0不变，待truth提交与clean identity复核；尚非最终T61A GO
 - Stage: verify
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- HEAD: 29d3daf235e645af2749b6116ad4bcece88cc44e
+- HEAD: 500a388a68debf1ba77f6f0ef92822acd72dec81
 - Base: origin/main@7922956d3e248a93c3190240259850ab3498ec9f
 
 ## Changed Files
@@ -72,19 +72,20 @@
   为`drift=false/pending_todos=0`；旧记录中的`--id`在当前CLI不可用，已按`--help`改用`--wi`。
 - `program truth sync --execute --yes`写入snapshot `b83dda84...c6bf`，truth audit=`ready/fresh`、
   inventory=`1131/1131/0/0`；manifest exact=`1 passed in 105.85s`。
+- 风险分层文档与治理记录已提交为`500a388a`；`program-manifest.yaml`保留为下一笔新HEAD truth机械提交。
 - 当前`git diff --check` PASS；`src/**`、`tests/unit`、`tests/integration`无diff；root/scoped handoff将保持
   byte-identical。
 
 ## Blockers / Risks
 
-- 当前formal修订尚未提交，也尚未在最终committed+clean HEAD/tree上复核双PASS0；完成前不能开始recorder。
+- 新HEAD truth尚未同步提交，也尚未在最终committed+clean HEAD/tree上复核双PASS0；完成前不能开始recorder。
 - Recorder/receipt/最终proof identity与T61A双readiness GO均不存在；不能改产品或目标行为测试。
 - `program-manifest.yaml`是truth sync机械变化，正式提交前必须复跑manifest exact与治理门禁。
 - 共享`.venv`不得并行运行不同`uv run`解释器；固定`uv run --python 3.11`顺序执行。
 
 ## Exact Next Steps
 
-- 提交Round 17风险分层修正，truth sync到新提交并确认clean formal identity。
+- Truth sync到`500a388a`，提交manifest/handoff机械更新并确认clean formal identity。
 - Pascal/LEAN与Confucius/SAFETY对最终committed+clean HEAD/tree/formal hash复核双PASS0。
 - 以TDD实现唯一≤200 LOC recorder，形成receipt和最终proof。
 - 对final committed+clean T61A tuple取得双GO后，才按九阶段进入产品实现与逐阶段三方回放。
