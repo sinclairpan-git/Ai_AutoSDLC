@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T18:42:42Z
-- Reason: C1 output-loader SAFETY FAIL1 remediation checkpoint
+- Updated: 2026-07-20T19:07:40Z
+- Reason: C1 output-loader remediation final review checkpoint
 - Goal: 完成C1双审修正并取得同identity LEAN/SAFETY PASS0
-- State: 最新SAFETY FAIL1已完成tests-only最小修正；待提交、重跑full/治理门/immutable A/B与同identity双审
+- State: 最新SAFETY FAIL1修正已完成full/治理门/immutable A/B；待新committed+clean identity同身份双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -42,14 +42,20 @@
   raw artifact tree `diff -qr=0`；产品分别从`7922956d`与`0a994488` worktree加载。
 - 全仓Ruff、constraints、validate、plan、truth、manifest exact全绿；formal-six=`75d60ac9...519e`、
   formal-three=`e498a7f8...cf6c`。
+- 最新tests-only修正=`771ae752`，truth records=`201be4e5`；clean full=`3376 passed, 3 skipped in 693.41s`，
+  teardown repository guard通过且测试后worktree clean。
+- 最新immutable legacy=`7922956d`/current=`201be4e5`两腿各`238 passed, 474 deselected`，JUnit=
+  `238/0/0/0`，ordered node hash同为`0064659b...ba61`；各移除35个便利symlink后raw tree `diff -qr=0`。
+- 最新全仓Ruff、constraints、validate、plan=`drift=false/pending=0`、truth=`ready/fresh 1131/1131/0/0`、
+  manifest exact=`1 passed in 98.38s`；产品blob仍为legacy `7b2ac507...9c6`。
 
 ## Blockers / Risks
 
-- `bccb6939`的LEAN=`PASS0`、SAFETY=`FAIL1`已因测试identity变化失效；须在新clean HEAD重新双审。
+- `bccb6939`的LEAN=`PASS0`、SAFETY=`FAIL1`已因测试identity变化失效；最新identity须重新双审。
 - 共享`.venv`固定`uv run --python 3.11`顺序执行，不并行不同解释器。
 
 ## Exact Next Steps
 
-1. 提交latest tests-only修正与continuity，完成truth sync并固定clean identity。
-2. 复跑full、治理门、manifest exact与immutable legacy/current两腿，再提交同一clean HEAD双审。
-3. 双PASS0后才开始首个cross-spec Rx；否则最小修正并重新双审。
+1. 提交本次final continuity，确认只改变两份byte-identical handoff并保持truth fresh。
+2. 将同一clean HEAD提交Pascal/LEAN和Confucius/SAFETY，要求严格`PASS0`或可操作finding。
+3. 双PASS0后开始首个cross-spec Rx；否则最小修正并对新identity重新双审。
