@@ -433,3 +433,10 @@
 - removed comment reason: `specs/215-programservice-bounded-stage-reduction-implementation/tasks.md` 删除并由RC-10任务替代 `**编号**：215-programservice-bounded-stage-reduction-implementation | **日期**：2026-07-20` `**来源**：本 WI spec/plan + WI213 canonical contract` `**当前门禁**：T61A 双 readiness GO 前 src/** 零差异、两份目标行为测试 blob 不变；tests/**` `### T11 冻结 legacy inventory（completed）` `### T12 采集 selector characterization（completed；非最终性能）` `### T13 TDD 实现唯一 recorder（completed）` `### T16 LEAN/SAFETY 同身份 readiness（pending）` `## Batch 2：Candidate shadow（双 GO 后）` `### T22 创建唯一 private engine（pending）` `### T23～T30 逐 stage RED/GREEN（pending）` `### T31 九阶段 selector round-trip（pending）` `## Batch 3：T61B 与 candidate mainline` `### T32 T61B zero-delta（pending）` `### T33 Candidate terminal gates（pending）` `### T34 Candidate PR/merge/fresh-main（pending）` `## Batch 4：主线预发布稳定周期` `### T41 Cross-platform/package/offline（pending）` `### T42 Sibling 与 selector 稳定（pending）` `## Batch 5：独立 deletion 与 rollback` `### T51 删除 legacy（pending）` `### T52 Deletion gates/PR/merge（pending）` `### T53 Exact-merge actual rollback（pending）` `### T54 Lifecycle closure（pending）` `## 追踪矩阵`；原因是T01～T35已把历史状态映射为completed_no_go、formal、九stage、terminal、final PR和lifecycle任务。
 - removed comment reason: `specs/215-programservice-bounded-stage-reduction-implementation/plan.md` 的compact摘要 `*停止**：任何`src` 与 `*完成**：双`GO`、` 属于已退役T61A/shadow门；RC-10以pre-product双PASS、逐stage NO-GO和精确revert替代。
 - removed comment reason: `specs/215-programservice-bounded-stage-reduction-implementation/tasks.md` 的compact摘要 `*编号**：`215-p` 对应旧header；新header保留同一WI编号并把状态改为RC-10 formal。
+
+## 30. Batch 2026-07-20-028：RC-10 formal source commit
+
+- Formal source commit/tree=`385568456f500054a3737d97e451b813fa5df946`/
+  `42b253a089c20762ef1334503be8d68695d78ad8`；formal-six=`75d60ac9...519e`、formal-three=
+  `2875f9ac...7090`；`+603/-1094`，删除recorder/receipt，产品与目标测试零diff。
+- 下一笔仅允许truth/continuity机械收口；最终clean identity形成后再做同identity双审，禁止提前进入Cx。

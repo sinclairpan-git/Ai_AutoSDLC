@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T14:52:00Z
+- Updated: 2026-07-20T15:07:00Z
 - Reason: Final T61A双NO-GO后退役过度proof路线，author RC-10 direct-reduction formal
 - Goal: 先取得RC-10 formal同identity双PASS，再以九个Cx/Rx安全减重ProgramService
-- State: RC-10 formal与机器门已完成；待final truth sync、提交committed+clean identity与双审；产品零差异
+- State: RC-10 formal source=`38556845`已提交；待truth/continuity records commit与双审；产品零差异
 - Stage: specify
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -38,6 +38,8 @@
 - 旧proof identity上全量=`3303 passed, 3 skipped`、exact165和治理门均通过，但readiness已被双NO-GO退役。
 - RC-10 formal当前constraints/validate/plan-check通过；truth=`ready/fresh 1131/1131/0/0`；exact165=
   `165 passed, 474 deselected in 2.65s`；manifest exact=`1 passed in 113.90s`。
+- Formal source tree=`42b253a0`；formal-six=`75d60ac9...519e`、formal-three=`2875f9ac...7090`；
+  diff=`+603/-1094`，净删491行治理/证明资产。
 
 ## Blockers / Risks
 
@@ -47,7 +49,6 @@
 
 ## Exact Next Steps
 
-1. 对本轮结果回写做final truth sync/audit，确认constraints/validate/manifest、scope/parity/clean。
-2. 提交RC-10 formal identity并复算HEAD/tree/formal hashes。
-3. Pascal/LEAN与Confucius/SAFETY对同一HEAD/tree/formal hashes双PASS0；finding则最小修正后重审。
-4. 双PASS后冻结implementation-base，才开始characterization-only T11；仍先不写engine。
+1. 执行final truth sync/audit与manifest exact，提交records-only identity并确认clean/parity/scope。
+2. Pascal/LEAN与Confucius/SAFETY对同一HEAD/tree/formal hashes双PASS0；finding则最小修正后重审。
+3. 双PASS后冻结implementation-base，才开始characterization-only T11；仍先不写engine。
