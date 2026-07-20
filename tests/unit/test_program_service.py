@@ -9322,8 +9322,8 @@ def _cross_spec_service(root: Path, **seed_kwargs: object) -> ProgramService:
 )
 @pytest.mark.parametrize(
     "consumer",
-    ["cross_spec_writeback", "guarded_registry"],
-    ids=["cross_spec_writeback_input", "cross_spec_writeback_output"],
+    ["cross_spec_writeback", "guarded_registry", "broader_governance"],
+    ids=["cross_spec_writeback_input", "cross_spec_writeback_output", "guarded_registry_output"],
 )
 def test_bounded_stage_input_loaders_fail_closed_for_unusable_artifact(
     tmp_path: Path,
@@ -9342,11 +9342,11 @@ def test_bounded_stage_input_loaders_fail_closed_for_unusable_artifact(
     request = builder(_manifest(), artifact_path=relative_path)
     executor = getattr(svc, f"execute_frontend_{consumer}")
     result = executor(_manifest(), request=request, confirmed=True)
-    is_registry = consumer == "guarded_registry"
-    state_attr = "registry_state" if is_registry else "writeback_state"
-    upstream_attr = "writeback_state" if is_registry else "apply_result"
-    outcome_attr = "registry_result" if is_registry else "orchestration_result"
-    artifact_kind = "cross-spec writeback" if is_registry else "provider patch apply"
+    state_attr, upstream_attr, outcome_attr, artifact_kind = {
+        "cross_spec_writeback": ("writeback_state", "apply_result", "orchestration_result", "provider patch apply"),
+        "guarded_registry": ("registry_state", "writeback_state", "registry_result", "cross-spec writeback"),
+        "broader_governance": ("governance_state", "registry_state", "governance_result", "guarded registry"),
+    }[consumer]
 
     assert (
         request.required,
@@ -9796,19 +9796,66 @@ def test_execute_frontend_cross_spec_writeback_does_not_write_artifact_by_defaul
     assert (tmp_path / "specs" / "001-auth" / "frontend-provider-writeback.md").is_file()
 
 
+def _guarded_registry_service(root: Path, **seed_kwargs: object) -> ProgramService:
+    for path in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
+        (root / path).mkdir(parents=True)
+    _write_frontend_cross_spec_writeback_artifact(root, **seed_kwargs)
+    return ProgramService(root)
+
+
+def _guarded_visual_step(pending_input: str, review_action: str) -> dict[str, object]:
+    return {
+        "spec_id": "001-auth",
+        "path": "specs/001-auth",
+        "writeback_state": "deferred",
+        "pending_inputs": [pending_input],
+        "suggested_next_actions": [review_action, "re-run ai-sdlc verify constraints"],
+        "source_linkage": {
+            "cross_spec_writeback_state": "deferred",
+            "provider_patch_apply_artifact_path": ".ai-sdlc/memory/frontend-provider-patch-apply/latest.yaml",
+        },
+    }
+
+
+def _assert_guarded_visual_roundtrip(
+    root: Path,
+    pending_input: str,
+    review_action: str,
+    *,
+    write_artifact: bool,
+) -> None:
+    svc = _guarded_registry_service(
+        root,
+        orchestration_result="deferred",
+        writeback_state="deferred",
+        remaining_blockers=["spec 001-auth remediation still required"],
+        steps=[_guarded_visual_step(pending_input, review_action)],
+    )
+    request = svc.build_frontend_guarded_registry_request(_manifest())
+    step = request.steps[0]
+    expected_actions = [review_action, "re-run ai-sdlc verify constraints"]
+    assert (request.required, request.confirmation_required) == (True, True)
+    assert (step.spec_id, step.registry_state) == ("001-auth", "not_started")
+    assert step.pending_inputs == [pending_input]
+    assert step.suggested_next_actions == expected_actions
+    if not write_artifact:
+        return
+    result = svc.execute_frontend_guarded_registry(_manifest(), request=request, confirmed=True)
+    path = svc.write_frontend_guarded_registry_artifact(_manifest(), request=request, result=result)
+    payload = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert payload["steps"][0]["pending_inputs"] == [pending_input]
+    assert payload["steps"][0]["suggested_next_actions"] == expected_actions
+
+
 def test_build_frontend_guarded_registry_request_requires_explicit_confirmation(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    svc = _guarded_registry_service(
         tmp_path,
         orchestration_result="deferred",
         writeback_state="deferred",
         remaining_blockers=["spec 001-auth remediation still required"],
     )
-
-    svc = ProgramService(tmp_path)
     request = svc.build_frontend_guarded_registry_request(_manifest())
 
     assert request.required is True
@@ -9835,102 +9882,34 @@ def test_build_frontend_guarded_registry_request_requires_explicit_confirmation(
 def test_build_frontend_guarded_registry_request_preserves_stable_empty_visual_a11y_pending_input(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    _assert_guarded_visual_roundtrip(
         tmp_path,
-        orchestration_result="deferred",
-        writeback_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
-        steps=[
-            {
-                "spec_id": "001-auth",
-                "path": "specs/001-auth",
-                "writeback_state": "deferred",
-                "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
-                "suggested_next_actions": [
-                    "review stable empty frontend visual / a11y evidence",
-                    "re-run ai-sdlc verify constraints",
-                ],
-                "source_linkage": {
-                    "cross_spec_writeback_state": "deferred",
-                    "provider_patch_apply_artifact_path": ".ai-sdlc/memory/frontend-provider-patch-apply/latest.yaml",
-                },
-            }
-        ],
-    )
-
-    svc = ProgramService(tmp_path)
-    request = svc.build_frontend_guarded_registry_request(_manifest())
-
-    assert request.required is True
-    assert request.confirmation_required is True
-    assert [step.spec_id for step in request.steps] == ["001-auth"]
-    assert request.steps[0].pending_inputs == [
-        "frontend_visual_a11y_evidence_stable_empty"
-    ]
-    assert request.steps[0].suggested_next_actions == [
+        "frontend_visual_a11y_evidence_stable_empty",
         "review stable empty frontend visual / a11y evidence",
-        "re-run ai-sdlc verify constraints",
-    ]
-    assert request.steps[0].registry_state == "not_started"
+        write_artifact=False,
+    )
 
 
 def test_build_frontend_guarded_registry_request_preserves_visual_a11y_issue_review_input(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    _assert_guarded_visual_roundtrip(
         tmp_path,
-        orchestration_result="deferred",
-        writeback_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
-        steps=[
-            {
-                "spec_id": "001-auth",
-                "path": "specs/001-auth",
-                "writeback_state": "deferred",
-                "pending_inputs": ["frontend_visual_a11y_issue_review"],
-                "suggested_next_actions": [
-                    "review frontend visual / a11y issue findings",
-                    "re-run ai-sdlc verify constraints",
-                ],
-                "source_linkage": {
-                    "cross_spec_writeback_state": "deferred",
-                    "provider_patch_apply_artifact_path": ".ai-sdlc/memory/frontend-provider-patch-apply/latest.yaml",
-                },
-            }
-        ],
-    )
-
-    svc = ProgramService(tmp_path)
-    request = svc.build_frontend_guarded_registry_request(_manifest())
-
-    assert request.required is True
-    assert request.confirmation_required is True
-    assert [step.spec_id for step in request.steps] == ["001-auth"]
-    assert request.steps[0].pending_inputs == ["frontend_visual_a11y_issue_review"]
-    assert request.steps[0].suggested_next_actions == [
+        "frontend_visual_a11y_issue_review",
         "review frontend visual / a11y issue findings",
-        "re-run ai-sdlc verify constraints",
-    ]
-    assert request.steps[0].registry_state == "not_started"
+        write_artifact=False,
+    )
 
 
 def test_execute_frontend_guarded_registry_blocks_until_writeback_is_completed(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    svc = _guarded_registry_service(
         tmp_path,
         orchestration_result="deferred",
         writeback_state="deferred",
         remaining_blockers=["spec 001-auth remediation still required"],
     )
-
-    svc = ProgramService(tmp_path)
     result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
 
     assert result.passed is False
@@ -9951,16 +9930,12 @@ def test_execute_frontend_guarded_registry_blocks_until_writeback_is_completed(
 def test_execute_frontend_guarded_registry_writes_step_files_when_confirmed(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    svc = _guarded_registry_service(
         tmp_path,
         orchestration_result="completed",
         writeback_state="completed",
         remaining_blockers=[],
     )
-
-    svc = ProgramService(tmp_path)
     result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
 
     assert result.passed is True
@@ -9988,16 +9963,12 @@ def test_execute_frontend_guarded_registry_writes_step_files_when_confirmed(
 def test_execute_frontend_guarded_registry_blocks_completed_artifact_with_blockers(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    svc = _guarded_registry_service(
         tmp_path,
         orchestration_result="completed",
         writeback_state="completed",
         remaining_blockers=["spec 001-auth receipt still requires review"],
     )
-
-    svc = ProgramService(tmp_path)
     result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
 
     assert result.passed is False
@@ -10013,16 +9984,12 @@ def test_execute_frontend_guarded_registry_blocks_completed_artifact_with_blocke
 def test_execute_frontend_guarded_registry_blocks_manual_skip_request_with_blockers(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    svc = _guarded_registry_service(
         tmp_path,
         orchestration_result="completed",
         writeback_state="completed",
         remaining_blockers=["spec 001-auth receipt still requires review"],
     )
-
-    svc = ProgramService(tmp_path)
     request = replace(
         svc.build_frontend_guarded_registry_request(_manifest()),
         required=False,
@@ -10046,17 +10013,13 @@ def test_execute_frontend_guarded_registry_blocks_manual_skip_request_with_block
 def test_execute_frontend_guarded_registry_blocks_empty_non_completed_artifact(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    svc = _guarded_registry_service(
         tmp_path,
         orchestration_result="deferred",
         writeback_state="deferred",
         remaining_blockers=[],
         steps=[],
     )
-
-    svc = ProgramService(tmp_path)
     result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
 
     assert result.registry_state == "blocked"
@@ -10064,19 +10027,84 @@ def test_execute_frontend_guarded_registry_blocks_empty_non_completed_artifact(
     assert result.written_paths == []
 
 
+@pytest.mark.parametrize("case", ["skipped", "partial"])
+def test_execute_frontend_guarded_registry_freezes_reachable_state_matrix(
+    tmp_path: Path,
+    case: str,
+) -> None:
+    svc = _guarded_registry_service(tmp_path)
+    request = svc.build_frontend_guarded_registry_request(_manifest())
+    if case == "skipped":
+        request = replace(request, required=False, confirmation_required=False, steps=[])
+    else:
+        request = replace(request, steps=[*request.steps, replace(request.steps[0], spec_id="404")])
+
+    result = svc.execute_frontend_guarded_registry(_manifest(), request=request, confirmed=True)
+
+    expected = {"skipped": ("not_started", "skipped", True), "partial": ("partial", "partial", False)}[case]
+    assert (result.registry_state, result.registry_result, result.passed) == expected
+    target = tmp_path / ".ai-sdlc/memory/frontend-guarded-registry/steps/001-auth.md"
+    assert target.exists() is (case == "partial")
+
+
+@pytest.mark.parametrize(
+    ("spec_id", "path", "blocker"),
+    [
+        ("../escape", "specs/001-auth", "is not a simple spec identifier; write skipped"),
+        ("404", "specs/001-auth", "missing manifest spec"),
+        ("001-auth", "../outside", "resolves outside workspace root: ../outside"),
+        ("001-auth", ".ai-sdlc/memory", "path does not match manifest spec path: .ai-sdlc/memory"),
+    ],
+)
+def test_execute_frontend_guarded_registry_rejects_invalid_step_targets(
+    tmp_path: Path,
+    spec_id: str,
+    path: str,
+    blocker: str,
+) -> None:
+    svc = _guarded_registry_service(tmp_path)
+    request = svc.build_frontend_guarded_registry_request(_manifest())
+    request = replace(request, steps=[replace(request.steps[0], spec_id=spec_id, path=path)])
+
+    result = svc.execute_frontend_guarded_registry(_manifest(), request=request, confirmed=True)
+
+    assert (result.registry_state, result.registry_result, result.written_paths) == ("blocked", "blocked", [])
+    assert result.remaining_blockers == [f"guarded registry step {spec_id} {blocker}"]
+
+
+@pytest.mark.parametrize("fault_operation", ["mkdir", "write_text"])
+def test_execute_frontend_guarded_registry_step_fault_retry_matches_success(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    fault_operation: str,
+) -> None:
+    svc = _guarded_registry_service(tmp_path)
+    expected_result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
+    target = tmp_path / expected_result.written_paths[0]
+    expected_bytes = target.read_bytes()
+    target.unlink()
+
+    with monkeypatch.context() as fault_patch:
+        fault_patch.setattr(Path, fault_operation, lambda *_args, **_kwargs: (_ for _ in ()).throw(OSError(f"{fault_operation} failed")))
+        with pytest.raises(OSError, match=f"{fault_operation} failed"):
+            svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
+        assert not target.exists()
+        assert not (tmp_path / ".ai-sdlc/memory/frontend-guarded-registry/latest.yaml").exists()
+
+    retry = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
+    assert retry == expected_result
+    assert target.read_bytes() == expected_bytes
+
+
 def test_write_frontend_guarded_registry_artifact_emits_canonical_yaml(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    svc = _guarded_registry_service(
         tmp_path,
         orchestration_result="completed",
         writeback_state="completed",
         remaining_blockers=[],
     )
-
-    svc = ProgramService(tmp_path)
     request = svc.build_frontend_guarded_registry_request(_manifest())
     result = svc.execute_frontend_guarded_registry(
         _manifest(),
@@ -10123,118 +10151,34 @@ def test_write_frontend_guarded_registry_artifact_emits_canonical_yaml(
 def test_write_frontend_guarded_registry_artifact_preserves_stable_empty_visual_a11y_pending_input(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    _assert_guarded_visual_roundtrip(
         tmp_path,
-        orchestration_result="deferred",
-        writeback_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
-        steps=[
-            {
-                "spec_id": "001-auth",
-                "path": "specs/001-auth",
-                "writeback_state": "deferred",
-                "pending_inputs": ["frontend_visual_a11y_evidence_stable_empty"],
-                "suggested_next_actions": [
-                    "review stable empty frontend visual / a11y evidence",
-                    "re-run ai-sdlc verify constraints",
-                ],
-                "source_linkage": {
-                    "cross_spec_writeback_state": "deferred",
-                    "provider_patch_apply_artifact_path": ".ai-sdlc/memory/frontend-provider-patch-apply/latest.yaml",
-                },
-            }
-        ],
-    )
-
-    svc = ProgramService(tmp_path)
-    request = svc.build_frontend_guarded_registry_request(_manifest())
-    result = svc.execute_frontend_guarded_registry(
-        _manifest(),
-        request=request,
-        confirmed=True,
-    )
-
-    artifact_path = svc.write_frontend_guarded_registry_artifact(
-        _manifest(),
-        request=request,
-        result=result,
-    )
-
-    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-    assert payload["steps"][0]["pending_inputs"] == [
-        "frontend_visual_a11y_evidence_stable_empty"
-    ]
-    assert payload["steps"][0]["suggested_next_actions"] == [
+        "frontend_visual_a11y_evidence_stable_empty",
         "review stable empty frontend visual / a11y evidence",
-        "re-run ai-sdlc verify constraints",
-    ]
+        write_artifact=True,
+    )
 
 
 def test_write_frontend_guarded_registry_artifact_preserves_visual_a11y_issue_review_input(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    _assert_guarded_visual_roundtrip(
         tmp_path,
-        orchestration_result="deferred",
-        writeback_state="deferred",
-        remaining_blockers=["spec 001-auth remediation still required"],
-        steps=[
-            {
-                "spec_id": "001-auth",
-                "path": "specs/001-auth",
-                "writeback_state": "deferred",
-                "pending_inputs": ["frontend_visual_a11y_issue_review"],
-                "suggested_next_actions": [
-                    "review frontend visual / a11y issue findings",
-                    "re-run ai-sdlc verify constraints",
-                ],
-                "source_linkage": {
-                    "cross_spec_writeback_state": "deferred",
-                    "provider_patch_apply_artifact_path": ".ai-sdlc/memory/frontend-provider-patch-apply/latest.yaml",
-                },
-            }
-        ],
-    )
-
-    svc = ProgramService(tmp_path)
-    request = svc.build_frontend_guarded_registry_request(_manifest())
-    result = svc.execute_frontend_guarded_registry(
-        _manifest(),
-        request=request,
-        confirmed=True,
-    )
-
-    artifact_path = svc.write_frontend_guarded_registry_artifact(
-        _manifest(),
-        request=request,
-        result=result,
-    )
-
-    payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-    assert payload["steps"][0]["pending_inputs"] == ["frontend_visual_a11y_issue_review"]
-    assert payload["steps"][0]["suggested_next_actions"] == [
+        "frontend_visual_a11y_issue_review",
         "review frontend visual / a11y issue findings",
-        "re-run ai-sdlc verify constraints",
-    ]
+        write_artifact=True,
+    )
 
 
 def test_execute_frontend_guarded_registry_does_not_write_artifact_by_default(
     tmp_path: Path,
 ) -> None:
-    for p in ("specs/001-auth", "specs/002-course", "specs/003-enroll"):
-        (tmp_path / p).mkdir(parents=True)
-    _write_frontend_cross_spec_writeback_artifact(
+    svc = _guarded_registry_service(
         tmp_path,
         orchestration_result="completed",
         writeback_state="completed",
         remaining_blockers=[],
     )
-
-    svc = ProgramService(tmp_path)
     result = svc.execute_frontend_guarded_registry(_manifest(), confirmed=True)
 
     assert result.registry_state == "completed"
