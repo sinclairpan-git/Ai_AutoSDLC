@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 双项目夹具 terminal gates 全绿，待双审
+**当前状态**：formal/amendment 已 merge/fresh-main；implementation PR #162 最终本地审查的两项测试证据缺口已修正，待新身份 terminal gates 与双审
 
 ## 已冻结合同
 
@@ -63,5 +63,11 @@
   指出它偏离 plan 的“两份 byte-identical 临时项目”合同。当前不改 formal：恢复 `control/subject` 两个等长
   路径的隔离 repo，只把各自绝对根路径替换为统一 token 后比较完整 stdout/stderr；80/200/300 列单测、
   宽终端 49 项矩阵与 Ruff 已通过。双项目 correction identity 的宽终端 full=`3302 passed/3 skipped`，
-  Ruff/V4、constraints、validate、truth/manifest、scope/parity/Cursor/clean 全绿；当前只剩 continuity correction
-  后的新身份双审与 PR #162 current-head 复审/CI。
+  Ruff/V4、constraints、validate、truth/manifest、scope/parity/Cursor/clean 全绿。
+- 最终本地审查中，Pascal/LEAN 对 `98b7c6f2` 为 PASS0；Confucius/SAFETY 为 FAIL2：真实 no-project
+  `init` 缺自动化证明、config-lock warning 的空白归一化会漏掉换行漂移。两项均成立，已仅补测试：前者冻结
+  root 阻断前 hook/scaffold/write set 为零，后者使用稳定相对路径与固定 Console 宽度直接比较
+  `export_text()` 完整 bytes。两项 mutation 均得到预期 RED，修复态 targeted=`50 passed`；产品代码零变化。
+- OpenAI 官方 Codex PR review 事故期间，用户明确批准 PR #162 采用一次性治理例外：以 final current-identity
+  本地 Pascal/LEAN + Confucius/SAFETY 双 PASS0、完整本地门禁与远端 22/22 required checks 共同替代
+  current-head GitHub Codex 回执；例外不自动扩展到 lifecycle 或后续发布阶段。

@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T00:31:59Z
-- Reason: 双项目夹具修正的 terminal gates 已完成；直接进入新身份双审
+- Updated: 2026-07-20T03:20:35Z
+- Reason: 最终本地审查的两项测试证据 finding 已最小修正；冻结新 source 后重跑 terminal gates
 - Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
-- State: T21-T31 completed；双项目 A/B 与 terminal gates 全绿，等待新身份双审
+- State: T21-T31 completed；两项测试证据修正 targeted/mutation 全绿，待新身份 terminal gates 与双审
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-dev
@@ -55,11 +55,16 @@
 - 双项目 correction identity=`36f49b62`/tree=`04ae4bea`：80/200/300 列单测 PASS、宽终端 targeted=
   `49 passed in 16.47s`、full=`3302 passed, 3 skipped in 683.70s`；Ruff/V4a/V4b、constraints、validate、
   truth ready/fresh 1126/1126、manifest exact=`1 passed in 110.91s`、scope/parity/Cursor/clean 全绿。
+- 最终本地审查 exact `98b7c6f2`：Pascal/LEAN=`PASS0`，Confucius/SAFETY=`FAIL2`；真实 no-project
+  自动化与 config-lock warning byte-exact 两项 finding 均成立，旧 verdict 全部退役。
+- 两项最小测试修正的 mutation 均预期 RED；恢复产品源码后两项=`2 passed`、宽终端 targeted=`50 passed`
+  且 80/200/300 列 real-hook A/B、Ruff/diff-check 全绿。被中止的 full 不是验收，final identity 必须重跑。
 
 ## Blockers / Risks
 
-- 新 identity 双 PASS0、PR #162 current-head Codex/CI、merge/detached fresh-main 前不得开始 lifecycle
-  reconciliation。
+- 新 identity terminal gates、双 PASS0、PR #162 22/22 checks、merge/detached fresh-main 前不得开始 lifecycle。
+- 用户批准 PR #162 一次性治理例外：OpenAI 官方事故期间，本地 LEAN+SAFETY 同身份 PASS0 取代 current-head
+  GitHub Codex 回执；例外不自动扩展到 lifecycle 或发布阶段。
 - handoff CLI 依据旧 WI208 checkpoint 写错 scoped copy；已用 apply_patch 恢复 WI208/resume-pack，并直接维护
   当前 WI214 root/scoped byte-identical，禁止把错误路由变化带入 implementation。
 
@@ -73,10 +78,12 @@
   两份 verdict 与 Codex current-head review 全部退役，必须从零重审。
 - Post-CI Round 4：Pascal continuity FAIL 已修正；Confucius SAFETY 对 `551d90b9` 报告同 repo A/B 偏离
   plan 的“两份 byte-identical 临时项目”P3。Finding 成立，旧 review 均退役。
+- Final local review：Pascal 对 `98b7c6f2` PASS0；Confucius FAIL2 的 no-project 自动化与 warning byte-exact
+  finding 已仅以测试修正，产品源码保持不变；必须对新 committed+clean identity 从零双审。
 
 ## Exact Next Steps
 
-- 让 Pascal/LEAN 与 Confucius/SAFETY 对本 continuity correction 后的新 identity 从零审到 PASS0。
-- 双 PASS0 后推送 PR #162 并重新请求 Codex current-head review。
-- current-head 双 PASS0/Codex/checks 全绿后 merge 并 detached fresh-main。
+- 提交测试/continuity source，刷新 terminal truth/manifest并完整重跑 T31 gates。
+- 让 Pascal/LEAN 与 Confucius/SAFETY 对新 committed+clean identity 从零审到 PASS0。
+- 双 PASS0 且 PR #162 22/22 checks 全绿后，按用户批准的一次性例外直接 merge并 detached fresh-main。
 - Implementation fresh-main 通过后创建独立 lifecycle reconciliation；不得提前关闭 GAP-15/T58 或放行 T66。

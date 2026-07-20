@@ -106,7 +106,11 @@ def test_adapter_hook_warns_after_adapter_write_when_config_persist_is_locked(
 
     before = _files(candidate_root)
     canonical_rule = candidate_root / rule_rel
-    locked_error = PermissionError(13, "Access is denied", str(project_config))
+    locked_error = PermissionError(
+        13,
+        "Access is denied",
+        config_rel.as_posix(),
+    )
 
     def _locked_persist(*args: object, **kwargs: object) -> None:
         _ = args, kwargs
@@ -115,7 +119,7 @@ def test_adapter_hook_warns_after_adapter_write_when_config_persist_is_locked(
 
     monkeypatch.setattr(ide_adapter, "_persist_config", _locked_persist)
     monkeypatch.chdir(candidate_root)
-    console = Console(record=True, width=200)
+    console = Console(record=True, width=500)
 
     cli_hooks.run_ide_adapter_if_initialized(console=console)
 
@@ -128,13 +132,10 @@ def test_adapter_hook_warns_after_adapter_write_when_config_persist_is_locked(
     assert changed == {rule_rel.as_posix()}
     assert canonical_rule.read_bytes() == expected_rule
     assert project_config.read_bytes() == config_before
-    normalized_output = " ".join(console.export_text().split())
-    expected_output = " ".join(
-        (
-            "AI-SDLC adapter metadata write skipped: project-config.yaml appears to "
-            f"be temporarily locked ({locked_error}). Current command will continue; "
-            "this does not mean code generation or the frontend build failed. Run "
-            "`ai-sdlc adapter status` later only when troubleshooting."
-        ).split()
+    expected_output = (
+        "AI-SDLC adapter metadata write skipped: project-config.yaml appears to "
+        f"be temporarily locked ({locked_error}). Current command will continue; "
+        "this does not mean code generation or the frontend build failed. Run "
+        "`ai-sdlc adapter status` later only when troubleshooting.\n"
     )
-    assert normalized_output == expected_output
+    assert console.export_text() == expected_output

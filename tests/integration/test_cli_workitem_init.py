@@ -158,6 +158,37 @@ def _checkout_branch(root: Path, branch_name: str) -> None:
 
 
 class TestCliWorkitemInit:
+    def test_workitem_init_blocks_before_hook_and_writes_outside_project(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        monkeypatch.chdir(root)
+        calls: list[str] = []
+
+        def _adapter(*, console: object) -> None:
+            _ = console
+            calls.append("adapter")
+
+        monkeypatch.setattr("ai_sdlc.cli.main.run_ide_adapter_if_initialized", _adapter)
+
+        with patch("ai_sdlc.cli.workitem_cmd.WorkitemScaffolder") as scaffolder:
+            result = runner.invoke(
+                app,
+                [
+                    "workitem",
+                    "init",
+                    "--title",
+                    "Direct Formal Entry",
+                ],
+            )
+
+        assert result.exit_code == 1
+        assert result.output == "Not inside an AI-SDLC project.\n"
+        assert calls == []
+        scaffolder.assert_not_called()
+        assert tuple(root.iterdir()) == ()
+
     def test_workitem_init_guides_formal_bootstrap_when_state_missing(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

@@ -409,3 +409,21 @@
   1126/1126、manifest exact=`1 passed in 110.91s`、11-file scope/handoff parity/Cursor/clean 全绿。
 - 本 continuity correction 只把已完成证据写入 summary/log 与 byte-identical handoff，并把唯一 next step 设为
   新 identity 双审；提交后刷新 truth并重跑相关治理门禁，src/tests/tooling 不再变化。
+
+## 29. Batch 2026-07-19-025：最终本地审查测试证据收口
+
+- PR #162 current identity=`98b7c6f25df420d8cb7f3be6e9e516a7dc343441`/tree=
+  `6316f459fa31143c8dcbedfa792cc6ed7165e9fa`、clean；Pascal/LEAN=`PASS0`，Confucius/SAFETY=
+  `FAIL2`。两项 finding 均成立，旧 verdict 全部退役。
+- P2：既有 `init` missing-state 测试已创建 `.ai-sdlc/project/config`，不能证明 §3.2 的真实 no-project
+  `root is None` 路径。最小新增一例空目录 CLI 测试，冻结 exit=`1`、逐字输出、hook=`0`、scaffolder=`0`
+  与目录零写入；临时把 hook 移到 root check 前，得到预期 RED（`calls=['adapter']`），随后恢复产品源码。
+- P3：config-lock partial-write 测试先 `split/join` 再比较，会吞掉空格与换行漂移。最小改为稳定相对
+  `project-config.yaml` error path、固定 Console width=`500`，并直接比较 `console.export_text()` 与完整期望
+  字符串（含末尾换行）；临时把 warning 增加一个空格，得到预期 RED，随后恢复产品源码。
+- 修复态两项=`2 passed`，`COLUMNS=200` targeted=`50 passed in 15.58s`，80/200/300 列 real-hook A/B
+  均 PASS，Ruff lint、可清洁 hook unit format、diff-check 与产品源码零差异断言全绿。此前 full 在收到
+  finding 后于 67% 主动中止；当时 `2285 passed, 3 skipped` 只作诊断，不作为验收，final identity 必须完整重跑。
+- OpenAI 官方 Codex PR review 事故仍在进行。用户明确批准 PR #162 的一次性治理例外：不再无限等待
+  GitHub Codex，改以 final current-identity 本地 LEAN + SAFETY 双 PASS0、完整本地验证与远端 22/22
+  required checks 共同作为 merge 门槛；本例外不自动扩展到 lifecycle 或发布阶段。
