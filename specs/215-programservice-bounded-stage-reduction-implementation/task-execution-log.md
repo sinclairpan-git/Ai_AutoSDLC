@@ -2,7 +2,7 @@
 
 **功能编号**：`215-programservice-bounded-stage-reduction-implementation`
 **创建日期**：2026-07-20
-**状态**：T61A authoring；产品代码禁止
+**状态**：RC-10 formal review/remediation；产品代码禁止
 
 ## 1. 固定归档规则
 
@@ -440,3 +440,14 @@
   `42b253a089c20762ef1334503be8d68695d78ad8`；formal-six=`75d60ac9...519e`、formal-three=
   `2875f9ac...7090`；`+603/-1094`，删除recorder/receipt，产品与目标测试零diff。
 - 下一笔仅允许truth/continuity机械收口；最终clean identity形成后再做同identity双审，禁止提前进入Cx。
+
+## 31. Batch 2026-07-20-029：RC-10 首轮同身份评审与最小修订
+
+- 同一 committed+clean identity `c0ff5f28a28c5685ba43f0c7244b35dd19d80f9e` 上，Pascal/LEAN=`FAIL1`：
+  formal内容无精简finding，仅 continuity/summary 仍把已完成的 records sync 写成 pending。
+- Confucius/SAFETY=`FAIL2`：除同一状态陈旧外，C1 尚未显式冻结 late-bound/truthiness、时钟调用次数/
+  顺序/异常与首次 fault 后 retry 等价；public denylist 尚未覆盖 docstring/module/qualname 等完整可观察定义。
+- 本批只修订 spec/plan/tasks 与状态记录：增加 truthy/falsey、`self` callback、clock、fault/retry 的共享
+  参数化 characterization 和三类必需 mutation；扩全 public/DTO denylist。`src/**` 与目标行为测试继续零差异。
+- 只有新的 committed+clean identity 通过治理门并取得同 identity LEAN/SAFETY 双 PASS0，才允许冻结
+  implementation-base 并进入 `C1`；此前禁止产品代码。

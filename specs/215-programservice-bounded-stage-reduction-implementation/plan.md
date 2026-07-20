@@ -53,8 +53,12 @@ closure、archive。
 
 1. 映射当前 stage 既有 exact nodes 与分支。
 2. 只有覆盖缺口才增加共享参数化测试；新增断言只调用 public API/CLI。
-3. 在 legacy 产品源码上运行并 PASS；用临时 mutation 证明缺陷会被捕获。
-4. 提交 tests-only checkpoint；冻结 test tree/blob/node IDs，不允许 `Rx` 修改断言。
+3. 共享用例显式冻结 truthy bypass、`None`/falsey fallback、经 `self` 的 late-bound callback、
+   `generated_at` 时钟调用次数/顺序/异常，以及首次 fault 后无 completed artifact、同输入 retry 等价。
+4. 在 legacy 产品源码上运行并 PASS；至少用 `or`→`is None`、绕过 `self` callback、eager clock
+   evaluation 临时 mutation 证明缺陷会被捕获。
+5. 提交 tests-only checkpoint；冻结 test tree/blob/node IDs，不允许 `Rx` 修改断言；同时冻结 public
+   name/signature/annotations/defaults/docstring/module/qualname 与整个 DTO definition 的逐 stage denylist。
 
 若无需新增测试，`Cx` 可以是只记录 immutable coverage mapping 的 no-code checkpoint，但仍须先于 `Rx`。
 

@@ -1,7 +1,7 @@
 # 开发摘要：ProgramService 九阶段精益减重正式合同
 
 **功能编号**：`213-programservice-bounded-stage-reduction`
-**状态**：formal contract、T58/WI214 closure receipt 与 detached fresh-main 均已完成；WI215 T61A active
+**状态**：formal contract、T58/WI214 closure receipt 与 detached fresh-main 均已完成；WI215 RC-10 formal review active，旧 T61A 已退役
 
 ## 本地已交付
 

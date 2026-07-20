@@ -72,11 +72,16 @@ PASS0 且 findings=0，才允许进入下一 stage。任何身份变化使旧 ve
 - missing/malformed/non-mapping upstream artifact：warning、blocked/missing 状态与零副作用；
 - `skipped / confirmation_required / blocked / partial / failed / completed` 状态矩阵；
 - invalid/outside-root/relative target、默认未确认写入与 path resolution；
-- 目录创建/写入 fault 必须向上传播，不能产生表示 completed 的最终 artifact；
+- `provided_value or callback()` 与 `generated_at or utc_now_z()` 的 truthy bypass、`None`/falsey fallback、
+  经 `self` late-bound 的 subclass/patch override、调用次数/顺序与异常传播；
+- 目录创建/写入首次 fault 必须向上传播且不留下 completed artifact；同一输入重试的结果、调用顺序与
+  artifact 必须与 legacy 一致；
 - public/DTO 只用 public API/CLI 验证；测试不得 import private engine。
 
-Public method header/signature 与 DTO class definition 默认属于逐 stage diff denylist。若无法机器保证，才允许
-增加一份紧凑参数化 contract test，不恢复 custom snapshot/recorder。
+每类新增断言必须用临时 mutation 证明会 RED；至少覆盖 `or` 改为 `is None`、绕过 `self` callback、
+eager clock evaluation。Public method 的 name/signature/annotations/defaults/docstring/module/qualname 与整个
+DTO class definition 默认属于逐 stage diff denylist。若无法机器保证，才允许增加一份紧凑参数化 contract
+test，不恢复 custom snapshot/recorder。
 
 ### 3.2 原生 legacy/current 两腿
 

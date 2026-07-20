@@ -40,10 +40,14 @@ related_doc:
 ### T11 Shared characterization RED/GREEN（pending）
 
 - 仅在真实缺口处增加参数化 public API/CLI tests：
-  missing/malformed/non-mapping、六状态矩阵、invalid/relative/outside-root、默认确认、写入 fault。
-- 先在 legacy source 上 PASS；每类用临时 mutation 证明会 RED。
+  missing/malformed/non-mapping、六状态矩阵、invalid/relative/outside-root、默认确认、truthy bypass、
+  `None`/falsey fallback、经 `self` 的 late-bound callback、`generated_at` 时钟次数/顺序/异常、首次写入
+  fault 后无 completed artifact与同输入 retry 等价。
+- 先在 legacy source 上 PASS；至少用 `or`→`is None`、绕过 `self` callback、eager clock evaluation
+  临时 mutation 证明会 RED。
 - 不 import private engine，不改 `src/**`，不删除/rename/skip/xfail/deselect 原165节点。
-- 提交 `C1`，双审后冻结 test tree/blob/node IDs。
+- 提交 `C1`，双审后冻结 test tree/blob/node IDs，以及 public name/signature/annotations/defaults/
+  docstring/module/qualname 与整个 DTO definition 的逐 stage denylist。
 
 ## Batch 2：九阶段 Cx/Rx
 

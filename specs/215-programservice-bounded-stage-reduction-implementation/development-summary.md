@@ -20,7 +20,8 @@
 
 - 不保留双实现、runtime selector、dead branch、持久 controller、custom receipt/schema 或 normalizer。
 - 只允许唯一 private engine；DTO 与 public facade 留在 `program_service.py`；测试只调用 public API/CLI。
-- 真实缺口 characterization 最小覆盖 missing/malformed、六状态、path/confirmation 与写入 fault。
+- 真实缺口 characterization 最小覆盖 missing/malformed、六状态、path/confirmation、late-bound/truthiness、
+  时钟求值与 fault/retry；public/DTO denylist 覆盖完整可观察定义。
 - retained product≤522、proof≤290、combined≤729、route cumulative≤1,500、terminal≤720、
   net delete≥2,918、responsibility reduction≥3,278、branch≤90、新/改函数≤50。
 - 每 stage 目标 LOC/branch 必须下降；任何临时 scaffold 都按峰值计费，删除不返还预算。
@@ -28,6 +29,7 @@
 
 ## 下一步
 
-1. 完成 WI196/WI213/WI215 formal 校验、truth sync 与 committed+clean identity。
-2. 取得 Pascal/LEAN 与 Confucius/SAFETY 对同一 formal identity 的双 PASS0。
-3. 双 PASS 后冻结 implementation-base，先做 characterization-only checkpoint；此之前禁止产品代码。
+1. `c0ff5f28` 同身份评审的状态陈旧与 characterization/denylist 缺口已完成最小修订；以当前
+   `git rev-parse HEAD` 解析 committed+clean identity，并复核治理门。
+2. 取得 Pascal/LEAN 与 Confucius/SAFETY 对该同一 current identity 的双 PASS0。
+3. 双 PASS 后冻结 implementation-base，先做 characterization-only `C1`；此之前禁止产品代码。

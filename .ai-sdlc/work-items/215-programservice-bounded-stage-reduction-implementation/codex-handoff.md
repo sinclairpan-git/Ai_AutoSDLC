@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T15:07:00Z
-- Reason: Final T61A双NO-GO后退役过度proof路线，author RC-10 direct-reduction formal
+- Updated: 2026-07-20T15:34:00Z
+- Reason: 修复RC-10首轮同身份LEAN/SAFETY评审的最小可操作意见
 - Goal: 先取得RC-10 formal同identity双PASS，再以九个Cx/Rx安全减重ProgramService
-- State: RC-10 formal source=`38556845`已提交；待truth/continuity records commit与双审；产品零差异
+- State: `c0ff5f28`首轮双审返回FAIL1/FAIL2；当前tree完成状态与characterization/denylist最小修订，产品零差异
 - Stage: specify
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -40,15 +40,18 @@
   `165 passed, 474 deselected in 2.65s`；manifest exact=`1 passed in 113.90s`。
 - Formal source tree=`42b253a0`；formal-six=`75d60ac9...519e`、formal-three=`2875f9ac...7090`；
   diff=`+603/-1094`，净删491行治理/证明资产。
+- `c0ff5f28`同身份评审：LEAN仅发现状态陈旧；SAFETY另要求显式冻结late-bound/truthiness、clock、
+  fault/retry与完整public/DTO denylist；未发现产品实现或RC-10路线级新问题。
 
 ## Blockers / Risks
 
-- RC-10 formal尚未形成committed+clean双审identity；禁止写测试或产品。
+- T06尚缺新的committed+clean identity上的LEAN/SAFETY双PASS0；禁止写测试或产品。
 - Parent文档保留被§0明确覆盖的历史T61A文字；reviewer须确认不存在仍具执行歧义的旧授权。
 - 共享`.venv`固定`uv run --python 3.11`顺序执行，不并行不同解释器。
 
 ## Exact Next Steps
 
-1. 执行final truth sync/audit与manifest exact，提交records-only identity并确认clean/parity/scope。
-2. Pascal/LEAN与Confucius/SAFETY对同一HEAD/tree/formal hashes双PASS0；finding则最小修正后重审。
-3. 双PASS后冻结implementation-base，才开始characterization-only T11；仍先不写engine。
+1. 若worktree不clean，完成当前最小修订的治理验证、truth sync与提交；若已clean，直接解析当前
+   HEAD/tree/formal hashes并复核parity/scope。
+2. Pascal/LEAN与Confucius/SAFETY对该同一identity双PASS0；finding则只做最小修正并重审。
+3. 双PASS后冻结implementation-base，才开始characterization-only T11/C1；仍先不写engine。
