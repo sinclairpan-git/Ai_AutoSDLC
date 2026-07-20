@@ -384,3 +384,17 @@
 - LEAN Round 3=`FAIL1`（P3×1）：双 handoff 和 summary 仍把上述已完成 gates 写成下一步；代码与测试本身、
   同 repo A/B 防假绿、产品一行最小性和净删 13 行均通过。Finding 成立，只修正文档/continuity 并刷新
   terminal truth；旧 LEAN verdict 与已中止的 SAFETY 审查全部退役，新 identity 必须从零双审。
+
+## 27. Batch 2026-07-19-023：SAFETY 双项目隔离 finding 与修正
+
+- Continuity correction 后 identity=`551d90b93f615b85a6145aa4fa72d9e32b641fe0`/tree=
+  `99b0168b2ddf4043c5799b40383b0b7a50f252c7`，truth/manifest/targeted/Ruff/V4/constraints/scope 均通过，
+  且相对宽终端 full-pass identity `33a37b53` 的 src/tests/tooling 零差异。
+- SAFETY Round 4=`FAIL1`（P3×1）：同 repo 顺序 A/B 与 plan §5.2 的“两份 byte-identical 临时项目”不一致，
+  不能独立隔离 Git 内部状态。Finding 成立，不修改 formal；恢复两个隔离 repo，并把目录名设为等长的
+  `control/subject`，防止 Rich 表格列宽受路径长度影响。
+- stdout/stderr 仅把各自绝对根路径归一为 `<repo>` 后做完整相等比较；exit、guarded bytes、全 tree/status
+  仍严格比较，其他字符、空格、表格边界或 receipt 差异不会被吞掉。80/200/300 列单测均通过，宽终端
+  targeted=`49 passed in 15.51s`，Ruff lint/format PASS。
+- 相对 PR 首轮 reviewed identity `8d09b7bb`，该测试 correction 是 `+9/-4`，未新增公共 fixture/DSL/产品
+  抽象；产品代码仍只有一行。提交测试/continuity、刷新 truth并重跑 terminal full/gates 后重新双审。

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -119,12 +120,17 @@ def test_plan_check_real_cursor_hook_matches_no_op_without_writes(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    root = tmp_path / "repo"
-    _initialize_read_only_project(root, cursor=True)
-    canonical_rule = root / ".cursor" / "rules" / "ai-sdlc.mdc"
+    baseline_root = tmp_path / "control" / "repo"
+    baseline_root.parent.mkdir()
+    _initialize_read_only_project(baseline_root, cursor=True)
+    canonical_rule = baseline_root / ".cursor" / "rules" / "ai-sdlc.mdc"
     canonical_rule.unlink()
-    _git(root, "add", "-A")
-    _git(root, "commit", "-m", "remove managed rule")
+    _git(baseline_root, "add", "-A")
+    _git(baseline_root, "commit", "-m", "remove managed rule")
+
+    candidate_root = tmp_path / "subject" / "repo"
+    candidate_root.parent.mkdir()
+    shutil.copytree(baseline_root, candidate_root)
     relative_guarded = (
         Path(".cursor/rules/ai-sdlc.mdc"),
         Path(".ai-sdlc/project/config/project-config.yaml"),
@@ -138,25 +144,37 @@ def test_plan_check_real_cursor_hook_matches_no_op_without_writes(
             for path in relative_guarded
         }
 
-    before = (_guarded(root), _tree_snapshot(root))
+    assert len(str(candidate_root)) == len(str(baseline_root))
+    assert _guarded(candidate_root) == _guarded(baseline_root)
+    assert _tree_snapshot(candidate_root) == _tree_snapshot(baseline_root)
+    baseline_before = (_guarded(baseline_root), _tree_snapshot(baseline_root))
+    candidate_before = (_guarded(candidate_root), _tree_snapshot(candidate_root))
     args = ["workitem", "plan-check", "--plan", ".cursor/plans/read-only.md"]
 
-    monkeypatch.chdir(root)
+    monkeypatch.chdir(baseline_root)
     monkeypatch.setattr(
         "ai_sdlc.cli.main.run_ide_adapter_if_initialized",
         lambda *, console: None,
     )
     baseline = runner.invoke(app, args)
-    assert (_guarded(root), _tree_snapshot(root)) == before
+    assert (_guarded(baseline_root), _tree_snapshot(baseline_root)) == baseline_before
 
+    monkeypatch.chdir(candidate_root)
     monkeypatch.setattr(
         "ai_sdlc.cli.main.run_ide_adapter_if_initialized",
         run_ide_adapter_if_initialized,
     )
     candidate = runner.invoke(app, args)
 
-    assert (_guarded(root), _tree_snapshot(root)) == before
+    assert (
+        _guarded(candidate_root),
+        _tree_snapshot(candidate_root),
+    ) == candidate_before
     assert candidate.exit_code == baseline.exit_code
-    assert candidate.stdout == baseline.stdout
-    assert candidate.stderr == baseline.stderr
+    assert candidate.stdout.replace(str(candidate_root), "<repo>") == (
+        baseline.stdout.replace(str(baseline_root), "<repo>")
+    )
+    assert candidate.stderr.replace(str(candidate_root), "<repo>") == (
+        baseline.stderr.replace(str(baseline_root), "<repo>")
+    )
     assert "IDE adapter" not in candidate.output

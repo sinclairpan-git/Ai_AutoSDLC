@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T00:05:17Z
-- Reason: PR #162 测试夹具修正的 terminal gates 已完成；直接进入新身份双审
+- Updated: 2026-07-20T00:15:38Z
+- Reason: SAFETY 指出的双项目隔离合同偏差已修正；新测试身份重新验收
 - Goal: 关闭 GAP-15/T58，并以可执行的格式门禁保持一行产品修复零回归
-- State: T21-T31 completed；测试夹具修正与 terminal gates 全绿，产品一行修复不变，等待新身份双审
+- State: T21-T31 completed；A/B 恢复双项目隔离并稳定跨终端输出，等待新身份 terminal gates
 - Stage: decompose
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: feature/214-workitem-readonly-adapter-side-effect-dev
@@ -47,8 +47,8 @@
   truth ready/fresh、manifest exact=`1 passed in 102.45s`、Ruff/V4/constraints/scope/clean 全绿。
 - PR #162 Codex reviewed exact `8d09b7bba8` 无 major issue；首轮 Compatibility Gate 的 Ubuntu/macOS
   pytest 均因 real-hook A/B 比较不同绝对临时路径而失败，旧 Codex/双审 identity 随测试修正退役。
-- 本地以 `COLUMNS=200` 精确复现 RED；改为同一 clean repo 顺序运行 no-op/real hook 后，宽终端单测=
-  `1 passed in 0.96s`、targeted=`49 passed in 16.00s`，Ruff lint/format PASS，且测试净删 13 行。
+- 本地以 `COLUMNS=200` 精确复现 RED；当前使用等长 `control/subject` 两个 byte-identical 隔离 repo，只
+  归一化绝对根路径后比较完整 stdout/stderr，保留 Rich 列宽与其余输出差异。
 - 修正后 terminal identity=`33a37b53`/tree=`90e5e950`：宽终端 targeted=`49 passed in 15.82s`、full=
   `3302 passed, 3 skipped in 674.46s`；Ruff/V4a/V4b、constraints、validate、truth ready/fresh 1126/1126、
   manifest exact=`1 passed in 102.03s`、scope/parity/Cursor/clean 全绿。
@@ -68,10 +68,13 @@
 - Implementation Round 1：Pascal FAIL1（仅 continuity P3）、Confucius PASS0；identity 变化使两份 verdict 均退役。
 - Implementation Round 2：同一 `8d09b7bb` identity Pascal/Confucius 均 PASS0；PR #162 CI 促成测试修正后
   两份 verdict 与 Codex current-head review 全部退役，必须从零重审。
+- Post-CI Round 4：Pascal continuity FAIL 已修正；Confucius SAFETY 对 `551d90b9` 报告同 repo A/B 偏离
+  plan 的“两份 byte-identical 临时项目”P3。Finding 成立，旧 review 均退役。
 
 ## Exact Next Steps
 
-- 让 Pascal/LEAN 与 Confucius/SAFETY 对本 continuity correction 后的新 identity 从零审到 PASS0。
+- 提交双项目夹具/continuity 修正并刷新 terminal truth；对新 identity 重跑 full 与全部 gates。
+- 让 Pascal/LEAN 与 Confucius/SAFETY 对新 identity 从零审到 PASS0。
 - 双 PASS0 后推送 PR #162 并重新请求 Codex current-head review。
 - current-head 双 PASS0/Codex/checks 全绿后 merge 并 detached fresh-main。
 - Implementation fresh-main 通过后创建独立 lifecycle reconciliation；不得提前关闭 GAP-15/T58 或放行 T66。
