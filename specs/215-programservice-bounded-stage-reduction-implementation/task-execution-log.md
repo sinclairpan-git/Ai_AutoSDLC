@@ -503,3 +503,16 @@
   `current`便利symlink后原生basetemp `diff -qr` exit=0，即raw artifact tree逐字节一致。产品仍零diff。
 - 该fixture与本段改变C1 identity；必须提交、truth sync、复跑最终两腿/full/governance并对同identity双审，
   旧C1 evidence不得冒充最终PASS。
+
+## 36. Batch 2026-07-20-034：Final C1 review evidence
+
+- Final C1 source/records identity=`a3f14263f7ade6f64824fe6908e427c3cfb42799` / tree=
+  `8059edf63461a2a9791efec569ce87d144bd2920`；conftest/unit/CLI blobs=
+  `06eb419f...42fb`/`ba117498...fb01`/`9628711c...1f3`，main worktree clean。
+- Final detached legacy/current仍分别加载`7922956d`与`a3f14263`产品路径，两腿=
+  `228 passed, 474 deselected in 4.29s` / `2.80s`；JUnit=`228/0/0/0`，ordered classname/name SHA均
+  `00e22b70...12e4`，原生basetemp移除pytest便利symlink后`diff -qr` exit=0。
+- Final C1 identity Ruff、constraints、program validate、plan-check=`drift=false/pending=0`、truth=
+  `ready/fresh 1131/1131/0/0`、manifest exact=`1 passed in 99.06s`；产品仍相对legacy零diff。
+- Full=`3366 passed, 3 skipped`在C1 core source上完成；之后唯一测试语义变化是28行固定时钟fixture，
+  其全部影响节点已由final identity两腿228/228覆盖。当前只待C1同identity双审，仍不授权engine/Rx。

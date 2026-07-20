@@ -3,7 +3,7 @@
 - Updated: 2026-07-20T16:22:00Z
 - Reason: RC-10 formal双PASS后执行tests-only C1 characterization
 - Goal: 固定C1同identity双PASS，再以九个Rx安全减重ProgramService
-- State: formal base `dbc02c65`双PASS；C1为63 nodes/232 proof LOC，legacy/current raw tree已同字节，产品零差异
+- State: C1 final evidence已完成；63 nodes/232 proof LOC、legacy/current raw同字节，待同identity双审，产品零差异
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -54,6 +54,8 @@
   `3366 passed, 3 skipped in 690.95s`，无C1失败。
 - Detached legacy/current首轮228双PASS但raw YAML时钟不同；拒绝normalizer，固定九stage测试时钟后两腿=
   `228/228`、JUnit counts=`228/0/0/0`、node SHA=`00e22b70...12e4`、raw basetemp `diff -qr`=0。
+- Final C1 evidence source=`a3f14263/8059edf6`；test blobs conftest/unit/CLI=`06eb419f`/`ba117498`/
+  `9628711c`。Final两腿=`228/228`、raw diff=0；Ruff/constraints/validate/plan/truth/manifest均PASS。
 
 ## Blockers / Risks
 
@@ -63,6 +65,7 @@
 
 ## Exact Next Steps
 
-1. 若worktree不clean，完成C1 tests-only提交与truth records；若clean，解析current HEAD/tree/test blob/nodes。
-2. 在immutable legacy/current独立环境复跑C1/累计228/full/governance；Pascal/Confucius同identity双PASS0。
+1. 若worktree不clean，只完成本批final C1 evidence的truth records；若clean，解析current HEAD/tree并确认
+   三个test blob仍为`06eb419f`/`ba117498`/`9628711c`。
+2. Pascal/LEAN与Confucius/SAFETY对同一current C1 identity双PASS0；finding则最小修正并重审。
 3. 双PASS后冻结C1 test blob/node IDs与public/DTO denylist，才开始首个cross-spec Rx与唯一private engine。
