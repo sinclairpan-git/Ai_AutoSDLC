@@ -86,7 +86,8 @@
   PR #159、merge `d5ad7616` 与 detached fresh-main 收口。独立 T58/GAP-15 WI214 的 formal PR #160、
   amendment PR #161 与 implementation PR #162 / merge `2845fedc` 已完成；reviewed/merge tree=
   `03b4a1ff`，detached fresh-main full=`3303 passed, 3 skipped`、targeted=`50 passed`、truth=`ready/fresh
-  1126/1126` 且全部门禁全绿。本 lifecycle reconciliation merge/fresh-main 后 GAP-15/T58 关闭，唯一
-  下一步是新建 T66 implementation WI并先取得 T61A 双 readiness GO；T66/GAP-03/WI196/RC-08/release
-  仍未完成，本项不授权提前发布。
+  1126/1126` 且全部门禁全绿。Lifecycle delivery merge/fresh-main 后另建 closure receipt branch/PR；
+  只有 receipt 自身双审、Codex/checks、merge/detached fresh-main 全绿才关闭 GAP-15/T58。此后唯一下一步
+  是新建 T66 implementation WI并先取得 T61A 双 readiness GO；T66/GAP-03/WI196/RC-08/release 仍未完成，
+  本项不授权提前发布。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。

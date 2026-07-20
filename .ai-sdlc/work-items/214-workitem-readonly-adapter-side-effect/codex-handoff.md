@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T05:40:00Z
-- Reason: lifecycle Round 2 LEAN stale next-step finding 已最小修正
+- Updated: 2026-07-20T05:55:00Z
+- Reason: lifecycle Round 3 SAFETY plan 时序 finding 已最小修正
 - Goal: 关闭 GAP-15/T58，并只恢复 T66 独立 implementation WI 的 T61A readiness 准入
-- State: fail-closed source/truth/gates 已完成；Round 2 重复步骤已删除，新身份直接进入双审
+- State: fail-closed source/truth/gates 已完成；Round 3 plan 时序已修正，新身份直接进入双审
 - Stage: verify
 - Work Item: 214-workitem-readonly-adapter-side-effect
 - Branch: codex/214-workitem-readonly-adapter-side-effect-lifecycle
@@ -52,16 +52,21 @@
   diff/scope/parity/Cursor/clean 全绿；src/tests/workflow/依赖/版本/release 零差异。
 - Round 2 exact `2c47be6b`：Confucius/SAFETY=`PASS0`；Pascal/LEAN=`FAIL1`，唯一 finding 是 Exact Next
   重复已完成的 terminal truth/gates。Finding 已只删除该一步；identity 变化使两 verdict 同时退役。
+- Round 3 exact `8ab05f3c`：Pascal/LEAN=`PASS0`；Confucius/SAFETY=`FAIL1`，唯一 finding 是 plan 仍会
+  指导 delivery branch 提前关闭/放行。已改为 delivery fresh-main 后再建独立 receipt PR；旧 verdict 退役。
 
 ## Blockers / Risks
 
 - Pascal/Confucius 对修正后新 identity 双 PASS0 前不得 push。
-- lifecycle PR required checks、Codex review、merge/detached fresh-main 前 closure 不得视为对 main 生效。
+- Delivery PR 与后续 receipt PR 各自 required checks、Codex review、merge/detached fresh-main 前，closure
+  不得视为对 main 生效。
 - OpenAI 事故若继续影响 lifecycle Codex 接单，不得静默沿用 PR #162 的一次性例外。
 - handoff CLI 仍可能按旧 WI208 checkpoint 错写 scoped copy；本轮直接维护 WI214 root/scoped byte-identical。
 
 ## Exact Next Steps
 
 - 让 Pascal/LEAN 与 Confucius/SAFETY 对同一 committed+clean identity 从零审到 PASS0。
-- 双 PASS0 后 push/open lifecycle PR，取得 required checks 与 Codex current-head review，再 merge/fresh-main。
-- 仅在 lifecycle fresh-main 完成后创建 T66 implementation WI并先执行 T61A 双 readiness。
+- 双 PASS0 后 push/open lifecycle delivery PR，取得 required checks 与 Codex current-head review，再
+  merge/detached fresh-main。
+- Delivery fresh-main 后创建独立 closure receipt branch/PR；其双审、Codex/checks、merge/fresh-main 全绿后，
+  才创建 T66 implementation WI并先执行 T61A 双 readiness。

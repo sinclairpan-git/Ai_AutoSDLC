@@ -490,3 +490,16 @@
   最小修正只删除该步骤，让唯一下一步直接从新身份双审开始；不改其他 source 或状态。
 - 修正提交后机械刷新 truth并重验治理门禁，随后对新 committed+clean identity 从零双审；双 PASS0 前
   不得 push。
+
+## 35. Batch 2026-07-19-031：lifecycle Round 3 split verdict 与 plan 时序修正
+
+- 受审 identity HEAD/tree=`8ab05f3cdcf84800396eafe32b7812769872e8bd`/
+  `61d373feb5101c7fa1a3349aa8cfb4c3d4a51358`、clean；Pascal/LEAN=`PASS0`，
+  Confucius/SAFETY=`FAIL1`。Identity 将变化，两份 verdict 同时退役。
+- SAFETY 唯一 finding 成立：Phase 3 plan 仍指示在本轮双审、PR checks、merge/fresh-main 前写
+  closed/completed 与 T66 next，可能让未来 executor 重引入 Round 1 的机器状态假绿。
+- 最小修正把 delivery branch 固定为 T42 in_progress、T58 closure-ready/active、T66 blocked；只有 delivery
+  detached fresh-main 后，才从新 main 建独立 receipt branch/PR 写入 completed/closed/ready。Receipt 本身
+  也必须双审、Codex/checks、merge/fresh-main 后才允许创建 T66 WI/T61A。
+- 本修正不改当前机器状态、产品、测试、workflow、依赖、版本或 release。提交后机械刷新 truth、重验治理
+  门禁并对新 committed+clean identity 从零双审；双 PASS0 前不得 push。

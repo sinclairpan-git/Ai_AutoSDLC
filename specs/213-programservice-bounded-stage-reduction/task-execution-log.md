@@ -318,3 +318,10 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
   truth=`ready/fresh 1126/1126`，其余实现门禁全绿。
 - 本独立 lifecycle reconciliation merge/fresh-main 后关闭 GAP-15/T58。唯一下一步是新建 T66
   implementation WI并先取得 T61A 双 readiness GO；T66/GAP-03/WI196/RC-08/release 仍保持 open。
+
+## 17. Batch 2026-07-19-016：WI214 lifecycle delivery/receipt superseding boundary
+
+- §16 的“lifecycle reconciliation merge/fresh-main 后关闭”由本段细化：delivery PR 始终保持 T58 active、
+  T66 blocked；delivery detached fresh-main 后另建 main-derived closure receipt branch/PR。
+- 只有 receipt 自身同身份双审、Codex/checks、merge/detached fresh-main 全绿，才关闭 GAP-15/T58并恢复
+  T66 WI/T61A 准入。T66 产品、GAP-03、WI196、RC-08 与 release 仍保持 open。

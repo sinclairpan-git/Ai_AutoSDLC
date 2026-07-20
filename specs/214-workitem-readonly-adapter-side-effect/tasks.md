@@ -149,19 +149,22 @@ related_doc:
 - **完成**：从 exact main `2845fedc` 创建 `codex/214-workitem-readonly-adapter-side-effect-lifecycle`；
   变更白名单仅含 WI214/WI196/WI213 lifecycle docs、双 handoff、truth/manifest，`src/tests` 零差异。
 
-### T42 lifecycle final 双审、PR 与 fresh-main
+### T42 lifecycle delivery、closure receipt 与最终 fresh-main
 
 - **状态**：in_progress
 - **依赖**：T41
-- **验收**：truth/handoff/gates 先完成；Pascal/Confucius 对 final current identity 双 PASS0；Codex/
-  required checks/merge/detached fresh-main 全绿后，唯一下一步才是创建 T66 implementation WI并先执行
-  T61A 双 readiness。
+- **验收**：delivery 与后续 receipt 均 truth/handoff/gates first；Pascal/Confucius 对各自 final current
+  identity 双 PASS0；各自 Codex/required checks/merge/detached fresh-main 全绿。只有 receipt fresh-main 后，
+  唯一下一步才是创建 T66 implementation WI并先执行 T61A 双 readiness。
 - **回退**：lifecycle 已 merge 时先 revert/修正 closure receipt 以重开 GAP-15、阻断 T66，再 revert
   implementation PR；不得留下 closed truth。
 - **边界**：不声明 T66、GAP-03、WI196、RC-08 或 release 完成，不发布版本。
-- **完成定义**：本 lifecycle source 在 truth/handoff/gates、同身份双 PASS0、PR checks/merge 与 detached
-  fresh-main 全部成功后生效；任一外部门禁失败即回退本状态。生效后的唯一下一步是创建 T66 implementation
-  WI并先执行 T61A 双 readiness，不得直接写 T66 产品代码。
+- **完成定义**：本 delivery source 在 truth/handoff/gates、同身份双 PASS0、PR checks/merge 与 detached
+  fresh-main 全部成功后，只授权创建 main-derived receipt branch/PR；receipt 以同等门禁 merge/detached
+  fresh-main 后，本任务才 completed。任一外部门禁失败即保持 active/blocked；不得直接写 T66 产品代码。
+- **落盘顺序**：当前 delivery PR 始终保持 T42 in_progress、T58 active、T66 blocked；delivery detached
+  fresh-main 通过后，另建 main-derived receipt branch/PR 写入 completed/closed/ready。Receipt 自身双审、
+  Codex/checks、merge/detached fresh-main 全绿后才算本任务完成并允许创建 T66 WI。
 
 ## 追踪矩阵
 

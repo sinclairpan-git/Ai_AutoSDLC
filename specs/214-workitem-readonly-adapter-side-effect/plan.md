@@ -253,12 +253,14 @@ emitted range；merge 后先证明 merge tree 等于 reviewed tree，再在 deta
 
 1. 从 implementation fresh main 创建 `codex/214-workitem-readonly-adapter-side-effect-lifecycle`；只修改
    child/parent lifecycle docs、program truth、root/scoped handoff和必要的 manifest exact 机械期望。
-2. 写入 implementation reviewed/merge/fresh-main receipts，把 GAP-15/T58 标记 closed/completed，并把唯一
-   下一步设为创建 T66 implementation WI/T61A；本分支不得修改 `src/tests`、依赖、workflow 或版本。
+2. 写入 implementation reviewed/merge/fresh-main receipts，把 GAP-15/T58 标记 closure-ready/active、
+   T42 保持 in_progress、T66 保持 blocked；本分支不得修改 `src/tests`、依赖、workflow 或版本。
 3. 先同步 truth/handoff并跑 constraints/validate/truth/manifest/scope/parity/Cursor/clean，再由 Pascal/
    Confucius 对 final committed+clean lifecycle identity 双审 PASS0。
-4. push lifecycle PR、Codex current-head review、required checks、merge、detached fresh-main；只有该 fresh-main
-   通过才真正解除 T66 阻断。
+4. push lifecycle delivery PR、Codex current-head review、required checks、merge、detached fresh-main；只有该
+   fresh-main 通过后，才从新 main 创建独立 receipt branch/PR，落盘 GAP-15/T58 closed/completed、T42
+   completed 与 T66 ready。Receipt 本身也必须同身份双审、Codex/checks、merge/detached fresh-main；全部通过后
+   才创建独立 T66 implementation WI并先执行 T61A 双 readiness。
 
 **回退**：implementation 已 merge但 lifecycle 未 merge时直接 revert implementation PR；lifecycle 已 merge
 时先 revert/修正 lifecycle receipt，重开 GAP-15并阻断 T66，再 revert implementation PR。不得留下 closed

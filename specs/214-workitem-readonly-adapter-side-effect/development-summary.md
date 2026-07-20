@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal/amendment 与 implementation 已 merge/fresh-main；lifecycle reconciliation 关闭材料已就绪
+**当前状态**：formal/amendment 与 implementation 已 merge/fresh-main；lifecycle delivery 材料已就绪
 
 ## 已冻结合同
 
@@ -13,10 +13,11 @@
   output/exit/write set；不复制 adapter 内部 fixture、不新增事务化。
 - 测试布局固定为一个新增参数化 dispatch 文件、两个既有 init/link integration 文件和既有 hook unit 文件；
   V1 targeted、full、Ruff、constraints 与 diff-check 命令已明确。
-- Formal、implementation、lifecycle reconciliation 分三个 branch/PR；每阶段都 truth/gates first、final
-  current-identity 双 PASS0、Codex/current-head checks、merge 与 detached fresh-main。
-- Lifecycle fresh-main 才关闭 GAP-15/T58并授权 T66 T61A。关闭后回退必须先重开 truth/阻断 T66，再
-  revert implementation，禁止代码与状态分裂。
+- Formal、implementation、lifecycle delivery 分独立 branch/PR；delivery fresh-main 后再以独立 receipt
+  branch/PR 落盘关闭。每阶段都 truth/gates first、final current-identity 双 PASS0、Codex/current-head
+  checks、merge 与 detached fresh-main。
+- Lifecycle receipt fresh-main 才关闭 GAP-15/T58并授权创建 T66 WI/T61A。关闭后回退必须先重开 truth/
+  阻断 T66，再 revert implementation，禁止代码与状态分裂。
 
 ## 对抗评审
 
@@ -41,10 +42,11 @@
   authoring 对抗评审收敛；formal PR #160 与 amendment PR #161 merge/detached fresh-main；implementation
   test-only/product 两提交、RED/GREEN、full/Ruff/V4/constraints。
 - 已完成：implementation terminal truth/handoff/source freeze、同身份本地双 PASS0、PR #162 的 22/22 checks、
-  squash merge `2845fedc` 与 detached fresh-main。当前 lifecycle branch 只关闭 GAP-15/T58；T66 T61A 尚未开始。
-- 本 lifecycle merge/fresh-main 后 GAP-15/T58 关闭，并只授权创建独立 T66 implementation WI、先执行
-  T61A 双 readiness；T66、GAP-03、WI196、RC-08 与 release 仍保持 open，禁止版本/tag/Release/PyPI/
-  共享 CLI 更新。
+  squash merge `2845fedc` 与 detached fresh-main。当前 lifecycle delivery branch 只标记 closure-ready；
+  GAP-15/T58 仍 active、T66 仍 blocked。
+- Delivery merge/fresh-main 后另建独立 closure receipt branch/PR；只有 receipt 自身双审、Codex/checks、
+  merge/detached fresh-main 全绿，才关闭 GAP-15/T58并授权创建独立 T66 implementation WI、先执行 T61A
+  双 readiness。T66、GAP-03、WI196、RC-08 与 release 仍保持 open，禁止版本/tag/Release/PyPI/共享 CLI 更新。
 - Implementation 预审发现 formal V4 错把主线 273 个历史 formatter-red 文件设为全库零债务门禁；独立
   amendment 仅改为 changed-file strict + legacy baseline-delta，不授权格式化非范围文件或放宽其他门禁。
 - Amendment final review Round 1 对 `a91bbba3` 一致否决动态 base/count-only 判定；当前改为固定
