@@ -25,6 +25,7 @@
 - Lifecycle delivery final reviewed HEAD/tree=`1d99b798`/`3f6698d7`，LEAN/SAFETY 同身份 PASS0。
 - PR #163 exact-head 10/10 checks 全绿；用户明确授权以本地 SDLC 双审替代继续等待远端 Codex 最终
   文字回执，squash merge=`60fe6d90`，分支保留。
+- PR #163 的本地替代只适用于 lifecycle delivery，不自动扩展到 closure receipt 或 release。
 - Delivery detached fresh-main HEAD/tree=`60fe6d90`/`3f6698d7`，constraints/validate/truth、manifest exact、
   scope/parity/Cursor/clean 全绿。
 - 本 receipt merge 是 T42/GAP-15/T58 completed/closed 的唯一生效点；T66 继续 blocked。Receipt
@@ -47,11 +48,13 @@
   PASS0 前不得 push。
 - Receipt merge 前 completed/closed 只属于候选 main state；T66 不得解锁。Receipt merge 后 fresh-main
   失败必须优先回退 receipt，禁止创建 T66 WI。
+- Receipt 仍须取得 current-head Codex review 且无 actionable finding；若 Codex 再次不可用，不无限刷请求，
+  立即作为用户输入 blocker，只有取得单独授权后才可改变该门禁。
 - handoff CLI 仍可能按旧 WI208 checkpoint 错写 scoped copy；本轮直接维护 WI214 root/scoped byte-identical。
 
 ## Exact Next Steps
 
 - 重跑 constraints/validate/truth/manifest/scope/parity/Cursor/clean；对 final committed+clean identity 取得
   Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0。
-- 双 PASS0 后 push/open receipt PR；checks 全绿后 merge，detached fresh-main 通过才创建 T66
-  implementation WI并先执行 T61A 双 readiness。
+- 双 PASS0 后 push/open receipt PR；取得 current-head Codex review 无 actionable finding且 checks 全绿后
+  merge，detached fresh-main 通过才创建 T66 implementation WI并先执行 T61A 双 readiness。
