@@ -530,3 +530,6 @@
   `235 passed, 474 deselected`，产品blob=`7b2ac507...9c6`与behavior legacy逐字节一致。
 - blanket `monkeypatch.undo()`改为局部`monkeypatch.context()`，不再中途撤销HOME/AgentOps/固定时钟fixture。
   returned `failed`经双审确认公开结构不可达；C1冻结write fault传播/零receipt/retry等价，首Rx删除dead branch。
+- source commit=`7dbc3f85`。首次full功能断言=`3373 passed, 3 skipped`，但session teardown守卫发现
+  `program-manifest.yaml`在运行中由truth sync写入`repo_revision=7dbc3f85`，故该轮以`1 error`作废；不绕过
+  repository guard。先固定该records变更，再从clean identity完整重跑full。

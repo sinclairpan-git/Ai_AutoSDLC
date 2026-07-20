@@ -3,7 +3,7 @@
 - Updated: 2026-07-20T17:45:00Z
 - Reason: C1 local review FAIL1 remediation checkpoint
 - Goal: 完成C1双审修正并取得同identity LEAN/SAFETY PASS0
-- State: 两项FAIL1已在测试层最小修正；产品源码与behavior legacy逐字节一致，尚未授权engine/Rx
+- State: 两项FAIL1已修正；source已提交，truth records写入与首次full重叠导致teardown守卫按失败处理
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -34,14 +34,16 @@
 - Mutation RED：loader fail-closed=`3 failed`；skipped/confirmation/partial=`3 failed`；outside-root=
   `1 failed`；吞掉write fault=`1 failed`。全部用`apply_patch`恢复。
 - Ruff check PASS；聚焦cross-spec+bounded-stage=`81 passed`；产品blob=`7b2ac507...9c6`与legacy相同。
+- source commit=`7dbc3f85`；首次full功能断言=`3373 passed, 3 skipped`，但truth sync在session内更新
+  `program-manifest.yaml`，teardown状态守卫报`1 error`，该轮明确作废且未绕过守卫。
 
 ## Blockers / Risks
 
-- 仍需source/records提交、clean identity上的full、治理门、immutable legacy/current A/B与同SHA双审。
+- 仍需records提交、clean identity上的full、治理门、immutable legacy/current A/B与同SHA双审。
 - 共享`.venv`固定`uv run --python 3.11`顺序执行，不并行不同解释器。
 
 ## Exact Next Steps
 
-1. 提交C1 tests/docs/handoff source，truth sync后提交records并保持clean。
+1. 提交truth records与本次作废诊断并保持clean。
 2. 运行full、Ruff、constraints、validate、plan/truth/manifest与detached legacy/current A/B。
 3. Pascal/LEAN与Confucius/SAFETY对同一clean identity双PASS0；此前禁止engine/Rx。
