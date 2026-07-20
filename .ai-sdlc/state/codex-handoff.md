@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T19:07:40Z
-- Reason: C1 output-loader remediation final review checkpoint
+- Updated: 2026-07-20T19:17:22Z
+- Reason: C1 final evidence provenance SAFETY FAIL1 remediation checkpoint
 - Goal: 完成C1双审修正并取得同identity LEAN/SAFETY PASS0
-- State: 最新SAFETY FAIL1修正已完成full/治理门/immutable A/B；待新committed+clean identity同身份双审
+- State: 行为审查无其他问题；唯一final evidence provenance缺口已写入execution log，待truth sync与新identity双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -48,14 +48,17 @@
   `238/0/0/0`，ordered node hash同为`0064659b...ba61`；各移除35个便利symlink后raw tree `diff -qr=0`。
 - 最新全仓Ruff、constraints、validate、plan=`drift=false/pending=0`、truth=`ready/fresh 1131/1131/0/0`、
   manifest exact=`1 passed in 98.38s`；产品blob仍为legacy `7b2ac507...9c6`。
+- `15d8a784/fcc5a6d3`复审为LEAN=`PASS0`、SAFETY=`FAIL1`；唯一finding是final full/A-B/JUnit/raw
+  provenance未写入formal execution log，行为与测试无其他问题。已追加Batch 39，含命令、cwd/commit/tree、
+  interpreter/import、source/test/config blobs、stdout/stderr、JUnit与raw locator/hash/length。
 
 ## Blockers / Risks
 
-- `bccb6939`的LEAN=`PASS0`、SAFETY=`FAIL1`已因测试identity变化失效；最新identity须重新双审。
+- `15d8a784`的LEAN=`PASS0`、SAFETY=`FAIL1`将在records修正提交后失效；新identity须重新双审。
 - 共享`.venv`固定`uv run --python 3.11`顺序执行，不并行不同解释器。
 
 ## Exact Next Steps
 
-1. 提交本次final continuity，确认只改变两份byte-identical handoff并保持truth fresh。
-2. 将同一clean HEAD提交Pascal/LEAN和Confucius/SAFETY，要求严格`PASS0`或可操作finding。
+1. 提交Batch 39与byte-identical handoff，执行truth sync并固定clean records identity。
+2. 复核truth fresh与不变的test/product/config blobs，将同一clean HEAD重新提交双审。
 3. 双PASS0后开始首个cross-spec Rx；否则最小修正并对新identity重新双审。

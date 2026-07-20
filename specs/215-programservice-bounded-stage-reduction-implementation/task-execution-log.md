@@ -554,3 +554,45 @@
 - 当前exact union=`238 passed, 474 deselected`，原63共享节点和165基线节点均保留；formal base/candidate
   Ruff自然格式副本净增=`26+261=287≤290`。`bccb6939`旧双审结果因测试identity变化而失效，须重新提交
   committed+clean identity、复跑full/immutable两腿/治理门，并取得同identity双`PASS0`。
+
+## 39. Batch 2026-07-20-037：C1 final evidence provenance闭合
+
+- Source/tests commit=`771ae752f60a0e61b99ce8ab5993470b5403d81d`；truth records commit=
+  `201be4e54f374f4dd53144c14d146c147887139d` / tree=`e297bdee1a0d2891aa481e19cb2fc7cff9ffdebd`；
+  continuity review identity=`15d8a7840b666a78de71783bc20550ecda16cadd` / tree=
+  `fcc5a6d3cfa4546f5289e6a95041807027b5419d`。两者间仅两份byte-identical handoff改变。
+- 冻结blob：产品`program_service.py=7b2ac50725136b6399b74e898f147a0b1fecd9c6`，与behavior legacy相同；
+  candidate tests为`conftest=2f9083d3b712ddfbd2b8984f41053ff38642e642`、
+  `unit=d1459fe42c5633e541ff6aba278aeab128545b37`、
+  `integration=9628711ce7a41b08fd6bc92f4a6c9639ed5031f3`；config为
+  `pyproject=8e4a99fa8f042ba97a0b0fcc581344d2b4d0db21`、`uv.lock=21a34695cb9530add630ee9e52f1747f0aeece2a`。
+- Clean full命令=`COLUMNS=240 LINES=60 uv run --python 3.11 pytest -q`，在records identity上退出0；PTY
+  combined output=`3376 passed, 3 skipped in 693.41s`，无failure/error诊断，teardown repository guard通过，
+  运行后`git status --porcelain`为空。
+- A/B共同selector为九stage名称并排除`thread_archive/project_cleanup`；共同命令为
+  `uv run --python 3.11 pytest --import-mode=importlib -q <candidate unit> <candidate integration> -k <selector>`，
+  并传入`--basetemp=<leg> --junitxml=<leg.xml>`，固定`PYTHONPATH=<leg>/src`。A腿cwd/commit/tree=
+  `/tmp/ai-sdlc-wi215-c1-legacy-7922956d` / `7922956d3e248a93c3190240259850ab3498ec9f` /
+  `cc3c6b7f7e63dd040034938ff6bb6827f067e41c`，解释器=
+  `<cwd>/.venv/bin/python3`，imported module=`<cwd>/src/ai_sdlc/core/program_service.py`；B腿对应=
+  `/tmp/ai-sdlc-wi215-c1-current-201be4e5` / `201be4e54f374f4dd53144c14d146c147887139d` /
+  `e297bdee1a0d2891aa481e19cb2fc7cff9ffdebd`，解释器与module同样均来自B腿cwd。两腿stdout分别为
+  `238 passed, 474 deselected in 3.02s/3.34s`，stderr均为空。
+- 原生JUnit locator为`/tmp/ai-sdlc-wi215-c1-ab-238-final/{legacy,current}.xml`，均`39,436 bytes`，SHA256=
+  `2ed848b368db90572ed7222a5bc5e0111a85915a3defbf9e0064c00b62dc3f39` /
+  `ba50cc7dce4e2ad12ca5df73cf4b97bb1b150026cf8e4bd1dcd34ee9d00e8740`；outcome均=`238/0/0/0`，
+  ordered classname/name SHA256均=
+  `0064659b58a8b856fd0b85be1e8c2ba9cee6d2f23e1bf52dc03b9c6d62dbba61`。
+- stdout locator为同目录`{legacy,current}.stdout`，均`356 bytes`，SHA256=
+  `dc7f6f777db97515ef758885d91fb8c00c948a596b6d0419b0ef77d8c6574456` /
+  `809fddc7996fbe02759c7f50feea79853973ab42d7b141b7db659fc3e4c63b59`；stderr locator为
+  `{legacy,current}.stderr`，均`0 bytes`，SHA256=
+  `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`。移除两腿各35个pytest便利
+  symlink后，raw locator为同目录`legacy/`与`current/`；
+  每腿`767 files / 717,475 bytes`，按排序后的`sha256 length relative-path`清单计算tree SHA256均=
+  `ed594c678114f2314c60f594094cd78e0be9c5cc4ce5db9905c6f4e585905a35`，`diff -qr`退出0。
+- Final gates：全仓Ruff PASS、constraints无BLOCKER、program validate PASS、plan=
+  `drift=false/pending=0`、truth=`ready/fresh 1131/1131/0/0`、manifest exact=`1 passed in 98.38s`；
+  root/scoped handoff同字节。`15d8a784`评审得到LEAN=`PASS0`、SAFETY=`FAIL1`，唯一finding是本段证据
+  未进入execution log；行为、loader、状态、路径、fault/retry与fixture无其他问题。本段补齐该finding，
+  Batch 38 pending已完成；因records identity变化，双审结论须在新clean HEAD重新取得。
