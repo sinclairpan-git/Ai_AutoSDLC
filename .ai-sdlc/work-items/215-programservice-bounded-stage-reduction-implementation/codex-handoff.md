@@ -3,7 +3,7 @@
 - Updated: 2026-07-20T17:45:00Z
 - Reason: C1 local review FAIL1 remediation checkpoint
 - Goal: 完成C1双审修正并取得同identity LEAN/SAFETY PASS0
-- State: 两项FAIL1已修正；source已提交，truth records写入与首次full重叠导致teardown守卫按失败处理
+- State: 两项FAIL1已修正；clean full、治理门与immutable A/B全绿，待同identity双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -36,14 +36,19 @@
 - Ruff check PASS；聚焦cross-spec+bounded-stage=`81 passed`；产品blob=`7b2ac507...9c6`与legacy相同。
 - source commit=`7dbc3f85`；首次full功能断言=`3373 passed, 3 skipped`，但truth sync在session内更新
   `program-manifest.yaml`，teardown状态守卫报`1 error`，该轮明确作废且未绕过守卫。
+- records identity=`0a994488/53770c37` clean full=`3373 passed, 3 skipped`，teardown状态守卫通过。
+- detached legacy/current各`235 passed, 474 deselected`；JUnit counts/node hash一致，清理便利symlink后
+  raw artifact tree `diff -qr=0`；产品分别从`7922956d`与`0a994488` worktree加载。
+- 全仓Ruff、constraints、validate、plan、truth、manifest exact全绿；formal-six=`75d60ac9...519e`、
+  formal-three=`e498a7f8...cf6c`。
 
 ## Blockers / Risks
 
-- 仍需records提交、clean identity上的full、治理门、immutable legacy/current A/B与同SHA双审。
+- 仍需提交final evidence continuity，并由同一Pascal/Confucius身份对新clean HEAD双审。
 - 共享`.venv`固定`uv run --python 3.11`顺序执行，不并行不同解释器。
 
 ## Exact Next Steps
 
-1. 提交truth records与本次作废诊断并保持clean。
-2. 运行full、Ruff、constraints、validate、plan/truth/manifest与detached legacy/current A/B。
-3. Pascal/LEAN与Confucius/SAFETY对同一clean identity双PASS0；此前禁止engine/Rx。
+1. 提交final evidence continuity，确认只改变log/handoff且test/product/config blobs不变。
+2. 复跑治理门与manifest exact，提交同一clean HEAD给Pascal/LEAN和Confucius/SAFETY。
+3. 双PASS0后才开始首个cross-spec Rx；否则最小修正并重新双审。

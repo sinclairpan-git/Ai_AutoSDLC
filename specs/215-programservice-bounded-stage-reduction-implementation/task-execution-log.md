@@ -533,3 +533,12 @@
 - source commit=`7dbc3f85`。首次full功能断言=`3373 passed, 3 skipped`，但session teardown守卫发现
   `program-manifest.yaml`在运行中由truth sync写入`repo_revision=7dbc3f85`，故该轮以`1 error`作废；不绕过
   repository guard。先固定该records变更，再从clean identity完整重跑full。
+- records identity=`0a9944883926b5396916ef426a5fa1c72bb1a98f` / tree=
+  `53770c374f05f632db01886c56069eda2753b6cb`；clean full=`3373 passed, 3 skipped in 695.56s`，teardown
+  repository guard通过，测试后worktree clean。
+- immutable legacy=`7922956d/cc3c6b7f`与current=`0a994488/53770c37`分别从独立detached worktree加载
+  产品，两腿均用candidate test blobs运行=`235 passed, 474 deselected`；JUnit=`235/0/0/0`，ordered
+  classname/name SHA均=`0d7b6759...57af`。移除两腿各34个pytest便利symlink后raw tree `diff -qr`=0。
+- Final gates：全仓Ruff、constraints、program validate、plan-check=`drift=false/pending=0`、truth=
+  `ready/fresh 1131/1131/0/0`、manifest exact=`1 passed in 104.56s`；root/scoped handoff同字节。
+  formal-six=`75d60ac9...519e`，formal-three=`e498a7f8...cf6c`，产品blob仍为legacy `7b2ac507...9c6`。
