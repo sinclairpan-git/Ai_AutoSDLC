@@ -152,7 +152,7 @@ T66/RC-08/release 完成
 
 ### T42 lifecycle delivery、closure receipt 与最终 fresh-main
 
-- **状态**：in_progress
+- **状态**：completed（本 closure receipt merge 生效）
 - **依赖**：T41
 - **验收**：delivery 与后续 receipt 均 truth/handoff/gates first；Pascal/Confucius 对各自 final current
   identity 双 PASS0；各自 Codex/required checks/merge 全绿。Delivery detached fresh-main 只授权创建 receipt；
@@ -166,9 +166,13 @@ T66/RC-08/release 完成
 - **完成定义**：本 delivery source 在 truth/handoff/gates、同身份双 PASS0、PR checks/merge 与 detached
   fresh-main 全部成功后，只授权创建 main-derived receipt branch/PR；receipt merge 时本任务/GAP-15/T58
   completed/closed，但 T66 保持 blocked。Receipt detached fresh-main 通过后才授权 T66 WI；失败立即回退 receipt。
-- **落盘顺序**：当前 delivery PR 始终保持 T42 in_progress、T58 active、T66 blocked；delivery detached
-  fresh-main 通过后，另建 main-derived receipt branch/PR 写入 completed/closed，T66 仍 blocked；receipt 自身
+- **落盘顺序**：delivery PR 阶段始终保持 T42 in_progress、T58 active、T66 blocked；delivery detached
+  fresh-main 通过后，已创建本 main-derived receipt branch/PR 写入 completed/closed，T66 仍 blocked；receipt 自身
   双审、Codex/checks 全绿后 merge 生效。Receipt detached fresh-main 通过才允许创建 T66 WI。
+- **完成**：delivery final HEAD/tree=`1d99b798`/`3f6698d7` 同身份 LEAN/SAFETY PASS0，PR #163
+  exact-head 10/10 checks 全绿并按用户授权采用本地 SDLC 双审替代继续等待远端 Codex 最终文字回执，
+  squash merge=`60fe6d90`；detached fresh-main truth=`ready/fresh 1126/1126`、manifest exact、scope/parity/
+  Cursor/clean 全绿。本 receipt merge 是 T42/GAP-15/T58 completed/closed 的唯一生效点；T66 继续 blocked。
 
 ## 追踪矩阵
 

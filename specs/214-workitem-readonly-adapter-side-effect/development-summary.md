@@ -1,7 +1,7 @@
 # 开发摘要：Workitem 只读命令 Adapter 副作用隔离
 
 **功能编号**：`214-workitem-readonly-adapter-side-effect`
-**当前状态**：formal/amendment 与 implementation 已 merge/fresh-main；lifecycle delivery 材料已就绪
+**当前状态**：formal/amendment、implementation 与 lifecycle delivery 已 merge/fresh-main；closure receipt 候选
 
 ## 已冻结合同
 
@@ -43,10 +43,13 @@
   authoring 对抗评审收敛；formal PR #160 与 amendment PR #161 merge/detached fresh-main；implementation
   test-only/product 两提交、RED/GREEN、full/Ruff/V4/constraints。
 - 已完成：implementation terminal truth/handoff/source freeze、同身份本地双 PASS0、PR #162 的 22/22 checks、
-  squash merge `2845fedc` 与 detached fresh-main。当前 lifecycle delivery branch 只标记 closure-ready；
-  GAP-15/T58 仍 active、T66 仍 blocked。
-- Delivery merge/fresh-main 后另建独立 closure receipt branch/PR；receipt 双审、Codex/checks 全绿后 merge，
-  该 merge 关闭 GAP-15/T58，但 T66 仍 blocked。Receipt detached fresh-main 通过才授权创建独立 T66
+  squash merge `2845fedc` 与 detached fresh-main。
+- 已完成：lifecycle delivery final HEAD/tree=`1d99b798`/`3f6698d7`，Pascal/LEAN 与
+  Confucius/SAFETY 同身份 PASS0；PR #163 exact-head 10/10 checks 全绿，按用户明确授权以本地 SDLC 双审
+  替代继续等待远端 Codex 最终文字回执，squash merge=`60fe6d90`。Detached fresh-main 的
+  constraints/validate/truth=`ready/fresh 1126/1126`、manifest exact、scope/parity/Cursor/clean 全绿。
+- 当前 closure receipt 候选在 merge 时关闭 GAP-15/T58、完成 T42，但 T66 仍 blocked。Receipt detached
+  fresh-main 通过才授权创建独立 T66
   implementation WI、先执行 T61A 双 readiness；失败立即回退 receipt。T66、GAP-03、WI196、RC-08 与
   release 仍保持 open，禁止版本/tag/Release/PyPI/共享 CLI 更新。
 - Implementation 预审发现 formal V4 错把主线 273 个历史 formatter-red 文件设为全库零债务门禁；独立

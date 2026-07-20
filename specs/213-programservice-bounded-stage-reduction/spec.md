@@ -19,6 +19,9 @@ fresh-main 通过后才允许创建唯一 T66 implementation WI；
 该 WI 还必须在写产品代码前完成 T61A，并取得 LEAN 与 SAFETY 两位 reviewer 的 readiness `GO`，才允许
 进入 candidate 实现。
 
+当前 delivery PR #163 已 merge 为 `60fe6d90` 且 detached fresh-main 全绿；本 closure receipt merge
+关闭 GAP-15/T58。T66 继续 blocked，receipt detached fresh-main 通过前不得创建 implementation WI。
+
 后续 candidate 与 legacy deletion 属于同一个 T66 工作包，但必须使用两个独立 PR。Candidate 合入时
 legacy 必须完整保留；主线预发布稳定周期通过后才允许删除。Legacy 删除和删除后回退证明完成前，
 不得关闭 T66、GAP-03、WI-196 或发布新版本。

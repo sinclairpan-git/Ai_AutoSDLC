@@ -263,6 +263,12 @@ emitted range；merge 后先证明 merge tree 等于 reviewed tree，再在 deta
    Merge 后 detached fresh-main 通过才创建独立 T66 implementation WI并先执行 T61A 双 readiness；若失败，
    立即 revert/correct receipt 以重开 GAP-15，T66 继续 blocked。
 
+**当前执行状态**：delivery final HEAD/tree=`1d99b798`/`3f6698d7` 已同身份 LEAN/SAFETY PASS0，
+PR #163 exact-head 10/10 checks 全绿并按用户授权采用本地 SDLC 双审替代继续等待远端 Codex 最终文字回执；
+squash merge=`60fe6d90`，detached fresh-main 治理、truth、scope/parity/Cursor/clean 全绿。当前分支是
+main-derived closure receipt 候选；其 merge 关闭 GAP-15/T58，T66 仍 blocked，receipt detached fresh-main
+通过前不得创建 T66 WI。
+
 **回退**：implementation 已 merge、delivery 未 merge时直接 revert implementation PR；delivery 已 merge但
 receipt 未生效时先 revert/correct delivery source，再 revert implementation，不得回退不存在的 closure
 receipt；receipt 已 merge（含 fresh-main pending/failed）时先 revert/correct receipt 以重开 GAP-15并阻断
