@@ -144,13 +144,14 @@ related_doc:
 - **依赖**：T32
 - **分支**：`codex/214-workitem-readonly-adapter-side-effect-lifecycle`，从 implementation fresh main 创建。
 - **验收**：只写 child/parent lifecycle docs、truth/continuity与 manifest exact 机械期望；登记 implementation
-  reviewed/merge/fresh-main receipt，把 parent T58/GAP-15 标记 completed/closed；`src/tests` 零差异。
+  reviewed/merge/fresh-main receipt，把 parent T58/GAP-15 标记 closure-ready 且在本 lifecycle fresh-main 前
+  保持 active；`src/tests` 零差异。
 - **完成**：从 exact main `2845fedc` 创建 `codex/214-workitem-readonly-adapter-side-effect-lifecycle`；
   变更白名单仅含 WI214/WI196/WI213 lifecycle docs、双 handoff、truth/manifest，`src/tests` 零差异。
 
 ### T42 lifecycle final 双审、PR 与 fresh-main
 
-- **状态**：completed
+- **状态**：in_progress
 - **依赖**：T41
 - **验收**：truth/handoff/gates 先完成；Pascal/Confucius 对 final current identity 双 PASS0；Codex/
   required checks/merge/detached fresh-main 全绿后，唯一下一步才是创建 T66 implementation WI并先执行

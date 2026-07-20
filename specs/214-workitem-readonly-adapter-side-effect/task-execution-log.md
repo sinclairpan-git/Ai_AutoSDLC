@@ -459,9 +459,22 @@
 
 - 从 exact main `2845fedc` 创建 `codex/214-workitem-readonly-adapter-side-effect-lifecycle`；只对账
   WI214/WI196/WI213 lifecycle docs、root/scoped handoff 与 truth/manifest，`src/tests` 零差异。
-- 本 source 将 GAP-15/T58 标记为以 lifecycle merge/fresh-main 生效的 closed/completed，并把 T66 从
-  implementation blocked 改为 ready；唯一授权是另建 T66 implementation WI，T61A 双 readiness GO 前
-  不得写产品代码。
+- 本 source 先把 GAP-15/T58 标记为 closure-ready、T42 保持 in_progress、T66 保持 blocked；只有
+  lifecycle merge/fresh-main 后才落盘 closed/completed 与 ready receipt。其后唯一授权是另建 T66
+  implementation WI，T61A 双 readiness GO 前不得写产品代码。
 - T66、GAP-03、WI196、RC-08 与 release 仍为 open；不得创建版本/tag/GitHub Release/PyPI 或更新共享 CLI。
 - 下一步：提交 source、truth sync、治理/manifest/scope/parity/clean 门禁，再由 Pascal/LEAN 与
   Confucius/SAFETY 对同一 committed+clean identity 从零双审；双 PASS0 前不得 push。
+
+## 33. Batch 2026-07-19-029：lifecycle Round 1 双 FAIL 与 fail-closed 修正
+
+- 受审 identity HEAD/tree=`a6f2c6a60dcddf58d851ab8eb03672b979fe8d8b`/
+  `f7bb4049101041663c7eac219ccb1ae51ca8ed7a`、clean；Pascal/LEAN=`FAIL2`，
+  Confucius/SAFETY=`FAIL2`。两方意见重合且全部成立，旧 verdict 同时退役。
+- P1：T42 在其本轮双审、PR checks、merge/fresh-main 前标成 completed，parent T58/T66 的完成/ready
+  状态让 manifest deferred 过早减少 1。最小恢复为 T42 in_progress、T58 closure-ready/active、T66 blocked；
+  实际 lifecycle fresh-main 后才落盘完成与准入 receipt。
+- P2/P3：双 handoff 仍停在 source/truth 提交前，且 Changed Files 漏 WI196 plan。最小同步当前 commits、
+  truth/gates 与唯一下一步，补全路径并保持两份 byte-identical。
+- 本修正不改 src/tests/workflow/依赖/版本/release。提交后重新 truth sync、治理门禁，并对新
+  committed+clean identity 从零双审；双 PASS0 前不得 push。
