@@ -2052,6 +2052,10 @@ specs:
   path: specs/214-workitem-readonly-adapter-side-effect
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
+- id: 215-programservice-bounded-stage-reduction-implementation
+  path: specs/215-programservice-bounded-stage-reduction-implementation
+  depends_on:
+  - 213-programservice-bounded-stage-reduction
 truth_snapshot:
   generated_at: '2026-07-20T07:12:11Z'
   generated_by: ai-sdlc program truth sync

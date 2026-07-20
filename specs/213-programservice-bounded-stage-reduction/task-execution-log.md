@@ -336,3 +336,14 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
 - 本 closure receipt merge 关闭 GAP-15/T58，但 T66 仍 blocked；receipt detached fresh-main 通过后才允许
   创建 T66 implementation WI并执行 T61A 双 readiness。失败立即回退 receipt；不关闭 GAP-03/WI196/
   RC-08，不发布版本。
+
+## 19. Batch 2026-07-20-018：closure receipt 验收与 WI215 T61A 准入
+
+- Closure receipt PR #164 reviewed HEAD/tree=`428a316a083c0e5dddb995edb268da1cde496ce5`/
+  `cc3c6b7f7e63dd040034938ff6bb6827f067e41c`；LEAN/SAFETY 同身份 PASS0，Codex current-head clean，
+  required checks 全绿，squash merge=`7922956d3e248a93c3190240259850ab3498ec9f`。
+- Detached fresh-main tree 与 reviewed tree 相同；constraints/validate/truth=`ready/fresh 1126/1126`、
+  manifest exact、scope/parity/Cursor/clean 全绿。GAP-15/T58 因此保持 completed/closed。
+- 已从 exact fresh main 创建唯一 T66 implementation WI215；当前只写 formal/T61A proof 与 baseline
+  receipt，`src/**`/产品测试零差异。最终 T61A 必须绑定 legacy/proof commit+tree、formal/evidence/harness
+  hash，并取得 Pascal/LEAN 与 Confucius/SAFETY 同一身份双 GO 后才允许 candidate 实现。

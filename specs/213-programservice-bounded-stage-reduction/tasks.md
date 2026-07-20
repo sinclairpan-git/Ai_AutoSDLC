@@ -185,8 +185,9 @@ related_doc:
 | 7 | T66 close | deletion fresh-main 后才 completed_reduction |
 | 8 | release | 仅 WI196/RC-08 全部完成后 |
 
-当前 T58/GAP-15 在本 closure receipt merge 时 completed/closed；T66 仍 blocked，receipt detached fresh-main
-通过后才允许创建 implementation WI并开始 T61A。
+T58/GAP-15 已由 closure receipt PR #164 / merge `7922956d` 及 detached fresh-main 完成关闭；唯一 T66
+implementation WI215 已创建并开始 T61A。T61A 同一 proof identity 的 LEAN/SAFETY 双 readiness GO 前，
+不得进入产品实现。
 
 ## 追踪矩阵
 

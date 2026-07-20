@@ -161,9 +161,9 @@ WI 或直接写产品。
 
 **停止**：需要关闭全部 workitem adapter、改变生成内容或扩大到另一 CLI family。
 **回退**：revert T58 独立 PR；T66 继续阻断在 T61A 前。
-**当前执行状态**：WI214 implementation PR #162 / merge `2845fedc` 与 delivery PR #163 / merge
-`60fe6d90` 均已 detached fresh-main 验收；本 closure receipt merge 关闭 GAP-15/T58，T66 仍 blocked，
-receipt detached fresh-main 通过后才进入 Phase 2。
+**当前执行状态**：WI214 implementation PR #162 / merge `2845fedc`、delivery PR #163 / merge
+`60fe6d90` 与 closure receipt PR #164 / merge `7922956d` 均已 detached fresh-main 验收；GAP-15/T58
+已关闭，Phase 2 的唯一 implementation WI215 已创建并正在执行 T61A，双 readiness GO 前产品代码零改动。
 
 ### Phase 2：Implementation WI / T61A readiness（下游执行）
 

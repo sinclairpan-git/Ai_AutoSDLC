@@ -1,7 +1,7 @@
 # 开发摘要：ProgramService 九阶段精益减重正式合同
 
 **功能编号**：`213-programservice-bounded-stage-reduction`
-**状态**：formal contract 与 lifecycle reconciliation mainline/fresh-main 均已完成；T58/WI214 在本 receipt merge 时关闭
+**状态**：formal contract、T58/WI214 closure receipt 与 detached fresh-main 均已完成；WI215 T61A active
 
 ## 本地已交付
 
@@ -42,14 +42,15 @@
 - PR #158 的 current-head review、13/13 checks 与 squash merge `450d4988` 已完成；detached fresh-main
   验证 merge/reviewed tree=`9d1c0f69` 且 truth/tests/scope/parity/clean 全绿。
 - 本 WI 没有产品代码、selector、candidate、legacy deletion、版本/tag/Release/PyPI 或全局 CLI 更新。
-- GAP-15/T58 以本独立 closure receipt merge 关闭；receipt detached fresh-main 通过后
-  才恢复 T66 WI/T61A 准入。T61A/B、T66、GAP-03、WI196、RC-08 和总体版本发布均保持 open。
+- GAP-15/T58 以独立 closure receipt PR #164 / merge `7922956d` 及 detached fresh-main 关闭；唯一 T66
+  implementation WI215 已创建并进入 T61A。T61A/B、T66、GAP-03、WI196、RC-08 和总体版本发布均保持 open。
 - Lifecycle reconciliation 最终 identity=`762a3fa5`/tree `901dfa8f`/formal-six=`e51befd2...9431`，
   Pascal/LEAN 与 Confucius/SAFETY 双 PASS0；PR #159 required checks 全绿并 squash merge=`d5ad7616`，
   detached fresh-main 的 truth/tests/scope/parity/Cursor/clean 全绿。
 - WI214 final implementation reviewed HEAD/tree=`75d60375`/`03b4a1ff`，LEAN/SAFETY 同身份 PASS0；
   PR #162 22/22 checks，squash merge=`2845fedc`；detached fresh-main full=`3303 passed, 3 skipped`、
   targeted=`50 passed` 与治理门禁全绿。Lifecycle delivery tree=`3f6698d7` 同身份双 PASS0，PR #163
-  exact-head 10/10 checks、merge=`60fe6d90` 与 detached fresh-main 全绿。本 receipt merge 关闭 GAP-15/T58，
-  receipt detached fresh-main 后唯一下一步才是创建 T66 implementation WI
-  并先取得 T61A 双 readiness GO。
+  exact-head 10/10 checks、merge=`60fe6d90` 与 detached fresh-main 全绿。Closure receipt PR #164
+  reviewed HEAD/tree=`428a316a`/`cc3c6b7f`，同身份双 PASS0、Codex clean、required checks 全绿，merge=
+  `7922956d` 且 detached fresh-main 全绿。GAP-15/T58 已关闭；WI215 当前只做 T61A baseline/readiness，
+  双 GO 前不得写产品。
