@@ -689,3 +689,18 @@
   62 errors，证明本 Rx 无类型债增量。
 - 本段进入 formal 后执行 final truth sync/audit 与 manifest exact，再提交 records identity；此后不得改
   product/test/config/formal evidence，直到同 SHA LEAN/SAFETY 复审完成。
+
+## 44. Batch 2026-07-20-042：R1 双 PASS0 与 guarded-registry C2 映射
+
+- R1 final committed+clean identity=`0630fb0ab5170b09321085fc47be0f24ee95a4e2` / tree=
+  `7c94b85d0cabafd83dd58d38bfcb9cf906ecef2d`；同一 Pascal/LEAN=`PASS0/findings=0`，同一
+  Confucius/SAFETY=`PASS0/findings=0`。R1 完成并解锁 C2；远程 Codex review 仅为附加信号。
+- C2 在该 reviewed 产品上执行，无产品、测试、DTO、public surface、CLI、依赖或 workflow 改动。
+  `guarded_registry` public API/CLI 收集=`26/712`，由19个 baseline与7个共享 characterization节点组成；
+  exact group=`26 passed, 686 deselected in 0.99s`。
+- 已完成 stage 的累计 selector=`cross_spec_writeback or guarded_registry`，结果=
+  `59 passed, 653 deselected in 1.27s`。覆盖显式确认、六状态可达子集、稳定空输入、视觉/无障碍问题、
+  canonical YAML、默认不写、truthy bypass、falsey late-bound fallback、clock/build/execute异常顺序、
+  mkdir/write_text fault 与 retry，以及 CLI dry-run/execute/write。
+- C2 沿用 C1 已验证的七类共享 mutation 证据，不新增测试或临时 proof；冻结 test/config blobs保持不变。
+  下一步只提交 no-code characterization records，并由相同 LEAN/SAFETY identity 复核；双 PASS0 前禁止 R2。

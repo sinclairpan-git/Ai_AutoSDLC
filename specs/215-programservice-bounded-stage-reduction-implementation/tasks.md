@@ -37,7 +37,7 @@ related_doc:
 
 ## Batch 1：Characterization 缺口
 
-### T11 Shared characterization RED/GREEN（in_review）
+### T11 Shared characterization RED/GREEN（completed）
 
 - 仅在真实缺口处增加参数化 public API/CLI tests：
   missing/malformed/non-mapping、六状态矩阵、invalid/relative/outside-root、默认确认、truthy bypass、
@@ -58,8 +58,8 @@ related_doc:
 
 | Task | Stage | Baseline | C1 union | 状态 |
 |---|---|---:|---:|---|
-| T21 | `cross_spec_writeback` | 16 | 33 | pending |
-| T22 | `guarded_registry` | 19 | 26 | pending |
+| T21 | `cross_spec_writeback` | 16 | 33 | completed |
+| T22 | `guarded_registry` | 19 | 26 | characterization_review |
 | T23 | `broader_governance` | 19 | 26 | pending |
 | T24 | `final_governance` | 19 | 26 | pending |
 | T25 | `writeback_persistence` | 19 | 26 | pending |
