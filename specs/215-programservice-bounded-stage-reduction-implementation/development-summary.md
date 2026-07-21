@@ -102,3 +102,7 @@
 2. 双审只仲裁当前结构是否适合作为九stage实测样本；未取得同一 committed+clean 身份一致结论前，
    不扩展下一 stage，不修改 C2-safe 产品分支，也不调整 formal 预算。
 3. 九stage `T*` 取得后再由同一 LEAN/SAFETY评审新 formal；远端 Codex 仅作附加信号，不无限等待。
+4. 隔离实测在第二个`guarded_registry` stage即得到完整target=`1209 LOC / 164 branch`，高于两stage legacy
+   `842/92`并超过branch≤90；checkpoint=`6c945b40/6341bcb2`由LEAN/SAFETY一致判定
+   `STOP_SPIKE_NO_GO/findings=0`。按hard-stop省略full/A-B、停止第三stage；spike仅留审计，formal继续以
+   clean C2-safe `70f19275/2fdd9aaa`为上一reviewed tree。

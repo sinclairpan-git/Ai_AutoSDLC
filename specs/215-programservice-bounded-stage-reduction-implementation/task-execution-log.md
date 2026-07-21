@@ -1021,3 +1021,33 @@
   继续原样有效。
 - 下一步先提交本段review receipt与两份一致handoff，再由两位reviewer对新的records-only identity做
   compact consistency recheck；同identity双PASS0后才开始下一stage产品变更。
+
+## 53. Batch 2026-07-21-051：guarded stage hard-stop 与双 NO-GO
+
+- receipt identity=`4ec5c27d1533b908a1bff0456f27ecf7bd4553c9` / tree=
+  `296cca135cc3daac9a6481a66fe874e87e000008` 已由 Pascal/LEAN 与 Confucius/SAFETY 同身份再次双
+  `CONTINUE_SPIKE_PASS0/findings=0`，随后才开始第二个 `guarded_registry` stage。
+- 第二stage只在隔离spike中采用显式 `GuardedRegistry*Data`、具名build/execute/write/payload/render/target
+  函数及四个逐字段DTO转换；删除guarded旧重复body与dead returned `failed`。没有改tests/config/public/DTO/
+  CLI/deps/version/release，也没有DSL、registry、reflection、selector、rule table、callback bundle、virtual hook、
+  type erasure、第二module或新public abstraction。
+- product checkpoint=`6c945b40c8b488728f718287dc6458f15db50d96` / tree=
+  `6341bcb20526be9fdfcd1c273fc15f33dac7e5f4`；engine/ProgramService blobs=
+  `4ab00c369a0414b76f6dda4e49a1c9e2b4d97a79` / `ddc417c8203b6bce8458587a98258e233f2d79d0`，worktree clean。
+- Ruff-natural完整互斥账本：engine=`885 LOC / 28 functions / 738 function-span / 122 branch / max50`；
+  cross+guarded exact service=`154/30`；8个active DTO glue=`170/12`；target=`1209 LOC / 164 branch`。
+  两stage legacy exact仅=`842/92`，故target LOC增加367且branch超过硬上限74；第二stage已违反“每stage LOC/
+  branch严格下降”和terminal branch≤90，无需线性外推剩余七stage即可触发RC hard-stop。
+- behavior-legacy natural service additions=`235`，canonical product/proof/combined=`1120/285/1405`；C2 churn
+  additions=`247`，product/combined=`1132/1417`。两套口径均远超`522/729`且完整披露，不以删proof、压行或
+  恢复微型DSL伪造减重。
+- 结构停止前的必要核验：engine Ruff format/check/strict mypy=0；ProgramService strict mypy=`62`、对C2增量0；
+  guarded group=`37 passed, 686 deselected`、focused=`70 passed, 653 deselected`、exact union=
+  `249 passed, 474 deselected`；27 public signature与27 DTO definition均changed=0/missing=0，函数max=50。
+- 按spec §7“任一stage LOC不降立即NO-GO并保留上一reviewed tree”，在发现确定结构失败后没有继续耗时
+  13分钟full或immutable A/B；这两项只能验证行为，无法修复1209/164结构门。Pascal/LEAN与
+  Confucius/SAFETY对同一`6c945b40/6341bcb2`独立仲裁，均返回`STOP_SPIKE_NO_GO/findings=0`；LEAN明确
+  确认full/A-B应省略。
+- 两位意见已统一：不得扩展第三stage；隔离spike只保留可重放审计证据，不合入产品。formal权威回到已获
+  同identity双PASS0的C2-safe `70f19275150831ceea89a6c1e006c056ee98c412` / tree=
+  `2fdd9aaa5fde71711f8ec706338f9bdcbfd860e4`，其worktree仍clean。

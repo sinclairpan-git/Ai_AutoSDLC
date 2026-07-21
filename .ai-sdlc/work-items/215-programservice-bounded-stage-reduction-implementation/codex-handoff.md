@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T08:05:00Z
-- Reason: 第四轮同identity LEAN/SAFETY双PASS0，准备records-only一致性复核后继续guarded_registry
+- Updated: 2026-07-21T08:20:00Z
+- Reason: guarded第二stage触发结构hard-stop，LEAN/SAFETY同identity双STOP_SPIKE_NO_GO
 - Goal: 在不污染 C2-safe 分支的前提下取得九阶段无 DSL、typed、Ruff-natural 的实测 T*，再由同一 LEAN/SAFETY 双审决定 formal 路线
-- State: records=01a69268/35ff5a36已获双CONTINUE_SPIKE_PASS0；产品b71e4147/d23ddd0f不变，待receipt commit compact recheck
+- State: spike=6c945b40/6341bcb2已双NO-GO；不得扩展第三stage，formal权威回到clean C2-safe 70f19275/2fdd9aaa
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: codex/215-nine-stage-no-dsl-residual-spike
@@ -23,6 +23,7 @@
 - 完整互斥自然账本为 engine=454、cross exact=75、active glue=85、target=614/88 branch；behavior-legacy canonical product=575、proof=285、combined=860，超旧预算必须原样披露。
 - 只有 committed+clean 同一身份 LEAN/SAFETY 均无结构性 finding，才可决定是否扩展 guarded_registry。
 - 第四轮`01a69268/35ff5a36`已由LEAN/SAFETY同身份双PASS0；权限仅为继续隔离T* spike，不是formal/merge授权。
+- 第二stage target=`1209/164`已违反stage下降与branch≤90；按spec §7立即NO-GO，不再运行full/A-B或扩展第三stage。
 
 ## Commands / Tests
 
@@ -43,14 +44,18 @@
 - 第三轮复审=`LEAN PASS0 / SAFETY FAIL2`；重复spec id末项覆盖与空格path解析均由public RED确认并最小修复
 - 第四产品A/B各=`249/474`；raw=`780/732745/ca44e2d...a543`；六类public probes逐项等价
 - 第四轮同identity复审=`LEAN CONTINUE_SPIKE_PASS0/findings=0`、`SAFETY CONTINUE_SPIKE_PASS0/findings=0`
+- records-only `4ec5c27d/296cca13`再次双PASS0后才进入guarded；guarded37/focused70/exact249均PASS
+- guarded engine=`885/122/max50`、exact=`154/30`、glue=`170/12`、target=`1209/164`；canonical product/combined=`1120/1405`
+- `6c945b40/6341bcb2`同identity仲裁=`LEAN STOP_SPIKE_NO_GO/findings=0`、`SAFETY STOP_SPIKE_NO_GO/findings=0`
 
 ## Blockers / Risks
 
-- cross-only完整target=454 engine + 75 exact service + 85 active glue =614，仍未低于 behavior legacy cross=417。
-- canonical product 575>522，combined 860>729；因此当前 checkpoint 不是可合入 formal Rx。
-- 该单 stage 负面信号尚不能替代九 stage 终态 T*，但若结构审查不通过必须停止，不得继续堆代码。
+- cross+guarded target=1209>legacy842，branch=164>90；该确定结构失败已替代继续线性堆叠的必要性。
+- 隔离checkpoint不是可合入formal Rx；full/A-B省略是hard-stop的预定行为，不得将其补跑后误称可继续。
+- C2-safe是唯一formal上一reviewed tree；不得把spike commit cherry-pick、merge或发布。
 
 ## Exact Next Steps
 
-1. 提交只含第四轮双PASS0 receipt与handoff更新的records identity，确认产品blobs仍为`240a85ad/827d4d4a`。
-2. 同一新records-only committed+clean SHA交两位reviewer做compact一致性复核；双PASS0后开始guarded_registry显式typed spike。
+1. 提交只含guarded hard-stop账本、双NO-GO receipt与handoff更新的records identity；保留`6c945b40`产品证据不改。
+2. 对records-only identity做LEAN/SAFETY compact一致性复核；通过后关闭本spike工作流。
+3. 在C2-safe边界上由双agent提出可交付恢复方案；未经新formal合同，不继续九stage重写、不提PR/发布。
