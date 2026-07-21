@@ -79,7 +79,7 @@
 - [x] **治理**：constraints无BLOCKER、validate PASS、truth ready/fresh且只有WI217 summary missing、manifest
   exact、scope/consumer scan全绿。
 - [ ] **兼容**：required Windows/macOS/Linux、wheel/sdist、clean-install、POSIX/Windows offline smoke全绿。
-- [x] **预算**：proof≤48、truth≤2、combined≤98/101；路线保守累计≤282/1500。
+- [x] **预算**：proof≤48、truth=3、combined=99/101；路线保守累计≤283/1500。
 
 ### T24 Rollback/reapply receipt
 

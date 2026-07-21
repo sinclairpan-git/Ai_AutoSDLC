@@ -48,8 +48,8 @@
   `16 passed, 406 deselected`；该proof后来由§7加强并取代。
 - Initial完整 `tests/unit/test_program_service.py`：`422 passed in 37.87s`；Ruff check与
   `git diff --check` PASS；当前proof结果以§7为准。
-- RC-05=`48≤60`；RC-06=`48+48+truth≤2=98≤floor(406×25%)=101`，buffer≥3；product net=-358；
-  product+proof+truth net≤-308。
+- RC-05=`48≤60`；canonical truth sync实际三行后，RC-06=`48+48+3=99≤floor(406×25%)=101`，
+  buffer=2；product net=-358；product+proof+truth net=-307。
 - Round 4 exact clean evidence：Pascal/LEAN=`APPROVE A/findings=0`；Confucius/SAFETY=
   `APPROVE A/findings=0`。双方共同选择 common helper +12 direct binding +cleanup-only wrapper，并拒绝
   wrapper保留和builder-family扩张。
@@ -93,7 +93,7 @@
   non-mapping、valid与directory read failure五态。
 - 独立legacy RED worktree实跑=`1 binding failed, 5 behavior passed, 406 deselected`；clean candidate=
   `6 passed, 406 deselected`，full ProgramService=`412 passed in 34.28s`，Ruff PASS。Test additions仍=48；
-  product仍`+48/-406`，RC-06仍98/101。
+  product仍`+48/-406`；当时formal reserve按2行记录，implementation canonical truth实测后由§15纠正为99/101。
 - 修复改变formal-six与HEAD/tree，Round 2全部verdict失效；新clean identity必须双方完整复审。
 
 ## 8. Batch 2026-07-21-007：Formal Round 3 FAIL2 同源修正
@@ -173,7 +173,7 @@
   `dbf9fc1415414b4cb97693a7dc9f8a1c976df115`；只含product/proof两个文件。Candidate blobs为product=
   `77827e018ae192e1d33d739310c0c7754309d7a2`、proof=
   `549de823045985161a6c4b2b9a9e2f3e4d1b8a51`；raw ledger product=`+48/-406/net -358`、proof=`+48`、
-  combined含truth reserve=`98/101`，与clean spike两个文件逐字相同。
+  combined含canonical truth三行=`99/101`，与clean spike两个product/proof文件逐字相同。
 
 ## 14. Batch 2026-07-21-013：完整门禁、基线对照与 rollback/reapply
 
@@ -190,3 +190,16 @@
   `406 passed in 37.12s`；reapply commit=`f785f43b733a0c4f2d4e0cef44cb28f36653e52f`，两个blob精确恢复candidate，
   proof=`6 passed`、ProgramService=`412 passed in 33.26s`、Ruff PASS。临时clone未推送；legacy RED只绑定
   proof-first worktree，不错误声称atomic revert后仍存在新增proof。
+
+## 15. Batch 2026-07-21-014：Implementation Final Round 1 ledger FAIL1
+
+- Review identity=`1d4d0bf701e4dc42d5ea5b5ea390db437869bc0e` / tree=
+  `fb28126dcdca8ec88f9bbd938dd9c2d42d5edcde` / formal-six=
+  `fd8d29d0a2bc96d3ab644bed536b888c0515990a6aaed024b26a2d49208683a0`，worktree clean。
+- SAFETY=`PASS0/findings=0`；LEAN=`FAIL1`。唯一P2成立：canonical truth sync实际替换
+  `generated_at`、`repo_revision`、`snapshot_hash`三行，旧账本却按truth≤2记录98/101，低报1行。
+- 控制器先在隔离clone测试更严格的truth=0方案：恢复formal fresh-main manifest后truth audit明确
+  `stale/blocked`，因此不得删除canonical snapshot diff。最小修正按真实三行计费为
+  `48 product + 48 proof + 3 truth = 99/101`、buffer=2、路线累计≤283/1500；combined硬上限101不放宽。
+- 修正只改现有records/handoff，不改atomic candidate、product/proof blobs、测试、package或rollback receipt。
+  Round 1两份verdict均失效；truth重新sync、治理门禁和同identity双审必须从零执行。

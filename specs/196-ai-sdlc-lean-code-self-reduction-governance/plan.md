@@ -334,8 +334,8 @@ fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B
 ## 10. 当前 active child：WI-217 T63 artifact loader family
 
 - **范围**：13个同形private loader、12个ordinary caller label binding、cleanup-only wrapper；L1/WP-03。
-- **实测**：legacy403/branch39；clean product `+48/-406`、proof `+48`、terminal44/4；RC-06含truth≤2
-  为98/101；persistent legacy proof=5GREEN/1binding RED，candidate proof=6/6、ProgramService unit=412/412。
+- **实测**：legacy403/branch39；clean product `+48/-406`、proof `+48`、terminal44/4；canonical truth三行后
+  RC-06=99/101；persistent legacy proof=5GREEN/1binding RED，candidate proof=6/6、ProgramService unit=412/412。
 - **当前状态/分支纪律**：formal PR #167与fresh-main已完成；唯一implementation branch的atomic candidate=
   `e2752a9b`，T61A/B、本地full、治理、package和rollback/reapply均通过，等待final同identity双审与required
   cross-platform checks。Implementation仍须merge后detached fresh-main，随后只进入唯一closure。

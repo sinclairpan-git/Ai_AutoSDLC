@@ -106,7 +106,7 @@
   当前事实状态；closure 后转为路线关闭/非阻塞 backlog，不再另立减重 formal WI或继承 WI215 receipt。
 - WI-217 current active child：formal PR #167/merge `4e4971d4` 与detached fresh-main已完成；唯一
   implementation atomic candidate=`e2752a9b`，基线403/39，product `+48/-406`、proof `+48`、terminal44/4、
-  RC-06含truth≤2为98/101；legacy persistent proof=5GREEN/1binding RED，candidate=6 proof、412 unit、
+  canonical truth三行后RC-06=99/101；legacy persistent proof=5GREEN/1binding RED，candidate=6 proof、412 unit、
   233 CLI integration、稳定短basetemp full `3309 passed, 3 skipped`、治理/package/rollback-reapply全绿。
   当前等待final同identity双审与required cross-platform checks；本路线仍最多一个implementation PR和一个
   closure PR。GO登记actual net -358，NO-GO登记最终产品净变化0并如实区分

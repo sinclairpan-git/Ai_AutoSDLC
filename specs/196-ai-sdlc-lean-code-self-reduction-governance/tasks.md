@@ -128,7 +128,7 @@ proof不合入；T66/GAP-03在WI217 closure前仍保留当前事实状态，clos
 
 **当前 active child**：WI-217 formal PR #167 已合并并通过detached fresh-main；唯一implementation候选
 `e2752a9b`已完成T61A/B、本地full、治理、package与rollback/reapply门禁，正在等待同identity双审与required
-cross-platform checks。候选冻结product `+48/-406`、proof `+48`、terminal44/4、RC-06 `98/101`；实现
+cross-platform checks。候选冻结product `+48/-406`、proof `+48`、terminal44/4、RC-06 `99/101`；实现
 成功只登记真实净删，NO-GO登记最终产品净变化0并区分pre/post-merge；两者都由唯一closure关闭
 WI217/WI196、退役RC-08并恢复正常特性开发。
 
