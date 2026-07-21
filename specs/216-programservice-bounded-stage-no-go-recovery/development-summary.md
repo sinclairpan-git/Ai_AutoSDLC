@@ -4,13 +4,14 @@
 
 ## 已确认
 
-- fresh main 的 legacy ProgramService 行为保持原样；本项不会合入候选产品、测试或 proof。
+- fresh main 的 legacy ProgramService 行为保持原样；本项不会合入候选产品、测试逻辑/fixture或proof；
+  测试唯一变更是 manifest exact 的两个计数标量。
 - C2-safe 完整自然账本为 `558 LOC / 64 branch`，legacy 为 `495/63`；产品净增35 LOC、proof净增285，
   因而不是框架减重。
 - 无 DSL 九阶段 spike 在第二阶段达到 `1209/164`，高于两阶段 legacy `842/92` 且超过 branch≤90；
   双 reviewer 一致 `STOP_SPIKE_NO_GO/findings=0`。
-- C2-safe 与 spike 均保持 `archived_not_merged`；formal 已冻结两个远端只读 archive ref，待最终门禁前
-  持久化并从 remote 验证 exact SHA。
+- C2-safe 与 spike 均保持 `archived_not_merged`；formal 已冻结两个契约性非合入 remote archive ref，
+  待最终门禁前持久化并验证 exact SHA，不声称存在技术只读保护。
 
 ## 状态边界
 
@@ -28,5 +29,5 @@
 ## 待完成
 
 - 对 committed+clean formal-nine 完成 Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0。
-- 推送并验证两个远端只读 archive ref；同步 program truth，完成 records-only 门禁。
+- 推送并验证两个契约冻结的非合入 remote archive ref；同步 program truth，完成 records-only 门禁。
 - 推送 PR、required checks/Codex review、merge 与 detached fresh-main 验收。

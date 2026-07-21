@@ -8,7 +8,7 @@
 
 把 T66 首次实现尝试及其隔离 spike 的确定性失败结果写回主线真值，防止失败候选被误当作“已减重”或在
 后续会话中继续投入。本项只交付可审计的 NO-GO receipt、父项状态修正、program truth、continuity、
-两条只读远端 archive ref，以及 manifest exact 测试的两处机械计数；不合入候选产品、测试逻辑或 proof，
+两条契约冻结的非合入远端 archive ref，以及 manifest exact 测试的两处机械计数；不合入候选产品、测试逻辑或 proof，
 不关闭 GAP-03、WI-196、RC-08，也不发布版本。
 
 ## 2. 问题与结论
@@ -39,7 +39,8 @@ WI-213 曾为九个 bounded frontend stage 冻结 terminal≤720、净删≥2,91
 C2-safe 与 spike 分支只作审计证据，状态为 `archived_not_merged`；本项不得 cherry-pick、merge 或以
 其他方式把其产品、测试、proof 带入交付分支。合并前必须把上述 exact SHA 推送到表中两个远端 archive
 branch，并用 `git ls-remote --heads origin <ref>` 验证；archive ref 禁止 force-push、删除、创建候选 PR
-或改作发布分支，后续证据只能使用新 ref。远端可解析前只能称为“本地已验”，不得称为持久或可复算。
+或改作发布分支，后续证据只能使用新 ref。这是合同约束，不虚构远端分支保护或技术只读能力；远端可解析
+前只能称为“本地已验”，不得称为持久或可复算。
 
 ## 4. 允许范围
 
@@ -74,7 +75,7 @@ branch，并用 `git ls-remote --heads origin <ref>` 验证；archive ref 禁止
 
 ## 7. 功能需求
 
-- **FR-001**：NO-GO receipt 必须绑定完整 commit/tree/blob、远端只读 archive ref，以及可复算的
+- **FR-001**：NO-GO receipt 必须绑定完整 commit/tree/blob、契约冻结的非合入 remote archive ref，以及可复算的
   before/after LOC/branch 与稳定净增值；不记录依赖 diff 工具分段方式的不稳定 `+N/-M` 口径。
 - **FR-002**：交付 diff 对 `src/**`、测试逻辑/fixture、workflow、依赖、版本和 release 必须为零；
   `tests/**` 只允许 manifest exact 两个计数标量。

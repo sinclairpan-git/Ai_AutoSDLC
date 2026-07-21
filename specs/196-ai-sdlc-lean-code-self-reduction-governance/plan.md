@@ -150,9 +150,10 @@ T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷
 
 ### T58：GAP-15 workitem read-only adapter side-effect isolation
 
-- **当前状态**：completed（本 closure receipt merge 生效）；WI-214 formal PR #160、amendment PR #161、
+- **WI214 closure 历史时点（已由 WI216 supersede）**：WI-214 formal PR #160、amendment PR #161、
   implementation PR #162 / merge `2845fedc`、delivery PR #163 / merge `60fe6d90` 及各自 detached
-  fresh-main 已完成；T66 仍 blocked，receipt detached fresh-main 通过后才恢复准入。
+  fresh-main 已完成，receipt 当时恢复 T66 准入。该准入已经执行；WI216 已将本次 T66 implementation
+  标记为 `cancelled_no_go`，当前不得续跑旧路线。
 - **风险/范围**：L2 / CC-05；只调整 `workitem` subapp adapter hook 的只读/写命令分发。
 - **非目标**：不修改 adapter 同步算法、生成内容、`program` 分发、workitem handler 领域逻辑或 T66 产品代码。
 - **进入**：在 clean fixture 先 RED 证明 `plan-check/guard/close-check/branch-check/truth-check` 至少当前

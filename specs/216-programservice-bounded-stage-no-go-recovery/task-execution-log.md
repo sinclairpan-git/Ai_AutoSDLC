@@ -33,3 +33,15 @@
 - 处置：立即创建 WI216 byte-identical handoff；允许且仅允许 exact-test 两标量；seq推进217；将两个 exact
   证据身份持久化为禁止 PR/merge/force-push/delete 的 remote archive refs；回退保持 T66 fail-closed；
   修正全部历史时点和 summary。任何变更使 Round 1 verdict 失效，修正后重新提交同身份复审。
+
+## 3. Batch 2026-07-21-003：formal Round 2 FAIL findings
+
+- Exact review identity=`34cf0bb18ef427e93f10725f6a431edb2cb589d5` / tree=
+  `13a47e713505e1b3ab1fb131828d8fe397d73d61` / formal-nine=
+  `8fed255ab7299df65feb6e9c32ea54bbdf339db839dd578c3a9245b84fa9e42d`；worktree clean。
+- Pascal/LEAN=`FAIL`、Confucius/SAFETY=`FAIL2`，结论一致：plan 尚有两处“测试零差异”与 exact 标量例外
+  冲突；T35 archive gate 未成为 final review/PR 硬依赖；普通 remote branch 不应被虚构为技术只读；
+  WI196/T58 仍有一处旧“当前状态”。
+- 处置：所有测试边界统一为“测试逻辑/fixture零差异、唯二 exact 标量”；T34与T41硬依赖T35，
+  FR-001/SC-002映射T35；archive改称契约冻结非合入ref并明确无技术只读保护；T58文本标为历史且由
+  WI216 supersede。修正后 Round 2 verdict 失效，提交新的 formal-nine 进入 Round 3。

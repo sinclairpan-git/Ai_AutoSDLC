@@ -28,7 +28,7 @@
   LEAN/SAFETY 对产品及 records 均为 `STOP_SPIKE_NO_GO/findings=0`。
 - T66 本次 implementation=`cancelled_no_go`；C2/spike=`archived_not_merged`。GAP-03/WI196/RC-08/
   release 继续 open，用户“补缺口并减重”目标尚未完成。
-- 最终评审前把 `70f19275`、`60dcc4f6` 推送到两个 `codex/archive/215-*` 非合入 refs 并用
+- 最终评审前把 `70f19275`、`60dcc4f6` 推送到两个契约冻结的 `codex/archive/215-*` 非合入 refs 并用
   `git ls-remote` 验真；禁止 PR/merge/force-push/delete。
 - 产品、测试逻辑、workflow、依赖、版本、release 零改动；测试唯一例外是 manifest exact
   `1126/214→1131/215` 两个标量。
@@ -46,7 +46,8 @@
 
 - Round 1 verdict 已因文档与 continuity 修正失效；新的 HEAD/tree/formal-nine 未双 PASS 前不得同步最终
   truth、推送 WI216 PR 或合入。
-- 两个 archive ref 未在 remote exact 可解析前，证据只属于 local-verified，不得称为持久完成。
+- 两个 archive ref 未在 remote exact 可解析前，证据只属于 local-verified，不得称为持久完成；普通
+  remote branch 没有技术只读保护，安全来自禁止 force-push/delete/PR/merge 的交付合同。
 - WI216 merge/fresh-main 只关闭 records recovery，不关闭 T66/GAP-03/WI196/RC-08/release。
 - handoff CLI 可能跟随旧 checkpoint 错写 scoped copy；本项直接维护 root/scoped byte-identical。
 

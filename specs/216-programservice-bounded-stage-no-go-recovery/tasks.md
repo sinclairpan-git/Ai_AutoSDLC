@@ -33,14 +33,14 @@
 
 ### T22 Pascal / LEAN 审查
 
-- **状态**：completed（Round 1 FAIL）
+- **状态**：completed（Rounds 1～2 FAIL，findings 已进入 T24）
 - **依赖**：T21
 - **验收**：完整 LOC/branch/product/proof 计数、真实净删、YAGNI、未来入口和 records-only scope；
   返回 actionable findings 与 verdict。
 
 ### T23 Confucius / SAFETY 审查
 
-- **状态**：completed（Round 1 FAIL5）
+- **状态**：completed（Rounds 1～2 FAIL，findings 已进入 T24）
 - **依赖**：T21
 - **验收**：功能保持、证据 provenance、状态/回退、truth/continuity/release 边界；返回 findings 与 verdict。
 
@@ -75,7 +75,7 @@
 ### T34 最终同身份双审
 
 - **状态**：pending
-- **依赖**：T33
+- **依赖**：T33、T35
 - **验收**：Pascal/LEAN 与 Confucius/SAFETY 对同一 final HEAD/tree/formal-nine 再次
   `PASS0/findings=0`；records-only receipt 不改变 formal-nine。
 
@@ -91,7 +91,7 @@
 ### T41 推送并创建 records-only PR
 
 - **状态**：pending
-- **依赖**：T34
+- **依赖**：T34、T35
 - **验收**：PR scope 与 reviewed tree 一致；请求 Codex review；heartbeat 监控 current HEAD/checks。
 
 ### T42 current-head 评审与 required checks
@@ -111,7 +111,7 @@
 
 | 规范 | 任务 |
 |---|---|
-| FR-001、SC-002 | T11～T12、T21～T24 |
+| FR-001、SC-002 | T11～T12、T21～T24、T35 |
 | FR-002、SC-001、SC-006 | T13、T31、T33～T35、T42～T43 |
 | FR-003～FR-005、SC-003 | T12～T13、T22～T24 |
 | FR-006、SC-005 | T21～T24、T34、T42 |

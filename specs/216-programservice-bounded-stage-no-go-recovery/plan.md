@@ -3,8 +3,9 @@
 > **给 agentic workers：**执行本计划时使用 `superpowers:executing-plans`；在任何完成声明前使用
 > `superpowers:verification-before-completion`。所有命令在隔离 worktree 中以 PowerShell 执行。
 
-**目标**：把 WI215/T66 失败路线作为 records-only NO-GO receipt 合入 fresh main，保持产品、测试与版本
-零差异，并为未来真正净删的独立 formal 候选保留清晰入口。
+**目标**：把 WI215/T66 失败路线作为 records-only NO-GO receipt 合入 fresh main，保持产品、测试逻辑/
+fixture 与版本零差异；测试唯一例外是 manifest exact 两个计数标量，并为未来真正净删的独立 formal
+候选保留清晰入口。
 **架构**：不改运行时架构；只更新 WI196→WI213→WI216 治理链、program manifest truth 和 continuity。
 **技术栈**：Markdown、YAML、Git、`uv run ai-sdlc`、PowerShell、两位本地对抗 reviewer。
 
@@ -15,7 +16,8 @@
 - 基线固定为 `origin/main@7922956d3e248a93c3190240259850ab3498ec9f`；不得混入主工作树既有改动。
 - 只允许 WI196/WI213/WI216 records、`program-manifest.yaml`、project-state、WI216 root/scoped handoff，
   以及 manifest exact 测试两个计数标量。
-- 不运行会写产品状态的 managed delivery，不变更版本，不推送两个失败证据分支。
+- 不运行会写产品状态的 managed delivery，不变更版本，不把两个失败证据分支推送为候选；唯一推送例外
+  是 exact SHA 对应的契约冻结非合入 archive refs。
 - 任一内容变更后重新计算 formal-nine；任一 commit/tree 变化后重新做最终双审。
 
 ## Task 1：建立 records-only 恢复合同
@@ -32,7 +34,8 @@
 2. 写入稳定账本：C2 `558/64 vs 495/63`、product净增35、proof净增285；spike
    `1209/164 vs 842/92`。
 3. 把 T66 本次实现标为 `cancelled_no_go`；保持 GAP-03/WI196/RC-08/release open。
-4. 明确 C2-safe/spike 为 `archived_not_merged`，产品、测试、proof 不进入本分支。
+4. 明确 C2-safe/spike 为 `archived_not_merged`，产品、候选测试/proof 不进入本分支；manifest exact
+   两个机械标量不是候选测试。
 5. 检查范围：
 
    ```powershell
@@ -40,7 +43,8 @@
    git diff --check
    ```
 
-**停止**：缺任何不可变证据、状态出现假关闭、或 diff 含产品/测试时立即修正，不进入评审。
+**停止**：缺任何不可变证据、状态出现假关闭、diff 含产品或测试逻辑/fixture，或测试 diff 超出
+manifest exact 两个计数标量时，立即修正，不进入评审。
 
 ## Task 2：formal-nine 对抗评审
 
