@@ -45,3 +45,13 @@
 - 处置：所有测试边界统一为“测试逻辑/fixture零差异、唯二 exact 标量”；T34与T41硬依赖T35，
   FR-001/SC-002映射T35；archive改称契约冻结非合入ref并明确无技术只读保护；T58文本标为历史且由
   WI216 supersede。修正后 Round 2 verdict 失效，提交新的 formal-nine 进入 Round 3。
+
+## 4. Batch 2026-07-21-004：formal Round 3 split verdict
+
+- Exact review identity=`4cfff3b0c652c3162abeac7adb26e0fb4187d746` / tree=
+  `c4a7539cba4896e7acc00749c050cd21a054933c` / formal-nine=
+  `3daf7fb35b72a938662e097bf57837bf85fb1482f133764843fba4ce8a69ea39`；worktree clean。
+- Pascal/LEAN=`PASS0`。Confucius/SAFETY=`FAIL1`：root/scoped handoff 虽 byte-identical，但仍停留在
+  Round 1 状态和下一步，context restore 会重复旧 remediation。
+- 处置：只更新本 execution log 与两份 byte-identical handoff，formal-nine 不变；commit/tree 改变使
+  LEAN PASS0 与 SAFETY FAIL1 均不可直接用于最终拼接。Round 4 必须让双方复审同一新 HEAD/tree。

@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T08:15:00Z
+- Updated: 2026-07-21T08:14:50Z
 - Reason: T66/C2 与 no-DSL spike 已确定 NO-GO，进入 WI216 records-only recovery
 - Goal: 持久化本次 `cancelled_no_go`，保持 legacy 不变并禁止旧 T66 路线重复投入
-- State: formal Round 1 findings 已修正，等待新的 committed+clean identity 双审
+- State: formal Round 3 为 LEAN PASS0 / SAFETY FAIL1；continuity finding 已修，等待 Round 4 同身份复审
 - Stage: plan
 - Work Item: 216-programservice-bounded-stage-no-go-recovery
 - Branch: codex/216-programservice-bounded-stage-no-go-recovery
@@ -38,13 +38,15 @@
 
 - Base verified=`7922956d/cc3c6b7f`；C2=`70f19275/2fdd9aaa`；spike product=
   `6c945b40/6341bcb2`；spike records=`60dcc4f6/44420f6d`；三个 worktree clean。
-- Round 1 exact identity=`9718b330/c060ab24/formal-nine b8fc1ace...2dae`；Pascal/LEAN=`FAIL`，
-  Confucius/SAFETY=`FAIL5`；全部 findings 已进入 remediation。
+- Round 1=`9718b330/c060ab24/b8fc1ace...2dae`，LEAN FAIL / SAFETY FAIL5；Round 2=
+  `34cf0bb1/13a47e71/8fed255a...e42d`，LEAN FAIL / SAFETY FAIL2；findings均已修正。
+- Round 3=`4cfff3b0/c4a7539c/formal-nine 3daf7fb3...ea39`；LEAN PASS0，SAFETY FAIL1 仅指出本
+  handoff状态滞后。本修正不改变 formal-nine，但改变 final commit/tree，双方均须 Round 4 重审。
 - Pre-review scope：`src/**`、workflow、依赖、版本、release 零差异；`git diff --check` 待重跑。
 
 ## Blockers / Risks
 
-- Round 1 verdict 已因文档与 continuity 修正失效；新的 HEAD/tree/formal-nine 未双 PASS 前不得同步最终
+- Rounds 1～3 verdict 均因后续修正或 identity 变化失效；新的 HEAD/tree/formal-nine 未双 PASS 前不得同步最终
   truth、推送 WI216 PR 或合入。
 - 两个 archive ref 未在 remote exact 可解析前，证据只属于 local-verified，不得称为持久完成；普通
   remote branch 没有技术只读保护，安全来自禁止 force-push/delete/PR/merge 的交付合同。
@@ -53,7 +55,7 @@
 
 ## Exact Next Steps
 
-- 完成 Round 1 finding remediation，提交 clean identity并计算 formal-nine。
-- Pascal/LEAN 与 Confucius/SAFETY 对同一新 identity 复审；任一 finding 继续最小修正并重审。
-- 双 PASS 后注册 WI216、truth sync、推送/验真 archive refs，运行 exact/scope/parity/constraints/validate/
+- 提交 Round 3 continuity remediation，确认 formal-nine仍为 `3daf7fb3...ea39` 且 worktree clean。
+- Pascal/LEAN 与 Confucius/SAFETY 对同一 Round 4 HEAD/tree/formal-nine 复审；任一 finding 继续修正。
+- Round 4 双 PASS 后注册 WI216、truth sync、推送/验真 archive refs，运行 exact/scope/parity/constraints/validate/
   truth/clean 门禁，再做 final committed+clean 同身份双审。
