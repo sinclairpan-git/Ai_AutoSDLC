@@ -66,3 +66,17 @@
 - 处置：把下一步改为与提交时点无关的 fail-closed gate——“当前 committed+clean identity 取得同身份
   双 PASS；未双 PASS 不进入 truth”。只修改 log/handoff，formal-nine仍不变；Round 5 必须双方复审新
   HEAD/tree，不拼接 Round 4 split verdict。
+
+## 6. Batch 2026-07-21-006：formal Round 5 双 PASS 与 archive 持久化
+
+- Exact review identity=`77d984c2c2278259db7d87336f1a900cc4b48c79` / tree=
+  `63f2505b4ee09e7391bb3318e207f73cdee3899e` / formal-nine=
+  `3daf7fb35b72a938662e097bf57837bf85fb1482f133764843fba4ce8a69ea39`；worktree clean。
+- Pascal/LEAN=`PASS0`；Confucius/SAFETY=`PASS0/findings=0`。这是首个同 HEAD/tree/formal-nine 的一致
+  authoring verdict；Rounds 1～4 split verdict 仅保留审计，不参与拼接。
+- 推送契约冻结的非合入 archive refs，不创建 PR、不合并：
+  `refs/heads/codex/archive/215-programservice-bounded-stage-c2-safe` exact=
+  `70f19275150831ceea89a6c1e006c056ee98c412`；
+  `refs/heads/codex/archive/215-nine-stage-no-dsl-no-go` exact=
+  `60dcc4f65f2a332261b765bfe5fff9979397ddc7`。`git ls-remote --heads origin` 逐一匹配。
+- WI216 已注册到 manifest source，依赖 WI196/WI213/WI214；terminal truth snapshot 尚未机械同步。

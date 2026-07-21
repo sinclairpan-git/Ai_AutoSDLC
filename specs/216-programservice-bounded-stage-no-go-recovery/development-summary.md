@@ -1,6 +1,6 @@
 # 开发摘要：ProgramService 有界阶段减重 NO-GO 恢复
 
-**状态**：records-only authoring；等待 formal-nine 对抗评审、truth、PR 与 fresh-main
+**状态**：formal-nine Round 5 同身份双 PASS；remote archive 已验，等待 truth/gates/final review/PR
 
 ## 已确认
 
@@ -28,6 +28,12 @@
 
 ## 待完成
 
-- 对 committed+clean formal-nine 完成 Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0。
-- 推送并验证两个契约冻结的非合入 remote archive ref；同步 program truth，完成 records-only 门禁。
+- 对 final truth/gates identity 再完成 Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0。
+- 同步 program truth，完成 manifest exact、records-only scope、continuity 与 clean 门禁。
 - 推送 PR、required checks/Codex review、merge 与 detached fresh-main 验收。
+
+## Authoring receipt
+
+- Round 5 exact=`77d984c2/63f2505b/formal-nine 3daf7fb3...ea39`；Pascal/LEAN 与
+  Confucius/SAFETY 均 `PASS0/findings=0`。
+- 两个 remote archive refs 已分别 exact 解析到 `70f19275` 与 `60dcc4f6`，仅作非合入证据，未开 PR。

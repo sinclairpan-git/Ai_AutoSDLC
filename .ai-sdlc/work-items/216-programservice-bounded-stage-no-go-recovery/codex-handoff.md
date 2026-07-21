@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T08:16:24Z
+- Updated: 2026-07-21T08:18:26Z
 - Reason: T66/C2 与 no-DSL spike 已确定 NO-GO，进入 WI216 records-only recovery
 - Goal: 持久化本次 `cancelled_no_go`，保持 legacy 不变并禁止旧 T66 路线重复投入
-- State: formal Round 4 为 SAFETY PASS0 / LEAN FAIL1；next-step finding 已修，等待同身份双 PASS
+- State: formal Round 5 同身份 LEAN/SAFETY 双 PASS；archive已验，manifest source已注册，等待truth/gates
 - Stage: plan
 - Work Item: 216-programservice-bounded-stage-no-go-recovery
 - Branch: codex/216-programservice-bounded-stage-no-go-recovery
@@ -14,7 +14,7 @@
 - .ai-sdlc/project/config/project-state.yaml（`next_work_item_seq: 217`）
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/216-programservice-bounded-stage-no-go-recovery/codex-handoff.md
-- program-manifest.yaml（待注册 WI216 与 truth sync）
+- program-manifest.yaml（WI216 source已注册，待 terminal truth sync）
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}
 - specs/213-programservice-bounded-stage-reduction/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}
 - specs/216-programservice-bounded-stage-no-go-recovery/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}
@@ -28,8 +28,8 @@
   LEAN/SAFETY 对产品及 records 均为 `STOP_SPIKE_NO_GO/findings=0`。
 - T66 本次 implementation=`cancelled_no_go`；C2/spike=`archived_not_merged`。GAP-03/WI196/RC-08/
   release 继续 open，用户“补缺口并减重”目标尚未完成。
-- 最终评审前把 `70f19275`、`60dcc4f6` 推送到两个契约冻结的 `codex/archive/215-*` 非合入 refs 并用
-  `git ls-remote` 验真；禁止 PR/merge/force-push/delete。
+- `70f19275`、`60dcc4f6` 已推送到两个契约冻结的 `codex/archive/215-*` 非合入 refs，并用
+  `git ls-remote` exact 验真；未创建 PR，后续禁止 merge/force-push/delete。
 - 产品、测试逻辑、workflow、依赖、版本、release 零改动；测试唯一例外是 manifest exact
   `1126/214→1131/215` 两个标量。
 - 任何故障都保持 T66 fail-closed；禁止 full revert WI216 后恢复旧实现准入。
@@ -44,20 +44,22 @@
   handoff状态滞后。本修正不改变 formal-nine，但改变 final commit/tree，双方均须 Round 4 重审。
 - Round 4=`50958c55/ad950e6b/formal-nine 3daf7fb3...ea39`；SAFETY PASS0，LEAN FAIL1 仅指出首个
   next step 已被当前提交完成。本修正改用不依赖提交时点的 fail-closed gate，双方须复审新身份。
+- Round 5=`77d984c2/63f2505b/formal-nine 3daf7fb3...ea39`；Pascal/LEAN 与 Confucius/SAFETY
+  同身份 `PASS0/findings=0`。
+- Remote archive exact：C2=`70f19275150831ceea89a6c1e006c056ee98c412`；no-DSL records=
+  `60dcc4f65f2a332261b765bfe5fff9979397ddc7`。
 - Pre-review scope：`src/**`、workflow、依赖、版本、release 零差异；`git diff --check` 待重跑。
 
 ## Blockers / Risks
 
-- Rounds 1～4 verdict 均因后续修正或 identity 变化失效；新的 HEAD/tree/formal-nine 未双 PASS 前不得同步最终
-  truth、推送 WI216 PR 或合入。
-- 两个 archive ref 未在 remote exact 可解析前，证据只属于 local-verified，不得称为持久完成；普通
-  remote branch 没有技术只读保护，安全来自禁止 force-push/delete/PR/merge 的交付合同。
+- Authoring 双 PASS 只授权 truth/gates；final truth commit/tree 未再次双 PASS 前不得推送 WI216 PR 或合入。
+- 两个 archive ref 已 remote exact 可解析；普通 remote branch 没有技术只读保护，安全来自禁止
+  force-push/delete/PR/merge 的交付合同。
 - WI216 merge/fresh-main 只关闭 records recovery，不关闭 T66/GAP-03/WI196/RC-08/release。
 - handoff CLI 可能跟随旧 checkpoint 错写 scoped copy；本项直接维护 root/scoped byte-identical。
 
 ## Exact Next Steps
 
-- 对当前 committed+clean HEAD/tree/formal-nine 取得 Pascal/LEAN 与 Confucius/SAFETY 同身份双 PASS；
-  任一 finding 成立则继续最小修正，未双 PASS 不进入 truth。
-- 双 PASS 后注册 WI216、truth sync、推送/验真 archive refs，运行 exact/scope/parity/constraints/validate/
-  truth/clean 门禁，再做 final committed+clean 同身份双审。
+- 提交 manifest source/authoring receipt 后执行一次 `uv run ai-sdlc program truth sync --execute --yes`。
+- 运行 manifest exact、scope/parity/constraints/validate/truth/clean 门禁；只允许两个测试计数标量。
+- 对 final committed+clean HEAD/tree/formal-nine 取得同身份双 PASS；未通过不推送 WI216 PR。
