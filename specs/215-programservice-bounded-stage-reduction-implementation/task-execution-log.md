@@ -879,3 +879,22 @@
 - 当前下一门为提交 committed+clean checkpoint 后的 immutable A/B、JUnit ordered IDs、import provenance、
   raw artifact tree hash及同一SHA LEAN/SAFETY独立结构评审。双审只决定是否值得继续实测，不修改旧预算，
   不授权合入；任一 reviewer 给出结构 blocker 即停止并丢弃该 spike。
+- cross-only product checkpoint=`2f6d839ace178c815a2ba6a53c3f8d99faa426f6` / tree=
+  `01d424d2f71e37e950790401b7b77efe350508d7`；engine/ProgramService blobs=
+  `7205e6e60d079d61ead57e6c55d1fb5d56fa7879` / `aa6d5d3c8111536e39ea7726a4ba6a409e6d6adf`。
+- immutable A腿=`7922956d3e248a93c3190240259850ab3498ec9f/cc3c6b7f7e63dd040034938ff6bb6827f067e41c`，
+  B腿=`2f6d839a/01d424d2`；detached worktree分别为
+  `/tmp/ai-sdlc-wi215-spike-legacy-7922956d` 与 `/tmp/ai-sdlc-wi215-spike-current-2f6d839a`。
+  两腿使用候选冻结 tests、各自 rootdir/config/venv、Python3.11、`PYTHONHASHSEED=0`、`TZ=UTC`、
+  `COLUMNS=240/LINES=80`、`--import-mode=importlib`、独立 basetemp/JUnit。运行前 import provenance明确为
+  各腿自己的 `src/ai_sdlc/core/program_service.py`，没有交叉导入。
+- A/B各=`249 passed, 474 deselected in 3.37s/3.42s`；candidate test/config SHA256为 conftest=
+  `03e80ffd...a19`、unit=`f189e010...ab7a`、CLI=`39691188...170`、pyproject=`18bd95fc...c9cb`、
+  lock=`ea8f4d3f...b2d`。JUnit均=`249/0/0/0`，ordered classname/name SHA256均=
+  `fc9093a262715601af3e39cff19c5b4faa737b2d9990ba13f57f9467383cdb16`；XML均33,537 bytes，
+  legacy/current SHA256分别=`34b23160...3b0` / `02e46170...257`。
+- raw locator=`/tmp/ai-sdlc-wi215-spike-ab-2f6d839a/{legacy,current}`；移除各35个pytest便利symlink后，
+  两腿均=`780 files / 732745 bytes`，排序 `sha256 length relative-path` tree SHA256均=
+  `ca44e2d51846457f8eac7941e0637701c770091d180c0ae8e2dee7bb23dda543`，逐项相同。
+  A/B、full、产品与冻结范围证据现已齐全；下一步只提交 records identity 并对同一 committed+clean SHA
+  发起 LEAN/SAFETY 独立评审。

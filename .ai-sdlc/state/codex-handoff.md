@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T05:50:00Z
-- Reason: 用户授权隔离九阶段 residual LOC 实测；cross-only checkpoint 完成验证
+- Updated: 2026-07-21T06:02:00Z
+- Reason: cross-only product checkpoint 完成 immutable A/B，准备 records identity 双审
 - Goal: 在不污染 C2-safe 分支的前提下取得九阶段无 DSL、typed、Ruff-natural 的实测 T*，再由同一 LEAN/SAFETY 双审决定 formal 路线
-- State: cross_spec_writeback 显式 typed spike 已完成 focused/full/结构验证；这是可丢弃测量 checkpoint，尚未获双审，未进入其余八 stage
+- State: cross_spec_writeback 显式 typed spike 已完成 focused/full/immutable A-B/结构验证；产品 checkpoint=2f6d839a/01d424d2，待 records identity 同 SHA 双审，未进入其余八 stage
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: codex/215-nine-stage-no-dsl-residual-spike
@@ -32,6 +32,8 @@
 - public/DTO denylist: 27 public signature 与 27 DTO definition 均 delta 0
 - max modified/new function=47；cross target branch=75 engine + 14 service = 89
 - 初次窄终端 full 唯一失败来自 `does not exist` 折行；同一宽终端节点在 spike/C2-safe 均 PASS
+- immutable A/B: 各 `249 passed, 474 deselected`；JUnit ordered hash均 `fc9093a...db16`；raw tree均 `780 files/732745 bytes/ca44e2d...a543`，逐项相同
+- import provenance: A/B分别来自 detached legacy `7922956d` 与 current `2f6d839a` 自身源码
 
 ## Blockers / Risks
 
@@ -41,7 +43,6 @@
 
 ## Exact Next Steps
 
-1. 补全 task log/development summary、逐符号 ledger、toolchain/blob provenance。
-2. 提交 committed+clean cross checkpoint；在该身份跑 immutable A/B 与 raw artifact/JUnit 对账。
-3. 同一 SHA 交 Pascal/LEAN 与 Confucius/SAFETY 独立评审。
-4. 仅当两者对“继续实测”的结构意见统一且无 blocker，才扩展 guarded_registry；否则恢复/丢弃 spike 并保留 C2-safe。
+1. 提交只含 A/B evidence 与 handoff 更新的 records identity，确认产品 blobs 仍为 `7205e6e6/aa6d5d3c`。
+2. 同一 committed+clean SHA 交 Pascal/LEAN 与 Confucius/SAFETY 独立评审。
+3. 仅当两者对“继续实测”的结构意见统一且无 blocker，才扩展 guarded_registry；否则恢复/丢弃 spike 并保留 C2-safe。
