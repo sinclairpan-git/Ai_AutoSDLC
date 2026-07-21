@@ -203,3 +203,17 @@
   `48 product + 48 proof + 3 truth = 99/101`、buffer=2、路线累计≤283/1500；combined硬上限101不放宽。
 - 修正只改现有records/handoff，不改atomic candidate、product/proof blobs、测试、package或rollback receipt。
   Round 1两份verdict均失效；truth重新sync、治理门禁和同identity双审必须从零执行。
+
+## 16. Batch 2026-07-21-015：Implementation PR Windows proof portability remediation
+
+- Corrected final identity=`8919cbc04aa7afe9ec5a6f202119f5d3063ec37e` / tree=
+  `2ba38e808a3055575ea797241e334c7aeb5fb3ce` / formal-six=
+  `182edb5e75139c0070231e8bb3fbf8648cb6d60bbfaa4b7fcc9e4ee97940fe77`，LEAN/SAFETY Round 2均
+  `PASS0/findings=0`。唯一implementation PR #168已创建；Codex审到该commit并报告无major issues。
+- Required CI中19项先通过；Windows Python 3.11/3.12 full pytest分别在约21/20分钟后失败。两者均只有
+  新增proof的四个case失败：产品保持既有`_relative_to_root_or_str(...).as_posix()`正斜杠合同，proof却用
+  `Path.__str__()`在Windows构造反斜杠期望；3.11汇总=`4 failed, 3304 passed, 4 skipped`，不是产品回归。
+- 最小修复只把该proof期望路径改为`artifact_path.as_posix()`；产品、public API、依赖、结构与行数账本
+  均不变化。修复后focused proof=`6 passed, 406 deselected`，Ruff与diff-check通过。
+- 本tracked修复使旧HEAD的Codex结论、CI与LEAN/SAFETY verdict全部失效。必须在同一PR完成本地门禁、
+  truth/handoff、同一新identity双审，再只触发一次current-head Codex review与required CI。
