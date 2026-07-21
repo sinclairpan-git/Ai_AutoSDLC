@@ -305,7 +305,8 @@ identity is frozen.
 - [ ] **Step 3: disposable clone rollback/reapply**
 
   在隔离临时 clone 定位 atomic candidate commit。revert 后两个 code/test blob 必须等于 fresh-main，
-  persistent proof为5GREEN/1binding RED；reapply后blob等于candidate，6 proof与412 unit全绿。
+  并运行406项baseline unit；legacy的5 behavior GREEN/1 binding RED已由Task 2独立proof-red worktree回执
+  证明，atomic revert后新增proof不存在，不重复要求该结果。reapply后blob等于candidate，6 proof与412 unit全绿。
   所有命令、commit/tree/blob 写入 WI217 execution log；临时 clone 不推送。
 
 - [ ] **Step 4: package/offline/cross-platform**

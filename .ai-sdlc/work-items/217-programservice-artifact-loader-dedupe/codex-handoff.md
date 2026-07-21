@@ -1,11 +1,12 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T11:47:16Z
-- Reason: WI216 closure fresh-main 后启动新的、可证明真实净删的 T63 formal candidate
+- Updated: 2026-07-21T12:07:32Z
+- Reason: WI217 Formal Round 3 同源 finding 已完成最小修正
 - Goal: 先冻结 WI217 artifact-loader exact-family 合同并完成 formal merge/fresh-main；随后在独立
   implementation 分支以 T61A/B 实现 product net delete≥358 且零功能差异
 - State: branch=`feature/217-programservice-artifact-loader-dedupe-docs`，base=
-  `b4d2ce5a5bc27b72549dcdf394f277cfbd6a124d`；formal authoring，implementation blocked
+  `b4d2ce5a5bc27b72549dcdf394f277cfbd6a124d`；等待提交新identity并执行formal Round 4双审，
+  implementation blocked
 - Stage: plan
 - Work Item: 217-programservice-artifact-loader-dedupe
 
@@ -29,6 +30,8 @@
 - Pre-close truth只允许WI217 `development-summary.md`一个mapped/`exists=false`：inventory
   `complete 1136/1136`、missing/unmapped=`1/0`、close=`216/215`；closure才创建summary并恢复`216/216`。
 - 即使implementation成功，也只关闭该T63 family；GAP-03/T66、GAP-05、WI196、RC-08、release保持open。
+- Legacy 5 behavior GREEN/1 binding RED只绑定独立proof-red worktree；atomic revert只验baseline exact
+  blobs与406 unit，reapply再验candidate exact blobs、6 proof与412 unit。
 
 ## Commands / Tests
 
@@ -37,6 +40,8 @@
   `6 passed, 406 deselected`；full ProgramService=`412 passed in 34.28s`；Ruff/diff-check PASS；proof仍+48，
   current clean spike product/test仍`+96/-406`。
 - Formal init使用仓库source CLI；其非范围Cursor adapter refresh已恢复为HEAD exact。
+- Formal R3 identity=`3510fce9/2342bd22/formal-six 1db59fc2...5c39`；LEAN/SAFETY各FAIL1同源，
+  rollback/proof-red证据解耦修正文档diff-check PASS。
 
 ## Blockers / Risks
 
@@ -47,7 +52,7 @@
 
 ## Exact Next Steps
 
-1. 若worktree非clean，仅提交formal允许scope；基于该source identity执行truth sync与formal gates。
-2. 对最终committed+clean HEAD/tree/formal-six取得LEAN/SAFETY同一身份PASS0。
+1. 提交当前formal修正，计算HEAD/tree/formal-six并取得LEAN/SAFETY Round 4同一身份PASS0。
+2. 基于通过双审的source identity执行truth sync与formal gates；tracked变化后重新双审。
 3. Formal PR required checks全绿后merge并完成detached fresh-main acceptance。
 4. 只有第3步完成，才从新的fresh-main创建独立implementation worktree并执行T61A RED→GREEN。

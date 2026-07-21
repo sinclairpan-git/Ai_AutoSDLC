@@ -84,6 +84,8 @@
 ### T24 Rollback/reapply receipt
 
 - [ ] **依赖**：T23 + exact candidate commit/tree。
+- [ ] **RED来源**：legacy 5 behavior GREEN/1 binding RED只绑定T21独立proof-red worktree；atomic revert后
+  proof已不存在，不要求重跑该结果。
 - [ ] **Revert**：disposable clone revert atomic candidate；两个 code/test blob 与 fresh-main exact，406 unit通过。
 - [ ] **Reapply**：恢复 exact candidate tree；6 proof、412 unit、Ruff通过。
 - [ ] **验收**：不推临时 clone；commit/tree/blob/命令/输出写入 execution log；失败则 candidate NO-GO。

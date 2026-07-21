@@ -95,3 +95,14 @@
   `6 passed, 406 deselected`，full ProgramService=`412 passed in 34.28s`，Ruff PASS。Test additions仍=48；
   product仍`+48/-406`，RC-06仍98/101。
 - 修复改变formal-six与HEAD/tree，Round 2全部verdict失效；新clean identity必须双方完整复审。
+
+## 8. Batch 2026-07-21-007：Formal Round 3 FAIL2 同源修正
+
+- Review identity=`3510fce941953b00f2156061a0d89ed5e7163592` / tree=
+  `2342bd22dcca6396482e8c26f419d97d044eda10` / formal-six=
+  `1db59fc294ac4e45eac57d42f2587142f5aa149309abb6b3f9276120d2d85c39`，worktree clean。
+- Pascal/LEAN=`FAIL1`、Confucius/SAFETY=`FAIL1`，两者指出同一矛盾：atomic revert恢复fresh-main exact
+  code/test blobs后，新增proof已经不存在，不能同时要求在revert状态取得legacy 5 GREEN/1 RED。
+- 最小修正把5 behavior GREEN/1 binding RED只绑定T61A独立proof-red worktree；disposable clone revert只验
+  exact baseline code/test blobs与406 baseline unit，reapply再验exact candidate blobs、6 proof与412 unit。
+- 修正改变formal-six与HEAD/tree，Round 3全部verdict失效；提交新clean identity后双方完整复审。
