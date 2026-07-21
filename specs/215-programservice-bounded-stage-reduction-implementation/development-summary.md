@@ -85,10 +85,12 @@
 
 ## 下一步
 
-1. 用户已于 2026-07-21 授权隔离实测；cross-only 显式 typed checkpoint 已取得 focused/full/A-B 全绿、
-   27 public/DTO 零变化、mypy增量0、max function47与branch89，但自然 product=`624>522`、combined=
-   `909>729`，cross target=`563>legacy 417`。该结果只证明当前单 stage 结构没有净减重，尚不是九stage
-   终态 `T*`；必须先提交 records identity 并由同一 LEAN/SAFETY 双审，才能决定是否
+1. 用户已于 2026-07-21 授权隔离实测；首轮 cross-only identity 经双 `STOP_SPIKE_FAIL3` 发现漏计 DTO
+   glue、六个单调用层级及两项行为漂移。最小修正后 public/full/exact 全绿、27 public/DTO零变化、
+   mypy增量0、max function47，完整账本=`451 engine + 75 exact + 85 glue =611 LOC / 88 branch`；
+   behavior-legacy canonical product=`572>522`、combined=`857>729`。该结果只证明当前单 stage 结构仍
+   没有净减重，尚不是九stage终态 `T*`；必须先提交新产品/records identity、完成 immutable A/B并由
+   同一 LEAN/SAFETY 双审，才能决定是否
    继续扩展，绝不能把功能全绿解释为预算通过或可合入。
 2. 双审只仲裁当前结构是否适合作为九stage实测样本；未取得同一 committed+clean 身份一致结论前，
    不扩展下一 stage，不修改 C2-safe 产品分支，也不调整 formal 预算。

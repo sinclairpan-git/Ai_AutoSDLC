@@ -898,3 +898,34 @@
   `ca44e2d51846457f8eac7941e0637701c770091d180c0ae8e2dee7bb23dda543`，逐项相同。
   A/B、full、产品与冻结范围证据现已齐全；下一步只提交 records identity 并对同一 committed+clean SHA
   发起 LEAN/SAFETY 独立评审。
+
+## 49. Batch 2026-07-21-047：cross spike 双 FAIL3 与最小 remediation
+
+- 首轮 records identity=`dae3aaaca10e54e0aa0b75537d20d4796b38eb88` / tree=
+  `50767700a6d7b6a4bedc3f1750eed227a8572aa2`，worktree clean，产品 blobs仍为
+  `7205e6e6...a7879` / `aa6d5d3c...d6adf`。Pascal/LEAN=`STOP_SPIKE_FAIL3`，Confucius/SAFETY=
+  `STOP_SPIKE_FAIL3`；两者均禁止进入 `guarded_registry`。
+- 共同P1：原 `branch=89`/target=`563` 漏计 `program_service.py` 中5个 active DTO转换函数，真实首轮
+  glue=`86 LOC/7 branch`，完整 target至少=`649/96`。LEAN另指出4个单调用helper人为增加函数基数；
+  canonical product应同时报告 behavior-legacy基准，首轮为`612`而非只报告C2 churn `624`。
+- SAFETY独立P1行为实测：payload把调用者 `step.writeback_state=deferred` 改为 `not_started`；
+  `relative_path()` 未先 `resolve()`，使 `incoming/../upstream.yaml` 未规范化，并把指向workspace外部的
+  symlink lineage记录成貌似内部的相对路径。现有249节点未覆盖这两个输入，故A/B全绿不能覆盖该漂移。
+- 主代理先以 public API 在 immutable legacy/spike 对照复现RED：state=`deferred/not_started`；dotdot=
+  `upstream.yaml/incoming/../upstream.yaml`；外部symlink lineage=`absolute workspace link/relative link`。
+  最小行为修正只恢复 `step.writeback_state` 原值，并令 `relative_path()` 与legacy一致先对root/path执行
+  `resolve()`、workspace外fallback原始绝对path；修正后同一public probes逐项与legacy一致。
+- 结构修正逐个内联 `_resolve_spec_dir`、`_cross_header`、`_finish_cross`、`_cross_payload_steps`、
+  `write_payload`、`_from_cross_spec_step_data` 六个单调用函数；每次重跑cross exact=`33 passed`。
+  未增加 stage selector/definition/rule table、回调、反射、类型擦除或第二module。
+- 修正后的三组互斥且穷尽自然账本：engine=`451 physical/17 functions/366 function-span/68 branch/max47`；
+  cross exact-45=`75/14`；四个active service DTO glue=`85/6`。完整 target=`611 LOC/88 branch`，
+  不再漏计且branch≤90。C2→spike churn=`+133/-134`，retained product=`451+133=584`；immutable
+  behavior legacy→spike canonical=`+121/-481`，product=`451+121=572`。proof=`285`，两种combined分别
+  `869/857`；两者仍诚实超过product≤522/combined≤729，cross target也仍高于legacy=`417/50`，因此
+  本 checkpoint仍只用于终态T*实测，绝不是formal Rx或合入候选。
+- 修正后 engine Ruff format/check/strict mypy=0；ProgramService strict mypy=62、增量0；架构禁项扫描为空；
+  27 public signature与27 DTO definition均changed=0。累计focused=`70 passed, 653 deselected`，exact union=
+  `249 passed, 474 deselected`，宽终端full=`3387 passed, 3 skipped in 809.12s`；冻结tests/config未改。
+- 下一步固定新的 committed+clean product checkpoint，重跑 immutable A/B/JUnit/raw tree并提交records identity；
+  同一LEAN/SAFETY必须重新从零评审。任一 finding 未清零均不得进入下一stage。

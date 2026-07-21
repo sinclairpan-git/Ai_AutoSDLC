@@ -1248,21 +1248,6 @@ class ProgramFrontendCrossSpecWritebackResult:
         )
 
 
-def _from_cross_spec_step_data(
-    data: _bounded_stage.CrossSpecWritebackStepData,
-) -> ProgramFrontendCrossSpecWritebackRequestStep:
-    return ProgramFrontendCrossSpecWritebackRequestStep(
-        spec_id=data.spec_id,
-        path=data.path,
-        writeback_state=data.writeback_state,
-        pending_inputs=list(data.pending_inputs),
-        suggested_next_actions=list(data.suggested_next_actions),
-        plain_language_blockers=list(data.plain_language_blockers),
-        recommended_next_steps=list(data.recommended_next_steps),
-        source_linkage=dict(data.source_linkage),
-    )
-
-
 def _from_cross_spec_request_data(
     data: _bounded_stage.CrossSpecWritebackRequestData,
 ) -> ProgramFrontendCrossSpecWritebackRequest:
@@ -1274,7 +1259,19 @@ def _from_cross_spec_request_data(
         artifact_source_path=data.artifact_source_path,
         artifact_generated_at=data.artifact_generated_at,
         written_paths=list(data.written_paths),
-        steps=[_from_cross_spec_step_data(step) for step in data.steps],
+        steps=[
+            ProgramFrontendCrossSpecWritebackRequestStep(
+                spec_id=step.spec_id,
+                path=step.path,
+                writeback_state=step.writeback_state,
+                pending_inputs=list(step.pending_inputs),
+                suggested_next_actions=list(step.suggested_next_actions),
+                plain_language_blockers=list(step.plain_language_blockers),
+                recommended_next_steps=list(step.recommended_next_steps),
+                source_linkage=dict(step.source_linkage),
+            )
+            for step in data.steps
+        ],
         remaining_blockers=list(data.remaining_blockers),
         warnings=list(data.warnings),
         source_linkage=dict(data.source_linkage),

@@ -79,7 +79,7 @@ def string_mapping(value: object) -> dict[str, str]:
 
 def relative_path(root: Path, path: Path) -> str:
     try:
-        return path.relative_to(root).as_posix()
+        return path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
         return path.as_posix()
 
@@ -264,44 +264,16 @@ def _resolve_cross_target(
         return None, f"{label} missing manifest spec"
     if not step.path.strip():
         return None, f"{label} missing spec path"
-    resolved, blocker = _resolve_spec_dir(root, step.path, expected, label)
-    if blocker or resolved is None:
-        return None, blocker
-    return resolved / target_filename, None
-
-
-def _resolve_spec_dir(
-    root: Path, path_text: str, expected_path: str, label: str
-) -> tuple[Path | None, str | None]:
-    resolved = (root / path_text).resolve()
+    resolved = (root / step.path).resolve()
     try:
         resolved.relative_to(root)
     except ValueError:
-        return None, f"{label} resolves outside workspace root: {path_text}"
-    if resolved != (root / expected_path).resolve():
-        return None, f"{label} path does not match manifest spec path: {path_text}"
+        return None, f"{label} resolves outside workspace root: {step.path}"
+    if resolved != (root / expected).resolve():
+        return None, f"{label} path does not match manifest spec path: {step.path}"
     if not resolved.is_dir():
-        return None, f"{label} missing spec directory: {path_text}"
-    return resolved, None
-
-
-def _cross_header(
-    root: Path,
-    manifest_path: Path,
-    request: CrossSpecWritebackRequestData,
-    step: CrossSpecWritebackStepData,
-) -> list[str]:
-    return [
-        f"# Frontend Cross-Spec Writeback: {step.spec_id}",
-        "",
-        f"- Manifest: `{relative_path(root, manifest_path)}`",
-        f"- Source artifact: `{request.artifact_source_path}`",
-        f"- Apply result: `{request.apply_result}`",
-        f"- Artifact generated_at: `{request.artifact_generated_at or 'unknown'}`",
-        "",
-        "## Pending Inputs",
-        "",
-    ]
+        return None, f"{label} missing spec directory: {step.path}"
+    return resolved / target_filename, None
 
 
 def _cross_sections(
@@ -331,7 +303,17 @@ def render_cross_step(
     request: CrossSpecWritebackRequestData,
     step: CrossSpecWritebackStepData,
 ) -> str:
-    lines = _cross_header(root, manifest_path, request, step)
+    lines = [
+        f"# Frontend Cross-Spec Writeback: {step.spec_id}",
+        "",
+        f"- Manifest: `{relative_path(root, manifest_path)}`",
+        f"- Source artifact: `{request.artifact_source_path}`",
+        f"- Apply result: `{request.apply_result}`",
+        f"- Artifact generated_at: `{request.artifact_generated_at or 'unknown'}`",
+        "",
+        "## Pending Inputs",
+        "",
+    ]
     lines.extend(_cross_sections(request, step))
     lines.extend(["", "## Source Linkage", ""])
     linkage = dict(step.source_linkage)
@@ -369,12 +351,19 @@ def _write_cross_steps(
     return paths, blockers, executable
 
 
-def _finish_cross(
+def execute_cross_spec_writeback(
+    root: Path,
+    manifest_path: Path,
+    specs: Sequence[SpecPath],
     request: CrossSpecWritebackRequestData,
-    paths: list[str],
-    blockers: list[str],
-    executable: int,
+    confirmed: bool,
+    target_filename: str,
 ) -> CrossSpecWritebackResultData:
+    if (early := _cross_early(request, confirmed)) is not None:
+        return early
+    paths, blockers, executable = _write_cross_steps(
+        root, manifest_path, specs, request, target_filename
+    )
     if executable == 0:
         state = outcome = "blocked"
         summaries = [
@@ -392,40 +381,6 @@ def _finish_cross(
         ]
     values = (summaries, paths, blockers, request.warnings)
     return _cross_result(request, outcome == "completed", True, state, outcome, values)
-
-
-def execute_cross_spec_writeback(
-    root: Path,
-    manifest_path: Path,
-    specs: Sequence[SpecPath],
-    request: CrossSpecWritebackRequestData,
-    confirmed: bool,
-    target_filename: str,
-) -> CrossSpecWritebackResultData:
-    if (early := _cross_early(request, confirmed)) is not None:
-        return early
-    paths, blockers, executable = _write_cross_steps(
-        root, manifest_path, specs, request, target_filename
-    )
-    return _finish_cross(request, paths, blockers, executable)
-
-
-def _cross_payload_steps(
-    request: CrossSpecWritebackRequestData,
-) -> list[dict[str, object]]:
-    return [
-        {
-            "spec_id": step.spec_id,
-            "path": step.path,
-            "writeback_state": "not_started",
-            "pending_inputs": list(step.pending_inputs),
-            "suggested_next_actions": unique_strings(step.suggested_next_actions),
-            "plain_language_blockers": unique_strings(step.plain_language_blockers),
-            "recommended_next_steps": unique_strings(step.recommended_next_steps),
-            "source_linkage": dict(step.source_linkage),
-        }
-        for step in request.steps
-    ]
 
 
 def build_cross_payload(
@@ -460,7 +415,19 @@ def build_cross_payload(
         "written_paths": unique_strings(result.written_paths),
         "remaining_blockers": unique_strings(result.remaining_blockers),
         "warnings": unique_strings([*request.warnings, *result.warnings]),
-        "steps": _cross_payload_steps(request),
+        "steps": [
+            {
+                "spec_id": step.spec_id,
+                "path": step.path,
+                "writeback_state": step.writeback_state,
+                "pending_inputs": list(step.pending_inputs),
+                "suggested_next_actions": unique_strings(step.suggested_next_actions),
+                "plain_language_blockers": unique_strings(step.plain_language_blockers),
+                "recommended_next_steps": unique_strings(step.recommended_next_steps),
+                "source_linkage": dict(step.source_linkage),
+            }
+            for step in request.steps
+        ],
         "source_linkage": linkage,
     }
 
@@ -477,12 +444,8 @@ def write_cross_spec_writeback_artifact(
     payload = build_cross_payload(
         root, manifest_path, request, result, generated_at, relative
     )
-    return write_payload(artifact_path, payload)
-
-
-def write_payload(path: Path, payload: dict[str, object]) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
         yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8"
     )
-    return path
+    return artifact_path
