@@ -1,6 +1,6 @@
 # 开发摘要：ProgramService artifact loader 精确重复族减重
 
-**状态**：formal authoring；implementation 未授权。  
+**状态**：formal authoring；implementation 未授权。
 **基线**：fresh-main `b4d2ce5a5bc27b72549dcdf394f277cfbd6a124d`。
 
 ## 已确认

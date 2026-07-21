@@ -1,8 +1,8 @@
 # 任务分解：ProgramService artifact loader 精确重复族减重
 
-**编号**：`217-programservice-artifact-loader-dedupe`  
-**状态**：formal authoring  
-**来源**：`spec.md` + `plan.md`  
+**编号**：`217-programservice-artifact-loader-dedupe`
+**状态**：formal authoring
+**来源**：`spec.md` + `plan.md`
 **父项**：WI-196 / WP-03 / T63 / GAP-05
 
 ## Batch 0：候选准入

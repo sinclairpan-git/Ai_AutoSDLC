@@ -1,7 +1,7 @@
 # 执行日志：ProgramService artifact loader 精确重复族减重
 
-**功能编号**：`217-programservice-artifact-loader-dedupe`  
-**状态**：formal authoring  
+**功能编号**：`217-programservice-artifact-loader-dedupe`
+**状态**：formal authoring
 **基线**：`b4d2ce5a5bc27b72549dcdf394f277cfbd6a124d`
 
 ## 1. 归档规则

@@ -5,9 +5,9 @@
 > checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 用一个私有 YAML artifact loader 替代 13 个同形 body，真实净删至少 358 行且保持 observable
-行为零差异。  
+行为零差异。
 **Architecture:** 12 个 ordinary caller 显式传 exact label；保留 cleanup wrapper 承担唯一额外的 warning
-normalization。无新模块、registry、reflection、DSL、selector 或依赖。  
+normalization。无新模块、registry、reflection、DSL、selector 或依赖。
 **Tech Stack:** Python 3.11+、`pathlib.Path`、PyYAML、pytest、Ruff、Git、PowerShell、`uv run ai-sdlc`。
 
 ## Global Constraints
