@@ -316,3 +316,15 @@ fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B
 - 当前子项 authoring 修改父 formal 时，review target 必须按上述唯一算法包含六文件；双 Agent 对同一
   combined hash PASS 后才可合并。handoff 应指向当前 active child，不得退回已关闭的
   GAP-07/08、旧 WI-202 或已完成 WI-206/WI-210。
+
+## 10. 当前 active child：WI-217 T63 artifact loader family
+
+- **范围**：13个同形private loader、12个ordinary caller label binding、cleanup-only wrapper；L1/WP-03。
+- **实测**：legacy403/branch39；clean product `+48/-406`、proof `+48`、terminal44/4；RC-06含truth≤2
+  为98/101；ProgramService candidate unit 422/422。
+- **分支纪律**：formal docs PR先行；其fresh-main验收后另建implementation branch。两阶段均要求
+  LEAN/SAFETY同identity PASS0、required checks与detached fresh-main。
+- **完成边界**：只关闭该T63 family并登记actual product net -358；不关闭GAP-03/T66、GAP-05、WI196、
+  RC-08或release。
+- **停止**：任一exact label/path/error/YAML/cleanup warning差异，combined additions>101、formatter churn、
+  动态机制、第二family或rollback失败时保留legacy并记录NO-GO。

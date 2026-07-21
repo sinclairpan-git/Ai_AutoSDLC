@@ -97,3 +97,7 @@
   `1209/164` 高于两阶段 legacy `842/92`，双 reviewer 一致 `STOP_SPIKE_NO_GO/findings=0`。
   两条路线均 `archived_not_merged`，legacy 产品保持不变。GAP-03/WI196/RC-08/release继续 open；
   未来候选须另立 formal WI并证明真实净删，不能继承 WI215 receipt。
+- WI-217 current active child：从fresh-main选中T63 artifact-loader family；基线403/39，clean spike
+  product `+48/-406`、proof `+48`、terminal44/4、RC-06含truth≤2为98/101，16 proof与422 unit全绿；
+  LEAN/SAFETY Round 4均findings=0。当前仅formal authoring，产品尚未授权；成功实现也只把actual net -358
+  加入RC-08 family ledger，GAP-03/T66、GAP-05、WI196、RC-08与release仍open。

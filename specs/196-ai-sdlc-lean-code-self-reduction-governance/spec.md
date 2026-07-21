@@ -249,3 +249,9 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     `cancelled_no_go`，两条证据路线 `archived_not_merged`；GAP-03、WI-196、RC-08 与 release 继续 open。
     未来如重启 T66，必须另立 formal WI，从 fresh main 用完整自然产品账本证明净删与复杂度下降，不能
     继承 WI-215 的 GO、hash、预算或 reviewer receipt。
+13. WI-216 closure fresh-main 后从 `b4d2ce5a` 新选出的 WI-217 属于 T63/WP-03，而非 T66 重启。
+    其13个 ProgramService artifact loader 基线为403 physical/branch39；clean spike实测 product=
+    `+48/-406`、proof=`+48`、terminal=`44/4`，RC-06含truth≤2为`98/101`。Round 4 LEAN/SAFETY
+    对同一 clean evidence 均 `APPROVE A/findings=0`。WI-217 formal 与 implementation 必须分离；formal
+    fresh-main通过前不授权产品变更。成功实现只关闭该T63 family并把实际product net -358计入RC-08；
+    GAP-03/T66、GAP-05、WI-196、RC-08与release继续open。

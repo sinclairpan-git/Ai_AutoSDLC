@@ -2058,6 +2058,10 @@ specs:
   - 196-ai-sdlc-lean-code-self-reduction-governance
   - 213-programservice-bounded-stage-reduction
   - 214-workitem-readonly-adapter-side-effect
+- id: 217-programservice-artifact-loader-dedupe
+  path: specs/217-programservice-artifact-loader-dedupe
+  depends_on:
+  - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
   generated_at: '2026-07-21T10:35:36Z'
   generated_by: ai-sdlc program truth sync
