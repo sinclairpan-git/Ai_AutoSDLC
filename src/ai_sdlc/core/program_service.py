@@ -11,6 +11,7 @@ import shutil
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import cast
 
 import yaml
 
@@ -2018,23 +2019,75 @@ class ProgramService:
         self.manifest_path = manifest_path or (self.root / "program-manifest.yaml")
         self.browser_gate_probe_runner = browser_gate_probe_runner
 
+    def _bounded_stage_normalizers(self) -> _bounded_stage.StageNormalizers:
+        return _bounded_stage.StageNormalizers(
+            _unique_strings,
+            _normalize_string_list,
+            _normalize_mapping_list,
+            _normalize_string_mapping,
+            _relative_to_root_or_str,
+        )
+
+    def _render_frontend_guarded_registry_content(
+        self,
+        request: ProgramFrontendGuardedRegistryRequest,
+        step: ProgramFrontendGuardedRegistryRequestStep,
+    ) -> str:
+        return self._render_frontend_bounded_stage_step_content(
+            title="Frontend Guarded Registry Step",
+            source_label="Source artifact",
+            source_path=request.artifact_source_path,
+            upstream_label="Writeback state",
+            upstream_value=request.writeback_state,
+            artifact_generated_at=request.artifact_generated_at,
+            stage_state_key="registry_state",
+            result_key="registry_result",
+            source_written_paths=list(request.written_paths),
+            step=step,
+        )
+
     def _frontend_cross_spec_writeback_engine(
         self,
         manifest: ProgramManifest | None,
     ) -> _bounded_stage.BoundedStageEngine[ProgramFrontendCrossSpecWritebackRequest, ProgramFrontendCrossSpecWritebackResult]:
         return _bounded_stage.BoundedStageEngine(
-            self.root, self.manifest_path, {spec.id: spec.path for spec in manifest.specs} if manifest else {}, PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_ARTIFACT_REL_PATH, PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH,
-            _bounded_stage.BoundedStageRules("cross-spec writeback", "provider patch apply", "patch apply", "provider_patch_apply", "cross_spec_writeback", "cross_spec_writeback_state", "writeback_state", "orchestration_result", "apply_result", ("applied", "completed"), "applied patch artifact", "", "wrote", False),
-            ProgramFrontendCrossSpecWritebackRequestStep, ProgramFrontendCrossSpecWritebackRequest,
-            lambda source, warnings, linkage: ProgramFrontendCrossSpecWritebackRequest(False, False, "missing_artifact", "missing_artifact", source, "", warnings=warnings, source_linkage=linkage),
-            ProgramFrontendCrossSpecWritebackResult, self._render_frontend_cross_spec_writeback_content,
+            self.root,
+            self.manifest_path,
+            {spec.id: spec.path for spec in manifest.specs} if manifest else {},
+            PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_ARTIFACT_REL_PATH,
+            PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH,
+            _bounded_stage.CrossSpecAdapter(),
+            _bounded_stage.StageFactories(
+                ProgramFrontendCrossSpecWritebackRequestStep,
+                ProgramFrontendCrossSpecWritebackRequest,
+                ProgramFrontendCrossSpecWritebackResult,
+            ),
+            self._render_frontend_cross_spec_writeback_content,
             lambda payload: _normalize_string_list(payload.get("written_paths", [])),
-            lambda spec_dir, _spec_id: spec_dir / PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_FILENAME,
-            lambda step: (None, "cross-spec writeback step missing spec_id; writeback skipped") if not step.spec_id else (None, None),
-            lambda step: self._resolve_frontend_stage_spec_dir(manifest, stage_name="cross-spec writeback", spec_id=step.spec_id, path_text=step.path),
-            lambda request: (request.apply_result, [step.writeback_state for step in request.steps]),
-            lambda result: (result.writeback_state, result.orchestration_result, result.orchestration_summaries),
-            _unique_strings, _normalize_string_list, _normalize_mapping_list, _normalize_string_mapping, _relative_to_root_or_str,
+            lambda spec_dir, _spec_id: (
+                spec_dir / PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_FILENAME
+            ),
+            lambda step: (
+                (None, "cross-spec writeback step missing spec_id; writeback skipped")
+                if not step.spec_id
+                else (None, None)
+            ),
+            lambda step: self._resolve_frontend_stage_spec_dir(
+                cast(ProgramManifest, manifest),
+                stage_name="cross-spec writeback",
+                spec_id=step.spec_id,
+                path_text=step.path,
+            ),
+            lambda request: (
+                request.apply_result,
+                [step.writeback_state for step in request.steps],
+            ),
+            lambda result: (
+                result.writeback_state,
+                result.orchestration_result,
+                result.orchestration_summaries,
+            ),
+            self._bounded_stage_normalizers(),
         )
 
     def _frontend_guarded_registry_engine(
@@ -2042,24 +2095,48 @@ class ProgramService:
         manifest: ProgramManifest | None,
     ) -> _bounded_stage.BoundedStageEngine[ProgramFrontendGuardedRegistryRequest, ProgramFrontendGuardedRegistryResult]:
         return _bounded_stage.BoundedStageEngine(
-            self.root, self.manifest_path, {spec.id: spec.path for spec in manifest.specs} if manifest else {}, PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH, PROGRAM_FRONTEND_GUARDED_REGISTRY_ARTIFACT_REL_PATH,
-            _bounded_stage.BoundedStageRules("guarded registry", "cross-spec writeback", "cross-spec writeback", "cross_spec_writeback", "guarded_registry", "registry_state", "registry_state", "registry_result", "writeback_state", ("completed",), "completed cross-spec writeback artifact", "blocker-free cross-spec writeback artifact", "materialized", True),
-            ProgramFrontendGuardedRegistryRequestStep, ProgramFrontendGuardedRegistryRequest,
-            lambda source, warnings, linkage: ProgramFrontendGuardedRegistryRequest(False, False, "missing_artifact", "missing_artifact", source, "", warnings=warnings, source_linkage=linkage),
-            ProgramFrontendGuardedRegistryResult,
-            lambda request, step: self._render_frontend_bounded_stage_step_content(
-                title="Frontend Guarded Registry Step", source_label="Source artifact", source_path=request.artifact_source_path,
-                upstream_label="Writeback state", upstream_value=request.writeback_state, artifact_generated_at=request.artifact_generated_at,
-                stage_state_key="registry_state", result_key="registry_result", source_written_paths=list(request.written_paths), step=step,
+            self.root,
+            self.manifest_path,
+            {spec.id: spec.path for spec in manifest.specs} if manifest else {},
+            PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH,
+            PROGRAM_FRONTEND_GUARDED_REGISTRY_ARTIFACT_REL_PATH,
+            _bounded_stage.GuardedRegistryAdapter(),
+            _bounded_stage.StageFactories(
+                ProgramFrontendGuardedRegistryRequestStep,
+                ProgramFrontendGuardedRegistryRequest,
+                ProgramFrontendGuardedRegistryResult,
             ),
-            lambda payload: _unique_strings([*_normalize_string_list(payload.get("existing_written_paths", [])),
-                *_normalize_string_list(payload.get("written_paths", []))]),
-            lambda _spec_dir, spec_id: (self.root / PROGRAM_FRONTEND_GUARDED_REGISTRY_STEP_DIR / f"{spec_id}.md").resolve(),
-            lambda step: self._resolve_frontend_stage_step_target(stage_name="guarded registry", steps_dir=PROGRAM_FRONTEND_GUARDED_REGISTRY_STEP_DIR, spec_id=step.spec_id),
-            lambda step: self._resolve_frontend_stage_spec_dir(manifest, stage_name="guarded registry", spec_id=step.spec_id, path_text=step.path),
-            lambda request: (request.writeback_state, [step.registry_state for step in request.steps]),
-            lambda result: (result.registry_state, result.registry_result, result.registry_summaries),
-            _unique_strings, _normalize_string_list, _normalize_mapping_list, _normalize_string_mapping, _relative_to_root_or_str,
+            self._render_frontend_guarded_registry_content,
+            lambda payload: _unique_strings(
+                [
+                    *_normalize_string_list(payload.get("existing_written_paths", [])),
+                    *_normalize_string_list(payload.get("written_paths", [])),
+                ]
+            ),
+            lambda _spec_dir, spec_id: (
+                self.root / PROGRAM_FRONTEND_GUARDED_REGISTRY_STEP_DIR / f"{spec_id}.md"
+            ).resolve(),
+            lambda step: self._resolve_frontend_stage_step_target(
+                stage_name="guarded registry",
+                steps_dir=PROGRAM_FRONTEND_GUARDED_REGISTRY_STEP_DIR,
+                spec_id=step.spec_id,
+            ),
+            lambda step: self._resolve_frontend_stage_spec_dir(
+                cast(ProgramManifest, manifest),
+                stage_name="guarded registry",
+                spec_id=step.spec_id,
+                path_text=step.path,
+            ),
+            lambda request: (
+                request.writeback_state,
+                [step.registry_state for step in request.steps],
+            ),
+            lambda result: (
+                result.registry_state,
+                result.registry_result,
+                result.registry_summaries,
+            ),
+            self._bounded_stage_normalizers(),
         )
 
     def load_manifest(self) -> ProgramManifest:
@@ -10339,7 +10416,9 @@ const $i = (text: string) => text;
         effective_request = request or self.build_frontend_cross_spec_writeback_request(
             manifest
         )
-        return self._frontend_cross_spec_writeback_engine(manifest).execute(effective_request, confirmed=confirmed, upstream=effective_request.apply_result)
+        return self._frontend_cross_spec_writeback_engine(manifest).execute(
+            effective_request, confirmed=confirmed
+        )
 
     def write_frontend_cross_spec_writeback_artifact(
         self,
@@ -10609,7 +10688,9 @@ const $i = (text: string) => text;
         effective_request = request or self.build_frontend_guarded_registry_request(
             manifest
         )
-        return self._frontend_guarded_registry_engine(manifest).execute(effective_request, confirmed=confirmed, upstream=effective_request.writeback_state)
+        return self._frontend_guarded_registry_engine(manifest).execute(
+            effective_request, confirmed=confirmed
+        )
 
     def write_frontend_guarded_registry_artifact(
         self,

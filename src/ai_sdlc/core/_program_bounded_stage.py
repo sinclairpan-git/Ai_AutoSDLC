@@ -43,21 +43,53 @@ _EarlyOutcome = tuple[bool, bool, str, str, _ResultData]
 _LoadedPayload = tuple[dict[str, object] | None, list[str]]
 
 
-class BoundedStageRules(NamedTuple):
-    name: str
-    source_label: str
-    source_summary: str
-    source_key: str
-    output_key: str
-    state_key: str
-    payload_state_key: str
-    result_key: str
-    upstream_key: str
-    allowed_upstream: tuple[str, ...]
-    upstream_requirement: str
-    blockers_requirement: str
-    operation: str
-    bounded_steps: bool
+class CrossSpecAdapter:
+    name = "cross-spec writeback"
+    source_label = "provider patch apply"
+    source_summary = "patch apply"
+    source_key = "provider_patch_apply"
+    output_key = "cross_spec_writeback"
+    state_key = "cross_spec_writeback_state"
+    payload_state_key = "writeback_state"
+    result_key = "orchestration_result"
+    upstream_key = "apply_result"
+    allowed_upstream: tuple[str, ...] = ("applied", "completed")
+    upstream_requirement = "applied patch artifact"
+    blockers_requirement = ""
+    operation = "wrote"
+    bounded_steps = False
+
+
+class GuardedRegistryAdapter(CrossSpecAdapter):
+    name = "guarded registry"
+    source_label = source_summary = "cross-spec writeback"
+    source_key = "cross_spec_writeback"
+    output_key = "guarded_registry"
+    state_key = payload_state_key = "registry_state"
+    result_key = "registry_result"
+    upstream_key = "writeback_state"
+    allowed_upstream = ("completed",)
+    upstream_requirement = "completed cross-spec writeback artifact"
+    blockers_requirement = "blocker-free cross-spec writeback artifact"
+    operation = "materialized"
+    bounded_steps = True
+
+
+AdapterT = CrossSpecAdapter | GuardedRegistryAdapter
+
+
+class StageFactories(NamedTuple, Generic[RequestT, ResultT]):
+    step: Callable[..., _Step]
+    request: Callable[..., RequestT]
+    result: Callable[..., ResultT]
+
+
+class StageNormalizers(NamedTuple):
+    unique: Callable[[list[str] | tuple[str, ...]], list[str]]
+    strings: Callable[[object], list[str]]
+    mappings: Callable[[object], list[dict[str, object]]]
+    linkage: Callable[[object], dict[str, str]]
+    relative: Callable[[Path, Path], str]
 
 
 class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
@@ -66,11 +98,8 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
     spec_paths: dict[str, str]
     input_artifact_path: str
     output_artifact_path: str
-    rules: BoundedStageRules
-    step_factory: Callable[..., _Step]
-    request_factory: Callable[..., RequestT]
-    missing_request: Callable[[str, list[str], dict[str, str]], RequestT]
-    result_factory: Callable[..., ResultT]
+    rules: AdapterT
+    factories: StageFactories[RequestT, ResultT]
     render: Callable[..., str]
     input_paths: Callable[[dict[str, object]], list[str]]
     target: Callable[[Path, str], Path]
@@ -78,14 +107,10 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
     spec_guard: Callable[[_Step], tuple[Path | None, str | None]]
     request_values: Callable[[RequestT], tuple[str, Sequence[str]]]
     result_values: Callable[[ResultT], tuple[str, str, Sequence[str]]]
-    unique: Callable[[list[str] | tuple[str, ...]], list[str]]
-    strings: Callable[[object], list[str]]
-    mappings: Callable[[object], list[dict[str, object]]]
-    linkage: Callable[[object], dict[str, str]]
-    relative: Callable[[Path, Path], str]
+    normalizers: StageNormalizers
 
     def load(self, artifact_path: Path, artifact_label: str) -> _LoadedPayload:
-        relative_path = self.relative(self.root, artifact_path)
+        relative_path = self.normalizers.relative(self.root, artifact_path)
         if not artifact_path.exists():
             return None, [f"missing {artifact_label} artifact: {relative_path}"]
         try:
@@ -100,14 +125,14 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
         generated_at = str(payload.get("generated_at", "")).strip()
         binding, rules = self, self.rules
         steps: list[_Step] = []
-        for item in binding.mappings(payload.get("steps", [])):
+        for item in binding.normalizers.mappings(payload.get("steps", [])):
             spec_id = str(item.get("spec_id", "")).strip()
             if not spec_id:
                 continue
             path = str(item.get("path", "")).strip() or binding.spec_paths.get(
                 spec_id, ""
             )
-            linkage = binding.linkage(item.get("source_linkage", {}))
+            linkage = binding.normalizers.linkage(item.get("source_linkage", {}))
             linkage.update(
                 {
                     f"{rules.source_key}_artifact_path": source_path,
@@ -116,14 +141,16 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
                 }
             )
             steps.append(
-                binding.step_factory(
+                binding.factories.step(
                     spec_id,
                     path,
                     "not_started",
-                    binding.strings(item.get("pending_inputs", [])),
-                    binding.strings(item.get("suggested_next_actions", [])),
-                    binding.strings(item.get("plain_language_blockers", [])),
-                    binding.strings(item.get("recommended_next_steps", [])),
+                    binding.normalizers.strings(item.get("pending_inputs", [])),
+                    binding.normalizers.strings(item.get("suggested_next_actions", [])),
+                    binding.normalizers.strings(
+                        item.get("plain_language_blockers", [])
+                    ),
+                    binding.normalizers.strings(item.get("recommended_next_steps", [])),
                     linkage,
                 )
             )
@@ -132,31 +159,40 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
     def build(self, artifact_path: Path | None = None) -> RequestT:
         binding, rules = self, self.rules
         path = binding.root / (artifact_path or binding.input_artifact_path)
-        source_path = binding.relative(binding.root, path)
+        source_path = binding.normalizers.relative(binding.root, path)
         payload, warnings = self.load(path, rules.source_label)
         if payload is None:
             linkage = {
                 f"{rules.source_key}_artifact_path": source_path,
                 rules.state_key: "missing_artifact",
             }
-            return binding.missing_request(source_path, warnings, linkage)
+            return binding.factories.request(
+                False,
+                False,
+                "missing_artifact",
+                "missing_artifact",
+                source_path,
+                "",
+                warnings=warnings,
+                source_linkage=linkage,
+            )
         generated_at = str(payload.get("generated_at", "")).strip()
         upstream = str(payload.get(rules.upstream_key, "")).strip() or "unknown"
         paths = binding.input_paths(payload)
-        blockers = binding.strings(payload.get("remaining_blockers", []))
+        blockers = binding.normalizers.strings(payload.get("remaining_blockers", []))
         steps = self._steps(payload, source_path)
         required = any((steps, paths, blockers))
-        linkage = binding.linkage(payload.get("source_linkage", {}))
+        linkage = binding.normalizers.linkage(payload.get("source_linkage", {}))
         linkage |= {
             f"{rules.source_key}_artifact_path": source_path,
             f"{rules.source_key}_artifact_generated_at": generated_at,
             rules.state_key: "not_started",
             "confirmation_required": str(required).lower(),
         }
-        warnings = binding.unique(
-            [*warnings, *binding.strings(payload.get("warnings", []))]
+        warnings = binding.normalizers.unique(
+            [*warnings, *binding.normalizers.strings(payload.get("warnings", []))]
         )
-        return binding.request_factory(
+        return binding.factories.request(
             required,
             required,
             "not_started",
@@ -186,15 +222,15 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
             rules.state_key: state,
             rules.result_key: outcome,
         }
-        return binding.result_factory(
+        return binding.factories.result(
             passed,
             confirmed,
             state,
             outcome,
-            binding.unique(list(summaries)),
-            binding.unique(list(paths)),
-            binding.unique(list(blockers)),
-            binding.unique(list(warnings)),
+            binding.normalizers.unique(list(summaries)),
+            binding.normalizers.unique(list(paths)),
+            binding.normalizers.unique(list(blockers)),
+            binding.normalizers.unique(list(warnings)),
             linkage,
         )
 
@@ -248,7 +284,7 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
     ) -> tuple[list[str], list[str], int]:
         binding = self
         paths: list[str] = []
-        blockers = binding.unique(request.remaining_blockers)
+        blockers = binding.normalizers.unique(request.remaining_blockers)
         executable = 0
         for step in request.steps:
             target, blocker = binding.target_guard(step)
@@ -267,7 +303,7 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
             target.write_text(
                 binding.render(request=request, step=step), encoding="utf-8"
             )
-            paths.append(binding.relative(binding.root, target))
+            paths.append(binding.normalizers.relative(binding.root, target))
         return paths, blockers, executable
 
     def execute(
@@ -275,8 +311,8 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
         request: RequestT,
         *,
         confirmed: bool,
-        upstream: str,
     ) -> ResultT:
+        upstream, _ = self.request_values(request)
         rules = self.rules
         if (early := self._early_outcome(request, confirmed, upstream)) is not None:
             return self._result(request, *early)
@@ -327,16 +363,24 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
                 "path": step.path,
                 rules.payload_state_key: step_state,
                 "pending_inputs": list(step.pending_inputs),
-                "suggested_next_actions": binding.unique(step.suggested_next_actions),
-                "plain_language_blockers": binding.unique(step.plain_language_blockers),
-                "recommended_next_steps": binding.unique(step.recommended_next_steps),
+                "suggested_next_actions": binding.normalizers.unique(
+                    step.suggested_next_actions
+                ),
+                "plain_language_blockers": binding.normalizers.unique(
+                    step.plain_language_blockers
+                ),
+                "recommended_next_steps": binding.normalizers.unique(
+                    step.recommended_next_steps
+                ),
                 "source_linkage": dict(step.source_linkage),
             }
             for step, step_state in zip(request.steps, step_states, strict=True)
         ]
         return {
             "generated_at": generated_at,
-            "manifest_path": binding.relative(binding.root, binding.manifest_path),
+            "manifest_path": binding.normalizers.relative(
+                binding.root, binding.manifest_path
+            ),
             "artifact_source_path": request.artifact_source_path,
             "artifact_generated_at": request.artifact_generated_at,
             "required": request.required,
@@ -345,13 +389,14 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
             rules.upstream_key: upstream,
             rules.payload_state_key: state,
             rules.result_key: outcome,
-            rules.result_key.rsplit("_", 1)[0] + "_summaries": binding.unique(
-                list(summaries)
+            rules.result_key.rsplit("_", 1)[0]
+            + "_summaries": binding.normalizers.unique(list(summaries)),
+            "existing_written_paths": binding.normalizers.unique(request.written_paths),
+            "written_paths": binding.normalizers.unique(result.written_paths),
+            "remaining_blockers": binding.normalizers.unique(result.remaining_blockers),
+            "warnings": binding.normalizers.unique(
+                [*request.warnings, *result.warnings]
             ),
-            "existing_written_paths": binding.unique(request.written_paths),
-            "written_paths": binding.unique(result.written_paths),
-            "remaining_blockers": binding.unique(result.remaining_blockers),
-            "warnings": binding.unique([*request.warnings, *result.warnings]),
             "steps": steps,
             "source_linkage": linkage,
         }
@@ -373,7 +418,7 @@ class BoundedStageEngine(NamedTuple, Generic[RequestT, ResultT]):
             request,
             result,
             generated_at,
-            self.relative(self.root, path),
+            self.normalizers.relative(self.root, path),
         )
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(

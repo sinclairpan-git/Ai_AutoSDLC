@@ -1,14 +1,13 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T01:33:03Z
-- Reason: R2 final truth/manifest provenance records-only 收口
+- Updated: 2026-07-21T01:51:43Z
+- Reason: R2 formal local dual-review FAIL3 remediation start
 - Goal: 完成 guarded_registry R2 全量、immutable A/B、治理门禁与同 identity LEAN/SAFETY PASS0
-- State: R2 产品、full、A/B、全部治理门与 final truth/manifest 全绿，待同 identity 本地双审
+- State: R2 identity `93963a37/0f6a4738` 已退役；结构修正候选行为/类型已绿，真实自然预算冲突待双审裁决
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- Review identity: 以当前 clean 工作树的 `git rev-parse HEAD` 与 `git rev-parse HEAD^{tree}` 为权威；
-  product checkpoint=`9855834c/def015ef`。
+- Review identity: 无有效 review identity；修正后必须重新形成 committed+clean SHA/tree。
 
 ## Current Decisions
 
@@ -70,12 +69,23 @@
 - formal records=`fc699502` 后 final truth sync snapshot=
   `5abc99462a653cb5d95238d8cb647b73808d5cc504810b170a05f6ba76439d55`；clean final audit=
   `ready/fresh 1131/1131/0/0`，manifest exact=`1 passed in 102.93s`。
+- `93963a37` formal review：LEAN=`FAIL3`、SAFETY=`FAIL3`。共同 P1 为 factory 压行导致 Ruff
+  natural format 后73/88行、预算与 max-function 失真；LEAN另报规则表/回调微型DSL及 ProgramService
+  mypy=`64` 对 C2=`62` 的 +2；SAFETY另报 A/B locator/hash/command 不完整和终态记录陈旧。
+- FAIL3 修正中的未提交候选：删除 `BoundedStageRules(...)` 实例表，改为两个具名 adapter；DTO factories
+  与 normalizers 分组，所有服务 factory 经 Ruff 自然格式后分别46/50行；engine Ruff/mypy=0，聚焦 unit=
+  `57 passed, 433 deselected`，累计 public/CLI=`70 passed, 653 deselected`；ProgramService strict mypy=
+  `62`，与 C2 baseline 增量0。
+- 同一自然格式账本揭示 corrected product=`428 engine physical + 163 service additions = 591`；旧的
+  `444` 来自未自然格式化压行，不能继续作为真实证据。当前未改冻结 tests/config，未提交产品身份。
 
 ## Blockers / Risks
 
-- 无产品、测试、治理或远程 review blocker；仅待当前同一 clean identity 的本地双审。
+- 当前 blocker 是自然格式后的 `591>522` 与“禁止 DSL/registry/反射”同时成立时的架构预算冲突；远程
+  review 不是 blocker。必须由同一 LEAN/SAFETY 对精确 clean identity 裁决，不得静默放宽或伪造账本。
 
 ## Exact Next Steps
 
-1. 同一 Pascal/LEAN 与 Confucius/SAFETY 审查当前 committed+clean SHA/tree。
-2. 双 `PASS0/findings=0` 后进入下一 stage；任一 actionable finding 则同分支最小修复并重跑门禁。
+1. 形成只含结构修正、冻结 tests/config 的 committed+clean checkpoint，并记录 corrected natural ledger。
+2. 由同一 LEAN/SAFETY 独立裁决预算冲突；若不接受校正预算，按其共同可执行结构意见继续最小修正。
+3. 双审结构一致后才重跑 full/完整 A/B provenance/gates，统一 records 并复审最终 clean identity。
