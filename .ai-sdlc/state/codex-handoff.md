@@ -1,7 +1,7 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T12:15:53Z
-- Reason: WI217 Formal Round 4 handoff 时态 finding 已完成最小修正
+- Updated: 2026-07-21T12:29:27Z
+- Reason: WI217 truth/gates 已完成并修正 Formal Round 6 handoff 时态
 - Goal: 先冻结 WI217 artifact-loader exact-family 合同并完成 formal merge/fresh-main；随后在独立
   implementation 分支以 T61A/B 实现 product net delete≥358 且零功能差异
 - State: branch=`feature/217-programservice-artifact-loader-dedupe-docs`，base=
@@ -44,10 +44,16 @@
   rollback/proof-red证据解耦修正文档diff-check PASS。
 - Formal R4 identity=`dd2287fd/a53f310b/formal-six 856e7819...a669`；LEAN=`FAIL1`指出handoff仍要求
   重复提交，SAFETY=`PASS0`；该identity两项verdict均因本修正失效。
+- Formal source R5在`114a5f73/61da9d78/formal-six 856e7819...a669`取得LEAN/SAFETY同身份PASS0。
+- Truth sync commit=`0c1352a7`；manifest exact=`1 passed in 115.06s`，constraints无BLOCKER，validate PASS，
+  truth audit=`ready/fresh`、mapped=`1136/1136`、missing/unmapped=`1/0`、close total/materialized=`216/215`，scope/Cursor/
+  handoff parity/diff-check/clean均PASS。
+- Formal R6 identity=`0c1352a7/758de9ff/formal-six 856e7819...a669`；LEAN/SAFETY均`FAIL1`且只指出
+  handoff仍要求重复truth sync；本次只修正未纳入truth authoring hash的两份handoff。
 
 ## Blockers / Risks
 
-- 当前formal truth snapshot尚未基于最终source commit机械同步；目标是ready/fresh且只有上述summary missing。
+- Formal truth已ready/fresh，唯一missing为WI217 summary；后续不得改已映射authoring source使其stale。
 - RC-06 buffer只有3行；implementation不得增加“顺手”测试、truth或formatter churn。
 - 两位reviewer必须审同一committed+clean HEAD/tree/formal-six；任一tracked变化使双方verdict失效。
 - Remote Codex review仍可能受usage-limit影响；用户已授权本地SDLC双审替代，但required CI不可waive。
@@ -55,6 +61,6 @@
 ## Exact Next Steps
 
 1. 对当前committed+clean HEAD/tree/formal-six取得LEAN/SAFETY同一身份PASS0。
-2. 基于通过双审的source identity执行truth sync与formal gates；若产生tracked变化则重新双审。
-3. Formal PR required checks全绿后merge并完成detached fresh-main acceptance。
+2. 双PASS0后推送formal branch并创建PR；current-head review无actionable finding且required checks全绿后merge。
+3. 完成detached fresh-main acceptance，不删除本地formal branch。
 4. 只有第3步完成，才从新的fresh-main创建独立implementation worktree并执行T61A RED→GREEN。
