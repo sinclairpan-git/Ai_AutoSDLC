@@ -113,20 +113,18 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T63 单个 helper/DTO/test 重复族（按 family 继续） | standalone + T61A/B | GAP-05/WP-03 | L1 | T51、T52 已满足；WI-205、WI-206、WI-210、WI-211 各完成一个 family | WI-211 / PR #153 / merge `cd64d8aa`：10→1 mapping body、10 aliases、23 calls 不变、产品 net -122、双 Agent/Codex/22 checks/fresh-main；新 family 仍须重复族清零、目标切片 LOC -10%、全量测试 |
 | T64 单个 Loop Store family | standalone + T61A/B | GAP-05/WP-04 | L2 | T51、T52 | store differential、LOC -10%、恢复/损坏输入测试 |
 | T65 单个 baseline 候选 go/no-go | standalone + T61A/B on Go | GAP-06/WP-05 | L2 | T51、T52 | Go=`completed_reduction`；单项 No-Go=`cancelled_no_go`；六项全 No-Go=`closed_no_viable_reduction` |
-| T66 单个 ProgramService 领域切片（formal complete；implementation blocked） | standalone formal + implementation T61A/B + independent deletion PR | GAP-03/WP-06 | L3 | WI-213 formal 已满足；T58/GAP-15 在 closure receipt merge 时关闭，但 T66 只有 receipt detached fresh-main 通过后才恢复准入；随后创建唯一独立 implementation WI，且 T61A 双 readiness GO 前不得写产品 | WI-213 冻结九 stage/45 methods、terminal≤720、净删≥2,918；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与真实回退演练，删除前不得关闭 |
+| T66 单个 ProgramService 领域切片（本次 implementation `cancelled_no_go`；GAP-03 open） | standalone formal + implementation T61A/B + independent deletion PR | GAP-03/WP-06 | L3 | WI-213 formal、T58/GAP-15 closure receipt 已满足；WI-216 证明本次 C2 与无 DSL 路线不满足真实减重，证据 `archived_not_merged` | 本次不关闭；未来须新 formal WI 从 fresh main 证明完整自然产品净删、复杂度下降和兼容预算，不能继承 WI-215 GO/hash/budget/review receipt |
 | T67 单个 Program Stage family | standalone + T61A/B | GAP-04/WP-07 | L3 | T51、T52 + 真实重叠子项 | 镜像 LOC -70%、33 命令兼容；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与回退演练，删除前不得关闭 |
 
 **全局恢复门禁**：T57/WI-209、WI-210、WI-211 与 WI-212 candidate-selection fresh-main acceptance
 已完成；表中 T61A、
 T62A～T62C、T63～T67 的新实例已恢复选择，但仍须逐项满足各自依赖、sponsor、RC 与原子 WI/branch/PR。
 WI-211 已完成一个 T63 family；下一原子项必须从 fresh main 重新选择，不得沿用旧 spike 或已撤销 claim。
-WI-212 已唯一选择 T66 bounded-stage ProgramService domain；WI-213 formal-only 已在 PR #158 /
-merge `450d4988` 完成，lifecycle reconciliation 也已在 PR #159 / merge `d5ad7616` 完成双审、
-mainline 与 fresh-main。WI-214 formal PR #160、amendment PR #161、implementation PR #162 / merge
-`2845fedc` 及 detached fresh-main 已完成；lifecycle delivery PR #163 / merge `60fe6d90` 与 detached
-fresh-main 也已完成。本 closure receipt merge 关闭 GAP-15/T58，但 receipt detached fresh-main 通过后才允许
-创建 T66 implementation WI；失败立即回退 receipt。该 WI 未完成 T61A 双 readiness GO 前不得写产品，
-candidate/stability/deletion 未全部完成前不得关闭 T66。
+WI-212/WI-213 formal 与 WI-214/T58 closure receipt 已完成。其后 T66 首次实现尝试已经执行，但 WI-216
+以 C2=`558/64 vs 495/63`、product净增35、proof净增285，以及 no-DSL spike=
+`1209/164 vs 842/92` 证明当前路线确定 NO-GO。本次 implementation 状态为 `cancelled_no_go`，产品、测试、
+proof不合入；T66/GAP-03仍未关闭。未来只能创建新的 formal WI并从 fresh main 重新准入，不得沿用本次
+候选或把 records receipt 当作 reduction completion。
 既有已完成 receipt 不受影响；各行保留的历史 T51/T52 依赖已满足，不需要重复执行。
 
 每个目标切片必须先落盘 GAP-09～GAP-11 防回归 impact analysis；除当前 active child 唯一 mapped

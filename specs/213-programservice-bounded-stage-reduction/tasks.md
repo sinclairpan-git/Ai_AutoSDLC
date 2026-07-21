@@ -185,8 +185,9 @@ related_doc:
 | 7 | T66 close | deletion fresh-main 后才 completed_reduction |
 | 8 | release | 仅 WI196/RC-08 全部完成后 |
 
-当前 T58/GAP-15 在本 closure receipt merge 时 completed/closed；T66 仍 blocked，receipt detached fresh-main
-通过后才允许创建 implementation WI并开始 T61A。
+当前 T58/GAP-15 已 completed/closed；其后 T66 首次 implementation 探索由 WI216 判为
+`cancelled_no_go`：C2-safe=`558/64 vs 495/63`，no-DSL spike=`1209/164 vs 842/92`，均未合入。
+下游表第2～7步对本次候选已经终止，只能由新的 formal WI 重新授权；GAP-03仍 open。
 
 ## 追踪矩阵
 

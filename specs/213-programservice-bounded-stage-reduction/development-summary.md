@@ -53,3 +53,8 @@
   exact-head 10/10 checks、merge=`60fe6d90` 与 detached fresh-main 全绿。本 receipt merge 关闭 GAP-15/T58，
   receipt detached fresh-main 后唯一下一步才是创建 T66 implementation WI
   并先取得 T61A 双 readiness GO。
+- WI216 superseding outcome：上述入口已执行，但本次实现 `cancelled_no_go`。C2-safe 完整账本
+  `558/64` 高于 legacy `495/63`、产品净增35且 proof净增285；no-DSL spike 第二阶段
+  `1209/164` 高于两阶段 legacy `842/92`，LEAN/SAFETY 一致 `STOP_SPIKE_NO_GO/findings=0`。
+  C2/spike只作 `archived_not_merged` 审计证据，产品、测试、proof未进入主线。WI213 formal 历史 receipt
+  保留，但旧 Phase 3 不再可执行；GAP-03/WI196/RC-08/release继续 open。

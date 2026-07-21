@@ -336,3 +336,14 @@ subcommand 调 `_run_workitem_adapter`，因此 handler 之前已经写盘。`pr
 - 本 closure receipt merge 关闭 GAP-15/T58，但 T66 仍 blocked；receipt detached fresh-main 通过后才允许
   创建 T66 implementation WI并执行 T61A 双 readiness。失败立即回退 receipt；不关闭 GAP-03/WI196/
   RC-08，不发布版本。
+
+## 19. Batch 2026-07-21-018：下游 T66 实现 NO-GO
+
+- WI216 记录本 formal 下游首次实现的确定结果：C2-safe records=`70f19275/2fdd9aaa`，完整自然账本
+  `558/64` 对 legacy `495/63`，产品源码净增35、proof净增285；该路线不是减重。`+N/-M` 分解不作为
+  canonical 账本，因为 Git/SequenceMatcher 的 diff 分段会变化而净值不变。
+- 独立 no-DSL spike 产品=`6c945b40/6341bcb2`、records=`60dcc4f6/44420f6d`，第二阶段
+  target=`1209/164` 对两阶段 legacy=`842/92`；LEAN/SAFETY 对产品及 records 均为
+  `STOP_SPIKE_NO_GO/findings=0`。
+- T66 本次 implementation=`cancelled_no_go`，C2/spike=`archived_not_merged`，运行时仍为 fresh-main
+  legacy。WI213 formal receipt 保留为历史合同，但不授权继续旧 Phase 3；GAP-03/WI196/RC-08/release open。

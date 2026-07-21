@@ -150,9 +150,10 @@ T55、T56、T57 必须顺序使用三个 WI/branch/PR；它们均是基础缺陷
 
 ### T58：GAP-15 workitem read-only adapter side-effect isolation
 
-- **当前状态**：completed（本 closure receipt merge 生效）；WI-214 formal PR #160、amendment PR #161、
+- **WI214 closure 历史时点（已由 WI216 supersede）**：WI-214 formal PR #160、amendment PR #161、
   implementation PR #162 / merge `2845fedc`、delivery PR #163 / merge `60fe6d90` 及各自 detached
-  fresh-main 已完成；T66 仍 blocked，receipt detached fresh-main 通过后才恢复准入。
+  fresh-main 已完成，receipt 当时恢复 T66 准入。该准入已经执行；WI216 已将本次 T66 implementation
+  标记为 `cancelled_no_go`，当前不得续跑旧路线。
 - **风险/范围**：L2 / CC-05；只调整 `workitem` subapp adapter hook 的只读/写命令分发。
 - **非目标**：不修改 adapter 同步算法、生成内容、`program` 分发、workitem handler 领域逻辑或 T66 产品代码。
 - **进入**：在 clean fixture 先 RED 证明 `plan-check/guard/close-check/branch-check/truth-check` 至少当前
@@ -239,19 +240,19 @@ T66 T61A 的硬前置。
 
 ### WP-06：ProgramService 单领域切片（L3）
 
-- **当前状态**：WI-212 已唯一选择九个 bounded frontend stage；WI-213 formal-only 已在 PR #158 /
-  merge `450d4988` 完成，lifecycle reconciliation 也已由 PR #159 / merge `d5ad7616` 与 detached
-  fresh-main 收口，冻结 45 methods=`3,638/3,305`、terminal≤720、产品净删≥2,918。T58/WI-214 在本
-  closure receipt merge 时关闭；T66 仍 blocked，receipt detached fresh-main 通过后才创建唯一 T66
-  implementation WI。
-  该 WI 必须先 T61A 和双 readiness GO，随后 candidate PR 保留 legacy、完成主线预发布稳定周期，再以
-  独立 PR 删除 legacy。
+- **当前状态**：WI-212/WI-213 formal 与 T58/WI-214 closure receipt 均已完成；随后 T66 首次实现探索
+  已由 WI-216 判定 `cancelled_no_go`。C2-safe 完整账本 `558/64` 高于 legacy `495/63`，产品净增35且
+  proof净增285；无 DSL spike 第二阶段 target=`1209/164` 高于两阶段 legacy=`842/92`。两条路线只作
+  `archived_not_merged` 审计证据，legacy 产品保持不变。GAP-03/WI196/RC-08/release 继续 open；未来
+  候选须另立 formal WI并重新证明完整自然账本净删，不能直接进入旧 Phase 3 或继承 WI215 receipt。
 - **范围**：每个子 WI 只迁移一个领域；`ProgramService` 暂作薄 facade。
 - **非目标**：不同时迁移第二领域，不改变公共调用方、CLI 或 artifact 合同。
 - **进入**：WP-01A 完成；只依赖与该领域真实重叠的 WP-03～WP-05 子项，不等待无关低风险任务。
 - **切换**：旧/新 shadow → 单入口切换 → 受影响 smoke → 一个主线预发布稳定周期 → 独立删旧 PR。该周期要求 candidate 已合入且 legacy 仍保留，并通过 required cross-platform CI、wheel/sdist、clean install、offline smoke、代表性 sibling project smoke 与 selector rollback/reapply；不创建版本、tag、GitHub Release、PyPI 发布或全局 CLI 更新。
 - **完成**：迁移职责在原文件的 LOC/方法数下降至少 90%，并达到 RC-04 至少一项结构改善阈值；新文件/函数符合 RC-07，纯移动 No-Go。
 - **停止/回退**：跨两个领域、差异不为零或临时膨胀超 RC-05 时缩小切片；删旧前 facade 指回旧实现，删旧后先 revert legacy-deletion PR，再回退 candidate PR。deletion 后必须重复同等安装包、offline/sibling smoke 与 rollback/reapply；rollback receipt 覆盖最终删除状态。
+- **本次停止 receipt**：WI-216 只把确定 NO-GO 写回治理真值，不合入候选产品/测试/proof；本次失败不
+  关闭 WP-06/GAP-03，也不授权为满足旧预算压缩可读性、引入 type erasure/DSL 或提前发布。
 - **终态**：逐切片推进，直到 `program_service.py` 符合 400 行约束。
 - **证据**：domain map、dependency diff、shadow result、release smoke、legacy deletion receipt。
 
