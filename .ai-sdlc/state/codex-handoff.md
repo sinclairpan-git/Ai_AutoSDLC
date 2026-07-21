@@ -1,14 +1,13 @@
 # Continuity Handoff
 
-- Updated: 2026-07-20T23:36:42Z
-- Reason: C2 final handoff provenance records-only 收口
-- Goal: 完成 guarded_registry C2 final gates 并取得同 identity LEAN/SAFETY PASS0
-- State: C2 行为、final provenance与全部门禁全绿，待同identity LEAN/SAFETY双审
+- Updated: 2026-07-21T01:18:41Z
+- Reason: R2 full、immutable A/B 与 pre-records 治理门绿色检查点
+- Goal: 完成 guarded_registry R2 全量、immutable A/B、治理门禁与同 identity LEAN/SAFETY PASS0
+- State: R2 产品、full、immutable A/B 与 pre-records gates 全绿，待 evidence commit/truth sync/final双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- Review identity: 以当前 clean 工作树的 `git rev-parse HEAD` 与 `git rev-parse HEAD^{tree}` 为权威；
-  前置 truth source checkpoint 为 `5622ba10/e4c9a7d1`。
+- Review identity: product checkpoint=`9855834c/def015ef`；最终双审仅接受后续 committed+clean SHA/tree。
 
 ## Current Decisions
 
@@ -23,7 +22,7 @@
 - C2 `6bcdb477` 双审均FAIL1；findings已转为11个public节点及四类mutation evidence。
 - C2 truth source checkpoint=`5622ba10/e4c9a7d1`；records-only identity `ed003ccb/567424e6`
   的 LEAN=`PASS0`、SAFETY=`FAIL1`，唯一finding为本handoff中的已完成动作与身份字段陈旧。
-- C2 final双PASS0前不得修改guarded-registry产品实现。
+- C2 final identity=`18609c47/fa9d0b08` 已获同 identity LEAN/SAFETY 双 `PASS0/findings=0`。
 
 ## Changed Files
 
@@ -32,6 +31,8 @@
 - 两份 handoff 删除已完成动作与自引用 `Current HEAD`，并保持逐字节一致。
 - `program-manifest.yaml` 仅同步 records-only truth；冻结测试、产品、DTO/public surface、其他 stage、
   CLI、依赖均未修改。
+- R2 仅修改 private engine 与 cross/guarded 五 facade：删除双层 binding 包装及回绕职责，
+  保留 ProgramService 默认 build/execute/clock 顺序与可替换边界；冻结 tests/config 未修改。
 
 ## Evidence
 
@@ -55,12 +56,21 @@
 - C2 pre-records truth=`ready/fresh 1131/1131/0/0`，snapshot=`4ab61c0d...5cea5`；manifest exact=
   `1 passed in 109.35s`；scope/clean通过。records-only resync后的权威final snapshot读取同提交
   `program-manifest.yaml:truth_snapshot.snapshot_hash`，不硬编码自引用hash。
+- R2 product/proof/combined=`444/285/729`，满足 `≤444/≤290/≤729`；engine Ruff format/check、
+  Ruff lint 与 strict mypy 均绿；累计 focused=`70 passed, 653 deselected`。调试期间9个失败证明
+  ProgramService 默认编排边界不可下沉，修正后测试全绿且测试文件未修改。
+- R2 target=`380 LOC/61 branch/max 50`，严格低于 legacy cross+guarded=`792/92/max177`；full=
+  `3387 passed, 3 skipped in 665.41s`。immutable legacy/current各249通过，JUnit ordered node hash与
+  raw `780 files/732745 bytes` tree hash相同，`diff -qr=0`。
+- 全仓 Ruff、constraints、program validate、plan-check均绿；pre-records truth audit=
+  `ready/fresh 1131/1131/0/0`。
 
 ## Blockers / Risks
 
-- 无产品、测试或治理 blocker；仅当前 exact clean identity 尚待同 SHA 双审。
-- C2 双 PASS0 前不得开始 guarded_registry R2。
+- 无当前 blocker；evidence/truth/manifest final identity 尚未形成，不能开始双审或下一 stage。
 
 ## Exact Next Steps
 
-1. 同一 Pascal/LEAN 与 Confucius/SAFETY 复审当前 committed+clean identity；双PASS0后进入R2。
+1. 提交 execution/summary/handoff evidence source checkpoint，保持 product/tests/config blobs冻结。
+2. 执行 truth sync，提交 records，clean identity 上复跑 audit/manifest exact/scope/clean。
+3. 同一 Pascal/LEAN 与 Confucius/SAFETY 双 PASS0 后才进入下一 stage。

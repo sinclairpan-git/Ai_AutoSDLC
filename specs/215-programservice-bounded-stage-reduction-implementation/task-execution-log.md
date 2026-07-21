@@ -747,3 +747,33 @@
   `c15122c5...800`/`9628711c...1f3`保持不变，新identity必须重新取得同SHA双PASS0。
 - records-only文档进入truth source后再次执行sync；final snapshot的权威值只读取同一提交中的
   `program-manifest.yaml:truth_snapshot.snapshot_hash`，避免把自引用hash硬编码回source造成无穷漂移。
+
+## 46. Batch 2026-07-20-044：guarded-registry R2 产品减重与等价验证
+
+- C2 final committed+clean identity=`18609c477f3de7162d06a55e8585ab02a8c1e490` / tree=
+  `fa9d0b08b10bf6af2985274f83c53d6965c8004e` 已由同一 Pascal/LEAN 与 Confucius/SAFETY 给出
+  `PASS0/findings=0`，R2 获准开始；远程 Codex review 只作附加信号，不构成本地合入阻塞。
+- R2 product checkpoint=`9855834ca3fb269cf484737e65934077763b13a9` / tree=
+  `def015efb4ca03eb81e346736a224850a4aabf92`；ProgramService/engine blobs=
+  `93cbd26f55c7d1b3167b824116cc6cbd9ad4e357` / `89f30d4546a3ac8a309f8d15155e00bbdebd806f`。
+  frozen conftest/unit/CLI 与 config blobs保持C2不变。
+- 唯一 private engine 直接持有 typed binding，删除第二层 binding wrapper、回绕 build/execute/payload
+  callback 和 legacy returned `failed` dead branch；默认 clock/build/execute 仍由 public ProgramService
+  facade 按既有 truthy/falsey 和 late-bound 顺序执行。一次过度下沉被 frozen tests 以9个失败捕获，最小
+  修正后累计 focused=`70 passed, 653 deselected`；没有修改测试迁就实现。
+- 相对 behavior legacy 的 retained product=`383 engine + 61 service =444≤444`；proof=`285≤290`，
+  combined=`729≤729`。legacy cross+guarded 十方法=`792 LOC / 92 branch / max 177`；current 九 facade
+  加九个 active engine methods=`380/61/max 50`，严格下降并满足修改函数≤50。
+- 宽终端 Python3.11 full=`3387 passed, 3 skipped in 665.41s`，无failure/error，repository teardown
+  guard通过。engine Ruff format/check、strict mypy、全仓 Ruff、constraints=`ok=true/blockers=0/
+  advisories=0`、program validate、plan-check=`drift=false/pending_todos=0`均通过。
+- immutable A腿=`7922956d/cc3c6b7f`，B腿=`9855834c/def015ef`，candidate tests来自 clean
+  `756def01/f0d83140`；两腿 Python3.11 interpreter与imported ProgramService均来自各自detached worktree，
+  使用同一 selector、`--import-mode=importlib`、独立 basetemp/JUnit、`PYTHONHASHSEED=0`、`TZ=UTC`。
+- 两腿分别=`249 passed, 474 deselected in 4.64s/4.60s`；JUnit均=`249/0/0/0`，ordered
+  classname/name hash均=`33a9eda894a8742d68ff9931cd9cf30d8485fdd7303022598d43fa99bcf712ff`。
+  locator=`/tmp/ai-sdlc-wi215-r2-ab-9855834c/{legacy,current}.*`，stdout均356 bytes、stderr均0；
+  移除各35个pytest便利symlink后raw tree各=`780 files/732745 bytes`，tree hash均=
+  `a85c966cab7b06d70142b3a99caa072b57dedc4f8f396027cc6f550885207b87`，`diff -qr=0`。
+- pre-records truth audit=`ready/fresh 1131/1131/0/0`。本段与 summary/handoff 先进入 source checkpoint，
+  再执行受控 truth sync、clean manifest exact 和同 identity 双审；双 PASS0 前不得进入下一 stage。

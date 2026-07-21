@@ -1,7 +1,7 @@
 # 开发摘要：ProgramService 九阶段直接减重
 
 **功能编号**：`215-programservice-bounded-stage-reduction-implementation`
-**状态**：cross-spec R1 已完成；guarded-registry C2 行为与全部门禁已闭合，待 records-only 同 identity 复审
+**状态**：cross-spec R1、guarded-registry C2 已完成；guarded-registry R2 等价验证全绿，待 final identity 双审
 
 ## 当前事实
 
@@ -49,6 +49,12 @@
   scope/clean通过；records-only resync后的权威final snapshot以`program-manifest.yaml`为准。
 - records identity=`5622ba10/e4c9a7d1` 已获 LEAN=`PASS0`；SAFETY=`FAIL1`仅指出上述final gate
   provenance尚未写回文档。本次只做records-only收口，产品与测试blobs不变。
+- C2 final identity=`18609c47/fa9d0b08` 已获同一 LEAN/SAFETY 双 `PASS0/findings=0`；R2 随后只改
+  private engine 与 cross/guarded facade，产品 checkpoint=`9855834c/def015ef`，冻结测试/config未改。
+- R2 删除双层 binding 与回绕职责，保留 public 默认 clock/build/execute 边界。累计 focused=`70 passed`，
+  full=`3387 passed, 3 skipped`；immutable legacy/current各249通过，JUnit节点和raw tree相同。
+- R2 target=`380 LOC/61 branch/max 50`，严格低于 legacy cross+guarded=`792/92/max177`；
+  product/proof/combined=`444/285/729`均在硬上限内。Ruff/mypy/constraints/validate/plan/truth audit全绿。
 
 ## 兼容与减重边界
 
@@ -63,5 +69,5 @@
 
 ## 下一步
 
-1. 提交 C2 final provenance records，并在新 clean identity 上复跑truth audit/manifest exact。
-2. 由相同 Pascal/LEAN 与 Confucius/SAFETY 复审同一 clean identity；双 `PASS0` 后才进入 R2。
+1. 提交 R2 evidence source checkpoint，执行 truth sync 并在 clean final identity 复跑 audit/manifest exact。
+2. 由相同 Pascal/LEAN 与 Confucius/SAFETY 复审同一 identity；双 `PASS0` 后才进入下一 stage。
