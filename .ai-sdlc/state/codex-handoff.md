@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T06:58:00Z
-- Reason: remediation product checkpoint 已完成 immutable A/B 与public parity probes，准备records复审
+- Updated: 2026-07-21T07:25:00Z
+- Reason: 第二轮LEAN PASS0/SAFETY FAIL1的manifest path异常漂移已修复，准备新product checkpoint
 - Goal: 在不污染 C2-safe 分支的前提下取得九阶段无 DSL、typed、Ruff-natural 的实测 T*，再由同一 LEAN/SAFETY 双审决定 formal 路线
-- State: remediation product=a06dc3ee/50da4c59；focused/exact/full/immutable A-B/public probes均通过，待records identity同SHA复审，未进入其余八 stage
+- State: 0d729efd第二轮复审=LEAN PASS0/SAFETY FAIL1；manifest ../outside ValueError parity已修复，focused/exact/full通过，待新product/A-B/同SHA双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: codex/215-nine-stage-no-dsl-residual-spike
@@ -20,7 +20,7 @@
 
 - C2-safe worktree/branch 保持不变；本分支不得发布、合并或替代 formal Rx。
 - 保持唯一 private module；禁止 DSL、registry、reflection、selector、callback bundle、virtual hook、type erasure、新 public abstraction 和依赖。
-- 完整互斥自然账本为 engine=451、cross exact=75、active glue=85、target=611/88 branch；behavior-legacy canonical product=572、proof=285、combined=857，超旧预算必须原样披露。
+- 完整互斥自然账本为 engine=453、cross exact=75、active glue=85、target=613/88 branch；behavior-legacy canonical product=574、proof=285、combined=859，超旧预算必须原样披露。
 - 只有 committed+clean 同一身份 LEAN/SAFETY 均无结构性 finding，才可决定是否扩展 guarded_registry。
 
 ## Commands / Tests
@@ -38,15 +38,16 @@
 - remediation focused=`70/653`；exact union=`249/474`；wide full=`3387 passed, 3 skipped in 809.12s`
 - remediation A/B各=`249/474`；ordered JUnit=`fc9093a...db16`；raw tree均=`780/732745/ca44e2d...a543`
 - committed public probes两腿均=`deferred / upstream.yaml / absolute link.yaml`
+- 第二轮复审=`LEAN PASS0 / SAFETY FAIL1`；manifest `../outside` public probe已由`blocked`恢复为legacy `ValueError`
 
 ## Blockers / Risks
 
-- cross-only完整target=451 engine + 75 exact service + 85 active glue =611，仍未低于 behavior legacy cross=417。
-- canonical product 572>522，combined 857>729；因此当前 checkpoint 不是可合入 formal Rx。
+- cross-only完整target=453 engine + 75 exact service + 85 active glue =613，仍未低于 behavior legacy cross=417。
+- canonical product 574>522，combined 859>729；因此当前 checkpoint 不是可合入 formal Rx。
 - 该单 stage 负面信号尚不能替代九 stage 终态 T*，但若结构审查不通过必须停止，不得继续堆代码。
 
 ## Exact Next Steps
 
-1. 提交只含 remediation A/B/public probe evidence与handoff更新的records identity，确认产品blobs仍为`fe794012/827d4d4a`。
-2. 同一 committed+clean SHA 交 Pascal/LEAN 与 Confucius/SAFETY 从零独立复审。
-3. 仅当两者对“继续实测”统一 PASS0，才扩展 guarded_registry；否则继续最小修正或丢弃spike并保留C2-safe。
+1. 提交manifest path最小修正与第二轮review记录的新product checkpoint。
+2. 重跑immutable A/B/JUnit/raw tree及state/dotdot/symlink/manifest-outside四类public probes，提交records identity。
+3. 同一 committed+clean SHA 交 Pascal/LEAN 与 Confucius/SAFETY再次从零复审；双PASS0前不扩展。

@@ -264,12 +264,14 @@ def _resolve_cross_target(
         return None, f"{label} missing manifest spec"
     if not step.path.strip():
         return None, f"{label} missing spec path"
+    expected_resolved = (root / expected).resolve()
+    expected_resolved.relative_to(root)
     resolved = (root / step.path).resolve()
     try:
         resolved.relative_to(root)
     except ValueError:
         return None, f"{label} resolves outside workspace root: {step.path}"
-    if resolved != (root / expected).resolve():
+    if resolved != expected_resolved:
         return None, f"{label} path does not match manifest spec path: {step.path}"
     if not resolved.is_dir():
         return None, f"{label} missing spec directory: {step.path}"

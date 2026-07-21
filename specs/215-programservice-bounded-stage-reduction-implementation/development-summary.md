@@ -93,6 +93,8 @@
    必须先提交records identity并由
    同一 LEAN/SAFETY 双审，才能决定是否
    继续扩展，绝不能把功能全绿解释为预算通过或可合入。
+   第二轮复审为LEAN PASS0、SAFETY FAIL1；新增manifest `../outside`异常漂移已用public RED/GREEN修复，
+   新完整target=`613/88`、canonical product/combined=`574/859`，须重新提交、A/B和同SHA双审。
 2. 双审只仲裁当前结构是否适合作为九stage实测样本；未取得同一 committed+clean 身份一致结论前，
    不扩展下一 stage，不修改 C2-safe 产品分支，也不调整 formal 预算。
 3. 九stage `T*` 取得后再由同一 LEAN/SAFETY评审新 formal；远端 Codex 仅作附加信号，不无限等待。

@@ -942,3 +942,24 @@
   `efef75d3...d121` / `102ec4bc...bff7`。移除各35个pytest便利symlink后，raw两腿均=
   `780 files/732745 bytes`，tree SHA256均=`ca44e2d51846457f8eac7941e0637701c770091d180c0ae8e2dee7bb23dda543`，
   逐项相同。下一步仅提交records identity并重新双审，不改产品。
+
+## 50. Batch 2026-07-21-048：第二轮 SAFETY FAIL1 与 manifest path parity
+
+- 第二轮 records identity=`0d729efd78effb5ceb509cc1daeda78d9b7eb573` / tree=
+  `9e8cd6b57052afc2577ce794a07eeec4b64d5d24`，worktree clean，产品 blobs=
+  `fe794012...3b24` / `827d4d4a...54c7`。Pascal/LEAN=`CONTINUE_SPIKE_PASS0/findings=0`；
+  Confucius/SAFETY=`STOP_SPIKE_FAIL1`，故LEAN PASS随新修正失效，仍禁止进入下一stage。
+- SAFETY P1：manifest spec path=`../outside` 时，legacy先通过 `_resolve_project_relative_path()` 验证
+  manifest target并传播`ValueError`；当前 `_resolve_cross_target()` 先验证request step，随后只把路径
+  mismatch转成普通blocked。主代理在两条committed腿用public execute复现：legacy=`ValueError`、
+  current=`blocked/blocked`，finding成立且属于异常/路径合同漂移。
+- 最小修正仅在解析step前计算`expected_resolved=(root/expected).resolve()`并无catch执行
+  `expected_resolved.relative_to(root)`，随后复用该值比较request path；未增加branch、helper、依赖或动态机制。
+  同一public probe现传播`ValueError`；此前state/dotdot/symlink probes继续等价。
+- 修正后engine=`453 physical/17 functions/68 branch/max47`，exact=`75/14`，active glue=`85/6`，
+  完整target=`613/88`；canonical behavior-legacy product=`574`、combined=`859`，C2 churn product=`586`、
+  combined=`871`。预算仍失败且原样保留；本轮只修兼容，不宣称减重达标。
+- engine Ruff format/check/strict mypy=0；累计focused=`70 passed, 653 deselected`；exact union=
+  `249 passed, 474 deselected`；宽终端full=`3387 passed, 3 skipped in 819.87s`；冻结tests/config未改。
+  下一步提交新product checkpoint、重跑immutable A/B与四类public probes、提交records identity并由两位
+  reviewer对同一新SHA再次从零评审。
