@@ -62,13 +62,15 @@
   `payload()`=59行；`93963a37` 的 LEAN/SAFETY 均为 `FAIL3`，旧`444/729/max50`证据退役。
 - 修正 identity=`21dccc79/9fbaaad3` 保持行为测试与mypy增量0，但仍保留adapter/rules/callback微型DSL；
   同一两位reviewer均返回`CONSTRAINT_CONFLICT / R2 NO-GO`。
-- 共同建议的无DSL显式双-stage spike经Ruff自然格式后仅engine即704行；LEAN估算必要facade后
-  product约`749–763`、combined约`1034–1048`，SAFETY独立确认当前`≤444/≤522`不可达。
+- 共同建议的无DSL显式双-stage spike经Ruff自然格式后仅engine即704行；当时必要facade估算使
+  product约`749–763`、combined约`1034–1048`，证明当前实现不达预算，但不是最小下界。
 - 未批准R2产品已暂存回退到C2 final blobs；冻结proof、tests/config和失败证据保留。按WI213 §10，
   后续只先仲裁自然LOC预算度量/上限，不以删proof、压行、未来摊销或恢复DSL伪造减重。
-- 进一步双审确认固定terminal本身已被反证：双stage最低`704 engine + 45 service =749>720`，对应最大
-  net deletion=`3638-749=2889<2918`。Round 3双方最终`CONVERGED`：不预授权新行为接口，只在用户
-  明确授权后重审RC-03/RC-05 residual LOC基准，并先以隔离九stage无DSL自然spike取得实测`T*`。
+- Round 3双方最终`CONVERGED`：不预授权新行为接口，只在用户明确授权后以隔离九stage无DSL自然spike
+  实测RC-03/RC-05 residual LOC。spike-readiness复核纠正：双stage `749–763`缺可重放source且仅代表
+  一个实现，不能称为terminal反证；`2615`也只是线性投影。
+- 后续公平比较必须报告45-symbol raw legacy/C2=`3638/3303`和Ruff-natural=`3825/3465`，另计private
+  engine与glue；不得用raw legacy对natural candidate或把cross facade `57`冒充完整实现成本。
 
 ## 兼容与减重边界
 

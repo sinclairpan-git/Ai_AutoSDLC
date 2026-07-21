@@ -1,7 +1,7 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T03:15:44Z
-- Reason: R2 本地双审一致 CONSTRAINT_CONFLICT，回退未批准产品候选
+- Updated: 2026-07-21T03:28:16Z
+- Reason: 九stage spike-readiness 双审修正自然口径与下界表述
 - Goal: 在 C2 双 PASS0 安全基线上完成 R2 预算 formal 仲裁，再实现 guarded_registry 减重
 - State: R2=`NO-GO`；产品安全回退完成，本地双审已一致收敛，等待用户授权重审 residual LOC 基准
 - Stage: execute
@@ -25,8 +25,8 @@
 - C2 final identity=`18609c47/fa9d0b08` 已获同 identity LEAN/SAFETY 双 `PASS0/findings=0`。
 - `21dccc79/9fbaaad3` 经同一 LEAN/SAFETY 独立仲裁均为 `CONSTRAINT_CONFLICT/NO-GO`；
   远端 Codex 不是 blocker，不得用未接单覆盖本地失败结论。
-- Round 3交叉质询后双方一致：不预授权 `StageSemantics` 或任何 virtual hook；仅允许在用户明确授权后
-  重审 RC-03/RC-05 residual LOC 耦合基准，并先做隔离、可丢弃的九stage无DSL自然格式spike。
+- Round 3交叉质询后双方一致：不预授权 `StageSemantics` 或任何 virtual hook；仅在用户明确授权后
+  进入 RC-03/RC-05 residual LOC 实测审查，并先做隔离、可丢弃的九stage无DSL自然格式spike。
 
 ## Changed Files
 
@@ -84,18 +84,22 @@
 - 回退后累计 focused 命令=`uv run --python 3.11 pytest --import-mode=importlib -q
   tests/unit/test_program_service.py tests/integration/test_cli_program.py -k 'cross_spec_writeback or guarded_registry'`，
   结果=`70 passed, 653 deselected in 1.58s`。
-- terminal冲突算术：双stage无DSL最低product=`704 engine + 45 service =749>720`；九stage终态包含这两stage，
-  故固定terminal已被反证。由`3638-terminal`派生的net deletion在749时最多=`2889<2918`。
-- Round 3 final：LEAN=`CONVERGED`、SAFETY=`CONVERGED`，共同要求用户只授权重审RC-03/RC-05基准；
-  行为、proof、无DSL/registry/reflection/string lookup/stage selector、typed、函数≤50、branch≤90均不放宽。
+- spike-readiness复核修正公平口径：45-symbol legacy/C2 raw=`3638/3303`，Ruff-natural=
+  `3825/3465`；未来必须 natural-to-natural 比较，并另计C2 private engine=`394`与范围内glue。
+- 双stage `704 engine + 45–59 service =749–763` 是未提交、已恢复的单个实现及glue估算，没有可重放
+  commit/tree/blob，故只能作为高风险信号，不能称为terminal下界或反证；`2615`也仅是线性投影。
+- Round 3及spike-readiness final：LEAN/SAFETY均要求用户只授权隔离实测RC-03/RC-05基准；行为、proof、
+  无DSL/registry/reflection/string lookup/stage selector/rule table/callback bundle/virtual hook/type erasure、
+  typed、函数≤50、branch≤90均不放宽。
 
 ## Blockers / Risks
 
-- 当前 user-input blocker 是是否授权重新审视 RC-03/RC-05 residual LOC 耦合基准。该授权不等于放宽
-  或接受新数字；只允许先做隔离九stage spike取得实测`T*`，再由同一双审决定是否仍有实质减重价值。
+- 当前 user-input blocker 是是否授权隔离实测 RC-03/RC-05 residual LOC 基准。该授权不等于放宽
+  或接受新数字；只允许制作有commit/tree/blob与完整provenance的九stage spike取得`T*`，再由同一双审
+  判断旧terminal是否可达、是否仍有实质减重价值。
 
 ## Exact Next Steps
 
-1. 请求用户单一授权：允许重审RC-03/RC-05 residual LOC基准并制作隔离、可丢弃的九stage spike。
+1. 请求用户单一授权：允许隔离实测RC-03/RC-05 residual LOC基准并制作可丢弃的九stage spike。
 2. 若授权，先新建隔离分支/worktree实测`T*`，不改当前C2-safe分支；再形成formal并双审。
 3. 若不授权，保持R2与九stage路线NO-GO，不合入未批准产品改动。

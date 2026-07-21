@@ -799,7 +799,7 @@
   registry/reflection/string lookup/stage selector，仅共享无语义load/normalize/write primitive；private engine
   Ruff自然格式=`704` physical、strict mypy=0，尚未计ProgramService facade glue。
 - 对`21dccc79/9fbaaad3`再次独立仲裁，LEAN与SAFETY均返回`CONSTRAINT_CONFLICT / R2 NO-GO`。
-  LEAN逐项分解显式engine下界=`704`，必要service glue约`45–59`，product约`749–763`、combined约
+  LEAN逐项分解该显式engine实现=`704`，必要service glue估算约`45–59`，product约`749–763`、combined约
   `1034–1048`；SAFETY独立确认不存在诚实的`≤444/≤522`结构。双方一致拒绝删冻结proof、压行、
   按未来stage摊销或恢复可错配DSL。
 - 按WI213 §10保留最后reviewed C2安全点：执行`git revert --no-commit 21dccc79`与
@@ -811,10 +811,22 @@
 - 远端Codex不构成blocker；本地双审已在有限轮次内给出确定结论。下一步不是强行合入，而是只对
   `peak retained product / product+proof` 的自然LOC度量和上限进入新的formal review；行为契约、
   frozen proof、无DSL、typed contract、函数≤50与terminal/net-delete/responsibility/branch门保持不动。
-- 后续预算Round 2发现更深终态矛盾：双stage无DSL最低product=`704+45=749>terminal 720`；因为九stage
-  终态必含这两stage，单改peak/combined无法修复。由`3638-terminal`派生的net deletion在749时最多
-  `2889<2918`。SAFETY主张重审RC-03/RC-05 residual LOC；LEAN最初主张允许sealed typed行为接口。
-- Round 3交叉质询后双方统一为`CONVERGED`：不预授权`StageSemantics`或任何virtual hook；仅在用户明确
-  授权后重审RC-03/RC-05 residual LOC耦合基准，先在隔离分支完成可丢弃的九stage、无DSL、Ruff自然
-  spike，取得实测`T*`后统一重算terminal/net deletion/peak/combined，再双审是否仍有实质减重价值。
-  行为、proof、无DSL/registry/reflection/string lookup/stage selector、typed、函数≤50、branch≤90不放宽。
+- 后续预算Round 2把双stage `704+45–59=749–763>720`识别为高风险，SAFETY主张隔离实测
+  RC-03/RC-05 residual LOC，LEAN最初主张允许sealed typed行为接口。Round 3交叉质询后双方统一为
+  `CONVERGED`：不预授权`StageSemantics`或任何virtual hook；仅在用户明确授权后先在隔离分支完成
+  可丢弃的九stage、无DSL、Ruff自然spike，取得实测`T*`后再审terminal/net deletion/peak/combined。
+- spike-readiness复核进一步纠正证据强度：双stage spike未提交且已恢复，缺commit/tree/blob与可重放
+  source，`704`只是一个实现的实测大小，`45–59`是glue估算；九stage可全局重组，故`749–763`不能称为
+  terminal下界或反证。`2615=158+9×273`也只是无行为共享线性投影，不能作为预算输入。
+- 公平账本必须同时保留raw与Ruff-natural：45-symbol legacy/C2 raw=`3638/3303`、natural=
+  `3825/3465`，且C2的完整private engine=`394`与范围内glue另计；任何candidate必须natural-to-natural
+  对比。行为、proof、无DSL/registry/reflection/string lookup/stage selector/rule table/callback bundle/
+  virtual hook/type erasure、typed、函数≤50、branch≤90均不放宽。
+- 45-symbol仍严格为九stage各`build request / execute / write artifact / private payload build / private payload
+  load`五方法；natural stage基线依次为legacy=`417,425,425,427,429,425,425,427,425`，C2=
+  `57,425,425,427,429,425,425,427,425`，branch依次为legacy=`50,42×8`、C2=`6,42×8`。
+- 隔离spike ledger必须含：base/spike commit+tree+blobs、formatter/toolchain与AST recipe、每symbol/stage/family
+  raw/natural/executable/header/branch、engine与service互斥行集、product/proof/combined峰值、27 public/DTO
+  denylist、strict mypy增量、focused/full、immutable A/B、JUnit ordered IDs、import provenance及raw artifact
+  tree hash。任一base污染、冻结测试/公共合同变更、动态分发/类型擦除、函数>50、branch>90、A/B差异或
+  缺committed provenance立即停止；合法natural `T*>=3825`则无净减重，路线直接NO-GO。
