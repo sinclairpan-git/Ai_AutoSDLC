@@ -1,13 +1,14 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T01:26:29Z
-- Reason: R2 首轮 clean truth audit 与 manifest exact 绿色检查点
+- Updated: 2026-07-21T01:33:03Z
+- Reason: R2 final truth/manifest provenance records-only 收口
 - Goal: 完成 guarded_registry R2 全量、immutable A/B、治理门禁与同 identity LEAN/SAFETY PASS0
-- State: R2 全部行为/治理门与首轮 clean truth/manifest 全绿，待 formal records commit/final sync/双审
+- State: R2 产品、full、A/B、全部治理门与 final truth/manifest 全绿，待同 identity 本地双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- Review identity: product checkpoint=`9855834c/def015ef`；最终双审仅接受后续 committed+clean SHA/tree。
+- Review identity: 以当前 clean 工作树的 `git rev-parse HEAD` 与 `git rev-parse HEAD^{tree}` 为权威；
+  product checkpoint=`9855834c/def015ef`。
 
 ## Current Decisions
 
@@ -66,13 +67,15 @@
   `ready/fresh 1131/1131/0/0`。
 - evidence source=`de7d4d63`，manifest sync checkpoint=`9a50479a/786dadc4`；clean audit=
   `ready/fresh 1131/1131/0/0`，manifest exact=`1 passed in 102.65s`，scope/clean为空。
+- formal records=`fc699502` 后 final truth sync snapshot=
+  `5abc99462a653cb5d95238d8cb647b73808d5cc504810b170a05f6ba76439d55`；clean final audit=
+  `ready/fresh 1131/1131/0/0`，manifest exact=`1 passed in 102.93s`。
 
 ## Blockers / Risks
 
-- 无当前 blocker；formal gate结果与 final resync 尚未提交，不能开始双审或下一 stage。
+- 无产品、测试、治理或远程 review blocker；仅待当前同一 clean identity 的本地双审。
 
 ## Exact Next Steps
 
-1. 提交本轮 formal gate records，保持 product/tests/config blobs冻结。
-2. 执行 final truth sync，提交 manifest；clean identity 上复跑 audit/manifest exact/scope/clean。
-3. 同一 Pascal/LEAN 与 Confucius/SAFETY 双 PASS0 后才进入下一 stage。
+1. 同一 Pascal/LEAN 与 Confucius/SAFETY 审查当前 committed+clean SHA/tree。
+2. 双 `PASS0/findings=0` 后进入下一 stage；任一 actionable finding 则同分支最小修复并重跑门禁。
