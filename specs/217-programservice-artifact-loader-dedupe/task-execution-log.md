@@ -63,3 +63,17 @@
 - Fresh-main pre-authoring baseline：`tests/unit/test_program_service.py`=`406 passed in 35.83s`。
 - 当前只进入 formal authoring；product spike 未复制、提交或继承到本 branch。下一硬门是 formal source
   commit、truth sync、同 identity LEAN/SAFETY PASS0、formal PR/checks/merge/fresh-main。
+
+## 6. Batch 2026-07-21-005：Formal Round 1 FAIL3
+
+- Review identity=`45761e2225635aa3c31fd0a95409907f2ec12977` / tree=
+  `7e91d433dcef7c64389765218abb06d48f207360` / formal-six=
+  `7ad72b08f01c12f26b4dfc16719a230401d8db290d83d061f28d4f8c77e0a19b`，worktree clean。
+- Pascal/LEAN=`FAIL2`：spec把18个已知内部caller与“无consumer”写成矛盾；产品/runtime `getattr`禁令
+  又误伤plan中的test-only source inspection。
+- Confucius/SAFETY=`FAIL1`：formal提前物化child `development-summary.md`并预期close=`216/216`，违反父
+  pre-close唯一missing合同，等同伪造完成。
+- 三项finding全部成立。最小修复：consumer改为“18个内部callsite之外为0”；禁令限定产品/runtime并
+  显式允许T61A test-only inspection；删除WI217 summary，truth目标改为inventory
+  `complete 1136/1136`、missing/unmapped=`1/0`、close=`216/215`，closure才物化summary恢复`216/216`。
+- 修复改变formal-six与HEAD/tree，Round 1全部verdict失效；提交新clean identity后双方完整复审。

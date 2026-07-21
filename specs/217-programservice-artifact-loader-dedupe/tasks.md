@@ -20,9 +20,9 @@
 
 ## Batch 1：Formal-only PR
 
-### T11 Canonical formal 五件套与 parent linkage
+### T11 Canonical pre-close 四文档与 parent linkage
 
-- [ ] **文件**：WI217 五件套；WI196 五件套最小追加；禁止修改产品。
+- [ ] **文件**：WI217 spec/plan/tasks/log；summary只注册且保持不存在；WI196五件套最小追加；禁止修改产品。
 - [ ] **验收**：RC-01～RC-10、CC-01～CC-08、FR/SC、stop/rollback、formal/implementation scope 完整；
   无占位文本、无 WI213/WI215 准入继承。
 - [ ] **验证**：formal-six hash 可复算；`git diff --check`；scope scan。
@@ -31,8 +31,9 @@
 
 - [ ] **依赖**：T11 source commit。
 - [ ] **文件**：`program-manifest.yaml`、project-state、manifest exact 两标量、root/scoped handoff。
-- [ ] **验收**：WI217 `depends_on=[WI196]`；`next_work_item_seq=218`；inventory=`1136/1136`、close=
-  `216/216`、missing/unmapped=0；handoff byte-identical。
+- [ ] **验收**：WI217 `depends_on=[WI196]`；`next_work_item_seq=218`；inventory state=`complete`、
+  mapped=`1136/1136`、close=`216/215`、missing/unmapped=`1/0`且唯一missing为WI217 summary；handoff
+  byte-identical。
 - [ ] **验证**：manifest exact、constraints、validate、truth audit、Cursor bytes unchanged、clean tree。
 
 ### T13 Formal same-identity 双审
@@ -64,7 +65,8 @@
 - [ ] **依赖**：T21 RED。
 - [ ] **文件**：只改 `src/ai_sdlc/core/program_service.py` 与 T21 test。
 - [ ] **实现**：一个 private helper；删除 12 ordinary wrapper；12 exact binding；cleanup wrapper保留。
-- [ ] **禁止**：新模块/public API/dependency/registry/reflection/DSL/getattr/type erasure/第二重复族/全文件格式化。
+- [ ] **禁止**：产品/runtime新模块、public API、dependency、registry、reflection、DSL、getattr、type
+  erasure、第二重复族或全文件格式化；T61A test-only inspection 例外按spec执行。
 - [ ] **结构验收**：product additions≤48/deletions≥406/net delete≥358；terminal≤44/branch≤4；13→1。
 - [ ] **GREEN**：16 passed；Ruff/diff-check PASS；product+proof 使用一个 atomic candidate commit。
 
@@ -72,7 +74,8 @@
 
 - [ ] **依赖**：T22 clean commit。
 - [ ] **测试**：ProgramService unit=`422 passed`；完整 CLI integration 与 full pytest exit0。
-- [ ] **治理**：constraints 无 BLOCKER、validate PASS、truth ready/fresh、manifest exact、scope/consumer scan全绿。
+- [ ] **治理**：constraints无BLOCKER、validate PASS、truth ready/fresh且只有WI217 summary missing、manifest
+  exact、scope/consumer scan全绿。
 - [ ] **兼容**：required Windows/macOS/Linux、wheel/sdist、clean-install、POSIX/Windows offline smoke全绿。
 - [ ] **预算**：proof≤48、truth≤2、combined≤98/101；路线保守累计≤282/1500。
 
@@ -101,6 +104,7 @@
 
 - [ ] **依赖**：T31 fresh-main。
 - [ ] **范围**：独立 closure branch/PR；产品与行为测试零 diff。
+- [ ] **Close source**：创建 WI217 `development-summary.md`，missing归零、close恢复`216/216`。
 - [ ] **状态**：只关闭本 T63 family并登记 product net -358；GAP-03/T66、GAP-05、WI196、RC-08、release
   保持 open。
 - [ ] **验收**：同 identity 双审、required checks、merge、detached fresh-main 全绿后才选择下一原子项。
