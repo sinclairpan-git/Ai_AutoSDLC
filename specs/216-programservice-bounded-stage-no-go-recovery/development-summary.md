@@ -1,6 +1,6 @@
 # 开发摘要：ProgramService 有界阶段减重 NO-GO 恢复
 
-**状态**：formal-nine Round 5 同身份双 PASS；remote archive 已验，等待 truth/gates/final review/PR
+**状态**：authoring/gates/archive已完成；等待 terminal truth、final同身份双审与PR
 
 ## 已确认
 
@@ -29,7 +29,7 @@
 ## 待完成
 
 - 对 final truth/gates identity 再完成 Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0。
-- 同步 program truth，完成 manifest exact、records-only scope、continuity 与 clean 门禁。
+- 状态 receipt 提交后执行 terminal truth sync 并确认 clean。
 - 推送 PR、required checks/Codex review、merge 与 detached fresh-main 验收。
 
 ## Authoring receipt
@@ -37,3 +37,10 @@
 - Round 5 exact=`77d984c2/63f2505b/formal-nine 3daf7fb3...ea39`；Pascal/LEAN 与
   Confucius/SAFETY 均 `PASS0/findings=0`。
 - 两个 remote archive refs 已分别 exact 解析到 `70f19275` 与 `60dcc4f6`，仅作非合入证据，未开 PR。
+
+## Gate receipt
+
+- Truth audit=`ready/fresh 1131/1131`，missing/unmapped=`0/0`；constraints no BLOCKERs；validate PASS；
+  Cursor bytes不变；manifest exact=`1 passed in 158.21s`；Ruff check PASS。
+- Scope共20个允许文件；产品/workflow/依赖/版本/release零差异；测试仅两个 exact 计数标量；project seq=217；
+  root/scoped handoff byte-identical；archive refs exact；diff-check PASS。

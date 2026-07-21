@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T08:18:26Z
+- Updated: 2026-07-21T08:33:38Z
 - Reason: T66/C2 与 no-DSL spike 已确定 NO-GO，进入 WI216 records-only recovery
 - Goal: 持久化本次 `cancelled_no_go`，保持 legacy 不变并禁止旧 T66 路线重复投入
-- State: formal Round 5 同身份 LEAN/SAFETY 双 PASS；archive已验，manifest source已注册，等待truth/gates
+- State: authoring双PASS、archive与records-only gates全绿；等待terminal truth与final同身份双审
 - Stage: plan
 - Work Item: 216-programservice-bounded-stage-no-go-recovery
 - Branch: codex/216-programservice-bounded-stage-no-go-recovery
@@ -14,7 +14,7 @@
 - .ai-sdlc/project/config/project-state.yaml（`next_work_item_seq: 217`）
 - .ai-sdlc/state/codex-handoff.md
 - .ai-sdlc/work-items/216-programservice-bounded-stage-no-go-recovery/codex-handoff.md
-- program-manifest.yaml（WI216 source已注册，待 terminal truth sync）
+- program-manifest.yaml（WI216已注册；状态receipt后待terminal truth sync）
 - specs/196-ai-sdlc-lean-code-self-reduction-governance/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}
 - specs/213-programservice-bounded-stage-reduction/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}
 - specs/216-programservice-bounded-stage-no-go-recovery/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}
@@ -48,11 +48,16 @@
   同身份 `PASS0/findings=0`。
 - Remote archive exact：C2=`70f19275150831ceea89a6c1e006c056ee98c412`；no-DSL records=
   `60dcc4f65f2a332261b765bfe5fff9979397ddc7`。
+- Truth audit=`ready/fresh 1131/1131`、missing/unmapped=`0/0`；manifest exact=`1 passed in 158.21s`；
+  constraints no BLOCKERs；validate PASS；Cursor SHA不变；Ruff check PASS。
+- Scope=20个允许文件；产品/workflow/依赖/版本/release零差异；测试精确`+2/-2`两个计数标量；
+  project seq=217；handoff parity、archive exact、diff-check均PASS。
 - Pre-review scope：`src/**`、workflow、依赖、版本、release 零差异；`git diff --check` 待重跑。
 
 ## Blockers / Risks
 
-- Authoring 双 PASS 只授权 truth/gates；final truth commit/tree 未再次双 PASS 前不得推送 WI216 PR 或合入。
+- Authoring 双 PASS 只授权 truth/gates；状态receipt会使当前snapshot stale，terminal truth commit/tree 未再次
+  双 PASS 前不得推送 WI216 PR 或合入。
 - 两个 archive ref 已 remote exact 可解析；普通 remote branch 没有技术只读保护，安全来自禁止
   force-push/delete/PR/merge 的交付合同。
 - WI216 merge/fresh-main 只关闭 records recovery，不关闭 T66/GAP-03/WI196/RC-08/release。
@@ -60,6 +65,5 @@
 
 ## Exact Next Steps
 
-- 提交 manifest source/authoring receipt 后执行一次 `uv run ai-sdlc program truth sync --execute --yes`。
-- 运行 manifest exact、scope/parity/constraints/validate/truth/clean 门禁；只允许两个测试计数标量。
-- 对 final committed+clean HEAD/tree/formal-nine 取得同身份双 PASS；未通过不推送 WI216 PR。
+- 提交本状态receipt并执行terminal `uv run ai-sdlc program truth sync --execute --yes`，再提交机械snapshot。
+- 确认truth fresh、scope/parity/clean与formal-nine后，对final HEAD/tree取得同身份双PASS；未通过不推PR。

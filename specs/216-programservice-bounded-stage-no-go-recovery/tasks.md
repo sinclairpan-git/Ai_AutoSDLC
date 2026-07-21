@@ -46,7 +46,7 @@
 
 ### T24 处置 findings 并同身份复审
 
-- **状态**：in_progress
+- **状态**：completed
 - **依赖**：T22、T23
 - **验收**：所有成立 finding 最小修正；双方对新的同一 HEAD/tree/formal-nine `PASS0/findings=0`。
 
@@ -54,7 +54,7 @@
 
 ### T31 注册 WI216 并同步 truth
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T24
 - **验收**：manifest 注册依赖；project-state seq=217；manifest exact 只机械更新 `1131/215`；truth sync 后
   ready/fresh、inventory exact、missing/unmapped=0。
@@ -67,7 +67,7 @@
 
 ### T33 执行 records-only 门禁
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T31、T32
 - **验收**：constraints、validate、truth、manifest exact、scope、handoff parity、diff-check、clean 全绿；
   `src/**`、测试逻辑/fixture、workflow、依赖、版本、release 零差异；测试只含两个 exact 标量。
@@ -81,7 +81,7 @@
 
 ### T35 持久化非合入审计 refs
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T24
 - **验收**：两个 `codex/archive/215-*` remote ref 分别 exact 指向 `70f19275`、`60dcc4f6`；
   no PR/no merge/no force-push，fresh clone 可解析 C2 与 spike commit/tree/blob。

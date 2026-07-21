@@ -80,3 +80,21 @@
   `refs/heads/codex/archive/215-nine-stage-no-dsl-no-go` exact=
   `60dcc4f65f2a332261b765bfe5fff9979397ddc7`。`git ls-remote --heads origin` 逐一匹配。
 - WI216 已注册到 manifest source，依赖 WI196/WI213/WI214；terminal truth snapshot 尚未机械同步。
+
+## 7. Batch 2026-07-21-007：truth、exact 与 records-only scope 门禁
+
+- Source receipt commit=`7bdbd68d606935885c15f01f020316a221829243` / tree=
+  `ee0ea1ef075ecd0601c351ab3702a3fd1be90b2f`；随后执行 truth sync，snapshot repo_revision=
+  `7bdbd68d`、inventory=`1131/1131`、missing/unmapped=`0/0`、各 canonical layer=`215/215`。
+- `uv run --python 3.11 ai-sdlc verify constraints`：no BLOCKERs；`program validate`：PASS；
+  Cursor SHA before/after均=`d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a`。
+- 计划中的 `program truth status` 在当前CLI不存在；依据 `program truth --help` 修正为正式子命令
+  `program truth audit`，结果=`ready/fresh`、release targets ready、source inventory complete `1131/1131`。
+- Manifest exact：`tests/integration/test_repo_program_manifest.py`=`1 passed in 158.21s`；Ruff check PASS。
+  Ruff format check 对当前与 `origin/main` 同一文件均 exit1，属于已存在 baseline、delta=0；为遵守“两处
+  exact标量”白名单不做扩展格式化。
+- Scope=`20 files`；无 `src/**`、workflow、依赖、版本、release；测试唯一文件 numstat=`+2/-2`，逐行仅
+  `1126→1131` 与 `214→215`；project seq=`217`；handoff byte-identical；archive refs 再次 exact；
+  `git diff --check` PASS。
+- 本批状态写入后会使当前 snapshot stale；必须提交 source receipt，再做一次 terminal truth sync，final
+  committed+clean identity 双 PASS 前不得推送 WI216 PR。
