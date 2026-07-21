@@ -115,3 +115,17 @@
 - 处置：本 batch 与 summary/handoff 把 terminal truth/gates 标为已完成；下一步只保留与提交时点无关的
   “当前 clean identity 取得 final 同身份双 PASS 后进入 PR”。提交本 records receipt 后只机械 resync
   manifest；不得再修改 specs/handoff，Round 7 复审新的 clean HEAD/tree。
+
+## 9. Batch 2026-07-21-009：Final Round 7 FAIL1 stale-line cleanup
+
+- Records receipt=`870ac0b413672808ce40fd7bb0d6e3c168851483` / tree=
+  `c90150d980a1888b910ff64708ab7c0ed1df7758`；mechanical truth commit=
+  `bb32a5f2e887f75d5efa53577ae295e8cb0e9650` / tree=
+  `3cd20aa99df3579fb68a797026cdb504cc785500`，snapshot=
+  `f8e89bb1ee928014af32a9c4e2edbef791933c1fd8c2e6abb8251b6b91086d24`，audit=
+  `ready/fresh 1131/1131`。
+- Final Round 7 exact=`bb32a5f2/3cd20aa9/formal-nine 75351a47...d164`；Pascal/LEAN 与
+  Confucius/SAFETY 均`FAIL1`，只发现两处相同旧状态：summary仍写archive“待持久化”，handoff仍写
+  diff-check“待重跑”；双方明确其余identity、账本、YAGNI、20文件scope、test `+2/-2`均无finding。
+- 处置：把archive改为已exact完成并删除旧diff-check待重跑行；更新两份handoff当前轮次，不改formal
+  合同或范围。提交后只机械resync；Round 8复审新的clean identity，不再写receipt。

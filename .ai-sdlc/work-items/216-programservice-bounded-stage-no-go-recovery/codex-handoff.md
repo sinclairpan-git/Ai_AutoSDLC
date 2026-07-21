@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T08:47:07Z
+- Updated: 2026-07-21T08:57:22Z
 - Reason: T66/C2 与 no-DSL spike 已确定 NO-GO，进入 WI216 records-only recovery
 - Goal: 持久化本次 `cancelled_no_go`，保持 legacy 不变并禁止旧 T66 路线重复投入
-- State: terminal truth/gates/archive全绿；Final Round 6 唯一状态finding已修，等待final同身份双审
+- State: terminal truth/gates/archive全绿；Final Round 7 两处stale-line finding已修，等待final同身份双审
 - Stage: plan
 - Work Item: 216-programservice-bounded-stage-no-go-recovery
 - Branch: codex/216-programservice-bounded-stage-no-go-recovery
@@ -55,12 +55,13 @@
 - Terminal truth=`6e606df5/2b4954d0`，snapshot=`89ea4c7d...dd90`；clean复验 truth=`ready/fresh
   1131/1131`、manifest exact=`1 passed in 135.19s`，fast gates全绿。
 - Final Round 6=`6e606df5/2b4954d0/formal-nine 75351a47...d164`；LEAN/SAFETY均`FAIL1`，唯一共同
-  finding是本handoff/summary仍写等待terminal truth；本receipt已修，其余范围/账本/安全无finding。
-- Pre-review scope：`src/**`、workflow、依赖、版本、release 零差异；`git diff --check` 待重跑。
+  finding是receipt状态未反映terminal truth已完成；本receipt已修，其余范围/账本/安全无finding。
+- Final Round 7=`bb32a5f2/3cd20aa9/formal-nine 75351a47...d164`；LEAN/SAFETY均`FAIL1`，只发现
+  archive与diff-check两处残留旧状态；本receipt已删除，其余边界均无finding。
 
 ## Blockers / Risks
 
-- Final Round 6 的唯一 finding 已修；本 records receipt 后只允许机械 snapshot resync。新的 clean
+- Final Rounds 6～7 的 receipt findings 已修；本 records receipt 后只允许机械 snapshot resync。新的 clean
   commit/tree 未取得 final 同身份双 PASS 前不得推送 WI216 PR 或合入。
 - 两个 archive ref 已 remote exact 可解析；普通 remote branch 没有技术只读保护，安全来自禁止
   force-push/delete/PR/merge 的交付合同。

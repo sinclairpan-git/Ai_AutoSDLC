@@ -10,8 +10,8 @@
   因而不是框架减重。
 - 无 DSL 九阶段 spike 在第二阶段达到 `1209/164`，高于两阶段 legacy `842/92` 且超过 branch≤90；
   双 reviewer 一致 `STOP_SPIKE_NO_GO/findings=0`。
-- C2-safe 与 spike 均保持 `archived_not_merged`；formal 已冻结两个契约性非合入 remote archive ref，
-  待最终门禁前持久化并验证 exact SHA，不声称存在技术只读保护。
+- C2-safe 与 spike 均保持 `archived_not_merged`；两个契约性非合入 remote archive ref 已持久化并
+  exact 验证，不声称存在技术只读保护。
 
 ## 状态边界
 
