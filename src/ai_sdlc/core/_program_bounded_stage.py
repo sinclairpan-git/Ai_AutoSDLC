@@ -257,24 +257,25 @@ def _resolve_cross_target(
     target_filename: str,
 ) -> tuple[Path | None, str | None]:
     label = f"cross-spec writeback step {step.spec_id}".rstrip()
-    expected = next((spec.path for spec in specs if spec.id == step.spec_id), None)
+    expected = {spec.id: spec.path for spec in specs}.get(step.spec_id)
     if not step.spec_id:
         return None, f"{label} missing spec_id; writeback skipped"
     if expected is None:
         return None, f"{label} missing manifest spec"
-    if not step.path.strip():
+    path_text = step.path.strip()
+    if not path_text:
         return None, f"{label} missing spec path"
     expected_resolved = (root / expected).resolve()
     expected_resolved.relative_to(root)
-    resolved = (root / step.path).resolve()
+    resolved = (root / path_text).resolve()
     try:
         resolved.relative_to(root)
     except ValueError:
-        return None, f"{label} resolves outside workspace root: {step.path}"
+        return None, f"{label} resolves outside workspace root: {path_text}"
     if resolved != expected_resolved:
-        return None, f"{label} path does not match manifest spec path: {step.path}"
+        return None, f"{label} path does not match manifest spec path: {path_text}"
     if not resolved.is_dir():
-        return None, f"{label} missing spec directory: {step.path}"
+        return None, f"{label} missing spec directory: {path_text}"
     return resolved / target_filename, None
 
 
