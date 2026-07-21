@@ -1,13 +1,13 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T03:03:47Z
+- Updated: 2026-07-21T03:15:44Z
 - Reason: R2 本地双审一致 CONSTRAINT_CONFLICT，回退未批准产品候选
 - Goal: 在 C2 双 PASS0 安全基线上完成 R2 预算 formal 仲裁，再实现 guarded_registry 减重
-- State: R2=`NO-GO`；产品已回退到 C2 reviewed blobs且focused=`70 passed`，待提交并形成预算 formal 提案
+- State: R2=`NO-GO`；产品安全回退完成，本地双审已一致收敛，等待用户授权重审 residual LOC 基准
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- Review identity: R2 rejected identity=`21dccc79/9fbaaad3`；当前工作树为 staged rollback，尚无新 review identity。
+- Review identity: C2-safe rollback checkpoint=`a0872881/20c9b11d`；仅作为formal起点，不是R2 PASS identity。
 
 ## Current Decisions
 
@@ -25,6 +25,8 @@
 - C2 final identity=`18609c47/fa9d0b08` 已获同 identity LEAN/SAFETY 双 `PASS0/findings=0`。
 - `21dccc79/9fbaaad3` 经同一 LEAN/SAFETY 独立仲裁均为 `CONSTRAINT_CONFLICT/NO-GO`；
   远端 Codex 不是 blocker，不得用未接单覆盖本地失败结论。
+- Round 3交叉质询后双方一致：不预授权 `StageSemantics` 或任何 virtual hook；仅允许在用户明确授权后
+  重审 RC-03/RC-05 residual LOC 耦合基准，并先做隔离、可丢弃的九stage无DSL自然格式spike。
 
 ## Changed Files
 
@@ -78,19 +80,22 @@
 - LEAN 独立分解无 DSL 下界为 engine=`704` + service glue约`59` = product约`763`，combined约`1048`；
   SAFETY 独立确认当前无可信 `≤444/≤522` 路线。双方均拒绝删 proof、压行、未来摊销或恢复 DSL。
 - `git revert --no-commit 21dccc79` 与 `git revert --no-commit 9855834c` 后，两个产品 blob 已逐一验真
-  等于 C2 final identity `18609c47` 对应 blob；回退尚未提交。
+  等于 C2 final identity `18609c47` 对应 blob；回退提交=`a0872881/20c9b11d`。
 - 回退后累计 focused 命令=`uv run --python 3.11 pytest --import-mode=importlib -q
   tests/unit/test_program_service.py tests/integration/test_cli_program.py -k 'cross_spec_writeback or guarded_registry'`，
   结果=`70 passed, 653 deselected in 1.58s`。
+- terminal冲突算术：双stage无DSL最低product=`704 engine + 45 service =749>720`；九stage终态包含这两stage，
+  故固定terminal已被反证。由`3638-terminal`派生的net deletion在749时最多=`2889<2918`。
+- Round 3 final：LEAN=`CONVERGED`、SAFETY=`CONVERGED`，共同要求用户只授权重审RC-03/RC-05基准；
+  行为、proof、无DSL/registry/reflection/string lookup/stage selector、typed、函数≤50、branch≤90均不放宽。
 
 ## Blockers / Risks
 
-- 当前 blocker 是正式预算合同不可达：冻结 proof=`285` 时 product 实际 cap=`444`，而无 DSL 双-stage
-  实测约`749–763`。按 WI213 §10 必须进入新的 formal review 或保持 R2 NO-GO，不能自动扩预算。
+- 当前 user-input blocker 是是否授权重新审视 RC-03/RC-05 residual LOC 耦合基准。该授权不等于放宽
+  或接受新数字；只允许先做隔离九stage spike取得实测`T*`，再由同一双审决定是否仍有实质减重价值。
 
 ## Exact Next Steps
 
-1. 提交产品回退，形成 committed+clean C2-safe checkpoint；运行聚焦测试确认回退无漂移。
-2. 基于704行真实 spike编写只改预算度量/上限的最小 formal 提案；行为、冻结 proof、无 DSL、typed contract、
-   函数≤50、terminal/net deletion/responsibility/branch 约束保持不动。
-3. 同一 LEAN/SAFETY 对 formal 提案独立评审并收敛；双 PASS0 前不再写 R2 产品代码。
+1. 请求用户单一授权：允许重审RC-03/RC-05 residual LOC基准并制作隔离、可丢弃的九stage spike。
+2. 若授权，先新建隔离分支/worktree实测`T*`，不改当前C2-safe分支；再形成formal并双审。
+3. 若不授权，保持R2与九stage路线NO-GO，不合入未批准产品改动。

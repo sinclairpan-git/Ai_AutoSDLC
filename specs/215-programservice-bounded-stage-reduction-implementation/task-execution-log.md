@@ -811,3 +811,10 @@
 - 远端Codex不构成blocker；本地双审已在有限轮次内给出确定结论。下一步不是强行合入，而是只对
   `peak retained product / product+proof` 的自然LOC度量和上限进入新的formal review；行为契约、
   frozen proof、无DSL、typed contract、函数≤50与terminal/net-delete/responsibility/branch门保持不动。
+- 后续预算Round 2发现更深终态矛盾：双stage无DSL最低product=`704+45=749>terminal 720`；因为九stage
+  终态必含这两stage，单改peak/combined无法修复。由`3638-terminal`派生的net deletion在749时最多
+  `2889<2918`。SAFETY主张重审RC-03/RC-05 residual LOC；LEAN最初主张允许sealed typed行为接口。
+- Round 3交叉质询后双方统一为`CONVERGED`：不预授权`StageSemantics`或任何virtual hook；仅在用户明确
+  授权后重审RC-03/RC-05 residual LOC耦合基准，先在隔离分支完成可丢弃的九stage、无DSL、Ruff自然
+  spike，取得实测`T*`后统一重算terminal/net deletion/peak/combined，再双审是否仍有实质减重价值。
+  行为、proof、无DSL/registry/reflection/string lookup/stage selector、typed、函数≤50、branch≤90不放宽。

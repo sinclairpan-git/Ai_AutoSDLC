@@ -66,6 +66,9 @@
   product约`749–763`、combined约`1034–1048`，SAFETY独立确认当前`≤444/≤522`不可达。
 - 未批准R2产品已暂存回退到C2 final blobs；冻结proof、tests/config和失败证据保留。按WI213 §10，
   后续只先仲裁自然LOC预算度量/上限，不以删proof、压行、未来摊销或恢复DSL伪造减重。
+- 进一步双审确认固定terminal本身已被反证：双stage最低`704 engine + 45 service =749>720`，对应最大
+  net deletion=`3638-749=2889<2918`。Round 3双方最终`CONVERGED`：不预授权新行为接口，只在用户
+  明确授权后重审RC-03/RC-05 residual LOC基准，并先以隔离九stage无DSL自然spike取得实测`T*`。
 
 ## 兼容与减重边界
 
@@ -80,6 +83,6 @@
 
 ## 下一步
 
-1. 提交R2产品安全回退并复跑聚焦测试，形成committed+clean C2-safe checkpoint。
-2. 基于704行实测下界形成只调整预算度量/上限的最小formal提案，由同一LEAN/SAFETY独立评审。
-3. formal双`PASS0/findings=0`前不再写R2产品代码；远端Codex仅作附加信号，不无限等待。
+1. 等待用户单一授权：允许重审RC-03/RC-05 residual LOC耦合基准并制作隔离、可丢弃的九stage spike。
+2. 授权后先实测`T*`，再由同一LEAN/SAFETY评审新formal；双`PASS0`前不改C2-safe产品分支。
+3. 不授权则R2与九stage路线保持NO-GO；远端Codex仅作附加信号，不无限等待。
