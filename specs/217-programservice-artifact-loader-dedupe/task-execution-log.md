@@ -217,3 +217,24 @@
   均不变化。修复后focused proof=`6 passed, 406 deselected`，Ruff与diff-check通过。
 - 本tracked修复使旧HEAD的Codex结论、CI与LEAN/SAFETY verdict全部失效。必须在同一PR完成本地门禁、
   truth/handoff、同一新identity双审，再只触发一次current-head Codex review与required CI。
+
+## 17. Batch 2026-07-21-016：Final Round 3 FAIL2 与 portable atomic candidate refresh
+
+- R3 review identity=`8b0850f03ae876ea73ac5b74f31452f2310321a0` / tree=
+  `c1919a111643d0f6382e7b22926a39dc6ff409ef` / formal-six=
+  `182edb5e75139c0070231e8bb3fbf8648cb6d60bbfaa4b7fcc9e4ee97940fe77`；LEAN/SAFETY均`FAIL2`且
+  独立指出相同两项：旧T24 receipt只覆盖pre-portability proof blob，无法回退当前pair；handoff下一步重复
+  已完成动作，且把canonical close=`216/215`倒写成`215/216`。
+- 为保持最终产品树不变且重新建立可独立回退的原子边界，先用commit=`9f4d3e47`把product/proof精确恢复
+  fresh-main blobs，再以新atomic candidate=`eb8dc0f8bc726816e97cd5bb0f027e35216651c0`一次提交当前portable
+  pair。该commit仍严格为product=`+48/-406`、proof=`+48/0`；最终product blob=
+  `77827e018ae192e1d33d739310c0c7754309d7a2`、proof blob=
+  `25ef1acdd616f89b001b96973ced37fdf5f073ff`，与已通过full gate的最终blobs一致。
+- 新disposable clone=`/tmp/wi217-rollback-reapply-r3`，未推送。Revert commit=
+  `12d9bd5eafcfecb3be881ec4110430b75bc4e9b7`，精确恢复baseline product=
+  `7b2ac50725136b6399b74e898f147a0b1fecd9c6`、proof=
+  `735b505f72c4f2cfb1a378397e4f15faa79ed219`，ProgramService=`406 passed in 31.56s`。
+  Reapply commit=`ef04298e2187e4a9d37c49417674d206610f2271`，精确恢复当前两个candidate blobs，
+  focused proof=`6 passed`、ProgramService=`412 passed in 28.28s`、Ruff PASS、clone clean。
+- 由于最终product/proof blobs未从R3 full gate后变化，`3309 passed, 3 skipped`与package/CLI证据继续精确
+  绑定同一代码内容；不重复运行昂贵full。Records/truth/handoff提交后必须以新clean identity从零双审。
