@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T17:51:24Z
-- Reason: closure R1 LEAN/SAFETY FAIL2 remediation
+- Updated: 2026-07-21T17:59:06Z
+- Reason: closure R2 LEAN/SAFETY identical FAIL1 remediation
 - Goal: 合入唯一closure PR，关闭WI217/WI196并恢复正常特性开发，不再创建减重work item
-- State: R1四项finding已修正；truth与本地治理门禁已刷新，待clean committed identity R2双审
+- State: R2唯一恢复时点finding已修正；待新clean committed identity R3双审
 - Stage: review
 - Work Item: 217-programservice-artifact-loader-dedupe
 - Branch: codex/217-lean-route-closure
@@ -28,8 +28,8 @@
 - 无用户输入blocker；closure source仍须新identity本地门禁、LEAN/SAFETY PASS0、current-head Codex、required checks、merge与detached fresh-main。
 
 ## Local PR Review
-- R1 exact `5aa3550c/55cb7347/formal-six 5a4d3f97/handoff 04474cba`：LEAN FAIL2、SAFETY FAIL2；findings已进入records修正，旧verdict失效。
+- R2 exact `86ebf23c/0d0583e2/formal-six 6228319a/handoff 406f7933`：LEAN/SAFETY均FAIL1且finding相同；已修正为merge后立即恢复正常开发，旧verdict失效。
 
 ## Exact Next Steps
-- 对修正后的committed+clean identity完成终检并取得LEAN/SAFETY R2双PASS0。
+- 对修正后的committed+clean identity完成终检并取得LEAN/SAFETY R3双PASS0。
 - 推送唯一closure PR，完成Codex/current-head checks后squash merge并在detached fresh-main验收；不删除本地branch。

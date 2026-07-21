@@ -289,8 +289,9 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     closure PR；实现修复不得拆出第二 PR。GO 路径登记真实净删；NO-GO 路径登记最终产品净变化0，并区分
     pre-merge零产品合入或post-merge临时合入后exact rollback；两者都由
     closure 关闭 WI217/WI196，将 RC-08 记为 `retired_unrealistic_composite_target`，把 GAP-01/GAP-03～06
-    与 T62～T67 剩余结构债转为 `non_blocking_backlog`，并禁止新的减重 work item。Closure fresh-main 后
-    恢复正常特性开发；本路线不创建版本、tag、Release、PyPI 上传或全局 CLI 更新。
+    与 T62～T67 剩余结构债转为 `non_blocking_backlog`，并禁止新的减重 work item。Closure merge后
+    立即恢复正常特性/缺陷开发；fresh-main不延迟或重新阻断该恢复。本路线不创建版本、tag、Release、
+    PyPI上传或全局CLI更新。
 15. WI217 唯一implementation PR #168 已以 reviewed HEAD=`533363f495`、22/22 required checks、Codex
     current-head clean、LEAN/SAFETY同identity PASS0和detached fresh-main全绿形成最终GO；merge=
     `4d98039d`，实际product=`+48/-406/net -358`。本唯一closure source合入时，路线累计产品raw净删

@@ -346,8 +346,8 @@ identity is frozen.
   product/proof blobs 精确恢复到 pre-implementation baseline，并证明406 baseline unit与所有required checks
   全绿。GO登记实际 product net -358；两种NO-GO都登记最终零产品净变化，同时如实记录是否发生过临时merge。
   两条路径都关闭 WI217/WI196，把 RC-08 记为 `retired_unrealistic_composite_target`，并将 GAP-01/GAP-03～06、
-  T62～T67 剩余结构债转为非阻塞 backlog。Closure fresh-main 后恢复正常特性开发，禁止再选择或创建新的
-  减重 work item；正常特性/缺陷 work item 不受此禁令影响，本路线不执行版本发布。
+  T62～T67剩余结构债转为非阻塞backlog。Closure merge后立即恢复正常特性/缺陷开发，fresh-main不延迟
+  或重新阻断该恢复；禁止再选择或创建新的减重work item，本路线不执行版本发布。
   本步骤的source完成不提前代表main已关闭路线；唯一closure PR merge是mainline状态生效点，detached
   fresh-main governance/truth/scope/clean是post-merge acceptance。若失败，按parent spec §10.1执行
   emergency corrective-revert，精确恢复pre-closure records，不创建第二closure/implementation/减重WI。

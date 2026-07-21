@@ -284,3 +284,10 @@
   implementation或减重WI；不得选择候选，正常特性/缺陷开发不被阻断，再次closure需用户明确授权。
 - Root/scoped handoff同步为当前时态。R1双方verdict退役；tracked内容变化后必须对新committed+clean
   identity重新完成LEAN/SAFETY双审。
+
+## 21. Batch 2026-07-21-020：Closure Round 2 单一时态 finding
+
+- R2 exact=`86ebf23c/0d0583e2/formal-six 6228319a...803e/handoff 406f7933...b398`；LEAN与SAFETY
+  独立返回相同`FAIL1`：parent spec与child plan各残留一句“fresh-main后恢复正常开发”，与merge生效合同冲突。
+- 最小修复只把两句统一为“closure merge后立即恢复正常特性/缺陷开发，fresh-main不延迟或重新阻断”；
+  不改产品/proof、truth计数、收益、corrective-revert、backlog或发布边界。R2 verdict退役，R3从零双审。
