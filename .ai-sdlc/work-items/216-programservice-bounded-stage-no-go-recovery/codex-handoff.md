@@ -1,75 +1,43 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T08:57:22Z
-- Reason: T66/C2 与 no-DSL spike 已确定 NO-GO，进入 WI216 records-only recovery
-- Goal: 持久化本次 `cancelled_no_go`，保持 legacy 不变并禁止旧 T66 路线重复投入
-- State: terminal truth/gates/archive全绿；Final Round 7 两处stale-line finding已修，等待final同身份双审
+- Updated: 2026-07-21T10:03:29Z
+- Reason: 为已观察到的 WI216 lifecycle 事实写入 records-only reconciliation receipt
+- Goal: 仅持久化 WI216 `cancelled_no_go` 的闭环收据；保持 legacy 不变，禁止恢复旧 T66 路线
+- State: branch=`codex/216-lifecycle-reconciliation`，base=`origin/main@19809f3ac0b1c7f648fa36ed326be7b2c367b3b1`；
+  awaiting receipt truth/gates、same-identity LEAN/SAFETY review、PR/checks/merge/fresh-main。
 - Stage: plan
 - Work Item: 216-programservice-bounded-stage-no-go-recovery
-- Branch: codex/216-programservice-bounded-stage-no-go-recovery
-- Base: origin/main@7922956d3e248a93c3190240259850ab3498ec9f
 
 ## Changed Files
 
-- .ai-sdlc/project/config/project-state.yaml（`next_work_item_seq: 217`）
-- .ai-sdlc/state/codex-handoff.md
-- .ai-sdlc/work-items/216-programservice-bounded-stage-no-go-recovery/codex-handoff.md
-- program-manifest.yaml（WI216已注册，terminal truth已完成；本receipt后只机械resync）
-- specs/196-ai-sdlc-lean-code-self-reduction-governance/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}
-- specs/213-programservice-bounded-stage-reduction/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}
-- specs/216-programservice-bounded-stage-no-go-recovery/{spec.md,plan.md,tasks.md,task-execution-log.md,development-summary.md}
-- tests/integration/test_repo_program_manifest.py（仅 inventory/close 两个机械期望）
+- `.ai-sdlc/state/codex-handoff.md` 与 scoped copy（byte-identical）
+- `specs/216-programservice-bounded-stage-no-go-recovery/{tasks.md,task-execution-log.md,development-summary.md}`
+- `program-manifest.yaml`（source receipt 后仅允许机械 truth sync refresh）
 
 ## Key Decisions
 
-- C2-safe 完整自然账本=`558 LOC / 64 branch`，legacy=`495/63`；产品源码净增35、proof净增285，
-  不能称为减重。
-- No-DSL spike 第二阶段 target=`1209/164`，高于两阶段 legacy=`842/92`且 branch 超硬门74；
-  LEAN/SAFETY 对产品及 records 均为 `STOP_SPIKE_NO_GO/findings=0`。
-- T66 本次 implementation=`cancelled_no_go`；C2/spike=`archived_not_merged`。GAP-03/WI196/RC-08/
-  release 继续 open，用户“补缺口并减重”目标尚未完成。
-- `70f19275`、`60dcc4f6` 已推送到两个契约冻结的 `codex/archive/215-*` 非合入 refs，并用
-  `git ls-remote` exact 验真；未创建 PR，后续禁止 merge/force-push/delete。
-- 产品、测试逻辑、workflow、依赖、版本、release 零改动；测试唯一例外是 manifest exact
-  `1126/214→1131/215` 两个标量。
-- 任何故障都保持 T66 fail-closed；禁止 full revert WI216 后恢复旧实现准入。
+- 记录的 final reviewed delivery identity HEAD/tree/formal-nine 为
+  `57c22f60618ed85df5e0f51b90b4bd3aa2e4b2b8` / `6d0946c85c8a12c3821861523e780a0d3829e1ed` /
+  `75351a47a7c98b98881e2cfc878850295535d7e73b657bc48a3615028b3d164a`；LEAN/SAFETY 均 `PASS0/findings=0`。
+- PR #165 的 13/13 checks success；Codex bot 返回 code-review usage-limit，用户授权本地 SDLC LEAN+SAFETY
+  substitute，未 waive CI。squash merge=`19809f3ac0b1c7f648fa36ed326be7b2c367b3b1`，delivery branch 保留。
+- 只关闭 WI216 records recovery；T66、GAP-03、WI196、RC-08、release 保持 open/fail-closed，C2/spike 保持
+  `archived_not_merged`。本 reconciliation branch 的 merge 才使 WI216 completion 在 main 生效；其 detached
+  fresh-main 通过前不得启动 replacement formal reduction WI。
 
 ## Commands / Tests
 
-- Base verified=`7922956d/cc3c6b7f`；C2=`70f19275/2fdd9aaa`；spike product=
-  `6c945b40/6341bcb2`；spike records=`60dcc4f6/44420f6d`；三个 worktree clean。
-- Round 1=`9718b330/c060ab24/b8fc1ace...2dae`，LEAN FAIL / SAFETY FAIL5；Round 2=
-  `34cf0bb1/13a47e71/8fed255a...e42d`，LEAN FAIL / SAFETY FAIL2；findings均已修正。
-- Round 3=`4cfff3b0/c4a7539c/formal-nine 3daf7fb3...ea39`；LEAN PASS0，SAFETY FAIL1 仅指出本
-  handoff状态滞后。本修正不改变 formal-nine，但改变 final commit/tree，双方均须 Round 4 重审。
-- Round 4=`50958c55/ad950e6b/formal-nine 3daf7fb3...ea39`；SAFETY PASS0，LEAN FAIL1 仅指出首个
-  next step 已被当前提交完成。本修正改用不依赖提交时点的 fail-closed gate，双方须复审新身份。
-- Round 5=`77d984c2/63f2505b/formal-nine 3daf7fb3...ea39`；Pascal/LEAN 与 Confucius/SAFETY
-  同身份 `PASS0/findings=0`。
-- Remote archive exact：C2=`70f19275150831ceea89a6c1e006c056ee98c412`；no-DSL records=
-  `60dcc4f65f2a332261b765bfe5fff9979397ddc7`。
-- Truth audit=`ready/fresh 1131/1131`、missing/unmapped=`0/0`；manifest exact=`1 passed in 158.21s`；
-  constraints no BLOCKERs；validate PASS；Cursor SHA不变；Ruff check PASS。
-- Scope=20个允许文件；产品/workflow/依赖/版本/release零差异；测试精确`+2/-2`两个计数标量；
-  project seq=217；handoff parity、archive exact、diff-check均PASS。
-- Terminal truth=`6e606df5/2b4954d0`，snapshot=`89ea4c7d...dd90`；clean复验 truth=`ready/fresh
-  1131/1131`、manifest exact=`1 passed in 135.19s`，fast gates全绿。
-- Final Round 6=`6e606df5/2b4954d0/formal-nine 75351a47...d164`；LEAN/SAFETY均`FAIL1`，唯一共同
-  finding是receipt状态未反映terminal truth已完成；本receipt已修，其余范围/账本/安全无finding。
-- Final Round 7=`bb32a5f2/3cd20aa9/formal-nine 75351a47...d164`；LEAN/SAFETY均`FAIL1`，只发现
-  archive与diff-check两处残留旧状态；本receipt已删除，其余边界均无finding。
+- 已运行 `uv run ai-sdlc program truth sync --execute --yes`；已恢复原有 `## Gate receipt` 标题以满足文档保留
+  追踪规则；最终 `verify constraints`=no BLOCKERs、
+  `program validate`=PASS、`program truth audit`=exit 0、manifest exact
+  `tests/integration/test_repo_program_manifest.py`=exit 0，Markdown/scope/parity/Cursor/diff-check assertions=PASS。
 
 ## Blockers / Risks
 
-- Final Rounds 6～7 的 receipt findings 已修；本 records receipt 后只允许机械 snapshot resync。新的 clean
-  commit/tree 未取得 final 同身份双 PASS 前不得推送 WI216 PR 或合入。
-- 两个 archive ref 已 remote exact 可解析；普通 remote branch 没有技术只读保护，安全来自禁止
-  force-push/delete/PR/merge 的交付合同。
-- WI216 merge/fresh-main 只关闭 records recovery，不关闭 T66/GAP-03/WI196/RC-08/release。
-- handoff CLI 可能跟随旧 checkpoint 错写 scoped copy；本项直接维护 root/scoped byte-identical。
+- 不推送或创建 PR；控制器会在本分支 own truth/gates 与同身份 LEAN/SAFETY review 后执行交付。
+- handoff 两份必须持续 byte-identical。
 
 ## Exact Next Steps
 
-- 对当前 committed+clean HEAD/tree/formal-nine 取得 final LEAN/SAFETY 同身份双 PASS；任一 finding
-  成立则最小修正并机械 resync，未双 PASS 不进入 PR。
-- 双 PASS 后推送 WI216 分支、创建 records-only PR，监控 current-head review 与 required checks。
+- 完成 handoff 本次测试收据后的最后 mechanical truth sync，再复跑 focused verification 并 clean commit。
+- 独立 LEAN/SAFETY 对同一 commit/tree/formal-nine 复审通过后，交由控制器完成 PR/checks/merge/fresh-main。

@@ -74,9 +74,12 @@
 
 ### T34 最终同身份双审
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T33、T35
-- **验收**：Pascal/LEAN 与 Confucius/SAFETY 对同一 final HEAD/tree/formal-nine 再次
+- **验收/收据**：Pascal/LEAN 与 Confucius/SAFETY 对同一 final reviewed delivery identity
+  HEAD/tree/formal-nine=`57c22f60618ed85df5e0f51b90b4bd3aa2e4b2b8` /
+  `6d0946c85c8a12c3821861523e780a0d3829e1ed` /
+  `75351a47a7c98b98881e2cfc878850295535d7e73b657bc48a3615028b3d164a` 均为
   `PASS0/findings=0`；records-only receipt 不改变 formal-nine。
 
 ### T35 持久化非合入审计 refs
@@ -90,22 +93,31 @@
 
 ### T41 推送并创建 records-only PR
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T34、T35
-- **验收**：PR scope 与 reviewed tree 一致；请求 Codex review；heartbeat 监控 current HEAD/checks。
+- **验收/收据**：PR #165 对应 reviewed exact HEAD
+  `57c22f60618ed85df5e0f51b90b4bd3aa2e4b2b8`，scope 与 reviewed tree 一致；13/13 checks
+  success，zero reviews、zero review threads。Codex bot 明确返回 code-review usage-limit，未接受该
+  review；用户授权使用本地 SDLC LEAN+SAFETY 作为替代，但未豁免 CI。
 
 ### T42 current-head 评审与 required checks
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T41
-- **验收**：无 actionable finding、required checks 100% success；任何修正使旧本地双审失效并回 T21。
+- **验收/收据**：PR #165 的 current HEAD 保持
+  `57c22f60618ed85df5e0f51b90b4bd3aa2e4b2b8`；13/13 required checks success，zero reviews、zero
+  review threads，未发现 actionable finding。Codex bot 的 code-review usage-limit 由用户授权的本地
+  SDLC LEAN+SAFETY substitute 覆盖；CI 仍完整通过，未被 waive。
 
 ### T43 squash merge 与 detached fresh-main
 
-- **状态**：pending
+- **状态**：completed
 - **依赖**：T42
-- **验收**：保留本地分支；detached fresh-main 的 truth/constraints/validate/manifest/scope/parity/clean 全绿；
-  只关闭 WI216 records recovery。
+- **验收/收据**：squash merge=`19809f3ac0b1c7f648fa36ed326be7b2c367b3b1`，delivery branch 已保留。
+  detached fresh-main acceptance：manifest exact=`1 passed in 109.86s`；constraints no BLOCKERs；
+  validate PASS 且 Cursor SHA 不变=`d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a`；
+  truth ready/fresh=`1131/1131`、missing/unmapped=`0/0`、all canonical layers=`215/215`；Ruff exact
+  和 diff-check PASS，worktree clean。只关闭 WI216 records recovery。
 
 ## 追踪矩阵
 
