@@ -107,30 +107,30 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 | T58 隔离 workitem 只读 adapter side effect（completed；本 receipt merge 生效） | standalone | GAP-15 | L2 / CC-05 | WI-213 PR #158 / merge `450d4988` 与 lifecycle PR #159 / merge `d5ad7616` 的 fresh-main；WI-214 formal PR #160、amendment PR #161、implementation PR #162 / merge `2845fedc`、delivery PR #163 / merge `60fe6d90` 均已完成 | 五个只读命令含 help/invalid sentinel + `plan-check normal` 代表性 real-hook A/B；共享 hook 一例 partial-write；`init/link` valid/missing/dirty/no-project/no-checkpoint/config-lock/other-exception 分发零差异；implementation reviewed tree=`03b4a1ff`，LEAN/SAFETY 同身份 PASS0，22/22 checks，fresh-main full=`3303 passed, 3 skipped`、targeted=`50 passed`；delivery tree=`3f6698d7` 双 PASS0、10/10 checks、detached fresh-main truth=`ready/fresh 1126/1126` 与治理/scope/clean 全绿；receipt detached fresh-main 后才恢复 T66 准入 |
 | T61A 捕获目标切片旧行为 | embedded gate | GAP-02/WP-01A | L1/L2 | T51、T52 + fail-closed impact analysis；T66 额外依赖 T58 closure receipt fresh-main | 固定环境、allowlist、surface/Golden 基线 |
 | T61B 候选实现 differential 与回退演练 | embedded pre-merge gate | GAP-02/WP-01B | L1～L3 | T61A + candidate hash | 零未批准差异、rollback receipt；未通过不得 merge/close |
-| T62A code + contract report-only（open） | standalone | GAP-01/WP-02 | L1/L2 | T61A + 新/替代 sponsor + 父合同重新双审 | WI-202 候选 RC-09 No-Go；重启项须分类/合同缺口报告、历史零误阻断、RC-06 预算 |
-| T62B code + contract warning | standalone | GAP-01/WP-02 | L2 | T62A 稳定 | 两规则族 warning fixture、waiver schema、独立开关 |
-| T62C code + contract blocking | standalone | GAP-01/WP-02 | L2 | T62B 稳定 | 两规则族 blocker、admission `active + verified`、独立降级与 reviewer fallback 测试 |
-| T63 单个 helper/DTO/test 重复族（按 family 继续） | standalone + T61A/B | GAP-05/WP-03 | L1 | T51、T52 已满足；WI-205、WI-206、WI-210、WI-211 各完成一个 family | WI-211 / PR #153 / merge `cd64d8aa`：10→1 mapping body、10 aliases、23 calls 不变、产品 net -122、双 Agent/Codex/22 checks/fresh-main；新 family 仍须重复族清零、目标切片 LOC -10%、全量测试 |
-| T64 单个 Loop Store family | standalone + T61A/B | GAP-05/WP-04 | L2 | T51、T52 | store differential、LOC -10%、恢复/损坏输入测试 |
-| T65 单个 baseline 候选 go/no-go | standalone + T61A/B on Go | GAP-06/WP-05 | L2 | T51、T52 | Go=`completed_reduction`；单项 No-Go=`cancelled_no_go`；六项全 No-Go=`closed_no_viable_reduction` |
-| T66 单个 ProgramService 领域切片（本次 implementation `cancelled_no_go`；GAP-03 open） | standalone formal + implementation T61A/B + independent deletion PR | GAP-03/WP-06 | L3 | WI-213 formal、T58/GAP-15 closure receipt 已满足；WI-216 证明本次 C2 与无 DSL 路线不满足真实减重，证据 `archived_not_merged` | 本次不关闭；未来须新 formal WI 从 fresh main 证明完整自然产品净删、复杂度下降和兼容预算，不能继承 WI-215 GO/hash/budget/review receipt |
-| T67 单个 Program Stage family | standalone + T61A/B | GAP-04/WP-07 | L3 | T51、T52 + 真实重叠子项 | 镜像 LOC -70%、33 命令兼容；candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、offline/sibling smoke、selector rollback/reapply；独立删旧 PR 后重复同等安装与回退演练，删除前不得关闭 |
+| T62A code + contract report-only（WI-202 No-Go；停止新实例） | retired-to-backlog at WI217 closure | GAP-01/WP-02 | L1/L2 | 不再准入新 sponsor/WI | 保留 WI-202 No-Go、分类/合同缺口与 RC-06 历史证据；不作为正常特性开发 blocker |
+| T62B code + contract warning（未开始；停止新实例） | retired-to-backlog at WI217 closure | GAP-01/WP-02 | L2 | 不再准入 | 保留未实施事实并转非阻塞 backlog |
+| T62C code + contract blocking（未开始；停止新实例） | retired-to-backlog at WI217 closure | GAP-01/WP-02 | L2 | 不再准入 | 保留未实施事实与既有 reviewer fallback，不转成已完成功能 claim |
+| T63 helper/DTO/test 重复族（WI217最后一个） | standalone + T61A/B | GAP-05/WP-03 | L1 | WI-205、WI-206、WI-210、WI-211 已完成；WI217为最终候选 | WI217 按 GO/NO-GO exact receipt结束；之后不再创建新 family reduction WI |
+| T64 Loop Store family（停止新实例） | retired-to-backlog at WI217 closure | GAP-05/WP-04 | L2 | 不再准入 | 剩余 store 结构债转非阻塞 backlog |
+| T65 baseline 候选（停止新实例） | retired-to-backlog at WI217 closure | GAP-06/WP-05 | L2 | 不再准入 | 既有 go/no-go 历史保留；未评估项转非阻塞 backlog |
+| T66 ProgramService 领域切片（`cancelled_no_go`） | retired-to-backlog at WI217 closure | GAP-03/WP-06 | L3 | WI-216 已证明两条路线 NO-GO | 不创建新 formal WI，不继承 WI-215 receipt；剩余分域债转非阻塞 backlog |
+| T67 Program Stage family（停止新实例） | retired-to-backlog at WI217 closure | GAP-04/WP-07 | L3 | 不再准入 | 剩余 stage 结构债转非阻塞 backlog |
 
-**全局恢复门禁**：T57/WI-209、WI-210、WI-211 与 WI-212 candidate-selection fresh-main acceptance
-已完成；表中 T61A、
-T62A～T62C、T63～T67 的新实例已恢复选择，但仍须逐项满足各自依赖、sponsor、RC 与原子 WI/branch/PR。
-WI-211 已完成一个 T63 family；下一原子项必须从 fresh main 重新选择，不得沿用旧 spike 或已撤销 claim。
+**路线终局门禁**：历史恢复门禁均已完成，但用户已冻结 WI217 为最后一个减重 work item，取代
+T62A～T67“恢复选择/创建新实例”的未来时态。WI217 formal 后最多一个 implementation PR 和一个 closure PR；
+任何修复留在同一 implementation PR，closure 后禁止新减重 work item。
 WI-212/WI-213 formal 与 WI-214/T58 closure receipt 已完成。其后 T66 首次实现尝试已经执行，但 WI-216
 以 C2=`558/64 vs 495/63`、product净增35、proof净增285，以及 no-DSL spike=
 `1209/164 vs 842/92` 证明当前路线确定 NO-GO。本次 implementation 状态为 `cancelled_no_go`，产品、测试、
-proof不合入；T66/GAP-03仍未关闭。未来只能创建新的 formal WI并从 fresh main 重新准入，不得沿用本次
-候选或把 records receipt 当作 reduction completion。
+proof不合入；T66/GAP-03在WI217 closure前仍保留当前事实状态，closure后转为非阻塞backlog，不再创建
+新的formal WI，也不得把records receipt当作reduction completion。
 既有已完成 receipt 不受影响；各行保留的历史 T51/T52 依赖已满足，不需要重复执行。
 
 **当前 active child**：WI-217 已从 fresh-main 选择一个新的 T63 artifact-loader family。Formal-only
 阶段冻结403/39、product `+48/-406`、proof `+48`、terminal44/4与RC-06 `98/101`；R4 LEAN/SAFETY
 option review均findings=0。只有formal PR merge并通过detached fresh-main后才能执行T61A；实现成功也只
-关闭该family，父路线总体状态保持open。
+登记真实净删，实现NO-GO则登记零产品合入；两者都由唯一closure关闭WI217/WI196、退役RC-08并恢复
+正常特性开发。
 
 每个目标切片必须先落盘 GAP-09～GAP-11 防回归 impact analysis；除当前 active child 唯一 mapped
 pre-close `development-summary.md`（close=`N/(N-1)`）外，分析缺失/不确定或当前 truth 再现对应
@@ -142,7 +142,7 @@ T53A/T53B/T54，也不得把它们重新解释为待满足硬依赖。
 | 规范 | 任务 |
 |---|---|
 | GAP-01～GAP-15 | T22、T51～T67 |
-| LP-01～LP-12 | T21、T23、T32、T63～T67 |
+| LP-01～LP-13 | T21、T23、T32、T63～T67；LP-13由WI217/T32终局关闭落实 |
 | NC-01～NC-06 | T21、T51～T58 |
 | CC-01～CC-08 | T21、T51、T52、T55～T58、T61A、T61B、T62A～T62C、T63～T67（按 impact analysis） |
 | RC-01～RC-10 | T21、T32、T61A、T61B、T62A～T62C、T63～T67（按适用矩阵） |
@@ -154,4 +154,6 @@ T53A/T53B/T54，也不得把它们重新解释为待满足硬依赖。
 | FR-12 | T42、T43、T55～T58 formal truth |
 | FR-13 | T55、T56 |
 | FR-14 | T57 |
+| FR-15 | WI217 T31～T32 |
 | SC-01～SC-10 | T32、T33、T41～T43、T55～T58 |
+| SC-11 | WI217 T32 |

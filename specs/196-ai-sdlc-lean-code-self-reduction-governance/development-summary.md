@@ -69,9 +69,9 @@
   `net -122`，累计产品 raw `net -653`；这只是已关闭重复族的局部收益，不代表路线整体达到 10% 或
   两个超大文件降到 400 行。
 - WI-211 closure PR #154 已合并为 `626adb70`，lifecycle reconciliation PR #155 已合并为 `32742a25`；
-  双 Agent、Codex、required checks 与 detached fresh-main 验收均通过，下一原子项选择门禁已恢复。
-  后续仍须按真实收益、证明成本与 sponsor 从新的 T63/T65/WP-06/WP-07 候选中选择独立 WI。不得恢复
-  已 No-Go 且缺少 sponsor 的 T62A，也不得关闭 GAP-05/WI-196、宣称 RC-08 达成或发布版本。
+  双 Agent、Codex、required checks 与 detached fresh-main 验收均通过。其“恢复下一原子项选择”的历史
+  结果已用于选择 WI217；用户现已冻结 WI217 为最后一个减重 work item，不再选择新的
+  T62/T63/T65/WP-06/WP-07 减重 WI。
 - WI-212 只冻结下一候选与修复 L3 路线合同死锁：WP-06/WP-07 的“稳定发布周期”改为主线预发布
   稳定周期，要求 candidate 合入且 legacy 保留后完成 cross-platform CI、wheel/sdist clean install、
   offline/sibling smoke 与 selector rollback/reapply，再以独立 PR 删旧并重复同等安装与回退证明。
@@ -89,16 +89,23 @@
   1126/1126` 且全部门禁全绿。Lifecycle delivery final tree=`3f6698d7` 同身份双 PASS0，PR #163
   exact-head 10/10 checks、merge=`60fe6d90` 与 detached fresh-main 全绿。本 closure receipt merge 关闭
   GAP-15/T58，但 T66 仍 blocked；receipt detached fresh-main
-  通过后才允许新建 T66 implementation WI并先取得 T61A 双 readiness GO，失败立即回退 receipt。
+  按当时合同，通过后才允许新建 T66 implementation WI并先取得 T61A 双 readiness GO，失败立即回退 receipt；
+  该未来时态现已由 WI217 终局规则终止。
   T66/GAP-03/WI196/RC-08/release 仍未完成，本项不授权提前发布。
-- 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
+- 关闭事件：WI217 的唯一 closure PR 在 GO/NO-GO 任一路径完成双审、checks、merge 与 detached fresh-main；
+  该事件关闭 WI196、把 RC-08 记为 `retired_unrealistic_composite_target` 并将剩余结构债转为
+  `non_blocking_backlog`。在此事件前保持 active。
+- 终止理由：专项接近7天仍无可预测终点，token/评审/CI成本持续增加并影响正常特性开发；已合入产品
+  raw净删653行仅约占初始107,482行基线0.61%，即使WI217 GO累计1,011行也仅约0.94%。减重必须与
+  新特性交付均衡，不能成为无限期主线工作。
 - WI-216 superseding receipt：T66 首次实现探索已 `cancelled_no_go`。C2-safe 的完整产品账本
   `558/64` 高于 legacy `495/63`、产品净增35且 proof净增285；no-DSL spike 第二阶段
   `1209/164` 高于两阶段 legacy `842/92`，双 reviewer 一致 `STOP_SPIKE_NO_GO/findings=0`。
-  两条路线均 `archived_not_merged`，legacy 产品保持不变。GAP-03/WI196/RC-08/release继续 open；
-  未来候选须另立 formal WI并证明真实净删，不能继承 WI215 receipt。
+  两条路线均 `archived_not_merged`，legacy 产品保持不变。GAP-03/WI196/RC-08 在 WI217 closure 前保留
+  当前事实状态；closure 后转为路线关闭/非阻塞 backlog，不再另立减重 formal WI或继承 WI215 receipt。
 - WI-217 current active child：从fresh-main选中T63 artifact-loader family；基线403/39，clean spike
   product `+48/-406`、proof `+48`、terminal44/4、RC-06含truth≤2为98/101；加强后legacy persistent
   proof=5GREEN/1binding RED，candidate=6 proof与412 unit全绿；
-  LEAN/SAFETY Round 4均findings=0。当前仅formal authoring，产品尚未授权；成功实现也只把actual net -358
-  加入RC-08 family ledger，GAP-03/T66、GAP-05、WI196、RC-08与release仍open。
+  LEAN/SAFETY Round 4均findings=0。当前仅formal authoring，产品尚未授权；formal 后最多一个
+  implementation PR 和一个 closure PR。GO登记actual net -358，NO-GO登记零产品合入；两者都由closure
+  关闭WI217/WI196、退役RC-08、把剩余结构债转为非阻塞backlog并恢复正常特性开发。

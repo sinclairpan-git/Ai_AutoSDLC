@@ -31,6 +31,16 @@
 
 当前治理总项不删除公共命令，不改变参数、默认值、退出码、artifact schema、状态语义或授权边界，不发布版本，也不更新全局 CLI。
 
+### 2.1 路线终止的投入产出依据
+
+本专项已持续接近7天，完成时间仍不可预测，token、评审、CI和协调成本持续上升，并阻塞正常特性开发。
+当前已合入family ledger产品raw净删653行，相对初始`src/ai_sdlc` 107,482行基线仅约0.61%；即使WI217
+GO再净删358行，累计1,011行也仅约0.94%，仍远低于RC-08的10%组合目标。该粗算只用于判断路线级
+投入产出，不夸大为全仓精确净变化。
+
+减重必须服务可维护性和特性交付，而不能替代特性交付。继续为不可达组合目标消耗无限token与日历时间
+没有产品意义，因此WI217被设为最后工作项；剩余结构债降为非阻塞backlog，正常特性开发恢复优先级。
+
 ## 3. 统一问题台账
 
 所有证据默认对应基线 revision；`program-manifest.yaml` 证据必须以目标提交内的 `truth_snapshot.repo_revision`、`generated_at`、`snapshot_hash` 三元组为准，并通过 `uv run ai-sdlc program truth audit` 复核。规范不得硬编码会随 truth sync 变化的 snapshot hash。
@@ -64,6 +74,10 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 
 每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
 
+WI217 closure 是本路线唯一剩余终局。表中 GAP-01/GAP-03～06 在 closure 前仍保留当前事实状态；closure
+不伪造其“已修复”，而是统一记为 `non_blocking_backlog` 并解除对正常特性开发的阻断。GAP-02 的
+characterization 能力保留为普通工程实践，不再产生减重 work item；已关闭 GAP-07～15 的历史证据不变。
+
 ## 4. Lean Code 原则
 
 - **LP-01 行为优先**：净行数下降不能抵消功能、错误处理、审计证据或兼容损失。
@@ -78,6 +92,8 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 - **LP-10 每包可量化减重**：每个实现包必须满足 Reduction Contract，不允许无限期“结构准备”。
 - **LP-11 功能与减重分批**：出现公共行为需求时转为独立功能/迁移工作项。
 - **LP-12 切换后删除**：L3 切片在同一工作包内完成 shadow、切换、稳定期和旧实现删除后才能关闭。
+- **LP-13 有界投入与产品均衡**：减重必须有可解释收益、时间边界和退出条件；当边际收益不足、结束时间
+  不可预测、token/验证成本过高或阻塞正常特性开发时，立即收口为backlog，不得以治理流程续投。
 
 ## 5. 公共兼容契约
 
@@ -123,8 +139,12 @@ WP-03～WP-07 的每个减重候选在编码前冻结以下字段；缺一项不
 - **RC-05 临时膨胀**：shadow 期间最多增加目标切片基线的 15% 或 1,000 行手写产品代码，取较小值；超出则缩小切片。旧实现删除前工作包不得关闭。
 - **RC-06 保护成本**：适用矩阵要求 RC-06 的候选，其新增手写产品、test/harness/normalizer LOC 合计不得超过已通过候选审查并纳入具体 RC 的预计删除代码 25%，且路线图累计绝对上限 1,500 行；fixture/snapshot 文件每个冻结 CC 场景最多 2 个，版本库内规范化 snapshot 累计不超过 2 MiB。超限时缩小范围或复用现有测试，不得扩大预算分母。统一口径不追溯撤销已经双审、合并和 fresh-main 验收的 receipt，但后续候选计算路线累计上限时，必须按当前 product+proof 合并口径保守重列历史实际值或已批准上限，不得只累计 proof 子项。
 - **RC-07 文件约束**：新增手写文件不超过 400 行、新增函数不超过 50 行；无三个当前调用者不得新增公共抽象。
-- **RC-08 总体终态**：仅用于路线图组合终态，不作为单个子项关闭条件。路线图关闭时手写产品 LOC 相对基线净下降至少 10%；选定重复族全部关闭；`program_service.py` 与 `program_cmd.py` 均降到 400 行以内。
-- **RC-09 停止投资**：预测或实测不能达到该子项适用的 RC-04～RC-07，或会使 RC-08 组合终态不可达，或保护成本超过收益时，停止该方案并保留旧实现，不得以结构准备续投。校验器只解析适用矩阵声明的字段。
+- **RC-08 总体终态（待退役）**：历史组合目标要求手写产品 LOC 相对基线净下降至少 10%、选定重复族
+  全部关闭，且 `program_service.py` 与 `program_cmd.py` 均降到 400 行以内。该组合目标已被用户判定
+  不现实；WI217 closure 必须记为 `retired_unrealistic_composite_target`，不得写成达成、waiver 或失败后
+  继续投资，也不再作为 WI196 关闭门。
+- **RC-09 停止投资**：预测或实测不能达到该子项适用的 RC-04～RC-07，或保护成本超过收益时，停止该
+  方案并保留旧实现，不得以结构准备续投。校验器只解析适用矩阵声明的字段；WI217 后不再准入新的减重候选。
 - **RC-10 证据**：PR 必须给出 before/after、预算消耗、差异结果、回退演练和未解决风险。
 
 门禁、兼容 harness 和 facade 不是减重成果；它们的新增必须计入预算。
@@ -138,7 +158,7 @@ WP-03～WP-07 的每个减重候选在编码前冻结以下字段；缺一项不
 | WP-02 | RC-01～RC-03、RC-06、RC-07、RC-09、RC-10 + CC-01/02/03/05/06/07；代码指标与合同 admission 两个规则族都经历 report/warning/blocking，使用独立状态/回退开关 |
 | WP-03/WP-04/WP-05 | RC-01～RC-07、RC-09、RC-10 + impact analysis 选出的 CC；RC-04 按重复/候选类型解释 |
 | WP-06/WP-07 | RC-01～RC-07、RC-09、RC-10 + impact analysis 选出的 CC；RC-04 按结构类型解释，T61A/B 为 pre-merge gate |
-| 路线图关闭 | RC-08 + 所有 Gap Evidence Index |
+| WI217/WI196 终局关闭 | WI217 GO/NO-GO exact receipt + RC-08 retired + 剩余 Gap=`non_blocking_backlog` |
 
 ## 7. 风险与执行边界
 
@@ -185,8 +205,11 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
 - **FR-13**：WI-207 不得修改 resume-pack/state reconstruction；WI-208 不得顺带修改 root adapter dispatch。
   两项分别 fresh-main 后继续进入 WI-209，不得提前恢复新的减重候选。
 - **FR-14**：WI-209 只修 comment preservation 的 YAML quoted-scalar false positive，不得修改 adapter、
-  resume reconstruction 或把所有 YAML `#` 行一律豁免；该项 fresh-main 门禁已满足，后续减重仍须
-  使用独立原子 WI/branch/PR。
+  resume reconstruction 或把所有 YAML `#` 行一律豁免；该项 fresh-main 门禁已满足。其历史“后续减重
+  使用独立原子 WI”规则只适用于WI217之前，FR-15禁止WI217之后的新减重WI。
+- **FR-15**：WI217 是最后一个减重 work item。Formal 后最多一个 implementation PR和一个 closure PR；
+  GO/NO-GO 均由 closure 关闭 WI196、退役 RC-08、把剩余结构债转为非阻塞 backlog，并禁止创建新的
+  减重 work item。正常特性开发恢复，但本路线不自动授权版本发布。
 
 ## 9. 成功标准
 
@@ -198,13 +221,16 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
 - **SC-05**：文档合同检查、`verify constraints`、`git diff --check` 与路径白名单检查通过。
 - **SC-06**：兼容安全 Agent 与精简效率 Agent 对同一 `spec.md + plan.md + tasks.md` 内容哈希均明确 PASS。
 - **SC-07**：GAP-07 与 GAP-08 已作为两个独立首批实现项分别关闭，关闭证据绑定 WI-197/PR #121 与 WI-198/PR #122；WP-01A 的基础 barrier 已满足。
-- **SC-08**：后续减重工作包只有满足适用 Reduction Contract 才能以 `completed_reduction` 关闭。WP-05 单项 No-Go 用 `cancelled_no_go`；六个冻结候选均完成评估且全部 No-Go 时，GAP-06 可用 `closed_no_viable_reduction` 关闭，但不计减重成果。只有基线或消费者发生实质变化才允许重新打开。
+- **SC-08**：历史减重工作包只有满足适用 Reduction Contract 才能以 `completed_reduction` 关闭。WP-05 单项 No-Go 用 `cancelled_no_go`；六个冻结候选均完成评估且全部 No-Go 时，GAP-06 可用 `closed_no_viable_reduction` 关闭，但不计减重成果。该重开规则只保留为历史合同；SC-11生效后不得重开为新的减重work item。
 - **SC-09**：GAP-12 由 WI-207 关闭、GAP-13 由 WI-208 关闭、GAP-14 由 WI-209 关闭；任一项不得借
   另一项的测试、waiver 或 PR 伪装为已完成，且三者均不得计入 RC-08 产品 LOC 减重。
 - **SC-10**：GAP-15 由 T58 独立关闭；五个只读 `workitem` 命令不得改变 adapter/config/working tree，
   其 help/invalid-input 同样无 refresh；`init/link` 的 valid/负路径 hook 次数、时序、输出、退出码与写语义
   零未批准差异；real-hook byte evidence 与 config-lock warning+continue/其他异常传播均须覆盖，且独立
   lifecycle delivery 后的 closure receipt 自身双审、Codex/checks、merge/detached fresh-main 前不得进入 T66 T61A。
+- **SC-11**：WI217 closure 对 GO/NO-GO 选择恰好一个真实 outcome，missing/close truth 完整，WI196=closed、
+  RC-08=`retired_unrealistic_composite_target`、剩余结构债=`non_blocking_backlog`，且无新减重 work item、
+  第二个 implementation PR 或本路线发布动作。
 
 ## 10. 冻结决策
 
@@ -253,5 +279,13 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     其13个 ProgramService artifact loader 基线为403 physical/branch39；clean spike实测 product=
     `+48/-406`、proof=`+48`、terminal=`44/4`，RC-06含truth≤2为`98/101`。Round 4 LEAN/SAFETY
     对同一 clean evidence 均 `APPROVE A/findings=0`。WI-217 formal 与 implementation 必须分离；formal
-    fresh-main通过前不授权产品变更。成功实现只关闭该T63 family并把实际product net -358计入RC-08；
-    GAP-03/T66、GAP-05、WI-196、RC-08与release继续open。
+    fresh-main通过前不授权产品变更。以下第14项终局决策取代本项关于“只关闭family并保持父路线open”的
+    未来时态，但不改写候选基线与已观察证据。
+14. 本专项已持续接近7天且结束时间不可预测，token/评审/CI成本持续增加并影响正常特性开发；已合入
+    product raw净删653行仅约占初始107,482行基线的0.61%，即使WI217 GO累计1,011行也仅约0.94%。
+    基于该投入产出，用户冻结 WI217 为本轮减重专项最后一个 work item。本项取代第6～13项所有关于
+    “未来重启、继续open、恢复选择、另立减重WI”的未来时态，但不改写其中已发生的历史事实。当前 formal 后至多一个 implementation PR 和一个
+    closure PR；实现修复不得拆出第二 PR。GO 路径登记真实净删，NO-GO 路径登记零产品合入；两者都由
+    closure 关闭 WI217/WI196，将 RC-08 记为 `retired_unrealistic_composite_target`，把 GAP-01/GAP-03～06
+    与 T62～T67 剩余结构债转为 `non_blocking_backlog`，并禁止新的减重 work item。Closure fresh-main 后
+    恢复正常特性开发；本路线不创建版本、tag、Release、PyPI 上传或全局 CLI 更新。

@@ -117,3 +117,17 @@
 - Finding成立；两份handoff改成不依赖未来commit号的稳定状态：formal source已提交，下一步只要求对当前
   committed+clean identity双审。修正改变HEAD/tree但不改变formal-six、产品、预算或行为合同。
 - Round 4两个verdict均失效；新clean identity必须由双方完整复审。
+
+## 10. Batch 2026-07-21-009：用户冻结减重路线终局
+
+- 用户明确指定 WI217 是本轮减重专项最后一个 work item；当前 formal 完成后至多一个
+  implementation PR 和一个 closure PR，禁止新的减重 work item。
+- 用户说明终止原因：专项接近7天仍不知道何时结束，减重效果不透明，持续大量消耗token并影响正常
+  特性开发；没有新特性的AI-SDLC只追求减重没有产品意义，减重必须与特性交付均衡。
+- 控制器复算已有family ledger产品raw净删653行约占初始107,482行基线0.61%；WI217若GO累计1,011行
+  约0.94%。该比例是路线ROI粗算，不伪装为全仓精确净变化。
+- GO 路径登记真实净删；NO-GO 路径登记零产品合入且不保留候选。两条路径都由唯一 closure PR
+  关闭 WI217/WI196，把 RC-08 记为 `retired_unrealistic_composite_target`，并把剩余结构债转为
+  `non_blocking_backlog`，随后恢复正常特性开发。
+- 该方向改变了 PR #167 已审 identity 的终态合同，R7 LEAN/SAFETY PASS0、已触发 CI 与 Codex 👀均退役；
+  formal 文档、truth、同身份双审和 PR current HEAD 必须重做。本变更不授权版本发布。
