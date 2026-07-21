@@ -96,8 +96,9 @@
    第二轮复审为LEAN PASS0、SAFETY FAIL1；新增manifest `../outside`异常漂移已用public RED/GREEN修复。
    第三轮为LEAN PASS0、SAFETY FAIL2；重复spec id末项覆盖和空格path解析两项public RED均成立，现已在
    唯一private resolver中最小修正。新完整target=`614/88`、canonical product/combined=`575/860`；
-   checkpoint=`b71e4147/d23ddd0f`的immutable A/B各249通过，raw/JUnit与六类public probes均等价，
-   待records identity第四轮同SHA双审。
+   checkpoint=`b71e4147/d23ddd0f`的immutable A/B各249通过，raw/JUnit与六类public probes均等价；
+   records identity=`01a69268/35ff5a36`已获同一 LEAN/SAFETY 双
+   `CONTINUE_SPIKE_PASS0/findings=0`，只解锁继续实测下一stage，不构成formal预算或合并通过。
 2. 双审只仲裁当前结构是否适合作为九stage实测样本；未取得同一 committed+clean 身份一致结论前，
    不扩展下一 stage，不修改 C2-safe 产品分支，也不调整 formal 预算。
 3. 九stage `T*` 取得后再由同一 LEAN/SAFETY评审新 formal；远端 Codex 仅作附加信号，不无限等待。

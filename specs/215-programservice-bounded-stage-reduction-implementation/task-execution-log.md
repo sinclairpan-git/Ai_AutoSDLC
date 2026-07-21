@@ -1009,3 +1009,15 @@
   `ca44e2d51846457f8eac7941e0637701c770091d180c0ae8e2dee7bb23dda543`。
 - 下一步只提交 records identity 并让同一 Pascal/LEAN 与 Confucius/SAFETY 对同一 committed+clean SHA
   第四轮从零复审；双 `CONTINUE_SPIKE_PASS0/findings=0` 前仍不得扩展 `guarded_registry`。
+
+## 52. Batch 2026-07-21-050：第四轮同身份双 PASS0
+
+- 第四轮评审对象为 committed+clean identity=`01a69268317124c8521ee983a30487118df02363` / tree=
+  `35ff5a36cfb3d6ba8189e1eead64b79747f65e0a`；产品 blobs继续为`240a85ad...b5f` / `827d4d4a...4c7`。
+- Pascal/LEAN 与 Confucius/SAFETY 均独立返回`CONTINUE_SPIKE_PASS0/findings=0`；两者意见已统一，第三轮
+  lookup/path findings关闭，允许在同一隔离 spike 中继续实测下一 `guarded_registry` stage。
+- 该 PASS0 只确认当前 cross-only 样本的结构与行为证据足以继续取得九stage `T*`；不修改旧预算，不是
+  formal Rx、合并、PR或release授权。完整target=`614/88`、canonical product/combined=`575/860`的预算失败
+  继续原样有效。
+- 下一步先提交本段review receipt与两份一致handoff，再由两位reviewer对新的records-only identity做
+  compact consistency recheck；同identity双PASS0后才开始下一stage产品变更。
