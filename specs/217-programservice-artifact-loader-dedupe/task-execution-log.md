@@ -106,3 +106,14 @@
 - 最小修正把5 behavior GREEN/1 binding RED只绑定T61A独立proof-red worktree；disposable clone revert只验
   exact baseline code/test blobs与406 baseline unit，reapply再验exact candidate blobs、6 proof与412 unit。
 - 修正改变formal-six与HEAD/tree，Round 3全部verdict失效；提交新clean identity后双方完整复审。
+
+## 9. Batch 2026-07-21-008：Formal Round 4 handoff 时态修正
+
+- Review identity=`dd2287fdfa57023bb3c5116a4659696c018e9c07` / tree=
+  `a53f310b9e5d537610dff0468c6f74cffbbbff46` / formal-six=
+  `856e7819ed10515db61387933a59a75178985fc1d63691be722739c18e02a669`，worktree clean。
+- Pascal/LEAN=`FAIL1`：root/scoped handoff在source commit后仍称“等待提交”，下一步又要求重复提交；
+  Confucius/SAFETY=`PASS0/findings=0`。
+- Finding成立；两份handoff改成不依赖未来commit号的稳定状态：formal source已提交，下一步只要求对当前
+  committed+clean identity双审。修正改变HEAD/tree但不改变formal-six、产品、预算或行为合同。
+- Round 4两个verdict均失效；新clean identity必须由双方完整复审。
