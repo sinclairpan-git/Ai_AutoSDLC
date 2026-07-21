@@ -129,3 +129,23 @@
   diff-check“待重跑”；双方明确其余identity、账本、YAGNI、20文件scope、test `+2/-2`均无finding。
 - 处置：把archive改为已exact完成并删除旧diff-check待重跑行；更新两份handoff当前轮次，不改formal
   合同或范围。提交后只机械resync；Round 8复审新的clean identity，不再写receipt。
+
+## 10. Batch 2026-07-21-010：WI216 lifecycle reconciliation receipt
+
+- 已观察到的 final reviewed delivery identity HEAD/tree/formal-nine=
+  `57c22f60618ed85df5e0f51b90b4bd3aa2e4b2b8` /
+  `6d0946c85c8a12c3821861523e780a0d3829e1ed` /
+  `75351a47a7c98b98881e2cfc878850295535d7e73b657bc48a3615028b3d164a`；独立 LEAN 与 SAFETY
+  均为 `PASS0/findings=0`。
+- PR #165 对应该 exact HEAD，13/13 checks success，zero reviews、zero review threads。Codex bot 明确
+  返回 code-review usage-limit，而非接受 review；用户授权本地 SDLC LEAN+SAFETY substitute，但未 waive
+  CI。
+- PR #165 squash merge=`19809f3ac0b1c7f648fa36ed326be7b2c367b3b1`，delivery branch 已保留。detached
+  fresh-main acceptance：manifest exact=`1 passed in 109.86s`；constraints no BLOCKERs；validate PASS
+  且 Cursor SHA 不变=`d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a`；truth
+  ready/fresh=`1131/1131`、missing/unmapped=`0/0`、all canonical layers=`215/215`；Ruff exact 和
+  diff-check PASS，worktree clean。
+- 该证据是 closure-receipt candidate：只有本 reconciliation branch merge 才使 WI216 completion 在 main
+  生效；本分支自身 detached fresh-main 必须通过，才可开始 replacement formal reduction WI。它只关闭
+  WI216 records recovery；GAP-03、WI196、RC-08、T66 和 release 仍 fail-closed/open，C2 与 spike
+  均为 `archived_not_merged`。

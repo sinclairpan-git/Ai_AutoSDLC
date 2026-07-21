@@ -1,6 +1,7 @@
 # 开发摘要：ProgramService 有界阶段减重 NO-GO 恢复
 
-**状态**：terminal truth/gates/archive已完成；等待final同身份双审与PR
+**状态**：closure-receipt candidate；已记录已观察到的 PR #165、squash merge 与 detached fresh-main
+验收事实。本分支尚未合入时，WI216 completion 不在 main 生效。
 
 ## 已确认
 
@@ -21,15 +22,27 @@
 - 未来只有新的 formal WI 以完整自然账本证明产品净删、复杂度下降、兼容与证明成本可控后，才能重启
   T66；不得继承 WI215 的 GO、hash、预算或 reviewer receipt。
 
-## 已完成的 authoring
+## 生命周期收据
 
-- WI196/WI213 superseding 状态已经更新；Round 1 指出的旧“当前”措辞继续在 remediation commit 修正。
-- WI216 root/scoped handoff 已提前建立，防止在 formal 复审前恢复到旧 WI214/T66 路线。
+- final reviewed delivery identity HEAD/tree/formal-nine=`57c22f60618ed85df5e0f51b90b4bd3aa2e4b2b8` /
+  `6d0946c85c8a12c3821861523e780a0d3829e1ed` /
+  `75351a47a7c98b98881e2cfc878850295535d7e73b657bc48a3615028b3d164a`；独立 LEAN 与 SAFETY
+  均为 `PASS0/findings=0`。
+- PR #165 对应上述 exact HEAD，13/13 checks success，zero reviews、zero review threads。Codex bot
+  明确返回 code-review usage-limit 而非接受 review；用户授权本地 SDLC LEAN+SAFETY substitute，CI 未被
+  waive。
+- squash merge=`19809f3ac0b1c7f648fa36ed326be7b2c367b3b1`，delivery branch 已保留。detached
+  fresh-main acceptance：manifest exact=`1 passed in 109.86s`；constraints no BLOCKERs；validate
+  PASS 且 Cursor SHA 不变=`d5f04acf353c96b7dbd1bfbdd43382f986e8d4ff4413475d46ce46449e260b6a`；truth
+  ready/fresh=`1131/1131`、missing/unmapped=`0/0`、all canonical layers=`215/215`；Ruff exact 和
+  diff-check PASS，worktree clean。
 
-## 待完成
+## 生效边界
 
-- 对 final truth/gates identity 再完成 Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0。
-- 推送 PR、required checks/Codex review、merge 与 detached fresh-main 验收。
+- 本分支的 merge 是 WI216 completion 在 main 生效的唯一时点；本分支自身 detached fresh-main 必须通过，
+  才能开始 replacement formal reduction WI。
+- 上述 closure receipt 只关闭 WI216 records recovery；不关闭 T66、GAP-03、WI196、RC-08 或 release，且
+  C2/spike 始终为 `archived_not_merged`。
 
 ## Authoring receipt
 
@@ -43,6 +56,4 @@
   Cursor bytes不变；manifest exact=`1 passed in 158.21s`；Ruff check PASS。
 - Scope共20个允许文件；产品/workflow/依赖/版本/release零差异；测试仅两个 exact 计数标量；project seq=217；
   root/scoped handoff byte-identical；archive refs exact；diff-check PASS。
-- Terminal truth commit=`6e606df5/2b4954d0`，snapshot=`89ea4c7d...dd90`；clean identity复验 truth=
-  `ready/fresh 1131/1131`、manifest exact=`1 passed in 135.19s`，其余门禁保持全绿。Final Round 6 两位
-  reviewer 唯一一致 finding 是本摘要/handoff状态滞后，本 receipt 已修正；机械 resync 后进入 Round 7。
+- 这些 pre-PR authoring/gate receipt 仅保留审计；闭环事实以上述 lifecycle receipt 为准。
