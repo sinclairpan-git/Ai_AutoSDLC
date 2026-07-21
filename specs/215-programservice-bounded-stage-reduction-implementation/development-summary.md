@@ -89,7 +89,8 @@
    glue、六个单调用层级及两项行为漂移。最小修正后 public/full/exact 全绿、27 public/DTO零变化、
    mypy增量0、max function47，完整账本=`451 engine + 75 exact + 85 glue =611 LOC / 88 branch`；
    behavior-legacy canonical product=`572>522`、combined=`857>729`。该结果只证明当前单 stage 结构仍
-   没有净减重，尚不是九stage终态 `T*`；必须先提交新产品/records identity、完成 immutable A/B并由
+   没有净减重，尚不是九stage终态 `T*`；新产品 immutable A/B与review缺口public probes已等价，
+   必须先提交records identity并由
    同一 LEAN/SAFETY 双审，才能决定是否
    继续扩展，绝不能把功能全绿解释为预算通过或可合入。
 2. 双审只仲裁当前结构是否适合作为九stage实测样本；未取得同一 committed+clean 身份一致结论前，

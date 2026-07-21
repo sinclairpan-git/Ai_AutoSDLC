@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T06:40:00Z
-- Reason: 首轮双 STOP_SPIKE_FAIL3 已完成行为与完整账本 remediation，准备新 product checkpoint
+- Updated: 2026-07-21T06:58:00Z
+- Reason: remediation product checkpoint 已完成 immutable A/B 与public parity probes，准备records复审
 - Goal: 在不污染 C2-safe 分支的前提下取得九阶段无 DSL、typed、Ruff-natural 的实测 T*，再由同一 LEAN/SAFETY 双审决定 formal 路线
-- State: 首轮 dae3aaac 双 FAIL3 findings 已修复；cross public probes/focused/exact/full/结构验证通过，待提交新 product checkpoint、重跑 immutable A/B并同SHA复审，未进入其余八 stage
+- State: remediation product=a06dc3ee/50da4c59；focused/exact/full/immutable A-B/public probes均通过，待records identity同SHA复审，未进入其余八 stage
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: codex/215-nine-stage-no-dsl-residual-spike
@@ -30,12 +30,14 @@
 - engine Ruff/check/strict mypy: PASS / 0 errors
 - ProgramService strict mypy: 62 errors，与 C2 基线增量 0
 - public/DTO denylist: 27 public signature 与 27 DTO definition 均 delta 0
-- max modified/new function=47；cross target branch=75 engine + 14 service = 89
+- max modified/new function=47；完整cross target branch=68 engine + 14 exact + 6 glue = 88
 - 初次窄终端 full 唯一失败来自 `does not exist` 折行；同一宽终端节点在 spike/C2-safe 均 PASS
 - immutable A/B: 各 `249 passed, 474 deselected`；JUnit ordered hash均 `fc9093a...db16`；raw tree均 `780 files/732745 bytes/ca44e2d...a543`，逐项相同
 - import provenance: A/B分别来自 detached legacy `7922956d` 与 current `2f6d839a` 自身源码
 - 首轮双审=`STOP_SPIKE_FAIL3/STOP_SPIKE_FAIL3`；已修复state/lineage漂移、漏计glue与六个单调用层级
 - remediation focused=`70/653`；exact union=`249/474`；wide full=`3387 passed, 3 skipped in 809.12s`
+- remediation A/B各=`249/474`；ordered JUnit=`fc9093a...db16`；raw tree均=`780/732745/ca44e2d...a543`
+- committed public probes两腿均=`deferred / upstream.yaml / absolute link.yaml`
 
 ## Blockers / Risks
 
@@ -45,7 +47,6 @@
 
 ## Exact Next Steps
 
-1. 提交包含最小产品修正与FAIL/remediation记录的新 product checkpoint，确认 worktree clean与产品blobs。
-2. 对新 checkpoint重跑 immutable A/B/JUnit/raw tree，提交records identity。
-3. 同一 committed+clean SHA 交 Pascal/LEAN 与 Confucius/SAFETY 从零独立复审。
-4. 仅当两者对“继续实测”统一 PASS0，才扩展 guarded_registry；否则继续最小修正或丢弃spike并保留C2-safe。
+1. 提交只含 remediation A/B/public probe evidence与handoff更新的records identity，确认产品blobs仍为`fe794012/827d4d4a`。
+2. 同一 committed+clean SHA 交 Pascal/LEAN 与 Confucius/SAFETY 从零独立复审。
+3. 仅当两者对“继续实测”统一 PASS0，才扩展 guarded_registry；否则继续最小修正或丢弃spike并保留C2-safe。

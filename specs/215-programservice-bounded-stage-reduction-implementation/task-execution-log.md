@@ -929,3 +929,16 @@
   `249 passed, 474 deselected`，宽终端full=`3387 passed, 3 skipped in 809.12s`；冻结tests/config未改。
 - 下一步固定新的 committed+clean product checkpoint，重跑 immutable A/B/JUnit/raw tree并提交records identity；
   同一LEAN/SAFETY必须重新从零评审。任一 finding 未清零均不得进入下一stage。
+- remediation product checkpoint=`a06dc3eeec0b79164ad45da4d91487cfc1cdb601` / tree=
+  `50da4c596caba3d2e0e78e64c94561c502a9571f`；engine/ProgramService blobs=
+  `fe7940123e85e679b4ecf795d0841591e1b03b24` / `827d4d4ab1c443be48b3805aa5083435736354c7`。
+- immutable A腿继续为`7922956d/cc3c6b7f`，B腿=`a06dc3ee/50da4c59`；各自 detached rootdir/config/
+  venv/import provenance已验真。两腿用同一冻结candidate tests、seed/TZ/宽终端、独立basetemp/JUnit，
+  分别=`249 passed, 474 deselected in 4.26s/3.27s`。
+- 对249节点未覆盖的两个review finding另以相同public probe在两条committed腿复核：两边均输出
+  `state=deferred`、dotdot lineage=`upstream.yaml`、外部symlink lineage=`absolute .../link.yaml`，完全一致。
+- JUnit均=`249/0/0/0`、33,537 bytes，ordered classname/name SHA256均=
+  `fc9093a262715601af3e39cff19c5b4faa737b2d9990ba13f57f9467383cdb16`；legacy/current XML SHA256=
+  `efef75d3...d121` / `102ec4bc...bff7`。移除各35个pytest便利symlink后，raw两腿均=
+  `780 files/732745 bytes`，tree SHA256均=`ca44e2d51846457f8eac7941e0637701c770091d180c0ae8e2dee7bb23dda543`，
+  逐项相同。下一步仅提交records identity并重新双审，不改产品。
