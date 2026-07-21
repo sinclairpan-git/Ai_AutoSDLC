@@ -9683,9 +9683,8 @@ const $i = (text: string) => text;
             artifact_path = self.root / artifact_path
 
         relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
-        payload, warnings = self._load_frontend_artifact_payload(
-            artifact_path,
-            artifact_label="remediation writeback",
+        payload, warnings = self._load_frontend_remediation_writeback_payload(
+            artifact_path
         )
         if payload is None:
             return ProgramFrontendProviderHandoff(
@@ -9962,9 +9961,8 @@ const $i = (text: string) => text;
             artifact_path = self.root / artifact_path
 
         relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
-        payload, warnings = self._load_frontend_artifact_payload(
-            artifact_path,
-            artifact_label="provider runtime",
+        payload, warnings = self._load_frontend_provider_runtime_artifact_payload(
+            artifact_path
         )
         if payload is None:
             return ProgramFrontendProviderPatchHandoff(
@@ -10290,9 +10288,8 @@ const $i = (text: string) => text;
             effective_artifact_path = self.root / effective_artifact_path
 
         relative_artifact_path = _relative_to_root_or_str(self.root, effective_artifact_path)
-        payload, warnings = self._load_frontend_artifact_payload(
-            effective_artifact_path,
-            artifact_label="provider patch apply",
+        payload, warnings = self._load_frontend_provider_patch_apply_artifact_payload(
+            effective_artifact_path
         )
         if payload is None:
             return ProgramFrontendCrossSpecWritebackRequest(
@@ -10839,9 +10836,8 @@ const $i = (text: string) => text;
             effective_artifact_path = self.root / effective_artifact_path
 
         relative_artifact_path = _relative_to_root_or_str(self.root, effective_artifact_path)
-        payload, warnings = self._load_frontend_artifact_payload(
-            effective_artifact_path,
-            artifact_label="cross-spec writeback",
+        payload, warnings = self._load_frontend_cross_spec_writeback_artifact_payload(
+            effective_artifact_path
         )
         if payload is None:
             return ProgramFrontendGuardedRegistryRequest(
@@ -11165,9 +11161,8 @@ const $i = (text: string) => text;
             effective_artifact_path = self.root / effective_artifact_path
 
         relative_artifact_path = _relative_to_root_or_str(self.root, effective_artifact_path)
-        payload, warnings = self._load_frontend_artifact_payload(
-            effective_artifact_path,
-            artifact_label="guarded registry",
+        payload, warnings = self._load_frontend_guarded_registry_artifact_payload(
+            effective_artifact_path
         )
         if payload is None:
             return ProgramFrontendBroaderGovernanceRequest(
@@ -11493,9 +11488,8 @@ const $i = (text: string) => text;
         relative_artifact_path = _relative_to_root_or_str(
             self.root, effective_artifact_path
         )
-        payload, warnings = self._load_frontend_artifact_payload(
-            effective_artifact_path,
-            artifact_label="broader governance",
+        payload, warnings = self._load_frontend_broader_governance_artifact_payload(
+            effective_artifact_path
         )
         if payload is None:
             return ProgramFrontendFinalGovernanceRequest(
@@ -11825,9 +11819,8 @@ const $i = (text: string) => text;
         relative_artifact_path = _relative_to_root_or_str(
             self.root, effective_artifact_path
         )
-        payload, warnings = self._load_frontend_artifact_payload(
-            effective_artifact_path,
-            artifact_label="final governance",
+        payload, warnings = self._load_frontend_final_governance_artifact_payload(
+            effective_artifact_path
         )
         if payload is None:
             return ProgramFrontendWritebackPersistenceRequest(
@@ -12159,9 +12152,8 @@ const $i = (text: string) => text;
         relative_artifact_path = _relative_to_root_or_str(
             self.root, effective_artifact_path
         )
-        payload, warnings = self._load_frontend_artifact_payload(
-            effective_artifact_path,
-            artifact_label="writeback persistence",
+        payload, warnings = self._load_frontend_writeback_persistence_artifact_payload(
+            effective_artifact_path
         )
         if payload is None:
             return ProgramFrontendPersistedWriteProofRequest(
@@ -12491,9 +12483,8 @@ const $i = (text: string) => text;
         relative_artifact_path = _relative_to_root_or_str(
             self.root, effective_artifact_path
         )
-        payload, warnings = self._load_frontend_artifact_payload(
-            effective_artifact_path,
-            artifact_label="persisted write proof",
+        payload, warnings = self._load_frontend_persisted_write_proof_artifact_payload(
+            effective_artifact_path
         )
         if payload is None:
             return ProgramFrontendFinalProofPublicationRequest(
@@ -12823,9 +12814,8 @@ const $i = (text: string) => text;
         relative_artifact_path = _relative_to_root_or_str(
             self.root, effective_artifact_path
         )
-        payload, warnings = self._load_frontend_artifact_payload(
-            effective_artifact_path,
-            artifact_label="final proof publication",
+        payload, warnings = self._load_frontend_final_proof_publication_artifact_payload(
+            effective_artifact_path
         )
         if payload is None:
             return ProgramFrontendFinalProofClosureRequest(
@@ -13157,9 +13147,8 @@ const $i = (text: string) => text;
         relative_artifact_path = _relative_to_root_or_str(
             self.root, effective_artifact_path
         )
-        payload, warnings = self._load_frontend_artifact_payload(
-            effective_artifact_path,
-            artifact_label="final proof closure",
+        payload, warnings = self._load_frontend_final_proof_closure_artifact_payload(
+            effective_artifact_path
         )
         if payload is None:
             return ProgramFrontendFinalProofArchiveRequest(
@@ -13489,9 +13478,8 @@ const $i = (text: string) => text;
         relative_artifact_path = _relative_to_root_or_str(
             self.root, effective_artifact_path
         )
-        payload, warnings = self._load_frontend_artifact_payload(
-            effective_artifact_path,
-            artifact_label="final proof archive",
+        payload, warnings = self._load_frontend_final_proof_archive_artifact_payload(
+            effective_artifact_path
         )
         if payload is None:
             return ProgramFrontendFinalProofArchiveThreadArchiveRequest(
@@ -15732,17 +15720,15 @@ const $i = (text: string) => text;
             "source_linkage": source_linkage,
         }
 
-    def _load_frontend_artifact_payload(
+    def _load_frontend_remediation_writeback_payload(
         self,
         artifact_path: Path,
-        *,
-        artifact_label: str,
     ) -> tuple[dict[str, object] | None, list[str]]:
         if not artifact_path.exists():
             return (
                 None,
                 [
-                    f"missing {artifact_label} artifact: "
+                    "missing remediation writeback artifact: "
                     + _relative_to_root_or_str(self.root, artifact_path)
                 ],
             )
@@ -15752,7 +15738,7 @@ const $i = (text: string) => text;
             return (
                 None,
                 [
-                    f"invalid {artifact_label} artifact: "
+                    "invalid remediation writeback artifact: "
                     + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
                 ],
             )
@@ -15760,7 +15746,359 @@ const $i = (text: string) => text;
             return (
                 None,
                 [
-                    f"invalid {artifact_label} artifact: "
+                    "invalid remediation writeback artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_provider_runtime_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing provider runtime artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid provider runtime artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid provider runtime artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_provider_patch_apply_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing provider patch apply artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid provider patch apply artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid provider patch apply artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_cross_spec_writeback_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing cross-spec writeback artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid cross-spec writeback artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid cross-spec writeback artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_guarded_registry_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing guarded registry artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid guarded registry artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid guarded registry artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_broader_governance_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing broader governance artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid broader governance artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid broader governance artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_final_governance_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing final governance artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid final governance artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid final governance artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_writeback_persistence_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing writeback persistence artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid writeback persistence artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid writeback persistence artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_persisted_write_proof_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing persisted write proof artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid persisted write proof artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid persisted write proof artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_final_proof_publication_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing final proof publication artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid final proof publication artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid final proof publication artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_final_proof_closure_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing final proof closure artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid final proof closure artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid final proof closure artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        return payload, []
+
+    def _load_frontend_final_proof_archive_artifact_payload(
+        self,
+        artifact_path: Path,
+    ) -> tuple[dict[str, object] | None, list[str]]:
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing final proof archive artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid final proof archive artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid final proof archive artifact: "
                     + _relative_to_root_or_str(self.root, artifact_path)
                 ],
             )
@@ -15770,12 +16108,32 @@ const $i = (text: string) => text;
         self,
         artifact_path: Path,
     ) -> tuple[dict[str, object] | None, list[str]]:
-        payload, warnings = self._load_frontend_artifact_payload(
-            artifact_path,
-            artifact_label="final proof archive project cleanup",
-        )
-        if payload is None:
-            return None, warnings
+        if not artifact_path.exists():
+            return (
+                None,
+                [
+                    "missing final proof archive project cleanup artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
+        try:
+            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            return (
+                None,
+                [
+                    "invalid final proof archive project cleanup artifact: "
+                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
+                ],
+            )
+        if not isinstance(payload, dict):
+            return (
+                None,
+                [
+                    "invalid final proof archive project cleanup artifact: "
+                    + _relative_to_root_or_str(self.root, artifact_path)
+                ],
+            )
         return payload, _normalize_string_list(payload.get("warnings", []))
 
     def _resolve_frontend_final_proof_archive_cleanup_targets(
