@@ -1,7 +1,7 @@
 # 执行日志：ProgramService artifact loader 精确重复族减重
 
 **功能编号**：`217-programservice-artifact-loader-dedupe`
-**状态**：implementation local gates passed / final review pending
+**状态**：implementation GO；唯一 closure source 待评审/合入
 **基线**：formal merge `4e4971d4625b5cf7f3381653bb6288a95fb4aa54`
 
 ## 1. 归档规则
@@ -238,3 +238,56 @@
   focused proof=`6 passed`、ProgramService=`412 passed in 28.28s`、Ruff PASS、clone clean。
 - 由于最终product/proof blobs未从R3 full gate后变化，`3309 passed, 3 skipped`与package/CLI证据继续精确
   绑定同一代码内容；不重复运行昂贵full。Records/truth/handoff提交后必须以新clean identity从零双审。
+
+## 18. Batch 2026-07-21-017：Implementation final PASS、PR #168 与隔离验收
+
+- Final implementation identity HEAD/tree=`533363f4950546a744722b8f19d9d323aed12114` /
+  `d0d8bf9ae449223c01cae02322490f2737282c6d`，formal-six=
+  `182edb5e75139c0070231e8bb3fbf8648cb6d60bbfaa4b7fcc9e4ee97940fe77`，worktree clean且root/scoped
+  handoff hash=`835d935dfd497c3ada3bcf9badf0467797f9449150f51496c99ebe6b3dc1522c`。LEAN与SAFETY R4
+  对同一identity均`PASS0/findings=0`。
+- PR #168 current-head Codex对`533363f495`明确返回“Didn't find any major issues”；22/22 required
+  checks全绿，含Windows Python 3.11/3.12、macOS/Linux、offline、shell、verify与compatibility result。
+  该PR squash merge=`4d98039d21f2c94f50f3c5224d0c52bc929428b9`，本地implementation branch保留。
+- Detached fresh-main精确位于该merge：最终product/proof blobs保持
+  `77827e018ae192e1d33d739310c0c7754309d7a2` /
+  `25ef1acdd616f89b001b96973ced37fdf5f073ff`；proof=6、ProgramService=412、CLI=233、full=
+  `3309 passed, 3 skipped in 815.07s`，Ruff、manifest exact、constraints、validate、truth、build与
+  clean-install CLI smoke全绿。
+- Fresh-main隔离clone revert=`da29c10cbbd6f9bcf8dbbc6ebd622c6a1811fa48`恢复baseline exact blobs并
+  通过406 unit；reapply=`866d4c4805d5dadc525351d0d00c4ba1cea84f08`恢复最终exact blobs并通过
+  6 proof、412 unit与Ruff。最终判定为`GO`，实际产品净删358行。
+
+## 19. Batch 2026-07-21-018：唯一 closure source
+
+- 从 exact implementation merge `4d98039d` 创建唯一 closure branch=`codex/217-lean-route-closure`；
+  正常GO路径保持 product/proof零diff，不创建rollback、第二implementation或新减重work item。
+- 新增WI217 `development-summary.md`并同步WI217/WI196终态source：WI217实际净删358行，路线累计产品
+  raw净删1,011行，约占初始107,482行基线0.94%；不宣称达到RC-08。
+- 用户终止理由原样纳入终局：专项接近7天、终点不可预测、减重效果不透明、Token/评审/CI成本过高且
+  挤压正常特性开发；减重必须与新特性交付均衡。
+- 本source合入main时关闭WI217/WI196，RC-08=`retired_unrealistic_composite_target`，GAP-01/GAP-03～06
+  与T62～T67剩余债务=`non_blocking_backlog`，恢复正常特性/缺陷开发并禁止新减重work item。
+- Closure source不提前伪造mainline completion；仍须同identity LEAN/SAFETY PASS0、current-head Codex、
+  required checks、merge与detached fresh-main全绿。Merge是mainline状态生效点，fresh-main是post-merge
+  acceptance；失败按parent spec §10.1 emergency corrective-revert撤销失败closure。本路线不执行版本发布。
+
+## 20. Batch 2026-07-21-019：Closure Round 1 FAIL2 remediation
+
+- R1 exact identity=`5aa3550c/55cb7347/formal-six 5a4d3f97...91ed/handoff 04474cba...6f041`；
+  LEAN与SAFETY均`FAIL2`。两者共同指出handoff仍要求重复提交已完成truth/handoff；LEAN另指出parent plan
+  与tasks残留WI-202/T62重启入口；SAFETY另指出closure merge/fresh-main生效时点矛盾且失败无合法回退。
+- 四项均成立。最小修复彻底退役WI-202/T62/T66重启路径；统一“merge是mainline生效点、fresh-main是
+  post-merge acceptance”；若验收失败，只允许emergency corrective-revert PR精确恢复pre-closure records、
+  summary缺失与close=`216/215`，product/proof零diff并标记`closure_delivery_failed`。
+- Corrective-revert是一次closure PR上限的唯一安全例外，只撤销失败closure，不是第二closure、
+  implementation或减重WI；不得选择候选，正常特性/缺陷开发不被阻断，再次closure需用户明确授权。
+- Root/scoped handoff同步为当前时态。R1双方verdict退役；tracked内容变化后必须对新committed+clean
+  identity重新完成LEAN/SAFETY双审。
+
+## 21. Batch 2026-07-21-020：Closure Round 2 单一时态 finding
+
+- R2 exact=`86ebf23c/0d0583e2/formal-six 6228319a...803e/handoff 406f7933...b398`；LEAN与SAFETY
+  独立返回相同`FAIL1`：parent spec与child plan各残留一句“fresh-main后恢复正常开发”，与merge生效合同冲突。
+- 最小修复只把两句统一为“closure merge后立即恢复正常特性/缺陷开发，fresh-main不延迟或重新阻断”；
+  不改产品/proof、truth计数、收益、corrective-revert、backlog或发布边界。R2 verdict退役，R3从零双审。

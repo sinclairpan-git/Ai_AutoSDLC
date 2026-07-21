@@ -1,28 +1,35 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T16:27:43Z
-- Reason: PR #168 Windows required CI proof portability remediation
-- Goal: 完成唯一implementation PR并隔离验收；随后用唯一closure PR关闭WI217/WI196并恢复正常特性开发
-- State: R3两项finding已修正；portable atomic candidate=`eb8dc0f8`、新rollback/reapply receipt和truth=`da2a3538`均已提交，等待当前clean identity双审
+- Updated: 2026-07-21T18:05:46Z
+- Reason: closure R2 LEAN/SAFETY identical FAIL1 remediation
+- Goal: 合入唯一closure PR，关闭WI217/WI196并恢复正常特性开发，不再创建减重work item
+- State: R2唯一恢复时点finding已修正；truth与本地门禁已刷新，待clean committed identity R3双审
 - Stage: review
 - Work Item: 217-programservice-artifact-loader-dedupe
-- Branch: feature/217-programservice-artifact-loader-dedupe
+- Branch: codex/217-lean-route-closure
 
 ## Changed Files
-- Atomic candidate=`eb8dc0f8`同时提交最终product/proof；最终blobs与已通过full gate的内容相同。
-- WI217 execution log记录R3 FAIL2和新rollback/reapply receipt；truth snapshot已刷新；root/scoped handoff逐字一致。
+- 新增WI217 development-summary；最小更新WI217/WI196终态records、manifest exact两标量、truth与handoff。
+- 相对implementation merge `4d98039d`，product/proof必须保持零diff。
 
 ## Key Decisions
-- 只把portable proof纳入新的原子candidate边界；最终产品逻辑、结构、预算和范围均不变，旧identity verdict失效
+- WI217最终GO：product `+48/-406/net -358`；路线累计产品raw净删1,011行，约初始基线0.94%。
+- Closure merge时关闭WI217/WI196，RC-08=`retired_unrealistic_composite_target`，剩余GAP/T62～T67=`non_blocking_backlog`。
+- 禁止新减重work item；恢复正常特性/缺陷开发；不发布版本。
+- Merge是mainline状态生效点；fresh-main失败只允许emergency corrective-revert恢复pre-closure records，
+  不构成第二closure/implementation/减重WI。
 
 ## Commands / Tests
-- 当前blobs：proof=6、ProgramService=412、CLI=233、full=3309 passed/3 skipped、manifest exact=1 passed；新clone revert=baseline blobs+406，reapply=current blobs+6+412+Ruff；canonical close=216/215
+- Implementation detached fresh-main：proof=6、ProgramService=412、CLI=233、full=3309 passed/3 skipped；package/governance/rollback全绿。
+- Closure truth sync：revision=`9f95152f`、snapshot=`da7419fb`、inventory=1136/1136，missing/unmapped=0/0，close=216/216。
+- Closure R2-remediation gates：manifest exact=1 passed；constraints无BLOCKER；validate PASS；product/proof零diff。Final commit后复核truth audit、handoff parity、diff-check与clean identity。
 
 ## Blockers / Risks
-- 无用户输入blocker；只剩clean identity LEAN/SAFETY PASS0、一次current-head Codex review与required CI
+- 无用户输入blocker；closure source仍须新identity本地门禁、LEAN/SAFETY PASS0、current-head Codex、required checks、merge与detached fresh-main。
 
 ## Local PR Review
-- none
+- R2 exact `86ebf23c/0d0583e2/formal-six 6228319a/handoff 406f7933`：LEAN/SAFETY均FAIL1且finding相同；已修正为merge后立即恢复正常开发，旧verdict失效。
 
 ## Exact Next Steps
-- 对当前committed+clean identity完成LEAN/SAFETY双审；双PASS后推送同一PR并只触发一次current-head Codex review/CI
+- 对修正后的committed+clean identity完成终检并取得LEAN/SAFETY R3双PASS0。
+- 推送唯一closure PR，完成Codex/current-head checks后squash merge并在detached fresh-main验收；不删除本地branch。

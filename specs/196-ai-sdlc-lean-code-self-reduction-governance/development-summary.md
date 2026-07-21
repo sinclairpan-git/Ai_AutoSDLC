@@ -1,6 +1,6 @@
 # Development Summary：WI-196 Lean-Code Self-Reduction Governance
 
-**状态**：active governance parent；治理基线已合并，路线未关闭
+**状态**：closure-source candidate；本分支合入 `main` 后路线 `closed`
 **Owner**：AI-SDLC framework maintainers
 **证据性质**：基于 parent spec、tasks、execution log 与 merge 事实的追溯总结
 
@@ -56,18 +56,18 @@
   findings=`none`。动态 PASS receipt 后 final terminal gates 已全绿，随后 PR #140 已合并；本段只保留
   formal 历史，不代表 PR #139 已完成。
 
-## 未完成边界
+## 路线终局与历史边界
 
-- 当前只允许 WI217 按已冻结的 formal、至多一个 implementation PR和一个closure PR推进；其他 GAP/WP
-  不再创建减重 WI，并在 WI217 closure 转为非阻塞 backlog。本 summary 在该 closure 前不宣称整体路线关闭。
-- WI-202 的首个 T62A 候选因完整 proof 明显超过 RC-06 预算，已按 RC-09 停止且未合入；
-  GAP-01/T62A 仍 open，T62B/T62C 未开始，FR-08 双 reviewer fallback 继续有效。
+- WI217 formal与唯一implementation已经完成；当前只剩本唯一closure source的评审、checks、merge和
+  detached fresh-main post-merge acceptance。其他GAP/WP不再创建减重WI，剩余结构债在本source合入时转为非阻塞backlog。
+- WI-202 的首个 T62A 候选因完整proof明显超过RC-06预算，已按RC-09停止且未合入；T62B/T62C未开始。
+  GAP-01/T62A～C在本source合入时转为非阻塞backlog，FR-08 reviewer fallback作为普通工程实践保留。
 - GAP-12、GAP-13、GAP-14 均已关闭且不计 RC-08 减重收益。WI-209 最终 raw 产品/测试
   `+121/+200`、normalized `+128/+198`，5 private helper、零新产品/测试文件、零公共抽象；Round 15
   candidate/replay 同树且双 Agent PASS，PR #146 的 Codex current-head、22/22 checks 与 fresh-main
   `3275 passed, 3 skipped` 全部通过。回退对应 implementation PR 会重开各自 GAP。
 - RC-08 family ledger 已记录 WI-205 `net -109`、WI-206 `net -209`、WI-210 `net -213`、WI-211
-  `net -122`，累计产品 raw `net -653`；这只是已关闭重复族的局部收益，不代表路线整体达到 10% 或
+  `net -122`及WI-217 `net -358`，累计产品raw `net -1,011`；这只是已关闭重复族的局部收益，不代表路线整体达到10%或
   两个超大文件降到 400 行。
 - WI-211 closure PR #154 已合并为 `626adb70`，lifecycle reconciliation PR #155 已合并为 `32742a25`；
   双 Agent、Codex、required checks 与 detached fresh-main 验收均通过。其“恢复下一原子项选择”的历史
@@ -93,9 +93,11 @@
   按当时合同，通过后才允许新建 T66 implementation WI并先取得 T61A 双 readiness GO，失败立即回退 receipt；
   该未来时态现已由 WI217 终局规则终止。
   T66/GAP-03/WI196/RC-08/release 仍未完成，本项不授权提前发布。
-- 关闭事件：WI217 的唯一 closure PR 在 GO/NO-GO 任一路径完成双审、checks、merge 与 detached fresh-main；
-  该事件关闭 WI196、把 RC-08 记为 `retired_unrealistic_composite_target` 并将剩余结构债转为
-  `non_blocking_backlog`。在此事件前保持 active。
+- 关闭事件：WI217 唯一 implementation 已形成GO；本唯一 closure source合入 `main` 时关闭WI196，
+  把RC-08记为`retired_unrealistic_composite_target`并将剩余结构债转为`non_blocking_backlog`。
+  Source不提前代表main已关闭；closure PR merge是mainline状态生效点，detached fresh-main是post-merge
+  acceptance。失败时按parent spec §10.1 emergency corrective-revert精确恢复pre-closure records，
+  不构成第二closure或减重路线重启。
 - 终止理由：专项接近7天仍无可预测终点，token/评审/CI成本持续增加并影响正常特性开发；已合入产品
   raw净删653行仅约占初始107,482行基线0.61%，即使WI217 GO累计1,011行也仅约0.94%。减重必须与
   新特性交付均衡，不能成为无限期主线工作。
@@ -104,11 +106,11 @@
   `1209/164` 高于两阶段 legacy `842/92`，双 reviewer 一致 `STOP_SPIKE_NO_GO/findings=0`。
   两条路线均 `archived_not_merged`，legacy 产品保持不变。GAP-03/WI196/RC-08 在 WI217 closure 前保留
   当前事实状态；closure 后转为路线关闭/非阻塞 backlog，不再另立减重 formal WI或继承 WI215 receipt。
-- WI-217 current active child：formal PR #167/merge `4e4971d4` 与detached fresh-main已完成；唯一
-  implementation atomic candidate=`e2752a9b`，基线403/39，product `+48/-406`、proof `+48`、terminal44/4、
-  canonical truth三行后RC-06=99/101；legacy persistent proof=5GREEN/1binding RED，candidate=6 proof、412 unit、
-  233 CLI integration、稳定短basetemp full `3309 passed, 3 skipped`、治理/package/rollback-reapply全绿。
-  当前等待final同identity双审与required cross-platform checks；本路线仍最多一个implementation PR和一个
-  closure PR。GO登记actual net -358，NO-GO登记最终产品净变化0并如实区分
-  pre-merge零产品合入或post-merge临时合入后exact rollback；两者都由closure
-  关闭WI217/WI196、退役RC-08、把剩余结构债转为非阻塞backlog并恢复正常特性开发。
+- WI-217终局child：formal PR #167/merge `4e4971d4` 与唯一implementation PR #168/merge `4d98039d`
+  已完成；reviewed HEAD=`533363f495`，Codex current-head、22/22 checks、LEAN/SAFETY同identity与detached
+  fresh-main全绿。最终product=`+48/-406/net -358`、proof=`+48`、terminal44/4、canonical truth三行后
+  RC-06=`99/101`；proof=6、ProgramService=412、CLI=233、full=`3309 passed, 3 skipped`，治理/package与
+  rollback-reapply全绿。
+- WI196路线最终产品raw净删累计1,011行，约占初始107,482行基线0.94%。该实际收益与接近7天的
+  Token/评审/CI投入、不可预测终点及对正常特性开发的挤压共同构成终止依据；不再追逐不现实的RC-08
+  组合终态。Closure merge生效后禁止新减重work item并恢复正常特性/缺陷开发。

@@ -2,7 +2,7 @@
 
 **功能编号**：`196-ai-sdlc-lean-code-self-reduction-governance`
 **创建日期**：2026-07-12
-**状态**：双 Agent 评审门禁
+**状态**：closure-source candidate；merge 后 `closed`
 **类型**：治理总项 / 独立实现子项路线图
 **当前分支边界**：只修改治理文档和 AI-SDLC 真值文件；运行时代码和规则由后续独立 work item
 修改。测试默认同样后置，唯一例外是 FR-12 定义的 root exact truth 两个值机械更新。
@@ -56,12 +56,12 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 
 | 编号 | 类别 | 事实证据 / 复现入口 | 目标与责任 | 减重关键路径 |
 |---|---|---|---|---|
-| GAP-01 | 治理缺口 | 宪章规定 400 行/50 行，但当前 `uv run ai-sdlc verify constraints` 对历史超限无 BLOCKER | WP-02：report → warning → changed-code blocking | 是 |
+| GAP-01 | 非阻塞结构债 backlog | 宪章规定 400 行/50 行，但当前 `uv run ai-sdlc verify constraints` 对历史超限无 BLOCKER；WI-202 No-Go 保留 | 不再创建减重 WI；只在正常特性改动自然触及时局部治理 | 否 |
 | GAP-02 | 兼容缺口 | 现有测试分散，缺少目标切片统一的 CLI/artifact/状态/副作用 differential 基线 | WP-01：最小充分 Characterization/Golden | 是 |
-| GAP-03 | 结构臃肿 | `src/ai_sdlc/core/program_service.py` 17,369 行、249 方法 | WP-06：逐领域切片、保留 facade、稳定后删旧实现 | 是 |
-| GAP-04 | 结构臃肿 | `src/ai_sdlc/cli/program_cmd.py` 7,062 行；33 个公共 program 命令与 77 对相似长命令候选 | WP-07：逐 stage family 双跑与收敛 | 是 |
-| GAP-05 | 重复实现（active） | WI-205、WI-206、WI-210、WI-211 已各关闭一个 exact family；WI-211 / PR #153 / merge `cd64d8aa` 将 10 个 mapping-dedupe body 收敛为 1 个共享实现和 10 个 alias，23 calls 不变，产品 raw/non-empty 净删 122/104 且 fresh-main 全绿 | WP-03/WP-04：只合并语义和失败模式一致的重复族；回退对应 implementation PR 会重开该 family，其余候选仍须逐族证明 | 是 |
-| GAP-06 | 单一真值源候选 | `frontend_page_ui_schema.py`、`frontend_cross_provider_consistency.py`、`frontend_quality_platform.py`、`frontend_provider_expansion.py`、`frontend_provider_runtime_adapter.py`、`frontend_theme_token_governance.py` 的 6 个 `build_p*_baseline` builder | WP-05：对该有限候选集逐项 go/no-go；只有净减重合同成立才实施 | 条件性 |
+| GAP-03 | 非阻塞结构债 backlog | `ProgramService` T66 两条路线已由 WI-216 证明 NO-GO，legacy保持 | 不重启减重路线；正常特性可按独立需求演进 | 否 |
+| GAP-04 | 非阻塞结构债 backlog | `program_cmd.py` stage family 未实施 | 不创建减重 WI；正常特性可按独立需求演进 | 否 |
+| GAP-05 | 已实现局部收益；剩余为非阻塞 backlog | WI-205、WI-206、WI-210、WI-211及WI-217各关闭一个 exact family；累计产品raw净删1,011行 | 已关闭family保留回退证据；不再选择新family reduction WI | 否 |
+| GAP-06 | 非阻塞结构债 backlog | 6个 `build_p*_baseline` builder 候选未实施 | 不创建减重 WI；保留候选事实但不阻塞特性开发 | 否 |
 | GAP-07 | 已关闭 | WI-197 / PR #121 / merge `4802596f`：adapter mutation 不再与 clean-tree preflight 自冲突 | T51 已完成；权威证据见 WI-197 execution log §6.3～6.7 | 否 |
 | GAP-08 | 已关闭 | WI-198 / PR #122 / merge `68150d3f`：resume working set 以 active linked WI 为准 | T52 已完成；权威证据见 WI-198 execution log §3～§8 | 否 |
 | GAP-09 | 已关闭 | WI-199 / PR #123 / merge `208a34c8`：framework capability 与 consumer inheritance fail-closed 分离 | T53A 已完成；回退整个 WI-199 会重开本项 | 否 |
@@ -74,8 +74,8 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 
 每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
 
-WI217 closure 是本路线唯一剩余终局。表中 GAP-01/GAP-03～06 在 closure 前仍保留当前事实状态；closure
-不伪造其“已修复”，而是统一记为 `non_blocking_backlog` 并解除对正常特性开发的阻断。GAP-02 的
+本 WI217 closure source 是本路线唯一终局；合入时表中 GAP-01/GAP-03～06 按上述状态记为
+`non_blocking_backlog`，不伪造其“已修复”，并解除对正常特性开发的阻断。GAP-02 的
 characterization 能力保留为普通工程实践，不再产生减重 work item；已关闭 GAP-07～15 的历史证据不变。
 
 ## 4. Lean Code 原则
@@ -240,9 +240,9 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
 3. 取消混合型 WP-00 和 WP-08：基础缺陷各自立项；门禁升级归 WP-02；旧实现删除归 WP-06/WP-07。
 4. 不预占正式 WI 编号；双 PASS 后使用当时下一可用编号。
 5. Lean Gate 是否推广到普通用户项目另行决策。
-6. WI-202 首次 T62A 候选经两套完整 proof 证实违反 RC-06，按 RC-09 停止且不合入任何
-   source/state/claim；GAP-01/T62A 保持 open，T62B/T62C 未开始。重启必须同时取得新的或替代
-   sponsor，并重新冻结和双审父合同；在此之前按 FR-08 为 CC-05/CC-06 保留两个独立 reviewer。
+6. WI-202 首次T62A候选经两套完整proof证实违反RC-06，按RC-09停止且不合入任何
+   source/state/claim；GAP-01/T62A当时保持open，T62B/T62C未开始。该段原有重启条件已由第14项终局
+   决策退役；不得复活WI-202或创建新的T62A～C减重WI，CC-05/CC-06 reviewer只作普通工程实践保留。
 7. WI-206 关闭后依次执行 WI-207/GAP-12、WI-208/GAP-13、WI-209/GAP-14；三个基础修复完成后才
    恢复新的 T63/T65/WP-06/WP-07 原子减重选择，RC-08 全路线终态前不发布版本。
 8. WI-210 与 WI-211 closure fresh-main 均已满足恢复门禁；WI-211 已关闭一个 T63
@@ -274,8 +274,8 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     Pascal/LEAN 与 Confucius/SAFETY 对 spike 产品和 records-only 身份均裁决
     `STOP_SPIKE_NO_GO/findings=0`，并一致确认 C2 不能称为减重。因此 T66 本次实现尝试为
     `cancelled_no_go`，两条证据路线 `archived_not_merged`；GAP-03、WI-196、RC-08 与 release 继续 open。
-    未来如重启 T66，必须另立 formal WI，从 fresh main 用完整自然产品账本证明净删与复杂度下降，不能
-    继承 WI-215 的 GO、hash、预算或 reviewer receipt。
+    该段原有T66重启路径已由第14项终局决策退役；不得另立减重formal WI，也不得继承WI-215的GO、
+    hash、预算或reviewer receipt。
 13. WI-216 closure fresh-main 后从 `b4d2ce5a` 新选出的 WI-217 属于 T63/WP-03，而非 T66 重启。
     其13个 ProgramService artifact loader 基线为403 physical/branch39；clean spike实测 product=
     `+48/-406`、proof=`+48`、terminal=`44/4`；implementation canonical truth为3行，RC-06=`99/101`。Round 4 LEAN/SAFETY
@@ -289,5 +289,23 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     closure PR；实现修复不得拆出第二 PR。GO 路径登记真实净删；NO-GO 路径登记最终产品净变化0，并区分
     pre-merge零产品合入或post-merge临时合入后exact rollback；两者都由
     closure 关闭 WI217/WI196，将 RC-08 记为 `retired_unrealistic_composite_target`，把 GAP-01/GAP-03～06
-    与 T62～T67 剩余结构债转为 `non_blocking_backlog`，并禁止新的减重 work item。Closure fresh-main 后
-    恢复正常特性开发；本路线不创建版本、tag、Release、PyPI 上传或全局 CLI 更新。
+    与 T62～T67 剩余结构债转为 `non_blocking_backlog`，并禁止新的减重 work item。Closure merge后
+    立即恢复正常特性/缺陷开发；fresh-main不延迟或重新阻断该恢复。本路线不创建版本、tag、Release、
+    PyPI上传或全局CLI更新。
+15. WI217 唯一implementation PR #168 已以 reviewed HEAD=`533363f495`、22/22 required checks、Codex
+    current-head clean、LEAN/SAFETY同identity PASS0和detached fresh-main全绿形成最终GO；merge=
+    `4d98039d`，实际product=`+48/-406/net -358`。本唯一closure source合入时，路线累计产品raw净删
+    1,011行（约初始基线0.94%），关闭WI217/WI196，按第14项退役RC-08并转移剩余backlog。Source存在
+    不提前代表main已关闭；closure PR merge是mainline状态生效点，detached fresh-main是post-merge
+    acceptance。若该验收失败，按下述emergency corrective-revert路径撤销失败closure，不重启减重路线。
+
+### 10.1 Closure post-merge failure 边界
+
+- 唯一closure PR merge即是`completed_go/closed`、RC-08退役与backlog状态在main的生效点；detached
+  fresh-main不延迟生效，只验证该状态。
+- 若post-merge acceptance失败，立即用一个emergency corrective-revert PR精确恢复pre-closure records：
+  删除WI217 summary、恢复manifest exact missing=`1`/close=`216/215`并重新sync truth；product/proof仍须
+  相对`4d98039d`零diff，状态改为`closure_delivery_failed`，不得继续宣称closed。
+- 该corrective-revert是“一次closure PR”上限的唯一安全例外，仅撤销失败closure，不构成第二closure、
+  implementation或减重work item；不得重新选择候选。正常特性/缺陷开发不被该回退阻断；再次closure
+  必须取得用户新的明确授权。

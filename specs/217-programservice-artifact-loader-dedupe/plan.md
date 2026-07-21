@@ -312,26 +312,26 @@ identity is frozen.
   证明，atomic revert后新增proof不存在，不重复要求该结果。reapply后blob等于candidate，6 proof与412 unit全绿。
   所有命令、commit/tree/blob 写入 WI217 execution log；临时 clone 不推送。
 
-- [ ] **Step 4: package/offline/cross-platform**
+- [x] **Step 4: package/offline/cross-platform**
 
   本地运行 build 与安装产物 CLI smoke；GitHub required checks 必须包含 Windows/macOS/Linux compatibility、
   POSIX/Windows offline smoke。不得创建 tag、Release、PyPI 上传或全局 CLI 更新。
 
 ## Task 5: Final review、PR 与 fresh-main
 
-- [ ] **Step 1: committed+clean same-identity 双审**
+- [x] **Step 1: committed+clean same-identity 双审**
 
   GO时LEAN与SAFETY同时审查candidate commit/tree、final HEAD/tree、formal-six、`+96/-406` code/test diff、
   truth与rollback receipt；NO-GO时双方审查exact失败门、最终产品净变化0及pre/post-merge回退状态。任何tracked内容变化使
   两者同时失效。
 
-- [ ] **Step 2: implementation PR**
+- [x] **Step 2: implementation PR**
 
   只有本地T25 GO才推送最多一个implementation branch并创建一个PR；若此前NO-GO则不创建PR并直接进入
   closure。PR内所有修复/重审留在同一PR，请求Codex review并保持约五分钟heartbeat；若Codex服务不可用，
   仅在用户已经授权的本地 SDLC 双审替代范围内继续，required CI 不得 waiver。
 
-- [ ] **Step 3: merge 与 detached fresh-main acceptance**
+- [x] **Step 3: merge 与 detached fresh-main acceptance**
 
   GO路径在current-head无actionable finding、required checks全绿且LEAN/SAFETYPASS0后squash merge，
   不删除本地branch。detached fresh-main重跑Task3 Step3与Task4全部验证，并证明merge tree包含exact
@@ -339,12 +339,15 @@ identity is frozen.
   直接进入closure；合并后若fresh-main失败，则记录exact失败与merge tree，由唯一closure执行baseline rollback，
   不创建第二个implementation或独立rollback PR。
 
-- [ ] **Step 4: closure / rollback receipt**
+- [x] **Step 4: closure source / rollback receipt**
 
   唯一独立 closure PR 创建 WI217 `development-summary.md`，把missing归零、close恢复`216/216`。正常 GO
   或 pre-merge NO-GO 路径保持 records-only；post-merge fresh-main NO-GO 路径在该同一 PR 内先把 reviewed
   product/proof blobs 精确恢复到 pre-implementation baseline，并证明406 baseline unit与所有required checks
   全绿。GO登记实际 product net -358；两种NO-GO都登记最终零产品净变化，同时如实记录是否发生过临时merge。
   两条路径都关闭 WI217/WI196，把 RC-08 记为 `retired_unrealistic_composite_target`，并将 GAP-01/GAP-03～06、
-  T62～T67 剩余结构债转为非阻塞 backlog。Closure fresh-main 后恢复正常特性开发，禁止再选择或创建新的
-  减重 work item；正常特性/缺陷 work item 不受此禁令影响，本路线不执行版本发布。
+  T62～T67剩余结构债转为非阻塞backlog。Closure merge后立即恢复正常特性/缺陷开发，fresh-main不延迟
+  或重新阻断该恢复；禁止再选择或创建新的减重work item，本路线不执行版本发布。
+  本步骤的source完成不提前代表main已关闭路线；唯一closure PR merge是mainline状态生效点，detached
+  fresh-main governance/truth/scope/clean是post-merge acceptance。若失败，按parent spec §10.1执行
+  emergency corrective-revert，精确恢复pre-closure records，不创建第二closure/implementation/减重WI。

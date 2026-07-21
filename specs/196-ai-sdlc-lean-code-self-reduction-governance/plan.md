@@ -36,12 +36,12 @@ fresh-main 验收失败，唯一 closure PR 同时承担 exact product/proof rol
   ├─ T52 GAP-08 linked-WI resume 缺陷（WI-198 / PR #122，已关闭）
   └─ Barrier：T51 与 T52 已关闭
             └─ WP-01A 目标切片旧行为基线
-                 ├─ WP-02 Lean Gate：report → warning → blocking（首个 T62A 候选 RC-09 No-Go；仍 open）
-                 ├─ WP-03 helper/DTO/test 重复族
-                 ├─ WP-04 Loop Store 重复族
-                 ├─ WP-05 baseline 候选 go/no-go
-                 ├─ WP-06 ProgramService 单领域切片
-                 └─ WP-07 Program Stage 单 family 切片
+                 ├─ WP-02 Lean Gate（T62A No-Go；剩余债务转非阻塞backlog）
+                 ├─ WP-03 helper/DTO/test 重复族（WI217后停止新实例）
+                 ├─ WP-04 Loop Store 重复族（非阻塞backlog）
+                 ├─ WP-05 baseline 候选（非阻塞backlog）
+                 ├─ WP-06 ProgramService 单领域切片（WI216 No-Go；非阻塞backlog）
+                 └─ WP-07 Program Stage 单 family 切片（非阻塞backlog）
 
 已关闭的关联治理债务（当前仅保留防回归检查）
   ├─ T53A frontend inheritance truth（WI-199 / PR #123，已关闭）
@@ -210,21 +210,23 @@ T66 T61A 的硬前置。
 - **非目标**：不追补或一次性阻断历史债务，不引入与 changed-code 无关的全仓重写。
 - **进入**：WP-01A 完成；分类器在当前仓库零误分类样本通过。
 - **阶段**：T62A 两个规则族 report-only → T62B 两个规则族 warning → T62C 两个规则族 blocking；每阶段独立 PR，两个规则族使用独立状态和开关，可单独降级。
-- **当前状态**：WI-202 候选在 formatter/真实 Git/closed safety proof 下仍至少为 product 225、
-  candidate 382，超过 170；已按 RC-09 停止，未合入 source 或消费 sponsor。T62A 仍 open。
+- **当前状态**：WI-202 候选在 formatter/真实 Git/closed safety proof 下仍至少为product225、
+  candidate382，超过170；已按RC-09停止且未合入。T62A～C在本closure source合入时转为非阻塞backlog，
+  不再重启或新建减重WI。
 - **兼容**：强制 CC-01/02/03/05/06/07；新增报告、warning/blocker 与退出行为必须写入版本化 expected-delta artifact，未列入差异为 BLOCKER。
 - **完成**：历史未改代码不阻断；新增超限和缺合同字段 fixture 分别经历 report/warning/blocker；所有 waiver 有 owner、理由、路径和到期日；合同 admission 健康检查、状态转换和 execute BLOCKER 通过。
 - **停止/回退**：任一规则族误判时只降级该规则族；合同 admission 不处于 `active + verified` 时自动恢复 FR-08 风险分层 reviewer，不追补历史债务。
-- **重启**：必须同时有足额的新/替代 sponsor 与重新冻结、同 hash 双 PASS 的父合同；只满足一项
-  不得复活 WI-202。重启前影响 CC-05/CC-06 的子项继续使用两个独立 reviewer。
+- **终局**：此前“新/替代sponsor + 重冻结父合同”的重启路径已由WI217终局决策退役；不得复活WI-202、
+  不得创建T62A～C减重WI。CC-05/CC-06风险分层reviewer只作为正常特性/缺陷工程实践保留。
 - **预算/证据**：计入 RC-06；结构化报告、blocking fixture、降级演练。
 
 ### WP-03：稳定 helper / DTO / 镜像测试重复族（L1）
 
-- **当前状态**：WI-205、WI-206、WI-210、WI-211 已各关闭一个 family。WI-211 / PR #153 / merge
+- **当前状态**：WI-205、WI-206、WI-210、WI-211与WI-217已各关闭一个family。WI-211 / PR #153 / merge
   `cd64d8aa` 将 10 个 exact mapping-dedupe defs / 10 modules / 120 LOC 收敛为 1 个共享 body 与 10 个
   局部 alias，23 calls 不变；产品 raw 净删 122、non-empty 净删 104，fresh-main direct/impact/full/
-  治理/clean-state 全绿。GAP-05 仍 active，下一 family 尚未选择。
+  治理/clean-state全绿；WI217又实际净删358行。路线family累计净删1,011行，剩余GAP-05转非阻塞backlog，
+  不再选择下一family。
 - **范围**：一次只选一个经语义审查的重复族。
 - **非目标**：不跨不同错误语义合并，不建设通用 utility framework。
 - **进入**：WP-01A 完成；至少三处当前调用者、失败模式一致、RC 预测达标。
@@ -257,16 +259,16 @@ T66 T61A 的硬前置。
 - **当前状态**：WI-212/WI-213 formal 与 T58/WI-214 closure receipt 均已完成；随后 T66 首次实现探索
   已由 WI-216 判定 `cancelled_no_go`。C2-safe 完整账本 `558/64` 高于 legacy `495/63`，产品净增35且
   proof净增285；无 DSL spike 第二阶段 target=`1209/164` 高于两阶段 legacy=`842/92`。两条路线只作
-  `archived_not_merged` 审计证据，legacy 产品保持不变。WI217 closure 前 GAP-03/WI196/RC-08 仍保留
-  当前事实状态；closure 后 GAP-03/T66 转为非阻塞 backlog，不再另立减重 formal WI或继承 WI215 receipt。
+  `archived_not_merged`审计证据，legacy产品保持不变。本closure source合入时GAP-03/T66转为非阻塞
+  backlog，不再另立减重formal WI或继承WI215 receipt。
 - **范围**：每个子 WI 只迁移一个领域；`ProgramService` 暂作薄 facade。
 - **非目标**：不同时迁移第二领域，不改变公共调用方、CLI 或 artifact 合同。
 - **进入**：WP-01A 完成；只依赖与该领域真实重叠的 WP-03～WP-05 子项，不等待无关低风险任务。
 - **切换**：旧/新 shadow → 单入口切换 → 受影响 smoke → 一个主线预发布稳定周期 → 独立删旧 PR。该周期要求 candidate 已合入且 legacy 仍保留，并通过 required cross-platform CI、wheel/sdist、clean install、offline smoke、代表性 sibling project smoke 与 selector rollback/reapply；不创建版本、tag、GitHub Release、PyPI 发布或全局 CLI 更新。
 - **完成**：迁移职责在原文件的 LOC/方法数下降至少 90%，并达到 RC-04 至少一项结构改善阈值；新文件/函数符合 RC-07，纯移动 No-Go。
 - **停止/回退**：跨两个领域、差异不为零或临时膨胀超 RC-05 时缩小切片；删旧前 facade 指回旧实现，删旧后先 revert legacy-deletion PR，再回退 candidate PR。deletion 后必须重复同等安装包、offline/sibling smoke 与 rollback/reapply；rollback receipt 覆盖最终删除状态。
-- **本次停止 receipt**：WI-216 只把确定 NO-GO 写回治理真值，不合入候选产品/测试/proof；本次失败不
-  关闭 WP-06/GAP-03，也不授权为满足旧预算压缩可读性、引入 type erasure/DSL 或提前发布。
+- **本次停止 receipt**：WI-216只把确定NO-GO写回治理真值，不合入候选产品/测试/proof；本closure不把
+  WP-06/GAP-03伪造为已实现，而是转为非阻塞backlog，也不授权压缩可读性、引入type erasure/DSL或发布。
 - **终态**：原“逐切片到400行”目标由 RC-08 退役决策终止；剩余职责分域债务进入非阻塞 backlog。
 - **证据**：domain map、dependency diff、shadow result、release smoke、legacy deletion receipt。
 
@@ -289,9 +291,9 @@ T53A、T53B、T54 已分别使用独立 WI/branch/PR 关闭，不再是待执行
 - T53B：WI-200 / PR #124 / merge `c737eda0`，adapter canonical consumption truth 已关闭。
 - T54：WI-201 / PR #125 / merge `d19c8b7d`，source inventory 已收敛为 unmapped=0、missing=0。
 
-每个后续目标切片仍须落盘对应 impact analysis，作用是防止上述 truth 回归，而不是重复执行已关闭任务。
-active child 在 closure 前只允许一个已映射但尚不存在的 `development-summary.md`，close 层必须精确为
-`N/(N-1)`；closure 必须归零为 `N/N`，不得预建空 summary 伪造完成。分析缺失或不确定，或当前 truth
+每个后续正常特性/缺陷切片在实际触及时仍须落盘对应impact analysis，作用是防止上述truth回归，而不是
+重复执行已关闭任务。WI217 `development-summary.md`已按closure source物化，close层精确归零为
+`216/216`；不再存在active-child pre-close例外。分析缺失或不确定，或当前truth
 再次出现对应 blocker、unmapped、第二个 missing 或其他类型/path/layer 的 missing source 时，必须
 fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B/T54 重新当作硬依赖。涉及 adapter
 入口的切片仍须明确验证 GAP-10 的 consumption 边界未回归。
@@ -331,15 +333,28 @@ fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B
   combined hash PASS 后才可合并。handoff 应指向当前 active child，不得退回已关闭的
   GAP-07/08、旧 WI-202 或已完成 WI-206/WI-210。
 
-## 10. 当前 active child：WI-217 T63 artifact loader family
+## 10. 终局 child：WI-217 T63 artifact loader family
 
 - **范围**：13个同形private loader、12个ordinary caller label binding、cleanup-only wrapper；L1/WP-03。
 - **实测**：legacy403/branch39；clean product `+48/-406`、proof `+48`、terminal44/4；canonical truth三行后
   RC-06=99/101；persistent legacy proof=5GREEN/1binding RED，candidate proof=6/6、ProgramService unit=412/412。
-- **当前状态/分支纪律**：formal PR #167与fresh-main已完成；唯一implementation branch的atomic candidate=
-  `e2752a9b`，T61A/B、本地full、治理、package和rollback/reapply均通过，等待final同identity双审与required
-  cross-platform checks。Implementation仍须merge后detached fresh-main，随后只进入唯一closure。
-- **完成边界**：GO时登记actual product net -358，NO-GO时登记最终产品净变化0并区分pre/post-merge；两者均经唯一closure关闭
-  WI217/WI196、退役RC-08、把剩余GAP/T62～T67转为非阻塞backlog，并禁止新减重work item。
+- **实施结果**：formal PR #167与唯一implementation PR #168均已合并；reviewed HEAD=`533363f495`，
+  22/22 required checks、Codex current-head、双Agent和detached fresh-main全绿。实际product=
+  `+48/-406/net -358`、proof=`+48`、terminal44/4、combined=`99/101`。
+- **完成边界**：唯一closure source合入时关闭WI217/WI196，路线累计产品raw净删1,011行（约0.94%）；
+  RC-08退役，剩余GAP/T62～T67转非阻塞backlog，不再创建减重work item并恢复正常特性/缺陷开发。
+  Source不提前代表mainline completion；closure PR merge是mainline状态生效点，detached fresh-main是
+  必须通过的post-merge acceptance。若其失败，立即走下述emergency corrective-revert，不得重试减重路线。
 - **停止**：任一exact label/path/error/YAML/cleanup warning差异，combined additions>101、formatter churn、
   动态机制、第二family或rollback失败时保留legacy并记录NO-GO。
+
+### Closure post-merge failure 回退
+
+- 唯一closure PR merge后，`completed_go/closed`、RC-08退役与backlog状态立即在main生效；detached
+  fresh-main只验证该状态，不延迟生效时点。
+- 若post-merge acceptance失败，必须用一个emergency corrective-revert PR精确恢复pre-closure records：
+  删除WI217 summary、把manifest exact恢复为missing=`1`/close=`216/215`并重新sync truth；product/proof
+  继续相对`4d98039d`零diff。状态标记为`closure_delivery_failed`，不得虚报closed。
+- 该corrective-revert是“一次closure PR”上限的唯一安全例外，只允许撤销失败closure，不是第二个
+  closure、implementation或减重work item；不得重新选择候选。正常特性/缺陷开发不被该回退阻断，任何
+  再次closure需要用户另行明确授权。
