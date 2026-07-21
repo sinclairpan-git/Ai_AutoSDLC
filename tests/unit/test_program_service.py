@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import shutil
 import subprocess
@@ -18309,3 +18310,50 @@ def test_program_service_project_cleanup_eligibility_warnings_deduplicate_values
         "final proof archive project cleanup blocked target: cleanup_targets[1] "
         "target_id=target-b remains blocked (still referenced)",
     ]
+
+
+def test_frontend_artifact_loader_callsite_labels() -> None:
+    bindings = {
+        "build_frontend_provider_handoff": "remediation writeback",
+        "build_frontend_provider_patch_handoff": "provider runtime",
+        "build_frontend_cross_spec_writeback_request": "provider patch apply",
+        "build_frontend_guarded_registry_request": "cross-spec writeback",
+        "build_frontend_broader_governance_request": "guarded registry",
+        "build_frontend_final_governance_request": "broader governance",
+        "build_frontend_writeback_persistence_request": "final governance",
+        "build_frontend_persisted_write_proof_request": "writeback persistence",
+        "build_frontend_final_proof_publication_request": "persisted write proof",
+        "build_frontend_final_proof_closure_request": "final proof publication",
+        "build_frontend_final_proof_archive_request": "final proof closure",
+        "build_frontend_final_proof_archive_thread_archive_request": "final proof archive",
+    }
+    for method_name, artifact_label in bindings.items():
+        source = inspect.getsource(getattr(ProgramService, method_name))
+        assert f'artifact_label="{artifact_label}"' in source
+
+
+@pytest.mark.parametrize("content", [None, "[", "[]", "key: value\n", "<directory>"])
+def test_frontend_artifact_loader_preserves_payload_and_error_contract(tmp_path: Path, content: str | None) -> None:
+    root = tmp_path / "root"
+    artifact_path = tmp_path / "artifact.yaml"
+    if content == "<directory>":
+        artifact_path.mkdir()
+    elif content is not None:
+        artifact_path.write_text(content, encoding="utf-8")
+    service = ProgramService(root)
+    loader = getattr(service, "_load_frontend_artifact_payload", None)
+    if loader:
+        payload, warnings = loader(artifact_path, artifact_label="provider runtime")
+    else:
+        payload, warnings = service._load_frontend_provider_runtime_artifact_payload(artifact_path)
+
+    if content == "key: value\n":
+        assert (payload, warnings) == ({"key": "value"}, [])
+        return
+    suffix = ""
+    if content in {"[", "<directory>"}:
+        with pytest.raises(Exception) as error:
+            yaml.safe_load(content) if content == "[" else artifact_path.read_text()
+        suffix = f" ({error.value})"
+    prefix = "missing" if content is None else "invalid"
+    assert (payload, warnings) == (None, [f"{prefix} provider runtime artifact: {artifact_path.as_posix()}{suffix}"])
