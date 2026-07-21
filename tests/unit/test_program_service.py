@@ -18356,4 +18356,4 @@ def test_frontend_artifact_loader_preserves_payload_and_error_contract(tmp_path:
             yaml.safe_load(content) if content == "[" else artifact_path.read_text()
         suffix = f" ({error.value})"
     prefix = "missing" if content is None else "invalid"
-    assert (payload, warnings) == (None, [f"{prefix} provider runtime artifact: {artifact_path.as_posix()}{suffix}"])
+    assert (payload, warnings) == (None, [f"{prefix} provider runtime artifact: {artifact_path}{suffix}"])
