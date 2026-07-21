@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T17:59:06Z
+- Updated: 2026-07-21T18:05:46Z
 - Reason: closure R2 LEAN/SAFETY identical FAIL1 remediation
 - Goal: 合入唯一closure PR，关闭WI217/WI196并恢复正常特性开发，不再创建减重work item
-- State: R2唯一恢复时点finding已修正；待新clean committed identity R3双审
+- State: R2唯一恢复时点finding已修正；truth与本地门禁已刷新，待clean committed identity R3双审
 - Stage: review
 - Work Item: 217-programservice-artifact-loader-dedupe
 - Branch: codex/217-lean-route-closure
@@ -21,8 +21,8 @@
 
 ## Commands / Tests
 - Implementation detached fresh-main：proof=6、ProgramService=412、CLI=233、full=3309 passed/3 skipped；package/governance/rollback全绿。
-- Closure truth sync：revision=`cda52fe9`、snapshot=`ea43335a`、inventory=1136/1136，missing/unmapped=0/0，close=216/216。
-- Closure R1-remediation gates：manifest exact=1 passed；constraints无BLOCKER；validate PASS；product/proof零diff。Final commit后复核truth audit、handoff parity、diff-check与clean identity。
+- Closure truth sync：revision=`9f95152f`、snapshot=`da7419fb`、inventory=1136/1136，missing/unmapped=0/0，close=216/216。
+- Closure R2-remediation gates：manifest exact=1 passed；constraints无BLOCKER；validate PASS；product/proof零diff。Final commit后复核truth audit、handoff parity、diff-check与clean identity。
 
 ## Blockers / Risks
 - 无用户输入blocker；closure source仍须新identity本地门禁、LEAN/SAFETY PASS0、current-head Codex、required checks、merge与detached fresh-main。
