@@ -2063,10 +2063,10 @@ specs:
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
-  generated_at: '2026-07-21T14:48:17Z'
+  generated_at: '2026-07-21T15:13:07Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 2d97719c
+  repo_revision: b0c08d57
   authoring_hash: 616a8eee66c55dad23d5a60e2b26b4cfc2befd05aa9c51ba1d10c6d46400e85d
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
@@ -2109,7 +2109,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 9384f4d16ac27e95b126fad627bd6d4305031445fdae0fa2453819653d8d16af
+  snapshot_hash: 365baa874c90af5d332efec62453c2796280f5b035bc491a809da701a29b94da
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
