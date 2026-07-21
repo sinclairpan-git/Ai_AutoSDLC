@@ -60,7 +60,7 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 | GAP-12 | 已关闭 | WI-207：formal PR #140、implementation PR #139、test-isolation repair PR #141；merge `8d8b8f96` 的 fresh-main real-hook/focused/full/Ruff/治理门禁全绿且 repository state clean | T55 已完成；回退 PR #139 或 #141 会重开本项 | 否 |
 | GAP-13 | 已关闭 | WI-208 / PR #143 / merge `f51c176a`：共同 builder 以 canonical sources portable/lossless 重建 root/scoped resume-pack，保留 branch、active files、context 与 raw-byte convergence | T56 已完成；fresh-main relocation/focused/full/Ruff/治理门禁全绿，保护文件与 clean state 不变；回退 PR #143 会重开本项 | 否 |
 | GAP-14 | 已关闭 | `comment_policy._is_comment_line()` 曾按 stripped diff line 判断前缀；WI-209 在 `main@85bdedac` 复现 single/double quoted scalar 续行均产生 1 finding，而 PyYAML token 实际跨越该内容行 | T57 / WI-209：formal PR #145/merge `46156c24` 与 implementation PR #146/merge `31aad572`；Round 15 双 Agent、Codex current-head、22/22 checks 与 fresh-main focused/full/Ruff/治理/clean-state 全部通过；回退 PR #146 会重开，且本项不计 RC-08 | 否 |
-| GAP-15 | 已关闭（本 closure receipt merge 生效） | `main@e184c8e2`：`program validate` 前后 `.cursor/rules/ai-sdlc.mdc` SHA-256 均为 `d5f04acf...0b6a`；只读 `workitem plan-check --json` 却输出 `IDE adapter (cursor): installed 1 file(s)` 并将 SHA 改为 `02d9656d...e134`，产生 `+18/-6` tracked diff。根因是 `workitem` callback 对除 `init` 外全部子命令无条件调用 adapter hook | T58 / WI-214：formal PR #160、amendment PR #161、implementation PR #162 / merge `2845fedc`；reviewed tree=`03b4a1ff`，本地 LEAN/SAFETY 同身份 PASS0，22/22 checks，detached fresh-main full=`3303 passed, 3 skipped`、targeted=`50 passed`、truth=`ready/fresh 1126/1126`。Lifecycle delivery final tree=`3f6698d7` 同身份双 PASS0，PR #163 exact-head 10/10 checks、merge=`60fe6d90` 与 detached fresh-main 治理/scope/clean 全绿；只隔离五个只读命令的隐式 refresh，保留 `init/link` 既有写语义。本 receipt merge 关闭；T66 仍 blocked，receipt fresh-main 后才可创建 T66 WI | 否 |
+| GAP-15 | 已关闭（本 closure receipt merge 生效） | `main@e184c8e2`：`program validate` 前后 `.cursor/rules/ai-sdlc.mdc` SHA-256 均为 `d5f04acf...0b6a`；只读 `workitem plan-check --json` 却输出 `IDE adapter (cursor): installed 1 file(s)` 并将 SHA 改为 `02d9656d...e134`，产生 `+18/-6` tracked diff。根因是 `workitem` callback 对除 `init` 外全部子命令无条件调用 adapter hook | T58 / WI-214：formal PR #160、amendment PR #161、implementation PR #162 / merge `2845fedc`；reviewed tree=`03b4a1ff`，本地 LEAN/SAFETY 同身份 PASS0，22/22 checks，detached fresh-main full=`3303 passed, 3 skipped`、targeted=`50 passed`、truth=`ready/fresh 1126/1126`。Lifecycle delivery final tree=`3f6698d7` 同身份双 PASS0，PR #163 exact-head 10/10 checks、merge=`60fe6d90` 与 detached fresh-main 治理/scope/clean 全绿；只隔离五个只读命令的隐式 refresh，保留 `init/link` 既有写语义。历史时点仅说明 receipt fresh-main 后恢复 T66 准入；该准入已执行并由 WI216 `cancelled_no_go` supersede，不再授权进入旧实现路线 | 否 |
 
 每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
 
@@ -242,7 +242,7 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     下一步才是创建 T66 implementation WI并先完成 T61A 双 readiness。失败必须回退 receipt，仍不得把缺陷
     修复计入 T66 减重收益。
 12. 上述 T66 实现入口已经执行并由 WI-216 的 records-only recovery 取代：C2-safe 完整自然账本为
-    `558 LOC / 64 branch`，高于对应 legacy `495/63`，产品 `+443/-408`、proof净增285；后续无 DSL
+    `558 LOC / 64 branch`，高于对应 legacy `495/63`，产品源码净增35、proof净增285；后续无 DSL
     隔离 spike 在第二阶段达到 target=`1209/164`，高于两阶段 legacy=`842/92`且 branch 超硬门74。
     Pascal/LEAN 与 Confucius/SAFETY 对 spike 产品和 records-only 身份均裁决
     `STOP_SPIKE_NO_GO/findings=0`，并一致确认 C2 不能称为减重。因此 T66 本次实现尝试为

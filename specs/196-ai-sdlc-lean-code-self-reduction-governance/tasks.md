@@ -121,7 +121,7 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 T62A～T62C、T63～T67 的新实例已恢复选择，但仍须逐项满足各自依赖、sponsor、RC 与原子 WI/branch/PR。
 WI-211 已完成一个 T63 family；下一原子项必须从 fresh main 重新选择，不得沿用旧 spike 或已撤销 claim。
 WI-212/WI-213 formal 与 WI-214/T58 closure receipt 已完成。其后 T66 首次实现尝试已经执行，但 WI-216
-以 C2=`558/64 vs 495/63`、product=`+443/-408`、proof=`+285`，以及 no-DSL spike=
+以 C2=`558/64 vs 495/63`、product净增35、proof净增285，以及 no-DSL spike=
 `1209/164 vs 842/92` 证明当前路线确定 NO-GO。本次 implementation 状态为 `cancelled_no_go`，产品、测试、
 proof不合入；T66/GAP-03仍未关闭。未来只能创建新的 formal WI并从 fresh main 重新准入，不得沿用本次
 候选或把 records receipt 当作 reduction completion。

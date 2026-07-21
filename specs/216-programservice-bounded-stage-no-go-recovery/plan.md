@@ -13,7 +13,8 @@
 - 工作目录固定为
   `/Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/216-programservice-bounded-stage-no-go-recovery`。
 - 基线固定为 `origin/main@7922956d3e248a93c3190240259850ab3498ec9f`；不得混入主工作树既有改动。
-- 只允许 WI196/WI213/WI216 records、`program-manifest.yaml` 和 WI216 root/scoped handoff。
+- 只允许 WI196/WI213/WI216 records、`program-manifest.yaml`、project-state、WI216 root/scoped handoff，
+  以及 manifest exact 测试两个计数标量。
 - 不运行会写产品状态的 managed delivery，不变更版本，不推送两个失败证据分支。
 - 任一内容变更后重新计算 formal-nine；任一 commit/tree 变化后重新做最终双审。
 
@@ -28,7 +29,7 @@
 **步骤**：
 
 1. 写入 immutable baseline、C2-safe、spike commit/tree/blob。
-2. 写入完整账本：C2 `558/64 vs 495/63`、product `+443/-408`、proof `+285`；spike
+2. 写入稳定账本：C2 `558/64 vs 495/63`、product净增35、proof净增285；spike
    `1209/164 vs 842/92`。
 3. 把 T66 本次实现标为 `cancelled_no_go`；保持 GAP-03/WI196/RC-08/release open。
 4. 明确 C2-safe/spike 为 `archived_not_merged`，产品、测试、proof 不进入本分支。
@@ -70,12 +71,15 @@ $payload = [Text.Encoding]::UTF8.GetBytes(($rows -join "`n") + "`n")
 **文件**：
 
 - 修改 `program-manifest.yaml`。
+- 修改 `.ai-sdlc/project/config/project-state.yaml`。
+- 修改 `tests/integration/test_repo_program_manifest.py`，仅替换 inventory/close 两个期望标量。
 - 修改 `.ai-sdlc/state/codex-handoff.md`。
 - 新建 `.ai-sdlc/work-items/216-programservice-bounded-stage-no-go-recovery/codex-handoff.md`。
 
 **步骤**：
 
-1. 注册 WI216 及对 WI196、WI213、WI214 的依赖。
+1. 注册 WI216 及对 WI196、WI213、WI214 的依赖；把 `next_work_item_seq` 从215推进到217，其中 WI215
+   明确保留为未合入实验编号。
 2. 执行机械 truth sync：
 
    ```powershell
@@ -95,10 +99,20 @@ $payload = [Text.Encoding]::UTF8.GetBytes(($rows -join "`n") + "`n")
 ## Task 4：records-only 最终验证与双审
 
 1. 运行仓库现有 manifest exact、scope/continuity 与相关治理测试；先从测试清单定位精确命令，禁止猜测。
-2. 验证 `origin/main...HEAD` 中 `src/**`、`tests/**`、workflow、依赖、版本、release diff 均为零。
-3. 提交 final records identity，保持 clean。
-4. Pascal/LEAN 与 Confucius/SAFETY 对同一 final HEAD/tree/formal-nine 复审；两者必须一致 PASS0。
-5. 把 verdict、命令和结果只追加到 execution log/summary/handoff；若这些 records 变化，再对最终 commit/tree
+2. 验证 `origin/main...HEAD` 中 `src/**`、测试逻辑/fixture、workflow、依赖、版本、release diff 均为零；
+   测试 diff 必须恰为 manifest exact 的两个标量。
+3. 将 exact audit identities 持久化为非合入 archive：
+
+   ```powershell
+   git push origin 70f19275150831ceea89a6c1e006c056ee98c412:refs/heads/codex/archive/215-programservice-bounded-stage-c2-safe
+   git push origin 60dcc4f65f2a332261b765bfe5fff9979397ddc7:refs/heads/codex/archive/215-nine-stage-no-dsl-no-go
+   git ls-remote --heads origin refs/heads/codex/archive/215-programservice-bounded-stage-c2-safe refs/heads/codex/archive/215-nine-stage-no-dsl-no-go
+   ```
+
+   两个 ref 不开 PR、不 force-push、不删除；返回 SHA 必须逐字匹配。
+4. 提交 final records identity，保持 clean。
+5. Pascal/LEAN 与 Confucius/SAFETY 对同一 final HEAD/tree/formal-nine 复审；两者必须一致 PASS0。
+6. 把 verdict、命令和结果只追加到 execution log/summary/handoff；若这些 records 变化，再对最终 commit/tree
    做 records-only 身份复审。
 
 ## Task 5：PR、合并与 detached fresh-main
@@ -113,6 +127,9 @@ $payload = [Text.Encoding]::UTF8.GetBytes(($rows -join "`n") + "`n")
 
 ## 回退
 
-- PR 合并前：放弃 WI216 分支即可，main 未受影响。
-- 合并后 fresh-main 失败：revert WI216 records PR，恢复父项上一主线记录；不得通过修改产品补救 receipt。
+- PR 合并前：不得只放弃 WI216 后恢复旧 T66 路线；保留 remote archive，并在 replacement records PR
+  合入前把 T66 维持 fail-closed。
+- 合并后 fresh-main 失败：优先提交修正 receipt，只回退错误 truth/continuity 字段并保留 NO-GO、archive 与
+  `next_work_item_seq=217`。禁止单独 revert 整个 WI216 造成 T66 误解锁；若安全原因必须 full revert，先以
+  独立紧急 freeze commit 保留 `cancelled_no_go` 和禁止候选准入，再执行 revert。
 - 未来候选：另建 formal WI，重新采集完整 legacy 账本；不得继承 WI215 的 GO、hash 或 reviewer receipt。

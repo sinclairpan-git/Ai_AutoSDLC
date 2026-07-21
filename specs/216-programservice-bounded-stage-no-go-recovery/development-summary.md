@@ -9,7 +9,8 @@
   因而不是框架减重。
 - 无 DSL 九阶段 spike 在第二阶段达到 `1209/164`，高于两阶段 legacy `842/92` 且超过 branch≤90；
   双 reviewer 一致 `STOP_SPIKE_NO_GO/findings=0`。
-- C2-safe 与 spike 均只保留为本地 `archived_not_merged` 审计证据。
+- C2-safe 与 spike 均保持 `archived_not_merged`；formal 已冻结两个远端只读 archive ref，待最终门禁前
+  持久化并从 remote 验证 exact SHA。
 
 ## 状态边界
 
@@ -19,9 +20,13 @@
 - 未来只有新的 formal WI 以完整自然账本证明产品净删、复杂度下降、兼容与证明成本可控后，才能重启
   T66；不得继承 WI215 的 GO、hash、预算或 reviewer receipt。
 
+## 已完成的 authoring
+
+- WI196/WI213 superseding 状态已经更新；Round 1 指出的旧“当前”措辞继续在 remediation commit 修正。
+- WI216 root/scoped handoff 已提前建立，防止在 formal 复审前恢复到旧 WI214/T66 路线。
+
 ## 待完成
 
-- 更新 WI196/WI213 superseding 状态。
 - 对 committed+clean formal-nine 完成 Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0。
-- 同步 program truth 与 root/scoped handoff，完成 records-only 门禁。
+- 推送并验证两个远端只读 archive ref；同步 program truth，完成 records-only 门禁。
 - 推送 PR、required checks/Codex review、merge 与 detached fresh-main 验收。

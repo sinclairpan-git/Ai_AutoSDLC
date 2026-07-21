@@ -2,7 +2,7 @@
 
 **功能编号**：`213-programservice-bounded-stage-reduction`
 **创建日期**：2026-07-19
-**状态**：formal-only 准入；禁止产品 execute
+**状态**：formal-only 历史 receipt；下游本次 implementation 已由 WI216 `cancelled_no_go`
 **类型**：WI-196 / WP-06 / T66 / GAP-03 / L3
 **基线**：`main@e184c8e27818aa7950fcc64dbb10fa7a65888f8c`
 
@@ -19,8 +19,9 @@ fresh-main 通过后才允许创建唯一 T66 implementation WI；
 该 WI 还必须在写产品代码前完成 T61A，并取得 LEAN 与 SAFETY 两位 reviewer 的 readiness `GO`，才允许
 进入 candidate 实现。
 
-当前 delivery PR #163 已 merge 为 `60fe6d90` 且 detached fresh-main 全绿；本 closure receipt merge
-关闭 GAP-15/T58。T66 继续 blocked，receipt detached fresh-main 通过前不得创建 implementation WI。
+历史时点：delivery PR #163 merge=`60fe6d90` 且 detached fresh-main 全绿，closure receipt 关闭
+GAP-15/T58并曾恢复 T66 implementation 准入。该准入已经执行；WI216 随后以 C2 与 no-DSL spike 的
+确定结构失败把本次 implementation 标记为 `cancelled_no_go`。当前不得创建或续跑旧 implementation WI。
 
 后续 candidate 与 legacy deletion 属于同一个 T66 工作包，但必须使用两个独立 PR。Candidate 合入时
 legacy 必须完整保留；主线预发布稳定周期通过后才允许删除。Legacy 删除和删除后回退证明完成前，
