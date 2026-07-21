@@ -777,3 +777,7 @@
   `a85c966cab7b06d70142b3a99caa072b57dedc4f8f396027cc6f550885207b87`，`diff -qr=0`。
 - pre-records truth audit=`ready/fresh 1131/1131/0/0`。本段与 summary/handoff 先进入 source checkpoint，
   再执行受控 truth sync、clean manifest exact 和同 identity 双审；双 PASS0 前不得进入下一 stage。
+- evidence source checkpoint=`de7d4d63` 后 truth sync 生成 snapshot=`f972f63c...c408b`，manifest sync
+  checkpoint=`9a50479a/786dadc4`；该 clean identity 上 audit=`ready/fresh 1131/1131/0/0`，manifest exact=
+  `1 passed in 102.65s`，scope/clean为空。本条进入 truth source 后再执行一次 final sync；最终 snapshot
+  hash只读取同一提交的`program-manifest.yaml`，不把自引用值继续写回 formal source。

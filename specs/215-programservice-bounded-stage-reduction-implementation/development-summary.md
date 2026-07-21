@@ -55,6 +55,9 @@
   full=`3387 passed, 3 skipped`；immutable legacy/current各249通过，JUnit节点和raw tree相同。
 - R2 target=`380 LOC/61 branch/max 50`，严格低于 legacy cross+guarded=`792/92/max177`；
   product/proof/combined=`444/285/729`均在硬上限内。Ruff/mypy/constraints/validate/plan/truth audit全绿。
+- R2 evidence source=`de7d4d63`、首轮 manifest sync=`9a50479a`；clean audit=`ready/fresh
+  1131/1131/0/0`，manifest exact=`1 passed in 102.65s`。本记录进入 source 后执行最后一次机械 sync，
+  final snapshot权威值以同一提交的`program-manifest.yaml`为准。
 
 ## 兼容与减重边界
 

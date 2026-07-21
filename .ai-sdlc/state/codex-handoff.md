@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T01:18:41Z
-- Reason: R2 full、immutable A/B 与 pre-records 治理门绿色检查点
+- Updated: 2026-07-21T01:26:29Z
+- Reason: R2 首轮 clean truth audit 与 manifest exact 绿色检查点
 - Goal: 完成 guarded_registry R2 全量、immutable A/B、治理门禁与同 identity LEAN/SAFETY PASS0
-- State: R2 产品、full、immutable A/B 与 pre-records gates 全绿，待 evidence commit/truth sync/final双审
+- State: R2 全部行为/治理门与首轮 clean truth/manifest 全绿，待 formal records commit/final sync/双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
@@ -64,13 +64,15 @@
   raw `780 files/732745 bytes` tree hash相同，`diff -qr=0`。
 - 全仓 Ruff、constraints、program validate、plan-check均绿；pre-records truth audit=
   `ready/fresh 1131/1131/0/0`。
+- evidence source=`de7d4d63`，manifest sync checkpoint=`9a50479a/786dadc4`；clean audit=
+  `ready/fresh 1131/1131/0/0`，manifest exact=`1 passed in 102.65s`，scope/clean为空。
 
 ## Blockers / Risks
 
-- 无当前 blocker；evidence/truth/manifest final identity 尚未形成，不能开始双审或下一 stage。
+- 无当前 blocker；formal gate结果与 final resync 尚未提交，不能开始双审或下一 stage。
 
 ## Exact Next Steps
 
-1. 提交 execution/summary/handoff evidence source checkpoint，保持 product/tests/config blobs冻结。
-2. 执行 truth sync，提交 records，clean identity 上复跑 audit/manifest exact/scope/clean。
+1. 提交本轮 formal gate records，保持 product/tests/config blobs冻结。
+2. 执行 final truth sync，提交 manifest；clean identity 上复跑 audit/manifest exact/scope/clean。
 3. 同一 Pascal/LEAN 与 Confucius/SAFETY 双 PASS0 后才进入下一 stage。
