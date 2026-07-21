@@ -51,6 +51,46 @@ class CrossSpecWritebackResultData:
     source_linkage: dict[str, str] = field(default_factory=dict)
 
 
+@dataclass
+class GuardedRegistryStepData:
+    spec_id: str
+    path: str
+    registry_state: str
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class GuardedRegistryRequestData:
+    required: bool
+    confirmation_required: bool
+    registry_state: str
+    writeback_state: str
+    artifact_source_path: str
+    artifact_generated_at: str
+    written_paths: list[str] = field(default_factory=list)
+    steps: list[GuardedRegistryStepData] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class GuardedRegistryResultData:
+    passed: bool
+    confirmed: bool
+    registry_state: str
+    registry_result: str
+    registry_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
+
+
 def unique_strings(values: Sequence[str]) -> list[str]:
     return list(dict.fromkeys(value for value in values if value))
 
@@ -445,6 +485,397 @@ def write_cross_spec_writeback_artifact(
 ) -> Path:
     relative = relative_path(root, artifact_path)
     payload = build_cross_payload(
+        root, manifest_path, request, result, generated_at, relative
+    )
+    artifact_path.parent.mkdir(parents=True, exist_ok=True)
+    artifact_path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8"
+    )
+    return artifact_path
+
+
+def _guarded_steps(
+    payload: dict[str, object], specs: Sequence[SpecPath], source_path: str
+) -> list[GuardedRegistryStepData]:
+    generated_at = str(payload.get("generated_at", "")).strip()
+    spec_paths = {spec.id: spec.path for spec in specs}
+    steps: list[GuardedRegistryStepData] = []
+    for item in mapping_list(payload.get("steps", [])):
+        spec_id = str(item.get("spec_id", "")).strip()
+        if not spec_id:
+            continue
+        path = str(item.get("path", "")).strip() or spec_paths.get(spec_id, "")
+        linkage = string_mapping(item.get("source_linkage", {}))
+        linkage.update(
+            {
+                "cross_spec_writeback_artifact_path": source_path,
+                "cross_spec_writeback_artifact_generated_at": generated_at,
+                "registry_state": "not_started",
+            }
+        )
+        steps.append(
+            GuardedRegistryStepData(
+                spec_id=spec_id,
+                path=path,
+                registry_state="not_started",
+                pending_inputs=string_list(item.get("pending_inputs", [])),
+                suggested_next_actions=string_list(
+                    item.get("suggested_next_actions", [])
+                ),
+                plain_language_blockers=string_list(
+                    item.get("plain_language_blockers", [])
+                ),
+                recommended_next_steps=string_list(
+                    item.get("recommended_next_steps", [])
+                ),
+                source_linkage=linkage,
+            )
+        )
+    return steps
+
+
+def build_guarded_registry_request(
+    root: Path, specs: Sequence[SpecPath], artifact_path: Path
+) -> GuardedRegistryRequestData:
+    source_path = relative_path(root, artifact_path)
+    payload, warnings = load_mapping(root, artifact_path, "cross-spec writeback")
+    if payload is None:
+        return GuardedRegistryRequestData(
+            required=False,
+            confirmation_required=False,
+            registry_state="missing_artifact",
+            writeback_state="missing_artifact",
+            artifact_source_path=source_path,
+            artifact_generated_at="",
+            warnings=warnings,
+            source_linkage={
+                "cross_spec_writeback_artifact_path": source_path,
+                "registry_state": "missing_artifact",
+            },
+        )
+    generated_at = str(payload.get("generated_at", "")).strip()
+    writeback_state = str(payload.get("writeback_state", "")).strip() or "unknown"
+    paths = unique_strings(
+        [
+            *string_list(payload.get("existing_written_paths", [])),
+            *string_list(payload.get("written_paths", [])),
+        ]
+    )
+    blockers = string_list(payload.get("remaining_blockers", []))
+    steps = _guarded_steps(payload, specs, source_path)
+    required = any((steps, paths, blockers))
+    linkage = string_mapping(payload.get("source_linkage", {}))
+    linkage |= {
+        "cross_spec_writeback_artifact_path": source_path,
+        "cross_spec_writeback_artifact_generated_at": generated_at,
+        "registry_state": "not_started",
+        "confirmation_required": str(required).lower(),
+    }
+    return GuardedRegistryRequestData(
+        required=required,
+        confirmation_required=required,
+        registry_state="not_started",
+        writeback_state=writeback_state,
+        artifact_source_path=source_path,
+        artifact_generated_at=generated_at,
+        written_paths=paths,
+        steps=steps,
+        remaining_blockers=blockers,
+        warnings=unique_strings([*warnings, *string_list(payload.get("warnings", []))]),
+        source_linkage=linkage,
+    )
+
+
+def _guarded_result(
+    request: GuardedRegistryRequestData,
+    passed: bool,
+    confirmed: bool,
+    state: str,
+    outcome: str,
+    values: tuple[Sequence[str], Sequence[str], Sequence[str], Sequence[str]],
+) -> GuardedRegistryResultData:
+    summaries, paths, blockers, warnings = values
+    linkage = dict(request.source_linkage)
+    linkage.update({"registry_state": state, "registry_result": outcome})
+    return GuardedRegistryResultData(
+        passed=passed,
+        confirmed=confirmed,
+        registry_state=state,
+        registry_result=outcome,
+        registry_summaries=unique_strings(summaries),
+        written_paths=unique_strings(paths),
+        remaining_blockers=unique_strings(blockers),
+        warnings=unique_strings(warnings),
+        source_linkage=linkage,
+    )
+
+
+def _guarded_early(
+    request: GuardedRegistryRequestData, confirmed: bool
+) -> GuardedRegistryResultData | None:
+    existing: tuple[Sequence[str], Sequence[str], Sequence[str], Sequence[str]] = (
+        (),
+        request.written_paths,
+        request.remaining_blockers,
+        request.warnings,
+    )
+    if request.warnings and not request.artifact_generated_at:
+        return _guarded_result(
+            request, False, confirmed, "blocked", "blocked", existing
+        )
+    if not confirmed:
+        warning = "guarded registry orchestration requires explicit confirmation"
+        values: tuple[Sequence[str], Sequence[str], Sequence[str], Sequence[str]] = (
+            (),
+            request.written_paths,
+            request.remaining_blockers,
+            [*request.warnings, warning],
+        )
+        return _guarded_result(
+            request, False, False, "confirmation_required", "blocked", values
+        )
+    if request.writeback_state != "completed":
+        blocker = "guarded registry requires completed cross-spec writeback artifact "
+        blocker += f"(writeback_state={request.writeback_state or 'unknown'})"
+        values = (
+            [blocker],
+            (),
+            [*request.remaining_blockers, blocker],
+            request.warnings,
+        )
+        return _guarded_result(request, False, True, "blocked", "blocked", values)
+    if request.remaining_blockers:
+        blocker = "guarded registry requires blocker-free cross-spec writeback artifact"
+        values = (
+            [blocker],
+            (),
+            [*request.remaining_blockers, blocker],
+            request.warnings,
+        )
+        return _guarded_result(request, False, True, "blocked", "blocked", values)
+    if not request.required:
+        values = ((), request.written_paths, (), request.warnings)
+        return _guarded_result(
+            request, True, confirmed, "not_started", "skipped", values
+        )
+    return None
+
+
+def _resolve_guarded_target(
+    root: Path,
+    specs: Sequence[SpecPath],
+    step: GuardedRegistryStepData,
+    steps_dir: str,
+) -> tuple[Path | None, str | None]:
+    spec_id = step.spec_id
+    if not spec_id:
+        return None, "guarded registry step missing spec_id; write skipped"
+    if Path(spec_id).name != spec_id or spec_id in {".", ".."}:
+        blocker = f"guarded registry step {spec_id} is not a simple spec identifier; "
+        return None, blocker + "write skipped"
+    steps_root = (root / steps_dir).resolve()
+    target = (steps_root / f"{spec_id}.md").resolve()
+    try:
+        target.relative_to(steps_root)
+    except ValueError:
+        blocker = (
+            f"guarded registry step {spec_id} resolves outside bounded step directory; "
+        )
+        return None, blocker + "write skipped"
+    manifest_spec = next((spec for spec in specs if spec.id == spec_id), None)
+    if manifest_spec is None:
+        return None, f"guarded registry step {spec_id} missing manifest spec"
+    path_text = step.path.strip()
+    if not path_text:
+        return None, f"guarded registry step {spec_id} missing spec path"
+    resolved = (root / path_text).resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError:
+        return (
+            None,
+            f"guarded registry step {spec_id} resolves outside workspace root: {path_text}",
+        )
+    expected = (root / manifest_spec.path).resolve()
+    expected.relative_to(root)
+    if resolved != expected:
+        return (
+            None,
+            f"guarded registry step {spec_id} path does not match manifest spec path: {path_text}",
+        )
+    if not resolved.is_dir():
+        return (
+            None,
+            f"guarded registry step {spec_id} missing spec directory: {path_text}",
+        )
+    return target, None
+
+
+def _guarded_sections(
+    request: GuardedRegistryRequestData, step: GuardedRegistryStepData
+) -> list[str]:
+    lines: list[str] = []
+    pending = list(step.pending_inputs) or ["none"]
+    lines.extend([f"- `{item}`" for item in pending])
+    lines.extend(["", "## Suggested Next Actions", ""])
+    actions = unique_strings(step.suggested_next_actions) or ["none"]
+    lines.extend([f"- {item}" for item in actions])
+    if blockers := unique_strings(step.plain_language_blockers):
+        lines.extend(["", "## Explain", ""])
+        lines.extend([f"- {item}" for item in blockers])
+    if next_steps := unique_strings(step.recommended_next_steps):
+        lines.extend(["", "## Recommended Next Steps", ""])
+        lines.extend([f"- {item}" for item in next_steps])
+    if request.written_paths:
+        lines.extend(["", "## Source Written Paths", ""])
+        lines.extend([f"- `{item}`" for item in request.written_paths])
+    return lines
+
+
+def render_guarded_registry_step(
+    root: Path,
+    manifest_path: Path,
+    request: GuardedRegistryRequestData,
+    step: GuardedRegistryStepData,
+) -> str:
+    lines = [
+        f"# Frontend Guarded Registry Step: {step.spec_id}",
+        "",
+        f"- Manifest: `{relative_path(root, manifest_path)}`",
+        f"- Source artifact: `{request.artifact_source_path}`",
+        f"- Writeback state: `{request.writeback_state}`",
+        f"- Artifact generated_at: `{request.artifact_generated_at or 'unknown'}`",
+        "",
+        "## Pending Inputs",
+        "",
+    ]
+    lines.extend(_guarded_sections(request, step))
+    lines.extend(["", "## Source Linkage", ""])
+    linkage = dict(step.source_linkage)
+    linkage.update({"registry_state": "completed", "registry_result": "completed"})
+    lines.extend([f"- `{key}`: `{value}`" for key, value in sorted(linkage.items())])
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _write_guarded_registry_steps(
+    root: Path,
+    manifest_path: Path,
+    specs: Sequence[SpecPath],
+    request: GuardedRegistryRequestData,
+    steps_dir: str,
+) -> tuple[list[str], list[str], int]:
+    paths: list[str] = []
+    blockers = unique_strings(request.remaining_blockers)
+    executable = 0
+    for step in request.steps:
+        target, blocker = _resolve_guarded_target(root, specs, step, steps_dir)
+        if blocker or target is None:
+            blockers.append(blocker or "guarded registry target unavailable")
+            continue
+        executable += 1
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(
+            render_guarded_registry_step(root, manifest_path, request, step),
+            encoding="utf-8",
+        )
+        paths.append(relative_path(root, target))
+    return paths, blockers, executable
+
+
+def execute_guarded_registry(
+    root: Path,
+    manifest_path: Path,
+    specs: Sequence[SpecPath],
+    request: GuardedRegistryRequestData,
+    confirmed: bool,
+    steps_dir: str,
+) -> GuardedRegistryResultData:
+    if (early := _guarded_early(request, confirmed)) is not None:
+        return early
+    paths, blockers, executable = _write_guarded_registry_steps(
+        root, manifest_path, specs, request, steps_dir
+    )
+    if executable == 0:
+        state = outcome = "blocked"
+        summaries = [
+            "no executable guarded registry targets available from canonical cross-spec writeback artifact"
+        ]
+    elif blockers:
+        state = outcome = "partial"
+        summaries = [
+            f"materialized {len(paths)} of {executable} guarded registry step file(s) from canonical cross-spec writeback artifact"
+        ]
+    else:
+        state = outcome = "completed"
+        summaries = [
+            f"materialized {len(paths)} guarded registry step file(s) from canonical cross-spec writeback artifact"
+        ]
+    values = (summaries, paths, blockers, request.warnings)
+    return _guarded_result(
+        request, outcome == "completed", True, state, outcome, values
+    )
+
+
+def build_guarded_registry_payload(
+    root: Path,
+    manifest_path: Path,
+    request: GuardedRegistryRequestData,
+    result: GuardedRegistryResultData,
+    generated_at: str,
+    artifact_path: str,
+) -> dict[str, object]:
+    linkage = dict(request.source_linkage)
+    linkage.update(result.source_linkage)
+    linkage.update(
+        {
+            "guarded_registry_artifact_path": artifact_path,
+            "guarded_registry_artifact_generated_at": generated_at,
+        }
+    )
+    return {
+        "generated_at": generated_at,
+        "manifest_path": relative_path(root, manifest_path),
+        "artifact_source_path": request.artifact_source_path,
+        "artifact_generated_at": request.artifact_generated_at,
+        "required": request.required,
+        "confirmation_required": request.confirmation_required,
+        "confirmed": result.confirmed,
+        "writeback_state": request.writeback_state,
+        "registry_state": result.registry_state,
+        "registry_result": result.registry_result,
+        "registry_summaries": unique_strings(result.registry_summaries),
+        "existing_written_paths": unique_strings(request.written_paths),
+        "written_paths": unique_strings(result.written_paths),
+        "remaining_blockers": unique_strings(result.remaining_blockers),
+        "warnings": unique_strings([*request.warnings, *result.warnings]),
+        "steps": [
+            {
+                "spec_id": step.spec_id,
+                "path": step.path,
+                "registry_state": step.registry_state,
+                "pending_inputs": list(step.pending_inputs),
+                "suggested_next_actions": unique_strings(step.suggested_next_actions),
+                "plain_language_blockers": unique_strings(step.plain_language_blockers),
+                "recommended_next_steps": unique_strings(step.recommended_next_steps),
+                "source_linkage": dict(step.source_linkage),
+            }
+            for step in request.steps
+        ],
+        "source_linkage": linkage,
+    }
+
+
+def write_guarded_registry_artifact(
+    root: Path,
+    manifest_path: Path,
+    request: GuardedRegistryRequestData,
+    result: GuardedRegistryResultData,
+    generated_at: str,
+    artifact_path: Path,
+) -> Path:
+    relative = relative_path(root, artifact_path)
+    payload = build_guarded_registry_payload(
         root, manifest_path, request, result, generated_at, relative
     )
     artifact_path.parent.mkdir(parents=True, exist_ok=True)

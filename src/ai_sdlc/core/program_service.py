@@ -1406,6 +1406,99 @@ class ProgramFrontendGuardedRegistryResult:
         )
 
 
+def _from_guarded_registry_request_data(
+    data: _bounded_stage.GuardedRegistryRequestData,
+) -> ProgramFrontendGuardedRegistryRequest:
+    return ProgramFrontendGuardedRegistryRequest(
+        required=data.required,
+        confirmation_required=data.confirmation_required,
+        registry_state=data.registry_state,
+        writeback_state=data.writeback_state,
+        artifact_source_path=data.artifact_source_path,
+        artifact_generated_at=data.artifact_generated_at,
+        written_paths=list(data.written_paths),
+        steps=[
+            ProgramFrontendGuardedRegistryRequestStep(
+                spec_id=step.spec_id,
+                path=step.path,
+                registry_state=step.registry_state,
+                pending_inputs=list(step.pending_inputs),
+                suggested_next_actions=list(step.suggested_next_actions),
+                plain_language_blockers=list(step.plain_language_blockers),
+                recommended_next_steps=list(step.recommended_next_steps),
+                source_linkage=dict(step.source_linkage),
+            )
+            for step in data.steps
+        ],
+        remaining_blockers=list(data.remaining_blockers),
+        warnings=list(data.warnings),
+        source_linkage=dict(data.source_linkage),
+    )
+
+
+def _to_guarded_registry_request_data(
+    request: ProgramFrontendGuardedRegistryRequest,
+) -> _bounded_stage.GuardedRegistryRequestData:
+    steps = [
+        _bounded_stage.GuardedRegistryStepData(
+            spec_id=step.spec_id,
+            path=step.path,
+            registry_state=step.registry_state,
+            pending_inputs=list(step.pending_inputs),
+            suggested_next_actions=list(step.suggested_next_actions),
+            plain_language_blockers=list(step.plain_language_blockers),
+            recommended_next_steps=list(step.recommended_next_steps),
+            source_linkage=dict(step.source_linkage),
+        )
+        for step in request.steps
+    ]
+    return _bounded_stage.GuardedRegistryRequestData(
+        required=request.required,
+        confirmation_required=request.confirmation_required,
+        registry_state=request.registry_state,
+        writeback_state=request.writeback_state,
+        artifact_source_path=request.artifact_source_path,
+        artifact_generated_at=request.artifact_generated_at,
+        written_paths=list(request.written_paths),
+        steps=steps,
+        remaining_blockers=list(request.remaining_blockers),
+        warnings=list(request.warnings),
+        source_linkage=dict(request.source_linkage),
+    )
+
+
+def _from_guarded_registry_result_data(
+    data: _bounded_stage.GuardedRegistryResultData,
+) -> ProgramFrontendGuardedRegistryResult:
+    return ProgramFrontendGuardedRegistryResult(
+        passed=data.passed,
+        confirmed=data.confirmed,
+        registry_state=data.registry_state,
+        registry_result=data.registry_result,
+        registry_summaries=list(data.registry_summaries),
+        written_paths=list(data.written_paths),
+        remaining_blockers=list(data.remaining_blockers),
+        warnings=list(data.warnings),
+        source_linkage=dict(data.source_linkage),
+    )
+
+
+def _to_guarded_registry_result_data(
+    result: ProgramFrontendGuardedRegistryResult,
+) -> _bounded_stage.GuardedRegistryResultData:
+    return _bounded_stage.GuardedRegistryResultData(
+        passed=result.passed,
+        confirmed=result.confirmed,
+        registry_state=result.registry_state,
+        registry_result=result.registry_result,
+        registry_summaries=list(result.registry_summaries),
+        written_paths=list(result.written_paths),
+        remaining_blockers=list(result.remaining_blockers),
+        warnings=list(result.warnings),
+        source_linkage=dict(result.source_linkage),
+    )
+
+
 @dataclass
 class ProgramFrontendBroaderGovernanceRequestStep:
     spec_id: str
@@ -10611,97 +10704,13 @@ const $i = (text: string) => text;
         )
         if not effective_artifact_path.is_absolute():
             effective_artifact_path = self.root / effective_artifact_path
-
-        relative_artifact_path = _relative_to_root_or_str(self.root, effective_artifact_path)
-        payload, warnings = self._load_frontend_cross_spec_writeback_artifact_payload(
-            effective_artifact_path
+        specs = [
+            _bounded_stage.SpecPath(spec.id, spec.path) for spec in manifest.specs
+        ]
+        data = _bounded_stage.build_guarded_registry_request(
+            self.root, specs, effective_artifact_path
         )
-        if payload is None:
-            return ProgramFrontendGuardedRegistryRequest(
-                required=False,
-                confirmation_required=False,
-                registry_state="missing_artifact",
-                writeback_state="missing_artifact",
-                artifact_source_path=relative_artifact_path,
-                artifact_generated_at="",
-                warnings=warnings,
-                source_linkage={
-                    "cross_spec_writeback_artifact_path": relative_artifact_path,
-                    "registry_state": "missing_artifact",
-                },
-            )
-
-        artifact_generated_at = str(payload.get("generated_at", "")).strip()
-        writeback_state = str(payload.get("writeback_state", "")).strip() or "unknown"
-        written_paths = _unique_strings(
-            [
-                *_normalize_string_list(payload.get("existing_written_paths", [])),
-                *_normalize_string_list(payload.get("written_paths", [])),
-            ]
-        )
-        remaining_blockers = _normalize_string_list(payload.get("remaining_blockers", []))
-        steps: list[ProgramFrontendGuardedRegistryRequestStep] = []
-        spec_by_id = {spec.id: spec for spec in manifest.specs}
-        for step_payload in _normalize_mapping_list(payload.get("steps", [])):
-            spec_id = str(step_payload.get("spec_id", "")).strip()
-            if not spec_id:
-                continue
-            path = str(step_payload.get("path", "")).strip()
-            if not path:
-                spec = spec_by_id.get(spec_id)
-                path = spec.path if spec is not None else ""
-            source_linkage = _normalize_string_mapping(step_payload.get("source_linkage", {}))
-            source_linkage.update(
-                {
-                    "cross_spec_writeback_artifact_path": relative_artifact_path,
-                    "cross_spec_writeback_artifact_generated_at": artifact_generated_at,
-                    "registry_state": "not_started",
-                }
-            )
-            steps.append(
-                ProgramFrontendGuardedRegistryRequestStep(
-                    spec_id=spec_id,
-                    path=path,
-                    registry_state="not_started",
-                    pending_inputs=_normalize_string_list(
-                        step_payload.get("pending_inputs", [])
-                    ),
-                    suggested_next_actions=_normalize_string_list(
-                        step_payload.get("suggested_next_actions", [])
-                    ),
-                    plain_language_blockers=_normalize_string_list(
-                        step_payload.get("plain_language_blockers", [])
-                    ),
-                    recommended_next_steps=_normalize_string_list(
-                        step_payload.get("recommended_next_steps", [])
-                    ),
-                    source_linkage=source_linkage,
-                )
-            )
-
-        required = bool(steps or written_paths or remaining_blockers)
-        source_linkage = _normalize_string_mapping(payload.get("source_linkage", {}))
-        source_linkage.update(
-            {
-                "cross_spec_writeback_artifact_path": relative_artifact_path,
-                "cross_spec_writeback_artifact_generated_at": artifact_generated_at,
-                "registry_state": "not_started",
-                "confirmation_required": str(required).lower(),
-            }
-        )
-        return ProgramFrontendGuardedRegistryRequest(
-            required=required,
-            confirmation_required=required,
-            registry_state="not_started",
-            writeback_state=writeback_state,
-            artifact_source_path=relative_artifact_path,
-            artifact_generated_at=artifact_generated_at,
-            written_paths=written_paths,
-            steps=steps,
-            remaining_blockers=remaining_blockers,
-            warnings=_unique_strings([*warnings, *_normalize_string_list(payload.get("warnings", []))]),
-            source_linkage=source_linkage,
-        )
+        return _from_guarded_registry_request_data(data)
 
     def execute_frontend_guarded_registry(
         self,
@@ -10714,172 +10723,18 @@ const $i = (text: string) => text;
         effective_request = request or self.build_frontend_guarded_registry_request(
             manifest
         )
-        if effective_request.warnings and not effective_request.artifact_generated_at:
-            return ProgramFrontendGuardedRegistryResult(
-                passed=False,
-                confirmed=confirmed,
-                registry_state="blocked",
-                registry_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
-                warnings=_unique_strings(list(effective_request.warnings)),
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "registry_state": "blocked",
-                    "registry_result": "blocked",
-                },
-            )
-        if not confirmed:
-            return ProgramFrontendGuardedRegistryResult(
-                passed=False,
-                confirmed=False,
-                registry_state="confirmation_required",
-                registry_result="blocked",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=_unique_strings(list(effective_request.remaining_blockers)),
-                warnings=_unique_strings([*effective_request.warnings, "guarded registry orchestration requires explicit confirmation"]),
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "registry_state": "confirmation_required",
-                    "registry_result": "blocked",
-                },
-            )
-        if effective_request.writeback_state != "completed":
-            blocker = (
-                "guarded registry requires completed cross-spec writeback artifact "
-                f"(writeback_state={effective_request.writeback_state or 'unknown'})"
-            )
-            return ProgramFrontendGuardedRegistryResult(
-                passed=False,
-                confirmed=True,
-                registry_state="blocked",
-                registry_result="blocked",
-                registry_summaries=[blocker],
-                written_paths=[],
-                remaining_blockers=_unique_strings(
-                    [*effective_request.remaining_blockers, blocker]
-                ),
-                warnings=_unique_strings(list(effective_request.warnings)),
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "registry_state": "blocked",
-                    "registry_result": "blocked",
-                },
-            )
-        if effective_request.remaining_blockers:
-            blocker = "guarded registry requires blocker-free cross-spec writeback artifact"
-            return ProgramFrontendGuardedRegistryResult(
-                passed=False,
-                confirmed=True,
-                registry_state="blocked",
-                registry_result="blocked",
-                registry_summaries=[blocker],
-                written_paths=[],
-                remaining_blockers=_unique_strings(
-                    [*effective_request.remaining_blockers, blocker]
-                ),
-                warnings=_unique_strings(list(effective_request.warnings)),
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "registry_state": "blocked",
-                    "registry_result": "blocked",
-                },
-            )
-        if not effective_request.required:
-            return ProgramFrontendGuardedRegistryResult(
-                passed=True,
-                confirmed=confirmed,
-                registry_state="not_started",
-                registry_result="skipped",
-                written_paths=list(effective_request.written_paths),
-                remaining_blockers=[],
-                warnings=_unique_strings(list(effective_request.warnings)),
-                source_linkage={
-                    **dict(effective_request.source_linkage),
-                    "registry_state": "not_started",
-                    "registry_result": "skipped",
-                },
-            )
-        written_paths: list[str] = []
-        remaining_blockers: list[str] = _unique_strings(list(effective_request.remaining_blockers))
-        warnings = _unique_strings(list(effective_request.warnings))
-        executable_steps = 0
-        for step in effective_request.steps:
-            target_path, target_blocker = self._resolve_frontend_stage_step_target(
-                stage_name="guarded registry",
-                steps_dir=PROGRAM_FRONTEND_GUARDED_REGISTRY_STEP_DIR,
-                spec_id=step.spec_id,
-            )
-            if target_blocker:
-                remaining_blockers.append(target_blocker)
-                continue
-            _, spec_blocker = self._resolve_frontend_stage_spec_dir(
-                manifest,
-                stage_name="guarded registry",
-                spec_id=step.spec_id,
-                path_text=str(step.path).strip(),
-            )
-            if spec_blocker:
-                remaining_blockers.append(spec_blocker)
-                continue
-            assert target_path is not None
-            executable_steps += 1
-            target_path.parent.mkdir(parents=True, exist_ok=True)
-            target_path.write_text(
-                self._render_frontend_bounded_stage_step_content(
-                    title="Frontend Guarded Registry Step",
-                    source_label="Source artifact",
-                    source_path=effective_request.artifact_source_path,
-                    upstream_label="Writeback state",
-                    upstream_value=effective_request.writeback_state,
-                    artifact_generated_at=effective_request.artifact_generated_at,
-                    stage_state_key="registry_state",
-                    result_key="registry_result",
-                    source_written_paths=list(effective_request.written_paths),
-                    step=step,
-                ),
-                encoding="utf-8",
-            )
-            written_paths.append(_relative_to_root_or_str(self.root, target_path))
-        if executable_steps == 0:
-            registry_state = "blocked"
-            registry_result = "blocked"
-            registry_summaries = [
-                "no executable guarded registry targets available from canonical cross-spec writeback artifact"
-            ]
-        elif not remaining_blockers and len(written_paths) == executable_steps:
-            registry_state = "completed"
-            registry_result = "completed"
-            registry_summaries = [
-                f"materialized {len(written_paths)} guarded registry step file(s) from canonical cross-spec writeback artifact"
-            ]
-        elif written_paths:
-            registry_state = "partial"
-            registry_result = "partial"
-            registry_summaries = [
-                f"materialized {len(written_paths)} of {executable_steps} guarded registry step file(s) from canonical cross-spec writeback artifact"
-            ]
-        else:
-            registry_state = "failed"
-            registry_result = "failed"
-            registry_summaries = [
-                f"materialized 0 of {executable_steps} guarded registry step file(s) from canonical cross-spec writeback artifact"
-            ]
-        return ProgramFrontendGuardedRegistryResult(
-            passed=registry_result == "completed",
-            confirmed=True,
-            registry_state=registry_state,
-            registry_result=registry_result,
-            registry_summaries=registry_summaries,
-            written_paths=_unique_strings(written_paths),
-            remaining_blockers=_unique_strings(remaining_blockers),
-            warnings=warnings,
-            source_linkage={
-                **dict(effective_request.source_linkage),
-                "registry_state": registry_state,
-                "registry_result": registry_result,
-            },
+        specs = [
+            _bounded_stage.SpecPath(spec.id, spec.path) for spec in manifest.specs
+        ]
+        data = _bounded_stage.execute_guarded_registry(
+            self.root,
+            self.manifest_path,
+            specs,
+            _to_guarded_registry_request_data(effective_request),
+            confirmed,
+            PROGRAM_FRONTEND_GUARDED_REGISTRY_STEP_DIR,
         )
+        return _from_guarded_registry_result_data(data)
 
     def write_frontend_guarded_registry_artifact(
         self,
@@ -10904,25 +10759,19 @@ const $i = (text: string) => text;
             raise ValueError(
                 "guarded registry artifact requires an explicitly confirmed result"
             )
-
         artifact_path = output_path or (
             self.root / PROGRAM_FRONTEND_GUARDED_REGISTRY_ARTIFACT_REL_PATH
         )
         if not artifact_path.is_absolute():
             artifact_path = self.root / artifact_path
-        relative_artifact_path = _relative_to_root_or_str(self.root, artifact_path)
-        payload = self._build_frontend_guarded_registry_artifact_payload(
-            request=effective_request,
-            result=effective_result,
-            generated_at=effective_generated_at,
-            artifact_path=relative_artifact_path,
+        return _bounded_stage.write_guarded_registry_artifact(
+            self.root,
+            self.manifest_path,
+            _to_guarded_registry_request_data(effective_request),
+            _to_guarded_registry_result_data(effective_result),
+            effective_generated_at,
+            artifact_path,
         )
-        artifact_path.parent.mkdir(parents=True, exist_ok=True)
-        artifact_path.write_text(
-            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
-            encoding="utf-8",
-        )
-        return artifact_path
 
     def build_frontend_broader_governance_request(
         self,
@@ -14971,54 +14820,6 @@ const $i = (text: string) => text;
             "source_linkage": source_linkage,
         }
 
-    def _build_frontend_guarded_registry_artifact_payload(
-        self,
-        *,
-        request: ProgramFrontendGuardedRegistryRequest,
-        result: ProgramFrontendGuardedRegistryResult,
-        generated_at: str,
-        artifact_path: str,
-    ) -> dict[str, object]:
-        source_linkage = {
-            **dict(request.source_linkage),
-            **dict(result.source_linkage),
-            "guarded_registry_artifact_path": artifact_path,
-            "guarded_registry_artifact_generated_at": generated_at,
-        }
-        return {
-            "generated_at": generated_at,
-            "manifest_path": _relative_to_root_or_str(self.root, self.manifest_path),
-            "artifact_source_path": request.artifact_source_path,
-            "artifact_generated_at": request.artifact_generated_at,
-            "required": request.required,
-            "confirmation_required": request.confirmation_required,
-            "confirmed": result.confirmed,
-            "writeback_state": request.writeback_state,
-            "registry_state": result.registry_state,
-            "registry_result": result.registry_result,
-            "registry_summaries": _unique_strings(list(result.registry_summaries)),
-            "existing_written_paths": _unique_strings(list(request.written_paths)),
-            "written_paths": _unique_strings(list(result.written_paths)),
-            "remaining_blockers": _unique_strings(list(result.remaining_blockers)),
-            "warnings": _unique_strings([*request.warnings, *result.warnings]),
-            "steps": [
-                {
-                    "spec_id": step.spec_id,
-                    "path": step.path,
-                    "registry_state": step.registry_state,
-                    "pending_inputs": list(step.pending_inputs),
-                    "suggested_next_actions": _unique_strings(
-                        list(step.suggested_next_actions)
-                    ),
-                    "plain_language_blockers": _unique_strings(list(step.plain_language_blockers)),
-                    "recommended_next_steps": _unique_strings(list(step.recommended_next_steps)),
-                    "source_linkage": dict(step.source_linkage),
-                }
-                for step in request.steps
-            ],
-            "source_linkage": source_linkage,
-        }
-
     def _build_frontend_broader_governance_artifact_payload(
         self,
         *,
@@ -15523,33 +15324,9 @@ const $i = (text: string) => text;
         self,
         artifact_path: Path,
     ) -> tuple[dict[str, object] | None, list[str]]:
-        if not artifact_path.exists():
-            return (
-                None,
-                [
-                    "missing guarded registry artifact: "
-                    + _relative_to_root_or_str(self.root, artifact_path)
-                ],
-            )
-        try:
-            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        except Exception as exc:
-            return (
-                None,
-                [
-                    "invalid guarded registry artifact: "
-                    + f"{_relative_to_root_or_str(self.root, artifact_path)} ({exc})"
-                ],
-            )
-        if not isinstance(payload, dict):
-            return (
-                None,
-                [
-                    "invalid guarded registry artifact: "
-                    + _relative_to_root_or_str(self.root, artifact_path)
-                ],
-            )
-        return payload, []
+        return _bounded_stage.load_mapping(
+            self.root, artifact_path, "guarded registry"
+        )
 
     def _load_frontend_broader_governance_artifact_payload(
         self,
