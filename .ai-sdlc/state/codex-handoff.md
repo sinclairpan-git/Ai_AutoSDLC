@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T07:25:00Z
-- Reason: 第二轮LEAN PASS0/SAFETY FAIL1的manifest path异常漂移已修复，准备新product checkpoint
+- Updated: 2026-07-21T07:43:00Z
+- Reason: 第三产品checkpoint完成immutable A/B与四类public probes，准备records identity第三轮双审
 - Goal: 在不污染 C2-safe 分支的前提下取得九阶段无 DSL、typed、Ruff-natural 的实测 T*，再由同一 LEAN/SAFETY 双审决定 formal 路线
-- State: 0d729efd第二轮复审=LEAN PASS0/SAFETY FAIL1；manifest ../outside ValueError parity已修复，focused/exact/full通过，待新product/A-B/同SHA双审
+- State: product=9b6eb9e9/a8cf7260；focused/exact/full/A-B/raw/JUnit/四类public probes通过，待records identity第三轮同SHA双审
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: codex/215-nine-stage-no-dsl-residual-spike
@@ -39,6 +39,7 @@
 - remediation A/B各=`249/474`；ordered JUnit=`fc9093a...db16`；raw tree均=`780/732745/ca44e2d...a543`
 - committed public probes两腿均=`deferred / upstream.yaml / absolute link.yaml`
 - 第二轮复审=`LEAN PASS0 / SAFETY FAIL1`；manifest `../outside` public probe已由`blocked`恢复为legacy `ValueError`
+- 第三产品A/B各=`249/474`；raw=`780/732745/ca44e2d...a543`；四类public probes逐项等价
 
 ## Blockers / Risks
 
@@ -48,6 +49,5 @@
 
 ## Exact Next Steps
 
-1. 提交manifest path最小修正与第二轮review记录的新product checkpoint。
-2. 重跑immutable A/B/JUnit/raw tree及state/dotdot/symlink/manifest-outside四类public probes，提交records identity。
-3. 同一 committed+clean SHA 交 Pascal/LEAN 与 Confucius/SAFETY再次从零复审；双PASS0前不扩展。
+1. 提交只含第三产品A/B/public probes evidence与handoff更新的records identity，确认产品blobs仍为`45230781/827d4d4a`。
+2. 同一 committed+clean SHA 交 Pascal/LEAN 与 Confucius/SAFETY第三轮从零复审；双PASS0前不扩展。

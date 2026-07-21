@@ -963,3 +963,14 @@
   `249 passed, 474 deselected`；宽终端full=`3387 passed, 3 skipped in 819.87s`；冻结tests/config未改。
   下一步提交新product checkpoint、重跑immutable A/B与四类public probes、提交records identity并由两位
   reviewer对同一新SHA再次从零评审。
+- 第三产品checkpoint=`9b6eb9e96f6f93234451321b7cfa09870181e61d` / tree=
+  `a8cf7260083330dba49ab6da389ee2f0761fc7e5`；engine/ProgramService blobs=
+  `4523078132eeceb0a0547a5ee34b986bd05636b8` / `827d4d4ab1c443be48b3805aa5083435736354c7`。
+- immutable A=`7922956d/cc3c6b7f`、B=`9b6eb9e9/a8cf7260`，各自rootdir/config/venv/import provenance；
+  同一candidate tests、seed/TZ/宽终端、独立basetemp/JUnit。两腿=`249 passed, 474 deselected in
+  3.35s/3.88s`。四类public probe两腿均=`state deferred / dotdot upstream.yaml / external symlink absolute
+  link.yaml / manifest outside ValueError`。
+- JUnit均=`249/0/0/0`、33,537 bytes，ordered SHA256均=`fc9093a2...db16`；legacy/current XML=
+  `ea5ba455...c2e4` / `90ae3717...78aa`。去除各35 symlink后raw均=`780 files/732745 bytes`，tree=
+  `ca44e2d51846457f8eac7941e0637701c770091d180c0ae8e2dee7bb23dda543`，逐项相同。下一步只提交
+  records identity并第三轮双审。
