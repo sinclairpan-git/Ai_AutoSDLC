@@ -241,3 +241,11 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     本 closure receipt merge 关闭 GAP-15/T58，但 T66 仍 blocked；receipt detached fresh-main 通过后，唯一
     下一步才是创建 T66 implementation WI并先完成 T61A 双 readiness。失败必须回退 receipt，仍不得把缺陷
     修复计入 T66 减重收益。
+12. 上述 T66 实现入口已经执行并由 WI-216 的 records-only recovery 取代：C2-safe 完整自然账本为
+    `558 LOC / 64 branch`，高于对应 legacy `495/63`，产品 `+443/-408`、proof净增285；后续无 DSL
+    隔离 spike 在第二阶段达到 target=`1209/164`，高于两阶段 legacy=`842/92`且 branch 超硬门74。
+    Pascal/LEAN 与 Confucius/SAFETY 对 spike 产品和 records-only 身份均裁决
+    `STOP_SPIKE_NO_GO/findings=0`，并一致确认 C2 不能称为减重。因此 T66 本次实现尝试为
+    `cancelled_no_go`，两条证据路线 `archived_not_merged`；GAP-03、WI-196、RC-08 与 release 继续 open。
+    未来如重启 T66，必须另立 formal WI，从 fresh main 用完整自然产品账本证明净删与复杂度下降，不能
+    继承 WI-215 的 GO、hash、预算或 reviewer receipt。

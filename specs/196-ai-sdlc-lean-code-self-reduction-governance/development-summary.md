@@ -92,3 +92,8 @@
   通过后才允许新建 T66 implementation WI并先取得 T61A 双 readiness GO，失败立即回退 receipt。
   T66/GAP-03/WI196/RC-08/release 仍未完成，本项不授权提前发布。
 - 关闭事件：所有子 WI 完成处置并执行 RC-08 route closure；在此事件前保持 active。
+- WI-216 superseding receipt：T66 首次实现探索已 `cancelled_no_go`。C2-safe 的完整产品账本
+  `558/64` 高于 legacy `495/63`、产品净增35且 proof净增285；no-DSL spike 第二阶段
+  `1209/164` 高于两阶段 legacy `842/92`，双 reviewer 一致 `STOP_SPIKE_NO_GO/findings=0`。
+  两条路线均 `archived_not_merged`，legacy 产品保持不变。GAP-03/WI196/RC-08/release继续 open；
+  未来候选须另立 formal WI并证明真实净删，不能继承 WI215 receipt。

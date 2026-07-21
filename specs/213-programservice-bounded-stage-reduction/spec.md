@@ -292,3 +292,7 @@ WI 保持 active；WI213 formal receipt 不得被冒充为产品完成证据。
 5. 公开版本只在 WI196 所有 spec/RC-08 完成后发布，不能用 WI213/T66 的局部成功提前发布。
 6. WI213 新发现的 GAP-15 与 T66 产品切片分属不同根因和回退面；先独立关闭 T58，再进入 T61A，禁止
    为赶路线把 adapter 分发修复混进 formal、candidate 或 deletion PR。
+7. WI216 supersede 后续实现路线：C2-safe 完整自然账本 `558/64` 高于 legacy `495/63`，产品净增35、
+   proof净增285；无 DSL spike 第二阶段 `1209/164` 高于两阶段 legacy `842/92`。当前静态 binding/private
+   engine 路线不能同时满足本 formal 的减重和复杂度合同，T66 本次实现=`cancelled_no_go`。WI213
+   formal 历史 receipt 仍有效，但不再构成当前候选 GO；GAP-03/WI196/RC-08/release继续 open。

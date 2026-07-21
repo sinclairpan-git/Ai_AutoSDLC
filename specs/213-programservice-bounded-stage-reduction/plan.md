@@ -179,8 +179,15 @@ receipt detached fresh-main 通过后才进入 Phase 2。
 **停止**：任一 reviewer NO-GO、proof/architecture 超预算、legacy 不稳定或隔离写边界不可靠。
 **回退**：NO-GO 先持久化不可变 receipt、commit/tree、raw-evidence hash、review verdict 和关闭状态，再放弃
 产品路线；不得删除唯一证据载体，运行时保持未修改。
+**实际结果（WI216 superseding receipt）**：本次路线已经触发停止条件并 `cancelled_no_go`。C2-safe=
+`558/64 vs 495/63`、产品净增35、proof净增285；隔离 no-DSL spike 第二阶段=`1209/164 vs 842/92`。
+两条证据路线 `archived_not_merged`，未进入 Phase 3；未来候选必须另立 formal WI，不能从本计划 Phase 3
+直接续跑或继承 WI215 identity。
 
 ### Phase 3：TDD candidate shadow
+
+**状态**：本次实现未准入；由 WI216 NO-GO 阻断。以下内容只保留为未来新 formal 重新授权后的历史方案，
+当前不可执行。
 
 1. 先写 candidate seam/differential RED；不得修改 assertion 迎合 candidate。
 2. 新增唯一 private module，逐函数≤50；先接 `cross_spec_writeback` 证明特殊 strategy。
