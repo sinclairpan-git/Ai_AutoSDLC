@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T08:14:50Z
+- Updated: 2026-07-21T08:16:24Z
 - Reason: T66/C2 与 no-DSL spike 已确定 NO-GO，进入 WI216 records-only recovery
 - Goal: 持久化本次 `cancelled_no_go`，保持 legacy 不变并禁止旧 T66 路线重复投入
-- State: formal Round 3 为 LEAN PASS0 / SAFETY FAIL1；continuity finding 已修，等待 Round 4 同身份复审
+- State: formal Round 4 为 SAFETY PASS0 / LEAN FAIL1；next-step finding 已修，等待同身份双 PASS
 - Stage: plan
 - Work Item: 216-programservice-bounded-stage-no-go-recovery
 - Branch: codex/216-programservice-bounded-stage-no-go-recovery
@@ -42,11 +42,13 @@
   `34cf0bb1/13a47e71/8fed255a...e42d`，LEAN FAIL / SAFETY FAIL2；findings均已修正。
 - Round 3=`4cfff3b0/c4a7539c/formal-nine 3daf7fb3...ea39`；LEAN PASS0，SAFETY FAIL1 仅指出本
   handoff状态滞后。本修正不改变 formal-nine，但改变 final commit/tree，双方均须 Round 4 重审。
+- Round 4=`50958c55/ad950e6b/formal-nine 3daf7fb3...ea39`；SAFETY PASS0，LEAN FAIL1 仅指出首个
+  next step 已被当前提交完成。本修正改用不依赖提交时点的 fail-closed gate，双方须复审新身份。
 - Pre-review scope：`src/**`、workflow、依赖、版本、release 零差异；`git diff --check` 待重跑。
 
 ## Blockers / Risks
 
-- Rounds 1～3 verdict 均因后续修正或 identity 变化失效；新的 HEAD/tree/formal-nine 未双 PASS 前不得同步最终
+- Rounds 1～4 verdict 均因后续修正或 identity 变化失效；新的 HEAD/tree/formal-nine 未双 PASS 前不得同步最终
   truth、推送 WI216 PR 或合入。
 - 两个 archive ref 未在 remote exact 可解析前，证据只属于 local-verified，不得称为持久完成；普通
   remote branch 没有技术只读保护，安全来自禁止 force-push/delete/PR/merge 的交付合同。
@@ -55,7 +57,7 @@
 
 ## Exact Next Steps
 
-- 提交 Round 3 continuity remediation，确认 formal-nine仍为 `3daf7fb3...ea39` 且 worktree clean。
-- Pascal/LEAN 与 Confucius/SAFETY 对同一 Round 4 HEAD/tree/formal-nine 复审；任一 finding 继续修正。
-- Round 4 双 PASS 后注册 WI216、truth sync、推送/验真 archive refs，运行 exact/scope/parity/constraints/validate/
+- 对当前 committed+clean HEAD/tree/formal-nine 取得 Pascal/LEAN 与 Confucius/SAFETY 同身份双 PASS；
+  任一 finding 成立则继续最小修正，未双 PASS 不进入 truth。
+- 双 PASS 后注册 WI216、truth sync、推送/验真 archive refs，运行 exact/scope/parity/constraints/validate/
   truth/clean 门禁，再做 final committed+clean 同身份双审。

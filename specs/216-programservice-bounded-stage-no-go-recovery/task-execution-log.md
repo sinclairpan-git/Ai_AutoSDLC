@@ -55,3 +55,14 @@
   Round 1 状态和下一步，context restore 会重复旧 remediation。
 - 处置：只更新本 execution log 与两份 byte-identical handoff，formal-nine 不变；commit/tree 改变使
   LEAN PASS0 与 SAFETY FAIL1 均不可直接用于最终拼接。Round 4 必须让双方复审同一新 HEAD/tree。
+
+## 5. Batch 2026-07-21-005：formal Round 4 split verdict
+
+- Exact review identity=`50958c5564356a0406c29a43c893cd65464426fc` / tree=
+  `ad950e6ba2f9c2eb572731b1059caa8a8722e45e` / formal-nine=
+  `3daf7fb35b72a938662e097bf57837bf85fb1482f133764843fba4ce8a69ea39`；worktree clean。
+- Confucius/SAFETY=`PASS0/findings=0`。Pascal/LEAN=`FAIL1`：handoff 的首个 next step 仍要求提交 Round 3
+  remediation，但当前 HEAD 已是该提交，恢复后会重复已完成动作。
+- 处置：把下一步改为与提交时点无关的 fail-closed gate——“当前 committed+clean identity 取得同身份
+  双 PASS；未双 PASS 不进入 truth”。只修改 log/handoff，formal-nine仍不变；Round 5 必须双方复审新
+  HEAD/tree，不拼接 Round 4 split verdict。
