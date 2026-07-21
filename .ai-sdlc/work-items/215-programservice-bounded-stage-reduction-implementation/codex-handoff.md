@@ -1,13 +1,13 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T01:51:43Z
-- Reason: R2 formal local dual-review FAIL3 remediation start
-- Goal: 完成 guarded_registry R2 全量、immutable A/B、治理门禁与同 identity LEAN/SAFETY PASS0
-- State: R2 identity `93963a37/0f6a4738` 已退役；结构修正候选行为/类型已绿，真实自然预算冲突待双审裁决
+- Updated: 2026-07-21T03:03:47Z
+- Reason: R2 本地双审一致 CONSTRAINT_CONFLICT，回退未批准产品候选
+- Goal: 在 C2 双 PASS0 安全基线上完成 R2 预算 formal 仲裁，再实现 guarded_registry 减重
+- State: R2=`NO-GO`；产品已回退到 C2 reviewed blobs且focused=`70 passed`，待提交并形成预算 formal 提案
 - Stage: execute
 - Work Item: 215-programservice-bounded-stage-reduction-implementation
 - Branch: feature/215-programservice-bounded-stage-reduction-implementation-dev
-- Review identity: 无有效 review identity；修正后必须重新形成 committed+clean SHA/tree。
+- Review identity: R2 rejected identity=`21dccc79/9fbaaad3`；当前工作树为 staged rollback，尚无新 review identity。
 
 ## Current Decisions
 
@@ -23,6 +23,8 @@
 - C2 truth source checkpoint=`5622ba10/e4c9a7d1`；records-only identity `ed003ccb/567424e6`
   的 LEAN=`PASS0`、SAFETY=`FAIL1`，唯一finding为本handoff中的已完成动作与身份字段陈旧。
 - C2 final identity=`18609c47/fa9d0b08` 已获同 identity LEAN/SAFETY 双 `PASS0/findings=0`。
+- `21dccc79/9fbaaad3` 经同一 LEAN/SAFETY 独立仲裁均为 `CONSTRAINT_CONFLICT/NO-GO`；
+  远端 Codex 不是 blocker，不得用未接单覆盖本地失败结论。
 
 ## Changed Files
 
@@ -31,8 +33,8 @@
 - 两份 handoff 删除已完成动作与自引用 `Current HEAD`，并保持逐字节一致。
 - `program-manifest.yaml` 仅同步 records-only truth；冻结测试、产品、DTO/public surface、其他 stage、
   CLI、依赖均未修改。
-- R2 仅修改 private engine 与 cross/guarded 五 facade：删除双层 binding 包装及回绕职责，
-  保留 ProgramService 默认 build/execute/clock 顺序与可替换边界；冻结 tests/config 未修改。
+- 当前 staged rollback 仅恢复 private engine 与 `program_service.py` 到 C2 reviewed blobs；
+  冻结 tests/config、历史 evidence commits 与 formal records 保留。
 
 ## Evidence
 
@@ -69,23 +71,26 @@
 - formal records=`fc699502` 后 final truth sync snapshot=
   `5abc99462a653cb5d95238d8cb647b73808d5cc504810b170a05f6ba76439d55`；clean final audit=
   `ready/fresh 1131/1131/0/0`，manifest exact=`1 passed in 102.93s`。
-- `93963a37` formal review：LEAN=`FAIL3`、SAFETY=`FAIL3`。共同 P1 为 factory 压行导致 Ruff
-  natural format 后73/88行、预算与 max-function 失真；LEAN另报规则表/回调微型DSL及 ProgramService
-  mypy=`64` 对 C2=`62` 的 +2；SAFETY另报 A/B locator/hash/command 不完整和终态记录陈旧。
-- FAIL3 修正中的未提交候选：删除 `BoundedStageRules(...)` 实例表，改为两个具名 adapter；DTO factories
-  与 normalizers 分组，所有服务 factory 经 Ruff 自然格式后分别46/50行；engine Ruff/mypy=0，聚焦 unit=
-  `57 passed, 433 deselected`，累计 public/CLI=`70 passed, 653 deselected`；ProgramService strict mypy=
-  `62`，与 C2 baseline 增量0。
-- 同一自然格式账本揭示 corrected product=`428 engine physical + 163 service additions = 591`；旧的
-  `444` 来自未自然格式化压行，不能继续作为真实证据。当前未改冻结 tests/config，未提交产品身份。
+- 修正后的自然格式账本为 engine=`428` physical、service additions=`163`，product=`591`；
+  proof=`285`，combined=`876`，分别超过有效 product cap `444` 与 combined cap `729`。
+- LEAN 与 SAFETY 共同要求去除 adapter/rules/callback 微型 DSL。按该建议制作的未提交、已恢复
+  显式双-stage spike：private engine=`704` physical、strict mypy=`0`，尚未计 facade glue。
+- LEAN 独立分解无 DSL 下界为 engine=`704` + service glue约`59` = product约`763`，combined约`1048`；
+  SAFETY 独立确认当前无可信 `≤444/≤522` 路线。双方均拒绝删 proof、压行、未来摊销或恢复 DSL。
+- `git revert --no-commit 21dccc79` 与 `git revert --no-commit 9855834c` 后，两个产品 blob 已逐一验真
+  等于 C2 final identity `18609c47` 对应 blob；回退尚未提交。
+- 回退后累计 focused 命令=`uv run --python 3.11 pytest --import-mode=importlib -q
+  tests/unit/test_program_service.py tests/integration/test_cli_program.py -k 'cross_spec_writeback or guarded_registry'`，
+  结果=`70 passed, 653 deselected in 1.58s`。
 
 ## Blockers / Risks
 
-- 当前 blocker 是自然格式后的 `591>522` 与“禁止 DSL/registry/反射”同时成立时的架构预算冲突；远程
-  review 不是 blocker。必须由同一 LEAN/SAFETY 对精确 clean identity 裁决，不得静默放宽或伪造账本。
+- 当前 blocker 是正式预算合同不可达：冻结 proof=`285` 时 product 实际 cap=`444`，而无 DSL 双-stage
+  实测约`749–763`。按 WI213 §10 必须进入新的 formal review 或保持 R2 NO-GO，不能自动扩预算。
 
 ## Exact Next Steps
 
-1. 形成只含结构修正、冻结 tests/config 的 committed+clean checkpoint，并记录 corrected natural ledger。
-2. 由同一 LEAN/SAFETY 独立裁决预算冲突；若不接受校正预算，按其共同可执行结构意见继续最小修正。
-3. 双审结构一致后才重跑 full/完整 A/B provenance/gates，统一 records 并复审最终 clean identity。
+1. 提交产品回退，形成 committed+clean C2-safe checkpoint；运行聚焦测试确认回退无漂移。
+2. 基于704行真实 spike编写只改预算度量/上限的最小 formal 提案；行为、冻结 proof、无 DSL、typed contract、
+   函数≤50、terminal/net deletion/responsibility/branch 约束保持不动。
+3. 同一 LEAN/SAFETY 对 formal 提案独立评审并收敛；双 PASS0 前不再写 R2 产品代码。

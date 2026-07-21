@@ -781,3 +781,33 @@
   checkpoint=`9a50479a/786dadc4`；该 clean identity 上 audit=`ready/fresh 1131/1131/0/0`，manifest exact=
   `1 passed in 102.65s`，scope/clean为空。本条进入 truth source 后再执行一次 final sync；最终 snapshot
   hash只读取同一提交的`program-manifest.yaml`，不把自引用值继续写回 formal source。
+
+## 47. Batch 2026-07-20-045：R2 自然预算冲突、双 NO-GO 与安全回退
+
+- `93963a37/0f6a4738` 的 Pascal/LEAN 与 Confucius/SAFETY formal review 均为 `FAIL3`。共同 P1：原
+  product=`444` 账本依赖未 Ruff 自然格式化的73/88行函数；自然格式后结构违反函数≤50，且
+  rules/callback wiring构成可错配的私有微型DSL。LEAN另发现ProgramService strict mypy由C2的62增至64；
+  SAFETY另发现A/B provenance与终态记录不完整。该identity及其旧证据退役。
+- 修正候选 committed+clean identity=`21dccc795c5ca4b6de558e5317e2b0d276749a38` / tree=
+  `9fbaaad35af2ea9a7e9cc39fce8b59f4337cb0ed`。engine Ruff/check/mypy=0，ProgramService strict mypy=62、
+  对C2增量0；focused unit=`57 passed, 433 deselected`，累计public/CLI=`70 passed, 653 deselected`，
+  冻结tests/config未改。
+- 同一自然格式账本揭示 engine=`428` physical + service additions=`163` = product=`591`，proof=`285`，
+  combined=`876`；超过 standalone product cap `522`，并超过proof冻结时的实际product cap
+  `729-285=444`。engine `payload()` 自然格式59行也违反函数≤50。
+- 按两位reviewer共同建议制作未提交、随后完全恢复的显式双-stage spike：不含rules/adapter/callback、
+  registry/reflection/string lookup/stage selector，仅共享无语义load/normalize/write primitive；private engine
+  Ruff自然格式=`704` physical、strict mypy=0，尚未计ProgramService facade glue。
+- 对`21dccc79/9fbaaad3`再次独立仲裁，LEAN与SAFETY均返回`CONSTRAINT_CONFLICT / R2 NO-GO`。
+  LEAN逐项分解显式engine下界=`704`，必要service glue约`45–59`，product约`749–763`、combined约
+  `1034–1048`；SAFETY独立确认不存在诚实的`≤444/≤522`结构。双方一致拒绝删冻结proof、压行、
+  按未来stage摊销或恢复可错配DSL。
+- 按WI213 §10保留最后reviewed C2安全点：执行`git revert --no-commit 21dccc79`与
+  `git revert --no-commit 9855834c`；`_program_bounded_stage.py`/`program_service.py`当前blob分别逐一验真
+  等于C2 final `18609c47` 的`977cad2c...630b`/`23a4968b...984e`。冻结测试、config与历史失败证据保留。
+- 回退后累计focused命令=`uv run --python 3.11 pytest --import-mode=importlib -q
+  tests/unit/test_program_service.py tests/integration/test_cli_program.py -k 'cross_spec_writeback or guarded_registry'`，
+  结果=`70 passed, 653 deselected in 1.58s`。
+- 远端Codex不构成blocker；本地双审已在有限轮次内给出确定结论。下一步不是强行合入，而是只对
+  `peak retained product / product+proof` 的自然LOC度量和上限进入新的formal review；行为契约、
+  frozen proof、无DSL、typed contract、函数≤50与terminal/net-delete/responsibility/branch门保持不动。

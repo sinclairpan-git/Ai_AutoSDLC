@@ -1,7 +1,7 @@
 # 开发摘要：ProgramService 九阶段直接减重
 
 **功能编号**：`215-programservice-bounded-stage-reduction-implementation`
-**状态**：cross-spec R1、guarded-registry C2 已完成；guarded-registry R2 等价验证全绿，待 final identity 双审
+**状态**：cross-spec R1、guarded-registry C2 已完成；guarded-registry R2 本地双审一致 NO-GO，产品回退到 C2 安全点，待预算 formal 仲裁
 
 ## 当前事实
 
@@ -58,6 +58,14 @@
 - R2 evidence source=`de7d4d63`、首轮 manifest sync=`9a50479a`；clean audit=`ready/fresh
   1131/1131/0/0`，manifest exact=`1 passed in 102.65s`。本记录进入 source 后执行最后一次机械 sync，
   final snapshot权威值以同一提交的`program-manifest.yaml`为准。
+- 上述 R2 数值随后被正式双审推翻：自然 Ruff 格式后 candidate product=`591`、combined=`876`，且
+  `payload()`=59行；`93963a37` 的 LEAN/SAFETY 均为 `FAIL3`，旧`444/729/max50`证据退役。
+- 修正 identity=`21dccc79/9fbaaad3` 保持行为测试与mypy增量0，但仍保留adapter/rules/callback微型DSL；
+  同一两位reviewer均返回`CONSTRAINT_CONFLICT / R2 NO-GO`。
+- 共同建议的无DSL显式双-stage spike经Ruff自然格式后仅engine即704行；LEAN估算必要facade后
+  product约`749–763`、combined约`1034–1048`，SAFETY独立确认当前`≤444/≤522`不可达。
+- 未批准R2产品已暂存回退到C2 final blobs；冻结proof、tests/config和失败证据保留。按WI213 §10，
+  后续只先仲裁自然LOC预算度量/上限，不以删proof、压行、未来摊销或恢复DSL伪造减重。
 
 ## 兼容与减重边界
 
@@ -72,5 +80,6 @@
 
 ## 下一步
 
-1. 提交 R2 evidence source checkpoint，执行 truth sync 并在 clean final identity 复跑 audit/manifest exact。
-2. 由相同 Pascal/LEAN 与 Confucius/SAFETY 复审同一 identity；双 `PASS0` 后才进入下一 stage。
+1. 提交R2产品安全回退并复跑聚焦测试，形成committed+clean C2-safe checkpoint。
+2. 基于704行实测下界形成只调整预算度量/上限的最小formal提案，由同一LEAN/SAFETY独立评审。
+3. formal双`PASS0/findings=0`前不再写R2产品代码；远端Codex仅作附加信号，不无限等待。
