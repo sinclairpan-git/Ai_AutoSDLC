@@ -39,5 +39,6 @@
 
 ## Exact Next Steps
 
-- 完成 handoff 本次测试收据后的最后 mechanical truth sync，再复跑 focused verification 并 clean commit。
-- 独立 LEAN/SAFETY 对同一 commit/tree/formal-nine 复审通过后，交由控制器完成 PR/checks/merge/fresh-main。
+- 对 committed receipt identity 进行独立同身份 LEAN/SAFETY review；通过后由控制器完成
+  PR/checks/merge/fresh-main。除非 reviewer 发现改变 tracked source 的具体缺陷，否则不再要求 handoff receipt
+  更新、truth sync、verification run 或 commit。

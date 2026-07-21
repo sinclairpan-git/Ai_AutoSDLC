@@ -2059,7 +2059,7 @@ specs:
   - 213-programservice-bounded-stage-reduction
   - 214-workitem-readonly-adapter-side-effect
 truth_snapshot:
-  generated_at: '2026-07-21T10:20:57Z'
+  generated_at: '2026-07-21T10:22:33Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
   repo_revision: 19809f3a
@@ -2105,7 +2105,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 4bfd9eea42f9aca3e1c54f6a7e8f79d74606f1307dacc9f7e485f551334d04cf
+  snapshot_hash: f6a0942baf5cea08bb4dfdb20ba87563d48a3ec866682b5607cee33253539d97
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
