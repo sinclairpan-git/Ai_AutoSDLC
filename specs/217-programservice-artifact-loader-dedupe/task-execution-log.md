@@ -131,3 +131,14 @@
   `non_blocking_backlog`，随后恢复正常特性开发。
 - 该方向改变了 PR #167 已审 identity 的终态合同，R7 LEAN/SAFETY PASS0、已触发 CI 与 Codex 👀均退役；
   formal 文档、truth、同身份双审和 PR current HEAD 必须重做。本变更不授权版本发布。
+
+## 11. Batch 2026-07-21-010：终局合同 R1/R2 remediation
+
+- 控制器首次把 formal-six 错算为 path-first 行格式；LEAN/SAFETY均独立复算 canonical
+  `<sha><two spaces><path>` 为 `c144c69d...70c1`，错误 identity verdict 全部失效，文件未因该错误变化。
+- 正确 identity R2：LEAN FAIL1指出handoff会重复提交已完成source；SAFETY FAIL3指出post-merge fresh-main
+  失败无合法回退、parent summary仍称独立WI持续推进，以及同一handoff时态问题。
+- 修复后唯一closure通常records-only；若implementation已合并后fresh-main失败，则在该closure内精确恢复
+  pre-implementation product/proof blobs并登记最终零产品净变化，不新开rollback/implementation PR。
+- Parent summary改为只允许WI217当前路线；handoff记录source已提交；“禁止gap/reduction WI”收窄为只禁止
+  新减重WI，不阻断正常特性/缺陷工作。修复改变HEAD/tree/formal-six，R2双方verdict失效。

@@ -103,17 +103,20 @@
 - [ ] **依赖**：T14 formal fresh-main，以及 T25 GO 或 T21～T25 任一门的 exact NO-GO receipt。
 - [ ] **数量**：最多一个 implementation PR；所有最小修复、重审与重跑留在同一分支/PR，不创建替代 PR。
 - [ ] **GO**：current-head review无 actionable finding、required checks全绿、squash merge、本地 branch保留；
-  fresh-main重复 T22～T24 并确认 reviewed product/test blobs 未变。
+  fresh-main重复 T22～T24 并确认 reviewed product/test blobs 未变；只有该验收通过才形成final GO。
 - [ ] **NO-GO**：若本地已确定则可以不创建PR；若PR已创建则关闭且不合入产品，记录exact head/tree、原因与
-  零产品合入，直接进入T32。
+  零产品合入，直接进入T32；若PR已合并后fresh-main失败，记录exact merge/failure并由T32同一closure回退。
 
-### T32 唯一 records-only route closure
+### T32 唯一 route closure / post-merge rollback
 
-- [ ] **依赖**：T14 formal fresh-main，以及 T31 的 GO fresh-main 或 NO-GO exact receipt。
-- [ ] **范围**：独立 closure branch/PR；产品与行为测试零 diff。
+- [ ] **依赖**：T14 formal fresh-main，以及 T31 的 GO fresh-main、pre-merge NO-GO exact receipt或post-merge
+  fresh-main failure exact receipt。
+- [ ] **范围**：独立且唯一closure branch/PR；GO/pre-merge NO-GO时产品与行为测试零diff；post-merge NO-GO时
+  只允许reviewed implementation product/proof diff的精确逆变更，禁止其他产品修改或独立rollback PR。
 - [ ] **Close source**：创建 WI217 `development-summary.md`，missing归零、close恢复`216/216`。
 - [ ] **GO状态**：关闭本 T63 family并登记实际 product net -358。
-- [ ] **NO-GO状态**：关闭本次候选为`cancelled_no_go`，登记零产品合入且不伪造减重收益。
+- [ ] **NO-GO状态**：关闭本次候选为`cancelled_no_go`；pre-merge路径登记零产品合入，post-merge路径先恢复
+  pre-implementation exact product/proof blobs并登记最终零产品净变化；均不得伪造减重收益。
 - [ ] **共同终态**：关闭 WI217/WI196；RC-08=`retired_unrealistic_composite_target`；GAP-01/GAP-03～06、
   T62～T67 剩余结构债=`non_blocking_backlog`；禁止创建新减重 work item，恢复正常特性开发。
 - [ ] **验收**：同 identity 双审、required checks、merge、detached fresh-main 全绿；本路线不发布版本。

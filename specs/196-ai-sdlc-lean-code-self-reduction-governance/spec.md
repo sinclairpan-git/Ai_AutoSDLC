@@ -209,7 +209,8 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
   使用独立原子 WI”规则只适用于WI217之前，FR-15禁止WI217之后的新减重WI。
 - **FR-15**：WI217 是最后一个减重 work item。Formal 后最多一个 implementation PR和一个 closure PR；
   GO/NO-GO 均由 closure 关闭 WI196、退役 RC-08、把剩余结构债转为非阻塞 backlog，并禁止创建新的
-  减重 work item。正常特性开发恢复，但本路线不自动授权版本发布。
+  减重 work item。Implementation 合并后 fresh-main NO-GO 时，唯一 closure PR 必须恢复 exact baseline
+  product/proof blobs，不得增加 rollback PR。正常特性开发恢复，但本路线不自动授权版本发布。
 
 ## 9. 成功标准
 
@@ -285,7 +286,8 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     product raw净删653行仅约占初始107,482行基线的0.61%，即使WI217 GO累计1,011行也仅约0.94%。
     基于该投入产出，用户冻结 WI217 为本轮减重专项最后一个 work item。本项取代第6～13项所有关于
     “未来重启、继续open、恢复选择、另立减重WI”的未来时态，但不改写其中已发生的历史事实。当前 formal 后至多一个 implementation PR 和一个
-    closure PR；实现修复不得拆出第二 PR。GO 路径登记真实净删，NO-GO 路径登记零产品合入；两者都由
+    closure PR；实现修复不得拆出第二 PR。GO 路径登记真实净删；NO-GO 路径登记最终产品净变化0，并区分
+    pre-merge零产品合入或post-merge临时合入后exact rollback；两者都由
     closure 关闭 WI217/WI196，将 RC-08 记为 `retired_unrealistic_composite_target`，把 GAP-01/GAP-03～06
     与 T62～T67 剩余结构债转为 `non_blocking_backlog`，并禁止新的减重 work item。Closure fresh-main 后
     恢复正常特性开发；本路线不创建版本、tag、Release、PyPI 上传或全局 CLI 更新。

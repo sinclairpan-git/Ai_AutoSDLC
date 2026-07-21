@@ -322,7 +322,7 @@ identity is frozen.
 - [ ] **Step 1: committed+clean same-identity 双审**
 
   GO时LEAN与SAFETY同时审查candidate commit/tree、final HEAD/tree、formal-six、`+96/-406` code/test diff、
-  truth与rollback receipt；NO-GO时双方审查exact失败门、零产品合入与回退状态。任何tracked内容变化使
+  truth与rollback receipt；NO-GO时双方审查exact失败门、最终产品净变化0及pre/post-merge回退状态。任何tracked内容变化使
   两者同时失效。
 
 - [ ] **Step 2: implementation PR**
@@ -335,12 +335,16 @@ identity is frozen.
 
   GO路径在current-head无actionable finding、required checks全绿且LEAN/SAFETYPASS0后squash merge，
   不删除本地branch。detached fresh-main重跑Task3 Step3与Task4全部验证，并证明merge tree包含exact
-  reviewed product/test blobs。PR阶段若转NO-GO，则关闭该唯一PR、不合入产品并直接进入closure。
+  reviewed product/test blobs；通过后才把GO记为final。PR合并前若转NO-GO，则关闭该唯一PR、不合入产品并
+  直接进入closure；合并后若fresh-main失败，则记录exact失败与merge tree，由唯一closure执行baseline rollback，
+  不创建第二个implementation或独立rollback PR。
 
-- [ ] **Step 4: closure receipt**
+- [ ] **Step 4: closure / rollback receipt**
 
-  唯一独立 records-only PR 创建 WI217 `development-summary.md`，把missing归零、close恢复`216/216`。
-  GO 路径登记实际 product net -358；NO-GO 路径登记零产品合入并关闭未合入的单一 implementation PR。
+  唯一独立 closure PR 创建 WI217 `development-summary.md`，把missing归零、close恢复`216/216`。正常 GO
+  或 pre-merge NO-GO 路径保持 records-only；post-merge fresh-main NO-GO 路径在该同一 PR 内先把 reviewed
+  product/proof blobs 精确恢复到 pre-implementation baseline，并证明406 baseline unit与所有required checks
+  全绿。GO登记实际 product net -358；两种NO-GO都登记最终零产品净变化，同时如实记录是否发生过临时merge。
   两条路径都关闭 WI217/WI196，把 RC-08 记为 `retired_unrealistic_composite_target`，并将 GAP-01/GAP-03～06、
-  T62～T67 剩余结构债转为非阻塞 backlog。Closure fresh-main 后恢复正常特性开发，禁止再选择或创建
-  gap/reduction work item；本路线不执行版本发布。
+  T62～T67 剩余结构债转为非阻塞 backlog。Closure fresh-main 后恢复正常特性开发，禁止再选择或创建新的
+  减重 work item；正常特性/缺陷 work item 不受此禁令影响，本路线不执行版本发布。

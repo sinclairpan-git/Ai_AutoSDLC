@@ -19,9 +19,10 @@
 ### 1.1 路线终局覆盖
 
 WI217 是最后一个减重 work item，取代本文所有“继续选择/另立/逐切片推进”的未来时态，但不改写历史
-receipt。当前 formal 后最多一个 implementation PR 和一个 closure PR；若实现 NO-GO，零产品合入并直接
-closure。唯一 closure 在 GO/NO-GO 两条路径都关闭 WI217/WI196、退役 RC-08、把剩余结构债转为非阻塞
-backlog，随后恢复正常特性开发并禁止新的减重 work item。本路线不执行发布动作。
+receipt。当前 formal 后最多一个 implementation PR 和一个 closure PR；若实现 NO-GO，最终产品净变化必须为0
+并直接closure。唯一 closure 在 GO/NO-GO 两条路径都关闭 WI217/WI196、退役 RC-08、把剩余结构债转为非阻塞
+backlog，随后恢复正常特性开发并禁止新的减重 work item。本路线不执行发布动作。若 implementation 合并后
+fresh-main 验收失败，唯一 closure PR 同时承担 exact product/proof rollback 与 NO-GO 记录，不另开回退 PR。
 
 终止依据不是功能风险豁免，而是路线级投入产出失衡：专项接近7天仍无可预测终点，token/评审/CI成本
 持续增加并阻塞特性交付；已实现产品raw净删653行约为初始产品基线的0.61%，WI217即使GO也只把上限
@@ -337,7 +338,7 @@ fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B
   为98/101；persistent legacy proof=5GREEN/1binding RED，candidate proof=6/6、ProgramService unit=412/412。
 - **分支纪律**：formal docs PR先行；其fresh-main验收后另建implementation branch。两阶段均要求
   LEAN/SAFETY同identity PASS0、required checks与detached fresh-main。
-- **完成边界**：GO时登记actual product net -358，NO-GO时登记零产品合入；两者均经唯一closure关闭
+- **完成边界**：GO时登记actual product net -358，NO-GO时登记最终产品净变化0并区分pre/post-merge；两者均经唯一closure关闭
   WI217/WI196、退役RC-08、把剩余GAP/T62～T67转为非阻塞backlog，并禁止新减重work item。
 - **停止**：任一exact label/path/error/YAML/cleanup warning差异，combined additions>101、formatter churn、
   动态机制、第二family或rollback失败时保留legacy并记录NO-GO。

@@ -129,7 +129,7 @@ proof不合入；T66/GAP-03在WI217 closure前仍保留当前事实状态，clos
 **当前 active child**：WI-217 已从 fresh-main 选择一个新的 T63 artifact-loader family。Formal-only
 阶段冻结403/39、product `+48/-406`、proof `+48`、terminal44/4与RC-06 `98/101`；R4 LEAN/SAFETY
 option review均findings=0。只有formal PR merge并通过detached fresh-main后才能执行T61A；实现成功也只
-登记真实净删，实现NO-GO则登记零产品合入；两者都由唯一closure关闭WI217/WI196、退役RC-08并恢复
+登记真实净删，实现NO-GO则登记最终产品净变化0并区分pre/post-merge；两者都由唯一closure关闭WI217/WI196、退役RC-08并恢复
 正常特性开发。
 
 每个目标切片必须先落盘 GAP-09～GAP-11 防回归 impact analysis；除当前 active child 唯一 mapped

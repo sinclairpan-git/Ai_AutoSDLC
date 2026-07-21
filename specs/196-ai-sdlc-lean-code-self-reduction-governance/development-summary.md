@@ -58,7 +58,8 @@
 
 ## 未完成边界
 
-- GAP/WP 子项仍按独立 WI/branch/PR 推进；本 summary 不宣称整体减重完成。
+- 当前只允许 WI217 按已冻结的 formal、至多一个 implementation PR和一个closure PR推进；其他 GAP/WP
+  不再创建减重 WI，并在 WI217 closure 转为非阻塞 backlog。本 summary 在该 closure 前不宣称整体路线关闭。
 - WI-202 的首个 T62A 候选因完整 proof 明显超过 RC-06 预算，已按 RC-09 停止且未合入；
   GAP-01/T62A 仍 open，T62B/T62C 未开始，FR-08 双 reviewer fallback 继续有效。
 - GAP-12、GAP-13、GAP-14 均已关闭且不计 RC-08 减重收益。WI-209 最终 raw 产品/测试
@@ -107,5 +108,6 @@
   product `+48/-406`、proof `+48`、terminal44/4、RC-06含truth≤2为98/101；加强后legacy persistent
   proof=5GREEN/1binding RED，candidate=6 proof与412 unit全绿；
   LEAN/SAFETY Round 4均findings=0。当前仅formal authoring，产品尚未授权；formal 后最多一个
-  implementation PR 和一个 closure PR。GO登记actual net -358，NO-GO登记零产品合入；两者都由closure
+  implementation PR 和一个 closure PR。GO登记actual net -358，NO-GO登记最终产品净变化0并如实区分
+  pre-merge零产品合入或post-merge临时合入后exact rollback；两者都由closure
   关闭WI217/WI196、退役RC-08、把剩余结构债转为非阻塞backlog并恢复正常特性开发。
