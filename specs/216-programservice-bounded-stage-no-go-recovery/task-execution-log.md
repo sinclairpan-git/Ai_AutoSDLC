@@ -98,3 +98,20 @@
   `git diff --check` PASS。
 - 本批状态写入后会使当前 snapshot stale；必须提交 source receipt，再做一次 terminal truth sync，final
   committed+clean identity 双 PASS 前不得推送 WI216 PR。
+
+## 8. Batch 2026-07-21-008：terminal truth 与 Final Round 6 FAIL1
+
+- Gate source receipt=`ceb7b764342d14e419f8515151293775e751a5ed` / tree=
+  `84f9e7edb1e403997fb82c7006277b777d5489a0`；terminal truth commit=
+  `6e606df54c0d1373dce2331d20ef113adbf627e8` / tree=
+  `2b4954d0d280006d27a107d290d7d270d3787106`，snapshot hash=
+  `89ea4c7d47ae1c58004ffd8e91dc067dcc30f679bfcdc596b23bf3b57b50dd90`。
+- 对 clean `6e606df5` 重跑：truth audit=`ready/fresh 1131/1131`、missing/unmapped=`0/0`；manifest exact=
+  `1 passed in 135.19s`；constraints no BLOCKERs；validate PASS/Cursor SHA不变；Ruff check、scope/parity/
+  archive/diff-check 全绿。
+- Final Round 6 exact=`6e606df5/2b4954d0/formal-nine 75351a47...d164`；Pascal/LEAN 与
+  Confucius/SAFETY 均 `FAIL1`，唯一且一致 finding 是 handoff/summary仍写“等待 terminal truth”，可能
+  让恢复重复 sync。其余 LEAN/YAGNI、账本、20文件scope、test `+2/-2`、回退/release均无发现。
+- 处置：本 batch 与 summary/handoff 把 terminal truth/gates 标为已完成；下一步只保留与提交时点无关的
+  “当前 clean identity 取得 final 同身份双 PASS 后进入 PR”。提交本 records receipt 后只机械 resync
+  manifest；不得再修改 specs/handoff，Round 7 复审新的 clean HEAD/tree。

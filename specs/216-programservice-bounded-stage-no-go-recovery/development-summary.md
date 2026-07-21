@@ -1,6 +1,6 @@
 # 开发摘要：ProgramService 有界阶段减重 NO-GO 恢复
 
-**状态**：authoring/gates/archive已完成；等待 terminal truth、final同身份双审与PR
+**状态**：terminal truth/gates/archive已完成；等待final同身份双审与PR
 
 ## 已确认
 
@@ -29,7 +29,6 @@
 ## 待完成
 
 - 对 final truth/gates identity 再完成 Pascal/LEAN 与 Confucius/SAFETY 同身份 PASS0。
-- 状态 receipt 提交后执行 terminal truth sync 并确认 clean。
 - 推送 PR、required checks/Codex review、merge 与 detached fresh-main 验收。
 
 ## Authoring receipt
@@ -44,3 +43,6 @@
   Cursor bytes不变；manifest exact=`1 passed in 158.21s`；Ruff check PASS。
 - Scope共20个允许文件；产品/workflow/依赖/版本/release零差异；测试仅两个 exact 计数标量；project seq=217；
   root/scoped handoff byte-identical；archive refs exact；diff-check PASS。
+- Terminal truth commit=`6e606df5/2b4954d0`，snapshot=`89ea4c7d...dd90`；clean identity复验 truth=
+  `ready/fresh 1131/1131`、manifest exact=`1 passed in 135.19s`，其余门禁保持全绿。Final Round 6 两位
+  reviewer 唯一一致 finding 是本摘要/handoff状态滞后，本 receipt 已修正；机械 resync 后进入 Round 7。
