@@ -974,3 +974,38 @@
   `ea5ba455...c2e4` / `90ae3717...78aa`。去除各35 symlink后raw均=`780 files/732745 bytes`，tree=
   `ca44e2d51846457f8eac7941e0637701c770091d180c0ae8e2dee7bb23dda543`，逐项相同。下一步只提交
   records identity并第三轮双审。
+
+## 51. Batch 2026-07-21-049：第三轮 SAFETY FAIL2 与 lookup/path parity
+
+- 第三轮 records identity=`f8e38180f41ede93302983709a01484cad03f52b` / tree=
+  `e0da088a84249d4c1564a0aea9e9cdddf93be094`，worktree clean，产品 blobs=
+  `45230781...36b8` / `827d4d4a...54c7`。Pascal/LEAN=`CONTINUE_SPIKE_PASS0/findings=0`；
+  Confucius/SAFETY=`STOP_SPIKE_FAIL2`，故旧 LEAN PASS0 随产品修正失效，继续禁止扩展下一 stage。
+- SAFETY 两项 P1 均由主代理用 public execute 在 immutable legacy/current 复现：重复 manifest spec id 时，
+  legacy 的 dict lookup 采用末项覆盖并阻断指向首项的 step，当前却首项命中并写入；step path=
+  `" specs/inside "` 时，legacy 先 strip 后解析并完成，当前仅用 strip 判空、仍按原始字符串解析而阻断。
+- 最小修正只修改 `_resolve_cross_target()`：manifest specs 以 dict comprehension 保留末项，step path
+  只规范化一次并同时用于解析、比较和错误文本。没有新增 helper、branch、依赖、动态分发、测试或配置；
+  此前 manifest outside 的 `ValueError` 顺序仍保留。
+- 新 product checkpoint=`b71e4147d0e3a91ff815c3a48b71bd62dcec678c` / tree=
+  `d23ddd0f210cf6e0de082a1d50f4b2dc82c7af6d`；engine/ProgramService blobs=
+  `240a85ad8385803ff14b8b960879682c957ebb5f` / `827d4d4ab1c443be48b3805aa5083435736354c7`。
+  C2-safe worktree仍为`70f19275/2fdd9aaa`且 clean。
+- 新自然账本为 engine=`454 physical / 17 functions / 369 function-span / 68 branch / max47`；cross exact=
+  `75/14`、active DTO glue=`85/6`均不变，完整 target=`614 LOC / 88 branch`。behavior-legacy canonical
+  product/proof/combined=`575/285/860`，C2 churn=`587/285/872`；旧预算仍失败，绝不称为 formal Rx。
+- engine Ruff format/check/strict mypy=0；ProgramService strict mypy=`62`、对 C2 增量0；service blob不变，
+  故27 public signature与27 DTO definition继续delta 0。累计 focused=`70 passed, 653 deselected`，九stage
+  exact union=`249 passed, 474 deselected`，宽终端 full=`3387 passed, 3 skipped in 806.70s`；冻结
+  tests/config/CLI/public/DTO/deps/version/release均未改。
+- immutable A=`7922956d/cc3c6b7f`、B=`b71e4147/d23ddd0f`，各自rootdir/config/venv/import provenance；
+  两腿均Python3.11.15且分别导入自身ProgramService，各=`249 passed, 474 deselected in 3.06s/3.40s`。
+  六类public probe逐项等价：step state=`deferred`、dotdot lineage=`upstream.yaml`、external symlink lineage=
+  workspace内绝对`link.yaml`、manifest outside=`ValueError`、重复id=`blocked`、空格path=`completed`。
+- JUnit均=`249/0/0/0`、33,537 bytes，ordered classname/name SHA256均=
+  `fc9093a262715601af3e39cff19c5b4faa737b2d9990ba13f57f9467383cdb16`；legacy/current XML SHA256=
+  `a436881b...f3592` / `fe63b865...53c3e`。移除各35 symlink后raw均=`780 files/732745 bytes`；新A/B
+  `git diff --no-index`=0，且分别与上一轮相应raw tree diff=0，故相同历史recipe的tree SHA256仍为
+  `ca44e2d51846457f8eac7941e0637701c770091d180c0ae8e2dee7bb23dda543`。
+- 下一步只提交 records identity 并让同一 Pascal/LEAN 与 Confucius/SAFETY 对同一 committed+clean SHA
+  第四轮从零复审；双 `CONTINUE_SPIKE_PASS0/findings=0` 前仍不得扩展 `guarded_registry`。
