@@ -830,3 +830,52 @@
   denylist、strict mypy增量、focused/full、immutable A/B、JUnit ordered IDs、import provenance及raw artifact
   tree hash。任一base污染、冻结测试/公共合同变更、动态分发/类型擦除、函数>50、branch>90、A/B差异或
   缺committed provenance立即停止；合法natural `T*>=3825`则无净减重，路线直接NO-GO。
+
+## 48. Batch 2026-07-21-046：用户授权隔离实测与 cross-only typed checkpoint
+
+- 用户明确允许隔离后，从 C2-safe records identity `70f19275150831ceea89a6c1e006c056ee98c412` / tree
+  `2fdd9aaa5fde71711f8ec706338f9bdcbfd860e4` 新建 worktree
+  `.worktrees/215-nine-stage-no-dsl-residual-spike` 与分支 `codex/215-nine-stage-no-dsl-residual-spike`；
+  C2-safe worktree、主工作区、冻结 tests/config、public/CLI/DTO、依赖、version/release 均未修改。
+- 本 checkpoint 只把 `cross_spec_writeback` 改写为显式 stage-specific private dataclass 与 named function；
+  `program_service.py` 逐字段转换 public DTO，并保留经 `self.build_*` / `self.execute_*` 的 late-bound、
+  `generated_at or utc_now_z()`、显式确认与异常传播。private module 不 import service/CLI，架构扫描未发现
+  DSL、registry、reflection、string method lookup、stage selector、rule table、callback bundle、virtual hook、
+  `Any`/`cast`/generic state/upstream/result/type erasure；没有第二 private module 或新 public abstraction。
+- toolchain=`uv 0.10.12`、Python=`3.11.15`、Ruff=`0.15.7`、mypy=`1.19.1`、pytest=`9.0.2`，
+  `uv.lock` SHA256=`ea8f4d3f3e711f3a229b3df2c95ab8b6831f958984e1e5f42a8d992e8f918b2d`。
+  Ruff-natural 通过 `ruff format --stdin-filename <file> -` 对三套源码同口径生成；raw 使用原始源码。
+- AST 口径：symbol span=`end_lineno-lineno+1`；header=从 `def` 到首个 body statement 前；executable=
+  body 内非空、非纯注释且排除 docstring 的物理行；branch=函数基数1，加 `If/IfExp/For/AsyncFor/While/
+  comprehension`，加 `BoolOp values-1`，加 `Try handlers/else/finally`，加 `Match cases`。
+
+| cross exact symbol | legacy raw span/exe/header/branch | legacy natural | C2 natural | spike raw | spike natural |
+|---|---:|---:|---:|---:|---:|
+| `build_frontend_cross_spec_writeback_request` | 97/87/6/16 | 107/97/6/16 | 9/2/6/1 | 15/8/6/3 | 13/6/6/3 |
+| `execute_frontend_cross_spec_writeback` | 173/162/7/20 | 184/173/7/20 | 15/7/7/2 | 23/15/7/3 | 21/13/7/3 |
+| `write_frontend_cross_spec_writeback_artifact` | 42/31/9/8 | 42/31/9/8 | 17/7/9/1 | 34/24/9/7 | 34/24/9/7 |
+| `_build_frontend_cross_spec_writeback_artifact_payload` | 49/41/8/2 | 53/45/8/2 | 10/2/8/1 | 0/0/0/0 | 0/0/0/0 |
+| `_load_frontend_cross_spec_writeback_artifact_payload` | 31/27/4/4 | 31/27/4/4 | 6/2/4/1 | 7/3/4/1 | 7/3/4/1 |
+| total | 392/348/34/50 | 417/373/34/50 | 57/20/34/6 | 79/50/26/14 | 75/46/26/14 |
+
+- candidate private engine raw/natural均=`488 physical / 22 functions / 393 function-span / 303 executable /
+  90 header / 75 branch / max function 47`；C2 engine=`394 / 11 / 315 / 268 / 47 / 43 / max49`。
+  engine line set为独立文件全体1..488，SHA256=`d5d8de79ba0a7fcdf2605ac113bdaf15c39032a6bb4e299c9a9dbffeb7b8bddc`。
+- `SequenceMatcher(autojunk=false)` 对 C2/candidate service 的互斥差异为 raw `+140/-132`、natural
+  `+136/-134`；natural added line-set SHA256=`b3507a5db5f28d626905cd8cd91298abf574c1fa1a63815b09559adfeade6691`。
+  两组与 engine 通过不同文件路径天然互斥。raw product=`488+140=628`，natural product=`488+136=624`；
+  frozen proof=`285`，natural combined=`909`。故 product `624>522`、combined `909>729`，不得把该
+  checkpoint 称为 formal Rx 或可合入候选。
+- cross-only target natural=`488 engine + 75 exact service =563`、branch=`75+14=89`；虽函数与 branch
+  硬门通过，但未低于 behavior legacy cross=`417/50`，也高于 C2=`451/49`。其余八 stage 尚未改，
+  当前45-symbol natural=`3483`，加 engine后的 partial target=`3971`；该 partial 数字不是九stage终态
+  `T*`，不能提前外推，但明确证明本 checkpoint 没有单 stage 净减重。
+- public/DTO AST denylist复核=`27/27 present, changed=0, missing=0`；engine strict mypy=`0`，
+  ProgramService strict mypy=`62`，与 C2 增量0；Ruff format/check均PASS；modified/new function最大47。
+- focused累计=`70 passed, 653 deselected in 1.39s`。首次窄终端full仅
+  `test_run_explicit_missing_enterprise_profile_fails_closed` 因 Rich 把 `does not exist` 折行而失败；
+  同一节点在 spike/C2-safe 设置 `COLUMNS=240/LINES=80` 均 `1 passed`。按历史宽终端口径重跑full=
+  `3387 passed, 3 skipped in 810.74s`。
+- 当前下一门为提交 committed+clean checkpoint 后的 immutable A/B、JUnit ordered IDs、import provenance、
+  raw artifact tree hash及同一SHA LEAN/SAFETY独立结构评审。双审只决定是否值得继续实测，不修改旧预算，
+  不授权合入；任一 reviewer 给出结构 blocker 即停止并丢弃该 spike。

@@ -1248,6 +1248,102 @@ class ProgramFrontendCrossSpecWritebackResult:
         )
 
 
+def _from_cross_spec_step_data(
+    data: _bounded_stage.CrossSpecWritebackStepData,
+) -> ProgramFrontendCrossSpecWritebackRequestStep:
+    return ProgramFrontendCrossSpecWritebackRequestStep(
+        spec_id=data.spec_id,
+        path=data.path,
+        writeback_state=data.writeback_state,
+        pending_inputs=list(data.pending_inputs),
+        suggested_next_actions=list(data.suggested_next_actions),
+        plain_language_blockers=list(data.plain_language_blockers),
+        recommended_next_steps=list(data.recommended_next_steps),
+        source_linkage=dict(data.source_linkage),
+    )
+
+
+def _from_cross_spec_request_data(
+    data: _bounded_stage.CrossSpecWritebackRequestData,
+) -> ProgramFrontendCrossSpecWritebackRequest:
+    return ProgramFrontendCrossSpecWritebackRequest(
+        required=data.required,
+        confirmation_required=data.confirmation_required,
+        writeback_state=data.writeback_state,
+        apply_result=data.apply_result,
+        artifact_source_path=data.artifact_source_path,
+        artifact_generated_at=data.artifact_generated_at,
+        written_paths=list(data.written_paths),
+        steps=[_from_cross_spec_step_data(step) for step in data.steps],
+        remaining_blockers=list(data.remaining_blockers),
+        warnings=list(data.warnings),
+        source_linkage=dict(data.source_linkage),
+    )
+
+
+def _to_cross_spec_request_data(
+    request: ProgramFrontendCrossSpecWritebackRequest,
+) -> _bounded_stage.CrossSpecWritebackRequestData:
+    steps = [
+        _bounded_stage.CrossSpecWritebackStepData(
+            spec_id=step.spec_id,
+            path=step.path,
+            writeback_state=step.writeback_state,
+            pending_inputs=list(step.pending_inputs),
+            suggested_next_actions=list(step.suggested_next_actions),
+            plain_language_blockers=list(step.plain_language_blockers),
+            recommended_next_steps=list(step.recommended_next_steps),
+            source_linkage=dict(step.source_linkage),
+        )
+        for step in request.steps
+    ]
+    return _bounded_stage.CrossSpecWritebackRequestData(
+        required=request.required,
+        confirmation_required=request.confirmation_required,
+        writeback_state=request.writeback_state,
+        apply_result=request.apply_result,
+        artifact_source_path=request.artifact_source_path,
+        artifact_generated_at=request.artifact_generated_at,
+        written_paths=list(request.written_paths),
+        steps=steps,
+        remaining_blockers=list(request.remaining_blockers),
+        warnings=list(request.warnings),
+        source_linkage=dict(request.source_linkage),
+    )
+
+
+def _from_cross_spec_result_data(
+    data: _bounded_stage.CrossSpecWritebackResultData,
+) -> ProgramFrontendCrossSpecWritebackResult:
+    return ProgramFrontendCrossSpecWritebackResult(
+        passed=data.passed,
+        confirmed=data.confirmed,
+        writeback_state=data.writeback_state,
+        orchestration_result=data.orchestration_result,
+        orchestration_summaries=list(data.orchestration_summaries),
+        written_paths=list(data.written_paths),
+        remaining_blockers=list(data.remaining_blockers),
+        warnings=list(data.warnings),
+        source_linkage=dict(data.source_linkage),
+    )
+
+
+def _to_cross_spec_result_data(
+    result: ProgramFrontendCrossSpecWritebackResult,
+) -> _bounded_stage.CrossSpecWritebackResultData:
+    return _bounded_stage.CrossSpecWritebackResultData(
+        passed=result.passed,
+        confirmed=result.confirmed,
+        writeback_state=result.writeback_state,
+        orchestration_result=result.orchestration_result,
+        orchestration_summaries=list(result.orchestration_summaries),
+        written_paths=list(result.written_paths),
+        remaining_blockers=list(result.remaining_blockers),
+        warnings=list(result.warnings),
+        source_linkage=dict(result.source_linkage),
+    )
+
+
 @dataclass
 class ProgramFrontendGuardedRegistryRequestStep:
     spec_id: str
@@ -2005,10 +2101,6 @@ class ProgramSpecTruthReadinessResult:
         self.matched_capabilities = _unique_strings(self.matched_capabilities)
 
 
-_CrossSpecRequest = ProgramFrontendCrossSpecWritebackRequest
-_CrossSpecResult = ProgramFrontendCrossSpecWritebackResult
-
-
 class ProgramService:
     """Program-level helper service used by CLI `program` commands."""
 
@@ -2021,34 +2113,6 @@ class ProgramService:
         self.root = root.resolve()
         self.manifest_path = manifest_path or (self.root / "program-manifest.yaml")
         self.browser_gate_probe_runner = browser_gate_probe_runner
-
-    def _frontend_cross_spec_writeback_engine(
-        self,
-        specs: list[ProgramSpecRef] | tuple[()],
-    ) -> _bounded_stage.BoundedStageEngine[_CrossSpecRequest, _CrossSpecResult]:
-        binding = _bounded_stage.BoundedStageBinding(
-            self.root,
-            self.manifest_path,
-            {spec.id: spec.path for spec in specs},
-            PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_ARTIFACT_REL_PATH,
-            PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH,
-            PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_FILENAME,
-            ProgramFrontendCrossSpecWritebackRequestStep,
-            ProgramFrontendCrossSpecWritebackRequest,
-            ProgramFrontendCrossSpecWritebackResult,
-            self._render_frontend_cross_spec_writeback_content,
-            utc_now_z,
-            self.build_frontend_cross_spec_writeback_request,
-            self.execute_frontend_cross_spec_writeback,
-            self._build_frontend_cross_spec_writeback_artifact_payload,
-            self._resolve_project_relative_path,
-            _unique_strings,
-            _normalize_string_list,
-            _normalize_mapping_list,
-            _normalize_string_mapping,
-            _relative_to_root_or_str,
-        )
-        return _bounded_stage.BoundedStageEngine(binding)
 
     def load_manifest(self) -> ProgramManifest:
         return YamlStore.load(self.manifest_path, ProgramManifest)
@@ -10314,8 +10378,14 @@ const $i = (text: string) => text;
         artifact_path: Path | None = None,
     ) -> ProgramFrontendCrossSpecWritebackRequest:
         """Build the guarded cross-spec writeback request from patch apply artifact."""
-        engine = self._frontend_cross_spec_writeback_engine(manifest.specs)
-        return engine.build(artifact_path)
+        path = self.root / (
+            artifact_path or PROGRAM_FRONTEND_PROVIDER_PATCH_APPLY_ARTIFACT_REL_PATH
+        )
+        specs = [
+            _bounded_stage.SpecPath(spec.id, spec.path) for spec in manifest.specs
+        ]
+        data = _bounded_stage.build_cross_spec_request(self.root, specs, path)
+        return _from_cross_spec_request_data(data)
 
     def execute_frontend_cross_spec_writeback(
         self,
@@ -10328,10 +10398,18 @@ const $i = (text: string) => text;
         effective_request = request or self.build_frontend_cross_spec_writeback_request(
             manifest
         )
-        return self._frontend_cross_spec_writeback_engine(manifest.specs).execute(
-            effective_request,
-            confirmed=confirmed,
+        specs = [
+            _bounded_stage.SpecPath(spec.id, spec.path) for spec in manifest.specs
+        ]
+        data = _bounded_stage.execute_cross_spec_writeback(
+            self.root,
+            self.manifest_path,
+            specs,
+            _to_cross_spec_request_data(effective_request),
+            confirmed,
+            PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_FILENAME,
         )
+        return _from_cross_spec_result_data(data)
 
     def write_frontend_cross_spec_writeback_artifact(
         self,
@@ -10343,12 +10421,29 @@ const $i = (text: string) => text;
         output_path: Path | None = None,
     ) -> Path:
         """Persist the canonical cross-spec writeback artifact."""
-        return self._frontend_cross_spec_writeback_engine(manifest.specs).write(
+        timestamp = generated_at or utc_now_z()
+        effective_request = request or self.build_frontend_cross_spec_writeback_request(
+            manifest
+        )
+        effective_result = result or self.execute_frontend_cross_spec_writeback(
             manifest,
-            request=request,
-            result=result,
-            generated_at=generated_at,
-            output_path=output_path,
+            request=effective_request,
+            confirmed=not effective_request.confirmation_required,
+        )
+        if effective_request.confirmation_required and not effective_result.confirmed:
+            raise ValueError(
+                "cross-spec writeback artifact requires an explicitly confirmed result"
+            )
+        path = self.root / (
+            output_path or PROGRAM_FRONTEND_CROSS_SPEC_WRITEBACK_ARTIFACT_REL_PATH
+        )
+        return _bounded_stage.write_cross_spec_writeback_artifact(
+            self.root,
+            self.manifest_path,
+            _to_cross_spec_request_data(effective_request),
+            _to_cross_spec_result_data(effective_result),
+            timestamp,
+            path,
         )
 
     def _render_frontend_provider_patch_apply_step_content(
@@ -10411,83 +10506,6 @@ const $i = (text: string) => text;
             {
                 "patch_apply_state": "completed",
                 "apply_result": "applied",
-            }
-        )
-        lines.extend(
-            [f"- `{key}`: `{value}`" for key, value in sorted(source_items.items())]
-        )
-        lines.append("")
-        return "\n".join(lines)
-
-    def _render_frontend_cross_spec_writeback_content(
-        self,
-        *,
-        request: ProgramFrontendCrossSpecWritebackRequest,
-        step: ProgramFrontendCrossSpecWritebackRequestStep,
-    ) -> str:
-        lines = [
-            f"# Frontend Cross-Spec Writeback: {step.spec_id}",
-            "",
-            f"- Manifest: `{_relative_to_root_or_str(self.root, self.manifest_path)}`",
-            f"- Source artifact: `{request.artifact_source_path}`",
-            f"- Apply result: `{request.apply_result}`",
-            f"- Artifact generated_at: `{request.artifact_generated_at or 'unknown'}`",
-            "",
-            "## Pending Inputs",
-            "",
-        ]
-        pending_inputs = list(step.pending_inputs) or ["none"]
-        lines.extend([f"- `{item}`" for item in pending_inputs])
-        lines.extend(
-            [
-                "",
-                "## Suggested Next Actions",
-                "",
-            ]
-        )
-        suggested_actions = _unique_strings(list(step.suggested_next_actions)) or ["none"]
-        lines.extend([f"- {item}" for item in suggested_actions])
-        plain_language_blockers = _unique_strings(list(step.plain_language_blockers))
-        if plain_language_blockers:
-            lines.extend(
-                [
-                    "",
-                    "## Explain",
-                    "",
-                ]
-            )
-            lines.extend([f"- {item}" for item in plain_language_blockers])
-        recommended_next_steps = _unique_strings(list(step.recommended_next_steps))
-        if recommended_next_steps:
-            lines.extend(
-                [
-                    "",
-                    "## Recommended Next Steps",
-                    "",
-                ]
-            )
-            lines.extend([f"- {item}" for item in recommended_next_steps])
-        if request.written_paths:
-            lines.extend(
-                [
-                    "",
-                    "## Source Apply Paths",
-                    "",
-                ]
-            )
-            lines.extend([f"- `{item}`" for item in request.written_paths])
-        lines.extend(
-            [
-                "",
-                "## Source Linkage",
-                "",
-            ]
-        )
-        source_items = dict(step.source_linkage)
-        source_items.update(
-            {
-                "cross_spec_writeback_state": "completed",
-                "orchestration_result": "completed",
             }
         )
         lines.extend(
@@ -14956,17 +14974,6 @@ const $i = (text: string) => text;
             "source_linkage": source_linkage,
         }
 
-    def _build_frontend_cross_spec_writeback_artifact_payload(
-        self,
-        *,
-        request: ProgramFrontendCrossSpecWritebackRequest,
-        result: ProgramFrontendCrossSpecWritebackResult,
-        generated_at: str,
-        artifact_path: str,
-    ) -> dict[str, object]:
-        engine = self._frontend_cross_spec_writeback_engine(())
-        return engine.payload(request, result, generated_at, artifact_path)
-
     def _build_frontend_guarded_registry_artifact_payload(
         self,
         *,
@@ -15511,8 +15518,9 @@ const $i = (text: string) => text;
         self,
         artifact_path: Path,
     ) -> tuple[dict[str, object] | None, list[str]]:
-        engine = self._frontend_cross_spec_writeback_engine(())
-        return engine.load(artifact_path, artifact_label="cross-spec writeback")
+        return _bounded_stage.load_mapping(
+            self.root, artifact_path, "cross-spec writeback"
+        )
 
     def _load_frontend_guarded_registry_artifact_payload(
         self,

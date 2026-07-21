@@ -1,394 +1,488 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Generic, NamedTuple, Protocol, TypeVar
 
 import yaml  # type: ignore[import-untyped]
 
 
-class _Step(Protocol):
+@dataclass(frozen=True)
+class SpecPath:
+    id: str
+    path: str
+
+
+@dataclass
+class CrossSpecWritebackStepData:
     spec_id: str
     path: str
     writeback_state: str
-    pending_inputs: list[str]
-    suggested_next_actions: list[str]
-    plain_language_blockers: list[str]
-    recommended_next_steps: list[str]
-    source_linkage: dict[str, str]
+    pending_inputs: list[str] = field(default_factory=list)
+    suggested_next_actions: list[str] = field(default_factory=list)
+    plain_language_blockers: list[str] = field(default_factory=list)
+    recommended_next_steps: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
 
 
-class _Messages(Protocol):
-    source_linkage: dict[str, str]
-    written_paths: list[str]
-    remaining_blockers: list[str]
-    warnings: list[str]
-
-
-class _Request(_Messages, Protocol):
-    artifact_generated_at: str
+@dataclass
+class CrossSpecWritebackRequestData:
     required: bool
+    confirmation_required: bool
+    writeback_state: str
     apply_result: str
     artifact_source_path: str
-    confirmation_required: bool
+    artifact_generated_at: str
+    written_paths: list[str] = field(default_factory=list)
+    steps: list[CrossSpecWritebackStepData] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
 
-    @property
-    def steps(self) -> Sequence[_Step]: ...
 
-
-class _Result(_Messages, Protocol):
+@dataclass
+class CrossSpecWritebackResultData:
+    passed: bool
     confirmed: bool
     writeback_state: str
     orchestration_result: str
-    orchestration_summaries: list[str]
+    orchestration_summaries: list[str] = field(default_factory=list)
+    written_paths: list[str] = field(default_factory=list)
+    remaining_blockers: list[str] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
+    source_linkage: dict[str, str] = field(default_factory=dict)
 
 
-RequestT = TypeVar("RequestT", bound=_Request)
-ResultT = TypeVar("ResultT", bound=_Result)
+def unique_strings(values: Sequence[str]) -> list[str]:
+    return list(dict.fromkeys(value for value in values if value))
 
 
-class BoundedStageBinding(NamedTuple, Generic[RequestT, ResultT]):
-    root: Path
-    manifest_path: Path
-    spec_paths: dict[str, str]
-    input_artifact_path: str
-    output_artifact_path: str
-    target_filename: str
-    step_factory: Callable[..., _Step]
-    request_factory: Callable[..., RequestT]
-    result_factory: Callable[..., ResultT]
-    render: Callable[..., str]
-    now: Callable[[], str]
-    build_request: Callable[..., RequestT]
-    execute: Callable[..., ResultT]
-    build_payload: Callable[..., dict[str, object]]
-    resolve: Callable[[str | Path], Path]
-    unique: Callable[[list[str] | tuple[str, ...]], list[str]]
-    strings: Callable[[object], list[str]]
-    mappings: Callable[[object], list[dict[str, object]]]
-    linkage: Callable[[object], dict[str, str]]
-    relative: Callable[[Path, Path], str]
+def string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
 
 
-class BoundedStageEngine(Generic[RequestT, ResultT]):
-    def __init__(
-        self,
-        binding: BoundedStageBinding[RequestT, ResultT],
-    ) -> None:
-        self.binding = binding
-        self.root = binding.root
-        self.unique, self.strings = binding.unique, binding.strings
-        self.mappings, self.linkage = binding.mappings, binding.linkage
-        self.relative = binding.relative
+def mapping_list(value: object) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        return []
+    return [dict(item) for item in value if isinstance(item, dict)]
 
-    def load(
-        self, artifact_path: Path, *, artifact_label: str
-    ) -> tuple[dict[str, object] | None, list[str]]:
-        relative_path = self.relative(self.root, artifact_path)
-        if not artifact_path.exists():
-            return None, [f"missing {artifact_label} artifact: {relative_path}"]
-        try:
-            payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
-        except Exception as exc:
-            return None, [f"invalid {artifact_label} artifact: {relative_path} ({exc})"]
-        if not isinstance(payload, dict):
-            return None, [f"invalid {artifact_label} artifact: {relative_path}"]
-        return payload, []
 
-    def _steps(self, payload: dict[str, object], source_path: str) -> list[_Step]:
-        generated_at = str(payload.get("generated_at", "")).strip()
-        spec_paths = self.binding.spec_paths
-        steps: list[_Step] = []
-        for item in self.mappings(payload.get("steps", [])):
-            spec_id = str(item.get("spec_id", "")).strip()
-            if not spec_id:
-                continue
-            path = str(item.get("path", "")).strip() or spec_paths.get(spec_id, "")
-            linkage = self.linkage(item.get("source_linkage", {}))
-            linkage.update(
-                {
-                    "provider_patch_apply_artifact_path": source_path,
-                    "provider_patch_apply_artifact_generated_at": generated_at,
-                    "cross_spec_writeback_state": "not_started",
-                }
+def string_mapping(value: object) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(key).strip(): str(item).strip()
+        for key, item in value.items()
+        if str(key).strip() and str(item).strip()
+    }
+
+
+def relative_path(root: Path, path: Path) -> str:
+    try:
+        return path.relative_to(root).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def load_mapping(
+    root: Path, artifact_path: Path, artifact_label: str
+) -> tuple[dict[str, object] | None, list[str]]:
+    relative = relative_path(root, artifact_path)
+    if not artifact_path.exists():
+        return None, [f"missing {artifact_label} artifact: {relative}"]
+    try:
+        payload = yaml.safe_load(artifact_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return None, [f"invalid {artifact_label} artifact: {relative} ({exc})"]
+    if not isinstance(payload, dict):
+        return None, [f"invalid {artifact_label} artifact: {relative}"]
+    return payload, []
+
+
+def _cross_steps(
+    payload: dict[str, object], specs: Sequence[SpecPath], source_path: str
+) -> list[CrossSpecWritebackStepData]:
+    generated_at = str(payload.get("generated_at", "")).strip()
+    spec_paths = {spec.id: spec.path for spec in specs}
+    steps: list[CrossSpecWritebackStepData] = []
+    for item in mapping_list(payload.get("steps", [])):
+        spec_id = str(item.get("spec_id", "")).strip()
+        if not spec_id:
+            continue
+        linkage = string_mapping(item.get("source_linkage", {}))
+        linkage.update(
+            {
+                "provider_patch_apply_artifact_path": source_path,
+                "provider_patch_apply_artifact_generated_at": generated_at,
+                "cross_spec_writeback_state": "not_started",
+            }
+        )
+        path = str(item.get("path", "")).strip() or spec_paths.get(spec_id, "")
+        steps.append(
+            CrossSpecWritebackStepData(
+                spec_id=spec_id,
+                path=path,
+                writeback_state="not_started",
+                pending_inputs=string_list(item.get("pending_inputs", [])),
+                suggested_next_actions=string_list(
+                    item.get("suggested_next_actions", [])
+                ),
+                plain_language_blockers=string_list(
+                    item.get("plain_language_blockers", [])
+                ),
+                recommended_next_steps=string_list(
+                    item.get("recommended_next_steps", [])
+                ),
+                source_linkage=linkage,
             )
-            steps.append(
-                self.binding.step_factory(
-                    spec_id,
-                    path,
-                    "not_started",
-                    self.strings(item.get("pending_inputs", [])),
-                    self.strings(item.get("suggested_next_actions", [])),
-                    self.strings(item.get("plain_language_blockers", [])),
-                    self.strings(item.get("recommended_next_steps", [])),
-                    linkage,
-                )
-            )
-        return steps
+        )
+    return steps
 
-    def build(self, artifact_path: Path | None = None) -> RequestT:
-        path = self.root / (artifact_path or self.binding.input_artifact_path)
-        source_path = self.relative(self.root, path)
-        payload, warnings = self.load(path, artifact_label="provider patch apply")
-        if payload is None:
-            linkage = {
+
+def build_cross_spec_request(
+    root: Path, specs: Sequence[SpecPath], artifact_path: Path
+) -> CrossSpecWritebackRequestData:
+    source_path = relative_path(root, artifact_path)
+    payload, warnings = load_mapping(root, artifact_path, "provider patch apply")
+    if payload is None:
+        return CrossSpecWritebackRequestData(
+            required=False,
+            confirmation_required=False,
+            writeback_state="missing_artifact",
+            apply_result="missing_artifact",
+            artifact_source_path=source_path,
+            artifact_generated_at="",
+            warnings=warnings,
+            source_linkage={
                 "provider_patch_apply_artifact_path": source_path,
                 "cross_spec_writeback_state": "missing_artifact",
-            }
-            return self.binding.request_factory(
-                False,
-                False,
-                "missing_artifact",
-                "missing_artifact",
-                source_path,
-                "",
-                [],
-                [],
-                [],
-                warnings,
-                linkage,
-            )
-        generated_at = str(payload.get("generated_at", "")).strip()
-        apply_result = str(payload.get("apply_result", "")).strip() or "unknown"
-        paths = self.strings(payload.get("written_paths", []))
-        blockers = self.strings(payload.get("remaining_blockers", []))
-        steps = self._steps(payload, source_path)
-        required = any((steps, paths, blockers))
-        linkage = self.linkage(payload.get("source_linkage", {}))
-        linkage |= {
+            },
+        )
+    generated_at = str(payload.get("generated_at", "")).strip()
+    apply_result = str(payload.get("apply_result", "")).strip() or "unknown"
+    paths = string_list(payload.get("written_paths", []))
+    blockers = string_list(payload.get("remaining_blockers", []))
+    steps = _cross_steps(payload, specs, source_path)
+    required = any((steps, paths, blockers))
+    linkage = string_mapping(payload.get("source_linkage", {}))
+    linkage.update(
+        {
             "provider_patch_apply_artifact_path": source_path,
             "provider_patch_apply_artifact_generated_at": generated_at,
             "cross_spec_writeback_state": "not_started",
             "confirmation_required": str(required).lower(),
         }
-        warnings = self.unique([*warnings, *self.strings(payload.get("warnings", []))])
-        return self.binding.request_factory(
-            required,
-            required,
-            "not_started",
-            apply_result,
-            source_path,
-            generated_at,
-            paths,
-            steps,
-            blockers,
-            warnings,
-            linkage,
-        )
+    )
+    return CrossSpecWritebackRequestData(
+        required=required,
+        confirmation_required=required,
+        writeback_state="not_started",
+        apply_result=apply_result,
+        artifact_source_path=source_path,
+        artifact_generated_at=generated_at,
+        written_paths=paths,
+        steps=steps,
+        remaining_blockers=blockers,
+        warnings=unique_strings([*warnings, *string_list(payload.get("warnings", []))]),
+        source_linkage=linkage,
+    )
 
-    def _result(
-        self,
-        request: RequestT,
-        passed: bool,
-        confirmed: bool,
-        state: str,
-        outcome: str,
-        data: tuple[Sequence[str], ...],
-    ) -> ResultT:
-        summaries, paths, blockers, warnings = data
-        linkage = {
-            **dict(request.source_linkage),
-            "cross_spec_writeback_state": state,
-            "orchestration_result": outcome,
-        }
-        return self.binding.result_factory(
-            passed,
-            confirmed,
-            state,
-            outcome,
-            self.unique(list(summaries)),
-            self.unique(list(paths)),
-            self.unique(list(blockers)),
-            self.unique(list(warnings)),
-            linkage,
-        )
 
-    def _early(self, request: RequestT, confirmed: bool) -> ResultT | None:
-        existing: tuple[Sequence[str], ...] = (
+def _cross_result(
+    request: CrossSpecWritebackRequestData,
+    passed: bool,
+    confirmed: bool,
+    state: str,
+    outcome: str,
+    values: tuple[Sequence[str], Sequence[str], Sequence[str], Sequence[str]],
+) -> CrossSpecWritebackResultData:
+    summaries, paths, blockers, warnings = values
+    linkage = dict(request.source_linkage)
+    linkage.update(
+        {"cross_spec_writeback_state": state, "orchestration_result": outcome}
+    )
+    return CrossSpecWritebackResultData(
+        passed=passed,
+        confirmed=confirmed,
+        writeback_state=state,
+        orchestration_result=outcome,
+        orchestration_summaries=unique_strings(summaries),
+        written_paths=unique_strings(paths),
+        remaining_blockers=unique_strings(blockers),
+        warnings=unique_strings(warnings),
+        source_linkage=linkage,
+    )
+
+
+def _cross_early(
+    request: CrossSpecWritebackRequestData, confirmed: bool
+) -> CrossSpecWritebackResultData | None:
+    existing: tuple[Sequence[str], Sequence[str], Sequence[str], Sequence[str]] = (
+        (),
+        request.written_paths,
+        request.remaining_blockers,
+        request.warnings,
+    )
+    if request.warnings and not request.artifact_generated_at:
+        return _cross_result(request, False, confirmed, "blocked", "blocked", existing)
+    if not request.required:
+        values: tuple[Sequence[str], Sequence[str], Sequence[str], Sequence[str]] = (
             (),
             request.written_paths,
-            request.remaining_blockers,
+            (),
             request.warnings,
         )
-        data = existing
-        if request.warnings and not request.artifact_generated_at:
-            return self._result(
-                request, False, confirmed, "blocked", "blocked", existing
-            )
-        if not request.required:
-            data = ((), request.written_paths, (), request.warnings)
-            return self._result(
-                request, True, confirmed, "not_started", "skipped", data
-            )
-        if not confirmed:
-            warnings = [
-                *request.warnings,
-                "cross-spec writeback requires explicit confirmation",
-            ]
-            data = ((), request.written_paths, request.remaining_blockers, warnings)
-            return self._result(
-                request,
-                False,
-                False,
-                "confirmation_required",
-                "blocked",
-                data,
-            )
-        if request.apply_result not in {"applied", "completed"}:
-            blocker = "cross-spec writeback requires applied patch artifact "
-            blocker += f"(apply_result={request.apply_result or 'unknown'})"
-            data = ((), (), [*request.remaining_blockers, blocker], request.warnings)
-            return self._result(request, False, True, "blocked", "blocked", data)
-        return None
-
-    def _write_steps(
-        self,
-        request: RequestT,
-        render: Callable[..., str],
-    ) -> tuple[list[str], list[str], int]:
-        paths: list[str] = []
-        blockers = self.unique(request.remaining_blockers)
-        executable = 0
-        for step in request.steps:
-            label = f"cross-spec writeback step {step.spec_id}".rstrip()
-            expected_path = self.binding.spec_paths.get(step.spec_id)
-            path_text = str(step.path).strip()
-            if not step.spec_id:
-                blockers.append(f"{label} missing spec_id; writeback skipped")
-                continue
-            if expected_path is None:
-                blockers.append(f"{label} missing manifest spec")
-                continue
-            if not path_text:
-                blockers.append(f"{label} missing spec path")
-                continue
-            spec_dir = (self.root / path_text).resolve()
-            try:
-                spec_dir.relative_to(self.root)
-            except ValueError:
-                blockers.append(f"{label} resolves outside workspace root: {path_text}")
-                continue
-            if spec_dir != self.binding.resolve(expected_path):
-                blockers.append(
-                    f"{label} path does not match manifest spec path: {path_text}"
-                )
-                continue
-            if not spec_dir.is_dir():
-                blockers.append(f"{label} missing spec directory: {path_text}")
-                continue
-            executable += 1
-            target = spec_dir / self.binding.target_filename
-            target.write_text(render(request=request, step=step), encoding="utf-8")
-            paths.append(self.relative(self.root, target))
-        return paths, blockers, executable
-
-    def execute(
-        self,
-        request: RequestT,
-        *,
-        confirmed: bool,
-    ) -> ResultT:
-        if (early := self._early(request, confirmed)) is not None:
-            return early
-        paths, blockers, executable = self._write_steps(request, self.binding.render)
-        if executable == 0:
-            state = outcome = "blocked"
-            summaries = [
-                "no executable cross-spec writeback targets available from canonical patch apply artifact"
-            ]
-        elif blockers:
-            state = outcome = "partial"
-            summaries = [
-                f"wrote {len(paths)} of {executable} cross-spec writeback file(s) from canonical patch apply artifact"
-            ]
-        else:
-            state = outcome = "completed"
-            summaries = [
-                f"wrote {len(paths)} cross-spec writeback file(s) from canonical patch apply artifact"
-            ]
-        return self._result(
-            request,
-            outcome == "completed",
-            True,
-            state,
-            outcome,
-            (summaries, paths, blockers, request.warnings),
+        return _cross_result(request, True, confirmed, "not_started", "skipped", values)
+    if not confirmed:
+        warnings = [
+            *request.warnings,
+            "cross-spec writeback requires explicit confirmation",
+        ]
+        values = ((), request.written_paths, request.remaining_blockers, warnings)
+        return _cross_result(
+            request, False, False, "confirmation_required", "blocked", values
         )
+    if request.apply_result in {"applied", "completed"}:
+        return None
+    blocker = "cross-spec writeback requires applied patch artifact "
+    blocker += f"(apply_result={request.apply_result or 'unknown'})"
+    values = ((), (), [*request.remaining_blockers, blocker], request.warnings)
+    return _cross_result(request, False, True, "blocked", "blocked", values)
 
-    def payload(
-        self,
-        request: RequestT,
-        result: ResultT,
-        generated_at: str,
-        artifact_path: str,
-    ) -> dict[str, object]:
-        linkage = {
-            **dict(request.source_linkage),
-            **dict(result.source_linkage),
+
+def _resolve_cross_target(
+    root: Path,
+    specs: Sequence[SpecPath],
+    step: CrossSpecWritebackStepData,
+    target_filename: str,
+) -> tuple[Path | None, str | None]:
+    label = f"cross-spec writeback step {step.spec_id}".rstrip()
+    expected = next((spec.path for spec in specs if spec.id == step.spec_id), None)
+    if not step.spec_id:
+        return None, f"{label} missing spec_id; writeback skipped"
+    if expected is None:
+        return None, f"{label} missing manifest spec"
+    if not step.path.strip():
+        return None, f"{label} missing spec path"
+    resolved, blocker = _resolve_spec_dir(root, step.path, expected, label)
+    if blocker or resolved is None:
+        return None, blocker
+    return resolved / target_filename, None
+
+
+def _resolve_spec_dir(
+    root: Path, path_text: str, expected_path: str, label: str
+) -> tuple[Path | None, str | None]:
+    resolved = (root / path_text).resolve()
+    try:
+        resolved.relative_to(root)
+    except ValueError:
+        return None, f"{label} resolves outside workspace root: {path_text}"
+    if resolved != (root / expected_path).resolve():
+        return None, f"{label} path does not match manifest spec path: {path_text}"
+    if not resolved.is_dir():
+        return None, f"{label} missing spec directory: {path_text}"
+    return resolved, None
+
+
+def _cross_header(
+    root: Path,
+    manifest_path: Path,
+    request: CrossSpecWritebackRequestData,
+    step: CrossSpecWritebackStepData,
+) -> list[str]:
+    return [
+        f"# Frontend Cross-Spec Writeback: {step.spec_id}",
+        "",
+        f"- Manifest: `{relative_path(root, manifest_path)}`",
+        f"- Source artifact: `{request.artifact_source_path}`",
+        f"- Apply result: `{request.apply_result}`",
+        f"- Artifact generated_at: `{request.artifact_generated_at or 'unknown'}`",
+        "",
+        "## Pending Inputs",
+        "",
+    ]
+
+
+def _cross_sections(
+    request: CrossSpecWritebackRequestData, step: CrossSpecWritebackStepData
+) -> list[str]:
+    lines: list[str] = []
+    pending = list(step.pending_inputs) or ["none"]
+    lines.extend([f"- `{item}`" for item in pending])
+    lines.extend(["", "## Suggested Next Actions", ""])
+    actions = unique_strings(step.suggested_next_actions) or ["none"]
+    lines.extend([f"- {item}" for item in actions])
+    if blockers := unique_strings(step.plain_language_blockers):
+        lines.extend(["", "## Explain", ""])
+        lines.extend([f"- {item}" for item in blockers])
+    if next_steps := unique_strings(step.recommended_next_steps):
+        lines.extend(["", "## Recommended Next Steps", ""])
+        lines.extend([f"- {item}" for item in next_steps])
+    if request.written_paths:
+        lines.extend(["", "## Source Apply Paths", ""])
+        lines.extend([f"- `{item}`" for item in request.written_paths])
+    return lines
+
+
+def render_cross_step(
+    root: Path,
+    manifest_path: Path,
+    request: CrossSpecWritebackRequestData,
+    step: CrossSpecWritebackStepData,
+) -> str:
+    lines = _cross_header(root, manifest_path, request, step)
+    lines.extend(_cross_sections(request, step))
+    lines.extend(["", "## Source Linkage", ""])
+    linkage = dict(step.source_linkage)
+    linkage.update(
+        {
+            "cross_spec_writeback_state": "completed",
+            "orchestration_result": "completed",
+        }
+    )
+    lines.extend([f"- `{key}`: `{value}`" for key, value in sorted(linkage.items())])
+    lines.append("")
+    return "\n".join(lines)
+
+
+def _write_cross_steps(
+    root: Path,
+    manifest_path: Path,
+    specs: Sequence[SpecPath],
+    request: CrossSpecWritebackRequestData,
+    target_filename: str,
+) -> tuple[list[str], list[str], int]:
+    paths: list[str] = []
+    blockers = unique_strings(request.remaining_blockers)
+    executable = 0
+    for step in request.steps:
+        target, blocker = _resolve_cross_target(root, specs, step, target_filename)
+        if blocker or target is None:
+            blockers.append(blocker or "cross-spec writeback target unavailable")
+            continue
+        executable += 1
+        target.write_text(
+            render_cross_step(root, manifest_path, request, step), encoding="utf-8"
+        )
+        paths.append(relative_path(root, target))
+    return paths, blockers, executable
+
+
+def _finish_cross(
+    request: CrossSpecWritebackRequestData,
+    paths: list[str],
+    blockers: list[str],
+    executable: int,
+) -> CrossSpecWritebackResultData:
+    if executable == 0:
+        state = outcome = "blocked"
+        summaries = [
+            "no executable cross-spec writeback targets available from canonical patch apply artifact"
+        ]
+    elif blockers:
+        state = outcome = "partial"
+        summaries = [
+            f"wrote {len(paths)} of {executable} cross-spec writeback file(s) from canonical patch apply artifact"
+        ]
+    else:
+        state = outcome = "completed"
+        summaries = [
+            f"wrote {len(paths)} cross-spec writeback file(s) from canonical patch apply artifact"
+        ]
+    values = (summaries, paths, blockers, request.warnings)
+    return _cross_result(request, outcome == "completed", True, state, outcome, values)
+
+
+def execute_cross_spec_writeback(
+    root: Path,
+    manifest_path: Path,
+    specs: Sequence[SpecPath],
+    request: CrossSpecWritebackRequestData,
+    confirmed: bool,
+    target_filename: str,
+) -> CrossSpecWritebackResultData:
+    if (early := _cross_early(request, confirmed)) is not None:
+        return early
+    paths, blockers, executable = _write_cross_steps(
+        root, manifest_path, specs, request, target_filename
+    )
+    return _finish_cross(request, paths, blockers, executable)
+
+
+def _cross_payload_steps(
+    request: CrossSpecWritebackRequestData,
+) -> list[dict[str, object]]:
+    return [
+        {
+            "spec_id": step.spec_id,
+            "path": step.path,
+            "writeback_state": "not_started",
+            "pending_inputs": list(step.pending_inputs),
+            "suggested_next_actions": unique_strings(step.suggested_next_actions),
+            "plain_language_blockers": unique_strings(step.plain_language_blockers),
+            "recommended_next_steps": unique_strings(step.recommended_next_steps),
+            "source_linkage": dict(step.source_linkage),
+        }
+        for step in request.steps
+    ]
+
+
+def build_cross_payload(
+    root: Path,
+    manifest_path: Path,
+    request: CrossSpecWritebackRequestData,
+    result: CrossSpecWritebackResultData,
+    generated_at: str,
+    artifact_path: str,
+) -> dict[str, object]:
+    linkage = dict(request.source_linkage)
+    linkage.update(result.source_linkage)
+    linkage.update(
+        {
             "cross_spec_writeback_artifact_path": artifact_path,
             "cross_spec_writeback_artifact_generated_at": generated_at,
         }
-        steps = [
-            {
-                "spec_id": step.spec_id,
-                "path": step.path,
-                "writeback_state": step.writeback_state,
-                "pending_inputs": list(step.pending_inputs),
-                "suggested_next_actions": self.unique(step.suggested_next_actions),
-                "plain_language_blockers": self.unique(step.plain_language_blockers),
-                "recommended_next_steps": self.unique(step.recommended_next_steps),
-                "source_linkage": dict(step.source_linkage),
-            }
-            for step in request.steps
-        ]
-        return {
-            "generated_at": generated_at,
-            "manifest_path": self.relative(self.root, self.binding.manifest_path),
-            "artifact_source_path": request.artifact_source_path,
-            "artifact_generated_at": request.artifact_generated_at,
-            "required": request.required,
-            "confirmation_required": request.confirmation_required,
-            "confirmed": result.confirmed,
-            "apply_result": request.apply_result,
-            "writeback_state": result.writeback_state,
-            "orchestration_result": result.orchestration_result,
-            "orchestration_summaries": self.unique(result.orchestration_summaries),
-            "existing_written_paths": self.unique(request.written_paths),
-            "written_paths": self.unique(result.written_paths),
-            "remaining_blockers": self.unique(result.remaining_blockers),
-            "warnings": self.unique([*request.warnings, *result.warnings]),
-            "steps": steps,
-            "source_linkage": linkage,
-        }
+    )
+    return {
+        "generated_at": generated_at,
+        "manifest_path": relative_path(root, manifest_path),
+        "artifact_source_path": request.artifact_source_path,
+        "artifact_generated_at": request.artifact_generated_at,
+        "required": request.required,
+        "confirmation_required": request.confirmation_required,
+        "confirmed": result.confirmed,
+        "apply_result": request.apply_result,
+        "writeback_state": result.writeback_state,
+        "orchestration_result": result.orchestration_result,
+        "orchestration_summaries": unique_strings(result.orchestration_summaries),
+        "existing_written_paths": unique_strings(request.written_paths),
+        "written_paths": unique_strings(result.written_paths),
+        "remaining_blockers": unique_strings(result.remaining_blockers),
+        "warnings": unique_strings([*request.warnings, *result.warnings]),
+        "steps": _cross_payload_steps(request),
+        "source_linkage": linkage,
+    }
 
-    def write(
-        self,
-        manifest: object,
-        *,
-        request: RequestT | None,
-        result: ResultT | None,
-        generated_at: str | None,
-        output_path: Path | None,
-    ) -> Path:
-        timestamp = generated_at or self.binding.now()
-        effective_request = request or self.binding.build_request(manifest)
-        effective_result = result or self.binding.execute(
-            manifest,
-            request=effective_request,
-            confirmed=not effective_request.confirmation_required,
-        )
-        if effective_request.confirmation_required and not effective_result.confirmed:
-            raise ValueError(
-                "cross-spec writeback artifact requires an explicitly confirmed result"
-            )
-        path = self.root / (output_path or self.binding.output_artifact_path)
-        payload = self.binding.build_payload(
-            request=effective_request,
-            result=effective_result,
-            generated_at=timestamp,
-            artifact_path=self.relative(self.root, path),
-        )
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(
-            yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
-            encoding="utf-8",
-        )
-        return path
+
+def write_cross_spec_writeback_artifact(
+    root: Path,
+    manifest_path: Path,
+    request: CrossSpecWritebackRequestData,
+    result: CrossSpecWritebackResultData,
+    generated_at: str,
+    artifact_path: Path,
+) -> Path:
+    relative = relative_path(root, artifact_path)
+    payload = build_cross_payload(
+        root, manifest_path, request, result, generated_at, relative
+    )
+    return write_payload(artifact_path, payload)
+
+
+def write_payload(path: Path, payload: dict[str, object]) -> Path:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8"
+    )
+    return path
