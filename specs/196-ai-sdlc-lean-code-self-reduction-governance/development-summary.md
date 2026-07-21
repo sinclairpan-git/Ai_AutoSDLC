@@ -104,10 +104,11 @@
   `1209/164` 高于两阶段 legacy `842/92`，双 reviewer 一致 `STOP_SPIKE_NO_GO/findings=0`。
   两条路线均 `archived_not_merged`，legacy 产品保持不变。GAP-03/WI196/RC-08 在 WI217 closure 前保留
   当前事实状态；closure 后转为路线关闭/非阻塞 backlog，不再另立减重 formal WI或继承 WI215 receipt。
-- WI-217 current active child：从fresh-main选中T63 artifact-loader family；基线403/39，clean spike
-  product `+48/-406`、proof `+48`、terminal44/4、RC-06含truth≤2为98/101；加强后legacy persistent
-  proof=5GREEN/1binding RED，candidate=6 proof与412 unit全绿；
-  LEAN/SAFETY Round 4均findings=0。当前仅formal authoring，产品尚未授权；formal 后最多一个
-  implementation PR 和一个 closure PR。GO登记actual net -358，NO-GO登记最终产品净变化0并如实区分
+- WI-217 current active child：formal PR #167/merge `4e4971d4` 与detached fresh-main已完成；唯一
+  implementation atomic candidate=`e2752a9b`，基线403/39，product `+48/-406`、proof `+48`、terminal44/4、
+  RC-06含truth≤2为98/101；legacy persistent proof=5GREEN/1binding RED，candidate=6 proof、412 unit、
+  233 CLI integration、稳定短basetemp full `3309 passed, 3 skipped`、治理/package/rollback-reapply全绿。
+  当前等待final同identity双审与required cross-platform checks；本路线仍最多一个implementation PR和一个
+  closure PR。GO登记actual net -358，NO-GO登记最终产品净变化0并如实区分
   pre-merge零产品合入或post-merge临时合入后exact rollback；两者都由closure
   关闭WI217/WI196、退役RC-08、把剩余结构债转为非阻塞backlog并恢复正常特性开发。

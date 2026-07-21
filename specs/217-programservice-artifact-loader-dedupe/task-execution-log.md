@@ -1,8 +1,8 @@
 # 执行日志：ProgramService artifact loader 精确重复族减重
 
 **功能编号**：`217-programservice-artifact-loader-dedupe`
-**状态**：formal authoring
-**基线**：`b4d2ce5a5bc27b72549dcdf394f277cfbd6a124d`
+**状态**：implementation local gates passed / final review pending
+**基线**：formal merge `4e4971d4625b5cf7f3381653bb6288a95fb4aa54`
 
 ## 1. 归档规则
 
@@ -142,3 +142,51 @@
   pre-implementation product/proof blobs并登记最终零产品净变化，不新开rollback/implementation PR。
 - Parent summary改为只允许WI217当前路线；handoff记录source已提交；“禁止gap/reduction WI”收窄为只禁止
   新减重WI，不阻断正常特性/缺陷工作。修复改变HEAD/tree/formal-six，R2双方verdict失效。
+
+## 12. Batch 2026-07-21-011：terminal formal 双审、合并与 fresh-main
+
+- Source R3 identity=`26d11c44dc63bc239423aec7981f3a6eb1804451` / tree=
+  `0b3e9034fac2396c52200009db658ad8e14dd7c5` / formal-six=
+  `40c6d928ecd2d903b44cb41e15372e6f8c80d5d378605144fd86286a3e0506a4`，LEAN/SAFETY均
+  `PASS0/findings=0`。Truth sync与handoff完成后的最终 review identity=
+  `588b3727e768bb2ed67a119535bc9093ef355217` / tree=
+  `4e423c93806b7c8966c1496baedf7dc4ae05b760` /同一formal-six，双方R4均`PASS0/findings=0`。
+- PR #167 current-head Codex review审到`588b3727e7`并报告无major issues；12项required checks全绿，
+  squash merge=`4e4971d4625b5cf7f3381653bb6288a95fb4aa54`，本地formal branch保留。
+- Detached fresh-main tree=`4e423c93806b7c8966c1496baedf7dc4ae05b760`与reviewed tree精确相同；manifest exact=
+  `1 passed in 121.32s`，constraints无BLOCKER，validate PASS，truth=`ready/fresh`、mapped=
+  `1136/1136`、missing/unmapped=`1/0`、close=`216/215`，handoff parity/diff-check/clean均PASS。
+
+## 13. Batch 2026-07-21-012：正式 TDD RED/GREEN 与原子候选
+
+- 从formal detached fresh-main创建唯一implementation branch=
+  `feature/217-programservice-artifact-loader-dedupe`。两个目标文件相对旧spike base与fresh-main blob精确相同，
+  product baseline=`7b2ac50725136b6399b74e898f147a0b1fecd9c6`，test baseline=
+  `735b505f72c4f2cfb1a378397e4f15faa79ed219`；fresh-main ProgramService=`406 passed in 33.43s`。
+- Proof-only RED在未改产品时精确为`1 failed, 5 passed, 406 deselected in 1.28s`；失败只来自12个caller
+  尚无exact `artifact_label`，五个payload/error行为全部保持GREEN。
+- 最小GREEN实现只含一个33 LOC/branch3 private helper、12个direct exact label binding与11 LOC/branch1
+  cleanup wrapper；没有新模块、public API、dependency、registry/reflection/DSL/getattr/type erasure、第二family
+  或formatter churn。Proof=`6 passed, 406 deselected`，ProgramService=`412 passed in 30.06s`，Ruff与
+  diff-check PASS。
+- Atomic candidate commit=`e2752a9b4b8572f828433c4c3fb57cac4a26f0f9` / tree=
+  `dbf9fc1415414b4cb97693a7dc9f8a1c976df115`；只含product/proof两个文件。Candidate blobs为product=
+  `77827e018ae192e1d33d739310c0c7754309d7a2`、proof=
+  `549de823045985161a6c4b2b9a9e2f3e4d1b8a51`；raw ledger product=`+48/-406/net -358`、proof=`+48`、
+  combined含truth reserve=`98/101`，与clean spike两个文件逐字相同。
+
+## 14. Batch 2026-07-21-013：完整门禁、基线对照与 rollback/reapply
+
+- CLI program integration=`233 passed in 23.39s`。首次本机full在默认超长pytest临时路径下得到
+  `3308 passed, 3 skipped, 1 failed`；唯一失败是enterprise-profile错误信息把`does not exist`在Rich终端
+  宽度处换行。候选与未改fresh-main单测都以相同输出失败；分别使用短`--basetemp`后均`1 passed`，证明
+  该失败是环境路径包装而非candidate regression。固定`--basetemp=/tmp/wi217-full`后的完整套件=
+  `3309 passed, 3 skipped in 807.92s`。
+- Constraints无BLOCKER、program validate PASS、truth audit=`ready/fresh`、inventory=`1136/1136`、
+  missing/unmapped=`1/0`、close=`216/215`。Wheel/sdist均成功构建；wheel在全新Python 3.14 venv安装后
+  `ai-sdlc --version`=`0.9.6`、`--help` exit0。Windows/macOS/Linux与POSIX/Windows offline smoke仍必须
+  由implementation PR required checks确认，不在本地伪造跨平台通过。
+- Disposable local clone revert commit=`1c66df02a74132b3f522eaf82a5c5aa887fc3c00`，两个blob精确恢复baseline，
+  `406 passed in 37.12s`；reapply commit=`f785f43b733a0c4f2d4e0cef44cb28f36653e52f`，两个blob精确恢复candidate，
+  proof=`6 passed`、ProgramService=`412 passed in 33.26s`、Ruff PASS。临时clone未推送；legacy RED只绑定
+  proof-first worktree，不错误声称atomic revert后仍存在新增proof。

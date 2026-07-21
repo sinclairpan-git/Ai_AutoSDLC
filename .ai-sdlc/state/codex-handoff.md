@@ -1,50 +1,42 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T13:16:58Z
-- Reason: 用户以时间、收益可见性、Token/评审/CI 成本和特性开发机会成本为依据，冻结本轮减重路线终止边界
-- Goal: 完成 WI217 formal；至多执行一个 implementation PR；随后用一个 closure PR 在 GO 或 NO-GO 下均关闭 WI217/WI196、退役 RC-08，并恢复正常特性开发
-- State: branch=`feature/217-programservice-artifact-loader-dedupe-docs`，base=`b4d2ce5a5bc27b72549dcdf394f277cfbd6a124d`；PR #167 已推送旧 HEAD `1a24ace02fa448c152e11e082ba2a835c99d423b`，其评审与 CI 因终止合同变更失效；终止 source R3 已双 PASS0，truth snapshot 与正式门禁已完成，等待最终 current identity 双审，implementation blocked
-- Stage: plan
+- Updated: 2026-07-21T14:45:24Z
+- Reason: WI217唯一implementation候选已完成TDD、本地完整门禁和rollback/reapply，进入truth sync与final双审
+- Goal: 最多创建一个implementation PR并完成GO/NO-GO；随后只用一个closure PR关闭WI217/WI196、退役RC-08并恢复正常特性开发
+- State: branch=`feature/217-programservice-artifact-loader-dedupe`，base=`main@4e4971d4625b5cf7f3381653bb6288a95fb4aa54`；atomic candidate=`e2752a9b4b8572f828433c4c3fb57cac4a26f0f9`；local GO gates passed，records/truth尚未最终提交和双审
+- Stage: review
 - Work Item: 217-programservice-artifact-loader-dedupe
 
 ## Changed Files
 
-- WI217 canonical `spec.md` / `plan.md` / `tasks.md` / `task-execution-log.md`
-- WI196 canonical `spec.md` / `plan.md` / `tasks.md` / `development-summary.md` / `task-execution-log.md`
-- `program-manifest.yaml` 与 program truth 机械 snapshot 已在 source 双审通过后重新同步
-- root/scoped `codex-handoff.md` 必须 byte-identical
-- Formal scope 禁止 `src/**`、产品测试逻辑、workflow、依赖、版本和 release
+- Atomic product/proof commit只含`src/ai_sdlc/core/program_service.py`与`tests/unit/test_program_service.py`。
+- 当前未提交records更新为WI217 plan/tasks/log、WI196 plan/tasks/development-summary/log及root/scoped handoff；后续允许机械truth snapshot/manifest expectation。
+- WI217 `development-summary.md`继续不存在；唯一closure才创建。不得创建新的减重work item。
 
 ## Key Decisions
 
-- WI217 是本轮减重专项最后一个 work item；当前 formal 后至多一个 implementation PR 和一个 closure PR，不得创建新的减重 work item。
-- 现有已合并 product raw net delete 为 `653` 行；相对 `src/ai_sdlc` 初始基线 `107482` 行约 `0.61%`。若 WI217 GO 再净减 `358` 行，累计约 `1011` 行或 `0.94%`，远低于 RC-08 的 `10%` 组合终态。
-- RC-08 退役为 `retired_unrealistic_composite_target`，不得表述为实现、豁免或质量门禁通过；剩余 GAP-01、GAP-03 至 GAP-06 及 T62 至 T67 结构债转为非阻塞 backlog。
-- GO：唯一 implementation PR 完成当前 T63 exact family 后进入 closure；NO-GO：本地门禁不通过则不创建 implementation PR，或已创建 PR 后关闭且零产品合入，再进入 closure。
-- Closure PR 无论 GO/NO-GO 都关闭 WI217/WI196、恢复正常特性开发；closure 不自动授权 release，发布仍走独立正常流程。
-- Closure 正常路径 records-only；若 implementation 已合并后 detached fresh-main 失败，同一 closure PR 精确恢复 pre-implementation product/proof blobs并登记最终零产品净变化，不增加 rollback PR。
-- 候选技术合同不扩张：13-loader T63 exact family、一个 private helper、12 个 direct exact label bindings、cleanup-only wrapper；禁止新模块、registry/reflection/DSL/getattr/type erasure、第二 family 和全文件 formatter。
-- Pre-close truth 允许 WI217 `development-summary.md` 一个 mapped/`exists=false`；closure 才创建 summary 并恢复 materialization。
+- Formal PR #167已合并并完成detached fresh-main；WI217是最后减重work item。
+- Candidate只含一个private helper、12个direct label bindings、cleanup-only wrapper；禁止新模块、动态机制、第二family与formatter churn。
+- Exact ledger：product `+48/-406/net -358`、proof `+48`、terminal `44/4`、RC-06含truth reserve=`98/101`。
+- GO/NO-GO之后都只进入一个closure PR；RC-08退役为`retired_unrealistic_composite_target`，剩余债转非阻塞backlog。
+- 默认超长pytest临时路径的Rich换行失败在candidate/fresh-main一致；固定短basetemp双通过，不把无关测试修复混入本PR。
 
 ## Commands / Tests
 
-- Fresh-main baseline：`tests/unit/test_program_service.py` = `406 passed in 35.83s`。
-- Clean spike：legacy=`1 binding failed, 5 behavior passed, 406 deselected`；candidate=`6 passed, 406 deselected`；full ProgramService=`412 passed in 34.28s`；product `+48/-406`，proof `+48`，terminal `44/4`，RC-06=`98/101`。
-- 旧 formal R7 identity=`1a24ace0/b111d6f5/formal-six 856e7819...a669` 曾取得 LEAN/SAFETY PASS0；该结论与其 PR #167 CI 均因本次终止合同变更失效，不得复用。
-- 终止 source 首提交=`022344ed/abfbfdfd/formal-six c144c69d...70c1`；R2 LEAN FAIL1、SAFETY FAIL3均已按最小范围修正，旧 R2 identity 失效。
-- Source R3 identity=`26d11c44/0b3e9034/formal-six 40c6d928...06a4`；LEAN/SAFETY均 PASS0/findings=0。
-- Truth sync commit=`df9fae3d`；manifest exact=`1 passed in 114.15s`，constraints无BLOCKER，validate PASS，truth audit=`ready/fresh`、mapped=`1136/1136`、missing/unmapped=`1/0`、close=`216/215`。
-- Formal scope=`14/14 allowed`、unexpected=`0`、`src/**=0`、Cursor diff=`0`；测试仅两个既有manifest exact计数替换；handoff parity、diff-check、clean均PASS。
+- TDD RED=`1 failed, 5 passed, 406 deselected`；GREEN=`6 passed, 406 deselected`。
+- ProgramService=`412 passed`；CLI program integration=`233 passed`；稳定短basetemp full=`3309 passed, 3 skipped in 807.92s`。
+- Ruff/diff-check PASS；constraints无BLOCKER；validate PASS；truth=`ready/fresh 1136/1136`、missing/unmapped=`1/0`、close=`216/215`。
+- Wheel/sdist成功；fresh venv安装后`ai-sdlc --version=0.9.6`且help exit0。
+- Disposable revert=`1c66df02`恢复baseline blobs并通过406 unit；reapply=`f785f43b`恢复candidate blobs并通过6 proof、412 unit、Ruff。
 
 ## Blockers / Risks
 
-- 当前 program truth 已 ready/fresh，唯一 missing 是合同要求 closure 前不得创建的 WI217 summary。
-- 新 HEAD/tree/formal-six 必须取得 LEAN/SAFETY 同一身份 PASS0；任一 tracked 变化使 verdict 失效。
-- Remote Codex review 可能受服务状态影响；用户允许本地 SDLC 双审替代，但 required CI 不可 waive。
-- 不得因评审意见创建第二个 implementation PR、额外 closure PR 或新的减重 work item；可操作修复必须收敛在允许的现有 PR 内。
+- 当前无用户输入blocker；final双审前需提交records、sync truth并重跑manifest/governance。
+- Windows/macOS/Linux与POSIX/Windows offline smoke只能由required CI最终确认，不得本地伪造。
+- 任一tracked变化使LEAN/SAFETY identity同时失效；PR后可操作finding只能在同一分支最小修复。
 
 ## Exact Next Steps
 
-1. 对当前 committed+clean HEAD/tree/formal-six与truth receipt取得 LEAN/SAFETY 最终同一身份 PASS0；finding只在本分支最小修复后重审。
-2. 双审通过后推送并更新 PR #167，只接受新 HEAD 的 review 与 required checks；全绿后合并并 detached fresh-main 验收。
-3. 至多一次 implementation 尝试；随后一个 closure PR 无条件关闭 WI217/WI196、退役 RC-08、把剩余债务转 backlog并恢复特性开发；post-merge NO-GO由该closure同时回退。
+1. 提交records source，执行truth sync，完成manifest exact、constraints、validate、truth、scope/parity/clean。
+2. 复算candidate/final HEAD/tree/formal-six与rollback receipt，取得LEAN/SAFETY同一identity PASS0。
+3. 最多创建一个implementation PR；current-head review与required checks全绿后merge并detached fresh-main，然后立即进入唯一closure。

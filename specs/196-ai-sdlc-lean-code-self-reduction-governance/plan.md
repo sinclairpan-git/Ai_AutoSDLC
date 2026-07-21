@@ -336,8 +336,9 @@ fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B
 - **范围**：13个同形private loader、12个ordinary caller label binding、cleanup-only wrapper；L1/WP-03。
 - **实测**：legacy403/branch39；clean product `+48/-406`、proof `+48`、terminal44/4；RC-06含truth≤2
   为98/101；persistent legacy proof=5GREEN/1binding RED，candidate proof=6/6、ProgramService unit=412/412。
-- **分支纪律**：formal docs PR先行；其fresh-main验收后另建implementation branch。两阶段均要求
-  LEAN/SAFETY同identity PASS0、required checks与detached fresh-main。
+- **当前状态/分支纪律**：formal PR #167与fresh-main已完成；唯一implementation branch的atomic candidate=
+  `e2752a9b`，T61A/B、本地full、治理、package和rollback/reapply均通过，等待final同identity双审与required
+  cross-platform checks。Implementation仍须merge后detached fresh-main，随后只进入唯一closure。
 - **完成边界**：GO时登记actual product net -358，NO-GO时登记最终产品净变化0并区分pre/post-merge；两者均经唯一closure关闭
   WI217/WI196、退役RC-08、把剩余GAP/T62～T67转为非阻塞backlog，并禁止新减重work item。
 - **停止**：任一exact label/path/error/YAML/cleanup warning差异，combined additions>101、formatter churn、
