@@ -35,8 +35,8 @@
 - 两份 handoff 删除已完成动作与自引用 `Current HEAD`，并保持逐字节一致。
 - `program-manifest.yaml` 仅同步 records-only truth；冻结测试、产品、DTO/public surface、其他 stage、
   CLI、依赖均未修改。
-- 当前 staged rollback 仅恢复 private engine 与 `program_service.py` 到 C2 reviewed blobs；
-  冻结 tests/config、历史 evidence commits 与 formal records 保留。
+- rollback commit `a0872881` 仅恢复 private engine 与 `program_service.py` 到 C2 reviewed blobs；
+  后续提交仅修正review/evidence记录，冻结 tests/config 与产品 blobs 保持。
 
 ## Evidence
 
