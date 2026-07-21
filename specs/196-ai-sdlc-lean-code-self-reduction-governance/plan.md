@@ -216,8 +216,8 @@ T66 T61A 的硬前置。
 - **兼容**：强制 CC-01/02/03/05/06/07；新增报告、warning/blocker 与退出行为必须写入版本化 expected-delta artifact，未列入差异为 BLOCKER。
 - **完成**：历史未改代码不阻断；新增超限和缺合同字段 fixture 分别经历 report/warning/blocker；所有 waiver 有 owner、理由、路径和到期日；合同 admission 健康检查、状态转换和 execute BLOCKER 通过。
 - **停止/回退**：任一规则族误判时只降级该规则族；合同 admission 不处于 `active + verified` 时自动恢复 FR-08 风险分层 reviewer，不追补历史债务。
-- **重启**：必须同时有足额的新/替代 sponsor 与重新冻结、同 hash 双 PASS 的父合同；只满足一项
-  不得复活 WI-202。重启前影响 CC-05/CC-06 的子项继续使用两个独立 reviewer。
+- **终局**：此前“新/替代sponsor + 重冻结父合同”的重启路径已由WI217终局决策退役；不得复活WI-202、
+  不得创建T62A～C减重WI。CC-05/CC-06风险分层reviewer只作为正常特性/缺陷工程实践保留。
 - **预算/证据**：计入 RC-06；结构化报告、blocking fixture、降级演练。
 
 ### WP-03：稳定 helper / DTO / 镜像测试重复族（L1）
@@ -343,6 +343,18 @@ fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B
   `+48/-406/net -358`、proof=`+48`、terminal44/4、combined=`99/101`。
 - **完成边界**：唯一closure source合入时关闭WI217/WI196，路线累计产品raw净删1,011行（约0.94%）；
   RC-08退役，剩余GAP/T62～T67转非阻塞backlog，不再创建减重work item并恢复正常特性/缺陷开发。
-  Source不提前代表mainline completion；closure PR merge与detached fresh-main acceptance仍是生效门。
+  Source不提前代表mainline completion；closure PR merge是mainline状态生效点，detached fresh-main是
+  必须通过的post-merge acceptance。若其失败，立即走下述emergency corrective-revert，不得重试减重路线。
 - **停止**：任一exact label/path/error/YAML/cleanup warning差异，combined additions>101、formatter churn、
   动态机制、第二family或rollback失败时保留legacy并记录NO-GO。
+
+### Closure post-merge failure 回退
+
+- 唯一closure PR merge后，`completed_go/closed`、RC-08退役与backlog状态立即在main生效；detached
+  fresh-main只验证该状态，不延迟生效时点。
+- 若post-merge acceptance失败，必须用一个emergency corrective-revert PR精确恢复pre-closure records：
+  删除WI217 summary、把manifest exact恢复为missing=`1`/close=`216/215`并重新sync truth；product/proof
+  继续相对`4d98039d`零diff。状态标记为`closure_delivery_failed`，不得虚报closed。
+- 该corrective-revert是“一次closure PR”上限的唯一安全例外，只允许撤销失败closure，不是第二个
+  closure、implementation或减重work item；不得重新选择候选。正常特性/缺陷开发不被该回退阻断，任何
+  再次closure需要用户另行明确授权。

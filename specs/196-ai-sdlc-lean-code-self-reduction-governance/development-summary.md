@@ -59,7 +59,7 @@
 ## 路线终局与历史边界
 
 - WI217 formal与唯一implementation已经完成；当前只剩本唯一closure source的评审、checks、merge和
-  detached fresh-main生效门。其他GAP/WP不再创建减重WI，剩余结构债在本source合入时转为非阻塞backlog。
+  detached fresh-main post-merge acceptance。其他GAP/WP不再创建减重WI，剩余结构债在本source合入时转为非阻塞backlog。
 - WI-202 的首个 T62A 候选因完整proof明显超过RC-06预算，已按RC-09停止且未合入；T62B/T62C未开始。
   GAP-01/T62A～C在本source合入时转为非阻塞backlog，FR-08 reviewer fallback作为普通工程实践保留。
 - GAP-12、GAP-13、GAP-14 均已关闭且不计 RC-08 减重收益。WI-209 最终 raw 产品/测试
@@ -95,7 +95,9 @@
   T66/GAP-03/WI196/RC-08/release 仍未完成，本项不授权提前发布。
 - 关闭事件：WI217 唯一 implementation 已形成GO；本唯一 closure source合入 `main` 时关闭WI196，
   把RC-08记为`retired_unrealistic_composite_target`并将剩余结构债转为`non_blocking_backlog`。
-  Source不提前代表main已关闭；closure PR merge与detached fresh-main acceptance仍是生效门。
+  Source不提前代表main已关闭；closure PR merge是mainline状态生效点，detached fresh-main是post-merge
+  acceptance。失败时按parent spec §10.1 emergency corrective-revert精确恢复pre-closure records，
+  不构成第二closure或减重路线重启。
 - 终止理由：专项接近7天仍无可预测终点，token/评审/CI成本持续增加并影响正常特性开发；已合入产品
   raw净删653行仅约占初始107,482行基线0.61%，即使WI217 GO累计1,011行也仅约0.94%。减重必须与
   新特性交付均衡，不能成为无限期主线工作。
@@ -111,4 +113,4 @@
   rollback-reapply全绿。
 - WI196路线最终产品raw净删累计1,011行，约占初始107,482行基线0.94%。该实际收益与接近7天的
   Token/评审/CI投入、不可预测终点及对正常特性开发的挤压共同构成终止依据；不再追逐不现实的RC-08
-  组合终态。Closure生效后禁止新减重work item并恢复正常特性/缺陷开发。
+  组合终态。Closure merge生效后禁止新减重work item并恢复正常特性/缺陷开发。

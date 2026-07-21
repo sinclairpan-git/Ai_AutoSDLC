@@ -70,7 +70,8 @@ program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src
 ### T41 同步 program truth 与 continuity
 
 - **依赖**：T33。
-- **完成**：canonical/scoped handoff 记录双 PASS、当前风险、T62A No-Go 与重新启动前置；resume-pack 指向 WI-196，不得指向已关闭的 GAP-07/08 或旧 WI-202。
+- **完成**：canonical/scoped handoff记录双PASS、当前风险、T62A No-Go与路线不再重启；resume-pack不得
+  恢复已关闭GAP-07/08或旧WI-202的减重入口。
 - **验证**：handoff show、resume-pack/checkpoint 对账、program truth dry-run。
 
 ### T42 运行最终门禁
@@ -131,7 +132,12 @@ proof不合入；T66/GAP-03在WI217 closure前仍保留当前事实状态，clos
 `533363f495`、22/22 checks、Codex current-head、双Agent与detached fresh-main全绿。实际product
 `+48/-406/net -358`、proof `+48`、terminal44/4、RC-06 `99/101`。本唯一closure source合入时关闭
 WI217/WI196、退役RC-08、将剩余GAP/T62～T67转为非阻塞backlog、禁止新减重work item并恢复正常
-特性/缺陷开发；merge与detached fresh-main acceptance是生效门。
+特性/缺陷开发；merge是mainline状态生效点，detached fresh-main是post-merge acceptance。
+
+**Post-merge failure**：若acceptance失败，只允许emergency corrective-revert PR精确恢复pre-closure
+records、删除WI217 summary、恢复missing=`1`/close=`216/215`并sync truth；product/proof保持零diff并标记
+`closure_delivery_failed`。这是一次closure PR上限的唯一安全例外，不是第二closure/implementation/减重WI，
+不得复活WI-202或选择新候选；正常特性/缺陷开发不因此阻断。
 
 每个正常特性/缺陷切片仍须在实际触及相关能力时执行GAP-09～GAP-11防回归impact analysis；WI217
 summary已物化，canonical inventory精确为missing/unmapped=`0/0`、close=`216/216`，不再存在active-child

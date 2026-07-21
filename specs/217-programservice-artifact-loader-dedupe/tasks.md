@@ -119,8 +119,9 @@
   pre-implementation exact product/proof blobs并登记最终零产品净变化；均不得伪造减重收益。
 - [x] **共同终态**：本 closure source 合入时关闭 WI217/WI196；RC-08=`retired_unrealistic_composite_target`；GAP-01/GAP-03～06、
   T62～T67 剩余结构债=`non_blocking_backlog`；禁止创建新减重 work item，恢复正常特性开发。
-- [ ] **交付验收**：同 identity 双审、required checks、merge、detached fresh-main 全绿；该项是本 source
-  合入生效门，不通过时不得宣称 main 已关闭路线。本路线不发布版本。
+- [ ] **交付验收**：同identity双审、required checks、merge、detached fresh-main全绿；merge是mainline
+  生效点，fresh-main是post-merge acceptance。失败时按parent spec §10.1 emergency corrective-revert精确恢复
+  pre-closure records，不重启减重路线。本路线不发布版本。
 
 ## 合同映射
 

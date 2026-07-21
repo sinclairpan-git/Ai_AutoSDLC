@@ -240,9 +240,9 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
 3. 取消混合型 WP-00 和 WP-08：基础缺陷各自立项；门禁升级归 WP-02；旧实现删除归 WP-06/WP-07。
 4. 不预占正式 WI 编号；双 PASS 后使用当时下一可用编号。
 5. Lean Gate 是否推广到普通用户项目另行决策。
-6. WI-202 首次 T62A 候选经两套完整 proof 证实违反 RC-06，按 RC-09 停止且不合入任何
-   source/state/claim；GAP-01/T62A 保持 open，T62B/T62C 未开始。重启必须同时取得新的或替代
-   sponsor，并重新冻结和双审父合同；在此之前按 FR-08 为 CC-05/CC-06 保留两个独立 reviewer。
+6. WI-202 首次T62A候选经两套完整proof证实违反RC-06，按RC-09停止且不合入任何
+   source/state/claim；GAP-01/T62A当时保持open，T62B/T62C未开始。该段原有重启条件已由第14项终局
+   决策退役；不得复活WI-202或创建新的T62A～C减重WI，CC-05/CC-06 reviewer只作普通工程实践保留。
 7. WI-206 关闭后依次执行 WI-207/GAP-12、WI-208/GAP-13、WI-209/GAP-14；三个基础修复完成后才
    恢复新的 T63/T65/WP-06/WP-07 原子减重选择，RC-08 全路线终态前不发布版本。
 8. WI-210 与 WI-211 closure fresh-main 均已满足恢复门禁；WI-211 已关闭一个 T63
@@ -274,8 +274,8 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     Pascal/LEAN 与 Confucius/SAFETY 对 spike 产品和 records-only 身份均裁决
     `STOP_SPIKE_NO_GO/findings=0`，并一致确认 C2 不能称为减重。因此 T66 本次实现尝试为
     `cancelled_no_go`，两条证据路线 `archived_not_merged`；GAP-03、WI-196、RC-08 与 release 继续 open。
-    未来如重启 T66，必须另立 formal WI，从 fresh main 用完整自然产品账本证明净删与复杂度下降，不能
-    继承 WI-215 的 GO、hash、预算或 reviewer receipt。
+    该段原有T66重启路径已由第14项终局决策退役；不得另立减重formal WI，也不得继承WI-215的GO、
+    hash、预算或reviewer receipt。
 13. WI-216 closure fresh-main 后从 `b4d2ce5a` 新选出的 WI-217 属于 T63/WP-03，而非 T66 重启。
     其13个 ProgramService artifact loader 基线为403 physical/branch39；clean spike实测 product=
     `+48/-406`、proof=`+48`、terminal=`44/4`；implementation canonical truth为3行，RC-06=`99/101`。Round 4 LEAN/SAFETY
@@ -295,4 +295,16 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     current-head clean、LEAN/SAFETY同identity PASS0和detached fresh-main全绿形成最终GO；merge=
     `4d98039d`，实际product=`+48/-406/net -358`。本唯一closure source合入时，路线累计产品raw净删
     1,011行（约初始基线0.94%），关闭WI217/WI196，按第14项退役RC-08并转移剩余backlog。Source存在
-    不提前代表main已关闭；closure PR merge与detached fresh-main acceptance仍是生效门。
+    不提前代表main已关闭；closure PR merge是mainline状态生效点，detached fresh-main是post-merge
+    acceptance。若该验收失败，按下述emergency corrective-revert路径撤销失败closure，不重启减重路线。
+
+### 10.1 Closure post-merge failure 边界
+
+- 唯一closure PR merge即是`completed_go/closed`、RC-08退役与backlog状态在main的生效点；detached
+  fresh-main不延迟生效，只验证该状态。
+- 若post-merge acceptance失败，立即用一个emergency corrective-revert PR精确恢复pre-closure records：
+  删除WI217 summary、恢复manifest exact missing=`1`/close=`216/215`并重新sync truth；product/proof仍须
+  相对`4d98039d`零diff，状态改为`closure_delivery_failed`，不得继续宣称closed。
+- 该corrective-revert是“一次closure PR”上限的唯一安全例外，仅撤销失败closure，不构成第二closure、
+  implementation或减重work item；不得重新选择候选。正常特性/缺陷开发不被该回退阻断；再次closure
+  必须取得用户新的明确授权。

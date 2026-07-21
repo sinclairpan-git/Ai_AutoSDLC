@@ -269,4 +269,18 @@
 - 本source合入main时关闭WI217/WI196，RC-08=`retired_unrealistic_composite_target`，GAP-01/GAP-03～06
   与T62～T67剩余债务=`non_blocking_backlog`，恢复正常特性/缺陷开发并禁止新减重work item。
 - Closure source不提前伪造mainline completion；仍须同identity LEAN/SAFETY PASS0、current-head Codex、
-  required checks、merge与detached fresh-main全绿。本路线不执行版本发布。
+  required checks、merge与detached fresh-main全绿。Merge是mainline状态生效点，fresh-main是post-merge
+  acceptance；失败按parent spec §10.1 emergency corrective-revert撤销失败closure。本路线不执行版本发布。
+
+## 20. Batch 2026-07-21-019：Closure Round 1 FAIL2 remediation
+
+- R1 exact identity=`5aa3550c/55cb7347/formal-six 5a4d3f97...91ed/handoff 04474cba...6f041`；
+  LEAN与SAFETY均`FAIL2`。两者共同指出handoff仍要求重复提交已完成truth/handoff；LEAN另指出parent plan
+  与tasks残留WI-202/T62重启入口；SAFETY另指出closure merge/fresh-main生效时点矛盾且失败无合法回退。
+- 四项均成立。最小修复彻底退役WI-202/T62/T66重启路径；统一“merge是mainline生效点、fresh-main是
+  post-merge acceptance”；若验收失败，只允许emergency corrective-revert PR精确恢复pre-closure records、
+  summary缺失与close=`216/215`，product/proof零diff并标记`closure_delivery_failed`。
+- Corrective-revert是一次closure PR上限的唯一安全例外，只撤销失败closure，不是第二closure、
+  implementation或减重WI；不得选择候选，正常特性/缺陷开发不被阻断，再次closure需用户明确授权。
+- Root/scoped handoff同步为当前时态。R1双方verdict退役；tracked内容变化后必须对新committed+clean
+  identity重新完成LEAN/SAFETY双审。

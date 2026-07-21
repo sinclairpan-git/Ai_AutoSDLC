@@ -42,6 +42,9 @@
   `retired_unrealistic_composite_target` 退役，不写成达成或 waiver。
 - GAP-01、GAP-03～GAP-06 与 T62～T67 的剩余结构债统一转为 `non_blocking_backlog`，不再阻塞正常
   特性/缺陷开发；禁止选择或创建新的减重 work item，正常特性开发立即恢复。
-- 本 closure PR 是路线唯一 closure PR。它相对 implementation merge 的产品文件与行为 proof 零差异；
-  merge 后仍须完成 detached fresh-main governance/truth/scope/clean acceptance，失败只允许修正本 closure
-  receipt，不得重启减重路线或创建新的减重 work item。
+- 本closure PR是路线唯一closure PR。它相对implementation merge的产品文件与行为proof零差异；merge
+  是`completed_go/closed`在mainline的生效点，detached fresh-main是必须通过的post-merge acceptance。
+- 若该acceptance失败，立即用emergency corrective-revert PR精确恢复pre-closure records：删除本summary、
+  恢复manifest exact missing=`1`/close=`216/215`并sync truth；product/proof保持零diff，状态改为
+  `closure_delivery_failed`。该PR是一次closure上限的唯一安全例外，只撤销失败closure，不是第二closure、
+  implementation或减重WI；不得重启候选，正常特性/缺陷开发不因此阻断，再次closure需用户明确授权。

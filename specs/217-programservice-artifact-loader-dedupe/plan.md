@@ -348,5 +348,6 @@ identity is frozen.
   两条路径都关闭 WI217/WI196，把 RC-08 记为 `retired_unrealistic_composite_target`，并将 GAP-01/GAP-03～06、
   T62～T67 剩余结构债转为非阻塞 backlog。Closure fresh-main 后恢复正常特性开发，禁止再选择或创建新的
   减重 work item；正常特性/缺陷 work item 不受此禁令影响，本路线不执行版本发布。
-  本步骤的 source 完成不提前代表 main 已关闭路线；唯一 closure PR 合并后生效，并以 detached
-  fresh-main governance/truth/scope/clean acceptance 作为终局交付门。
+  本步骤的source完成不提前代表main已关闭路线；唯一closure PR merge是mainline状态生效点，detached
+  fresh-main governance/truth/scope/clean是post-merge acceptance。若失败，按parent spec §10.1执行
+  emergency corrective-revert，精确恢复pre-closure records，不创建第二closure/implementation/减重WI。
