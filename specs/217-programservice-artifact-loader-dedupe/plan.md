@@ -32,7 +32,7 @@ normalization。无新模块、registry、reflection、DSL、selector 或依赖�
 | 文件 | 职责 |
 |---|---|
 | `src/ai_sdlc/core/program_service.py` | common loader、12 个 direct label binding、cleanup wrapper |
-| `tests/unit/test_program_service.py` | exact caller-label 与四态 loader characterization |
+| `tests/unit/test_program_service.py` | 12-pair caller-label 与五态 legacy/candidate persistent characterization |
 | `specs/217-programservice-artifact-loader-dedupe/{spec.md,plan.md,tasks.md,task-execution-log.md}` | candidate 合同、任务与账本；summary 到 closure 才创建 |
 | `specs/196-ai-sdlc-lean-code-self-reduction-governance/*` | parent T63/RC-08 ledger，保持总体 open |
 | `program-manifest.yaml` | canonical source mapping 与机械 truth snapshot |
@@ -102,55 +102,57 @@ normalization。无新模块、registry、reflection、DSL、selector 或依赖�
 
 **Interfaces:**
 
-- Consumes: `ProgramService` 12 个 caller 名称、PyYAML、`tmp_path`。
-- Produces: 12 个 binding case + 4 个 loader case，共16个 regression cases，raw additions≤48。
+- Consumes: `ProgramService` 12个caller名称、legacy provider-runtime loader、PyYAML、`tmp_path`。
+- Produces: 1个内部断言12对的binding case +5个legacy/candidate persistent loader cases，raw additions≤48。
 
 - [ ] **Step 1: 增加 exact proof**
 
   在标准库 import 中加入 `inspect`，并加入下列测试；总 raw additions 必须≤48：
 
   ```python
-  @pytest.mark.parametrize(
-      ("method_name", "artifact_label"),
-      [
-          ("build_frontend_provider_handoff", "remediation writeback"),
-          ("build_frontend_provider_patch_handoff", "provider runtime"),
-          ("build_frontend_cross_spec_writeback_request", "provider patch apply"),
-          ("build_frontend_guarded_registry_request", "cross-spec writeback"),
-          ("build_frontend_broader_governance_request", "guarded registry"),
-          ("build_frontend_final_governance_request", "broader governance"),
-          ("build_frontend_writeback_persistence_request", "final governance"),
-          ("build_frontend_persisted_write_proof_request", "writeback persistence"),
-          ("build_frontend_final_proof_publication_request", "persisted write proof"),
-          ("build_frontend_final_proof_closure_request", "final proof publication"),
-          ("build_frontend_final_proof_archive_request", "final proof closure"),
-          ("build_frontend_final_proof_archive_thread_archive_request", "final proof archive"),
-      ],
-  )
-  def test_frontend_artifact_loader_callsite_labels(method_name: str, artifact_label: str) -> None:
-      source = inspect.getsource(getattr(ProgramService, method_name))
-      assert f'artifact_label="{artifact_label}"' in source
+  def test_frontend_artifact_loader_callsite_labels() -> None:
+      bindings = {
+          "build_frontend_provider_handoff": "remediation writeback",
+          "build_frontend_provider_patch_handoff": "provider runtime",
+          "build_frontend_cross_spec_writeback_request": "provider patch apply",
+          "build_frontend_guarded_registry_request": "cross-spec writeback",
+          "build_frontend_broader_governance_request": "guarded registry",
+          "build_frontend_final_governance_request": "broader governance",
+          "build_frontend_writeback_persistence_request": "final governance",
+          "build_frontend_persisted_write_proof_request": "writeback persistence",
+          "build_frontend_final_proof_publication_request": "persisted write proof",
+          "build_frontend_final_proof_closure_request": "final proof publication",
+          "build_frontend_final_proof_archive_request": "final proof closure",
+          "build_frontend_final_proof_archive_thread_archive_request": "final proof archive",
+      }
+      for method_name, artifact_label in bindings.items():
+          source = inspect.getsource(getattr(ProgramService, method_name))
+          assert f'artifact_label="{artifact_label}"' in source
 
-  @pytest.mark.parametrize("content", [None, "[", "[]", "key: value\n"])
-  def test_frontend_artifact_loader_preserves_payload_and_error_contract(
-      tmp_path: Path, content: str | None
-  ) -> None:
+  @pytest.mark.parametrize("content", [None, "[", "[]", "key: value\n", "<directory>"])
+  def test_frontend_artifact_loader_preserves_payload_and_error_contract(tmp_path: Path, content: str | None) -> None:
+      root = tmp_path / "root"
       artifact_path = tmp_path / "artifact.yaml"
-      if content is not None:
+      if content == "<directory>":
+          artifact_path.mkdir()
+      elif content is not None:
           artifact_path.write_text(content, encoding="utf-8")
-      payload, warnings = ProgramService(tmp_path)._load_frontend_artifact_payload(
-          artifact_path, artifact_label="sample"
-      )
+      service = ProgramService(root)
+      loader = getattr(service, "_load_frontend_artifact_payload", None)
+      if loader:
+          payload, warnings = loader(artifact_path, artifact_label="provider runtime")
+      else:
+          payload, warnings = service._load_frontend_provider_runtime_artifact_payload(artifact_path)
       if content == "key: value\n":
           assert (payload, warnings) == ({"key": "value"}, [])
           return
       suffix = ""
-      if content == "[":
+      if content in {"[", "<directory>"}:
           with pytest.raises(Exception) as error:
-              yaml.safe_load(content)
+              yaml.safe_load(content) if content == "[" else artifact_path.read_text()
           suffix = f" ({error.value})"
       prefix = "missing" if content is None else "invalid"
-      assert (payload, warnings) == (None, [f"{prefix} sample artifact: artifact.yaml{suffix}"])
+      assert (payload, warnings) == (None, [f"{prefix} provider runtime artifact: {artifact_path}{suffix}"])
   ```
 
 - [ ] **Step 2: 运行 RED**
@@ -159,8 +161,8 @@ normalization。无新模块、registry、reflection、DSL、selector 或依赖�
   uv run pytest -q tests/unit/test_program_service.py -k 'frontend_artifact_loader_callsite_labels or frontend_artifact_loader_preserves_payload_and_error_contract'
   ```
 
-  Expected: 16 cases fail；12 个因 caller 未含 `artifact_label`，4 个因 common helper 不存在。若 legacy
-  已通过，则 baseline/测试写错，停止实现并复核。
+  Expected: legacy representative五态全GREEN，binding case因caller尚未含`artifact_label`而RED，即
+  `1 failed, 5 passed, 406 deselected`。若behavior case失败或binding提前通过，停止实现并复核。
 
 ## Task 3: 最小实现并取得 GREEN
 
@@ -261,7 +263,7 @@ normalization。无新模块、registry、reflection、DSL、selector 或依赖�
   git diff --numstat -- src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py
   ```
 
-  Expected: 16 passed、406 deselected；Ruff/diff-check exit0；product additions≤48/deletions≥406，test
+  Expected: 6 passed、406 deselected；Ruff/diff-check exit0；product additions≤48/deletions≥406，test
   additions≤48。AST 必须为 helper≤33/branch3 + cleanup≤11/branch1。
 
 - [ ] **Step 4: 原子提交**
@@ -286,7 +288,7 @@ identity is frozen.
   uv run ruff check src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py
   ```
 
-  Expected: ProgramService unit=`422 passed`；CLI integration 全部通过；Ruff exit0。
+  Expected: ProgramService unit=`412 passed`；CLI integration 全部通过；Ruff exit0。
 
 - [ ] **Step 2: 运行全量与治理**
 
@@ -303,7 +305,7 @@ identity is frozen.
 - [ ] **Step 3: disposable clone rollback/reapply**
 
   在隔离临时 clone 定位 atomic candidate commit。revert 后两个 code/test blob 必须等于 fresh-main，
-  `tests/unit/test_program_service.py` 为406 passed；reapply 后 blob 等于 candidate，16 proof与422 unit 全绿。
+  persistent proof为5GREEN/1binding RED；reapply后blob等于candidate，6 proof与412 unit全绿。
   所有命令、commit/tree/blob 写入 WI217 execution log；临时 clone 不推送。
 
 - [ ] **Step 4: package/offline/cross-platform**

@@ -33,8 +33,9 @@
 ## Commands / Tests
 
 - Fresh-main baseline：`tests/unit/test_program_service.py` = `406 passed in 35.83s`。
-- Clean spike：new proof=`16 passed, 406 deselected`；full ProgramService=`422 passed in 37.87s`；
-  Ruff/diff-check PASS；current clean spike diff仅product/test `+96/-406`。
+- Clean spike strengthened proof：legacy=`1 binding failed, 5 behavior passed, 406 deselected`；candidate=
+  `6 passed, 406 deselected`；full ProgramService=`412 passed in 34.28s`；Ruff/diff-check PASS；proof仍+48，
+  current clean spike product/test仍`+96/-406`。
 - Formal init使用仓库source CLI；其非范围Cursor adapter refresh已恢复为HEAD exact。
 
 ## Blockers / Risks

@@ -11,8 +11,8 @@
 
 - [x] **范围**：13 个 private YAML loader、18 个内部 callsite、repository consumer、相关测试库存。
 - [x] **基线**：403 physical / branch39；12 ordinary loader 各一个 caller；cleanup loader 六个 caller。
-- [x] **Clean spike**：product `+48/-406`、proof `+48`、AST terminal44/branch4；16/16 proof、422/422
-  ProgramService unit、Ruff、diff-check 全绿。
+- [x] **Clean spike**：product `+48/-406`、proof `+48`、AST terminal44/branch4；加强后legacy=
+  5behavior GREEN/1binding RED，candidate=6/6 proof、412/412 ProgramService unit；Ruff/diff-check全绿。
 - [x] **对抗结论**：R1～R3 findings 均已修正；R4 Pascal/LEAN 与 Confucius/SAFETY 对同一 clean spike
   均 `APPROVE A/findings=0`。formatter-polluted 第一棵 spike 明确不进入账本。
 - [x] **决策**：选择 common helper + 12 direct label binding + cleanup-only wrapper；formal 与 implementation
@@ -40,7 +40,8 @@
 
 - [ ] **依赖**：T12。
 - [ ] **LEAN**：真实净删、RC-04/05/06、proof成本、YAGNI、RC-08 claim。
-- [ ] **SAFETY**：13-label contract、四态 loader、cleanup warnings、路径/异常、scope、回退、continuity。
+- [ ] **SAFETY**：13-label contract、五态loader、root外绝对路径、read/YAML异常、cleanup warnings、scope、
+  回退、continuity。
 - [ ] **验收**：双方对同一 committed+clean HEAD/tree/formal-six 均 PASS0/findings=0；修复后必须双重审。
 
 ### T14 Formal PR、checks、merge、fresh-main
@@ -57,8 +58,9 @@
 - [ ] **依赖**：T14 fresh-main。
 - [ ] **分支**：从新的 detached fresh-main 创建独立 implementation worktree/branch。
 - [ ] **文件**：只改 `tests/unit/test_program_service.py`，raw additions≤48，无新 test file。
-- [ ] **覆盖**：12 caller→label + missing/invalid YAML exact exception/non-mapping/valid 四态；cleanup 复用既有测试。
-- [ ] **RED**：16 cases 全部失败，原因仅为 common helper/binding 尚不存在；记录命令与输出。
+- [ ] **覆盖**：一个case内部断言12 caller→label；persistent representative覆盖root外path的missing、
+  invalid YAML exact exception、non-mapping、valid、directory read failure五态；cleanup复用既有测试。
+- [ ] **RED**：legacy五个behavior cases全绿，binding case单独RED；记录`1 failed, 5 passed`输出。
 
 ### T22 Minimal implementation 与 atomic candidate commit
 
@@ -68,12 +70,12 @@
 - [ ] **禁止**：产品/runtime新模块、public API、dependency、registry、reflection、DSL、getattr、type
   erasure、第二重复族或全文件格式化；T61A test-only inspection 例外按spec执行。
 - [ ] **结构验收**：product additions≤48/deletions≥406/net delete≥358；terminal≤44/branch≤4；13→1。
-- [ ] **GREEN**：16 passed；Ruff/diff-check PASS；product+proof 使用一个 atomic candidate commit。
+- [ ] **GREEN**：6 proof passed；Ruff/diff-check PASS；product+proof 使用一个 atomic candidate commit。
 
 ### T23 ProgramService/CLI/full/package gates
 
 - [ ] **依赖**：T22 clean commit。
-- [ ] **测试**：ProgramService unit=`422 passed`；完整 CLI integration 与 full pytest exit0。
+- [ ] **测试**：ProgramService unit=`412 passed`；完整 CLI integration 与 full pytest exit0。
 - [ ] **治理**：constraints无BLOCKER、validate PASS、truth ready/fresh且只有WI217 summary missing、manifest
   exact、scope/consumer scan全绿。
 - [ ] **兼容**：required Windows/macOS/Linux、wheel/sdist、clean-install、POSIX/Windows offline smoke全绿。
@@ -83,7 +85,7 @@
 
 - [ ] **依赖**：T23 + exact candidate commit/tree。
 - [ ] **Revert**：disposable clone revert atomic candidate；两个 code/test blob 与 fresh-main exact，406 unit通过。
-- [ ] **Reapply**：恢复 exact candidate tree；16 proof、422 unit、Ruff通过。
+- [ ] **Reapply**：恢复 exact candidate tree；6 proof、412 unit、Ruff通过。
 - [ ] **验收**：不推临时 clone；commit/tree/blob/命令/输出写入 execution log；失败则 candidate NO-GO。
 
 ### T25 Final implementation 双审

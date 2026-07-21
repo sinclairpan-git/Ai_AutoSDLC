@@ -321,7 +321,7 @@ fail-closed 并重开相应 GAP；关闭条件持续满足时不得把 T53A/T53B
 
 - **范围**：13个同形private loader、12个ordinary caller label binding、cleanup-only wrapper；L1/WP-03。
 - **实测**：legacy403/branch39；clean product `+48/-406`、proof `+48`、terminal44/4；RC-06含truth≤2
-  为98/101；ProgramService candidate unit 422/422。
+  为98/101；persistent legacy proof=5GREEN/1binding RED，candidate proof=6/6、ProgramService unit=412/412。
 - **分支纪律**：formal docs PR先行；其fresh-main验收后另建implementation branch。两阶段均要求
   LEAN/SAFETY同identity PASS0、required checks与detached fresh-main。
 - **完成边界**：只关闭该T63 family并登记actual product net -358；不关闭GAP-03/T66、GAP-05、WI196、

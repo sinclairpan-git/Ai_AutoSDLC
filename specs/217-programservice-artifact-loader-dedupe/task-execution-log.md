@@ -18,8 +18,8 @@
   fresh-main acceptance 全绿；因此 replacement candidate 允许从该 SHA 重新选择。
 - `src/ai_sdlc/core/program_service.py` 为17,474 physical LOC；AST/文本扫描定位13个同形
   `_load_frontend_*payload`，自然 family=403 physical / branch39。
-- 12 个普通 loader 各一个 service caller；cleanup loader 六个 caller。仓库代码/测试对13个私有名称的
-  consumer=0；历史 specs 命中只作记录。
+- 12 个普通 loader 各一个 service caller；cleanup loader 六个 caller。除上述18个内部callsite外，其他
+  产品/测试consumer=0；历史specs命中只作记录。
 - Option A 最初保留13 wrappers，被 LEAN 以 RC-06 product+proof 合并预算冲突拒绝；修订为12 direct
   binding + cleanup-only wrapper。
 - Round 2 LEAN通过，但 SAFETY拒绝20行 proof，要求完整 caller-label 与四态矩阵。控制器没有降低证明面，
@@ -44,8 +44,10 @@
   ```
 
 - AST terminal：common helper=`33 LOC / branch3`；cleanup wrapper=`11/1`；合计=`44/4`。
-- 新 proof=12 caller-label +4 loader states，共16 cases：`16 passed, 406 deselected`。
-- 完整 `tests/unit/test_program_service.py`：`422 passed in 37.87s`；Ruff check与`git diff --check` PASS。
+- Option-review时的initial proof=12 caller-label +4 loader states，共16 cases：
+  `16 passed, 406 deselected`；该proof后来由§7加强并取代。
+- Initial完整 `tests/unit/test_program_service.py`：`422 passed in 37.87s`；Ruff check与
+  `git diff --check` PASS；当前proof结果以§7为准。
 - RC-05=`48≤60`；RC-06=`48+48+truth≤2=98≤floor(406×25%)=101`，buffer≥3；product net=-358；
   product+proof+truth net≤-308。
 - Round 4 exact clean evidence：Pascal/LEAN=`APPROVE A/findings=0`；Confucius/SAFETY=
@@ -77,3 +79,19 @@
   显式允许T61A test-only inspection；删除WI217 summary，truth目标改为inventory
   `complete 1136/1136`、missing/unmapped=`1/0`、close=`216/215`，closure才物化summary恢复`216/216`。
 - 修复改变formal-six与HEAD/tree，Round 1全部verdict失效；提交新clean identity后双方完整复审。
+
+## 7. Batch 2026-07-21-006：Formal Round 2 FAIL2 与 proof 加强
+
+- Review identity=`70df5d92c8258694fc09465e0f68edba19b08c93` / tree=
+  `bbfba83d009bcc5a57eb69da1577f01e6a636b16` / formal-six=
+  `5891f4030d7d1da56aafa23743bd8f01b2858770dcc2de0b1dcc5c139b6f57b9`，worktree clean。
+- Pascal/LEAN=`FAIL1`：本log仍遗留裸`consumer=0`，已改为“18个内部callsite之外为0”。
+- Confucius/SAFETY=`FAIL1`：旧proof没有冻结read failure、root外absolute path，也没有在legacy上先捕获
+  representative baseline。
+- Proof在48 raw LOC硬预算内重构：一个binding case内部逐项断言12对；persistent provider-runtime
+  representative在legacy/common helper间切换，同一断言覆盖root外path的missing、invalid YAML、
+  non-mapping、valid与directory read failure五态。
+- 独立legacy RED worktree实跑=`1 binding failed, 5 behavior passed, 406 deselected`；clean candidate=
+  `6 passed, 406 deselected`，full ProgramService=`412 passed in 34.28s`，Ruff PASS。Test additions仍=48；
+  product仍`+48/-406`，RC-06仍98/101。
+- 修复改变formal-six与HEAD/tree，Round 2全部verdict失效；新clean identity必须双方完整复审。
