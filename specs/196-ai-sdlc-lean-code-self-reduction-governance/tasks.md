@@ -2,6 +2,7 @@
 
 **编号**：`196-ai-sdlc-lean-code-self-reduction-governance`
 **来源**：`spec.md` + `plan.md`
+**状态**：closure-source candidate；merge 后 `closed`
 **当前分支边界**：允许当前 child 五件套、父路线五件套、被关闭前项的 execution/summary 回写、
 program/project truth、checkpoint、handoff 和 resume-pack；禁止修改 `src/ai_sdlc/**`、`rules/**`、
 `providers/**`、`.github/workflows/**`。唯一测试例外是新增 canonical 五件套时机械更新
@@ -126,16 +127,16 @@ proof不合入；T66/GAP-03在WI217 closure前仍保留当前事实状态，clos
 新的formal WI，也不得把records receipt当作reduction completion。
 既有已完成 receipt 不受影响；各行保留的历史 T51/T52 依赖已满足，不需要重复执行。
 
-**当前 active child**：WI-217 formal PR #167 已合并并通过detached fresh-main；唯一implementation候选
-`e2752a9b`已完成T61A/B、本地full、治理、package与rollback/reapply门禁，正在等待同identity双审与required
-cross-platform checks。候选冻结product `+48/-406`、proof `+48`、terminal44/4、RC-06 `99/101`；实现
-成功只登记真实净删，NO-GO登记最终产品净变化0并区分pre/post-merge；两者都由唯一closure关闭
-WI217/WI196、退役RC-08并恢复正常特性开发。
+**终局 child**：WI-217 formal PR #167与唯一implementation PR #168均已合并；reviewed HEAD=
+`533363f495`、22/22 checks、Codex current-head、双Agent与detached fresh-main全绿。实际product
+`+48/-406/net -358`、proof `+48`、terminal44/4、RC-06 `99/101`。本唯一closure source合入时关闭
+WI217/WI196、退役RC-08、将剩余GAP/T62～T67转为非阻塞backlog、禁止新减重work item并恢复正常
+特性/缺陷开发；merge与detached fresh-main acceptance是生效门。
 
-每个目标切片必须先落盘 GAP-09～GAP-11 防回归 impact analysis；除当前 active child 唯一 mapped
-pre-close `development-summary.md`（close=`N/(N-1)`）外，分析缺失/不确定或当前 truth 再现对应
-blocker、unmapped/missing source 时默认阻断并重开相应 GAP。关闭条件持续满足时不得重复执行
-T53A/T53B/T54，也不得把它们重新解释为待满足硬依赖。
+每个正常特性/缺陷切片仍须在实际触及相关能力时执行GAP-09～GAP-11防回归impact analysis；WI217
+summary已物化，canonical inventory精确为missing/unmapped=`0/0`、close=`216/216`，不再存在active-child
+pre-close例外。当前truth若再现对应blocker或unmapped/missing source，仍默认阻断并重开相应已关闭GAP；
+关闭条件持续满足时不得重复执行T53A/T53B/T54，也不得把它们重新解释为待满足硬依赖。
 
 ## 追踪矩阵
 

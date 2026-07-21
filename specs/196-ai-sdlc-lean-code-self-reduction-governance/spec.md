@@ -2,7 +2,7 @@
 
 **功能编号**：`196-ai-sdlc-lean-code-self-reduction-governance`
 **创建日期**：2026-07-12
-**状态**：双 Agent 评审门禁
+**状态**：closure-source candidate；merge 后 `closed`
 **类型**：治理总项 / 独立实现子项路线图
 **当前分支边界**：只修改治理文档和 AI-SDLC 真值文件；运行时代码和规则由后续独立 work item
 修改。测试默认同样后置，唯一例外是 FR-12 定义的 root exact truth 两个值机械更新。
@@ -56,12 +56,12 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 
 | 编号 | 类别 | 事实证据 / 复现入口 | 目标与责任 | 减重关键路径 |
 |---|---|---|---|---|
-| GAP-01 | 治理缺口 | 宪章规定 400 行/50 行，但当前 `uv run ai-sdlc verify constraints` 对历史超限无 BLOCKER | WP-02：report → warning → changed-code blocking | 是 |
+| GAP-01 | 非阻塞结构债 backlog | 宪章规定 400 行/50 行，但当前 `uv run ai-sdlc verify constraints` 对历史超限无 BLOCKER；WI-202 No-Go 保留 | 不再创建减重 WI；只在正常特性改动自然触及时局部治理 | 否 |
 | GAP-02 | 兼容缺口 | 现有测试分散，缺少目标切片统一的 CLI/artifact/状态/副作用 differential 基线 | WP-01：最小充分 Characterization/Golden | 是 |
-| GAP-03 | 结构臃肿 | `src/ai_sdlc/core/program_service.py` 17,369 行、249 方法 | WP-06：逐领域切片、保留 facade、稳定后删旧实现 | 是 |
-| GAP-04 | 结构臃肿 | `src/ai_sdlc/cli/program_cmd.py` 7,062 行；33 个公共 program 命令与 77 对相似长命令候选 | WP-07：逐 stage family 双跑与收敛 | 是 |
-| GAP-05 | 重复实现（active） | WI-205、WI-206、WI-210、WI-211 已各关闭一个 exact family；WI-211 / PR #153 / merge `cd64d8aa` 将 10 个 mapping-dedupe body 收敛为 1 个共享实现和 10 个 alias，23 calls 不变，产品 raw/non-empty 净删 122/104 且 fresh-main 全绿 | WP-03/WP-04：只合并语义和失败模式一致的重复族；回退对应 implementation PR 会重开该 family，其余候选仍须逐族证明 | 是 |
-| GAP-06 | 单一真值源候选 | `frontend_page_ui_schema.py`、`frontend_cross_provider_consistency.py`、`frontend_quality_platform.py`、`frontend_provider_expansion.py`、`frontend_provider_runtime_adapter.py`、`frontend_theme_token_governance.py` 的 6 个 `build_p*_baseline` builder | WP-05：对该有限候选集逐项 go/no-go；只有净减重合同成立才实施 | 条件性 |
+| GAP-03 | 非阻塞结构债 backlog | `ProgramService` T66 两条路线已由 WI-216 证明 NO-GO，legacy保持 | 不重启减重路线；正常特性可按独立需求演进 | 否 |
+| GAP-04 | 非阻塞结构债 backlog | `program_cmd.py` stage family 未实施 | 不创建减重 WI；正常特性可按独立需求演进 | 否 |
+| GAP-05 | 已实现局部收益；剩余为非阻塞 backlog | WI-205、WI-206、WI-210、WI-211及WI-217各关闭一个 exact family；累计产品raw净删1,011行 | 已关闭family保留回退证据；不再选择新family reduction WI | 否 |
+| GAP-06 | 非阻塞结构债 backlog | 6个 `build_p*_baseline` builder 候选未实施 | 不创建减重 WI；保留候选事实但不阻塞特性开发 | 否 |
 | GAP-07 | 已关闭 | WI-197 / PR #121 / merge `4802596f`：adapter mutation 不再与 clean-tree preflight 自冲突 | T51 已完成；权威证据见 WI-197 execution log §6.3～6.7 | 否 |
 | GAP-08 | 已关闭 | WI-198 / PR #122 / merge `68150d3f`：resume working set 以 active linked WI 为准 | T52 已完成；权威证据见 WI-198 execution log §3～§8 | 否 |
 | GAP-09 | 已关闭 | WI-199 / PR #123 / merge `208a34c8`：framework capability 与 consumer inheritance fail-closed 分离 | T53A 已完成；回退整个 WI-199 会重开本项 | 否 |
@@ -74,8 +74,8 @@ unmapped、超过一个 pre-close missing、non-ready、非零退出码、集合
 
 每条记录必须保留编号、证据 URI、revision/snapshot、复现命令、影响边界、责任子项和关闭证据。新问题先登记再分流，禁止顺手混入其他 PR。
 
-WI217 closure 是本路线唯一剩余终局。表中 GAP-01/GAP-03～06 在 closure 前仍保留当前事实状态；closure
-不伪造其“已修复”，而是统一记为 `non_blocking_backlog` 并解除对正常特性开发的阻断。GAP-02 的
+本 WI217 closure source 是本路线唯一终局；合入时表中 GAP-01/GAP-03～06 按上述状态记为
+`non_blocking_backlog`，不伪造其“已修复”，并解除对正常特性开发的阻断。GAP-02 的
 characterization 能力保留为普通工程实践，不再产生减重 work item；已关闭 GAP-07～15 的历史证据不变。
 
 ## 4. Lean Code 原则
@@ -291,3 +291,8 @@ GAP-15 是 WI-213 formal 验证时发现的独立入口分发缺陷，不是 GAP
     closure 关闭 WI217/WI196，将 RC-08 记为 `retired_unrealistic_composite_target`，把 GAP-01/GAP-03～06
     与 T62～T67 剩余结构债转为 `non_blocking_backlog`，并禁止新的减重 work item。Closure fresh-main 后
     恢复正常特性开发；本路线不创建版本、tag、Release、PyPI 上传或全局 CLI 更新。
+15. WI217 唯一implementation PR #168 已以 reviewed HEAD=`533363f495`、22/22 required checks、Codex
+    current-head clean、LEAN/SAFETY同identity PASS0和detached fresh-main全绿形成最终GO；merge=
+    `4d98039d`，实际product=`+48/-406/net -358`。本唯一closure source合入时，路线累计产品raw净删
+    1,011行（约初始基线0.94%），关闭WI217/WI196，按第14项退役RC-08并转移剩余backlog。Source存在
+    不提前代表main已关闭；closure PR merge与detached fresh-main acceptance仍是生效门。

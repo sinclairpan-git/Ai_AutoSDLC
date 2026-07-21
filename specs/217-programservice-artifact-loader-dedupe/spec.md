@@ -2,7 +2,7 @@
 
 **功能编号**：`217-programservice-artifact-loader-dedupe`
 **创建日期**：2026-07-21
-**状态**：formal authoring
+**状态**：closure-source candidate；merge 后 `completed_go`
 **类型**：WI-196 / WP-03 / T63 / GAP-05 / L1
 **父项**：`196-ai-sdlc-lean-code-self-reduction-governance`
 **基线**：fresh-main `b4d2ce5a5bc27b72549dcdf394f277cfbd6a124d`
