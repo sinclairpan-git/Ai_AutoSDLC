@@ -2063,10 +2063,10 @@ specs:
   depends_on:
   - 196-ai-sdlc-lean-code-self-reduction-governance
 truth_snapshot:
-  generated_at: '2026-07-21T12:20:37Z'
+  generated_at: '2026-07-21T13:09:40Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 114a5f73
+  repo_revision: 26d11c44
   authoring_hash: 616a8eee66c55dad23d5a60e2b26b4cfc2befd05aa9c51ba1d10c6d46400e85d
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
@@ -2109,7 +2109,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: f153592f0f572e9510f8c9931513bf25dee283fd4a362a8d467e50300a18655a
+  snapshot_hash: 2c9d7267138b979efff559bbc225d7de1fb91524c8d261e7e1ac109d963546c8
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2127,8 +2127,8 @@ truth_snapshot:
     mapped_sources: 1136
     unmapped_sources: 0
     missing_sources: 1
-    phase_signal_count: 3704
-    deferred_signal_count: 6673
+    phase_signal_count: 3703
+    deferred_signal_count: 6670
     non_goal_signal_count: 394
     layer_totals:
       blueprint: 1
@@ -10989,7 +10989,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 196-ai-sdlc-lean-code-self-reduction-governance
       phase_signal_count: 0
-      deferred_signal_count: 10
+      deferred_signal_count: 9
       non_goal_signal_count: 1
     - path: specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
       source_type: plan_doc
@@ -10997,8 +10997,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 196-ai-sdlc-lean-code-self-reduction-governance
-      phase_signal_count: 1
-      deferred_signal_count: 4
+      phase_signal_count: 0
+      deferred_signal_count: 3
       non_goal_signal_count: 14
     - path: specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
       source_type: tasks_doc
@@ -11025,7 +11025,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 196-ai-sdlc-lean-code-self-reduction-governance
       phase_signal_count: 4
-      deferred_signal_count: 5
+      deferred_signal_count: 4
       non_goal_signal_count: 0
     - path: specs/197-adapter-preflight-order/spec.md
       source_type: spec_doc
