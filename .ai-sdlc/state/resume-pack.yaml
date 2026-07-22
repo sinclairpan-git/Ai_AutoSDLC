@@ -5,31 +5,21 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/207-program-adapter-side-effect/spec.md
-  plan_path: specs/207-program-adapter-side-effect/plan.md
-  tasks_path: specs/207-program-adapter-side-effect/tasks.md
+  spec_path: specs/218-consumer-framework-constraint-isolation/spec.md
+  plan_path: specs/218-consumer-framework-constraint-isolation/plan.md
+  tasks_path: specs/218-consumer-framework-constraint-isolation/tasks.md
   active_files:
-  - specs/207-program-adapter-side-effect/spec.md
-  - specs/207-program-adapter-side-effect/plan.md
-  - specs/207-program-adapter-side-effect/tasks.md
-  - specs/207-program-adapter-side-effect/task-execution-log.md
-  - specs/207-program-adapter-side-effect/development-summary.md
-  - specs/196-ai-sdlc-lean-code-self-reduction-governance/spec.md
-  - specs/196-ai-sdlc-lean-code-self-reduction-governance/plan.md
-  - specs/196-ai-sdlc-lean-code-self-reduction-governance/tasks.md
-  - specs/196-ai-sdlc-lean-code-self-reduction-governance/task-execution-log.md
-  - specs/196-ai-sdlc-lean-code-self-reduction-governance/development-summary.md
-  - program-manifest.yaml
-  - .ai-sdlc/state/codex-handoff.md
-  - .ai-sdlc/work-items/207-program-adapter-side-effect/codex-handoff.md
-  context_summary: 'Goal: 完成 WI207 final-tree 双审并交付 PR #139 | State: formal merge
-    8d325a4d；implementation c4e5f07d 产品+4/测试+110；终态 continuity/truth 已刷新，等待新 HEAD/tree
-    双审 | Next: Pascal/Confucius 对新 HEAD/tree 从零双审；双 PASS 后 force-with-lease 推送 PR
-    #139、标记 ready、重请求 Codex review 并 heartbeat'
-current_branch: feature/207-program-adapter-side-effect-dev
+  - specs/218-consumer-framework-constraint-isolation/tasks.md
+  - specs/218-consumer-framework-constraint-isolation/spec.md
+  context_summary: 'Goal: 归档 WI218 产品需求并完成消费项目/框架约束隔离实现与验收 | State: Codex P2 的 handoff
+    与 resume-pack 同步修复已形成 candidate；formal manifest=901964e06b4199869879464b1d35e0b44ca5e74a91680c5276c5ea5b4f7500ec
+    保持不变，当前批次只修改连续性产物 | Next: 确认工作区 clean；若当前 committed identity 尚缺 LEAN/SAFETY 任一
+    PASS0，则只补缺失评审，已有不得重复；双 PASS0 后推送 #170、回复并解决当前 P2 thread，只请求一次新 HEAD Codex review并等待
+    checks'
+current_branch: feature/218-consumer-framework-constraint-isolation-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-17T02:21:10+00:00'
+timestamp: '2026-07-22T05:44:31+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-07-16T15:29:26+00:00'
-checkpoint_fingerprint: 88014388a14c101bfdd8173448c7e1422926d1cbcdf7af76809abfed8140dc0b
+checkpoint_last_updated: '2026-07-22T02:48:41+00:00'
+checkpoint_fingerprint: 83355f1f0b237fc59df9af5d9d4e472bc73e317b528249ca76b681e992d597db
