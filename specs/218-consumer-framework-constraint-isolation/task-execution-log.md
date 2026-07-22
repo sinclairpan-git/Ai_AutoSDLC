@@ -166,3 +166,47 @@
   本分支合入 `main` 后 WI218 才生效为 closed，不在分支提前宣称 main 已 closed。
 - closure 合并后不创建新的减重 work item、不重启减重路线；剩余结构债转为非阻塞 backlog，恢复正常特性开发。
 - 若 closure 失败，只允许 emergency corrective revert，不得以修复 closure 为由扩展实现或重启专项。
+
+### Batch 2026-07-22-014 | WI218 terminal closure receipt
+
+- **验证画像**：`truth-only`
+- **改动范围**：`specs/218-consumer-framework-constraint-isolation/development-summary.md`、`specs/218-consumer-framework-constraint-isolation/tasks.md`、`specs/218-consumer-framework-constraint-isolation/task-execution-log.md`、`program-manifest.yaml`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md`
+
+#### 14.1 当前结果
+
+- closure source payload=`fdeb1763`，只归档实施与 fresh-main 验收事实，不修改 `src/`、`tests/`、公开 API、配置、依赖或产品行为。
+- 本地旧 `main` 工作树保留用户现场，不作为 closure 真值；唯一 closure carrier 从独立 clone 的 current-main `fec4c010` 建立。
+- carrier 使用 `archive/218-consumer-framework-constraint-isolation-closure`，合入后继续保留为审计分支；`main` 仍是 WI218 closed 状态的唯一生效来源。
+
+#### 14.2 统一验证命令
+
+- `uv run ai-sdlc program truth sync --dry-run`
+- `uv run ai-sdlc program truth sync --execute --yes`
+- `uv run ai-sdlc program truth audit`
+- `uv run ai-sdlc verify constraints`
+- `uv run ai-sdlc workitem close-check --wi specs/218-consumer-framework-constraint-isolation --json`
+- `uv run ai-sdlc workitem truth-check --wi specs/218-consumer-framework-constraint-isolation --json`
+- `uv run ai-sdlc program validate`
+- `uv run pytest -q tests/integration/test_repo_program_manifest.py tests/integration/test_cli_workitem_close_check.py`
+- `git diff --check` 与 `git status --short --branch`
+
+#### 14.3 代码审查
+
+- 实现代码已由 LEAN/SAFETY R5 对同一 committed+clean identity 评为 `PASS0/findings=0`，并通过 exact-head Codex review。
+- closure diff 只允许 canonical closure/truth/continuity 文件；terminal snapshot 提交后，LEAN 与 SAFETY 必须对同一 clean identity 重新独立评审。
+- 结论：`无 Critical 阻塞项`；若 terminal 评审产生 finding，旧 verdict 立即失效并只做最小修复。
+
+#### 14.4 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`，T11～T33 共 8 项全部完成。
+- `related_plan` 同步状态：`已对账`，不新增阶段、任务、work item 或减重路线。
+- 关联 branch/worktree disposition 计划：`archived(WI218 closure audit carrier retained after merge)`
+- 当前批次 branch disposition 状态：`archived(WI218 closure audit carrier retained after merge)`
+- 当前批次 worktree disposition 状态：`retained(closure review and post-merge audit)`
+- 说明：archive carrier 仅保留可恢复审计证据；closure PR 合入前不得声称 `main` 已 closed。
+
+#### 14.5 Git close-out
+
+- **已完成 git 提交**：是（closure source payload A 已独立提交；本 receipt envelope 不自引用自身）
+- **提交哈希**：`fdeb17636d8d78a1b80ce6a46230bb65fbbfc925`
+- terminal 顺序：receipt 提交 → truth snapshot 物化 → clean identity 双评审/CI → merge → fresh-main 只读验收。
