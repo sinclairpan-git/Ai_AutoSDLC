@@ -1,27 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-22T13:56:52+00:00
-- Reason: Record second current-head Codex P2 correction and final local acceptance before adversarial review
-- Goal: Complete WI218 implementation PR and fresh-main acceptance
-- State: Both Codex P2 findings fixed through cf314f8e; full suite 3332 passed and 3 skipped; real Agent Store double-run blockers 0 with 647-path zero-write fingerprints stable; Ruff, diff-check, program validate, constraints green
+- Updated: 2026-07-22T15:03:32+00:00
+- Reason: Record WI218 terminal closure snapshot before final validation
+- Goal: Merge the single WI218 closure PR and complete fresh-main closure acceptance
+- State: Implementation PR 172 merged and accepted on fresh main; closure source payload fdeb1763 and terminal truth snapshot 1f2c4176 committed on the sole archive carrier; final governance validation and dual closure review pending
 - Stage: close
 - Work Item: 218-consumer-framework-constraint-isolation
-- Branch: codex/218-consumer-framework-constraint-isolation
+- Branch: archive/218-consumer-framework-constraint-isolation-closure
 
 ## Changed Files
 - none
 
 ## Key Decisions
-- Canonical verify context owns runtime attachment; runner duplicate injection removed; run CLI summary reuses repository scope; three product files total 80 additions/31 deletions, one private helper
+- Keep main as the only effective closed truth; retain archive/218-consumer-framework-constraint-isolation-closure as the single audit carrier; do not add product code or another work item
 
 ## Commands / Tests
-- COLUMNS=240 uv run pytest -q => 3332 passed, 3 skipped in 890.23s; 233 focused passed; Agent Store runs identical blockers=0 and fingerprints stable; Ruff/program validate/constraints PASS
+- Program Truth sync and audit: 1141/1141 sources, 217/217 layers, release targets ready, snapshot fresh before terminal commit
 
 ## Blockers / Risks
-- No implementation blocker; program truth snapshot remains intentionally stale until terminal closure PR
+- No known product blocker; closure must still pass close-check, constraints, targeted tests, LEAN/SAFETY same-identity review, Codex review and required checks
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit handoff, obtain LEAN and SAFETY PASS0 on final clean identity, push PR #172, resolve current Codex thread, re-request current-head review and monitor 22 checks
+- Run terminal read-only validation, commit continuity-only changes if any, obtain LEAN/SAFETY PASS0 on one clean identity, push the only closure PR, then merge and verify fresh main
