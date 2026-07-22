@@ -140,6 +140,15 @@ class TestRunCommand:
         )
         write_frontend_contract_observation_artifact(spec_dir, artifact)
 
+    @staticmethod
+    def _write_framework_identity(root: Path) -> None:
+        (root / "pyproject.toml").write_text(
+            '[project]\nname = "ai-sdlc"\n', encoding="utf-8"
+        )
+        package_init = root / "src" / "ai_sdlc" / "__init__.py"
+        package_init.parent.mkdir(parents=True, exist_ok=True)
+        package_init.write_text("", encoding="utf-8")
+
     def test_run_outside_project(self, tmp_path: Path) -> None:
         """Not inside a project → exit 1 (not found) or 2 (halt), never success."""
         result = runner.invoke(app, ["run", "--dry-run"], cwd=str(tmp_path))
@@ -1432,6 +1441,7 @@ class TestRunCommand:
     ) -> None:
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", "."]).exit_code == 0
+        self._write_framework_identity(tmp_path)
         self._write_014_checkpoint(tmp_path)
         self._write_014_frontend_contract_observations(tmp_path)
         self._force_passing_gates(monkeypatch)
@@ -1446,6 +1456,7 @@ class TestRunCommand:
     ) -> None:
         monkeypatch.chdir(tmp_path)
         assert runner.invoke(app, ["init", "."]).exit_code == 0
+        self._write_framework_identity(tmp_path)
         self._write_014_checkpoint(tmp_path)
         self._force_passing_gates(monkeypatch)
 
@@ -1455,3 +1466,16 @@ class TestRunCommand:
         assert "frontend contract runtime attachment: missing_artifact" in result.output
         assert "coverage gaps:" in result.output
         assert "frontend_contract_observations" in result.output
+
+    def test_run_dry_run_omits_consumer_014_runtime_attachment_summary(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", "."]).exit_code == 0
+        self._write_014_checkpoint(tmp_path)
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run", "--dry-run"])
+
+        assert result.exit_code == 0
+        assert "frontend contract runtime attachment" not in result.output

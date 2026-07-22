@@ -1734,8 +1734,7 @@ class FrontendPublicPrimeVueImportBoundaryReport:
 
 def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
-    is_framework, _ = _repository_scope(root)
-    if not is_framework:
+    if not _repository_scope(root)[0]:
         boundary = _frontend_public_primevue_import_boundary_report(root, None)
         return ConstraintReport(
             root=str(root),
@@ -1966,8 +1965,7 @@ def build_constraint_report(root: Path) -> ConstraintReport:
 
 def build_verification_gate_context(root: Path) -> dict[str, object]:
     """Build the explicit Verification Gate context consumed by runner and gate CLI."""
-    is_framework, _ = _repository_scope(root)
-    if not is_framework:
+    if not _repository_scope(root)[0]:
         report = build_constraint_report(root)
         boundary = _frontend_public_primevue_import_boundary_report(root, None)
         governance = build_verification_governance_bundle(

@@ -693,6 +693,12 @@ class TestConfirmMode:
         self, tmp_path: Path
     ) -> None:
         _bootstrap_project(tmp_path)
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "ai-sdlc"\n', encoding="utf-8"
+        )
+        package_init = tmp_path / "src" / "ai_sdlc" / "__init__.py"
+        package_init.parent.mkdir(parents=True)
+        package_init.write_text("", encoding="utf-8")
         spec_dir = tmp_path / "specs" / "014-runtime-attachment"
         artifact = build_frontend_contract_observation_artifact(
             observations=[
@@ -734,6 +740,48 @@ class TestConfirmMode:
         assert attachment["scope"]["scope_source"] == "checkpoint"
         assert attachment["observation_count"] == 1
         assert attachment["freshness_status"] == "verifiable"
+
+    def test_verify_context_does_not_readd_consumer_014_runtime_attachment(
+        self, tmp_path: Path
+    ) -> None:
+        _bootstrap_project(tmp_path)
+        spec_dir = tmp_path / "specs" / "014-runtime-attachment"
+        artifact = build_frontend_contract_observation_artifact(
+            observations=[
+                PageImplementationObservation(
+                    page_id="user-create",
+                    recipe_id="form-create",
+                    i18n_keys=["user.create.submit"],
+                    validation_fields=["username"],
+                )
+            ],
+            provider_kind="scanner",
+            provider_name="frontend-contract-scanner",
+            generated_at="2026-04-03T10:00:00Z",
+            source_digest="sha256:consumer-runner-context",
+        )
+        write_frontend_contract_observation_artifact(spec_dir, artifact)
+        save_checkpoint(
+            tmp_path,
+            Checkpoint(
+                current_stage="verify",
+                feature=FeatureInfo(
+                    id="014-runtime-attachment",
+                    spec_dir="specs/014-runtime-attachment",
+                    design_branch="design/014-runtime-attachment",
+                    feature_branch="feature/014-runtime-attachment",
+                    current_branch="feature/014-runtime-attachment",
+                ),
+            ),
+        )
+
+        runner = SDLCRunner(tmp_path)
+        cp = load_checkpoint(tmp_path)
+        assert cp is not None
+
+        ctx = runner._build_context("verify", cp)
+
+        assert "frontend_contract_runtime_attachment" not in ctx
 
     def test_verify_context_skips_frontend_contract_runtime_attachment_for_non_014(
         self, tmp_path: Path
