@@ -1,38 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-22T05:44:31+00:00
-- Reason: 同步修复 PR #170 Codex P2 的 handoff 与 resume-pack 恢复上下文
-- Goal: 归档 WI218 产品需求并完成消费项目/框架约束隔离实现与验收
-- State: Codex P2 的 handoff 与 resume-pack 同步修复已形成 candidate；formal manifest=901964e06b4199869879464b1d35e0b44ca5e74a91680c5276c5ea5b4f7500ec 保持不变，当前批次只修改连续性产物
+- Updated: 2026-07-22T13:56:52+00:00
+- Reason: Record second current-head Codex P2 correction and final local acceptance before adversarial review
+- Goal: Complete WI218 implementation PR and fresh-main acceptance
+- State: Both Codex P2 findings fixed through cf314f8e; full suite 3332 passed and 3 skipped; real Agent Store double-run blockers 0 with 647-path zero-write fingerprints stable; Ruff, diff-check, program validate, constraints green
 - Stage: close
 - Work Item: 218-consumer-framework-constraint-isolation
-- Branch: feature/218-consumer-framework-constraint-isolation-docs
+- Branch: codex/218-consumer-framework-constraint-isolation
 
 ## Changed Files
-- `.ai-sdlc/project/config/project-state.yaml`
-- `.ai-sdlc/state/checkpoint.yml`
-- `.ai-sdlc/state/codex-handoff.md`
-- `.ai-sdlc/state/resume-pack.yaml`
-- `.ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md`
-- `program-manifest.yaml`
-- `specs/218-consumer-framework-constraint-isolation/development-summary.md`
-- `specs/218-consumer-framework-constraint-isolation/plan.md`
-- `specs/218-consumer-framework-constraint-isolation/spec.md`
-- `specs/218-consumer-framework-constraint-isolation/task-execution-log.md`
-- `specs/218-consumer-framework-constraint-isolation/tasks.md`
-- `tests/integration/test_repo_program_manifest.py`
+- none
 
 ## Key Decisions
-- development-summary 仅物化 formal candidate，stage=close-pending；WI218 status=decompose_or_execute、tasks=2/8；不建立 active-WI missing waiver，不声称实现完成
+- Canonical verify context owns runtime attachment; runner duplicate injection removed; run CLI summary reuses repository scope; three product files total 80 additions/31 deletions, one private helper
 
 ## Commands / Tests
-- truth=1141/1141 missing/unmapped=0/0 close=217/217 ready/fresh；manifest=1 passed；lifecycle=4 passed；actual status=decompose_or_execute tasks=2/8；validate PASS；constraints no BLOCKER
+- COLUMNS=240 uv run pytest -q => 3332 passed, 3 skipped in 890.23s; 233 focused passed; Agent Store runs identical blockers=0 and fingerprints stable; Ruff/program validate/constraints PASS
 
 ## Blockers / Risks
-- none
+- No implementation blocker; program truth snapshot remains intentionally stale until terminal closure PR
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 确认工作区 clean；若当前 committed identity 尚缺 LEAN/SAFETY 任一 PASS0，则只补缺失评审，已有不得重复；双 PASS0 后推送 #170、回复并解决当前 P2 thread，只请求一次新 HEAD Codex review并等待 checks
+- Commit handoff, obtain LEAN and SAFETY PASS0 on final clean identity, push PR #172, resolve current Codex thread, re-request current-head review and monitor 22 checks

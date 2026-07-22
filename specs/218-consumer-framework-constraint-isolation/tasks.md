@@ -21,16 +21,29 @@
 
 ## Batch 2：TDD 实现
 
-- [ ] **T21 写入 consumer/framework 隔离 RED 测试**
+- [ ] **T21 写入 consumer/framework 隔离 RED 测试并校正既有 framework fixture 身份**
   - 依赖：T13
-  - 文件：`tests/unit/test_verify_constraints.py`
+  - 文件：`tests/unit/test_verify_constraints.py`、`tests/unit/test_runner_confirm.py`、
+    `tests/unit/test_run_cmd.py`、`tests/integration/test_cli_run.py`；另保留
+    `tests/integration/test_cli_verify_constraints.py`、`tests/integration/test_cli_index_gate.py` 两个精确
+    framework identity fixture setup 例外
   - 验收：Agent Store、routing-census、`003/012` metadata/编号碰撞在 legacy implementation baseline 上
     按预期 RED；四态身份、invalid pyproject 二态、PrimeVue/common-gate characterization 不产生无关失败。
+    verify constraints 新行为断言只在 `test_verify_constraints.py`；`014` runner/summary 断言只在 LC-02
+    精确允许的三个对应测试；两个 identity integration 例外文件仅为明确验证 framework-only
+    `003/012/018/073` 或 backlog/profile/doc-first surfaces 的逐个 fixture 创建 `pyproject.toml`
+    （`[project].name = "ai-sdlc"`）和 `src/ai_sdlc/__init__.py`，不改断言/预期输出、不用
+    module/global autouse；downstream/relinked `003` 与 consumer `003/012` collision fixture 保持无身份信号。
+    consumer `014` 必须对 canonical context、`SDLCRunner`、`run` CLI summary 写 negative assertions；
+    framework positive fixtures 必须带双身份信号并证明既有 `014` attachment/warning 保留。
 
 - [ ] **T22 实现最小双信号与三入口分流**
   - 依赖：T21
-  - 文件：`src/ai_sdlc/core/verify_constraints.py`
-  - 验收：T21 全部 GREEN；产品 raw additions ≤80、helper ≤2、无新模块/配置/公开抽象。
+  - 文件：`src/ai_sdlc/core/verify_constraints.py`（scope/canonical context，并回收行数）、
+    `src/ai_sdlc/core/runner.py`（只删除重复注入）、`src/ai_sdlc/cli/run_cmd.py`（只复用同一
+    `_repository_scope` 做 summary guard）
+  - 验收：T21 全部 GREEN；三个产品文件合计 raw additions ≤80、helper 目标1且≤2、无新模块/配置/公开抽象；
+    `ProgramService` 通用路径不改。
 
 ## Batch 3：验收与交付
 
@@ -39,6 +52,10 @@
   - 验收：focused pytest、Ruff、full pytest、constraints、program validate/truth、diff-check 全绿；
     真实 Agent Store 以 current-source、`python -B` 连续双跑，framework-only findings 为0，且前后
     status/diff/dirty-path 三类指纹完全一致。
+    full pytest 必须确认 33 个既有 framework fixture 不再因缺少身份信号失败；yaml-store permission 用例
+    即使 isolated rerun 通过也不豁免，仍由 full-suite gate 约束。
+    同时确认 consumer `014` 三个下游表面均无 framework attachment/warning，framework positive fixtures
+    保留既有行为，且 LC-01 三文件合计 raw additions ≤80。
 
 - [ ] **T32 完成本地对抗代码评审**
   - 依赖：T31

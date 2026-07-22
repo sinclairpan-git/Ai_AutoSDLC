@@ -12,10 +12,6 @@ from ai_sdlc.core.close_check import run_close_check
 from ai_sdlc.core.config import load_project_config
 from ai_sdlc.core.dispatcher import StageDispatcher
 from ai_sdlc.core.executor import Executor
-from ai_sdlc.core.frontend_contract_runtime_attachment import (
-    build_frontend_contract_runtime_attachment,
-    is_frontend_contract_runtime_attachment_work_item,
-)
 from ai_sdlc.core.program_service import ProgramService
 from ai_sdlc.core.state_machine import load_work_item, work_item_path
 from ai_sdlc.core.verify_constraints import build_verification_gate_context
@@ -376,14 +372,6 @@ class SDLCRunner:
             self._enrich_close_context(ctx, spec_dir, cp, dry_run=dry_run)
         elif stage == "verify":
             ctx.update(build_verification_gate_context(self.root))
-            if is_frontend_contract_runtime_attachment_work_item(cp):
-                attachment = build_frontend_contract_runtime_attachment(
-                    self.root,
-                    checkpoint=cp,
-                )
-                ctx["frontend_contract_runtime_attachment"] = (
-                    attachment.to_json_dict()
-                )
         return ctx
 
     def _build_executor(self) -> Executor:

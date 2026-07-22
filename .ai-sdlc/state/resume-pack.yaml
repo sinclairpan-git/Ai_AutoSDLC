@@ -11,15 +11,17 @@ working_set_snapshot:
   active_files:
   - specs/218-consumer-framework-constraint-isolation/tasks.md
   - specs/218-consumer-framework-constraint-isolation/spec.md
-  context_summary: 'Goal: 归档 WI218 产品需求并完成消费项目/框架约束隔离实现与验收 | State: Codex P2 的 handoff
-    与 resume-pack 同步修复已形成 candidate；formal manifest=901964e06b4199869879464b1d35e0b44ca5e74a91680c5276c5ea5b4f7500ec
-    保持不变，当前批次只修改连续性产物 | Next: 确认工作区 clean；若当前 committed identity 尚缺 LEAN/SAFETY 任一
-    PASS0，则只补缺失评审，已有不得重复；双 PASS0 后推送 #170、回复并解决当前 P2 thread，只请求一次新 HEAD Codex review并等待
-    checks'
-current_branch: feature/218-consumer-framework-constraint-isolation-docs
+  context_summary: 'Goal: Complete WI218 implementation PR and fresh-main acceptance
+    | State: Both Codex P2 findings fixed through cf314f8e; full suite 3332 passed
+    and 3 skipped; real Agent Store double-run blockers 0 with 647-path zero-write
+    fingerprints stable; Ruff, diff-check, program validate, constraints green | Next:
+    Commit handoff, obtain LEAN and SAFETY PASS0 on final clean identity, push PR
+    #172, resolve current Codex thread, re-request current-head review and monitor
+    22 checks'
+current_branch: codex/218-consumer-framework-constraint-isolation
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-22T05:44:31+00:00'
+timestamp: '2026-07-22T13:56:52+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-22T02:48:41+00:00'
 checkpoint_fingerprint: 83355f1f0b237fc59df9af5d9d4e472bc73e317b528249ca76b681e992d597db

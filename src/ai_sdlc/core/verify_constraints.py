@@ -1734,6 +1734,20 @@ class FrontendPublicPrimeVueImportBoundaryReport:
 
 def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
+    if not _repository_scope(root)[0]:
+        boundary = _frontend_public_primevue_import_boundary_report(root, None)
+        return ConstraintReport(
+            root=str(root),
+            source_name="verify constraints",
+            check_objects=_merge_unique_strings(
+                tuple(
+                    item for item in VERIFICATION_GATE_OBJECTS
+                    if item not in {"framework_defect_backlog", "reconcile_smoke_contract", "doc_first_surfaces", "verification_profiles", FEATURE_CONTRACT_SURFACE_OBJECT}
+                ),
+                boundary.check_objects if boundary else (),
+            ),
+            blockers=tuple(collect_constraint_blockers(root)),
+        )
     checkpoint = load_checkpoint(root)
     frontend_runtime_attachment = _frontend_contract_runtime_attachment(root, checkpoint)
     frontend_contract_report = _frontend_contract_attachment_report(root, checkpoint)
@@ -1951,6 +1965,25 @@ def build_constraint_report(root: Path) -> ConstraintReport:
 
 def build_verification_gate_context(root: Path) -> dict[str, object]:
     """Build the explicit Verification Gate context consumed by runner and gate CLI."""
+    if not _repository_scope(root)[0]:
+        report = build_constraint_report(root)
+        boundary = _frontend_public_primevue_import_boundary_report(root, None)
+        governance = build_verification_governance_bundle(
+            report,
+            decision_subject=f"verify:{root}",
+            evidence_refs=("verify-constraints:structured-report",),
+        )
+        blocked = governance["gate_decision_payload"]["decision_result"] == "block"
+        return {
+            "verification_sources": _merge_unique_strings((report.source_name,), (boundary.source_name,) if boundary else ()),
+            "verification_check_objects": report.check_objects,
+            "constraint_blockers": report.blockers if blocked else (),
+            "coverage_gaps": report.coverage_gaps if blocked else (),
+            "release_gate": None,
+            "verification_governance": governance,
+            "provenance_phase1": load_phase1_provenance_gate_payload(root),
+            **({"frontend_public_primevue_import_boundary_verification": boundary.to_json_dict()} if boundary else {}),
+        }
     report = build_constraint_report(root)
     checkpoint = load_checkpoint(root)
     frontend_runtime_attachment = _frontend_contract_runtime_attachment(root, checkpoint)
@@ -2208,7 +2241,11 @@ def build_verification_governance_bundle(
 def collect_constraint_blockers(root: Path) -> list[str]:
     """Return human-readable BLOCKER lines (empty list if none)."""
     blockers: list[str] = []
+    is_framework, identity_blocker = _repository_scope(root)
     cp = load_checkpoint(root)
+
+    if identity_blocker:
+        blockers.append(identity_blocker)
 
     constitution = root / CONSTITUTION_REL
     if not constitution.is_file():
@@ -2217,20 +2254,22 @@ def collect_constraint_blockers(root: Path) -> list[str]:
             f"{CONSTITUTION_REL.as_posix()}"
         )
 
-    blockers.extend(_framework_defect_backlog_blockers(root))
+    if is_framework:
+        blockers.extend(_framework_defect_backlog_blockers(root))
     blockers.extend(_formal_artifact_target_blockers(root))
-    blockers.extend(_backlog_breach_reference_blockers(root))
-    blockers.extend(_release_docs_consistency_blockers(root))
-    blockers.extend(_readme_cli_path_blockers(root))
-    blockers.extend(_beginner_guide_cli_path_blockers(root))
-    blockers.extend(_agent_instruction_cli_path_blockers(root))
-    blockers.extend(_adapter_template_cli_path_blockers(root))
-    blockers.extend(_frontend_solution_confirmation_instruction_blockers(root))
-    blockers.extend(_adapter_template_comment_policy_blockers(root))
-    blockers.extend(_reconcile_smoke_contract_blockers(root))
-    blockers.extend(_doc_first_surface_blockers(root))
-    blockers.extend(_verification_profile_blockers(root))
-    blockers.extend(_feature_regression_guard_blockers(root))
+    if is_framework:
+        blockers.extend(_backlog_breach_reference_blockers(root))
+        blockers.extend(_release_docs_consistency_blockers(root))
+        blockers.extend(_readme_cli_path_blockers(root))
+        blockers.extend(_beginner_guide_cli_path_blockers(root))
+        blockers.extend(_agent_instruction_cli_path_blockers(root))
+        blockers.extend(_adapter_template_cli_path_blockers(root))
+        blockers.extend(_frontend_solution_confirmation_instruction_blockers(root))
+        blockers.extend(_adapter_template_comment_policy_blockers(root))
+        blockers.extend(_reconcile_smoke_contract_blockers(root))
+        blockers.extend(_doc_first_surface_blockers(root))
+        blockers.extend(_verification_profile_blockers(root))
+        blockers.extend(_feature_regression_guard_blockers(root))
     blockers.extend(collect_comment_deletion_blockers(root))
     blockers.extend(collect_text_quality_blockers(root))
 
@@ -2271,12 +2310,33 @@ def collect_constraint_blockers(root: Path) -> list[str]:
     blockers.extend(_frontend_evidence_class_blockers(spec_path))
     blockers.extend(_skip_registry_mapping_blockers(root, spec_path, cp))
     blockers.extend(_branch_lifecycle_blockers(root, spec_path))
-    blockers.extend(_feature_contract_blockers(root, cp))
-    frontend_contract_report = _frontend_contract_attachment_report(root, cp)
-    if frontend_contract_report is not None:
-        blockers.extend(frontend_contract_report.blockers)
-    blockers.extend(_release_gate_blockers(root, cp))
+    if is_framework:
+        blockers.extend(_feature_contract_blockers(root, cp))
+        frontend_contract_report = _frontend_contract_attachment_report(root, cp)
+        if frontend_contract_report is not None:
+            blockers.extend(frontend_contract_report.blockers)
+        blockers.extend(_release_gate_blockers(root, cp))
     return _dedupe_text_items(blockers)
+
+
+def _repository_scope(root: Path) -> tuple[bool, str | None]:
+    package_init = root / PACKAGE_INIT_REL
+    try:
+        payload = tomllib.loads((root / PYPROJECT_REL).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError):
+        payload = {}
+    project = payload.get("project") if isinstance(payload, dict) else None
+    name = project.get("name") if isinstance(project, dict) else None
+    name_matches = isinstance(name, str) and name == "ai-sdlc"
+    package_matches = package_init.is_file()
+    if name_matches and package_matches:
+        return True, None
+    if not name_matches and not package_matches:
+        return False, None
+    return False, (
+        "BLOCKER: inconsistent repository identity; require both "
+        'pyproject.toml [project].name == "ai-sdlc" and src/ai_sdlc/__init__.py'
+    )
 
 
 def _frontend_evidence_class_blockers(spec_dir: Path) -> list[str]:

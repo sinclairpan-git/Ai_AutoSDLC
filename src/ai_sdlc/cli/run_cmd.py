@@ -44,6 +44,7 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
 from ai_sdlc.core.plan_check import git_changed_paths
 from ai_sdlc.core.reconcile import detect_reconcile_hint
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
+from ai_sdlc.core.verify_constraints import _repository_scope
 from ai_sdlc.integrations.ide_adapter import (
     build_adapter_governance_surface,
 )
@@ -282,7 +283,7 @@ def _render_frontend_contract_runtime_attachment_summary(
 ) -> None:
     if checkpoint is None or not is_frontend_contract_runtime_attachment_work_item(
         checkpoint
-    ):
+    ) or not _repository_scope(root)[0]:
         return
 
     attachment = build_frontend_contract_runtime_attachment(

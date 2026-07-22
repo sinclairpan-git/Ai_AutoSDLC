@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
+
+import pytest
 
 import ai_sdlc.cli.run_cmd as run_cmd_module
 from ai_sdlc.cli.run_cmd import _failed_gate_messages
@@ -61,8 +64,16 @@ def test_failed_gate_messages_deduplicates_same_message_across_checks() -> None:
     ]
 
 
-def test_runtime_attachment_summary_deduplicates_gap_and_blocker_text() -> None:
+def test_runtime_attachment_summary_deduplicates_gap_and_blocker_text(
+    tmp_path: Path,
+) -> None:
     checkpoint = SimpleNamespace()
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "ai-sdlc"\n', encoding="utf-8"
+    )
+    package_init = tmp_path / "src" / "ai_sdlc" / "__init__.py"
+    package_init.parent.mkdir(parents=True)
+    package_init.write_text("", encoding="utf-8")
 
     original_contract_check = run_cmd_module.is_frontend_contract_runtime_attachment_work_item
     original_builder = run_cmd_module.build_frontend_contract_runtime_attachment
@@ -83,7 +94,7 @@ def test_runtime_attachment_summary_deduplicates_gap_and_blocker_text() -> None:
 
         with run_cmd_module.console.capture() as capture:
             run_cmd_module._render_frontend_contract_runtime_attachment_summary(
-                object(),
+                tmp_path,
                 checkpoint,
             )
 
@@ -94,6 +105,45 @@ def test_runtime_attachment_summary_deduplicates_gap_and_blocker_text() -> None:
     finally:
         run_cmd_module.is_frontend_contract_runtime_attachment_work_item = original_contract_check
         run_cmd_module.build_frontend_contract_runtime_attachment = original_builder
+
+
+@pytest.mark.parametrize("identity", ("consumer", "xor"))
+def test_runtime_attachment_summary_skips_non_framework_014_without_building(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    identity: str,
+) -> None:
+    if identity == "xor":
+        (tmp_path / "pyproject.toml").write_text(
+            '[project]\nname = "ai-sdlc"\n', encoding="utf-8"
+        )
+    checkpoint = SimpleNamespace(
+        feature=SimpleNamespace(
+            id="014-runtime-attachment",
+            spec_dir="specs/014-runtime-attachment",
+        )
+    )
+    calls: list[Path] = []
+
+    def build_missing(root: Path, checkpoint: object) -> SimpleNamespace:
+        calls.append(root)
+        return SimpleNamespace(
+            status="missing_artifact",
+            coverage_gaps=("frontend_contract_observations",),
+            blockers=(),
+        )
+
+    monkeypatch.setattr(
+        run_cmd_module, "build_frontend_contract_runtime_attachment", build_missing
+    )
+
+    with run_cmd_module.console.capture() as capture:
+        run_cmd_module._render_frontend_contract_runtime_attachment_summary(
+            tmp_path, checkpoint
+        )
+
+    assert calls == []
+    assert "frontend contract runtime attachment" not in capture.get()
 
 
 def test_agentops_verification_metrics_count_only_test_stage_checks() -> None:

@@ -109,3 +109,38 @@
   T13/T21～T33保持pending。manifest exact恢复为`missing=0`、close=`217/217`，不建立active-WI waiver。
 - 本次更改使旧formal-four hash及旧LEAN/SAFETY verdict失效；truth、门禁与双评审必须在新committed+clean
   identity从零重建。
+
+## 2026-07-22 Batch 010：Implementation full-suite 发现与 formal errata
+
+- 冻结的双信号产品合同和 FR-218-006 consumer 工作项编号碰撞保护保持正确；implementation full pytest
+  发现 33 个既有 framework fixture 因未显式创建两个身份信号而失败，暴露的是 LC-02 fixture scope 遗漏，
+  不是产品兼容性缺口。
+- 另有 1 个 yaml-store permission failure；isolated rerun 已通过，不认定为本项产品回归，也不建立豁免，
+  后续仍必须由 T31 full-suite gate 验证。
+- LEAN 与 SAFETY 独立复核并一致决定：禁止在产品中增加“缺少双信号仍按 framework”兼容 fallback，因其会
+  重新把 framework-only 检查污染到 consumer。
+- formal correction 只扩展 LC-02、plan File Map/test scope 与 T21/T31：
+  `tests/integration/test_cli_verify_constraints.py` 和 `tests/integration/test_cli_index_gate.py` 仅可为明确验证
+  framework-only `003/012/018/073` 或 backlog/profile/doc-first surfaces 的逐个 fixture 创建
+  `pyproject.toml`（`[project].name = "ai-sdlc"`）与 `src/ai_sdlc/__init__.py`；不得修改断言/预期输出，
+  不得使用 module/global autouse。
+- downstream/relinked `003` 以及 consumer `003/012` collision fixture 必须保持无 framework identity；
+  所有新行为断言仍只允许写入 `tests/unit/test_verify_constraints.py`。
+- 本批次不修改产品或测试，不推进 lifecycle；T13/T21/T22/T31/T32/T33 全部保持 pending，且不声明
+  implementation acceptance。
+
+## 2026-07-22 Batch 011：Codex P2 与调用图范围校正
+
+- Codex P2 指出：consumer 内部 WI `014` 虽已在 canonical verify context 隔离，`SDLCRunner` 仍会在消费
+  该 context 后重复注入，`run` CLI summary 也会独立重建 framework attachment/warning；framework checkout
+  的既有 `014` 呈现同时必须保留。
+- LEAN 与 SAFETY 从代码负担和行为安全两个维度独立审查并达成一致：不新增身份模型或第二套过滤器，沿用
+  唯一 `_repository_scope`；`verify_constraints.py` 负责 scope/canonical context 并回收行数，`runner.py`
+  只删除重复注入，`run_cmd.py` 只复用同一 scope 做 summary guard。
+- 真实调用图证伪了 LC-01/LC-02 只覆盖 verify 三入口的旧范围，因此把产品范围精确扩为上述三个文件，测试
+  精确扩为 `test_verify_constraints.py`、`test_runner_confirm.py`、`test_run_cmd.py`、`test_cli_run.py`，并保留
+  Batch 010 的两个 integration identity fixture setup 例外。
+- `014` 验收必须同时覆盖 consumer canonical context/runner/CLI summary negative assertions 与双身份信号
+  framework positive fixtures；三个产品文件合计 raw additions 仍≤80，helper 目标1且≤2。
+- 本次只校正文档，不创建新 work item、PR、抽象或 harness；`ProgramService` 通用路径不改。T13、T21～T33
+  全部保持 pending，closure truth 不提前推进，也不声明 implementation acceptance。
