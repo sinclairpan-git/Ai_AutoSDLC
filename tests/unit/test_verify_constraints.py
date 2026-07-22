@@ -5271,6 +5271,7 @@ def test_constraint_public_paths_route_common_and_framework_checks_by_identity(
         if scenario == "framework":
             assert "framework" in calls
             assert "framework_attachment" in calls
+            assert calls.index("framework") < calls.index("common")
         else:
             assert "framework" not in calls
             assert "framework_attachment" not in calls
@@ -5303,30 +5304,57 @@ def test_consumer_work_item_number_collisions_do_not_expose_framework_payloads(
     work_item_id: str,
 ) -> None:
     _make_consumer_root(tmp_path)
-    spec_dir = tmp_path / "specs" / f"{work_item_id}-consumer-feature"
-    spec_dir.mkdir(parents=True)
-    save_checkpoint(
-        tmp_path,
-        Checkpoint(
-            current_stage="verify",
-            feature=FeatureInfo(
-                id=work_item_id,
-                spec_dir=f"specs/{spec_dir.name}",
-                design_branch="d",
-                feature_branch="f",
-                current_branch="main",
-            ),
-        ),
+    if work_item_id == "003":
+        _write_003_checkpoint(tmp_path)
+        _write_003_feature_contract_surfaces(
+            tmp_path,
+            include_authoring=False,
+            release_gate_verdict="BLOCK",
+        )
+        spec_dir = tmp_path / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
+        assert (spec_dir / "release-gate-evidence.md").is_file()
+        checkpoint = verify_constraints_module.load_checkpoint(tmp_path)
+        assert verify_constraints_module._feature_contract_coverage_gaps(
+            tmp_path, checkpoint
+        ) == ("draft_prd/final_prd",)
+        assert verify_constraints_module._release_gate_surface(
+            tmp_path, checkpoint
+        )["overall_verdict"] == "BLOCK"
+    else:
+        _write_012_checkpoint(tmp_path)
+        _write_minimal_frontend_contract_page_artifacts(tmp_path)
+        _write_012_frontend_contract_observations(tmp_path)
+        spec_dir = tmp_path / "specs" / "012-frontend-contract-verify-integration"
+        attachment = verify_constraints_module._frontend_contract_runtime_attachment(
+            tmp_path, verify_constraints_module.load_checkpoint(tmp_path)
+        )
+        assert attachment is not None
+        assert attachment.status == "attached"
+        assert attachment.observations
+
+    assert verify_constraints_module._repository_scope(tmp_path) == (False, None)
+    assert verify_constraints_module.load_checkpoint(tmp_path).feature.spec_dir == (
+        f"specs/{spec_dir.name}"
     )
 
+    blockers = collect_constraint_blockers(tmp_path)
     report = build_constraint_report(tmp_path)
     context = build_verification_gate_context(tmp_path)
 
+    assert not any(
+        token in blocker.lower()
+        for blocker in blockers
+        for token in ("feature-contract", "release gate portability", "frontend contract")
+    )
     assert report.coverage_gaps == ()
     assert report.release_gate is None
     assert "framework_defect_backlog" not in report.check_objects
     assert verify_constraints_module.FEATURE_CONTRACT_SURFACE_OBJECT not in report.check_objects
+    assert not set(FRONTEND_CONTRACT_CHECK_OBJECTS).intersection(report.check_objects)
     assert context["verification_sources"][0] == "verify constraints"
+    assert FRONTEND_CONTRACT_SOURCE_NAME not in context["verification_sources"]
+    assert context["coverage_gaps"] == ()
+    assert context["release_gate"] is None
     assert all(
         key == "frontend_public_primevue_import_boundary_verification"
         or not key.endswith("_verification")

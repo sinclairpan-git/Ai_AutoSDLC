@@ -2256,9 +2256,10 @@ def collect_constraint_blockers(root: Path) -> list[str]:
             f"{CONSTITUTION_REL.as_posix()}"
         )
 
-    blockers.extend(_formal_artifact_target_blockers(root))
     if is_framework:
         blockers.extend(_framework_defect_backlog_blockers(root))
+    blockers.extend(_formal_artifact_target_blockers(root))
+    if is_framework:
         blockers.extend(_backlog_breach_reference_blockers(root))
         blockers.extend(_release_docs_consistency_blockers(root))
         blockers.extend(_readme_cli_path_blockers(root))
