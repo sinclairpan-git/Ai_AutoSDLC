@@ -1,29 +1,30 @@
 # Continuity Handoff
 
-- Updated: 2026-07-22T04:18:07+00:00
-- Reason: 消除 PR #170 Codex P1 及本地 R5 共同确认的 post-commit stale next-step
+- Updated: 2026-07-22T05:10:00Z
+- Reason: 合并已验收的 close-pending lifecycle prerequisite，继续处理 PR #170 source-inventory P1
 - Goal: 归档 WI218 产品需求并完成消费项目/框架约束隔离实现与验收
-- State: formal artifacts identity=c94e62ff045f20cadc8d9a8440a96daa6ce52c5dcd25e249afee8ba90fd5c0a5；LEAN/SAFETY R4 same-identity PASS0；PR #170 Codex reviewed commit 350393de722d02996e40abf36ce6819919b99c5b；Codex P1 的 handoff-only 修复已形成当前本地提交，正式四件套未变化
-- Stage: close
+- State: lifecycle PR #171 已合并并通过 detached fresh-main；formal 分支正在同步 main，随后补诚实 close-pending summary、恢复 zero-missing 并重新冻结评审身份
+- Stage: review
 - Work Item: 218-consumer-framework-constraint-isolation
 - Branch: feature/218-consumer-framework-constraint-isolation-docs
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md
+- UU .ai-sdlc/state/codex-handoff.md
+- M src/ai_sdlc/core/program_service.py
+- M tests/unit/test_program_service.py
 
 ## Key Decisions
-- PRD/plan/tasks/execution-log 保持冻结；continuity 状态使用幂等条件式，恢复时不得重复已完成的提交、验证或评审
+- WI218 summary 只声明 formal archive candidate，必须包含 `stage: close-pending`，不得声称 T13/T21～T33 已完成
+- 恢复 WI201 常驻 `missing_sources=0` / close fully materialized 断言，不保留 active-WI waiver
 
 ## Commands / Tests
-- handoff 修复前已通过：verify_constraints 147/147、manifest 1/1、truth ready/fresh、program validate PASS、constraints no BLOCKER；formal manifest 复核仍为 c94e62ff
+- PR #171 current HEAD Codex clean、22/22 checks、squash merge=fb75a9d6；detached fresh-main focused=4、ProgramService=416、CLI=233、Ruff/constraints PASS
 
 ## Blockers / Risks
 - none
 
 ## Local PR Review
-- none
+- Codex #170 P1 与 LEAN/SAFETY cross-review 已共同确认：summary-only 需先补 lifecycle false-close；前置条件现已满足
 
 ## Exact Next Steps
-- 先核对工作树 clean；若 LEAN/SAFETY 对当前 HEAD 尚无同一身份双 PASS0 则仅补齐缺失评审，已有则不得重复；随后推送当前分支，只补发一次 @codex review，并监控同一 HEAD 的 review 与 required checks
+- 完成 main merge；新增 close-pending summary，修正 formal plan/tasks/log 与 manifest exact；truth sync 后重新取得同一身份 LEAN/SAFETY PASS0，再推送 #170 并重审
