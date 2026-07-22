@@ -1,23 +1,21 @@
 # Continuity Handoff
 
-- Updated: 2026-07-22T04:18:07+00:00
-- Reason: 消除 PR #170 Codex P1 及本地 R5 共同确认的 post-commit stale next-step
+- Updated: 2026-07-22T05:30:00+00:00
+- Reason: 消除 PR #170 formal R7 唯一 stale-continuity finding
 - Goal: 归档 WI218 产品需求并完成消费项目/框架约束隔离实现与验收
-- State: formal artifacts identity=c94e62ff045f20cadc8d9a8440a96daa6ce52c5dcd25e249afee8ba90fd5c0a5；LEAN/SAFETY R4 same-identity PASS0；PR #170 Codex reviewed commit 350393de722d02996e40abf36ce6819919b99c5b；Codex P1 的 handoff-only 修复已形成当前本地提交，正式四件套未变化
+- State: source-inventory lifecycle-safe remediation 已形成 committed+clean candidate；formal manifest=901964e06b4199869879464b1d35e0b44ca5e74a91680c5276c5ea5b4f7500ec；R7 唯一finding是 continuity时序陈旧，当前改动仅刷新handoff/resume
 - Stage: close
 - Work Item: 218-consumer-framework-constraint-isolation
 - Branch: feature/218-consumer-framework-constraint-isolation-docs
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md
+- none
 
 ## Key Decisions
-- PRD/plan/tasks/execution-log 保持冻结；continuity 状态使用幂等条件式，恢复时不得重复已完成的提交、验证或评审
+- development-summary 仅物化 formal candidate，stage=close-pending；WI218 status=decompose_or_execute、tasks=2/8；不建立 active-WI missing waiver，不声称实现完成
 
 ## Commands / Tests
-- handoff 修复前已通过：verify_constraints 147/147、manifest 1/1、truth ready/fresh、program validate PASS、constraints no BLOCKER；formal manifest 复核仍为 c94e62ff
+- truth=1141/1141 missing/unmapped=0/0 close=217/217 ready/fresh；manifest=1 passed；lifecycle=4 passed；actual status=decompose_or_execute tasks=2/8；validate PASS；constraints no BLOCKER
 
 ## Blockers / Risks
 - none
@@ -26,4 +24,4 @@
 - none
 
 ## Exact Next Steps
-- 先核对工作树 clean；若 LEAN/SAFETY 对当前 HEAD 尚无同一身份双 PASS0 则仅补齐缺失评审，已有则不得重复；随后推送当前分支，只补发一次 @codex review，并监控同一 HEAD 的 review 与 required checks
+- 若当前 committed identity 尚无 LEAN/SAFETY 双 PASS0则只补齐缺失评审，已有则不得重复；随后推送 #170、回复并解决 source-inventory thread、只请求一次 current-head Codex review并等待 checks

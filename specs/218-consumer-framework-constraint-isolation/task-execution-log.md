@@ -95,3 +95,17 @@
 - SAFETY=`PASS0/findings=0`：双信号、common/framework隔离、invalid语义、Agent Store零写入与回退合同完整。
 - T12完成。写入本receipt会改变formal-four；下一步只允许对回执后的final identity进行同双 reviewer确认，
   不再改变产品设计。
+
+## 2026-07-22 Batch 009：Codex source-inventory P1 与 lifecycle prerequisite
+
+- PR #170 Codex 在 `e31cb7db` 指出：把仓库级 manifest regression 放宽为 `missing=1` 会重新打开 WI201
+  已关闭的 source-inventory 缺口；LEAN/SAFETY 复核确认诊断成立。
+- 直接预建 summary 会触发既有 ProgramService false-close：summary 存在即 `stage_hint=close`，execute gate
+  会把未完成 WI 当作 closed。因此先交付独立 lifecycle prerequisite PR #171。
+- PR #171 final HEAD=`517ead3f`，LEAN/SAFETY同identity PASS0，Codex未发现major issue，22/22 checks
+  全绿；squash merge=`fb75a9d6`。detached fresh-main focused=4、ProgramService=416、CLI=233、Ruff与
+  constraints均PASS，产品/测试blob与reviewed HEAD一致。
+- Formal 分支合入该 prerequisite 后新增诚实 `stage: close-pending` summary；只声明 formal candidate，
+  T13/T21～T33保持pending。manifest exact恢复为`missing=0`、close=`217/217`，不建立active-WI waiver。
+- 本次更改使旧formal-four hash及旧LEAN/SAFETY verdict失效；truth、门禁与双评审必须在新committed+clean
+  identity从零重建。

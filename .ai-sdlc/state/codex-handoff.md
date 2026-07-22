@@ -1,30 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-22T05:10:00Z
-- Reason: 合并已验收的 close-pending lifecycle prerequisite，继续处理 PR #170 source-inventory P1
+- Updated: 2026-07-22T05:30:00+00:00
+- Reason: 消除 PR #170 formal R7 唯一 stale-continuity finding
 - Goal: 归档 WI218 产品需求并完成消费项目/框架约束隔离实现与验收
-- State: lifecycle PR #171 已合并并通过 detached fresh-main；formal 分支正在同步 main，随后补诚实 close-pending summary、恢复 zero-missing 并重新冻结评审身份
-- Stage: review
+- State: source-inventory lifecycle-safe remediation 已形成 committed+clean candidate；formal manifest=901964e06b4199869879464b1d35e0b44ca5e74a91680c5276c5ea5b4f7500ec；R7 唯一finding是 continuity时序陈旧，当前改动仅刷新handoff/resume
+- Stage: close
 - Work Item: 218-consumer-framework-constraint-isolation
 - Branch: feature/218-consumer-framework-constraint-isolation-docs
 
 ## Changed Files
-- UU .ai-sdlc/state/codex-handoff.md
-- M src/ai_sdlc/core/program_service.py
-- M tests/unit/test_program_service.py
+- none
 
 ## Key Decisions
-- WI218 summary 只声明 formal archive candidate，必须包含 `stage: close-pending`，不得声称 T13/T21～T33 已完成
-- 恢复 WI201 常驻 `missing_sources=0` / close fully materialized 断言，不保留 active-WI waiver
+- development-summary 仅物化 formal candidate，stage=close-pending；WI218 status=decompose_or_execute、tasks=2/8；不建立 active-WI missing waiver，不声称实现完成
 
 ## Commands / Tests
-- PR #171 current HEAD Codex clean、22/22 checks、squash merge=fb75a9d6；detached fresh-main focused=4、ProgramService=416、CLI=233、Ruff/constraints PASS
+- truth=1141/1141 missing/unmapped=0/0 close=217/217 ready/fresh；manifest=1 passed；lifecycle=4 passed；actual status=decompose_or_execute tasks=2/8；validate PASS；constraints no BLOCKER
 
 ## Blockers / Risks
 - none
 
 ## Local PR Review
-- Codex #170 P1 与 LEAN/SAFETY cross-review 已共同确认：summary-only 需先补 lifecycle false-close；前置条件现已满足
+- none
 
 ## Exact Next Steps
-- 完成 main merge；新增 close-pending summary，修正 formal plan/tasks/log 与 manifest exact；truth sync 后重新取得同一身份 LEAN/SAFETY PASS0，再推送 #170 并重审
+- 若当前 committed identity 尚无 LEAN/SAFETY 双 PASS0则只补齐缺失评审，已有则不得重复；随后推送 #170、回复并解决 source-inventory thread、只请求一次 current-head Codex review并等待 checks

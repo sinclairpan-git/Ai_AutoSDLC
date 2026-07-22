@@ -40,7 +40,8 @@
 5. 在 detached fresh-main 对归档产物做 checksum、manifest、constraints 和 clean-tree 验收。
 
 Formal PR 禁止修改 `src/**`、产品行为测试、workflow、依赖、版本或 release 表面；只允许 manifest exact
-测试的机械计数随 WI218 四件套和 pre-close summary 缺失同步。
+测试的机械计数随 WI218 四件套和 `stage: close-pending` summary 同步。该 summary 只保持 source inventory
+完整；ProgramService status/execute gate 必须停在 `decompose_or_execute`，不得据此推断实施或关闭完成。
 
 ## Phase 2：TDD RED
 

@@ -16,7 +16,8 @@
 - [ ] **T13 归档 formal PRD**
   - 依赖：T12
   - 验收：formal-only 本地门禁、Codex review、required checks、merge 和 detached fresh-main 全绿；
-    formal diff 不包含 `src/**` 或产品测试。
+    formal diff 不包含 WI218 的 `src/**` 或产品行为测试；`development-summary.md` 精确标记
+    `stage: close-pending`，inventory=`1141/1141/0/0`、close=`217/217`，status/execute gate 不得推进 close。
 
 ## Batch 2：TDD 实现
 
