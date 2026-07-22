@@ -1,33 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-07-22T07:03:28+00:00
-- Reason: 收口 ERRATA R2 continuity truth，移除旧 commit 与瞬时状态绑定
-- Goal: 完成 WI218 消费项目/框架约束隔离落地与验收
-- State: R1 continuity P1 已修复；formal-content scope 验证 PASS；formal errata 已形成 committed candidate，formal-four=5767517d91cc2a6f3d3372011d81e1a85f3262539b07dddb810798349272fe84；当前 committed identity 只待缺失双审
+- Updated: 2026-07-22T11:37:49+00:00
+- Reason: Refresh continuity after committed SAFETY review fix
+- Goal: Complete WI218 implementation PR and fresh-main acceptance
+- State: SAFETY R1 findings fixed in commit 8cf41f61; focused 3 passed and full unit 160 passed; final full-suite and real Agent Store re-acceptance pending on the new identity
 - Stage: close
 - Work Item: 218-consumer-framework-constraint-isolation
-- Branch: codex/218-consumer-framework-constraint-isolation-errata
+- Branch: codex/218-consumer-framework-constraint-isolation
 
 ## Changed Files
-- `specs/218-consumer-framework-constraint-isolation/plan.md`
-- `specs/218-consumer-framework-constraint-isolation/spec.md`
-- `specs/218-consumer-framework-constraint-isolation/task-execution-log.md`
-- `specs/218-consumer-framework-constraint-isolation/tasks.md`
-- `.ai-sdlc/state/codex-handoff.md`
-- `.ai-sdlc/state/resume-pack.yaml`
-- `.ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md`
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md
 
 ## Key Decisions
-- 冻结双信号产品合同与 FR-218-006 consumer collision protection 不变；禁止产品 compatibility fallback；formal errata 不推进 implementation lifecycle
+- Preserve legacy framework blocker order with formal-target common; use exact canonical non-empty 003/012 consumer collision fixtures; keep product additions at 80 and helper count at 1
 
 ## Commands / Tests
-- R1 continuity P1 已修复，formal-content scope 验证 PASS；exact-seven scope、handoff/resume bytes、stale scan、pending lifecycle 与 handoff tests 均 PASS；当前 committed identity 只待缺失双审
+- Focused affected tests: 3 passed, 157 deselected; full unit: 160 passed; Ruff passed; diff-check passed; product numstat from 6bec9a4e: 80/18
 
 ## Blockers / Risks
-- none
+- No product blocker; production additions are at the hard limit of 80; program truth snapshot remains stale until terminal closure PR
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 若当前 committed identity 缺少 LEAN 或 SAFETY 任一 PASS0，只补缺失评审且不得重复已有评审；双 PASS0 后将 errata 带回既有 implementation 分支继续 TDD，不新建 PR
+- Run COLUMNS=240 full pytest once on 8cf41f61, repeat real Agent Store zero-write acceptance, then obtain LEAN/SAFETY PASS0 on one committed clean identity

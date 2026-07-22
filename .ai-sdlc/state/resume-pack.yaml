@@ -11,14 +11,16 @@ working_set_snapshot:
   active_files:
   - specs/218-consumer-framework-constraint-isolation/tasks.md
   - specs/218-consumer-framework-constraint-isolation/spec.md
-  context_summary: 'Goal: 完成 WI218 消费项目/框架约束隔离落地与验收 | State: R1 continuity P1 已修复；formal-content
-    scope 验证 PASS；formal errata 已形成 committed candidate，formal-four=5767517d91cc2a6f3d3372011d81e1a85f3262539b07dddb810798349272fe84；当前
-    committed identity 只待缺失双审 | Next: 若当前 committed identity 缺少 LEAN 或 SAFETY 任一 PASS0，只补缺失评审且不得重复已有评审；双
-    PASS0 后将 errata 带回既有 implementation 分支继续 TDD，不新建 PR'
-current_branch: codex/218-consumer-framework-constraint-isolation-errata
+  context_summary: 'Goal: Complete WI218 implementation PR and fresh-main acceptance
+    | State: SAFETY R1 findings fixed in commit 8cf41f61; focused 3 passed and full
+    unit 160 passed; final full-suite and real Agent Store re-acceptance pending on
+    the new identity | Next: Run COLUMNS=240 full pytest once on 8cf41f61, repeat
+    real Agent Store zero-write acceptance, then obtain LEAN/SAFETY PASS0 on one committed
+    clean identity'
+current_branch: codex/218-consumer-framework-constraint-isolation
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-22T07:03:28+00:00'
+timestamp: '2026-07-22T11:37:49+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-22T02:48:41+00:00'
 checkpoint_fingerprint: 83355f1f0b237fc59df9af5d9d4e472bc73e317b528249ca76b681e992d597db
