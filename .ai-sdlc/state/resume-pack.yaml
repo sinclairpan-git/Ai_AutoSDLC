@@ -11,17 +11,18 @@ working_set_snapshot:
   active_files:
   - specs/218-consumer-framework-constraint-isolation/tasks.md
   - specs/218-consumer-framework-constraint-isolation/spec.md
-  context_summary: 'Goal: Merge the single WI218 closure PR and complete fresh-main
-    closure acceptance | State: Implementation PR 172 merged and accepted on fresh
-    main; closure source payload fdeb1763 and terminal truth snapshot 1f2c4176 committed
-    on the sole archive carrier; final governance validation and dual closure review
-    pending | Next: Run terminal read-only validation, commit continuity-only changes
-    if any, obtain LEAN/SAFETY PASS0 on one clean identity, push the only closure
-    PR, then merge and verify fresh main'
-current_branch: archive/218-consumer-framework-constraint-isolation-closure
+  context_summary: 'Goal: Merge the existing WI218 closure PR 173 and complete portable
+    fresh-main closure acceptance | State: Implementation PR 172 is merged and accepted;
+    Codex P1/P2 are addressed with portable deleted/removed lifecycle truth and refreshed
+    continuity; direct close-check is fully green with no associated branch/worktree
+    drift; closure remains docs/truth/continuity-only | Next: Confirm LEAN/SAFETY
+    PASS0 on the post-handoff clean HEAD, push it to existing PR 173, resolve addressed
+    threads, request one current-head Codex re-review, then merge only after all required
+    checks pass'
+current_branch: archive/consumer-framework-constraint-isolation-closure
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-22T15:03:32+00:00'
+timestamp: '2026-07-22T15:26:02+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-22T02:48:41+00:00'
 checkpoint_fingerprint: 83355f1f0b237fc59df9af5d9d4e472bc73e317b528249ca76b681e992d597db
