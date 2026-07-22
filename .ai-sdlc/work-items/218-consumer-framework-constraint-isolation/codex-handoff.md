@@ -30,4 +30,4 @@
 - none
 
 ## Exact Next Steps
-- Check whether the current clean HEAD already has terminal validation and same-identity LEAN/SAFETY PASS0; reuse them when HEAD is unchanged, otherwise rerun them. Then push to existing PR 173, resolve addressed threads, and request one current-head Codex re-review.
+- Read PR 173 state first and do not repeat completed steps. If it is open, confirm the current HEAD has terminal validation and same-identity LEAN/SAFETY PASS0 (reuse unchanged-HEAD evidence), push if needed, resolve threads, obtain current-head Codex review and all-green checks, then merge. If it is merged, rename remote `archive/218-consumer-framework-constraint-isolation-closure` to `archive/consumer-framework-constraint-isolation-closure` when not already renamed, then run independent fresh-main close/truth/audit/validate/manifest/constraints/clean-tree acceptance.
