@@ -78,6 +78,15 @@ def _minimal_constitution(root: Path) -> None:
     (mem / "constitution.md").write_text("# Constitution\n", encoding="utf-8")
 
 
+def _write_framework_identity(root: Path) -> None:
+    (root / "pyproject.toml").write_text(
+        '[project]\nname = "ai-sdlc"\n', encoding="utf-8"
+    )
+    package_init = root / "src" / "ai_sdlc" / "__init__.py"
+    package_init.parent.mkdir(parents=True, exist_ok=True)
+    package_init.write_text("", encoding="utf-8")
+
+
 def _framework_backlog(root: Path, *, include_eval: bool) -> None:
     path = root / "docs" / "framework-defect-backlog.zh-CN.md"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -304,6 +313,7 @@ def _scan_fixture_into_012_frontend_contract_observations(
 
 
 def _write_018_checkpoint(root: Path) -> None:
+    _write_framework_identity(root)
     spec = root / "specs" / "018-frontend-gate-compatibility-baseline"
     spec.mkdir(parents=True, exist_ok=True)
     save_checkpoint(
@@ -322,6 +332,7 @@ def _write_018_checkpoint(root: Path) -> None:
 
 
 def _write_073_checkpoint(root: Path) -> None:
+    _write_framework_identity(root)
     spec = root / "specs" / "073-frontend-p2-provider-style-solution-baseline"
     spec.mkdir(parents=True, exist_ok=True)
     save_checkpoint(
@@ -669,6 +680,7 @@ def _write_003_feature_contract_surfaces(
 
 
 def _write_003_checkpoint(root: Path, *, feature_id: str = "003") -> None:
+    _write_framework_identity(root)
     _minimal_constitution(root)
     spec = root / "specs" / "003-cross-cutting-authoring-and-extension-contracts"
     spec.mkdir(parents=True, exist_ok=True)
@@ -1060,6 +1072,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _write_012_checkpoint(tmp_path)
         _write_012_frontend_contract_page_artifacts(tmp_path)
@@ -1083,6 +1096,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _write_012_checkpoint(tmp_path)
         _write_012_frontend_contract_page_artifacts(tmp_path)
@@ -1109,6 +1123,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _write_012_checkpoint(tmp_path)
         _write_012_frontend_contract_page_artifacts(tmp_path)
@@ -1135,6 +1150,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _write_012_checkpoint(tmp_path)
         _write_012_frontend_contract_page_artifacts(tmp_path)
@@ -1153,6 +1169,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _write_012_checkpoint(tmp_path)
         _write_012_frontend_contract_page_artifacts(tmp_path)
@@ -1176,6 +1193,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _write_012_checkpoint(tmp_path)
         _write_012_frontend_contract_page_artifacts(tmp_path)
@@ -1201,6 +1219,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _write_012_checkpoint(tmp_path)
         _write_012_frontend_contract_page_artifacts(tmp_path)
@@ -1232,6 +1251,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         save_checkpoint(
             tmp_path,
@@ -1644,6 +1664,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _write_verification_profile_docs(tmp_path, include_rules_only=False)
         monkeypatch.chdir(tmp_path)
@@ -1693,6 +1714,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _framework_backlog(tmp_path, include_eval=False)
         monkeypatch.chdir(tmp_path)
@@ -1705,6 +1727,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _framework_backlog(tmp_path, include_eval=True)
         monkeypatch.chdir(tmp_path)
@@ -1716,6 +1739,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _write_doc_first_rule_surfaces(tmp_path, include_pipeline_terms=False)
         monkeypatch.chdir(tmp_path)
@@ -1729,6 +1753,7 @@ class TestCliVerifyConstraints:
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         init_project(tmp_path)
+        _write_framework_identity(tmp_path)
         _minimal_constitution(tmp_path)
         _write_doc_first_rule_surfaces(tmp_path)
         spec = tmp_path / "specs" / "001-wi"

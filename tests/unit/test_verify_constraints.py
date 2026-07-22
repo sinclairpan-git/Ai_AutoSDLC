@@ -117,6 +117,22 @@ from ai_sdlc.models.gate import GateResult, GateVerdict
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
 
+@pytest.fixture(autouse=True)
+def _framework_identity_for_existing_fixtures(tmp_path: Path) -> None:
+    """Keep legacy framework fixtures explicit while consumer tests remove signals."""
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname = \"ai-sdlc\"\n", encoding="utf-8"
+    )
+    package_init = tmp_path / "src" / "ai_sdlc" / "__init__.py"
+    package_init.parent.mkdir(parents=True, exist_ok=True)
+    package_init.write_text("", encoding="utf-8")
+
+
+def _make_consumer_root(root: Path) -> None:
+    (root / "pyproject.toml").unlink(missing_ok=True)
+    (root / "src" / "ai_sdlc" / "__init__.py").unlink(missing_ok=True)
+
+
 def test_feature_contract_runtime_objects_canonicalize_evidence_sets() -> None:
     evidence = FeatureContractEvidence(
         relative_paths=(
@@ -5147,3 +5163,191 @@ def test_collect_constraint_blockers_ignores_unrelated_historical_branch_lifecyc
     blockers = collect_constraint_blockers(tmp_path)
 
     assert all("branch lifecycle" not in item.lower() for item in blockers)
+
+
+def test_repository_scope_requires_both_framework_identity_signals(
+    tmp_path: Path,
+) -> None:
+    assert verify_constraints_module._repository_scope(tmp_path) == (True, None)
+
+    (tmp_path / "src" / "ai_sdlc" / "__init__.py").unlink()
+    framework, blocker = verify_constraints_module._repository_scope(tmp_path)
+
+    assert framework is False
+    assert blocker is not None
+    assert "pyproject.toml [project].name == \"ai-sdlc\"" in blocker
+    assert "src/ai_sdlc/__init__.py" in blocker
+
+    _make_consumer_root(tmp_path)
+    assert verify_constraints_module._repository_scope(tmp_path) == (False, None)
+
+
+@pytest.mark.parametrize(
+    "pyproject_text",
+    (
+        None,
+        "[project\nname = \"ai-sdlc\"\n",
+        "project = []\n",
+        "[project]\nname = [\"ai-sdlc\"]\n",
+        "[project]\nname = 42\n",
+        "[project]\nname = \"   \"\n",
+    ),
+)
+def test_repository_scope_treats_invalid_project_name_as_identity_miss(
+    tmp_path: Path,
+    pyproject_text: str | None,
+) -> None:
+    pyproject = tmp_path / "pyproject.toml"
+    if pyproject_text is None:
+        pyproject.unlink()
+    else:
+        pyproject.write_text(pyproject_text, encoding="utf-8")
+
+    framework, blocker = verify_constraints_module._repository_scope(tmp_path)
+
+    assert framework is False
+    assert blocker is not None
+    assert "pyproject.toml [project].name == \"ai-sdlc\"" in blocker
+    assert "src/ai_sdlc/__init__.py" in blocker
+
+    (tmp_path / "src" / "ai_sdlc" / "__init__.py").unlink()
+    assert verify_constraints_module._repository_scope(tmp_path) == (False, None)
+
+
+def test_constraint_public_paths_route_common_and_framework_checks_by_identity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[str] = []
+
+    def record_common(_root: Path) -> list[str]:
+        calls.append("common")
+        return []
+
+    def record_framework(_root: Path) -> list[str]:
+        calls.append("framework")
+        return []
+
+    def record_attachment(_root: Path, _checkpoint: Checkpoint | None):
+        calls.append("framework_attachment")
+        return None
+
+    monkeypatch.setattr(verify_constraints_module, "load_checkpoint", lambda _: None)
+    monkeypatch.setattr(
+        verify_constraints_module, "_formal_artifact_target_blockers", record_common
+    )
+    monkeypatch.setattr(
+        verify_constraints_module, "_framework_defect_backlog_blockers", record_framework
+    )
+    monkeypatch.setattr(
+        verify_constraints_module,
+        "_frontend_contract_attachment_report",
+        record_attachment,
+    )
+
+    for scenario in ("consumer", "framework", "xor"):
+        calls.clear()
+        if scenario == "consumer":
+            _make_consumer_root(tmp_path)
+        elif scenario == "framework":
+            (tmp_path / "pyproject.toml").write_text(
+                "[project]\nname = \"ai-sdlc\"\n", encoding="utf-8"
+            )
+            package_init = tmp_path / "src" / "ai_sdlc" / "__init__.py"
+            package_init.parent.mkdir(parents=True, exist_ok=True)
+            package_init.write_text("", encoding="utf-8")
+        else:
+            _make_consumer_root(tmp_path)
+            (tmp_path / "src" / "ai_sdlc" / "__init__.py").write_text(
+                "", encoding="utf-8"
+            )
+
+        collect_constraint_blockers(tmp_path)
+        build_constraint_report(tmp_path)
+        build_verification_gate_context(tmp_path)
+
+        assert "common" in calls
+        if scenario == "framework":
+            assert "framework" in calls
+            assert "framework_attachment" in calls
+        else:
+            assert "framework" not in calls
+            assert "framework_attachment" not in calls
+
+
+def test_agent_store_consumer_ignores_framework_only_stale_surfaces(
+    tmp_path: Path,
+) -> None:
+    _make_consumer_root(tmp_path)
+    (tmp_path / "README.md").write_text("stale framework release v0.0.1\n")
+    (tmp_path / "USER_GUIDE.zh-CN.md").write_text("stale install instructions\n")
+    (tmp_path / "AGENTS.md").write_text("legacy framework guidance\n")
+    rules = tmp_path / "src" / "ai_sdlc" / "rules"
+    rules.mkdir(parents=True)
+    (rules / "pipeline.md").write_text("legacy pipeline\n")
+
+    blockers = collect_constraint_blockers(tmp_path)
+
+    assert any("missing required governance file" in blocker for blocker in blockers)
+    assert not any(
+        token in blocker.lower()
+        for blocker in blockers
+        for token in ("release", "readme", "user_guide", "adapter", "backlog")
+    )
+
+
+@pytest.mark.parametrize("work_item_id", ("003", "012"))
+def test_consumer_work_item_number_collisions_do_not_expose_framework_payloads(
+    tmp_path: Path,
+    work_item_id: str,
+) -> None:
+    _make_consumer_root(tmp_path)
+    spec_dir = tmp_path / "specs" / f"{work_item_id}-consumer-feature"
+    spec_dir.mkdir(parents=True)
+    save_checkpoint(
+        tmp_path,
+        Checkpoint(
+            current_stage="verify",
+            feature=FeatureInfo(
+                id=work_item_id,
+                spec_dir=f"specs/{spec_dir.name}",
+                design_branch="d",
+                feature_branch="f",
+                current_branch="main",
+            ),
+        ),
+    )
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert report.coverage_gaps == ()
+    assert report.release_gate is None
+    assert "framework_defect_backlog" not in report.check_objects
+    assert verify_constraints_module.FEATURE_CONTRACT_SURFACE_OBJECT not in report.check_objects
+    assert context["verification_sources"][0] == "verify constraints"
+    assert all(
+        key == "frontend_public_primevue_import_boundary_verification"
+        or not key.endswith("_verification")
+        for key in context
+    )
+    assert "frontend_contract_runtime_attachment" not in context
+
+
+def test_consumer_keeps_primevue_boundary_and_base_governance_payloads(
+    tmp_path: Path,
+) -> None:
+    _make_consumer_root(tmp_path)
+    source = tmp_path / "src" / "components" / "business" / "BusinessWidget.ts"
+    source.parent.mkdir(parents=True)
+    source.write_text('import Button from "primevue/button";\n', encoding="utf-8")
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_public_primevue_import_boundary" in report.check_objects
+    assert context["frontend_public_primevue_import_boundary_verification"][
+        "gate_verdict"
+    ] == "WARN"
+    assert context["verification_governance"]["gate_decision_payload"]
+    assert "provenance_phase1" in context

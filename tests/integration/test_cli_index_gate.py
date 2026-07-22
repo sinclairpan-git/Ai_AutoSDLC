@@ -63,7 +63,17 @@ def _minimal_constitution(root: Path) -> None:
     (mem / "constitution.md").write_text("# Constitution\n", encoding="utf-8")
 
 
+def _write_framework_identity(root: Path) -> None:
+    (root / "pyproject.toml").write_text(
+        '[project]\nname = "ai-sdlc"\n', encoding="utf-8"
+    )
+    package_init = root / "src" / "ai_sdlc" / "__init__.py"
+    package_init.parent.mkdir(parents=True, exist_ok=True)
+    package_init.write_text("", encoding="utf-8")
+
+
 def _write_018_checkpoint(root: Path) -> None:
+    _write_framework_identity(root)
     spec = root / "specs" / "018-frontend-gate-compatibility-baseline"
     spec.mkdir(parents=True, exist_ok=True)
     save_checkpoint(
