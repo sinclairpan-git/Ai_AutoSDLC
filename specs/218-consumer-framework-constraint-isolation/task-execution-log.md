@@ -144,3 +144,25 @@
   framework positive fixtures；三个产品文件合计 raw additions 仍≤80，helper 目标1且≤2。
 - 本次只校正文档，不创建新 work item、PR、抽象或 harness；`ProgramService` 通用路径不改。T13、T21～T33
   全部保持 pending，closure truth 不提前推进，也不声明 implementation acceptance。
+
+## 2026-07-22 Batch 012：Implementation 交付与合并
+
+- formal PR #170 以 `bf4f4cf8` 合并，lifecycle prerequisite PR #171 以 `fb75a9d6` 合并；T13 完成。
+- implementation PR #172 最终 reviewed HEAD=`499b383e`、tree=`c319a6b6`；Codex 对精确 HEAD 未发现
+  major issue，required checks=`22/22`，squash merge=`fec4c010`。
+- 三个产品文件合计 `+80/-31`、净增 `+49`，仅一个私有 helper；runner 删除重复注入，PrimeVue 空扫描与
+  consumer `014` 下游呈现两个 P2 已最小修复，`ProgramService` 未修改。
+- implementation branch focused=`233 passed`、full=`3332 passed, 3 skipped`；constraints、program
+  validate/truth、Ruff 与 diff-check 全绿；真实 Agent Store framework-only blockers=`0` 且双跑零写入。
+- LEAN/SAFETY R5 对同一 committed+clean identity 均为 `PASS0/findings=0`；T21、T22、T31、T32 完成。
+- WI218 只使用一个 implementation PR；未创建新 WI，也未开启新的减重路线。
+
+## 2026-07-22 Batch 013：Fresh-main 验收与 closure source
+
+- 在 detached fresh-main `fec4c010` 完成实现验收：focused=`233 passed`，full=
+  `3332 passed, 3 skipped in 944.67s`；constraints、program validate 与真实 Agent Store 零写入全部通过，
+  T33 完成，实施结果为 GO。
+- 当前分支是 WI218 唯一 closure PR 的 source candidate，仅归档 tasks、execution log 与 development summary；
+  本分支合入 `main` 后 WI218 才生效为 closed，不在分支提前宣称 main 已 closed。
+- closure 合并后不创建新的减重 work item、不重启减重路线；剩余结构债转为非阻塞 backlog，恢复正常特性开发。
+- 若 closure 失败，只允许 emergency corrective revert，不得以修复 closure 为由扩展实现或重启专项。
