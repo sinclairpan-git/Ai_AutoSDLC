@@ -1,29 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-22T11:37:49+00:00
-- Reason: Refresh continuity after committed SAFETY review fix
+- Updated: 2026-07-22T11:55:10+00:00
+- Reason: Record final T31 acceptance before same-identity adversarial review
 - Goal: Complete WI218 implementation PR and fresh-main acceptance
-- State: SAFETY R1 findings fixed in commit 8cf41f61; focused 3 passed and full unit 160 passed; final full-suite and real Agent Store re-acceptance pending on the new identity
+- State: T31 complete on committed code fix 8cf41f61: final full suite 3326 passed and 3 skipped; real Agent Store double-run blockers 0 with all three fingerprints unchanged; Ruff, diff-check, program validate and constraints all green
 - Stage: close
 - Work Item: 218-consumer-framework-constraint-isolation
 - Branch: codex/218-consumer-framework-constraint-isolation
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md
+- none
 
 ## Key Decisions
-- Preserve legacy framework blocker order with formal-target common; use exact canonical non-empty 003/012 consumer collision fixtures; keep product additions at 80 and helper count at 1
+- Preserve legacy framework blocker order; exact canonical non-empty 003/012 consumer collision tests; product additions 80 and helper count 1
 
 ## Commands / Tests
-- Focused affected tests: 3 passed, 157 deselected; full unit: 160 passed; Ruff passed; diff-check passed; product numstat from 6bec9a4e: 80/18
+- COLUMNS=240 uv run pytest -q => 3326 passed, 3 skipped in 863.37s; Agent Store runs equal blockers=0 fingerprints equal; Ruff PASS; program validate PASS; verify constraints blockers=[]
 
 ## Blockers / Risks
-- No product blocker; production additions are at the hard limit of 80; program truth snapshot remains stale until terminal closure PR
+- No implementation blocker; program truth snapshot remains intentionally stale until terminal closure PR
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Run COLUMNS=240 full pytest once on 8cf41f61, repeat real Agent Store zero-write acceptance, then obtain LEAN/SAFETY PASS0 on one committed clean identity
+- Obtain LEAN and SAFETY PASS0 on the same committed clean identity, then push one implementation PR for Codex review and required checks

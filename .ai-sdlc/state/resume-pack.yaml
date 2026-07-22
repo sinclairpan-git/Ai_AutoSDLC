@@ -12,15 +12,15 @@ working_set_snapshot:
   - specs/218-consumer-framework-constraint-isolation/tasks.md
   - specs/218-consumer-framework-constraint-isolation/spec.md
   context_summary: 'Goal: Complete WI218 implementation PR and fresh-main acceptance
-    | State: SAFETY R1 findings fixed in commit 8cf41f61; focused 3 passed and full
-    unit 160 passed; final full-suite and real Agent Store re-acceptance pending on
-    the new identity | Next: Run COLUMNS=240 full pytest once on 8cf41f61, repeat
-    real Agent Store zero-write acceptance, then obtain LEAN/SAFETY PASS0 on one committed
-    clean identity'
+    | State: T31 complete on committed code fix 8cf41f61: final full suite 3326 passed
+    and 3 skipped; real Agent Store double-run blockers 0 with all three fingerprints
+    unchanged; Ruff, diff-check, program validate and constraints all green | Next:
+    Obtain LEAN and SAFETY PASS0 on the same committed clean identity, then push one
+    implementation PR for Codex review and required checks'
 current_branch: codex/218-consumer-framework-constraint-isolation
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-22T11:37:49+00:00'
+timestamp: '2026-07-22T11:55:10+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-22T02:48:41+00:00'
 checkpoint_fingerprint: 83355f1f0b237fc59df9af5d9d4e472bc73e317b528249ca76b681e992d597db
