@@ -144,3 +144,69 @@
   framework positive fixtures；三个产品文件合计 raw additions 仍≤80，helper 目标1且≤2。
 - 本次只校正文档，不创建新 work item、PR、抽象或 harness；`ProgramService` 通用路径不改。T13、T21～T33
   全部保持 pending，closure truth 不提前推进，也不声明 implementation acceptance。
+
+## 2026-07-22 Batch 012：Implementation 交付与合并
+
+- formal PR #170 以 `bf4f4cf8` 合并，lifecycle prerequisite PR #171 以 `fb75a9d6` 合并；T13 完成。
+- implementation PR #172 最终 reviewed HEAD=`499b383e`、tree=`c319a6b6`；Codex 对精确 HEAD 未发现
+  major issue，required checks=`22/22`，squash merge=`fec4c010`。
+- 三个产品文件合计 `+80/-31`、净增 `+49`，仅一个私有 helper；runner 删除重复注入，PrimeVue 空扫描与
+  consumer `014` 下游呈现两个 P2 已最小修复，`ProgramService` 未修改。
+- implementation branch focused=`233 passed`、full=`3332 passed, 3 skipped`；constraints、program
+  validate/truth、Ruff 与 diff-check 全绿；真实 Agent Store framework-only blockers=`0` 且双跑零写入。
+- LEAN/SAFETY R5 对同一 committed+clean identity 均为 `PASS0/findings=0`；T21、T22、T31、T32 完成。
+- WI218 只使用一个 implementation PR；未创建新 WI，也未开启新的减重路线。
+
+## 2026-07-22 Batch 013：Fresh-main 验收与 closure source
+
+- 在 detached fresh-main `fec4c010` 完成实现验收：focused=`233 passed`，full=
+  `3332 passed, 3 skipped in 944.67s`；constraints、program validate 与真实 Agent Store 零写入全部通过，
+  T33 完成，实施结果为 GO。
+- 当前分支是 WI218 唯一 closure PR 的 source candidate，仅归档 tasks、execution log 与 development summary；
+  本分支合入 `main` 后 WI218 才生效为 closed，不在分支提前宣称 main 已 closed。
+- closure 合并后不创建新的减重 work item、不重启减重路线；剩余结构债转为非阻塞 backlog，恢复正常特性开发。
+- 若 closure 失败，只允许 emergency corrective revert，不得以修复 closure 为由扩展实现或重启专项。
+
+### Batch 2026-07-22-014 | WI218 terminal closure receipt
+
+- **验证画像**：`truth-only`
+- **改动范围**：`specs/218-consumer-framework-constraint-isolation/development-summary.md`、`specs/218-consumer-framework-constraint-isolation/tasks.md`、`specs/218-consumer-framework-constraint-isolation/task-execution-log.md`、`program-manifest.yaml`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md`
+
+#### 14.1 当前结果
+
+- closure source payload=`fdeb1763`，只归档实施与 fresh-main 验收事实，不修改 `src/`、`tests/`、公开 API、配置、依赖或产品行为。
+- 本地旧 `main` 工作树保留用户现场，不作为 closure 真值；唯一 closure carrier 从独立 clone 的 current-main `fec4c010` 建立。
+- PR head 只承担 closure transport；合入后把远端 WI218 transport ref 原地改名为不带 WI 序号的通用 archive ref，使 snapshot revision 持续可达。该通用远端 ref 与本地同名 archive 分支只用于 Git 取证，不作为 work-item lifecycle branch；`main` 是 WI218 closed 状态的唯一生效来源。
+
+#### 14.2 统一验证命令
+
+- `uv run ai-sdlc program truth sync --dry-run`
+- `uv run ai-sdlc program truth sync --execute --yes`
+- `uv run ai-sdlc program truth audit`
+- `uv run ai-sdlc verify constraints`
+- `uv run ai-sdlc workitem close-check --wi specs/218-consumer-framework-constraint-isolation --json`
+- `uv run ai-sdlc workitem truth-check --wi specs/218-consumer-framework-constraint-isolation --json`
+- `uv run ai-sdlc program validate`
+- `uv run pytest -q tests/integration/test_repo_program_manifest.py tests/integration/test_cli_workitem_close_check.py`
+- `git diff --check` 与 `git status --short --branch`
+
+#### 14.3 代码审查
+
+- 实现代码已由 LEAN/SAFETY R5 对同一 committed+clean identity 评为 `PASS0/findings=0`，并通过 exact-head Codex review。
+- closure diff 只允许 canonical closure/truth/continuity 文件；terminal snapshot 提交后，LEAN 与 SAFETY 必须对同一 clean identity 重新独立评审。
+- 结论：`无 Critical 阻塞项`；若 terminal 评审产生 finding，旧 verdict 立即失效并只做最小修复。
+
+#### 14.4 任务/计划同步状态
+
+- `tasks.md` 同步状态：`已同步`，T11～T33 共 8 项全部完成。
+- `related_plan` 同步状态：`已对账`，不新增阶段、任务、work item 或减重路线。
+- 关联 branch/worktree disposition 计划：`deleted`
+- 当前批次 branch disposition 状态：`deleted`
+- 当前批次 worktree disposition 状态：`removed`
+- 说明：上述终态在 closure PR 合入并将远端 WI218 transport ref 改名为通用 archive ref 后生效；fresh-main 不依赖作者机器上的 branch/worktree，而 terminal snapshot 的 source revision 仍可由通用远端 archive ref 到达。closure PR 合入前不得声称 `main` 已 closed。
+
+#### 14.5 Git close-out
+
+- **已完成 git 提交**：是（closure source payload A 已独立提交；本 receipt envelope 不自引用自身）
+- **提交哈希**：`fdeb17636d8d78a1b80ce6a46230bb65fbbfc925`
+- terminal 顺序：receipt 提交 → truth snapshot 物化 → clean identity 双评审/CI → merge → fresh-main 只读验收。

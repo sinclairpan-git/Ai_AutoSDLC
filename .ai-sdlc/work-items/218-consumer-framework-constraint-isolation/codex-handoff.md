@@ -1,27 +1,33 @@
 # Continuity Handoff
 
-- Updated: 2026-07-22T13:56:52+00:00
-- Reason: Record second current-head Codex P2 correction and final local acceptance before adversarial review
-- Goal: Complete WI218 implementation PR and fresh-main acceptance
-- State: Both Codex P2 findings fixed through cf314f8e; full suite 3332 passed and 3 skipped; real Agent Store double-run blockers 0 with 647-path zero-write fingerprints stable; Ruff, diff-check, program validate, constraints green
+- Updated: 2026-07-22T15:42:19+00:00
+- Reason: Record all current-head Codex closure findings and portable provenance remediation
+- Goal: Merge the existing WI218 closure PR 173 and complete portable fresh-main closure acceptance
+- State: Implementation PR 172 is merged and accepted; all four Codex closure findings are addressed: portable deleted/removed lifecycle truth, current continuity state, explicit closure changed-file inventory, and a reachable terminal snapshot revision via post-merge generic remote archive rename; closure remains docs/truth/continuity-only
 - Stage: close
 - Work Item: 218-consumer-framework-constraint-isolation
-- Branch: codex/218-consumer-framework-constraint-isolation
+- Branch: archive/consumer-framework-constraint-isolation-closure
 
 ## Changed Files
-- none
+- `.ai-sdlc/state/codex-handoff.md`
+- `.ai-sdlc/state/resume-pack.yaml`
+- `.ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md`
+- `program-manifest.yaml`
+- `specs/218-consumer-framework-constraint-isolation/development-summary.md`
+- `specs/218-consumer-framework-constraint-isolation/task-execution-log.md`
+- `specs/218-consumer-framework-constraint-isolation/tasks.md`
 
 ## Key Decisions
-- Canonical verify context owns runtime attachment; runner duplicate injection removed; run CLI summary reuses repository scope; three product files total 80 additions/31 deletions, one private helper
+- After merge rename the remote WI218 transport ref to archive/consumer-framework-constraint-isolation-closure so snapshot history remains reachable while no WI218 lifecycle branch remains; keep main as sole effective closed truth and create no second PR, product change, or new reduction work item
 
 ## Commands / Tests
-- COLUMNS=240 uv run pytest -q => 3332 passed, 3 skipped in 890.23s; 233 focused passed; Agent Store runs identical blockers=0 and fingerprints stable; Ruff/program validate/constraints PASS
+- Program Truth refreshed to ready/fresh with 1141/1141 sources and 217/217 layers; final close-check, constraints, targeted tests and same-identity dual review must run after this continuity commit
 
 ## Blockers / Risks
-- No implementation blocker; program truth snapshot remains intentionally stale until terminal closure PR
+- No known local blocker; merge remains gated by final clean-identity LEAN/SAFETY PASS0, current-head Codex review, and all PR checks
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit handoff, obtain LEAN and SAFETY PASS0 on final clean identity, push PR #172, resolve current Codex thread, re-request current-head review and monitor 22 checks
+- Read PR 173 state first and do not repeat completed steps. If it is open, confirm the current HEAD has terminal validation and same-identity LEAN/SAFETY PASS0 (reuse unchanged-HEAD evidence), push if needed, resolve threads, obtain current-head Codex review and all-green checks, then merge. If it is merged, rename remote `archive/218-consumer-framework-constraint-isolation-closure` to `archive/consumer-framework-constraint-isolation-closure` when not already renamed, then run independent fresh-main close/truth/audit/validate/manifest/constraints/clean-tree acceptance.

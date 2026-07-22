@@ -11,17 +11,23 @@ working_set_snapshot:
   active_files:
   - specs/218-consumer-framework-constraint-isolation/tasks.md
   - specs/218-consumer-framework-constraint-isolation/spec.md
-  context_summary: 'Goal: Complete WI218 implementation PR and fresh-main acceptance
-    | State: Both Codex P2 findings fixed through cf314f8e; full suite 3332 passed
-    and 3 skipped; real Agent Store double-run blockers 0 with 647-path zero-write
-    fingerprints stable; Ruff, diff-check, program validate, constraints green | Next:
-    Commit handoff, obtain LEAN and SAFETY PASS0 on final clean identity, push PR
-    #172, resolve current Codex thread, re-request current-head review and monitor
-    22 checks'
-current_branch: codex/218-consumer-framework-constraint-isolation
+  context_summary: 'Goal: Merge the existing WI218 closure PR 173 and complete portable
+    fresh-main closure acceptance | State: Implementation PR 172 is merged and accepted;
+    all four Codex closure findings are addressed: portable deleted/removed lifecycle
+    truth, current continuity state, explicit closure changed-file inventory, and
+    a reachable terminal snapshot revision via post-merge generic remote archive rename;
+    closure remains docs/truth/continuity-only | Next: Read PR 173 state first and
+    do not repeat completed steps. If it is open, confirm the current HEAD has terminal
+    validation and same-identity LEAN/SAFETY PASS0 (reuse unchanged-HEAD evidence),
+    push if needed, resolve threads, obtain current-head Codex review and all-green
+    checks, then merge. If it is merged, rename remote `archive/218-consumer-framework-constraint-isolation-closure`
+    to `archive/consumer-framework-constraint-isolation-closure` when not already
+    renamed, then run independent fresh-main close/truth/audit/validate/manifest/constraints/clean-tree
+    acceptance.'
+current_branch: archive/consumer-framework-constraint-isolation-closure
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-22T13:56:52+00:00'
+timestamp: '2026-07-22T15:42:19+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-22T02:48:41+00:00'
 checkpoint_fingerprint: 83355f1f0b237fc59df9af5d9d4e472bc73e317b528249ca76b681e992d597db
