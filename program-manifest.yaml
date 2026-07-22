@@ -2066,10 +2066,10 @@ specs:
   path: specs/218-consumer-framework-constraint-isolation
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-22T05:14:13Z'
+  generated_at: '2026-07-22T15:02:09Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 975e00d4
+  repo_revision: 72c1bfe6
   authoring_hash: 5ff97322f9720533fbbe167a0aa0fa6a857b6484ef1c70de75cb70a68b935f36
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
@@ -2112,7 +2112,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: e2972e9e60d7f194890e0eb29cb2c19d71d48d084c28b825e1fc52f3b74b25ad
+  snapshot_hash: 8f65ff855da9d930ccd7be4ee1526358e74fb9dc9293e8fbefa012da0611d907
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2130,8 +2130,8 @@ truth_snapshot:
     mapped_sources: 1141
     unmapped_sources: 0
     missing_sources: 0
-    phase_signal_count: 3708
-    deferred_signal_count: 6675
+    phase_signal_count: 3713
+    deferred_signal_count: 6681
     non_goal_signal_count: 396
     layer_totals:
       blueprint: 1
@@ -11909,8 +11909,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 218-consumer-framework-constraint-isolation
-      phase_signal_count: 0
-      deferred_signal_count: 0
+      phase_signal_count: 1
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: specs/218-consumer-framework-constraint-isolation/task-execution-log.md
       source_type: execution_log
@@ -11918,8 +11918,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 218-consumer-framework-constraint-isolation
-      phase_signal_count: 3
-      deferred_signal_count: 3
+      phase_signal_count: 6
+      deferred_signal_count: 7
       non_goal_signal_count: 0
     - path: specs/218-consumer-framework-constraint-isolation/development-summary.md
       source_type: development_summary
@@ -11927,8 +11927,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 218-consumer-framework-constraint-isolation
-      phase_signal_count: 0
-      deferred_signal_count: 0
+      phase_signal_count: 1
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
