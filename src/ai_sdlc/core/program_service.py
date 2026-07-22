@@ -75,6 +75,7 @@ from ai_sdlc.core.managed_delivery_apply import (
     run_managed_delivery_apply,
     verify_dependency_installation,
 )
+from ai_sdlc.core.plan_check import parse_markdown_frontmatter
 from ai_sdlc.core.verify_constraints import (
     build_constraint_report,
     collect_frontend_evidence_class_blockers,
@@ -4268,7 +4269,12 @@ class ProgramService:
                 summary_md = spec_dir / "development-summary.md"
 
                 if summary_md.exists():
-                    stage_hint = "close"
+                    frontmatter, _ = parse_markdown_frontmatter(summary_md)
+                    stage_hint = (
+                        "decompose_or_execute"
+                        if frontmatter.get("stage") == "close-pending"
+                        else "close"
+                    )
                 elif tasks_md.exists():
                     stage_hint = "decompose_or_execute"
                 elif plan_md.exists():

@@ -1,35 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-07-21T18:05:46Z
-- Reason: closure R2 LEAN/SAFETY identical FAIL1 remediation
-- Goal: 合入唯一closure PR，关闭WI217/WI196并恢复正常特性开发，不再创建减重work item
-- State: R2唯一恢复时点finding已修正；truth与本地门禁已刷新，待clean committed identity R3双审
+- Updated: 2026-07-22T04:41:53Z
+- Reason: 修正 lifecycle reconciliation R1 continuity scope 并补齐兼容矩阵
+- Goal: 补齐 WI204 close-pending 在 ProgramService status/execute gate 的生命周期语义，解除 WI218 formal 归档的 zero-missing 与 false-close 冲突
+- State: 独立 lifecycle candidate 已含 close-pending status/gate 修复；R1 continuity mis-scope 已修正，兼容矩阵与扩展门禁全绿，当前 branch tip 是待同一身份复审的候选
 - Stage: review
-- Work Item: 217-programservice-artifact-loader-dedupe
-- Branch: codex/217-lean-route-closure
+- Work Item: unscoped-lifecycle-prerequisite
+- Branch: codex/218-close-pending-program-status-reconciliation
 
 ## Changed Files
-- 新增WI217 development-summary；最小更新WI217/WI196终态records、manifest exact两标量、truth与handoff。
-- 相对implementation merge `4d98039d`，product/proof必须保持零diff。
+- M .ai-sdlc/state/codex-handoff.md
+- M src/ai_sdlc/core/program_service.py
+- M tests/unit/test_program_service.py
 
 ## Key Decisions
-- WI217最终GO：product `+48/-406/net -358`；路线累计产品raw净删1,011行，约初始基线0.94%。
-- Closure merge时关闭WI217/WI196，RC-08=`retired_unrealistic_composite_target`，剩余GAP/T62～T67=`non_blocking_backlog`。
-- 禁止新减重work item；恢复正常特性/缺陷开发；不发布版本。
-- Merge是mainline状态生效点；fresh-main失败只允许emergency corrective-revert恢复pre-closure records，
-  不构成第二closure/implementation/减重WI。
+- 复用 parse_markdown_frontmatter；仅精确 close-pending 返回 decompose_or_execute，其他 summary 保持 close；不新增 helper、模块、schema 或依赖
 
 ## Commands / Tests
-- Implementation detached fresh-main：proof=6、ProgramService=412、CLI=233、full=3309 passed/3 skipped；package/governance/rollback全绿。
-- Closure truth sync：revision=`9f95152f`、snapshot=`da7419fb`、inventory=1136/1136，missing/unmapped=0/0，close=216/216。
-- Closure R2-remediation gates：manifest exact=1 passed；constraints无BLOCKER；validate PASS；product/proof零diff。Final commit后复核truth audit、handoff parity、diff-check与clean identity。
+- RED=2 failed；首轮GREEN=2 passed；R1 remediation focused=4 passed；ProgramService=416 passed；CLI program=233 passed；Ruff PASS；constraints no BLOCKER
 
 ## Blockers / Risks
-- 无用户输入blocker；closure source仍须新identity本地门禁、LEAN/SAFETY PASS0、current-head Codex、required checks、merge与detached fresh-main。
+- none
 
 ## Local PR Review
-- R2 exact `86ebf23c/0d0583e2/formal-six 6228319a/handoff 406f7933`：LEAN/SAFETY均FAIL1且finding相同；已修正为merge后立即恢复正常开发，旧verdict失效。
+- R1：LEAN仅发现 WI208 continuity mis-scope；SAFETY确认 status/gate 方向但要求兼容矩阵。unreadable-summary finding 经真实调用栈复核为既有 constraint scan 先行失败，不是本补丁新增回归，不扩大修复范围。
 
 ## Exact Next Steps
-- 对修正后的committed+clean identity完成终检并取得LEAN/SAFETY R3双PASS0。
-- 推送唯一closure PR，完成Codex/current-head checks后squash merge并在detached fresh-main验收；不删除本地branch。
+- 若当前 committed identity 尚无 LEAN/SAFETY 双 PASS0则只补齐缺失评审，已有则不得重复；随后 push 并创建独立 lifecycle reconciliation PR

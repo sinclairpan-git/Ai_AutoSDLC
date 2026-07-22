@@ -7961,6 +7961,47 @@ def test_build_status_counts_and_blockers(tmp_path: Path) -> None:
     assert by["003-enroll"].blocked_by == ["001-auth"]
 
 
+def test_build_status_keeps_close_pending_summary_in_execute(tmp_path: Path) -> None:
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        (tmp_path / "specs" / spec).mkdir(parents=True)
+    (tmp_path / "specs" / "001-auth" / "development-summary.md").write_text(
+        "ok\n", encoding="utf-8"
+    )
+    course = tmp_path / "specs" / "002-course"
+    (course / "development-summary.md").write_text(
+        "---\nstage: close-pending\n---\n# Development Summary\n",
+        encoding="utf-8",
+    )
+
+    rows = {
+        item.spec_id: item for item in ProgramService(tmp_path).build_status(_manifest())
+    }
+
+    assert rows["002-course"].stage_hint == "decompose_or_execute"
+    assert "002-course" in rows["003-enroll"].blocked_by
+
+
+@pytest.mark.parametrize(
+    "summary",
+    (
+        "---\nstage: unknown\n---\n# Development Summary\n",
+        "---\nstage: [\n---\n# Development Summary\n",
+    ),
+)
+def test_build_status_keeps_legacy_close_for_unrecognized_frontmatter(
+    tmp_path: Path, summary: str
+) -> None:
+    course = tmp_path / "specs" / "002-course"
+    course.mkdir(parents=True)
+    (course / "development-summary.md").write_text(summary, encoding="utf-8")
+
+    row = {item.spec_id: item for item in ProgramService(tmp_path).build_status(_manifest())}[
+        "002-course"
+    ]
+
+    assert row.stage_hint == "close"
+
+
 def test_build_status_surfaces_frontend_evidence_class_bounded_summary(
     tmp_path: Path,
 ) -> None:
@@ -16009,6 +16050,23 @@ def test_execution_gates_require_all_specs_closed(tmp_path: Path) -> None:
     gates = svc.evaluate_execute_gates(_manifest(), allow_dirty=True)
     assert gates.passed is False
     assert any("not closed" in item for item in gates.failed)
+
+
+def test_execution_gates_reject_close_pending_summary(tmp_path: Path) -> None:
+    for spec in ("001-auth", "002-course", "003-enroll"):
+        spec_dir = tmp_path / "specs" / spec
+        spec_dir.mkdir(parents=True)
+        summary = "ok\n"
+        if spec == "002-course":
+            summary = "---\nstage: close-pending\n---\n# Development Summary\n"
+        (spec_dir / "development-summary.md").write_text(summary, encoding="utf-8")
+
+    gates = ProgramService(tmp_path).evaluate_execute_gates(
+        _manifest(), allow_dirty=True
+    )
+
+    assert gates.passed is False
+    assert "spec 002-course is not closed (stage=decompose_or_execute)" in gates.failed
 
 
 def test_execution_gates_pass_when_closed(tmp_path: Path) -> None:
