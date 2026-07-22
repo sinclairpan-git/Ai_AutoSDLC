@@ -1736,7 +1736,7 @@ def build_constraint_report(root: Path) -> ConstraintReport:
     """Build a structured report for verify constraints."""
     is_framework, _ = _repository_scope(root)
     if not is_framework:
-        boundary = _frontend_public_primevue_import_boundary_report(root, None) or FrontendPublicPrimeVueImportBoundaryReport(root=str(root))
+        boundary = _frontend_public_primevue_import_boundary_report(root, None)
         return ConstraintReport(
             root=str(root),
             source_name="verify constraints",
@@ -1745,7 +1745,7 @@ def build_constraint_report(root: Path) -> ConstraintReport:
                     item for item in VERIFICATION_GATE_OBJECTS
                     if item not in {"framework_defect_backlog", "reconcile_smoke_contract", "doc_first_surfaces", "verification_profiles", FEATURE_CONTRACT_SURFACE_OBJECT}
                 ),
-                boundary.check_objects,
+                boundary.check_objects if boundary else (),
             ),
             blockers=tuple(collect_constraint_blockers(root)),
         )
@@ -1969,7 +1969,7 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
     is_framework, _ = _repository_scope(root)
     if not is_framework:
         report = build_constraint_report(root)
-        boundary = _frontend_public_primevue_import_boundary_report(root, None) or FrontendPublicPrimeVueImportBoundaryReport(root=str(root))
+        boundary = _frontend_public_primevue_import_boundary_report(root, None)
         governance = build_verification_governance_bundle(
             report,
             decision_subject=f"verify:{root}",
@@ -1977,14 +1977,14 @@ def build_verification_gate_context(root: Path) -> dict[str, object]:
         )
         blocked = governance["gate_decision_payload"]["decision_result"] == "block"
         return {
-            "verification_sources": (report.source_name, boundary.source_name),
+            "verification_sources": _merge_unique_strings((report.source_name,), (boundary.source_name,) if boundary else ()),
             "verification_check_objects": report.check_objects,
             "constraint_blockers": report.blockers if blocked else (),
             "coverage_gaps": report.coverage_gaps if blocked else (),
             "release_gate": None,
             "verification_governance": governance,
             "provenance_phase1": load_phase1_provenance_gate_payload(root),
-            "frontend_public_primevue_import_boundary_verification": boundary.to_json_dict(),
+            **({"frontend_public_primevue_import_boundary_verification": boundary.to_json_dict()} if boundary else {}),
         }
     report = build_constraint_report(root)
     checkpoint = load_checkpoint(root)

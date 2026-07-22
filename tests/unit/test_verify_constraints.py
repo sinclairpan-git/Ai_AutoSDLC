@@ -5380,3 +5380,19 @@ def test_consumer_keeps_primevue_boundary_and_base_governance_payloads(
     ] == "WARN"
     assert context["verification_governance"]["gate_decision_payload"]
     assert "provenance_phase1" in context
+
+
+def test_consumer_omits_primevue_boundary_when_no_files_are_scanned(
+    tmp_path: Path,
+) -> None:
+    _make_consumer_root(tmp_path)
+
+    report = build_constraint_report(tmp_path)
+    context = build_verification_gate_context(tmp_path)
+
+    assert "frontend_public_primevue_import_boundary" not in report.check_objects
+    assert (
+        verify_constraints_module.FRONTEND_PUBLIC_PRIMEVUE_IMPORT_BOUNDARY_SOURCE_NAME
+        not in context["verification_sources"]
+    )
+    assert "frontend_public_primevue_import_boundary_verification" not in context
