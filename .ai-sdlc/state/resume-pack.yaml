@@ -13,16 +13,17 @@ working_set_snapshot:
   - specs/218-consumer-framework-constraint-isolation/spec.md
   context_summary: 'Goal: Merge the existing WI218 closure PR 173 and complete portable
     fresh-main closure acceptance | State: Implementation PR 172 is merged and accepted;
-    Codex P1/P2 are addressed with portable deleted/removed lifecycle truth and refreshed
-    continuity; direct close-check is fully green with no associated branch/worktree
-    drift; closure remains docs/truth/continuity-only | Next: Confirm LEAN/SAFETY
-    PASS0 on the post-handoff clean HEAD, push it to existing PR 173, resolve addressed
-    threads, request one current-head Codex re-review, then merge only after all required
-    checks pass'
+    all four Codex closure findings are addressed: portable deleted/removed lifecycle
+    truth, current continuity state, explicit closure changed-file inventory, and
+    a reachable terminal snapshot revision via post-merge generic remote archive rename;
+    closure remains docs/truth/continuity-only | Next: Commit the explicit seven-file
+    handoff inventory, run terminal validation, obtain LEAN/SAFETY PASS0 on that clean
+    HEAD, push to existing PR 173, resolve addressed threads, and request one current-head
+    Codex re-review'
 current_branch: archive/consumer-framework-constraint-isolation-closure
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-22T15:26:02+00:00'
+timestamp: '2026-07-22T15:42:19+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-07-22T02:48:41+00:00'
 checkpoint_fingerprint: 83355f1f0b237fc59df9af5d9d4e472bc73e317b528249ca76b681e992d597db
