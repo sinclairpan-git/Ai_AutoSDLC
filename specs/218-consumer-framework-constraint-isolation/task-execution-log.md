@@ -176,7 +176,7 @@
 
 - closure source payload=`fdeb1763`，只归档实施与 fresh-main 验收事实，不修改 `src/`、`tests/`、公开 API、配置、依赖或产品行为。
 - 本地旧 `main` 工作树保留用户现场，不作为 closure 真值；唯一 closure carrier 从独立 clone 的 current-main `fec4c010` 建立。
-- carrier 使用 `archive/218-consumer-framework-constraint-isolation-closure`，合入后继续保留为审计分支；`main` 仍是 WI218 closed 状态的唯一生效来源。
+- PR head 只承担 closure transport；合入后删除远端 WI218 transport ref。本地仅保留不带 WI 序号的通用 archive 分支作为 Git 取证，不作为 work-item lifecycle branch；`main` 是 WI218 closed 状态的唯一生效来源。
 
 #### 14.2 统一验证命令
 
@@ -200,10 +200,10 @@
 
 - `tasks.md` 同步状态：`已同步`，T11～T33 共 8 项全部完成。
 - `related_plan` 同步状态：`已对账`，不新增阶段、任务、work item 或减重路线。
-- 关联 branch/worktree disposition 计划：`archived(WI218 closure audit carrier retained after merge)`
-- 当前批次 branch disposition 状态：`archived(WI218 closure audit carrier retained after merge)`
-- 当前批次 worktree disposition 状态：`retained(closure review and post-merge audit)`
-- 说明：archive carrier 仅保留可恢复审计证据；closure PR 合入前不得声称 `main` 已 closed。
+- 关联 branch/worktree disposition 计划：`deleted`
+- 当前批次 branch disposition 状态：`deleted`
+- 当前批次 worktree disposition 状态：`removed`
+- 说明：上述终态在 closure PR 合入并删除远端 WI218 transport ref 后生效；fresh-main 不依赖作者机器上的 archive branch/worktree。closure PR 合入前不得声称 `main` 已 closed。
 
 #### 14.5 Git close-out
 
