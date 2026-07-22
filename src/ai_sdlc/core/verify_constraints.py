@@ -2328,7 +2328,7 @@ def _repository_scope(root: Path) -> tuple[bool, str | None]:
         payload = {}
     project = payload.get("project") if isinstance(payload, dict) else None
     name = project.get("name") if isinstance(project, dict) else None
-    name_matches = isinstance(name, str) and name.strip() == "ai-sdlc"
+    name_matches = isinstance(name, str) and name == "ai-sdlc"
     package_matches = package_init.is_file()
     if name_matches and package_matches:
         return True, None

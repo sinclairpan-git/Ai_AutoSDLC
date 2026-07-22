@@ -5191,6 +5191,7 @@ def test_repository_scope_requires_both_framework_identity_signals(
         "[project]\nname = [\"ai-sdlc\"]\n",
         "[project]\nname = 42\n",
         "[project]\nname = \"   \"\n",
+        "[project]\nname = \" ai-sdlc \"\n",
     ),
 )
 def test_repository_scope_treats_invalid_project_name_as_identity_miss(
