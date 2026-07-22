@@ -16,10 +16,10 @@ working_set_snapshot:
     all four Codex closure findings are addressed: portable deleted/removed lifecycle
     truth, current continuity state, explicit closure changed-file inventory, and
     a reachable terminal snapshot revision via post-merge generic remote archive rename;
-    closure remains docs/truth/continuity-only | Next: Commit the explicit seven-file
-    handoff inventory, run terminal validation, obtain LEAN/SAFETY PASS0 on that clean
-    HEAD, push to existing PR 173, resolve addressed threads, and request one current-head
-    Codex re-review'
+    closure remains docs/truth/continuity-only | Next: Check whether the current clean
+    HEAD already has terminal validation and same-identity LEAN/SAFETY PASS0; reuse
+    them when HEAD is unchanged, otherwise rerun them. Then push to existing PR 173,
+    resolve addressed threads, and request one current-head Codex re-review.'
 current_branch: archive/consumer-framework-constraint-isolation-closure
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'

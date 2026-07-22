@@ -30,4 +30,4 @@
 - none
 
 ## Exact Next Steps
-- Commit the explicit seven-file handoff inventory, run terminal validation, obtain LEAN/SAFETY PASS0 on that clean HEAD, push to existing PR 173, resolve addressed threads, and request one current-head Codex re-review
+- Check whether the current clean HEAD already has terminal validation and same-identity LEAN/SAFETY PASS0; reuse them when HEAD is unchanged, otherwise rerun them. Then push to existing PR 173, resolve addressed threads, and request one current-head Codex re-review.
