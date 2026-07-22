@@ -21,11 +21,16 @@
 
 ## Batch 2：TDD 实现
 
-- [ ] **T21 写入 consumer/framework 隔离 RED 测试**
+- [ ] **T21 写入 consumer/framework 隔离 RED 测试并校正既有 framework fixture 身份**
   - 依赖：T13
-  - 文件：`tests/unit/test_verify_constraints.py`
+  - 文件：`tests/unit/test_verify_constraints.py`、`tests/integration/test_cli_verify_constraints.py`、
+    `tests/integration/test_cli_index_gate.py`
   - 验收：Agent Store、routing-census、`003/012` metadata/编号碰撞在 legacy implementation baseline 上
     按预期 RED；四态身份、invalid pyproject 二态、PrimeVue/common-gate characterization 不产生无关失败。
+    新行为断言只在 unit 文件；两个 integration 文件仅为明确验证 framework-only
+    `003/012/018/073` 或 backlog/profile/doc-first surfaces 的逐个 fixture 创建 `pyproject.toml`
+    （`[project].name = "ai-sdlc"`）和 `src/ai_sdlc/__init__.py`，不改断言/预期输出、不用
+    module/global autouse；downstream/relinked `003` 与 consumer `003/012` collision fixture 保持无身份信号。
 
 - [ ] **T22 实现最小双信号与三入口分流**
   - 依赖：T21
@@ -39,6 +44,8 @@
   - 验收：focused pytest、Ruff、full pytest、constraints、program validate/truth、diff-check 全绿；
     真实 Agent Store 以 current-source、`python -B` 连续双跑，framework-only findings 为0，且前后
     status/diff/dirty-path 三类指纹完全一致。
+    full pytest 必须确认 33 个既有 framework fixture 不再因缺少身份信号失败；yaml-store permission 用例
+    即使 isolated rerun 通过也不豁免，仍由 full-suite gate 约束。
 
 - [ ] **T32 完成本地对抗代码评审**
   - 依赖：T31

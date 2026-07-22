@@ -110,7 +110,7 @@ sources。不得仅过滤 blocker 而保留虚假的框架检查元数据。
 | 合同 | 硬约束 |
 |---|---|
 | LC-01 | implementation 产品代码只允许修改 `src/ai_sdlc/core/verify_constraints.py` |
-| LC-02 | implementation 行为测试只允许修改 `tests/unit/test_verify_constraints.py` |
+| LC-02 | implementation 新行为断言只允许修改 `tests/unit/test_verify_constraints.py`；两个既有 integration 文件仅可补显式 framework identity fixture setup |
 | LC-03 | 不新增产品模块、配置、依赖、公开 API、Enum、dataclass、role model、plan/registry/dispatcher |
 | LC-04 | 新增私有 helper 不超过 2 个；目标为 1 个 `_repository_scope` |
 | LC-05 | 产品 raw additions 硬上限 80 行；预计 55–77 行；超限必须停止并重新压缩设计 |
@@ -119,6 +119,11 @@ sources。不得仅过滤 blocker 而保留虚假的框架检查元数据。
 | LC-08 | formal 只允许 canonical records、manifest/state/handoff 和 `tests/integration/test_repo_program_manifest.py` 机械计数 |
 
 测试代码不计入 runtime 负担，但不得复制 Agent Store 全仓或建立第二套 integration harness。
+LC-02 的 integration 例外仅限 `tests/integration/test_cli_verify_constraints.py` 与
+`tests/integration/test_cli_index_gate.py`：对明确验证 framework-only `003/012/018/073` 或 framework
+backlog/profile/doc-first surfaces 的 fixture，只可创建 `pyproject.toml`（`[project].name = "ai-sdlc"`）和
+`src/ai_sdlc/__init__.py`。不得修改断言或预期输出，不得使用 module/global autouse；downstream/relinked
+`003` 以及 consumer `003/012` 编号碰撞 fixture 必须保持无 framework identity。
 
 ## 5. 功能需求
 

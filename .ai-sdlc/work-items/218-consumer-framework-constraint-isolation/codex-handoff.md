@@ -1,32 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-07-22T05:44:31+00:00
-- Reason: 同步修复 PR #170 Codex P2 的 handoff 与 resume-pack 恢复上下文
-- Goal: 归档 WI218 产品需求并完成消费项目/框架约束隔离实现与验收
-- State: Codex P2 的 handoff 与 resume-pack 同步修复已形成 candidate；formal manifest=901964e06b4199869879464b1d35e0b44ca5e74a91680c5276c5ea5b4f7500ec 保持不变，当前批次只修改连续性产物
+- Updated: 2026-07-22T07:03:28+00:00
+- Reason: 收口 ERRATA R2 continuity truth，移除旧 commit 与瞬时状态绑定
+- Goal: 完成 WI218 消费项目/框架约束隔离落地与验收
+- State: R1 continuity P1 已修复；formal-content scope 验证 PASS；formal errata 已形成 committed candidate，formal-four=5767517d91cc2a6f3d3372011d81e1a85f3262539b07dddb810798349272fe84；当前 committed identity 只待缺失双审
 - Stage: close
 - Work Item: 218-consumer-framework-constraint-isolation
-- Branch: feature/218-consumer-framework-constraint-isolation-docs
+- Branch: codex/218-consumer-framework-constraint-isolation-errata
 
 ## Changed Files
-- `.ai-sdlc/project/config/project-state.yaml`
-- `.ai-sdlc/state/checkpoint.yml`
-- `.ai-sdlc/state/codex-handoff.md`
-- `.ai-sdlc/state/resume-pack.yaml`
-- `.ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md`
-- `program-manifest.yaml`
-- `specs/218-consumer-framework-constraint-isolation/development-summary.md`
 - `specs/218-consumer-framework-constraint-isolation/plan.md`
 - `specs/218-consumer-framework-constraint-isolation/spec.md`
 - `specs/218-consumer-framework-constraint-isolation/task-execution-log.md`
 - `specs/218-consumer-framework-constraint-isolation/tasks.md`
-- `tests/integration/test_repo_program_manifest.py`
+- `.ai-sdlc/state/codex-handoff.md`
+- `.ai-sdlc/state/resume-pack.yaml`
+- `.ai-sdlc/work-items/218-consumer-framework-constraint-isolation/codex-handoff.md`
 
 ## Key Decisions
-- development-summary 仅物化 formal candidate，stage=close-pending；WI218 status=decompose_or_execute、tasks=2/8；不建立 active-WI missing waiver，不声称实现完成
+- 冻结双信号产品合同与 FR-218-006 consumer collision protection 不变；禁止产品 compatibility fallback；formal errata 不推进 implementation lifecycle
 
 ## Commands / Tests
-- truth=1141/1141 missing/unmapped=0/0 close=217/217 ready/fresh；manifest=1 passed；lifecycle=4 passed；actual status=decompose_or_execute tasks=2/8；validate PASS；constraints no BLOCKER
+- R1 continuity P1 已修复，formal-content scope 验证 PASS；exact-seven scope、handoff/resume bytes、stale scan、pending lifecycle 与 handoff tests 均 PASS；当前 committed identity 只待缺失双审
 
 ## Blockers / Risks
 - none
@@ -35,4 +30,4 @@
 - none
 
 ## Exact Next Steps
-- 确认工作区 clean；若当前 committed identity 尚缺 LEAN/SAFETY 任一 PASS0，则只补缺失评审，已有不得重复；双 PASS0 后推送 #170、回复并解决当前 P2 thread，只请求一次新 HEAD Codex review并等待 checks
+- 若当前 committed identity 缺少 LEAN 或 SAFETY 任一 PASS0，只补缺失评审且不得重复已有评审；双 PASS0 后将 errata 带回既有 implementation 分支继续 TDD，不新建 PR
