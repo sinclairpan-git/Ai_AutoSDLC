@@ -1670,7 +1670,7 @@ def test_user_guide_splits_pre_downloaded_and_online_release_install_paths() -> 
     assert "如果使用场景 B，在线下载到项目父目录并安装" not in guide
     assert "ai-sdlc init ." in guide
     assert "如果你的 PowerShell 粘贴多行时把命令显示成连续的 `>>` 提示" in guide
-    assert 'Set-Location ..; $BundleName = "ai-sdlc-offline-0.9.6-windows-amd64"' in guide
+    assert 'Set-Location ..; $BundleName = "ai-sdlc-offline-0.9.7-windows-amd64"' in guide
     assert "是示例路径；请替换成你的真实项目根目录" in guide
     assert len(scenario_a_sections) == 2
     assert guide.count("Invoke-WebRequest -Uri") >= 2
