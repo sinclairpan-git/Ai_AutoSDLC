@@ -1,37 +1,32 @@
 # Continuity Handoff
 
-- Updated: 2026-08-25T12:26:47+00:00
-- Reason: 记录 WI219 formal 同一候选的根因、最终验证与精确下一步
-- Goal: 冻结 WI219 主线真值复位与轻量 ROI 合同，等待用户审阅；批准前不进入产品实现
-- State: Formal 候选已完成根因收敛与自审：canonical linked-first 语义正确，readiness/status 与 execute authorization 存在定向消费缺口；设计允许一个共享纯 helper 和三个既有消费方。Program Truth=ready/fresh，root inventory 明确保留 WI219 formal missing close=1。
+- Updated: 2026-08-25T13:22:43+00:00
+- Reason: 记录首轮合议 REJECT、事实纠偏与 formal-only 整改边界
+- Goal: 整改 WI219 首轮合议阻断，仅冻结 formal 合同并等待 round 2；批准前不进入产品实现
+- State: 首轮合议 REJECT 已完成事实裁决。formal 已加入 behind-only remote-ref truth 基准、精确 formal-control classification、完整 active-WI consumer matrix、双模板 semantic-set 验收；已删除 adapter scope escape hatch。
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
 - Branch: feature/219-mainline-truth-roi-contract-docs
 
 ## Changed Files
-- M .ai-sdlc/project/config/project-state.yaml
-- M .ai-sdlc/state/checkpoint.yml
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M program-manifest.yaml
-- M tests/integration/test_repo_program_manifest.py
-- ?? .ai-sdlc/work-items/219-mainline-truth-roi-contract/
-- ?? specs/219-mainline-truth-roi-contract/
+- M specs/219-mainline-truth-roi-contract/plan.md
+- M specs/219-mainline-truth-roi-contract/spec.md
+- M specs/219-mainline-truth-roi-contract/task-execution-log.md
+- M specs/219-mainline-truth-roi-contract/tasks.md
 
 ## Key Decisions
-- 保留 checkpoint.feature 历史身份和现有 link writer；30/150 LOC 只作为重新评审信号。不得新增状态机、治理工件、硬门禁，或修改 writer/schema、Runner、ProgramService。
+- 不移动本地 main、不 fetch、不新增状态或解析器。truth base 只在本地 default 落后已有 origin ref 时只读使用 remote；formal-only 仅忽略精确列出的 control paths；任何其他路径仍是 execution evidence。指标只记 cost/risk，越过冻结边界或缺少必要性证据才暂停。
 
 ## Commands / Tests
-- 79 passed in 167.72s: status/handoff/checkpoint/readiness/execute/root-manifest targeted suite
-- uv run ai-sdlc verify constraints: no BLOCKERs
-- uv run ai-sdlc program truth audit: ready/fresh, 1147/1147 mapped, 0 unmapped, close 217/218
-- uv run ruff check tests/integration/test_repo_program_manifest.py: All checks passed
+- Round 1: autonomy APPROVE after WI198 correction; hard-guardrail APPROVE_WITH_CONDITIONS; balanced REJECT; chair REJECT
+- workitem truth-check at b3665d7e: branch_only_implemented, execute_started=yes, main divergence 221/0
+- git main...origin/main: local main c0f333c8 is 220 commits behind origin/main 76252746
 
 ## Blockers / Risks
-- 用户批准 spec.md 前禁止进入产品实现；若实现证据要求越过冻结文件/架构边界，必须停止并重新评审。
+- Round 2 未对同一新 SHA 关闭全部有效 Critical/Important 前禁止实施；若整改需要 GitClient/writer/schema/Runner/ProgramService、新状态或 Markdown parser，立即 No-Go/needs_user。
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交 formal spec identity，请用户审阅 specs/219-mainline-truth-roi-contract/spec.md；获批后再使用正式 planning 流程生成 RED/GREEN 实施计划。
+- 完成 formal 自审与 Program Truth/constraints/manifest 验证，提交新 formal SHA；随后原三席 round 2 审同一 base/head。

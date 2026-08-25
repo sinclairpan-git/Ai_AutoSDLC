@@ -2,7 +2,7 @@
 
 **功能编号**：`219-mainline-truth-roi-contract`
 **创建日期**：2026-08-25
-**状态**：formal design review candidate
+**状态**：formal remediation candidate（adversarial round 2）
 **类型**：mainline truth maintenance + delivery contract optimization
 **冻结基线**：`origin/main@762527466119dde127d7488b73d5592e44afaaa6`（`v0.9.7`）
 
@@ -23,6 +23,15 @@
 历史 `checkpoint.feature.id/spec_dir`，继续返回 WI204。这证明问题不是 link 写入失败，而是两个消费面绕过
 既有 linked-first 语义。
 
+首轮合议进一步复现了两个同源真值缺口：
+
+- 固定候选 `b3665d7e` 的 `workitem truth-check` 被判为 `branch_only_implemented`、`Execute started=yes`，
+  并要求 close/merge；其中本地 `main@c0f333c8` 比 `origin/main@76252746` 落后 220 个提交，导致候选被错误
+  归入 221 个历史产品差异；即使排除该环境污染，canonical formal control 文件、execution log 和机械
+  inventory test 也会被现有分类器一概当成产品执行证据。
+- status 的 backlog breach guard 仍独立从历史 `checkpoint.feature.spec_dir` 取目标；只修改三个最显眼的
+  消费方后，status 仍可能同时输出 WI219 与 WI204 结论。
+
 同时，当前 formal work item 模板没有要求在编码前说明用户收益、最小替代方案、总投入和退出条件。
 这使得模型可能在对抗修复中持续增加支撑、证明和治理实现，却没有显式比较投入产出。
 
@@ -41,6 +50,8 @@
    `workitem init` direct-formal 模板。
 4. ROI 提示保留模型自主选择方案的能力；LOC、支撑/核心比例、调用方数量只能触发说明，不能单独阻断。
 5. 现有 work item 无需回填，消费项目不会因为缺少新段落而收到 blocker。
+6. formal-only 候选必须相对可信主线判为 `formal_freeze_only`，不得因陈旧本地 main 或精确列出的 formal
+   control 文件伪报产品执行、close 或 merge 下一步。
 
 ### 2.2 明确非目标
 
@@ -51,6 +62,7 @@
 - 不重启 WI196，不创建新的减重工作项，不重构 `ProgramService`、`program_cmd.py` 或 `run_cmd.py`。
 - 不复制参赛版的模块、测试或历史，只借鉴已经验证的行为边界。
 - 不清理历史 specs、旧 branch/worktree 或发布记录。
+- 不执行 `fetch`、不移动本地/远端分支，不要求在线环境；truth-check 只读取当前已有 Git refs。
 - 不在本项发布新版本、tag 或 Release。
 
 ## 3. 方案比较与冻结决策
@@ -58,7 +70,7 @@
 | 方案 | 做法 | 收益 | 成本/风险 | 决策 |
 |---|---|---|---|---|
 | A. 只改 handoff 文案 | 手工移除 PR 173 和 WI218 文案 | 最便宜 | `status` 仍可能指向 WI204，不能证明运行真值 | 拒绝 |
-| B. 复用现有真值语义 + 定向消费修正 + 模板提示 | 保留 link/handoff/reconcile 写入；让 readiness/execute 复用 linked-first 解析；扩展 spec 模板和 characterization tests | 解决当前事实并防止后续投入失控；无新状态运行时 | 需要 linked/no-linked 前后对账 | **采用** |
+| B. 复用现有真值语义 + 定向分类/消费修正 + 模板提示 | 保留 link/handoff/reconcile 写入；修正 stale-local-main 与 formal-only 分类；让所有 active-WI status/execute 消费面复用 linked-first 解析；扩展 spec 模板和 characterization tests | 解决当前事实并防止后续投入失控；无新状态运行时 | 需要 base/formal/linked 矩阵对账 | **采用** |
 | C. 新建 ROI/Lean 治理引擎 | 增加评分、例外、生命周期和 close 门禁 | 自动化程度高 | 重复既有 Loop，重演治理膨胀 | No-Go |
 
 ## 4. 冻结设计
@@ -71,15 +83,45 @@
    命令和下一步；不得直接手写无法由 CLI 表达的新状态。
 3. 已验证 link 后出现以下稳定分叉：canonical active id 为 WI219，而 readiness binding、active work-item dir
    与 execute authorization 均为 WI204；这是本项 P0 的直接根因，不再把它误判为新状态机需求。
-4. 冻结一个最小 active binding 方案：
+4. 冻结一个无网络、无写入的 truth baseline/classification 修正：
+   - 默认分支仍由 `main`/`master` 决定；只有同名 `origin/<default>` 已存在、且本地 default 是该 remote ref
+     的严格祖先时，read-only truth comparison 才使用 remote ref；remote 缺失、本地领先或双方分叉时继续
+     使用本地 default，不执行 fetch，也不移动 ref；
+   - `formal_freeze_only` 只允许以下精确 formal control change set：
+     `specs/<wi>/{spec.md,plan.md,tasks.md,task-execution-log.md}`、
+     `.ai-sdlc/project/config/project-state.yaml`、`.ai-sdlc/state/{checkpoint.yml,codex-handoff.md,resume-pack.yaml}`、
+     `.ai-sdlc/work-items/<wi>/codex-handoff.md`、`program-manifest.yaml` 与
+     `tests/integration/test_repo_program_manifest.py`；任一其他 `src/`、test、配置、脚本、产品文档或其他路径
+     仍视为 execution evidence；
+   - 该 allowlist 只影响既有三种 truth classification，不增加状态、schema、命令参数或持久化字段；
+   - WI219 formal candidate 必须判为 `formal_freeze_only`，changed paths 不得包含远端主线已有产品文件，
+     next action 不得要求 close/merge；真实 RED test、产品实现或非 formal 路径仍判为 execution started。
+5. 冻结一个最小 active binding 方案：
    - `active_work_item_id(checkpoint)` 继续作为唯一 ID 解析入口；
    - 在同一 context/state 模块增加至多一个无 I/O、无持久化的 spec-dir 纯解析 helper：存在非空 linked WI
      时返回 `specs/<linked_wi_id>`，否则原样返回历史 `feature.spec_dir`；
-   - resume filesystem fallback、readiness/status 与 execute authorization 三个既有消费方复用该 helper；
+   - resume filesystem fallback、spec Program Truth、frontend evidence class、branch lifecycle、workitem
+     diagnostics、backlog breach guard 与 execute authorization 全部复用同一 id/spec-dir 选择；各消费方保留
+     现有 I/O、格式与错误语义；
    - linked target 缺失或不完整时 fail-closed，不得回退历史 feature 目录；无 linked WI 时行为完全不变。
-5. 仅修正 active id/spec-dir 的选择，不改变 checkpoint writer、branch/stage、status JSON schema、错误码、
-   task guard、truth classifier 或 execute 授权规则。
-6. WI219 关闭时，continuity 必须更新为终态或明确的下一正式工作项，不能再次留下“待合并已合并 PR”。
+6. 冻结 consumer-visible 验收矩阵：
+
+   | 场景 | ID / spec-dir | 必须结果 |
+   |---|---|---|
+   | valid linked WI | linked / `specs/<linked>` | 全部 active-WI 子面只读 linked target |
+   | no/blank linked WI | feature / 原 `feature.spec_dir` | legacy 行为、非标准路径和错误文本不变 |
+   | linked directory missing | linked / `specs/<linked>` | resume canonical fields 为空；status/execute unavailable/blocked；绝不读取历史 feature |
+   | linked formal docs partial | linked / `specs/<linked>` | 各既有 formal-incomplete/error 合同生效；绝不读取历史 feature |
+   | non-main 或非-close | 按 linked-first | 保留现有 active branch 语义 |
+   | main + close + linked 尚未 mainline merged | 按 linked-first | 仍是当前 active WI；formal-only 不伪报 merged |
+   | main + close + linked 已 mainline merged | linked | 保留现有 terminal inactive 语义 |
+   | strict checkpoint load | feature 校验不变，linked 消费 fail-closed | 不放宽 checkpoint schema/strict 错误合同 |
+
+7. 仅修正 truth base/formal classification 与 active id/spec-dir 选择，不改变 checkpoint writer、branch/stage、
+   status JSON schema、错误码、task guard 或 execute 授权规则。
+8. 每次 formal 提交后必须通过现有 handoff CLI 刷新 canonical/scoped continuity；下一步应稳定写为“审阅当前
+   已提交 formal candidate”，不得记录 `??` 文件或“提交已经提交的 identity”。
+9. WI219 关闭时，continuity 必须更新为终态或明确的下一正式工作项，不能再次留下“待合并已合并 PR”。
 
 允许的真值文件仅为：
 
@@ -91,22 +133,24 @@
 - `program-manifest.yaml`（`program truth sync` 机械结果）；
 - `tests/integration/test_repo_program_manifest.py`（只允许把 root inventory/close tuple 机械更新为 WI219 formal
   层数；不得放宽完整性、unmapped、capability 或 release 断言）；
-- 当前 adapter canonical 文件（仅框架入口机械刷新）。
 
 允许的 Track A 产品/测试文件仅为：
 
 - `src/ai_sdlc/context/state.py`；
+- `src/ai_sdlc/core/workitem_truth.py`；
 - `src/ai_sdlc/telemetry/readiness.py`；
 - `src/ai_sdlc/core/execute_authorization.py`；
+- `tests/integration/test_cli_workitem_truth_check.py`；
 - `tests/unit/test_context_state.py`；
 - `tests/unit/test_telemetry_readiness.py`；
 - `tests/unit/test_execute_authorization.py`；
 - `tests/integration/test_cli_status.py` 或 `tests/integration/test_cli_workitem_link.py` 二选一，只有 unit 无法证明
   真实 CLI link→status 闭环时才允许。
 
-不得修改 workitem link writer、Runner、ProgramService、status 展示格式或 checkpoint schema。产品净新增目标
-为 30 LOC 以内、定向测试新增目标为 150 LOC 以内；它们是 re-review 信号，不是脱离风险与兼容性的机械
-blocker。若必须超出，应先证明现有 helper 无法承载并重新审阅设计，不得边写边扩 scope。
+不得修改 workitem link writer、GitClient、Runner、ProgramService、status 展示格式或 checkpoint schema。
+active binding、truth classification 与模板合计预计产品净新增 40–80 LOC、定向测试新增 180–300 LOC；数字
+只进入 cost/risk 记录，不单独触发暂停。只有越过冻结文件/公共或持久化边界，或新增成本缺少兼容/行为证据
+时才停止并重新审阅；不得为满足数字删减必要的安全、兼容、跨平台或回归证据。
 
 ### 4.2 Track B：轻量 ROI 与实现边界
 
@@ -117,7 +161,7 @@ blocker。若必须超出，应先证明现有 helper 无法承载并重新审�
 3. **最小方案与备选方案**：说明为什么不采用更小或现有承载方式。
 4. **总投入**：产品、测试/harness、CI、评审、迁移和长期维护一起估算。
 5. **范围与退出条件**：新增公共面、依赖、持久化状态及回退/删除触发器。
-6. **决策**：`implement`、`defer`、`needs-user` 或 `not-applicable`，附一段理由。
+6. **决策**：`implement`、`defer`、`needs_user` 或 `not-applicable`，附一段理由。
 
 合同解释：
 
@@ -126,6 +170,9 @@ blocker。若必须超出，应先证明现有 helper 无法承载并重新审�
 - 只有未经授权的范围扩展、缺失可执行证据、可复现安全/隐私/数据/兼容/回归问题能够成为 blocker。
 - 安全、兼容、迁移、恢复和外部协议实现可以合理超过一般支撑比例，但必须说明必要性和退出条件。
 - 本项不新增解析器或 constraint blocker；模板内容供模型和现有 reviewer 使用。
+- 两个 render/scaffold 测试必须分别证明同一 canonical semantic set：六项提示、四个决策值、
+  `not-applicable` 轻量例外、数值仅是风险信号、§4.2 所列 blocker 类别；允许自然语言不同，不允许语义缺项
+  或一条路径把 advisory 升级为 blocker。
 
 允许的产品/测试文件仅为：
 
@@ -144,6 +191,10 @@ blocker。若必须超出，应先证明现有 helper 无法承载并重新审�
 - **FR-219-003**：WI219 活动期间，正常 status 不得继续把 WI204/WI218 作为下一可执行工作项。
 - **FR-219-004**：readiness/status、execute authorization 与 resume 必须按同一 linked-first active id/spec-dir
   语义解析；不得从 linked WI 静默回退历史 feature。
+- **FR-219-004A**：read-only truth comparison 必须按 §4.1 的 behind-only remote-ref 规则选择基准；不得让陈旧
+  本地 main 污染 changed paths，也不得在本地领先/分叉或 offline 场景强制使用 remote。
+- **FR-219-004B**：精确 formal control change set 必须判为 `formal_freeze_only`；任一范围外实现/测试/配置/
+  产品文档变更仍视为 execution evidence。
 - **FR-219-005**：两套 spec 模板必须包含 §4.2 六项，并保持语义一致。
 - **FR-219-006**：direct-formal scaffold 的新规格必须出现 ROI 段落，且既有 parser-friendly 结构不变。
 - **FR-219-007**：既有规格和消费项目无需回填；`verify constraints` 不得因缺少 ROI 段落新增 blocker。
@@ -178,11 +229,17 @@ readiness/status、execute authorization、resume 和 handoff 都选择 WI219，
 
 - **SC-219-001**：fresh-main 基线明确复现当前 WI204 `branch_only_implemented` 与陈旧 PR 173 handoff。
 - **SC-219-002**：使用现有 link/handoff 入口后，canonical resolver、branch lifecycle、workitem diagnostics、
-  execute authorization、resume 与 handoff 的 active WI 均为 WI219；任何一个仍指向 WI204 都算失败。
+  spec Program Truth、frontend evidence、backlog breach guard、execute authorization、resume 与 handoff 的 active
+  WI 均为 WI219；任何一个仍读取 WI204 都算失败。
+- **SC-219-002A**：本地 default 落后已有 origin default 的 fixture 中，truth-check 使用 origin ref；remote
+  缺失、本地领先和分叉 fixtures 保留本地 default；所有测试无网络、无 ref 写入。
+- **SC-219-002B**：WI219 formal-only fixture/真实候选均为 `formal_freeze_only`、无主线历史 code/test paths、
+  无 close/merge action；加入一条范围外 RED test 或产品文件后稳定转为 `branch_only_implemented`。
 - **SC-219-003**：Program Truth 同步/审计保持 fresh，release targets 继续 ready，source inventory 无新增
   unmapped source。
-- **SC-219-004**：`workitem init` 新生成的 `spec.md` 含 §4.2 六项；相关单元测试精确验证。
-- **SC-219-005**：普通 stage/spec 模板与 direct-formal 模板在 ROI 语义上无漂移。
+- **SC-219-004**：`workitem init` 新生成的 `spec.md` 含 §4.2 canonical semantic set；相关单元测试精确验证。
+- **SC-219-005**：普通 stage/spec 与 direct-formal 两个真实 render 路径分别覆盖 canonical semantic set；文字
+  可不同，但决策值、例外、risk/blocker 边界无漂移。
 - **SC-219-006**：未新增命令、schema、状态、ledger、certificate、receipt、waiver 或 close 权限。
 - **SC-219-007**：状态/handoff/checkpoint targeted tests、template/scaffold tests、Ruff、constraints、
   program truth audit 与 diff-check 全绿。
@@ -194,10 +251,10 @@ readiness/status、execute authorization、resume 和 handoff 都选择 WI219，
 | 项目 | 冻结值 |
 |---|---|
 | 用户价值 | 恢复下一步可信度；让未来每项实现显式比较总投入 |
-| 预计投入 | formal 0.5–1 人日；active binding 修正 0.5–1 人日；模板与验收 0.5–1 人日 |
-| 最小方案 | 现有 link/handoff 写入 + 一个共享纯解析 helper + 两个消费面修正 + 两份现有 spec 模板提示 |
+| 预计投入 | formal 1–1.5 人日；truth baseline/classification 0.5–1 人日；active binding 0.5–1 人日；模板与验收 0.5–1 人日；总计 2.5–4.5 人日 |
+| 最小方案 | behind-only remote-ref 读取 + 精确 formal-control 分类 + 一个共享纯解析 helper + 全部 active-WI 消费面 + 两份现有 spec 模板提示 |
 | 主要风险 | 模板重复、把 advisory 误写成 blocker、顺手扩展状态机 |
-| 停止条件 | 需要新状态机/新治理工件；需要修改 writer/schema/Runner/ProgramService；两轮定向修正仍无法统一 active WI |
+| 停止条件 | 需要新状态机/新治理工件；需要修改 GitClient/writer/schema/Runner/ProgramService；需要解析 Markdown 才能判 formal；两轮定向修正仍无法统一 truth/active WI |
 | 回退 | 原子 revert 模板与真值更新；不影响历史 specs |
 
 本项的成功不是新增一套 ROI 系统，而是以最小增量让正常开发在编码前回答正确的问题。
