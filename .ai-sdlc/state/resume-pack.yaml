@@ -11,15 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 整改 WI219 首轮合议阻断，仅冻结 formal 合同并等待 round 2；批准前不进入产品实现 | State:
-    首轮合议 REJECT 已完成事实裁决。formal 已加入 behind-only remote-ref truth 基准、精确 formal-control
-    classification、完整 active-WI consumer matrix、双模板 semantic-set 验收；已删除 adapter scope
-    escape hatch。 | Next: 完成 formal 自审与 Program Truth/constraints/manifest 验证，提交新
-    formal SHA；随后原三席 round 2 审同一 base/head。'
+  context_summary: 'Goal: 冻结已提交的 WI219 形式整改候选，接受原三席第二轮只读评审；用户批准前不进入产品实现。 | State:
+    24b14cf6 已提交；Program Truth ready/fresh，1147/1147 映射、0 unmapped、missing 1；T15 完成，T16/T17
+    待办。 | Next: 原三席只读审阅当前已提交候选；关闭全部有效 Critical/Important 后请求用户批准，否则停在 needs_user /
+    No-Go。'
 current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-25T13:22:43+00:00'
+timestamp: '2026-08-25T13:36:52+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1
