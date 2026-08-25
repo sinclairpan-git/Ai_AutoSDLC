@@ -2068,12 +2068,15 @@ specs:
 - id: 218-consumer-framework-constraint-isolation
   path: specs/218-consumer-framework-constraint-isolation
   depends_on: []
+- id: 219-mainline-truth-roi-contract
+  path: specs/219-mainline-truth-roi-contract
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-07-23T01:09:12Z'
+  generated_at: '2026-08-25T12:33:17Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 20a14787
-  authoring_hash: 4b50d1ae21e300200a521ce0ecf2036bbf8bd4f1c72a7375723ca230f67946e4
+  repo_revision: '76252746'
+  authoring_hash: fcb6f694f7149ac9d18c77536f5cdc17e620d9e4047b758afdf43e49763e76d4
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 01c3db2eed14ae56d4d4e493386fc2293d4b33c42f54e5a58d115f50127f76ee
@@ -2115,7 +2118,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: c819e940cec07ceb402ae5c87f06504675a447d995becf6e779169bc5631c9a2
+  snapshot_hash: 71bc27bb9566f5b9df634881e69f09de998eb7e3f84efdf5a3541441cfaba10e
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2129,30 +2132,30 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1142
-    mapped_sources: 1142
+    total_sources: 1147
+    mapped_sources: 1147
     unmapped_sources: 0
-    missing_sources: 0
-    phase_signal_count: 3713
-    deferred_signal_count: 6681
-    non_goal_signal_count: 396
+    missing_sources: 1
+    phase_signal_count: 3714
+    deferred_signal_count: 6685
+    non_goal_signal_count: 398
     layer_totals:
       blueprint: 1
-      spec: 217
-      plan: 217
-      tasks: 217
-      execution: 217
-      close: 217
+      spec: 218
+      plan: 218
+      tasks: 218
+      execution: 218
+      close: 218
       requirements: 2
       defect: 3
       design: 8
       release: 43
     layer_materialized:
       blueprint: 1
-      spec: 217
-      plan: 217
-      tasks: 217
-      execution: 217
+      spec: 218
+      plan: 218
+      tasks: 218
+      execution: 218
       close: 217
       requirements: 2
       defect: 3
@@ -11932,6 +11935,51 @@ truth_snapshot:
       mapping_ref: 218-consumer-framework-constraint-isolation
       phase_signal_count: 1
       deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/219-mainline-truth-roi-contract/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 219-mainline-truth-roi-contract
+      phase_signal_count: 1
+      deferred_signal_count: 3
+      non_goal_signal_count: 2
+    - path: specs/219-mainline-truth-roi-contract/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 219-mainline-truth-roi-contract
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/219-mainline-truth-roi-contract/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 219-mainline-truth-roi-contract
+      phase_signal_count: 0
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/219-mainline-truth-roi-contract/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 219-mainline-truth-roi-contract
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/219-mainline-truth-roi-contract/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 219-mainline-truth-roi-contract
+      phase_signal_count: 0
+      deferred_signal_count: 0
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc

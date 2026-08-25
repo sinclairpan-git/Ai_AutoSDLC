@@ -5,29 +5,21 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/218-consumer-framework-constraint-isolation/spec.md
-  plan_path: specs/218-consumer-framework-constraint-isolation/plan.md
-  tasks_path: specs/218-consumer-framework-constraint-isolation/tasks.md
+  spec_path: specs/219-mainline-truth-roi-contract/spec.md
+  plan_path: specs/219-mainline-truth-roi-contract/plan.md
+  tasks_path: specs/219-mainline-truth-roi-contract/tasks.md
   active_files:
-  - specs/218-consumer-framework-constraint-isolation/tasks.md
-  - specs/218-consumer-framework-constraint-isolation/spec.md
-  context_summary: 'Goal: Merge the existing WI218 closure PR 173 and complete portable
-    fresh-main closure acceptance | State: Implementation PR 172 is merged and accepted;
-    all four Codex closure findings are addressed: portable deleted/removed lifecycle
-    truth, current continuity state, explicit closure changed-file inventory, and
-    a reachable terminal snapshot revision via post-merge generic remote archive rename;
-    closure remains docs/truth/continuity-only | Next: Read PR 173 state first and
-    do not repeat completed steps. If it is open, confirm the current HEAD has terminal
-    validation and same-identity LEAN/SAFETY PASS0 (reuse unchanged-HEAD evidence),
-    push if needed, resolve threads, obtain current-head Codex review and all-green
-    checks, then merge. If it is merged, rename remote `archive/218-consumer-framework-constraint-isolation-closure`
-    to `archive/consumer-framework-constraint-isolation-closure` when not already
-    renamed, then run independent fresh-main close/truth/audit/validate/manifest/constraints/clean-tree
-    acceptance.'
-current_branch: archive/consumer-framework-constraint-isolation-closure
+  - specs/219-mainline-truth-roi-contract/tasks.md
+  - specs/219-mainline-truth-roi-contract/spec.md
+  context_summary: 'Goal: 冻结 WI219 主线真值复位与轻量 ROI 合同，等待用户审阅；批准前不进入产品实现 | State: Formal
+    候选已完成根因收敛与自审：canonical linked-first 语义正确，readiness/status 与 execute authorization
+    存在定向消费缺口；设计允许一个共享纯 helper 和三个既有消费方。Program Truth=ready/fresh，root inventory 明确保留
+    WI219 formal missing close=1。 | Next: 提交 formal spec identity，请用户审阅 specs/219-mainline-truth-roi-contract/spec.md；获批后再使用正式
+    planning 流程生成 RED/GREEN 实施计划。'
+current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-22T15:42:19+00:00'
+timestamp: '2026-08-25T12:26:47+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-07-22T02:48:41+00:00'
-checkpoint_fingerprint: 83355f1f0b237fc59df9af5d9d4e472bc73e317b528249ca76b681e992d597db
+checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
+checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1
