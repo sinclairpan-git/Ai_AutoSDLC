@@ -426,6 +426,44 @@ def test_execute_authorization_rejects_linked_symlink_to_other_work_item(
     assert result.detail == "active work item directory is unavailable"
 
 
+def test_execute_authorization_treats_cyclic_linked_symlink_as_unavailable(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    linked_wi = "219-cyclic"
+    linked_dir = root / "specs" / linked_wi
+    linked_dir.parent.mkdir()
+    try:
+        linked_dir.symlink_to(linked_dir, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink unavailable: {exc}")
+    original_resolve = Path.resolve
+
+    def _fail_cyclic_resolve(path: Path, *args: object, **kwargs: object) -> Path:
+        if path == linked_dir:
+            raise RuntimeError("symlink loop")
+        return original_resolve(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "resolve", _fail_cyclic_resolve)
+    monkeypatch.setattr(
+        execute_authorization_module,
+        "run_truth_check",
+        lambda **_: pytest.fail("cyclic work item must not reach truth-check"),
+    )
+
+    result = execute_authorization_module.evaluate_execute_authorization(
+        root=root,
+        checkpoint=_checkpoint(stage="execute", linked_wi_id=linked_wi),
+    )
+
+    assert result.state == "unavailable"
+    assert result.active_work_item == linked_wi
+    assert result.wi_path == f"specs/{linked_wi}"
+    assert result.detail == "active work item directory is unavailable"
+
+
 def test_execute_authorization_to_json_dict_deduplicates_reason_codes() -> None:
     payload = ExecuteAuthorizationResult(
         state="blocked",

@@ -348,6 +348,27 @@ def active_work_item_dir_has_canonical_identity(
     return bool(linked) and resolved_dir == root.resolve() / "specs" / linked
 
 
+def resolve_active_work_item_dir(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> Path | None:
+    """解析活动工作项目录；linked 身份异常时安全返回不可用。"""
+    spec_dir_raw = active_work_item_spec_dir(checkpoint)
+    if not spec_dir_raw:
+        return None
+    try:
+        resolved = (root / spec_dir_raw).resolve()
+        if checkpoint and (checkpoint.linked_wi_id or "").strip() and (
+            not active_work_item_dir_has_canonical_identity(root, checkpoint, resolved)
+            or not resolved.is_relative_to(root.resolve())
+            or not resolved.is_relative_to((root / "specs").resolve())
+        ):
+            return None
+    except (OSError, RuntimeError):
+        return None
+    return resolved
+
+
 def work_item_dir(root: Path, work_item_id: str) -> Path:
     """Return the canonical work-item artifact directory."""
     return root / ".ai-sdlc" / "work-items" / work_item_id
@@ -509,14 +530,8 @@ def _build_resume_working_set(
     linked = bool((checkpoint.linked_wi_id or "").strip())
     linked_artifact_paths_allowed = True
     if linked:
-        spec_dir_raw = active_work_item_spec_dir(checkpoint)
-        spec_dir = (root / spec_dir_raw).resolve() if spec_dir_raw else None
-        linked_artifact_paths_allowed = bool(
-            spec_dir
-            and spec_dir.is_relative_to((root / "specs").resolve())
-            and active_work_item_dir_has_canonical_identity(
-                root, checkpoint, spec_dir
-            )
+        linked_artifact_paths_allowed = (
+            resolve_active_work_item_dir(root, checkpoint) is not None
         )
     if artifact is not None:
         for field in (
@@ -558,9 +573,8 @@ def _build_resume_working_set_from_filesystem(
 ) -> WorkingSet:
     ws = WorkingSet()
     if checkpoint.feature:
-        spec_dir_raw = active_work_item_spec_dir(checkpoint)
-        if spec_dir_raw:
-            spec_dir = (root / spec_dir_raw).resolve()
+        spec_dir = resolve_active_work_item_dir(root, checkpoint)
+        if spec_dir is not None:
             linked = bool((checkpoint.linked_wi_id or "").strip())
             if spec_dir.is_relative_to(root.resolve()) and (
                 not linked

@@ -399,6 +399,32 @@ class TestResumePack:
 
         assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
 
+    def test_build_resume_pack_rejects_cyclic_linked_symlink(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+        linked_dir = tmp_path / "specs" / LINKED_WI
+        for relative_path in expected_paths:
+            (tmp_path / relative_path).unlink()
+        linked_dir.rmdir()
+        try:
+            linked_dir.symlink_to(linked_dir, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"symlink unavailable: {exc}")
+        original_resolve = Path.resolve
+
+        def _fail_cyclic_resolve(path: Path, *args: object, **kwargs: object) -> Path:
+            if path == linked_dir:
+                raise RuntimeError("symlink loop")
+            return original_resolve(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "resolve", _fail_cyclic_resolve)
+
+        snapshot = build_resume_pack(tmp_path).working_set_snapshot
+
+        assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
+        assert not snapshot.active_files
+
     def test_load_resume_pack_rebuilds_fresh_legacy_linked_working_set(self, tmp_path: Path) -> None:
         expected_paths = _seed_linked_checkpoint(tmp_path)
         for raw, active in (

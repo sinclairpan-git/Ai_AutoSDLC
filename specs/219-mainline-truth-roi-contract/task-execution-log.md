@@ -561,3 +561,19 @@
   两项改动都复用既有 path/unavailable 合同，没有新增治理层，ROI 裁决为保留。
 - Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
   0 unmapped、两个 release target ready；root manifest test=`1 passed in 127.21s`。
+
+## Batch 2026-08-26-027 | PR #175 cyclic linked resolver consumer remediation
+
+- Codex 在 `e9f107e7ba4607b1d64589a8abc98d1e4700444a` 提出 1 个 P2：readiness 已把 cyclic linked
+  symlink 降级为 unavailable，但 status 后续调用的 execute authorization 与 resume-pack 仍直接
+  `Path.resolve()`，跨 Python 运行时可能抛 `RuntimeError`。
+- 两个真实循环链接 fixture 同时注入 resolver `RuntimeError` 后稳定 RED：execute authorization 与
+  `build_resume_pack()` 均异常逃逸。
+- GREEN 在 context 层收敛单一活动 WI 目录解析辅助函数；linked identity、repo/specs containment 与
+  `OSError/RuntimeError` 共用 fail-closed 结果，execute authorization 和 resume-pack 删除重复解析。
+  未新增状态、schema、持久化、配置或扫描面。
+- cyclic + 既有 escaped/other-WI 定向 `5 passed`；execute/context/readiness/status 扩大回归
+  `118 passed in 43.75s`；final exact-tree full `3377 passed, 3 skipped in 840.23s`；全库 Ruff PASS；
+  constraints=`no BLOCKERs`。
+- 相对上一候选，本批运行时代码 28 additions / 18 deletions，净增 10；测试 64 additions，覆盖两个
+  实际消费者。重复实现减少且主流程不再崩溃，ROI 裁决为保留。

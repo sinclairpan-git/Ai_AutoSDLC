@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.context.state import (
-    active_work_item_dir_has_canonical_identity,
     active_work_item_id,
     active_work_item_spec_dir,
     load_checkpoint,
+    resolve_active_work_item_dir,
 )
 from ai_sdlc.core.task_guard import (
     BLOCK_CODE_PREPARE_TASKS,
@@ -85,12 +85,8 @@ def evaluate_execute_authorization(
             detail="checkpoint has no concrete spec_dir",
         )
 
-    wi_dir = (root / spec_dir_raw).resolve()
-    if (cp.linked_wi_id or "").strip() and (
-        not active_work_item_dir_has_canonical_identity(root, cp, wi_dir)
-        or not wi_dir.is_relative_to(root.resolve())
-        or not wi_dir.is_relative_to((root / "specs").resolve())
-    ):
+    wi_dir = resolve_active_work_item_dir(root, cp)
+    if wi_dir is None:
         return ExecuteAuthorizationResult(
             state="unavailable",
             active_work_item=active_work_item,
