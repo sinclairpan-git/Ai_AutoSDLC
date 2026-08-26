@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.context.state import (
+    active_work_item_dir_has_canonical_identity,
     active_work_item_id,
     active_work_item_spec_dir,
     load_checkpoint,
@@ -86,7 +87,8 @@ def evaluate_execute_authorization(
 
     wi_dir = (root / spec_dir_raw).resolve()
     if (cp.linked_wi_id or "").strip() and (
-        not wi_dir.is_relative_to(root.resolve())
+        not active_work_item_dir_has_canonical_identity(root, cp, wi_dir)
+        or not wi_dir.is_relative_to(root.resolve())
         or not wi_dir.is_relative_to((root / "specs").resolve())
     ):
         return ExecuteAuthorizationResult(

@@ -10,6 +10,7 @@ from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.context.state import (
+    active_work_item_dir_has_canonical_identity,
     active_work_item_id,
     active_work_item_spec_dir,
     load_checkpoint,
@@ -155,8 +156,12 @@ def _load_checkpoint_feature_spec_dir(
         return checkpoint, None
     if (checkpoint.linked_wi_id or "").strip():
         resolved = _resolve_spec_dir_path(repo_root, spec_dir_raw)
-        if not resolved.is_relative_to(repo_root.resolve()) or not resolved.is_relative_to(
-            (repo_root / "specs").resolve()
+        if (
+            not active_work_item_dir_has_canonical_identity(
+                repo_root, checkpoint, resolved
+            )
+            or not resolved.is_relative_to(repo_root.resolve())
+            or not resolved.is_relative_to((repo_root / "specs").resolve())
         ):
             return checkpoint, None
     return checkpoint, spec_dir_raw
@@ -176,16 +181,22 @@ def _load_checkpoint_feature_binding(
     checkpoint, spec_dir_raw = _load_checkpoint_feature_spec_dir(repo_root)
     if checkpoint is None or checkpoint.feature is None:
         return None, None
+    active_work_item = active_work_item_id(checkpoint) or None
+    if spec_dir_raw is None:
+        return active_work_item, None
+    if (checkpoint.linked_wi_id or "").strip() and not _resolve_spec_dir_path(
+        repo_root, spec_dir_raw
+    ).is_dir():
+        return active_work_item, None
     if (
-        spec_dir_raw is not None
-        and not _checkpoint_feature_binding_is_active(
+        not _checkpoint_feature_binding_is_active(
             repo_root,
             checkpoint=checkpoint,
             spec_dir_raw=spec_dir_raw,
         )
     ):
         return None, None
-    return active_work_item_id(checkpoint) or None, spec_dir_raw
+    return active_work_item, spec_dir_raw
 
 
 def _load_active_work_item_dir(
@@ -202,6 +213,10 @@ def _load_active_work_item_dir(
             else "checkpoint has no concrete spec_dir"
         )
         return active_work_item, None, detail
+    active_work_item = active_work_item_id(checkpoint) or None
+    resolved_dir = _resolve_spec_dir_path(repo_root, spec_dir_raw)
+    if (checkpoint.linked_wi_id or "").strip() and not resolved_dir.is_dir():
+        return active_work_item, None, "active work item directory is unavailable"
     if not _checkpoint_feature_binding_is_active(
         repo_root,
         checkpoint=checkpoint,
@@ -209,8 +224,8 @@ def _load_active_work_item_dir(
     ):
         return None, None, "no active work item on current branch"
     return (
-        active_work_item_id(checkpoint) or None,
-        _resolve_spec_dir_path(repo_root, spec_dir_raw),
+        active_work_item,
+        resolved_dir,
         None,
     )
 

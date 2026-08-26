@@ -299,3 +299,17 @@
   target ready；root manifest：`1 passed in 122.06s`。
 - 以上为 second-review regression 后的新鲜证据；无需再重复 full verification，除非后续改动产品/测试内容或
   required check 报告新的可复现失败。下一步仅为 exact-head 最终 reviewer 与仓库 PR 协议。
+
+## Batch 2026-08-26-012 | PR #175 Codex P2 remediation
+
+- GitHub Codex 在 `66f60da976287058f1bcbba6b0f65793b45cf80d` 提出 2 个 P2：linked 目录可通过指向
+  `specs/` 内另一 work item 的 symlink 保持 containment 却丢失 canonical identity；`main/master + close`
+  下 linked 目录缺失会先进入 terminal-inactive 判定，从而隐藏损坏指针的 ID。
+- 4 个最小回归先稳定 RED：execute 会对错误 work item 执行 truth-check，resume 会加载历史 formal docs，
+  readiness 会返回错误 spec-dir，missing main-close 会返回 `(None, None)`；合计 `4 failed`。
+- GREEN 只增加一个共享 canonical-identity 谓词，要求 resolved linked 目录精确等于
+  `repo/specs/<linked-id>`；readiness 在 terminal-inactive 前先识别 linked target 缺失并保留 linked ID。
+  execute/readiness/resume 共用同一身份约束；不新增 resolver、状态字段、schema、命令或依赖。
+- 新回归 `4 passed in 0.58s`；扩大 checkpoint/resume/status/handoff/execute/manifest 回归
+  `123 passed in 158.43s`；exact-tree full `3357 passed, 3 skipped in 880.47s`；全库 Ruff PASS；
+  constraints=`no BLOCKERs`。

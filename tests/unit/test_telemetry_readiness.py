@@ -188,6 +188,55 @@ def test_checkpoint_binding_prefers_linked_work_item_on_active_branch(tmp_path: 
         )
 
 
+def test_checkpoint_binding_rejects_linked_symlink_to_other_work_item(tmp_path: Path) -> None:
+    _save_linked_checkpoint(tmp_path)
+    linked_dir = tmp_path / "specs" / LINKED_WI
+    (linked_dir / "spec.md").unlink()
+    linked_dir.rmdir()
+    try:
+        linked_dir.symlink_to(tmp_path / "specs" / FEATURE_WI, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink unavailable: {exc}")
+
+    with patch(
+        "ai_sdlc.telemetry.readiness.GitClient.current_branch",
+        return_value=f"feature/{LINKED_WI}",
+    ):
+        assert _load_checkpoint_feature_binding(tmp_path) == (LINKED_WI, None)
+        assert _load_active_work_item_dir(tmp_path) == (
+            LINKED_WI,
+            None,
+            "active work item directory is unavailable",
+        )
+
+
+def test_missing_linked_work_item_remains_visible_on_main_close(tmp_path: Path) -> None:
+    _save_linked_checkpoint(tmp_path, stage="close")
+    linked_dir = tmp_path / "specs" / LINKED_WI
+    (linked_dir / "spec.md").unlink()
+    linked_dir.rmdir()
+
+    with patch(
+        "ai_sdlc.telemetry.readiness.GitClient.current_branch", return_value="main"
+    ):
+        assert _load_checkpoint_feature_binding(tmp_path) == (LINKED_WI, None)
+        assert _load_active_work_item_dir(tmp_path) == (
+            LINKED_WI,
+            None,
+            "active work item directory is unavailable",
+        )
+        status = build_status_json_surface(
+            tmp_path,
+            include_program_truth=False,
+            include_truth_ledger=False,
+        )
+
+    for surface_name in ("branch_lifecycle", "workitem_diagnostics"):
+        surface = status[surface_name]
+        assert surface["active_work_item"] == LINKED_WI
+        assert surface["detail"] == "active work item directory is unavailable"
+
+
 @pytest.mark.parametrize(
     ("classification", "expected_binding"),
     [

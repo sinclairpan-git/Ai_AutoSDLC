@@ -336,6 +336,18 @@ def active_work_item_spec_dir(checkpoint: Checkpoint | None) -> str:
     return (checkpoint.feature.spec_dir or "").strip()
 
 
+def active_work_item_dir_has_canonical_identity(
+    root: Path,
+    checkpoint: Checkpoint | None,
+    resolved_dir: Path,
+) -> bool:
+    """确认解析后的活动工作项目录仍保持 linked id 的规范身份。"""
+    if checkpoint is None or not (checkpoint.linked_wi_id or "").strip():
+        return True
+    linked = active_work_item_id(checkpoint)
+    return bool(linked) and resolved_dir == root.resolve() / "specs" / linked
+
+
 def work_item_dir(root: Path, work_item_id: str) -> Path:
     """Return the canonical work-item artifact directory."""
     return root / ".ai-sdlc" / "work-items" / work_item_id
@@ -537,7 +549,13 @@ def _build_resume_working_set_from_filesystem(
             spec_dir = (root / spec_dir_raw).resolve()
             linked = bool((checkpoint.linked_wi_id or "").strip())
             if spec_dir.is_relative_to(root.resolve()) and (
-                not linked or spec_dir.is_relative_to((root / "specs").resolve())
+                not linked
+                or (
+                    spec_dir.is_relative_to((root / "specs").resolve())
+                    and active_work_item_dir_has_canonical_identity(
+                        root, checkpoint, spec_dir
+                    )
+                )
             ):
                 for field, filename in (
                     ("spec_path", "spec.md"),

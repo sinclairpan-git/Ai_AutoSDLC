@@ -11,14 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 完成 WI219 exact-head 最终复审与主线 PR 闭环。 | State: second-review
-    regression 已修复；final focused 176、full 3353/3 skipped、Ruff/constraints/Truth/manifest/diff-check
-    全绿；exact-head 复审仅要求纠正已完成 continuity 的陈旧下一步。 | Next: 完成 exact-head continuity 短复审；APPROVE
-    后 push 并按 heartbeat 协议闭环。'
+  context_summary: 'Goal: 完成 WI219 PR #175 Codex P2 整改复审、required checks 与主线合并。 |
+    State: 2 个 P2 已关闭；GREEN 4、focused 123、full 3357/3 skipped、Ruff/constraints、Truth
+    1147/1147 ready/fresh、root manifest 1/1 与 diff-check 全绿。 | Next: 提交并 push PR #175
+    P2 remediation；重新触发 Codex review 和 heartbeat，全部通过后完成治理收口并合并。'
 current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-26T03:59:56+00:00'
+timestamp: '2026-08-26T04:42:48+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

@@ -373,6 +373,24 @@ class TestResumePack:
 
         assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
 
+    def test_build_resume_pack_rejects_linked_symlink_to_other_work_item(
+        self, tmp_path: Path
+    ) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+        linked_dir = tmp_path / "specs" / LINKED_WI
+        for relative_path in expected_paths:
+            (tmp_path / relative_path).unlink()
+        linked_dir.rmdir()
+        historical = tmp_path / "specs" / "001"
+        try:
+            linked_dir.symlink_to(historical, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"symlink unavailable: {exc}")
+
+        snapshot = build_resume_pack(tmp_path).working_set_snapshot
+
+        assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
+
     def test_load_resume_pack_rebuilds_fresh_legacy_linked_working_set(self, tmp_path: Path) -> None:
         expected_paths = _seed_linked_checkpoint(tmp_path)
         for raw, active in (

@@ -1,27 +1,37 @@
 # Continuity Handoff
 
-- Updated: 2026-08-26T03:59:56+00:00
-- Reason: 纠正 exact-head 复审识别的陈旧下一步，避免重复已完成的 final verification continuity。
-- Goal: 完成 WI219 exact-head 最终复审与主线 PR 闭环。
-- State: second-review regression 已修复；final focused 176、full 3353/3 skipped、Ruff/constraints/Truth/manifest/diff-check 全绿；exact-head 复审仅要求纠正已完成 continuity 的陈旧下一步。
+- Updated: 2026-08-26T04:42:48+00:00
+- Reason: P2 候选全部本地门禁完成，刷新可恢复证据与精确下一步。
+- Goal: 完成 WI219 PR #175 Codex P2 整改复审、required checks 与主线合并。
+- State: 2 个 P2 已关闭；GREEN 4、focused 123、full 3357/3 skipped、Ruff/constraints、Truth 1147/1147 ready/fresh、root manifest 1/1 与 diff-check 全绿。
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
 - Branch: feature/219-mainline-truth-roi-contract-docs
 
 ## Changed Files
-- none
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md
+- M program-manifest.yaml
+- M specs/219-mainline-truth-roi-contract/task-execution-log.md
+- M src/ai_sdlc/context/state.py
+- M src/ai_sdlc/core/execute_authorization.py
+- M src/ai_sdlc/telemetry/readiness.py
+- M tests/unit/test_context_state.py
+- M tests/unit/test_execute_authorization.py
+- M tests/unit/test_telemetry_readiness.py
 
 ## Key Decisions
-- 产品/测试候选冻结；仅刷新 continuity、resume pack 与 Program Truth 机械快照；除 required check 或 reviewer 给出可复现 blocker，不再修改实现。
+- 保留四个独立失效面的 97 行风险回归；运行时净增 35 行且仅复用一个 identity 谓词，不以机械删行损失 security/correctness 证据。
 
 ## Commands / Tests
-- focused 176 passed；full 3353 passed/3 skipped；Ruff PASS；constraints no BLOCKERs；Truth ready/fresh 1147/1147；manifest 1 passed；exact-head review: no Critical/Important, one governance-only Minor。
+- 4 passed；123 passed in 158.43s；3357 passed/3 skipped in 880.47s；Ruff PASS；constraints no BLOCKERs；Truth a45b0429 ready/fresh；manifest 1 passed in 139.16s。
 
 ## Blockers / Risks
-- 当前仅待 continuity wording 短复审、push/PR/Codex review 和 required checks。
+- 当前仅待提交/push、Codex re-review 与新 HEAD required checks。
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 完成 exact-head continuity 短复审；APPROVE 后 push 并按 heartbeat 协议闭环。
+- 提交并 push PR #175 P2 remediation；重新触发 Codex review 和 heartbeat，全部通过后完成治理收口并合并。

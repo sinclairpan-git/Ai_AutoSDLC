@@ -396,6 +396,36 @@ def test_execute_authorization_fails_closed_when_linked_directory_is_unavailable
     assert result.detail == "active work item directory is unavailable"
 
 
+def test_execute_authorization_rejects_linked_symlink_to_other_work_item(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    root = tmp_path / "repo"
+    root.mkdir()
+    historical = root / "specs" / "116-wi"
+    historical.mkdir(parents=True)
+    linked_wi = "219-active"
+    try:
+        (root / "specs" / linked_wi).symlink_to(historical, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink unavailable: {exc}")
+    monkeypatch.setattr(
+        execute_authorization_module,
+        "run_truth_check",
+        lambda **_: pytest.fail("wrong work item must not reach truth-check"),
+    )
+
+    result = execute_authorization_module.evaluate_execute_authorization(
+        root=root,
+        checkpoint=_checkpoint(stage="execute", linked_wi_id=linked_wi),
+    )
+
+    assert result.state == "unavailable"
+    assert result.active_work_item == linked_wi
+    assert result.wi_path == f"specs/{linked_wi}"
+    assert result.detail == "active work item directory is unavailable"
+
+
 def test_execute_authorization_to_json_dict_deduplicates_reason_codes() -> None:
     payload = ExecuteAuthorizationResult(
         state="blocked",
