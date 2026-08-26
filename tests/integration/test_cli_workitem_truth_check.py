@@ -517,6 +517,7 @@ class TestCliWorkitemTruthCheck:
             ("unicode_implementation_path", "mainline_merged"),
             ("path_prefix_collision", "formal_freeze_only"),
             ("path_space_collision", "formal_freeze_only"),
+            ("path_mentioned_outside_scope", "formal_freeze_only"),
             ("unrelated_between_log_updates", "formal_freeze_only"),
             ("nonroot_scaffold_with_unrelated", "formal_freeze_only"),
             ("nonroot_arbitrary_implementation", "mainline_merged"),
@@ -567,6 +568,7 @@ class TestCliWorkitemTruthCheck:
             "unicode_implementation_path",
             "path_prefix_collision",
             "path_space_collision",
+            "path_mentioned_outside_scope",
             "unrelated_between_log_updates",
         }:
             _write_formal_control_change_set(root, work_item_id)
@@ -578,6 +580,7 @@ class TestCliWorkitemTruthCheck:
                     "unicode_implementation_path",
                     "path_prefix_collision",
                     "path_space_collision",
+                    "path_mentioned_outside_scope",
                 }
                 else root / "product-config.yaml"
             )
@@ -589,6 +592,7 @@ class TestCliWorkitemTruthCheck:
                     "unicode_implementation_path",
                     "path_prefix_collision",
                     "path_space_collision",
+                    "path_mentioned_outside_scope",
                 }
                 else "feature_enabled: true\n",
                 encoding="utf-8",
@@ -602,6 +606,8 @@ class TestCliWorkitemTruthCheck:
                 if topology == "path_prefix_collision"
                 else "改动范围：src/功能.py backup\n"
                 if topology == "path_space_collision"
+                else "改动范围：src/other.py\n验证说明：`src/功能.py`\n"
+                if topology == "path_mentioned_outside_scope"
                 else ""
             )
             (root / "specs" / work_item_id / "task-execution-log.md").write_text(

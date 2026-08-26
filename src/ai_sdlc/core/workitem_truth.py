@@ -122,15 +122,18 @@ def _has_recorded_path_evidence(
     paths: tuple[str, ...], wi_rel: str, log_text: str
 ) -> bool:
     allowed = _formal_control_paths(wi_rel)
-    recorded_paths = {
-        token.strip()
-        for match in RECORDED_PATH_TOKEN_RE.finditer(log_text)
-        for token in (match.group(1) or match.group(2) or "",)
-        if token.strip()
-    }
+    recorded_paths: set[str] = set()
     for match in RECORDED_PATH_LINE_RE.finditer(log_text):
         value = match.group("value").strip()
-        if value and RECORDED_PATH_TOKEN_RE.search(value) is None:
+        tokens = {
+            token.strip()
+            for token_match in RECORDED_PATH_TOKEN_RE.finditer(value)
+            for token in (token_match.group(1) or token_match.group(2) or "",)
+            if token.strip()
+        }
+        if tokens:
+            recorded_paths.update(tokens)
+        elif value:
             recorded_paths.add(value)
     return any(path not in allowed and path in recorded_paths for path in paths)
 

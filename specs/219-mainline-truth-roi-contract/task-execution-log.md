@@ -527,3 +527,19 @@
   两项改动均复用现有 canonical identity 与执行日志字段，没有增加新的治理层，ROI 裁决为保留。
 - Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
   0 unmapped、两个 release target ready；root manifest test=`1 passed in 124.89s`。
+
+## Batch 2026-08-26-025 | PR #175 change-scope token remediation
+
+- Codex 在 `d1b5da5773a949127debbe279cc9b1f5f1dd7833` 发现 P2：完整 path-token 提取仍扫描整个 execution
+  log，验证说明中提到的反引号路径也会被当成当前 WI 的实施范围。
+- 新增“实际变更 `src/功能.py`，`改动范围`记录其他路径，仅验证说明提到该文件”的真实 Git topology 后稳定
+  RED：应为 `formal_freeze_only`，旧实现返回 `mainline_merged`，`1 failed, 29 deselected`。
+- GREEN 删除全日志 token 扫描，只在模板的 `改动范围：`字段值内提取反引号/Markdown 链接或 bare 整值；
+  没有新增字段、parser 层、schema、状态或持久化。
+- truth topology `15 passed`；truth/status/readiness/Program Truth/context/resume/recover/handoff 扩大回归
+  `738 passed in 126.57s`；final exact-tree full `3374 passed, 3 skipped in 827.69s`；全库 Ruff PASS；
+  constraints=`no BLOCKERs`。
+- 相对上一候选，本批运行时代码 10 additions / 7 deletions，净增 3；测试净增 6。该改动缩小证据作用域，
+  同时消除误归因，ROI 裁决为保留。
+- Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 124.32s`。
