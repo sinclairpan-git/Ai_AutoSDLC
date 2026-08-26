@@ -512,6 +512,7 @@ class TestCliWorkitemTruthCheck:
             ("merged_mainline", "formal_freeze_only"),
             ("formal_branch", "formal_freeze_only"),
             ("separate_implementation_and_log", "mainline_merged"),
+            ("implementation_after_latest_log", "mainline_merged"),
             ("implementation_before_initial_log", "mainline_merged"),
             ("unicode_implementation_path", "mainline_merged"),
             ("path_prefix_collision", "formal_freeze_only"),
@@ -519,6 +520,7 @@ class TestCliWorkitemTruthCheck:
             ("nonroot_scaffold_with_unrelated", "formal_freeze_only"),
             ("nonroot_arbitrary_implementation", "mainline_merged"),
             ("root_bootstrap", "formal_freeze_only"),
+            ("root_recorded_missing_path", "formal_freeze_only"),
             ("root_arbitrary_implementation", "mainline_merged"),
         ],
     )
@@ -605,6 +607,18 @@ class TestCliWorkitemTruthCheck:
                 encoding="utf-8",
             )
             _commit_all(root, "create initial 219 execution log")
+        elif topology == "implementation_after_latest_log":
+            _write_formal_control_change_set(root, work_item_id)
+            (root / "specs" / work_item_id / "task-execution-log.md").write_text(
+                "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+                "改动范围：product-config.yaml\n",
+                encoding="utf-8",
+            )
+            _commit_all(root, "record 219 evidence before implementation")
+            (root / "product-config.yaml").write_text(
+                "feature_enabled: true\n", encoding="utf-8"
+            )
+            _commit_all(root, "land implementation after latest execution log")
         elif topology.startswith("nonroot_"):
             _write_formal_control_change_set(root, work_item_id)
             (root / "product-config.yaml").write_text(
@@ -622,6 +636,12 @@ class TestCliWorkitemTruthCheck:
             if topology == "root_bootstrap":
                 (root / "pyproject.toml").write_text(
                     "[project]\nname = 'bootstrap'\n", encoding="utf-8"
+                )
+            elif topology == "root_recorded_missing_path":
+                (root / "specs" / work_item_id / "task-execution-log.md").write_text(
+                    "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+                    "改动范围：src/missing.py\n",
+                    encoding="utf-8",
                 )
             else:
                 (root / "product-config.yaml").write_text(

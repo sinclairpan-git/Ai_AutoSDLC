@@ -2419,7 +2419,8 @@ def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
     (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
     (spec_dir / "task-execution-log.md").write_text(
-        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+        "改动范围：src/app.py\n",
         encoding="utf-8",
     )
     (tmp_path / "src").mkdir(parents=True)
@@ -2834,7 +2835,8 @@ def test_build_truth_ledger_surface_waives_project_inheritance_for_framework_cap
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
     (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
     (spec_dir / "task-execution-log.md").write_text(
-        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+        "改动范围：governance/frontend/generation/generation.manifest.yaml\n",
         encoding="utf-8",
     )
     _write_truth_ledger_manifest(tmp_path)
@@ -3175,7 +3177,8 @@ def test_build_spec_truth_readiness_reuses_fresh_persisted_snapshot_for_unrelate
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
     (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
     (spec_dir / "task-execution-log.md").write_text(
-        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+        "改动范围：governance/frontend/generation/generation.manifest.yaml\n",
         encoding="utf-8",
     )
     _write_truth_ledger_manifest(tmp_path)
@@ -3948,7 +3951,8 @@ def test_build_truth_ledger_surface_attaches_blocking_reason_and_actions_for_fro
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
     (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
     (spec_dir / "task-execution-log.md").write_text(
-        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+        "改动范围：src/provider_expansion.py\n",
         encoding="utf-8",
     )
     (spec_dir / "development-summary.md").write_text("# Summary\n", encoding="utf-8")
@@ -4641,7 +4645,8 @@ def test_build_truth_snapshot_is_stable_across_branch_to_main_topology(
     (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
     (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
     (spec_dir / "task-execution-log.md").write_text(
-        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+        "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+        "改动范围：src/app.py\n",
         encoding="utf-8",
     )
     (tmp_path / "src").mkdir(parents=True)

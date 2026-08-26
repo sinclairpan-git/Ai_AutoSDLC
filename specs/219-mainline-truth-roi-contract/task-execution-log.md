@@ -489,3 +489,22 @@
   该投入关闭一个会错误隐藏 close-stage WI 的可复现误报，同时没有改变日志结构或模型自主记录方式，ROI 裁决为保留。
 - Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
   0 unmapped、两个 release target ready；root manifest test=`1 passed in 121.80s`。
+
+## Batch 2026-08-26-023 | PR #175 suffix-history and root path-binding remediation
+
+- Codex 在 `717e968d6ac252fc0bf77958b885f25c1197c3ef` 提出 2 个 P2：最新 execution-log commit 到
+  requested revision 的尾段从未扫描，日志先记路径、实现后落库时会漏判；root commit 只要存在任意非 formal 文件和
+  completed-looking log 即可通过，即使日志记录的是不存在路径。
+- 两个真实 Git topology 先稳定 RED：日志后的实现返回 `formal_freeze_only`；root README + missing path 返回
+  `mainline_merged`，合计 `2 failed, 26 deselected`。
+- GREEN 对最新日志到 revision 增加与既有区间相同的双向 diff + recorded + exact-path 判断；root commit 删除
+  path-evidence bypass，同样要求日志命中实际 non-formal changed path。未新增 Git API、parser、schema、状态、
+  持久化、commit-message 推断或路径白名单。
+- 扩大回归暴露 5 个应代表已实施的 root Program Truth fixture 未记录实际路径；保持产品断言不变，分别补入
+  `src/app.py`、`src/provider_expansion.py` 或已物化治理产物路径。13 topology + 5 回归点全绿；扩大回归
+  `686 passed in 122.43s`；final exact-tree full `3372 passed, 3 skipped in 826.43s`；全库 Ruff PASS；
+  constraints=`no BLOCKERs`。
+- 相对上一候选，本批运行时代码 23 additions / 1 deletion，净增 22；测试 30 additions / 5 deletions，净增 25。
+  两项改动补齐同一时间轴的尾段与 root 证据一致性，没有增加第二 classifier，ROI 裁决为保留。
+- Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 123.21s`。

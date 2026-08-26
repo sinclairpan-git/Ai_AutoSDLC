@@ -142,7 +142,9 @@ def _root_commit_has_implementation(
         log_text = git.read_file_at_revision(commit, f"{wi_rel}/task-execution-log.md")
     except GitError:
         return False
-    return execution_log_has_recorded_evidence(log_text)
+    return execution_log_has_recorded_evidence(
+        log_text
+    ) and _has_recorded_path_evidence(paths, wi_rel, log_text)
 
 
 def _history_contains_implementation(
@@ -172,6 +174,26 @@ def _history_contains_implementation(
             log_text
         ) and _has_recorded_path_evidence(commit_paths, wi_rel, log_text):
             return True
+
+    if log_commits:
+        newest_log_commit = log_commits[0]
+        try:
+            log_text = git.read_file_at_revision(newest_log_commit, execution_log_path)
+        except GitError:
+            pass
+        else:
+            suffix_paths = tuple(
+                _dedupe_text_items(
+                    (
+                        *git.changed_paths(newest_log_commit, revision),
+                        *git.changed_paths(revision, newest_log_commit),
+                    )
+                )
+            )
+            if execution_log_has_recorded_evidence(
+                log_text
+            ) and _has_recorded_path_evidence(suffix_paths, wi_rel, log_text):
+                return True
 
     for latest_log_commit, previous_log_commit in zip(
         log_commits, log_commits[1:], strict=False
