@@ -13,12 +13,12 @@ working_set_snapshot:
   - specs/219-mainline-truth-roi-contract/spec.md
   context_summary: 'Goal: 完成 WI219 exact-head 最终复审与主线 PR 闭环。 | State: second-review
     regression 已修复；final focused 176、full 3353/3 skipped、Ruff/constraints/Truth/manifest/diff-check
-    全绿；远端 main 未漂移。 | Next: 提交 final verification continuity，完成 exact-head 只读复审；APPROVE
+    全绿；exact-head 复审仅要求纠正已完成 continuity 的陈旧下一步。 | Next: 完成 exact-head continuity 短复审；APPROVE
     后 push 并按 heartbeat 协议闭环。'
 current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-26T03:37:58+00:00'
+timestamp: '2026-08-26T03:59:56+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1
