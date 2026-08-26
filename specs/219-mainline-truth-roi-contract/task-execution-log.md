@@ -421,3 +421,16 @@
   0 unmapped、两个 release target ready；root manifest test=`1 passed in 134.40s`。
 - 本批运行时代码 6 additions / 3 deletions，净增 3；测试 36 additions / 2 deletions，净增 34。两个 P2 各由
   一个现有语义的顺序/作用域修正关闭，没有引入新抽象，ROI 裁决为保留。
+
+## Batch 2026-08-26-019 | PR #175 merge-ready governance close
+
+- 产品/测试候选 HEAD=`3f1e2104153d3b6f32156bcf013533a0349036e8`；GitHub Codex 在该 SHA 明确返回
+  `Didn't find any major issues`，且 `original_commit_id` 等于该 SHA 的新 inline finding 为 0。
+- PR #175 required checks=`22/22 pass`，失败/取消/pending=0，GitHub merge state=`CLEAN`；跨平台矩阵覆盖
+  Ubuntu/macOS/Windows 与 Python 3.11/3.12，Windows 两项长跑 Pytest 最终均成功。
+- `tasks.md` 的 T50V/T52 与 `plan.md` Step 4 标记完成；本批仅更新 WI219 formal close、continuity 与 Program
+  Truth 快照，不修改产品、测试、模板、依赖或运行时 surface。
+- Program Truth execute 写入 snapshot `a866da9a...`；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 130.34s`。
+- 当前状态为 `merge-ready`，不是已合并；本 docs-only exact head 仍须经过 Codex review 与 required checks，
+  全绿后按仓库协议合并 PR #175，再验证 `origin/main` 包含 GitHub merge result。

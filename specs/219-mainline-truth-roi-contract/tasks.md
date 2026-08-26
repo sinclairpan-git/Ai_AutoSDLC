@@ -139,7 +139,7 @@
 ### Task 5.1 统一验证与主线交付
 
 - task_id: T50V
-- status: doing
+- status: done
 - goal: 对 A0/A1/B exact HEAD 完成回归、ROI 复核、continuity 和主线 PR 闭环。
 - depends:
   - T40B
@@ -177,7 +177,7 @@
   - 依赖：T50
   - 验收：task log、plan/tasks、manifest、root tuple 与 canonical/scoped handoff 准确；工作树干净。
 
-- [ ] **T52 本地只读 review 与主线 PR 流程**
+- [x] **T52 本地只读 review 与主线 PR 流程**
   - 依赖：T51
   - 验收：exact-head 本地 review 无可操作问题；随后 push/PR/Codex review/required checks 按仓库协议闭环。
 

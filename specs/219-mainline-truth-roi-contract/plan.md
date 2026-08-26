@@ -222,7 +222,7 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
 
   通过 `uv run ai-sdlc handoff update` 记录准确命令、结果、风险和下一步；同步 manifest 后重跑 root manifest test。
 
-- [ ] **Step 4：完成本地只读 PR review 后交付主线流程**
+- [x] **Step 4：完成本地只读 PR review 后交付主线流程**
 
   冻结 exact HEAD/diff，执行本地独立只读 review；无可操作问题后 push、开 PR、请求 Codex review，并按仓库
   Local Repository PR Protocol 持续监控 required checks，直到合并或出现用户输入 blocker。
