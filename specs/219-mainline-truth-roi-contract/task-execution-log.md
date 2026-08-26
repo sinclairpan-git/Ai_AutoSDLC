@@ -472,3 +472,20 @@
   两项投入均关闭可复现的 mainline truth 漏判，并继续用 recorded + exact-path 双证据限制误归因，ROI 裁决为保留。
 - Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
   0 unmapped、两个 release target ready；root manifest test=`1 passed in 121.56s`。
+
+## Batch 2026-08-26-022 | PR #175 exact path-token remediation
+
+- Codex 在 `3c4fc45c0afe14981297b3262b8b227d5fa2cf48` 发现 P2：已有 path-evidence predicate 使用子串匹配，
+  `src/功能.py` 会被日志中的 `src/功能.py.bak` 错当成当前 WI 的精确实施证据。
+- 新增真实 Git 前缀碰撞 topology 后稳定 RED：无关路径应为 `formal_freeze_only`，旧实现返回
+  `mainline_merged`，`1 failed, 25 deselected`。
+- GREEN 仅在既有 predicate 中为 repo-relative path 增加 token 边界；字母数字、斜杠、点及常见文件名符号会被
+  视为路径连续字符，中文冒号、空白、反引号与常见标点仍可作为分隔。不要求固定日志格式，不新增 parser、
+  schema、状态、持久化或路径白名单。
+- topology `11 passed`；truth/status/readiness/execute/GitClient/close/ProgramService 扩大回归
+  `684 passed in 117.56s`；final exact-tree full `3370 passed, 3 skipped in 820.69s`；全库 Ruff PASS；
+  constraints=`no BLOCKERs`。
+- 相对上一候选，本批运行时代码 10 additions / 1 deletion，净增 9；测试 6 additions / 2 deletions，净增 4。
+  该投入关闭一个会错误隐藏 close-stage WI 的可复现误报，同时没有改变日志结构或模型自主记录方式，ROI 裁决为保留。
+- Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 121.80s`。

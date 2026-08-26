@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -116,7 +117,15 @@ def _has_recorded_path_evidence(
     paths: tuple[str, ...], wi_rel: str, log_text: str
 ) -> bool:
     allowed = _formal_control_paths(wi_rel)
-    return any(path not in allowed and path in log_text for path in paths)
+    return any(
+        path not in allowed
+        and re.search(
+            rf"(?<![\w./\\@+~%-]){re.escape(path)}(?![\w./\\@+~%-])",
+            log_text,
+        )
+        is not None
+        for path in paths
+    )
 
 
 def _root_commit_has_implementation(
