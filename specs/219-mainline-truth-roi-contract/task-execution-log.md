@@ -452,3 +452,23 @@
   0 unmapped、两个 release target ready；root manifest test=`1 passed in 128.90s`。
 - 相对上一候选，本批运行时代码 15 additions / 7 deletions，净增 8；测试 34 additions / 1 deletion，净增 33。
   该改动移除一个绕过统一证据合同的 early return，没有增加新抽象；ROI 裁决为保留。
+
+## Batch 2026-08-26-021 | PR #175 initial-log history and Unicode path remediation
+
+- Codex 在 `1c77c0064358e94bf2a43e49b7b58ee08ed81c18` 提出 2 个 P2：实现若先于首份
+  `task-execution-log.md` 落库，既有“相邻日志提交”窗口为空而漏判；Git 默认 `core.quotePath` 会把中文路径转成
+  八进制转义，导致日志中的 Unicode 路径无法与 Git path evidence 对齐。
+- 两个真实 Git topology 先稳定 RED：首日志前实现与 `src/功能.py` 分离实现均返回
+  `execution_started=False/formal_freeze_only`，合计 `2 failed, 23 deselected`。
+- GREEN 优先使用最早 work-item commit 作为首日志前史下界；若 WI 文档与首日志同时补建、没有更早 WI 锚点，
+  才回退到该 revision 的 first-parent root。两种情况仍同时要求日志具备 recorded evidence 且明确记录实际变更过的
+  非 formal path；GitClient 的既有 path inventory 改用 NUL 分隔，直接保留 Unicode 路径。未读取 commit message，
+  未新增 parser、schema、状态、持久化、路径白名单或第二 truth classifier。
+- 曾尝试把双向 diff 抽成 helper，但该抽象没有独立价值且触发 comment-preservation constraint；已撤销抽取并保留
+  原位逻辑。最终定向 topology `10 passed`；truth/status/readiness/execute/GitClient/close/ProgramService 扩大回归
+  `683 passed in 117.63s`；final exact-tree full `3369 passed, 3 skipped in 822.87s`；全库 Ruff PASS；
+  constraints=`no BLOCKERs`。
+- 相对上一候选，本批运行时代码 44 additions / 5 deletions，净增 39；测试 30 additions / 6 deletions，净增 24。
+  两项投入均关闭可复现的 mainline truth 漏判，并继续用 recorded + exact-path 双证据限制误归因，ROI 裁决为保留。
+- Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 121.56s`。

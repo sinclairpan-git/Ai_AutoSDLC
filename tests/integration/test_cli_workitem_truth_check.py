@@ -512,6 +512,8 @@ class TestCliWorkitemTruthCheck:
             ("merged_mainline", "formal_freeze_only"),
             ("formal_branch", "formal_freeze_only"),
             ("separate_implementation_and_log", "mainline_merged"),
+            ("implementation_before_initial_log", "mainline_merged"),
+            ("unicode_implementation_path", "mainline_merged"),
             ("unrelated_between_log_updates", "formal_freeze_only"),
             ("nonroot_scaffold_with_unrelated", "formal_freeze_only"),
             ("nonroot_arbitrary_implementation", "mainline_merged"),
@@ -558,25 +560,47 @@ class TestCliWorkitemTruthCheck:
             _commit_all(root, "update formal 219")
         elif topology in {
             "separate_implementation_and_log",
+            "unicode_implementation_path",
             "unrelated_between_log_updates",
         }:
             _write_formal_control_change_set(root, work_item_id)
             _commit_all(root, "formalize 219 on main")
-            (root / "product-config.yaml").write_text(
-                "feature_enabled: true\n", encoding="utf-8"
+            implementation_path = (
+                root / "src" / "功能.py"
+                if topology == "unicode_implementation_path"
+                else root / "product-config.yaml"
+            )
+            implementation_path.parent.mkdir(parents=True, exist_ok=True)
+            implementation_path.write_text(
+                "feature_enabled = True\n"
+                if topology == "unicode_implementation_path"
+                else "feature_enabled: true\n",
+                encoding="utf-8",
             )
             _commit_all(root, f"land {topology} change")
             recorded_path = (
-                "改动范围：product-config.yaml\n"
-                if topology == "separate_implementation_and_log"
+                f"改动范围：{implementation_path.relative_to(root).as_posix()}\n"
+                if topology
+                in {"separate_implementation_and_log", "unicode_implementation_path"}
                 else ""
             )
             (root / "specs" / work_item_id / "task-execution-log.md").write_text(
-                "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
-                + recorded_path,
+                "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n" + recorded_path,
                 encoding="utf-8",
             )
             _commit_all(root, "record 219 execution evidence")
+        elif topology == "implementation_before_initial_log":
+            (root / "product-config.yaml").write_text(
+                "feature_enabled: true\n", encoding="utf-8"
+            )
+            _commit_all(root, "land implementation before initial execution log")
+            _write_formal_control_change_set(root, work_item_id)
+            (root / "specs" / work_item_id / "task-execution-log.md").write_text(
+                "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+                "改动范围：product-config.yaml\n",
+                encoding="utf-8",
+            )
+            _commit_all(root, "create initial 219 execution log")
         elif topology.startswith("nonroot_"):
             _write_formal_control_change_set(root, work_item_id)
             (root / "product-config.yaml").write_text(

@@ -181,7 +181,40 @@ def _history_contains_implementation(
         )
         if _has_recorded_path_evidence(tuple(history_paths), wi_rel, log_text):
             return True
-    return False
+
+    if not log_commits:
+        return False
+    oldest_log_commit = log_commits[-1]
+    try:
+        log_text = git.read_file_at_revision(oldest_log_commit, execution_log_path)
+    except GitError:
+        return False
+    if not execution_log_has_recorded_evidence(log_text):
+        return False
+    work_item_commits = git.commits_touching_path(oldest_log_commit, wi_rel)
+    if not work_item_commits:
+        return False
+    initial_work_item_commit = work_item_commits[-1]
+    if initial_work_item_commit == oldest_log_commit:
+        repository_commits = git.commits_touching_path(oldest_log_commit, ".")
+        if repository_commits:
+            initial_work_item_commit = repository_commits[-1]
+    initial_parent = git.first_parent(initial_work_item_commit)
+    history_paths: tuple[str, ...] = ()
+    if initial_parent is None:
+        history_paths = git.changed_paths_for_commit(initial_work_item_commit)
+    history_base = initial_parent or initial_work_item_commit
+    if history_base != oldest_log_commit:
+        history_paths = tuple(
+            _dedupe_text_items(
+                (
+                    *history_paths,
+                    *git.changed_paths(history_base, oldest_log_commit),
+                    *git.changed_paths(oldest_log_commit, history_base),
+                )
+            )
+        )
+    return _has_recorded_path_evidence(history_paths, wi_rel, log_text)
 
 
 def _classify_paths(paths: tuple[str, ...]) -> tuple[list[str], list[str], list[str], list[str]]:

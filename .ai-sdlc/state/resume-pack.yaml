@@ -11,15 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 完成 WI219 PR #175 non-root mixed-commit evidence 复审并合并主线。
-    | State: 同 commit/分离 commit 的 non-root history 均要求 recorded + logged-path evidence；root
-    legacy 保持不变。full 3367/3 skipped；Truth b52b6843 ready/fresh、1147/1147；root manifest
-    1/1。 | Next: 检查 PR #175 head 是否包含当前提交，仅缺失时 push；监控该 head 的 Codex review/required
-    checks，全绿后合并并验证 origin/main 包含 merge result。'
+  context_summary: 'Goal: 完成 WI219 PR #175 exact-head 复审并合并远端主线。 | State: Batch 021
+    最终候选已冻结并通过本地门禁：direct 10/10、expanded 683/683、full 3369/3 skipped；Truth ready/fresh、1147/1147；root
+    manifest 1/1。 | Next: 提交并 push Batch 021；请求并监控 PR #175 exact-head Codex review/required
+    checks；无 actionable finding 且全绿后合并并验证 origin/main。'
 current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-26T10:17:48+00:00'
+timestamp: '2026-08-26T11:55:35+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1
