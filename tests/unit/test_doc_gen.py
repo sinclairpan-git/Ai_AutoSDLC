@@ -24,6 +24,31 @@ TEMPLATES = [
 ]
 
 
+def _assert_lightweight_roi_contract(text: str) -> None:
+    required = (
+        "用户可观察收益或可复现风险",
+        "现状证据",
+        "最小方案 / 备选方案",
+        "总投入",
+        "产品、测试/harness、CI、评审、迁移和长期维护",
+        "范围与退出条件",
+        "public API",
+        "持久化状态",
+        "回退/删除触发器",
+        "`implement`",
+        "`defer`",
+        "`needs_user`",
+        "`not-applicable`",
+    )
+    assert not [marker for marker in required if marker not in text]
+    assert "一行 `not-applicable` 理由" in text
+    assert "`400/50`" in text
+    assert "仅是风险信号，不单独构成 blocker" in text
+    blocker_line = next(line for line in text.splitlines() if "可以成为 blocker" in line)
+    for marker in ("未经授权的范围扩展", "缺失可执行证据", "安全", "隐私", "数据", "兼容", "回归"):
+        assert marker in blocker_line
+
+
 class FakeTemplateGenerator:
     def __init__(self) -> None:
         self.calls: list[str] = []
@@ -195,6 +220,19 @@ def test_template_renders_full_context(template_name: str) -> None:
         assert "代码审查" in out
         assert "任务/计划同步状态" in out
         assert "已完成 git 提交" in out
+
+
+def test_doc_scaffolder_spec_render_includes_lightweight_roi_contract() -> None:
+    rendered = DocScaffolder().render(
+        "spec.md.j2",
+        {
+            "work_item_id": "WI-ROI-001",
+            "created_at": "2026-08-25T00:00:00+00:00",
+            "project_name": "ROI Contract",
+        },
+    )
+
+    _assert_lightweight_roi_contract(rendered)
 
 
 def test_scaffold_creates_four_files(tmp_path: Path) -> None:
