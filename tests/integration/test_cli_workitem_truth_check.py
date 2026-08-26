@@ -460,6 +460,16 @@ class TestCliWorkitemTruthCheck:
             root / "specs" / "006-provenance-trace-phase-1",
             include_exec_log=True,
         )
+        (
+            root
+            / "specs"
+            / "006-provenance-trace-phase-1"
+            / "task-execution-log.md"
+        ).write_text(
+            "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+            "改动范围：src/provenance.py\n",
+            encoding="utf-8",
+        )
         (root / "src").mkdir(exist_ok=True)
         (root / "src" / "provenance.py").write_text("VALUE = 6\n", encoding="utf-8")
         _commit_all(root, "implement 006")
@@ -503,6 +513,8 @@ class TestCliWorkitemTruthCheck:
             ("formal_branch", "formal_freeze_only"),
             ("separate_implementation_and_log", "mainline_merged"),
             ("unrelated_between_log_updates", "formal_freeze_only"),
+            ("nonroot_scaffold_with_unrelated", "formal_freeze_only"),
+            ("nonroot_arbitrary_implementation", "mainline_merged"),
             ("root_bootstrap", "formal_freeze_only"),
             ("root_arbitrary_implementation", "mainline_merged"),
         ],
@@ -565,6 +577,18 @@ class TestCliWorkitemTruthCheck:
                 encoding="utf-8",
             )
             _commit_all(root, "record 219 execution evidence")
+        elif topology.startswith("nonroot_"):
+            _write_formal_control_change_set(root, work_item_id)
+            (root / "product-config.yaml").write_text(
+                "feature_enabled: true\n", encoding="utf-8"
+            )
+            if topology == "nonroot_arbitrary_implementation":
+                (root / "specs" / work_item_id / "task-execution-log.md").write_text(
+                    "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+                    "改动范围：product-config.yaml\n",
+                    encoding="utf-8",
+                )
+            _commit_all(root, f"seed {topology} 219")
         else:
             _write_formal_control_change_set(root, work_item_id)
             if topology == "root_bootstrap":

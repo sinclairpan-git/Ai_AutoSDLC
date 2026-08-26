@@ -146,14 +146,22 @@ def _history_contains_implementation(
     log_commits = git.commits_touching_path(revision, execution_log_path)
     for commit in log_commits:
         commit_paths = git.changed_paths_for_commit(commit)
-        if git.first_parent(commit) is None and not _root_commit_has_implementation(
-            git,
-            commit=commit,
-            paths=commit_paths,
-            wi_rel=wi_rel,
-        ):
+        if git.first_parent(commit) is None:
+            if _root_commit_has_implementation(
+                git,
+                commit=commit,
+                paths=commit_paths,
+                wi_rel=wi_rel,
+            ):
+                return True
             continue
-        if commit_paths and not _is_formal_freeze_only_change_set(commit_paths, wi_rel):
+        try:
+            log_text = git.read_file_at_revision(commit, execution_log_path)
+        except GitError:
+            continue
+        if execution_log_has_recorded_evidence(
+            log_text
+        ) and _has_recorded_path_evidence(commit_paths, wi_rel, log_text):
             return True
 
     for latest_log_commit, previous_log_commit in zip(

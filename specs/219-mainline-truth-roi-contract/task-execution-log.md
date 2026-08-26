@@ -434,3 +434,21 @@
   0 unmapped、两个 release target ready；root manifest test=`1 passed in 130.34s`。
 - 当前状态为 `merge-ready`，不是已合并；本 docs-only exact head 仍须经过 Codex review 与 required checks，
   全绿后按仓库协议合并 PR #175，再验证 `origin/main` 包含 GitHub merge result。
+
+## Batch 2026-08-26-020 | PR #175 non-root mixed-commit evidence remediation
+
+- Codex 在 docs-only HEAD `de954db5cb62b95522d8b92f48bc18e9144207b7` 发现产品 P2：非 root commit 若同时
+  更新 scaffold execution log 与无关产品文件，旧循环会在检查 recorded/path evidence 前直接返回实施已开始。
+- 新增 non-root 同 commit 正/反 topology：scaffold + 无关根级配置应为 formal-only；已填写 marker 且日志明确记录
+  同一路径应为 mainline-merged。旧实现稳定 RED：`1 failed, 22 deselected`；扩展后的 8 topology 全绿。
+- GREEN 保留 root legacy 专用 predicate；非 root mixed commit 与相邻日志区间统一要求
+  `execution_log_has_recorded_evidence()` + `_has_recorded_path_evidence()`。未新增 parser、Git API、路径白名单、
+  commit-message 推断、schema/state 或持久化面。
+- 首轮扩大回归暴露 3 个本应代表已实施的 fixture 未记录 canonical evidence/path；保持产品断言不变，只给
+  provenance merge、branch lifecycle 与 frontend truth-ledger fixture 补真实 source evidence，并撤销两处误命中的
+  无关 fixture 改动。直接回归 `11 passed`；扩大回归 `645 passed in 101.65s`；final exact-tree full
+  `3367 passed, 3 skipped in 811.09s`；全库 Ruff PASS；constraints=`no BLOCKERs`。
+- Program Truth execute 写入 snapshot `b52b6843...`；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 128.90s`。
+- 相对上一候选，本批运行时代码 15 additions / 7 deletions，净增 8；测试 34 additions / 1 deletion，净增 33。
+  该改动移除一个绕过统一证据合同的 early return，没有增加新抽象；ROI 裁决为保留。
