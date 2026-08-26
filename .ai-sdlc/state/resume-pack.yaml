@@ -11,14 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 完成 WI219 PR #175 project-layout flexibility P2 复审、required
-    checks 与主线合并。 | State: 固定路径白名单已删除；共享 execution-log 证据谓词支持任意项目布局。full 3361/3 skipped；Truth
-    84db6bf8 ready/fresh、1147/1147；root manifest 1/1。 | Next: 审计 diff 并提交/push flexibility
+  context_summary: 'Goal: 完成 WI219 PR #175 separate implementation/log P2 复审、required
+    checks 与主线合并。 | State: 分离实现/日志 topology 已关闭；full 3362/3 skipped；Truth 1ab636ef
+    ready/fresh、1147/1147；root manifest 1/1。 | Next: 审计 diff 并提交/push separate-history
     remediation；重新触发 Codex review 和 heartbeat。'
 current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-26T07:02:13+00:00'
+timestamp: '2026-08-26T07:37:36+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

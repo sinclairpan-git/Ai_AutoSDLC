@@ -136,7 +136,8 @@ def _history_contains_implementation(
     wi_rel: str,
 ) -> bool:
     execution_log_path = f"{wi_rel}/task-execution-log.md"
-    for commit in git.commits_touching_path(revision, execution_log_path):
+    log_commits = git.commits_touching_path(revision, execution_log_path)
+    for commit in log_commits:
         commit_paths = git.changed_paths_for_commit(commit)
         if git.first_parent(commit) is None and not _root_commit_has_implementation(
             git,
@@ -146,6 +147,26 @@ def _history_contains_implementation(
         ):
             continue
         if commit_paths and not _is_formal_freeze_only_change_set(commit_paths, wi_rel):
+            return True
+
+    for latest_log_commit, previous_log_commit in zip(
+        log_commits, log_commits[1:], strict=False
+    ):
+        try:
+            log_text = git.read_file_at_revision(latest_log_commit, execution_log_path)
+        except GitError:
+            continue
+        if not execution_log_has_recorded_evidence(log_text):
+            continue
+        history_paths = _dedupe_text_items(
+            (
+                *git.changed_paths(previous_log_commit, latest_log_commit),
+                *git.changed_paths(latest_log_commit, previous_log_commit),
+            )
+        )
+        if history_paths and not _is_formal_freeze_only_change_set(
+            tuple(history_paths), wi_rel
+        ):
             return True
     return False
 

@@ -501,6 +501,7 @@ class TestCliWorkitemTruthCheck:
         [
             ("merged_mainline", "formal_freeze_only"),
             ("formal_branch", "formal_freeze_only"),
+            ("separate_implementation_and_log", "mainline_merged"),
             ("root_bootstrap", "formal_freeze_only"),
             ("root_arbitrary_implementation", "mainline_merged"),
         ],
@@ -542,6 +543,18 @@ class TestCliWorkitemTruthCheck:
             spec_path = root / "specs" / work_item_id / "spec.md"
             spec_path.write_text("# spec\nformal update\n", encoding="utf-8")
             _commit_all(root, "update formal 219")
+        elif topology == "separate_implementation_and_log":
+            _write_formal_control_change_set(root, work_item_id)
+            _commit_all(root, "formalize 219 on main")
+            (root / "product-config.yaml").write_text(
+                "feature_enabled: true\n", encoding="utf-8"
+            )
+            _commit_all(root, "implement 219 separately")
+            (root / "specs" / work_item_id / "task-execution-log.md").write_text(
+                "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+                encoding="utf-8",
+            )
+            _commit_all(root, "record 219 execution evidence")
         else:
             _write_formal_control_change_set(root, work_item_id)
             if topology == "root_bootstrap":

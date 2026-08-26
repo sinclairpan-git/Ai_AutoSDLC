@@ -366,3 +366,20 @@
 - 相对上一候选，本批运行时代码 36 additions / 21 deletions，净增 15；测试 25 additions / 9 deletions，
   净增 16。新增投入只用于共享证据判定和四类 root truth 对抗矩阵；删除过度刚性的路径规则后，误报与漏报
   同时受约束，ROI 裁决为保留。
+
+## Batch 2026-08-26-016 | PR #175 separate implementation/log P2 remediation
+
+- Codex 在 `7a4869a5b1ecfcdb2f4ee91ca890a41d193bd6c0` 提出 P2：实现提交与 execution-log 更新分离并经
+  rebase/fast-forward 进入 main 时，旧历史扫描只查看触及日志的提交，会漏掉两次日志更新之间的真实实现提交。
+- 真实 Git topology 先稳定 RED：formal scaffold、根级 `product-config.yaml` 实现、已填写日志分别提交后，
+  truth-check 返回 `execution_started=False/formal_freeze_only`；`1 failed, 19 deselected`。
+- GREEN 保持窄窗口：先沿 first-parent 读取触及 execution log 的提交；同提交证据规则不变，仅在相邻两次日志
+  更新之间读取双向 diff，并要求较新的日志通过共享 evidence predicate。未扫描从 WI 创建到当前的全部历史，
+  未读取 commit message，也未新增路径/后缀白名单、GitClient API、parser、schema、状态或持久化面。
+- truth-check 全文件 `20 passed in 8.09s`；truth/status/readiness/execute/GitClient/close/ProgramService 扩大
+  回归 `640 passed in 89.02s`；final exact-tree full `3362 passed, 3 skipped in 703.17s`；全库 Ruff PASS；
+  constraints=`no BLOCKERs`。
+- Program Truth execute 写入 snapshot `1ab636ef...`；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 114.16s`。
+- 本批运行时代码 22 additions / 1 deletion，净增 21；测试净增 13。投入只覆盖一个已复现且会错误保持已实施
+  WI active 的 P2，并用“相邻日志区间”限制误归因半径；不把一次边界修复扩成通用历史推断引擎，ROI 裁决为保留。
