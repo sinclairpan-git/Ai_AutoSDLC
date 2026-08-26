@@ -592,3 +592,18 @@
   `149 passed in 60.21s`；final exact-tree full `3378 passed, 3 skipped in 840.69s`；全库 Ruff PASS。
 - 相对上一候选，本批产品代码 1 addition / 4 deletions，净删除 3；测试 21 additions / 2 deletions。
   两项整改同时提高真假边界并减少实现量，ROI 裁决为保留。
+
+## Batch 2026-08-26-029 | PR #175 multiline change-scope compatibility remediation
+
+- Codex 在 `3cbc9c68f34c5533007cd5e80811dd9ecc4626a3` 提出 2 个 P2：仓库既有执行日志使用
+  `改动范围：` 后接缩进 path bullets，当前同行值解析会漏判；canonical handoff 仍包含已经完成的
+  Batch 028 commit 步骤。
+- `separate_implementation_and_log` 改用真实 multiline field 后稳定 RED：错误返回
+  `formal_freeze_only`。
+- GREEN 仅扩展既有改动范围字段正则，消费紧邻的缩进 bullet；继续复用 token/path normalization，
+  不扫描普通正文、不引入通用 Markdown parser、schema、状态或持久化。handoff 收敛到最终 push/review/check
+  动作，不再重复已完成提交。
+- truth topology `15 passed in 9.86s`；truth/context/execute/readiness/status 扩大回归
+  `149 passed in 60.22s`；final exact-tree full `3378 passed, 3 skipped in 840.78s`；全库 Ruff PASS。
+- 相对上一候选，本批运行时代码 24 additions / 17 deletions，净增 7；测试 1 addition / 1 deletion，
+  复用既有 topology。兼容仓库正式日志格式且未形成 parser 子系统，ROI 裁决为保留。

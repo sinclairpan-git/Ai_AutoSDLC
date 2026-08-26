@@ -11,15 +11,15 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 完成 WI219 PR #175 exact-head 整改、复审并合并远端主线。 | State: Batch
-    028 final exact-tree 全部门禁通过：targeted 21/21、expanded 149/149、full 3378/3 skipped、Truth
-    ready/fresh 1147/1147、root manifest 1/1、Ruff PASS、constraints no BLOCKERs；产品代码净删除
-    3 行。 | Next: 提交并 push Batch 028；请求并监控 PR #175 exact-head Codex review/required
-    checks；无 actionable finding 且全绿后合并并验证 origin/main。'
+  context_summary: 'Goal: 完成 WI219 PR #175 exact-head 复审并合并远端主线。 | State: Batch 029
+    final exact-tree 全部门禁通过：truth 15/15、expanded 149/149、full 3378/3 skipped、Truth
+    ready/fresh 1147/1147、root manifest 1/1、Ruff PASS、constraints no BLOCKERs；运行时代码净增
+    7 行。 | Next: 监控 PR #175 最终 exact-head Codex review/required checks；无 actionable
+    finding 且全绿后合并并验证 origin/main。'
 current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-26T17:02:32+00:00'
+timestamp: '2026-08-26T17:44:12+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

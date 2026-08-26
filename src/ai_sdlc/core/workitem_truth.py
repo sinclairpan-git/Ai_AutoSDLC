@@ -18,8 +18,10 @@ RECORDED_PATH_TOKEN_RE = re.compile(
     r"`([^`\n]+)`|\[([^\]\n]+)\]\(([^)\n]+)\)"
 )
 RECORDED_PATH_LINE_RE = re.compile(
-    r"(?m)^\s*(?:-\s*)?(?:\*\*)?改动范围(?:\*\*)?：(?P<value>.+?)\s*$"
+    r"(?m)^[ \t]*(?:-[ \t]*)?(?:\*\*)?改动范围(?:\*\*)?：[ \t]*(?P<value>[^\n]*)"
+    r"(?P<continuation>(?:\n[ \t]+-[ \t]+[^\n]+)*)[ \t]*$"
 )
+RECORDED_PATH_CONTINUATION_RE = re.compile(r"(?m)^[ \t]+-[ \t]+(?P<value>[^\n]+)$")
 
 
 @dataclass
@@ -127,22 +129,27 @@ def _has_recorded_path_evidence(
     allowed = _formal_control_paths(wi_rel)
     recorded_paths: set[str] = set()
     for match in RECORDED_PATH_LINE_RE.finditer(log_text):
-        value = match.group("value").strip()
-        tokens = {
-            _normalize_recorded_path(token, wi_rel)
-            for token_match in RECORDED_PATH_TOKEN_RE.finditer(value)
-            for token in (
-                token_match.group(3)
-                or token_match.group(1)
-                or token_match.group(2)
-                or "",
-            )
-            if token.strip()
-        }
-        if tokens:
-            recorded_paths.update(tokens)
-        elif value:
-            recorded_paths.add(_normalize_recorded_path(value, wi_rel))
+        values = (
+            match.group("value"),
+            *RECORDED_PATH_CONTINUATION_RE.findall(match.group("continuation")),
+        )
+        for value in values:
+            value = value.strip()
+            tokens = {
+                _normalize_recorded_path(token, wi_rel)
+                for token_match in RECORDED_PATH_TOKEN_RE.finditer(value)
+                for token in (
+                    token_match.group(3)
+                    or token_match.group(1)
+                    or token_match.group(2)
+                    or "",
+                )
+                if token.strip()
+            }
+            if tokens:
+                recorded_paths.update(tokens)
+            elif value:
+                recorded_paths.add(_normalize_recorded_path(value, wi_rel))
     return any(path not in allowed and path in recorded_paths for path in paths)
 
 

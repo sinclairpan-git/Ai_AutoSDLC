@@ -601,7 +601,7 @@ class TestCliWorkitemTruthCheck:
             recorded_path = (
                 "改动范围：[`../../src/功能.py`](../../src/功能.py)\n"
                 if topology == "unicode_implementation_path"
-                else f"改动范围：{implementation_path.relative_to(root).as_posix()}\n"
+                else "改动范围：\n  - `product-config.yaml`\n"
                 if topology == "separate_implementation_and_log"
                 else "改动范围：src/功能.py.bak\n"
                 if topology == "path_prefix_collision"
