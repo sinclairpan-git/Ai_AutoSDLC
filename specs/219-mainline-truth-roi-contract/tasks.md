@@ -49,18 +49,18 @@
 
 ## Batch 2：A0 truth baseline/classification
 
-- [ ] **T20 stale-local-main 与 formal-control RED**
+- [x] **T20 stale-local-main 与 formal-control RED**
   - 依赖：T17
   - 范围：`tests/integration/test_cli_workitem_truth_check.py`
   - 验收：behind-only 四类 Git fixture 与 formal allowlist/范围外路径用例先以预期原因失败；测试前后 refs 不变。
 
-- [ ] **T21 behind-only base 与 exact formal-control GREEN**
+- [x] **T21 behind-only base 与 exact formal-control GREEN**
   - 依赖：T20
   - 范围：`src/ai_sdlc/core/workitem_truth.py`
   - 验收：WI219 formal candidate 为 `formal_freeze_only`；任一范围外实现/测试/配置/产品文档为
     `branch_only_implemented`；无 fetch/ref 写入、无 GitClient 或新状态修改。
 
-- [ ] **T22 A0 Go/No-Go 与提交**
+- [x] **T22 A0 Go/No-Go 与提交**
   - 依赖：T21
   - 验收：truth-check 定向测试与 Ruff 全绿；冻结边界未越过；A0 独立提交。
 

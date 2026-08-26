@@ -55,14 +55,14 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
 - 产出：`_detect_base_ref(git: GitClient) -> str | None` 仍保持私有签名；新增私有
   `_is_formal_freeze_only_change_set(paths: tuple[str, ...], wi_rel: str) -> bool`，不产生公共 API。
 
-- [ ] **Step 1：写 behind-only 与 formal-control RED**
+- [x] **Step 1：写 behind-only 与 formal-control RED**
 
   在 `tests/integration/test_cli_workitem_truth_check.py` 增加真实 Git fixtures，至少覆盖：
   `origin/main` 严格领先本地 main、remote 缺失、本地领先、双方分叉；记录 `show-ref` 前后完全一致。
   再增加 WI219 精确 control-file 集合为 `formal_freeze_only`，以及额外 `src/`、普通 test、配置或产品文档
   后转为 `branch_only_implemented` 的参数化用例。期望值必须使用字面量，不从生产 allowlist 反推。
 
-- [ ] **Step 2：运行 RED 并确认失败原因**
+- [x] **Step 2：运行 RED 并确认失败原因**
 
   ```powershell
   uv run pytest tests/integration/test_cli_workitem_truth_check.py -q
@@ -71,7 +71,7 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
   预期：stale-local-main fixture 暴露远端主线历史产品路径；精确 formal control fixture 仍被当前
   `execution_log/test/other_paths` 逻辑判为 `branch_only_implemented`。不得接受 fixture 或语法错误型 RED。
 
-- [ ] **Step 3：做最小 GREEN**
+- [x] **Step 3：做最小 GREEN**
 
   在 `workitem_truth.py` 内保持 local `main/master` 为默认，仅当已有 `origin/<default>`、两端 SHA 不同且
   `git.is_ancestor(local, remote)` 为真时返回 remote ref；不得 fetch 或写 ref。
@@ -80,14 +80,14 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
   handoff、resume-pack、program-manifest 和 root manifest test。只有 changed paths 非空且全部属于该集合时
   才忽略 execution-log/path 证据；任一范围外路径都令 `execution_started=True`。
 
-- [ ] **Step 4：运行 GREEN 与 A0 回归**
+- [x] **Step 4：运行 GREEN 与 A0 回归**
 
   ```powershell
   uv run pytest tests/integration/test_cli_workitem_truth_check.py -q
   uv run ruff check src/ai_sdlc/core/workitem_truth.py tests/integration/test_cli_workitem_truth_check.py
   ```
 
-- [ ] **Step 5：A0 Go/No-Go 与提交**
+- [x] **Step 5：A0 Go/No-Go 与提交**
 
   若需要修改 GitClient、读取网络、解析 Markdown/YAML 内容或新增 classification 状态则 No-Go；否则提交：
 

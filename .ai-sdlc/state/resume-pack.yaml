@@ -11,14 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 实施已批准的 WI219：按 A0 truth、A1 linked-first、B ROI templates
-    三批 TDD 落地并避免实现膨胀。 | State: 三席 round 2 均 APPROVE；用户已明确批准；T16/T17 完成；canonical plan/tasks
-    已生成，产品代码尚未修改。 | Next: 同步 Program Truth 并提交 approval/planning batch，然后执行 T20 A0
-    characterization RED。'
+  context_summary: 'Goal: 继续实施 WI219；A0 已 Go，下一批用 TDD 统一 linked-first active binding。
+    | State: A0 已提交为 3dbdd8a2；truth-check 14 passed，Ruff PASS；真实 WI219 HEAD formal
+    candidate 正确为 formal_freeze_only。 | Next: 执行 T30：先为 active_work_item_spec_dir
+    和全部 linked-first consumer matrix 写失败测试。'
 current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-26T01:01:12+00:00'
+timestamp: '2026-08-26T01:22:30+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

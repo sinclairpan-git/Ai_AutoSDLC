@@ -113,3 +113,32 @@
   已于 2026-08-25 满足，并由当前 plan 的四个可执行 Task 及 `tasks.md` T20–T52 取代。
 - 上述删除不移除行为边界；behind-only、单一纯 helper、双模板 semantic set、禁止新状态/parser/公共面和
   三批独立回退均在新计划中保留并细化。
+
+## Batch 2026-08-25-004 | T20-T22 A0 truth baseline/classification
+
+### RED
+
+- 只修改 `tests/integration/test_cli_workitem_truth_check.py`，新增真实 Git fixtures：本地 main 落后已有
+  origin/main、remote 缺失、本地领先、双方分叉、精确 formal control 集及四类范围外路径。
+- 首次运行 `uv run pytest tests/integration/test_cli_workitem_truth_check.py -q` 得到
+  `4 failed, 10 passed in 5.23s`；四个失败均为当前把 formal control 集判为
+  `branch_only_implemented`，无 fixture/语法错误。
+
+### GREEN 与 refactor
+
+- `src/ai_sdlc/core/workitem_truth.py` 仅在本地 default 严格落后已有 origin/default 时选择 remote ref；
+  remote 缺失、本地领先、分叉保持 local；只调用既有只读 GitClient 方法。
+- 新增一个私有 exact-path helper；精确 formal control 集可判 `formal_freeze_only`，任一范围外源码、测试、
+  配置或产品文档仍是 execution evidence；未新增状态、schema、参数或内容 parser。
+- GREEN：`14 passed in 5.44s`；提取 test-only helper 去除重复后仍为 `14 passed in 5.66s`；Ruff PASS，
+  `git diff --check` PASS。
+- 真实 `workitem truth-check --wi specs/219-mainline-truth-roi-contract --rev HEAD --json` 在批准计划提交
+  `e6567e63` 上返回 `formal_freeze_only`、`execution_started=false`、无远端主线历史 code paths、无 close/merge
+  action。
+
+### ROI / Go-No-Go
+
+- 产品 diff：38 additions / 3 deletions；测试 diff 经去重后 161 additions；测试高于单批直觉值但覆盖四类
+  Git 拓扑、ref 不变、精确 allowlist 和四类范围外证据，未出现 mock-only 或重复矩阵，保留为必要证明。
+- 未修改 GitClient、writer、Runner、ProgramService、status schema/格式或 checkpoint schema；A0=`Go`。
+- 独立提交：`3dbdd8a2 fix: align work item truth with remote main`。
