@@ -506,6 +506,18 @@ def _build_resume_working_set(
 ) -> WorkingSet:
     working_set = _build_resume_working_set_from_filesystem(root, checkpoint, work_item_id)
     artifact = load_working_set(root, work_item_id) if work_item_id else None
+    linked = bool((checkpoint.linked_wi_id or "").strip())
+    linked_artifact_paths_allowed = True
+    if linked:
+        spec_dir_raw = active_work_item_spec_dir(checkpoint)
+        spec_dir = (root / spec_dir_raw).resolve() if spec_dir_raw else None
+        linked_artifact_paths_allowed = bool(
+            spec_dir
+            and spec_dir.is_relative_to((root / "specs").resolve())
+            and active_work_item_dir_has_canonical_identity(
+                root, checkpoint, spec_dir
+            )
+        )
     if artifact is not None:
         for field in (
             "prd_path",
@@ -515,10 +527,12 @@ def _build_resume_working_set(
             "plan_path",
             "tasks_path",
         ):
+            if linked and field in {"spec_path", "plan_path", "tasks_path"}:
+                continue
             value = _portable_repo_path(root, getattr(artifact, field))
             if value:
                 setattr(working_set, field, value)
-        if artifact.active_files:
+        if artifact.active_files and linked_artifact_paths_allowed:
             paths = (_portable_repo_path(root, path) for path in artifact.active_files)
             working_set.active_files = list(dict.fromkeys(filter(None, paths)))
         if artifact.context_summary:

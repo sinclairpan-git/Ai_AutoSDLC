@@ -508,3 +508,22 @@
   两项改动补齐同一时间轴的尾段与 root 证据一致性，没有增加第二 classifier，ROI 裁决为保留。
 - Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
   0 unmapped、两个 release target ready；root manifest test=`1 passed in 123.21s`。
+
+## Batch 2026-08-26-024 | PR #175 persisted-overlay and complete-path-token remediation
+
+- Codex 在 `389775343749b9200b26f39dbb7775a5635ffbe5` 提出 2 个 P2：linked WI 目录缺失/被 symlink
+  替换后，持久化 `working-set.yaml` 会在文件系统校验之后重新覆盖 spec/plan/tasks/active_files；路径边界 regex
+  仍会把合法长文件名 `src/功能.py backup` 中的前缀误当成完整路径。
+- 两个最小回归稳定 RED：symlink 到 root 外时 persisted spec/active_files 重新出现；space-suffix 长文件名仍返回
+  `mainline_merged`，各 `1 failed`。
+- GREEN 对 linked WI 的 formal spec/plan/tasks 始终使用已验证文件系统结果，只有 linked 目录仍具 canonical identity
+  时才允许 persisted active_files 覆盖；非 linked legacy 路径保持原行为。path evidence 改为完整 token 集合相等：
+  支持反引号、Markdown 链接，或把单个 bare `改动范围：`整值视为一个路径；多路径继续可由模型自由使用 Markdown
+  token 表达，不猜测空格/逗号究竟是分隔符还是合法文件名。不新增状态、schema、持久化或通用日志 parser subsystem。
+- truth topology `14 passed`；linked symlink/legacy `2 passed`；truth/status/readiness/Program Truth/context/resume/
+  recover/handoff 扩大回归 `737 passed in 125.37s`；final exact-tree full
+  `3373 passed, 3 skipped in 826.74s`；全库 Ruff PASS；constraints=`no BLOCKERs`。
+- 相对上一候选，本批运行时代码 31 additions / 10 deletions，净增 21；测试 24 additions / 2 deletions，净增 22。
+  两项改动均复用现有 canonical identity 与执行日志字段，没有增加新的治理层，ROI 裁决为保留。
+- Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 124.89s`。

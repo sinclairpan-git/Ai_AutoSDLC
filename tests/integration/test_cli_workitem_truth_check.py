@@ -516,6 +516,7 @@ class TestCliWorkitemTruthCheck:
             ("implementation_before_initial_log", "mainline_merged"),
             ("unicode_implementation_path", "mainline_merged"),
             ("path_prefix_collision", "formal_freeze_only"),
+            ("path_space_collision", "formal_freeze_only"),
             ("unrelated_between_log_updates", "formal_freeze_only"),
             ("nonroot_scaffold_with_unrelated", "formal_freeze_only"),
             ("nonroot_arbitrary_implementation", "mainline_merged"),
@@ -565,19 +566,30 @@ class TestCliWorkitemTruthCheck:
             "separate_implementation_and_log",
             "unicode_implementation_path",
             "path_prefix_collision",
+            "path_space_collision",
             "unrelated_between_log_updates",
         }:
             _write_formal_control_change_set(root, work_item_id)
             _commit_all(root, "formalize 219 on main")
             implementation_path = (
                 root / "src" / "功能.py"
-                if topology in {"unicode_implementation_path", "path_prefix_collision"}
+                if topology
+                in {
+                    "unicode_implementation_path",
+                    "path_prefix_collision",
+                    "path_space_collision",
+                }
                 else root / "product-config.yaml"
             )
             implementation_path.parent.mkdir(parents=True, exist_ok=True)
             implementation_path.write_text(
                 "feature_enabled = True\n"
-                if topology in {"unicode_implementation_path", "path_prefix_collision"}
+                if topology
+                in {
+                    "unicode_implementation_path",
+                    "path_prefix_collision",
+                    "path_space_collision",
+                }
                 else "feature_enabled: true\n",
                 encoding="utf-8",
             )
@@ -588,6 +600,8 @@ class TestCliWorkitemTruthCheck:
                 in {"separate_implementation_and_log", "unicode_implementation_path"}
                 else "改动范围：src/功能.py.bak\n"
                 if topology == "path_prefix_collision"
+                else "改动范围：src/功能.py backup\n"
+                if topology == "path_space_collision"
                 else ""
             )
             (root / "specs" / work_item_id / "task-execution-log.md").write_text(

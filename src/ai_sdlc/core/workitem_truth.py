@@ -13,6 +13,11 @@ from ai_sdlc.core.workitem_traceability import execution_log_has_recorded_eviden
 from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root
 
+RECORDED_PATH_TOKEN_RE = re.compile(r"`([^`\n]+)`|\[([^\]\n]+)\]\([^)]+\)")
+RECORDED_PATH_LINE_RE = re.compile(
+    r"(?m)^\s*(?:-\s*)?(?:\*\*)?改动范围(?:\*\*)?：(?P<value>.+?)\s*$"
+)
+
 
 @dataclass
 class WorkitemTruthResult:
@@ -117,15 +122,17 @@ def _has_recorded_path_evidence(
     paths: tuple[str, ...], wi_rel: str, log_text: str
 ) -> bool:
     allowed = _formal_control_paths(wi_rel)
-    return any(
-        path not in allowed
-        and re.search(
-            rf"(?<![\w./\\@+~%-]){re.escape(path)}(?![\w./\\@+~%-])",
-            log_text,
-        )
-        is not None
-        for path in paths
-    )
+    recorded_paths = {
+        token.strip()
+        for match in RECORDED_PATH_TOKEN_RE.finditer(log_text)
+        for token in (match.group(1) or match.group(2) or "",)
+        if token.strip()
+    }
+    for match in RECORDED_PATH_LINE_RE.finditer(log_text):
+        value = match.group("value").strip()
+        if value and RECORDED_PATH_TOKEN_RE.search(value) is None:
+            recorded_paths.add(value)
+    return any(path not in allowed and path in recorded_paths for path in paths)
 
 
 def _root_commit_has_implementation(
