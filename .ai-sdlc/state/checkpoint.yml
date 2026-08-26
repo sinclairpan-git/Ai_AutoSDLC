@@ -1,5 +1,5 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-07-22T02:48:41+00:00'
+pipeline_last_updated: '2026-08-25T11:54:47+00:00'
 current_stage: close
 feature:
   id: 204-program-finalization-command-family-reduction-candidate
@@ -43,6 +43,6 @@ completed_stages:
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 218-consumer-framework-constraint-isolation
-linked_plan_uri: specs/218-consumer-framework-constraint-isolation/plan.md
-last_synced_at: '2026-07-22T02:48:41+00:00'
+linked_wi_id: 219-mainline-truth-roi-contract
+linked_plan_uri: specs/219-mainline-truth-roi-contract/plan.md
+last_synced_at: '2026-08-25T11:54:47+00:00'

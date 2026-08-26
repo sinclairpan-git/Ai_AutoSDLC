@@ -259,6 +259,7 @@ def _write_branch_lifecycle_fixture(
 ) -> None:
     _init_git_repo(root)
     init_project(root)
+    _commit_all(root, "chore: initialize branch lifecycle fixture")
     wi_dir = root / "specs" / wi_name
     wi_dir.mkdir(parents=True, exist_ok=True)
     (wi_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
@@ -273,13 +274,21 @@ def _write_branch_lifecycle_fixture(
     (wi_dir / "task-execution-log.md").write_text(
         "# Log\n\n"
         "### Batch 2026-03-31-001 | Batch 1 demo\n\n"
+        "#### 2.2 统一验证命令\n"
+        "- 结果：passed\n"
+        "#### 2.4 代码审查\n"
+        "- 结论：passed\n"
         "#### 2.5 任务/计划同步状态（Mandatory）\n"
         "- 关联 branch/worktree disposition 计划：`待最终收口`\n"
+        "- 改动范围：src/branch_lifecycle_fixture.py\n"
         "#### 2.8 归档后动作\n"
         f"- 当前批次 branch disposition 状态：`{branch_disposition_status}`\n"
         "- 当前批次 worktree disposition 状态：`待最终收口`\n",
         encoding="utf-8",
     )
+    implementation = root / "src" / "branch_lifecycle_fixture.py"
+    implementation.parent.mkdir(parents=True, exist_ok=True)
+    implementation.write_text("IMPLEMENTED = True\n", encoding="utf-8")
     save_checkpoint(
         root,
         Checkpoint(
@@ -2256,6 +2265,7 @@ def test_status_json_blocks_frontend_inheritance_drift_in_truth_ledger(
 ) -> None:
     _init_git_repo(tmp_path)
     init_project(tmp_path)
+    _commit_all(tmp_path, "chore: initialize inheritance fixture")
     _write_truth_ledger_fixture(tmp_path)
     _write_builtin_frontend_delivery_truth(tmp_path)
     materialize_frontend_generation_constraint_artifacts(
@@ -2282,7 +2292,11 @@ def test_status_json_blocks_frontend_inheritance_drift_in_truth_ledger(
         encoding="utf-8",
     )
     (tmp_path / "specs" / "001-auth" / "task-execution-log.md").write_text(
-        "# Log\n\nexecution evidence\n",
+        "# Log\n\n### Batch 2026-04-20-001 | frontend truth\n"
+        "统一验证命令：passed\n"
+        "代码审查：passed\n"
+        "任务/计划同步状态：done\n"
+        "改动范围：.ai-sdlc/memory/frontend-solution-confirmation/latest.yaml\n",
         encoding="utf-8",
     )
     _commit_all(tmp_path, "docs: seed inheritance blocker status fixture")

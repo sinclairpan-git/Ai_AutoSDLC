@@ -3,17 +3,47 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 from ai_sdlc.context.state import save_checkpoint
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from ai_sdlc.telemetry.readiness import (
     _actions_surface,
+    _build_backlog_breach_guard_surface,
     _build_guard_workitem_diagnostic_item,
     _coerce_id_list,
     _dedupe_mapping_items,
     _load_active_work_item_dir,
     _load_checkpoint_feature_binding,
     _sort_workitem_diagnostic_items,
+    build_status_json_surface,
 )
+
+FEATURE_WI = "204-historical"
+LINKED_WI = "219-active"
+
+
+def _save_linked_checkpoint(
+    root: Path, *, stage: str = "verify", checkpoint_branch: str | None = None
+) -> None:
+    for work_item_id in (FEATURE_WI, LINKED_WI):
+        spec_dir = root / "specs" / work_item_id
+        spec_dir.mkdir(parents=True, exist_ok=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+    save_checkpoint(
+        root,
+        Checkpoint(
+            current_stage=stage,
+            feature=FeatureInfo(
+                id=FEATURE_WI,
+                spec_dir=f"specs/{FEATURE_WI}",
+                design_branch=f"design/{FEATURE_WI}",
+                feature_branch=f"feature/{FEATURE_WI}",
+                current_branch=checkpoint_branch or f"feature/{FEATURE_WI}",
+            ),
+            linked_wi_id=LINKED_WI,
+        ),
+    )
 
 
 def test_actions_surface_deduplicates_actions_and_preserves_order() -> None:
@@ -140,3 +170,204 @@ def test_checkpoint_feature_binding_ignores_terminally_merged_work_item_on_main(
             None,
             "no active work item on current branch",
         )
+
+
+def test_checkpoint_binding_prefers_linked_work_item_on_active_branch(tmp_path: Path) -> None:
+    _save_linked_checkpoint(tmp_path)
+
+    with patch(
+        "ai_sdlc.telemetry.readiness.GitClient.current_branch",
+        return_value=f"feature/{LINKED_WI}",
+    ):
+        assert _load_checkpoint_feature_binding(tmp_path) == (
+            LINKED_WI,
+            f"specs/{LINKED_WI}",
+        )
+        assert _load_active_work_item_dir(tmp_path) == (
+            LINKED_WI,
+            (tmp_path / "specs" / LINKED_WI).resolve(),
+            None,
+        )
+
+
+def test_checkpoint_binding_rejects_linked_symlink_to_other_work_item(tmp_path: Path) -> None:
+    _save_linked_checkpoint(tmp_path)
+    linked_dir = tmp_path / "specs" / LINKED_WI
+    (linked_dir / "spec.md").unlink()
+    linked_dir.rmdir()
+    try:
+        linked_dir.symlink_to(tmp_path / "specs" / FEATURE_WI, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink unavailable: {exc}")
+
+    with patch(
+        "ai_sdlc.telemetry.readiness.GitClient.current_branch",
+        return_value=f"feature/{LINKED_WI}",
+    ):
+        assert _load_checkpoint_feature_binding(tmp_path) == (LINKED_WI, None)
+        assert _load_active_work_item_dir(tmp_path) == (
+            LINKED_WI,
+            None,
+            "active work item directory is unavailable",
+        )
+
+
+def test_checkpoint_binding_treats_cyclic_linked_symlink_as_unavailable(
+    tmp_path: Path,
+) -> None:
+    _save_linked_checkpoint(tmp_path)
+    linked_dir = tmp_path / "specs" / LINKED_WI
+    (linked_dir / "spec.md").unlink()
+    linked_dir.rmdir()
+    try:
+        linked_dir.symlink_to(linked_dir, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink unavailable: {exc}")
+
+    with patch(
+        "ai_sdlc.telemetry.readiness.GitClient.current_branch",
+        return_value=f"feature/{LINKED_WI}",
+    ), patch(
+        "ai_sdlc.telemetry.readiness._resolve_spec_dir_path",
+        side_effect=RuntimeError("symlink loop"),
+    ):
+        assert _load_checkpoint_feature_binding(tmp_path) == (LINKED_WI, None)
+        assert _load_active_work_item_dir(tmp_path) == (
+            LINKED_WI,
+            None,
+            "active work item directory is unavailable",
+        )
+
+
+def test_missing_linked_work_item_remains_visible_on_main_close(tmp_path: Path) -> None:
+    _save_linked_checkpoint(tmp_path, stage="close")
+    linked_dir = tmp_path / "specs" / LINKED_WI
+    (linked_dir / "spec.md").unlink()
+    linked_dir.rmdir()
+
+    with patch(
+        "ai_sdlc.telemetry.readiness.GitClient.current_branch", return_value="main"
+    ):
+        assert _load_checkpoint_feature_binding(tmp_path) == (LINKED_WI, None)
+        assert _load_active_work_item_dir(tmp_path) == (
+            LINKED_WI,
+            None,
+            "active work item directory is unavailable",
+        )
+        status = build_status_json_surface(
+            tmp_path,
+            include_program_truth=False,
+            include_truth_ledger=False,
+        )
+
+    for surface_name in ("branch_lifecycle", "workitem_diagnostics"):
+        surface = status[surface_name]
+        assert surface["active_work_item"] == LINKED_WI
+        assert surface["detail"] == "active work item directory is unavailable"
+
+
+@pytest.mark.parametrize(
+    ("classification", "expected_binding"),
+    [
+        ("formal_freeze_only", (LINKED_WI, f"specs/{LINKED_WI}")),
+        ("mainline_merged", (None, None)),
+    ],
+)
+def test_checkpoint_binding_uses_linked_truth_for_main_close_terminal_state(
+    tmp_path: Path,
+    classification: str,
+    expected_binding: tuple[str | None, str | None],
+) -> None:
+    _save_linked_checkpoint(tmp_path, stage="close")
+    inspected_paths: list[Path] = []
+
+    def _truth(**kwargs: object) -> object:
+        inspected_paths.append(Path(str(kwargs["wi"])))
+        return type(
+            "TruthResult",
+            (),
+            {"error": None, "classification": classification},
+        )()
+
+    with patch(
+        "ai_sdlc.telemetry.readiness.GitClient.current_branch", return_value="main"
+    ), patch("ai_sdlc.telemetry.readiness.run_truth_check", side_effect=_truth):
+        assert _load_checkpoint_feature_binding(tmp_path) == expected_binding
+
+    assert inspected_paths == [(tmp_path / "specs" / LINKED_WI).resolve()]
+
+
+def test_linked_main_close_truth_precedes_historical_main_branch_match(
+    tmp_path: Path,
+) -> None:
+    _save_linked_checkpoint(tmp_path, stage="close", checkpoint_branch="main")
+    merged_truth = type(
+        "TruthResult", (), {"error": None, "classification": "mainline_merged"}
+    )()
+
+    with patch(
+        "ai_sdlc.telemetry.readiness.GitClient.current_branch", return_value="main"
+    ), patch(
+        "ai_sdlc.telemetry.readiness.run_truth_check", return_value=merged_truth
+    ):
+        assert _load_checkpoint_feature_binding(tmp_path) == (None, None)
+
+
+def test_backlog_breach_guard_scans_linked_work_item_instead_of_historical_feature(
+    tmp_path: Path,
+) -> None:
+    _save_linked_checkpoint(tmp_path)
+    (tmp_path / "specs" / FEATURE_WI / "spec.md").write_text(
+        "# Feature\nFD-2026-08-25-001\n", encoding="utf-8"
+    )
+    (tmp_path / "specs" / LINKED_WI / "spec.md").write_text(
+        "# Linked\nFD-2026-08-25-002\n", encoding="utf-8"
+    )
+
+    result = _build_backlog_breach_guard_surface(tmp_path)
+
+    assert result["missing_ids"] == ["FD-2026-08-25-002"]
+    assert result["sample_entries"] == [
+        {
+            "path": f"specs/{LINKED_WI}/spec.md",
+            "missing_ids": ["FD-2026-08-25-002"],
+        }
+    ]
+
+
+@pytest.mark.parametrize("escaped", [False, True])
+def test_backlog_breach_guard_fails_closed_when_linked_directory_is_unavailable(
+    tmp_path: Path, escaped: bool
+) -> None:
+    _save_linked_checkpoint(tmp_path)
+    (tmp_path / "specs" / FEATURE_WI / "spec.md").write_text(
+        "# Feature\nFD-2026-08-25-001\n", encoding="utf-8"
+    )
+    linked_spec = tmp_path / "specs" / LINKED_WI / "spec.md"
+    linked_spec.unlink()
+    linked_spec.parent.rmdir()
+    if escaped:
+        outside = tmp_path.parent / f"{tmp_path.name}-outside"
+        outside.mkdir()
+        (outside / "spec.md").write_text("# Outside\nFD-2026-08-25-999\n", encoding="utf-8")
+        try:
+            linked_spec.parent.symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"symlink unavailable: {exc}")
+
+    result = _build_backlog_breach_guard_surface(tmp_path)
+
+    assert result["state"] == "unavailable"
+    assert result["missing_ids"] == []
+    assert result["sample_entries"] == []
+    assert result["detail"] == "active work item directory is unavailable"
+    if escaped:
+        status = build_status_json_surface(
+            tmp_path,
+            include_program_truth=False,
+            include_truth_ledger=False,
+        )
+        for surface_name in ("branch_lifecycle", "workitem_diagnostics"):
+            surface = status[surface_name]
+            assert surface["active_work_item"] == LINKED_WI
+            assert surface["detail"] == "active work item directory is unavailable"

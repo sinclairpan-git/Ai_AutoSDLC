@@ -316,10 +316,58 @@ def active_work_item_id(checkpoint: Checkpoint | None) -> str:
         return ""
     linked = (checkpoint.linked_wi_id or "").strip()
     if linked:
+        if linked in {".", ".."} or Path(linked).name != linked or PureWindowsPath(linked).name != linked:
+            return ""
         return linked
     if checkpoint.feature and checkpoint.feature.id != "unknown":
         return checkpoint.feature.id
     return ""
+
+
+def active_work_item_spec_dir(checkpoint: Checkpoint | None) -> str:
+    """解析当前活动工作项对应的规格目录。"""
+    if checkpoint is None:
+        return ""
+    if (checkpoint.linked_wi_id or "").strip():
+        linked = active_work_item_id(checkpoint)
+        return f"specs/{linked}" if linked else ""
+    if checkpoint.feature is None:
+        return ""
+    return (checkpoint.feature.spec_dir or "").strip()
+
+
+def active_work_item_dir_has_canonical_identity(
+    root: Path,
+    checkpoint: Checkpoint | None,
+    resolved_dir: Path,
+) -> bool:
+    """确认解析后的活动工作项目录仍保持 linked id 的规范身份。"""
+    if checkpoint is None or not (checkpoint.linked_wi_id or "").strip():
+        return True
+    linked = active_work_item_id(checkpoint)
+    return bool(linked) and resolved_dir == root.resolve() / "specs" / linked
+
+
+def resolve_active_work_item_dir(
+    root: Path,
+    checkpoint: Checkpoint | None,
+) -> Path | None:
+    """解析活动工作项目录；linked 身份异常时安全返回不可用。"""
+    spec_dir_raw = active_work_item_spec_dir(checkpoint)
+    if not spec_dir_raw:
+        return None
+    try:
+        resolved = (root / spec_dir_raw).resolve()
+        if checkpoint and (checkpoint.linked_wi_id or "").strip() and (
+            not active_work_item_dir_has_canonical_identity(root, checkpoint, resolved)
+            or not resolved.is_dir()
+            or not resolved.is_relative_to(root.resolve())
+            or not resolved.is_relative_to((root / "specs").resolve())
+        ):
+            return None
+    except (OSError, RuntimeError):
+        return None
+    return resolved
 
 
 def work_item_dir(root: Path, work_item_id: str) -> Path:
@@ -480,6 +528,12 @@ def _build_resume_working_set(
 ) -> WorkingSet:
     working_set = _build_resume_working_set_from_filesystem(root, checkpoint, work_item_id)
     artifact = load_working_set(root, work_item_id) if work_item_id else None
+    linked = bool((checkpoint.linked_wi_id or "").strip())
+    linked_artifact_paths_allowed = True
+    if linked:
+        linked_artifact_paths_allowed = (
+            resolve_active_work_item_dir(root, checkpoint) is not None
+        )
     if artifact is not None:
         for field in (
             "prd_path",
@@ -489,10 +543,12 @@ def _build_resume_working_set(
             "plan_path",
             "tasks_path",
         ):
+            if linked and field in {"spec_path", "plan_path", "tasks_path"}:
+                continue
             value = _portable_repo_path(root, getattr(artifact, field))
             if value:
                 setattr(working_set, field, value)
-        if artifact.active_files:
+        if artifact.active_files and linked_artifact_paths_allowed:
             paths = (_portable_repo_path(root, path) for path in artifact.active_files)
             working_set.active_files = list(dict.fromkeys(filter(None, paths)))
         if artifact.context_summary:
@@ -518,11 +574,26 @@ def _build_resume_working_set_from_filesystem(
 ) -> WorkingSet:
     ws = WorkingSet()
     if checkpoint.feature:
-        spec_dir = root / "specs" / work_item_id if (checkpoint.linked_wi_id or "").strip() else root / checkpoint.feature.spec_dir
-        for field, filename in (("spec_path", "spec.md"), ("plan_path", "plan.md"), ("tasks_path", "tasks.md")):
-            path = spec_dir / filename
-            if path.exists():
-                setattr(ws, field, _portable_repo_path(root, path))
+        spec_dir = resolve_active_work_item_dir(root, checkpoint)
+        if spec_dir is not None:
+            linked = bool((checkpoint.linked_wi_id or "").strip())
+            if spec_dir.is_relative_to(root.resolve()) and (
+                not linked
+                or (
+                    spec_dir.is_relative_to((root / "specs").resolve())
+                    and active_work_item_dir_has_canonical_identity(
+                        root, checkpoint, spec_dir
+                    )
+                )
+            ):
+                for field, filename in (
+                    ("spec_path", "spec.md"),
+                    ("plan_path", "plan.md"),
+                    ("tasks_path", "tasks.md"),
+                ):
+                    path = spec_dir / filename
+                    if path.exists():
+                        setattr(ws, field, _portable_repo_path(root, path))
 
     if checkpoint.prd_source and (root / checkpoint.prd_source).exists():
         ws.prd_path = _portable_repo_path(root, checkpoint.prd_source)

@@ -5,29 +5,21 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/218-consumer-framework-constraint-isolation/spec.md
-  plan_path: specs/218-consumer-framework-constraint-isolation/plan.md
-  tasks_path: specs/218-consumer-framework-constraint-isolation/tasks.md
+  spec_path: specs/219-mainline-truth-roi-contract/spec.md
+  plan_path: specs/219-mainline-truth-roi-contract/plan.md
+  tasks_path: specs/219-mainline-truth-roi-contract/tasks.md
   active_files:
-  - specs/218-consumer-framework-constraint-isolation/tasks.md
-  - specs/218-consumer-framework-constraint-isolation/spec.md
-  context_summary: 'Goal: Merge the existing WI218 closure PR 173 and complete portable
-    fresh-main closure acceptance | State: Implementation PR 172 is merged and accepted;
-    all four Codex closure findings are addressed: portable deleted/removed lifecycle
-    truth, current continuity state, explicit closure changed-file inventory, and
-    a reachable terminal snapshot revision via post-merge generic remote archive rename;
-    closure remains docs/truth/continuity-only | Next: Read PR 173 state first and
-    do not repeat completed steps. If it is open, confirm the current HEAD has terminal
-    validation and same-identity LEAN/SAFETY PASS0 (reuse unchanged-HEAD evidence),
-    push if needed, resolve threads, obtain current-head Codex review and all-green
-    checks, then merge. If it is merged, rename remote `archive/218-consumer-framework-constraint-isolation-closure`
-    to `archive/consumer-framework-constraint-isolation-closure` when not already
-    renamed, then run independent fresh-main close/truth/audit/validate/manifest/constraints/clean-tree
-    acceptance.'
-current_branch: archive/consumer-framework-constraint-isolation-closure
+  - specs/219-mainline-truth-roi-contract/tasks.md
+  - specs/219-mainline-truth-roi-contract/spec.md
+  context_summary: 'Goal: 完成 WI219 PR #175 exact-head 复审并合并远端主线。 | State: Batch 029
+    final exact-tree 全部门禁通过：truth 15/15、expanded 149/149、full 3378/3 skipped、Truth
+    ready/fresh 1147/1147、root manifest 1/1、Ruff PASS、constraints no BLOCKERs；运行时代码净增
+    7 行。 | Next: 监控 PR #175 最终 exact-head Codex review/required checks；无 actionable
+    finding 且全绿后合并并验证 origin/main。'
+current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-07-22T15:42:19+00:00'
+timestamp: '2026-08-26T17:44:12+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-07-22T02:48:41+00:00'
-checkpoint_fingerprint: 83355f1f0b237fc59df9af5d9d4e472bc73e317b528249ca76b681e992d597db
+checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
+checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

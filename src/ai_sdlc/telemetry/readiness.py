@@ -9,9 +9,17 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
-from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.context.state import (
+    active_work_item_dir_has_canonical_identity,
+    active_work_item_id,
+    active_work_item_spec_dir,
+    load_checkpoint,
+)
 from ai_sdlc.core.artifact_target_guard import evaluate_formal_artifact_target_guard
-from ai_sdlc.core.backlog_breach_guard import evaluate_backlog_breach_guard
+from ai_sdlc.core.backlog_breach_guard import (
+    BacklogBreachGuardResult,
+    evaluate_backlog_breach_guard,
+)
 from ai_sdlc.core.execute_authorization import evaluate_execute_authorization
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
@@ -143,9 +151,22 @@ def _load_checkpoint_feature_spec_dir(
     checkpoint = load_checkpoint(repo_root)
     if checkpoint is None or checkpoint.feature is None:
         return None, None
-    spec_dir_raw = (checkpoint.feature.spec_dir or "").strip()
+    spec_dir_raw = active_work_item_spec_dir(checkpoint)
     if not spec_dir_raw or spec_dir_raw == "specs/unknown":
         return checkpoint, None
+    if (checkpoint.linked_wi_id or "").strip():
+        try:
+            resolved = _resolve_spec_dir_path(repo_root, spec_dir_raw)
+        except (OSError, RuntimeError):
+            return checkpoint, None
+        if (
+            not active_work_item_dir_has_canonical_identity(
+                repo_root, checkpoint, resolved
+            )
+            or not resolved.is_relative_to(repo_root.resolve())
+            or not resolved.is_relative_to((repo_root / "specs").resolve())
+        ):
+            return checkpoint, None
     return checkpoint, spec_dir_raw
 
 
@@ -163,16 +184,22 @@ def _load_checkpoint_feature_binding(
     checkpoint, spec_dir_raw = _load_checkpoint_feature_spec_dir(repo_root)
     if checkpoint is None or checkpoint.feature is None:
         return None, None
+    active_work_item = active_work_item_id(checkpoint) or None
+    if spec_dir_raw is None:
+        return active_work_item, None
+    if (checkpoint.linked_wi_id or "").strip() and not _resolve_spec_dir_path(
+        repo_root, spec_dir_raw
+    ).is_dir():
+        return active_work_item, None
     if (
-        spec_dir_raw is not None
-        and not _checkpoint_feature_binding_is_active(
+        not _checkpoint_feature_binding_is_active(
             repo_root,
             checkpoint=checkpoint,
             spec_dir_raw=spec_dir_raw,
         )
     ):
         return None, None
-    return checkpoint.feature.id, spec_dir_raw
+    return active_work_item, spec_dir_raw
 
 
 def _load_active_work_item_dir(
@@ -182,14 +209,28 @@ def _load_active_work_item_dir(
     if checkpoint is None or checkpoint.feature is None:
         return None, None, "no active work item checkpoint"
     if spec_dir_raw is None:
-        return None, None, "checkpoint has no concrete spec_dir"
+        active_work_item = active_work_item_id(checkpoint) or None
+        detail = (
+            "active work item directory is unavailable"
+            if active_work_item and (checkpoint.linked_wi_id or "").strip()
+            else "checkpoint has no concrete spec_dir"
+        )
+        return active_work_item, None, detail
+    active_work_item = active_work_item_id(checkpoint) or None
+    resolved_dir = _resolve_spec_dir_path(repo_root, spec_dir_raw)
+    if (checkpoint.linked_wi_id or "").strip() and not resolved_dir.is_dir():
+        return active_work_item, None, "active work item directory is unavailable"
     if not _checkpoint_feature_binding_is_active(
         repo_root,
         checkpoint=checkpoint,
         spec_dir_raw=spec_dir_raw,
     ):
         return None, None, "no active work item on current branch"
-    return checkpoint.feature.id, _resolve_spec_dir_path(repo_root, spec_dir_raw), None
+    return (
+        active_work_item,
+        resolved_dir,
+        None,
+    )
 
 
 def _checkpoint_feature_binding_is_active(
@@ -206,7 +247,9 @@ def _checkpoint_feature_binding_is_active(
     )
     if not current_branch:
         return True
-    if current_branch == checkpoint_branch:
+    if current_branch == checkpoint_branch and not (
+        checkpoint.linked_wi_id or ""
+    ).strip():
         return True
     if current_branch not in {"main", "master"}:
         return True
@@ -235,11 +278,12 @@ def _live_current_branch(repo_root: Path, checkpoint: Any) -> str:
 def _unavailable_active_work_item_surface(
     *,
     detail: str | None,
+    active_work_item: str | None,
     builder: Callable[..., dict[str, Any]],
 ) -> dict[str, Any]:
     return builder(
         detail=detail or "no active work item checkpoint",
-        active_work_item=None,
+        active_work_item=active_work_item,
     )
 
 
@@ -580,6 +624,13 @@ def _build_backlog_breach_guard_surface(repo_root: Path) -> dict[str, Any]:
         candidate = _resolve_spec_dir_path(repo_root, spec_dir_raw)
         if candidate.is_dir():
             spec_dir = candidate
+    if _checkpoint is not None and (_checkpoint.linked_wi_id or "").strip() and spec_dir is None:
+        return _guard_surface_json(
+            BacklogBreachGuardResult(
+                state="unavailable",
+                detail="active work item directory is unavailable",
+            )
+        )
     return _guard_surface_json(
         evaluate_backlog_breach_guard(
             root=repo_root,
@@ -641,6 +692,7 @@ def _build_branch_lifecycle_surface(repo_root: Path) -> dict[str, Any]:
     if unavailable_detail is not None or wi_dir is None:
         return _unavailable_active_work_item_surface(
             detail=unavailable_detail,
+            active_work_item=_active_work_item,
             builder=_unavailable_branch_lifecycle_surface,
         )
     if not wi_dir.is_dir() or not (repo_root / ".git").exists():
@@ -728,6 +780,7 @@ def _build_workitem_diagnostics_surface(
     if unavailable_detail is not None or wi_dir is None:
         return _unavailable_active_work_item_surface(
             detail=unavailable_detail,
+            active_work_item=_active_work_item,
             builder=_unavailable_workitem_diagnostics_surface,
         )
     if not wi_dir.is_dir():

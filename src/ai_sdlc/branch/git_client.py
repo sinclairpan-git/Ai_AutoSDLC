@@ -513,8 +513,38 @@ class GitClient:
 
     def changed_paths(self, base: str, target: str) -> tuple[str, ...]:
         """Return repo-relative changed paths between ``base`` and ``target``."""
-        raw = self._run("diff", "--name-only", f"{base}..{target}")
-        return tuple(path for path in raw.splitlines() if path.strip())
+        raw = self._run("diff", "--name-only", "-z", f"{base}..{target}")
+        return tuple(path for path in raw.split("\0") if path)
+
+    def commits_touching_path(self, revision: str, path: str) -> tuple[str, ...]:
+        """Return first-parent commits that changed ``path`` by newest first."""
+        raw = self._run("log", "--first-parent", "--format=%H", revision, "--", path)
+        return _dedupe_text_items(raw.splitlines())
+
+    def first_parent(self, commit: str) -> str | None:
+        """Return a commit's first parent, or ``None`` for a root commit."""
+        try:
+            return self.resolve_revision(f"{commit}^1")
+        except GitError:
+            return None
+
+    def changed_paths_for_commit(self, commit: str) -> tuple[str, ...]:
+        """Return changed paths for one commit, including a repository root commit."""
+        parent = self.first_parent(commit)
+        if parent is None:
+            raw = self._run(
+                "diff-tree",
+                "--root",
+                "--no-commit-id",
+                "--name-only",
+                "-z",
+                "-r",
+                commit,
+            )
+            return _dedupe_text_items(raw.split("\0"))
+        return _dedupe_text_items(
+            (*self.changed_paths(parent, commit), *self.changed_paths(commit, parent))
+        )
 
     def revision_divergence(
         self, revision: str, *, base: str | None = None

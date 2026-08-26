@@ -78,6 +78,22 @@ def _make_checkpoint() -> Checkpoint:
     )
 
 
+def test_active_work_item_spec_dir_prefers_linked_and_preserves_legacy_path() -> None:
+    checkpoint = _make_checkpoint()
+    checkpoint.linked_wi_id = LINKED_WI
+
+    assert context_state.active_work_item_spec_dir(checkpoint) == f"specs/{LINKED_WI}"
+
+    checkpoint.linked_wi_id = "  "
+    assert context_state.active_work_item_spec_dir(checkpoint) == "specs/001"
+    assert context_state.active_work_item_spec_dir(None) == ""
+
+    for invalid in ("../outside", r"..\outside", "C:outside"):
+        checkpoint.linked_wi_id = invalid
+        assert context_state.active_work_item_id(checkpoint) == ""
+        assert context_state.active_work_item_spec_dir(checkpoint) == ""
+
+
 class TestCheckpointManager:
     def test_save_and_load(self, tmp_path: Path) -> None:
         cp = _make_checkpoint()
@@ -319,8 +335,114 @@ class TestResumePack:
         assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
         legacy = _make_checkpoint()
         legacy.feature.id = "nonstandard"
+        legacy.feature.spec_dir = "formal/nonstandard"
+        legacy_dir = tmp_path / legacy.feature.spec_dir
+        legacy_dir.mkdir(parents=True)
+        for filename in ("spec.md", "plan.md", "tasks.md"):
+            (legacy_dir / filename).write_text("# legacy\n", encoding="utf-8")
         save_checkpoint(tmp_path, legacy)
-        assert Path(build_resume_pack(tmp_path).working_set_snapshot.spec_path).parent.name == "001"
+        legacy_snapshot = build_resume_pack(tmp_path).working_set_snapshot
+        assert (
+            legacy_snapshot.spec_path,
+            legacy_snapshot.plan_path,
+            legacy_snapshot.tasks_path,
+        ) == (
+            "formal/nonstandard/spec.md",
+            "formal/nonstandard/plan.md",
+            "formal/nonstandard/tasks.md",
+        )
+
+    def test_build_resume_pack_rejects_linked_symlink_outside_repo(
+        self, tmp_path: Path
+    ) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+        save_working_set(
+            tmp_path,
+            LINKED_WI,
+            state_models.WorkingSet(
+                spec_path=expected_paths[0], active_files=list(expected_paths)
+            ),
+        )
+        linked_dir = tmp_path / "specs" / LINKED_WI
+        for relative_path in expected_paths:
+            (tmp_path / relative_path).unlink()
+        linked_dir.rmdir()
+        outside = tmp_path.parent / f"{tmp_path.name}-outside"
+        outside.mkdir()
+        for filename in ("spec.md", "plan.md", "tasks.md"):
+            (outside / filename).write_text("# outside\n", encoding="utf-8")
+        try:
+            linked_dir.symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"symlink unavailable: {exc}")
+
+        snapshot = build_resume_pack(tmp_path).working_set_snapshot
+
+        assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
+        assert not snapshot.active_files
+
+    def test_build_resume_pack_rejects_missing_linked_directory(
+        self, tmp_path: Path
+    ) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+        save_working_set(
+            tmp_path,
+            LINKED_WI,
+            state_models.WorkingSet(active_files=list(expected_paths)),
+        )
+        linked_dir = tmp_path / "specs" / LINKED_WI
+        for relative_path in expected_paths:
+            (tmp_path / relative_path).unlink()
+        linked_dir.rmdir()
+
+        snapshot = build_resume_pack(tmp_path).working_set_snapshot
+
+        assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
+        assert not snapshot.active_files
+
+    def test_build_resume_pack_rejects_linked_symlink_to_other_work_item(
+        self, tmp_path: Path
+    ) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+        linked_dir = tmp_path / "specs" / LINKED_WI
+        for relative_path in expected_paths:
+            (tmp_path / relative_path).unlink()
+        linked_dir.rmdir()
+        historical = tmp_path / "specs" / "001"
+        try:
+            linked_dir.symlink_to(historical, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"symlink unavailable: {exc}")
+
+        snapshot = build_resume_pack(tmp_path).working_set_snapshot
+
+        assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
+
+    def test_build_resume_pack_rejects_cyclic_linked_symlink(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+        linked_dir = tmp_path / "specs" / LINKED_WI
+        for relative_path in expected_paths:
+            (tmp_path / relative_path).unlink()
+        linked_dir.rmdir()
+        try:
+            linked_dir.symlink_to(linked_dir, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"symlink unavailable: {exc}")
+        original_resolve = Path.resolve
+
+        def _fail_cyclic_resolve(path: Path, *args: object, **kwargs: object) -> Path:
+            if path == linked_dir:
+                raise RuntimeError("symlink loop")
+            return original_resolve(path, *args, **kwargs)
+
+        monkeypatch.setattr(Path, "resolve", _fail_cyclic_resolve)
+
+        snapshot = build_resume_pack(tmp_path).working_set_snapshot
+
+        assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
+        assert not snapshot.active_files
 
     def test_load_resume_pack_rebuilds_fresh_legacy_linked_working_set(self, tmp_path: Path) -> None:
         expected_paths = _seed_linked_checkpoint(tmp_path)
