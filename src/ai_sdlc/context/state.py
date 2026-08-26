@@ -360,6 +360,7 @@ def resolve_active_work_item_dir(
         resolved = (root / spec_dir_raw).resolve()
         if checkpoint and (checkpoint.linked_wi_id or "").strip() and (
             not active_work_item_dir_has_canonical_identity(root, checkpoint, resolved)
+            or not resolved.is_dir()
             or not resolved.is_relative_to(root.resolve())
             or not resolved.is_relative_to((root / "specs").resolve())
         ):

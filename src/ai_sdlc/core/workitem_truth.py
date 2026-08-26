@@ -251,10 +251,6 @@ def _history_contains_implementation(
     if not work_item_commits:
         return False
     initial_work_item_commit = work_item_commits[-1]
-    if initial_work_item_commit == oldest_log_commit:
-        repository_commits = git.commits_touching_path(oldest_log_commit, ".")
-        if repository_commits:
-            initial_work_item_commit = repository_commits[-1]
     initial_parent = git.first_parent(initial_work_item_commit)
     history_paths: tuple[str, ...] = ()
     if initial_parent is None:

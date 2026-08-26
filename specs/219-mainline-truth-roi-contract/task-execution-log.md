@@ -577,3 +577,18 @@
   constraints=`no BLOCKERs`。
 - 相对上一候选，本批运行时代码 28 additions / 18 deletions，净增 10；测试 64 additions，覆盖两个
   实际消费者。重复实现减少且主流程不再崩溃，ROI 裁决为保留。
+
+## Batch 2026-08-26-028 | PR #175 pre-WI history and missing linked target remediation
+
+- Codex 在 `256ebe3e74ee16f6c1828c03738ca7c9ad493559` 提出 2 个 P2：WI 与首份日志同提交时回溯
+  repository root，会把 WI 建立前的旧路径变更误归因；linked 目录缺失时 non-strict `resolve()` 仍返回
+  canonical-looking path，允许恢复持久化 active files。
+- preexisting implementation + combined WI/log topology 与 missing linked overlay 均稳定 RED：前者错误返回
+  `mainline_merged`，后者恢复三个已不存在的 formal path。
+- GREEN 删除无 canonical WI anchor 时的 repository-root fallback；linked resolver 增加真实 `is_dir()`
+  要求。保留已有 WI anchor 后的 implementation-before-log、same-commit、suffix 和 root-bootstrap 合同，
+  未新增状态、schema、持久化、配置或扫描面。
+- truth/linked 定向 `21 passed in 9.81s`；truth/context/execute/readiness/status 扩大回归
+  `149 passed in 60.21s`；final exact-tree full `3378 passed, 3 skipped in 840.69s`；全库 Ruff PASS。
+- 相对上一候选，本批产品代码 1 addition / 4 deletions，净删除 3；测试 21 additions / 2 deletions。
+  两项整改同时提高真假边界并减少实现量，ROI 裁决为保留。

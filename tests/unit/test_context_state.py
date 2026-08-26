@@ -381,6 +381,25 @@ class TestResumePack:
         assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
         assert not snapshot.active_files
 
+    def test_build_resume_pack_rejects_missing_linked_directory(
+        self, tmp_path: Path
+    ) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+        save_working_set(
+            tmp_path,
+            LINKED_WI,
+            state_models.WorkingSet(active_files=list(expected_paths)),
+        )
+        linked_dir = tmp_path / "specs" / LINKED_WI
+        for relative_path in expected_paths:
+            (tmp_path / relative_path).unlink()
+        linked_dir.rmdir()
+
+        snapshot = build_resume_pack(tmp_path).working_set_snapshot
+
+        assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
+        assert not snapshot.active_files
+
     def test_build_resume_pack_rejects_linked_symlink_to_other_work_item(
         self, tmp_path: Path
     ) -> None:

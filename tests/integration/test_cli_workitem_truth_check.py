@@ -513,7 +513,7 @@ class TestCliWorkitemTruthCheck:
             ("formal_branch", "formal_freeze_only"),
             ("separate_implementation_and_log", "mainline_merged"),
             ("implementation_after_latest_log", "mainline_merged"),
-            ("implementation_before_initial_log", "mainline_merged"),
+            ("preexisting_implementation_before_combined_work_item", "formal_freeze_only"),
             ("unicode_implementation_path", "mainline_merged"),
             ("path_prefix_collision", "formal_freeze_only"),
             ("path_space_collision", "formal_freeze_only"),
@@ -616,7 +616,7 @@ class TestCliWorkitemTruthCheck:
                 encoding="utf-8",
             )
             _commit_all(root, "record 219 execution evidence")
-        elif topology == "implementation_before_initial_log":
+        elif topology == "preexisting_implementation_before_combined_work_item":
             (root / "product-config.yaml").write_text(
                 "feature_enabled: true\n", encoding="utf-8"
             )
