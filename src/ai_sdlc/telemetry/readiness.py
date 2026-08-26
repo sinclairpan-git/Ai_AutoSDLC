@@ -9,9 +9,16 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
-from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.context.state import (
+    active_work_item_id,
+    active_work_item_spec_dir,
+    load_checkpoint,
+)
 from ai_sdlc.core.artifact_target_guard import evaluate_formal_artifact_target_guard
-from ai_sdlc.core.backlog_breach_guard import evaluate_backlog_breach_guard
+from ai_sdlc.core.backlog_breach_guard import (
+    BacklogBreachGuardResult,
+    evaluate_backlog_breach_guard,
+)
 from ai_sdlc.core.execute_authorization import evaluate_execute_authorization
 from ai_sdlc.core.program_service import (
     FRONTEND_EVIDENCE_CLASS_MIRROR_PROBLEM_FAMILY,
@@ -143,7 +150,7 @@ def _load_checkpoint_feature_spec_dir(
     checkpoint = load_checkpoint(repo_root)
     if checkpoint is None or checkpoint.feature is None:
         return None, None
-    spec_dir_raw = (checkpoint.feature.spec_dir or "").strip()
+    spec_dir_raw = active_work_item_spec_dir(checkpoint)
     if not spec_dir_raw or spec_dir_raw == "specs/unknown":
         return checkpoint, None
     return checkpoint, spec_dir_raw
@@ -172,7 +179,7 @@ def _load_checkpoint_feature_binding(
         )
     ):
         return None, None
-    return checkpoint.feature.id, spec_dir_raw
+    return active_work_item_id(checkpoint) or None, spec_dir_raw
 
 
 def _load_active_work_item_dir(
@@ -189,7 +196,11 @@ def _load_active_work_item_dir(
         spec_dir_raw=spec_dir_raw,
     ):
         return None, None, "no active work item on current branch"
-    return checkpoint.feature.id, _resolve_spec_dir_path(repo_root, spec_dir_raw), None
+    return (
+        active_work_item_id(checkpoint) or None,
+        _resolve_spec_dir_path(repo_root, spec_dir_raw),
+        None,
+    )
 
 
 def _checkpoint_feature_binding_is_active(
@@ -580,6 +591,13 @@ def _build_backlog_breach_guard_surface(repo_root: Path) -> dict[str, Any]:
         candidate = _resolve_spec_dir_path(repo_root, spec_dir_raw)
         if candidate.is_dir():
             spec_dir = candidate
+        elif _checkpoint is not None and (_checkpoint.linked_wi_id or "").strip():
+            return _guard_surface_json(
+                BacklogBreachGuardResult(
+                    state="unavailable",
+                    detail="active work item directory is unavailable",
+                )
+            )
     return _guard_surface_json(
         evaluate_backlog_breach_guard(
             root=repo_root,

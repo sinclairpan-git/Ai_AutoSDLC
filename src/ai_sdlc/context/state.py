@@ -322,6 +322,18 @@ def active_work_item_id(checkpoint: Checkpoint | None) -> str:
     return ""
 
 
+def active_work_item_spec_dir(checkpoint: Checkpoint | None) -> str:
+    """解析当前活动工作项对应的规格目录。"""
+    if checkpoint is None:
+        return ""
+    linked = (checkpoint.linked_wi_id or "").strip()
+    if linked:
+        return f"specs/{linked}"
+    if checkpoint.feature is None:
+        return ""
+    return (checkpoint.feature.spec_dir or "").strip()
+
+
 def work_item_dir(root: Path, work_item_id: str) -> Path:
     """Return the canonical work-item artifact directory."""
     return root / ".ai-sdlc" / "work-items" / work_item_id
@@ -518,11 +530,17 @@ def _build_resume_working_set_from_filesystem(
 ) -> WorkingSet:
     ws = WorkingSet()
     if checkpoint.feature:
-        spec_dir = root / "specs" / work_item_id if (checkpoint.linked_wi_id or "").strip() else root / checkpoint.feature.spec_dir
-        for field, filename in (("spec_path", "spec.md"), ("plan_path", "plan.md"), ("tasks_path", "tasks.md")):
-            path = spec_dir / filename
-            if path.exists():
-                setattr(ws, field, _portable_repo_path(root, path))
+        spec_dir_raw = active_work_item_spec_dir(checkpoint)
+        if spec_dir_raw:
+            spec_dir = root / spec_dir_raw
+            for field, filename in (
+                ("spec_path", "spec.md"),
+                ("plan_path", "plan.md"),
+                ("tasks_path", "tasks.md"),
+            ):
+                path = spec_dir / filename
+                if path.exists():
+                    setattr(ws, field, _portable_repo_path(root, path))
 
     if checkpoint.prd_source and (root / checkpoint.prd_source).exists():
         ws.prd_path = _portable_repo_path(root, checkpoint.prd_source)

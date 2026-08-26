@@ -78,6 +78,17 @@ def _make_checkpoint() -> Checkpoint:
     )
 
 
+def test_active_work_item_spec_dir_prefers_linked_and_preserves_legacy_path() -> None:
+    checkpoint = _make_checkpoint()
+    checkpoint.linked_wi_id = LINKED_WI
+
+    assert context_state.active_work_item_spec_dir(checkpoint) == f"specs/{LINKED_WI}"
+
+    checkpoint.linked_wi_id = "  "
+    assert context_state.active_work_item_spec_dir(checkpoint) == "specs/001"
+    assert context_state.active_work_item_spec_dir(None) == ""
+
+
 class TestCheckpointManager:
     def test_save_and_load(self, tmp_path: Path) -> None:
         cp = _make_checkpoint()

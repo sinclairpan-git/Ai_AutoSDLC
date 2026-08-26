@@ -6,7 +6,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ai_sdlc.context.state import load_checkpoint
+from ai_sdlc.context.state import (
+    active_work_item_id,
+    active_work_item_spec_dir,
+    load_checkpoint,
+)
 from ai_sdlc.core.task_guard import (
     BLOCK_CODE_PREPARE_TASKS,
     evaluate_task_guard,
@@ -68,8 +72,8 @@ def evaluate_execute_authorization(
             detail="no active work item checkpoint",
         )
 
-    spec_dir_raw = (cp.feature.spec_dir or "").strip()
-    active_work_item = cp.feature.id or None
+    spec_dir_raw = active_work_item_spec_dir(cp)
+    active_work_item = active_work_item_id(cp) or None
     current_stage = cp.current_stage or None
     if not spec_dir_raw or spec_dir_raw == "specs/unknown":
         return ExecuteAuthorizationResult(
