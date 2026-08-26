@@ -74,9 +74,41 @@ class WorkitemTruthResult:
 
 def _detect_base_ref(git: GitClient) -> str | None:
     for candidate in ("main", "master"):
-        if git.branch_exists(candidate):
-            return candidate
+        if not git.branch_exists(candidate):
+            continue
+        remote = f"origin/{candidate}"
+        if (
+            git.branch_exists(remote)
+            and git.resolve_revision(candidate) != git.resolve_revision(remote)
+            and git.is_ancestor(candidate, remote)
+        ):
+            return remote
+        return candidate
     return None
+
+
+def _formal_control_paths(wi_rel: str) -> frozenset[str]:
+    work_item_id = Path(wi_rel).name
+    return frozenset(
+        {
+            f"{wi_rel}/spec.md",
+            f"{wi_rel}/plan.md",
+            f"{wi_rel}/tasks.md",
+            f"{wi_rel}/task-execution-log.md",
+            ".ai-sdlc/project/config/project-state.yaml",
+            ".ai-sdlc/state/checkpoint.yml",
+            ".ai-sdlc/state/codex-handoff.md",
+            ".ai-sdlc/state/resume-pack.yaml",
+            f".ai-sdlc/work-items/{work_item_id}/codex-handoff.md",
+            "program-manifest.yaml",
+            "tests/integration/test_repo_program_manifest.py",
+        }
+    )
+
+
+def _is_formal_freeze_only_change_set(paths: tuple[str, ...], wi_rel: str) -> bool:
+    allowed = _formal_control_paths(wi_rel)
+    return bool(paths) and all(path in allowed for path in paths)
 
 
 def _classify_paths(paths: tuple[str, ...]) -> tuple[list[str], list[str], list[str], list[str]]:
@@ -269,8 +301,11 @@ def run_truth_check(
         changed_paths = git.changed_paths(merge_base, requested_revision)
         divergence = git.revision_divergence(requested_revision, base=base_ref)
         code_paths, test_paths, doc_paths, other_paths = _classify_paths(changed_paths)
+        execution_log_path = f"{wi_rel}/task-execution-log.md"
+        formal_freeze_only = _is_formal_freeze_only_change_set(changed_paths, wi_rel)
         execution_started = bool(
-            formal_docs["execution_log"] or code_paths or test_paths or other_paths
+            (formal_docs["execution_log"] and execution_log_path not in changed_paths)
+            or (changed_paths and not formal_freeze_only)
         )
         contained_in_main = git.is_ancestor(requested_revision, base_ref)
 

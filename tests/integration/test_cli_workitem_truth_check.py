@@ -78,6 +78,63 @@ def _seed_unrelated_mainline_work_item(root: Path) -> None:
     _commit_all(root, "seed unrelated mainline work item")
 
 
+def _set_origin_main(root: Path, revision: str) -> None:
+    subprocess.run(
+        ["git", "update-ref", "refs/remotes/origin/main", revision],
+        cwd=root,
+        check=True,
+        capture_output=True,
+    )
+
+
+def _write_formal_control_change_set(root: Path, work_item_id: str) -> None:
+    _write_formal_docs(root / "specs" / work_item_id, include_exec_log=True)
+    (root / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 220\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    state_dir = root / ".ai-sdlc" / "state"
+    state_dir.mkdir(parents=True, exist_ok=True)
+    (state_dir / "checkpoint.yml").write_text("current_stage: close\n", encoding="utf-8")
+    (state_dir / "codex-handoff.md").write_text("# Handoff\n", encoding="utf-8")
+    (state_dir / "resume-pack.yaml").write_text("current_stage: close\n", encoding="utf-8")
+    scoped = root / ".ai-sdlc" / "work-items" / work_item_id
+    scoped.mkdir(parents=True, exist_ok=True)
+    (scoped / "codex-handoff.md").write_text("# Scoped handoff\n", encoding="utf-8")
+    (root / "program-manifest.yaml").write_text("version: 1\n", encoding="utf-8")
+    manifest_test = root / "tests" / "integration" / "test_repo_program_manifest.py"
+    manifest_test.parent.mkdir(parents=True, exist_ok=True)
+    manifest_test.write_text("def test_inventory():\n    assert 1 == 1\n", encoding="utf-8")
+
+
+def _commit_formal_branch(
+    root: Path,
+    work_item_id: str,
+    *,
+    start_point: str | None = None,
+) -> None:
+    command = ["git", "checkout", "-b", "feature/219-formal"]
+    if start_point is not None:
+        command.append(start_point)
+    subprocess.run(command, cwd=root, check=True, capture_output=True)
+    _write_formal_control_change_set(root, work_item_id)
+    _commit_all(root, "formalize 219")
+
+
+def _truth_payload(
+    root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    work_item_id: str,
+) -> dict[str, object]:
+    monkeypatch.chdir(root)
+    result = runner.invoke(
+        app,
+        ["workitem", "truth-check", "--wi", f"specs/{work_item_id}", "--json"],
+    )
+    assert result.exit_code == 0
+    return json.loads(result.output)
+
+
 class TestCliWorkitemTruthCheck:
     def test_truth_check_text_deduplicates_code_and_test_paths(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -181,6 +238,110 @@ class TestCliWorkitemTruthCheck:
         ]
         assert payload["code_paths"] == []
         assert payload["test_paths"] == []
+
+    def test_truth_check_prefers_existing_origin_main_when_local_main_is_strictly_behind(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo(root)
+        _commit_all(root, "init")
+
+        subprocess.run(
+            ["git", "checkout", "-b", "upstream-main"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        (root / "src").mkdir()
+        (root / "src" / "mainline.py").write_text("VALUE = 1\n", encoding="utf-8")
+        upstream_revision = _commit_all(root, "advance remote main")
+        _set_origin_main(root, upstream_revision)
+        work_item_id = "219-mainline-truth-roi-contract"
+        _commit_formal_branch(root, work_item_id, start_point=upstream_revision)
+        refs_before = _run(root, "git", "show-ref")
+
+        payload = _truth_payload(root, monkeypatch, work_item_id)
+        assert payload["classification"] == "formal_freeze_only"
+        assert payload["execution_started"] is False
+        assert "src/mainline.py" not in payload["changed_paths"]
+        assert _run(root, "git", "show-ref") == refs_before
+
+    @pytest.mark.parametrize("remote_state", ["missing", "local_ahead", "diverged"])
+    def test_truth_check_keeps_local_main_when_origin_main_is_not_strictly_ahead(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        remote_state: str,
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo(root)
+        base_revision = _commit_all(root, "init")
+
+        if remote_state == "local_ahead":
+            _set_origin_main(root, base_revision)
+            (root / "src").mkdir()
+            (root / "src" / "local_main.py").write_text("VALUE = 1\n", encoding="utf-8")
+            _commit_all(root, "advance local main")
+        elif remote_state == "diverged":
+            subprocess.run(
+                ["git", "checkout", "-b", "remote-line", base_revision],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            (root / "src").mkdir()
+            (root / "src" / "remote_main.py").write_text("VALUE = 1\n", encoding="utf-8")
+            _set_origin_main(root, _commit_all(root, "advance remote line"))
+            subprocess.run(
+                ["git", "checkout", "main"], cwd=root, check=True, capture_output=True
+            )
+            (root / "src").mkdir(exist_ok=True)
+            (root / "src" / "local_main.py").write_text("VALUE = 2\n", encoding="utf-8")
+            _commit_all(root, "advance local line")
+
+        work_item_id = "219-mainline-truth-roi-contract"
+        _commit_formal_branch(root, work_item_id)
+        refs_before = _run(root, "git", "show-ref")
+
+        payload = _truth_payload(root, monkeypatch, work_item_id)
+        assert payload["classification"] == "formal_freeze_only"
+        assert payload["execution_started"] is False
+        assert "src/local_main.py" not in payload["changed_paths"]
+        assert _run(root, "git", "show-ref") == refs_before
+
+    @pytest.mark.parametrize(
+        ("outside_path", "content"),
+        [
+            ("src/feature.py", "VALUE = 1\n"),
+            ("tests/unit/test_feature.py", "def test_feature():\n    assert True\n"),
+            ("config/runtime.yaml", "enabled: true\n"),
+            ("docs/product-behavior.md", "# Product behavior\n"),
+        ],
+    )
+    def test_truth_check_treats_paths_outside_formal_controls_as_execution(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        outside_path: str,
+        content: str,
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo(root)
+        _commit_all(root, "init")
+        work_item_id = "219-mainline-truth-roi-contract"
+        _commit_formal_branch(root, work_item_id)
+        target = root / outside_path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+        _commit_all(root, "add out-of-scope execution evidence")
+
+        payload = _truth_payload(root, monkeypatch, work_item_id)
+        assert payload["classification"] == "branch_only_implemented"
+        assert payload["execution_started"] is True
+        assert outside_path in payload["changed_paths"]
 
     def test_truth_check_reports_branch_only_implemented_for_unmerged_revision(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
