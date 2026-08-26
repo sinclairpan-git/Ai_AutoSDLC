@@ -178,3 +178,26 @@
   文档，不扩展产品 parser。
 - A1=`Go`；独立提交：`6d969546 fix: unify linked work item consumers`。Track B 必须保持仅双模板与两条真实
   生成路径的最小实现，避免继续放大测试/运行时表面。
+
+## Batch 2026-08-25-006 | T40-T42 B 双模板 ROI semantic set
+
+### RED
+
+- 只在 `tests/unit/test_workitem_scaffold.py` 与 `tests/unit/test_doc_gen.py` 增加语义断言；分别走
+  `WorkitemScaffolder.scaffold()` direct-formal 路径和 `DocScaffolder().render("spec.md.j2", context)`
+  stage/native 路径，不读取模板源码作字符串代替。
+- 首次定向运行得到 `2 failed, 30 passed in 0.59s`；两个失败都精确指向生成结果缺少六项提示、四个 decision、
+  `not-applicable` 例外、risk-only 数值解释与 blocker 类别。
+
+### GREEN 与 ROI
+
+- 只修改 `templates/spec-template.md` 与 `src/ai_sdlc/templates/spec.md.j2`，加入同一份“ROI 与实现边界”提示；
+  没有修改 `workitem_scaffold.py`、生成器、parser、constraint、model、Enum、持久化字段或公共 API。
+- 文本明确允许微小事项用一行 `not-applicable`；`400/50`、辅助/核心比例与少调用方公共抽象仅是风险信号，
+  不单独阻断；只有未经授权的范围扩展、缺失可执行证据或可复现安全/隐私/数据/兼容/回归问题可成为
+  blocker。
+- GREEN：`uv run pytest tests/unit/test_workitem_scaffold.py tests/unit/test_doc_gen.py
+  tests/integration/test_cli_workitem_init.py -q` 得到 `51 passed in 8.11s`；两测试文件 Ruff 与
+  `git diff --check` 均 PASS。
+- 模板净增 30 行，测试净增 64 行；测试重复的是两条独立入口的同一 canonical semantic set，未增加运行时
+  支撑层。B=`Go`；独立提交：`ffad821f docs: add lightweight ROI prompts to specs`。

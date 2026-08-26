@@ -106,7 +106,7 @@
 ### Task 4.1 双模板 ROI semantic set
 
 - task_id: T40B
-- status: todo
+- status: done
 - goal: 先以两条真实生成路径复现语义缺口，再只修改两份现有模板完成 GREEN。
 - depends:
   - T31X
@@ -120,21 +120,43 @@
   - uv run pytest tests/unit/test_workitem_scaffold.py tests/unit/test_doc_gen.py tests/integration/test_cli_workitem_init.py -q
   - uv run ruff check tests/unit/test_workitem_scaffold.py tests/unit/test_doc_gen.py
 
-- [ ] **T40 两条真实 render/scaffold semantic RED**
+- [x] **T40 两条真实 render/scaffold semantic RED**
   - 依赖：T32
   - 范围：`tests/unit/test_workitem_scaffold.py`、`tests/unit/test_doc_gen.py`
   - 验收：生成结果缺少六项提示、四个 decision、轻量例外、risk-only 数值与 blocker 边界时稳定失败。
 
-- [ ] **T41 两份现有模板最小 GREEN**
+- [x] **T41 两份现有模板最小 GREEN**
   - 依赖：T40
   - 范围：`templates/spec-template.md`、`src/ai_sdlc/templates/spec.md.j2`
   - 验收：两路径 canonical semantic set 一致；不新增 parser、constraint blocker、Python 公共面或持久化字段。
 
-- [ ] **T42 B Go/No-Go 与提交**
+- [x] **T42 B Go/No-Go 与提交**
   - 依赖：T41
   - 验收：scaffold/render/workitem-init 测试与 Ruff 全绿；B 独立提交。
 
 ## Batch 5：统一验证与交付
+
+### Task 5.1 统一验证与主线交付
+
+- task_id: T50V
+- status: doing
+- goal: 对 A0/A1/B exact HEAD 完成回归、ROI 复核、continuity 和主线 PR 闭环。
+- depends:
+  - T40B
+- scope:
+  - specs/219-mainline-truth-roi-contract/
+  - .ai-sdlc/state/
+  - .ai-sdlc/work-items/219-mainline-truth-roi-contract/
+  - program-manifest.yaml
+  - tests/integration/test_repo_program_manifest.py
+- acceptance:
+  - focused/full pytest、Ruff、constraints、Program Truth、manifest 与 diff-check 全绿。
+  - exact-head 只读 review 无可操作问题，required checks 通过后合并主线。
+- verify:
+  - uv run pytest -q
+  - uv run ruff check .
+  - uv run ai-sdlc verify constraints
+  - uv run ai-sdlc program truth audit
 
 - [ ] **T50 focused/full verification 与 ROI 复核**
   - 依赖：T42

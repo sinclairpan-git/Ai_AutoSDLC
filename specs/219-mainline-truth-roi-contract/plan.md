@@ -164,7 +164,7 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
 
 **接口**：仅生成 Markdown 提示；不新增 parser、model、Enum、持久化字段或 blocker。
 
-- [ ] **Step 1：写两个真实路径的 semantic RED**
+- [x] **Step 1：写两个真实路径的 semantic RED**
 
   在 `tests/unit/test_workitem_scaffold.py` 对 `WorkitemScaffolder.scaffold()` 生成的 spec 断言六项提示、
   `implement/defer/needs_user/not-applicable`、一行轻量例外、400/50 仅为风险信号，以及允许成为 blocker 的
@@ -173,25 +173,25 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
   在 `tests/unit/test_doc_gen.py` 对 `DocScaffolder().render("spec.md.j2", context)` 的真实输出执行同一组
   test-only semantic assertions；测试比较语义集合，不要求两模板逐字一致。
 
-- [ ] **Step 2：运行 RED 并确认缺少 ROI 段落**
+- [x] **Step 2：运行 RED 并确认缺少 ROI 段落**
 
   ```powershell
   uv run pytest tests/unit/test_workitem_scaffold.py tests/unit/test_doc_gen.py -q
   ```
 
-- [ ] **Step 3：只修改两份模板完成 GREEN**
+- [x] **Step 3：只修改两份模板完成 GREEN**
 
   两份模板均新增“ROI 与实现边界”段，包含规格 §4.2 的六项、四个 canonical decision、轻量例外、risk-only
   数值解释和 blocker 边界。自然语言可以不同，但不得把 advisory 写成自动 blocker。
 
-- [ ] **Step 4：运行 GREEN 与模板回归**
+- [x] **Step 4：运行 GREEN 与模板回归**
 
   ```powershell
   uv run pytest tests/unit/test_workitem_scaffold.py tests/unit/test_doc_gen.py tests/integration/test_cli_workitem_init.py -q
   uv run ruff check tests/unit/test_workitem_scaffold.py tests/unit/test_doc_gen.py
   ```
 
-- [ ] **Step 5：B Go/No-Go 与提交**
+- [x] **Step 5：B Go/No-Go 与提交**
 
   若模板无法在不改生产 Python 的情况下生成语义段，先暂停复核；不得直接扩展 scaffold API。否则提交：
 
