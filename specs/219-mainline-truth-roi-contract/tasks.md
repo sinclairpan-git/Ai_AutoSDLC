@@ -185,3 +185,8 @@
   - 依赖：T51
   - 验收：rename 来源路径进入 truth inventory；linked ID 和 resolved path 均 fail-closed；formal-only 文案不再
     谎称 execution log 缺失；双模板语义测试的重复支撑显著下降。
+
+- [x] **T54 复审回归与 continuity 修复**
+  - 依赖：T53
+  - 验收：no-link 非标准 spec-dir resume 行为恢复；linked unavailable status 保留身份与准确原因；定向/status
+    回归全绿，进入最终 exact-head 全量验证。

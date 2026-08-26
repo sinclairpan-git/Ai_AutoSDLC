@@ -272,3 +272,18 @@
   对应两个已复现的 truth/fail-closed Important 和一项错误提示修复，没有新命令、依赖、parser、schema、
   state 或治理层；安全/兼容证明属于 ROI 合同允许超过一般支撑比例的必要例外。
 - 目标 Ruff 与 `git diff --check` PASS；独立提交：`33fd1e50 fix: close WI219 review gaps`。
+
+## Batch 2026-08-25-010 | T54 remediation re-review
+
+- 同 reviewer 复核 `d02dbcc3..5447a153`：原 3 个 Important 均 closed，Lean Minor 的 in-place 压缩可接受；
+  新发现 1 个 Important：resume containment 无条件要求 `root/specs`，破坏 no-link 非标准
+  `feature.spec_dir`；另有 status 在 linked symlink unavailable 时丢失 active identity 的 Minor。
+- 将既有 legacy 用例改为真实 `formal/nonstandard/{spec,plan,tasks}.md` 后稳定 RED；full status symlink
+  assertion 也稳定复现 `active_work_item=None` 与错误原因。
+- GREEN 只让 `root/specs` containment 适用于非空 link；no-link 继续接受仓库内历史非标准路径。readiness
+  unavailable surface 保留 canonical linked ID，并统一 detail=`active work item directory is unavailable`；linked
+  traversal/symlink 的 fail-closed 不回退。
+- 定向 `3 passed`；context/readiness/execute unit `55 passed in 0.83s`；status CLI
+  `55 passed in 38.20s`；目标 Ruff 与 diff-check PASS。
+- 本批运行时代码净增 10 行，测试净增 25 行；不增加新 resolver、状态或格式字段。独立提交：
+  `2b23c8c1 fix: preserve legacy resume paths`。下一步为新 exact HEAD focused/full 与最终复审。
