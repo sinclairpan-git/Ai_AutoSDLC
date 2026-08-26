@@ -2,7 +2,7 @@
 
 **编号**：`219-mainline-truth-roi-contract`
 **来源**：`spec.md`
-**阶段**：formal design review
+**阶段**：execute
 
 ## Batch 1：Formal 规格
 
@@ -19,8 +19,8 @@
 
 - [x] **T13 冻结 formal 规格与 scope/ROI 停止条件**
   - 依赖：T12
-  - 验收：`spec.md` 无 TODO/TBD/placeholder；方案、范围、功能需求、成功标准和停止条件唯一明确；Track A
-    只允许一个共享纯解析语义、三个既有消费方和定向测试，不修改 writer/schema/Runner/ProgramService。
+  - 历史验收：首轮把 Track A 限为一个共享纯解析语义、三个显式消费方和定向测试；该范围已由 T15 与
+    `spec.md` §4.1 的完整 consumer matrix 取代，不修改 writer/schema/Runner/ProgramService 的边界保持不变。
   - Formal inventory：WI219 新增 5 个已映射 layer，close 暂为 218/217；只机械更新 root manifest tuple，
     保留 missing=1，不放宽任何完整性断言。
 
@@ -36,14 +36,80 @@
   - 证据：formal required/forbidden 自审 PASS；targeted suite `79 passed`；constraints 无 BLOCKER；Ruff PASS；
     post-commit continuity refresh 由 T16 候选 identity 提交完成。
 
-- [ ] **T16 原三席 round 2 同 identity 复审**
+- [x] **T16 原三席 round 2 同 identity 复审**
   - 依赖：T15
   - 验收：三个 reviewer 审同一 base/head；任一有效 Critical/Important 未关闭则不批准且不进入第三轮。
+  - 证据：三席冻结审阅 `76252746..a5fe086e`；交叉质询后均为 `APPROVE`，无可操作
+    Critical/Important；路径级 formal allowlist 与历史 T13 文案仅保留 advisory。
 
-- [ ] **T17 用户审阅并批准 formal 规格**
+- [x] **T17 用户审阅并批准 formal 规格**
   - 依赖：T16
   - 验收：合议通过后用户明确批准；批准前没有产品或特性测试实现任务。
+  - 证据：用户于 2026-08-25 明确回复“批准”。
 
-## 后续批次
+## Batch 2：A0 truth baseline/classification
 
-尚未授权。T17 完成后通过正式 planning 流程生成，不得预填或推断实现任务。
+- [ ] **T20 stale-local-main 与 formal-control RED**
+  - 依赖：T17
+  - 范围：`tests/integration/test_cli_workitem_truth_check.py`
+  - 验收：behind-only 四类 Git fixture 与 formal allowlist/范围外路径用例先以预期原因失败；测试前后 refs 不变。
+
+- [ ] **T21 behind-only base 与 exact formal-control GREEN**
+  - 依赖：T20
+  - 范围：`src/ai_sdlc/core/workitem_truth.py`
+  - 验收：WI219 formal candidate 为 `formal_freeze_only`；任一范围外实现/测试/配置/产品文档为
+    `branch_only_implemented`；无 fetch/ref 写入、无 GitClient 或新状态修改。
+
+- [ ] **T22 A0 Go/No-Go 与提交**
+  - 依赖：T21
+  - 验收：truth-check 定向测试与 Ruff 全绿；冻结边界未越过；A0 独立提交。
+
+## Batch 3：A1 linked-first active binding
+
+- [ ] **T30 active spec-dir helper 与 consumer matrix RED**
+  - 依赖：T22
+  - 范围：`tests/unit/test_context_state.py`、`tests/unit/test_telemetry_readiness.py`、
+    `tests/unit/test_execute_authorization.py`；只有 unit 证据不足时才修改 `tests/integration/test_cli_status.py`。
+  - 验收：valid/no-link/missing/partial、branch-stage、main+close 与 strict-load 矩阵先复现历史 feature 泄漏。
+
+- [ ] **T31 单一 linked-first id/spec-dir GREEN**
+  - 依赖：T30
+  - 范围：`src/ai_sdlc/context/state.py`、`src/ai_sdlc/telemetry/readiness.py`、
+    `src/ai_sdlc/core/execute_authorization.py`
+  - 验收：resume/status/execute 全部复用一个无 I/O spec-dir helper；missing/partial fail-closed；legacy 无 link
+    行为、错误文本、writer/schema/status 格式保持不变。
+
+- [ ] **T32 A1 Go/No-Go 与提交**
+  - 依赖：T31
+  - 验收：三组 unit、必要的 status CLI 与 Ruff 全绿；无第二 resolver、无 silent fallback；A1 独立提交。
+
+## Batch 4：B 双模板 ROI semantic set
+
+- [ ] **T40 两条真实 render/scaffold semantic RED**
+  - 依赖：T32
+  - 范围：`tests/unit/test_workitem_scaffold.py`、`tests/unit/test_doc_gen.py`
+  - 验收：生成结果缺少六项提示、四个 decision、轻量例外、risk-only 数值与 blocker 边界时稳定失败。
+
+- [ ] **T41 两份现有模板最小 GREEN**
+  - 依赖：T40
+  - 范围：`templates/spec-template.md`、`src/ai_sdlc/templates/spec.md.j2`
+  - 验收：两路径 canonical semantic set 一致；不新增 parser、constraint blocker、Python 公共面或持久化字段。
+
+- [ ] **T42 B Go/No-Go 与提交**
+  - 依赖：T41
+  - 验收：scaffold/render/workitem-init 测试与 Ruff 全绿；B 独立提交。
+
+## Batch 5：统一验证与交付
+
+- [ ] **T50 focused/full verification 与 ROI 复核**
+  - 依赖：T42
+  - 验收：focused/full pytest、Ruff、constraints、Program Truth audit、diff-check 全绿；记录产品/测试净新增与
+    冻结范围差异。
+
+- [ ] **T51 continuity 与 Program Truth 收口**
+  - 依赖：T50
+  - 验收：task log、plan/tasks、manifest、root tuple 与 canonical/scoped handoff 准确；工作树干净。
+
+- [ ] **T52 本地只读 review 与主线 PR 流程**
+  - 依赖：T51
+  - 验收：exact-head 本地 review 无可操作问题；随后 push/PR/Codex review/required checks 按仓库协议闭环。

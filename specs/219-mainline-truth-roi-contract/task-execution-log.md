@@ -2,7 +2,7 @@
 
 **功能编号**：`219-mainline-truth-roi-contract`
 **创建日期**：2026-08-25
-**状态**：formal design review
+**状态**：execute authorized
 
 ## Batch 2026-08-25-001 | T11-T13
 
@@ -75,3 +75,41 @@
 - 完成 formal 自审、Program Truth 同步、constraints/manifest 回归与 continuity refresh；
 - 提交新 formal identity；
 - 原三席对同一新 SHA 做 round 2，整改通过前不进入实现。
+
+## Batch 2026-08-25-003 | T16-T20 approval and implementation planning
+
+### Round 2 合议与用户授权
+
+- 三席只读复审同一冻结区间
+  `762527466119dde127d7488b73d5592e44afaaa6..a5fe086ebad132db096a2c159b37cf7f65d2a63f`；
+  自主性/ROI、平衡 Lean、硬边界三席最终均为 `APPROVE`，无可操作 Critical/Important。
+- 硬边界席最初提出 formal allowlist 的文件内内容风险；同 SHA 交叉质询确认 `formal_freeze_only` 仅是
+  只读 truth 信号，不参与 execute/close/release 授权，且现有 audit/test/diff review 仍独立生效；该项降为
+  advisory，不引入 YAML/hunk policy engine。
+- 用户于 2026-08-25 明确回复“批准”，T17 完成，允许按 A0→A1→B 顺序进入产品/测试实现。
+
+### 执行计划与基线
+
+- 使用独立 linked worktree
+  `/Users/sinclairpan/project/Ai_AutoSDLC/.worktrees/219-mainline-truth-roi-contract`；
+  branch=`feature/219-mainline-truth-roi-contract-docs`，批准时 HEAD=`a5fe086e`，相对 origin/main ahead 3。
+- 将批准后的实施拆为 A0 truth baseline/classification、A1 linked-first active binding、B 双模板 semantic set；
+  每批先 RED、后最小 GREEN、独立 Go/No-Go 和提交。
+- 批前基线：
+  `uv run pytest tests/integration/test_cli_status.py tests/integration/test_cli_handoff.py tests/unit/test_checkpoint_fr088.py tests/unit/test_handoff.py tests/unit/test_telemetry_readiness.py tests/unit/test_execute_authorization.py tests/integration/test_repo_program_manifest.py -q`
+  得到 `79 passed in 173.39s`。
+- 当前只完成 planning/approval 记录；尚未修改任何 Track A/B 产品或特性测试文件。下一步为 T20 A0 RED。
+
+### 计划文档替换说明
+
+- removed comment: `specs/219-mainline-truth-roi-contract/plan.md` `## 已冻结推荐方案`；用户批准后由 Task 1–3
+  的逐步 RED/GREEN、接口和 Go/No-Go 合同完整替代。
+- removed comment: `specs/219-mainline-truth-roi-contract/plan.md` `## 计划生成条件`；批准条件已满足，由当前
+  plan 四个可执行 Task 及 `tasks.md` T20–T52 取代。
+- 文件：`specs/219-mainline-truth-roi-contract/plan.md`。
+- 删除的原说明标题：`## 已冻结推荐方案`，其摘要为“批准前只描述方案 B 的 behind-only、共享 helper 与
+  双模板方向”；删除原因是用户批准后已由 Task 1–3 的逐步 RED/GREEN、接口和 Go/No-Go 合同完整替代。
+- 删除的原说明标题：`## 计划生成条件`，其摘要为“用户批准后再生成 A0/A1/B 详细计划”；删除原因是该条件
+  已于 2026-08-25 满足，并由当前 plan 的四个可执行 Task 及 `tasks.md` T20–T52 取代。
+- 上述删除不移除行为边界；behind-only、单一纯 helper、双模板 semantic set、禁止新状态/parser/公共面和
+  三批独立回退均在新计划中保留并细化。
