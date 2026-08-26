@@ -155,7 +155,10 @@ def _load_checkpoint_feature_spec_dir(
     if not spec_dir_raw or spec_dir_raw == "specs/unknown":
         return checkpoint, None
     if (checkpoint.linked_wi_id or "").strip():
-        resolved = _resolve_spec_dir_path(repo_root, spec_dir_raw)
+        try:
+            resolved = _resolve_spec_dir_path(repo_root, spec_dir_raw)
+        except (OSError, RuntimeError):
+            return checkpoint, None
         if (
             not active_work_item_dir_has_canonical_identity(
                 repo_root, checkpoint, resolved

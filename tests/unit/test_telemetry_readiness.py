@@ -212,6 +212,33 @@ def test_checkpoint_binding_rejects_linked_symlink_to_other_work_item(tmp_path: 
         )
 
 
+def test_checkpoint_binding_treats_cyclic_linked_symlink_as_unavailable(
+    tmp_path: Path,
+) -> None:
+    _save_linked_checkpoint(tmp_path)
+    linked_dir = tmp_path / "specs" / LINKED_WI
+    (linked_dir / "spec.md").unlink()
+    linked_dir.rmdir()
+    try:
+        linked_dir.symlink_to(linked_dir, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink unavailable: {exc}")
+
+    with patch(
+        "ai_sdlc.telemetry.readiness.GitClient.current_branch",
+        return_value=f"feature/{LINKED_WI}",
+    ), patch(
+        "ai_sdlc.telemetry.readiness._resolve_spec_dir_path",
+        side_effect=RuntimeError("symlink loop"),
+    ):
+        assert _load_checkpoint_feature_binding(tmp_path) == (LINKED_WI, None)
+        assert _load_active_work_item_dir(tmp_path) == (
+            LINKED_WI,
+            None,
+            "active work item directory is unavailable",
+        )
+
+
 def test_missing_linked_work_item_remains_visible_on_main_close(tmp_path: Path) -> None:
     _save_linked_checkpoint(tmp_path, stage="close")
     linked_dir = tmp_path / "specs" / LINKED_WI

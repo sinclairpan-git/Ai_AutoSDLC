@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import posixpath
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,7 +14,9 @@ from ai_sdlc.core.workitem_traceability import execution_log_has_recorded_eviden
 from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root
 
-RECORDED_PATH_TOKEN_RE = re.compile(r"`([^`\n]+)`|\[([^\]\n]+)\]\([^)]+\)")
+RECORDED_PATH_TOKEN_RE = re.compile(
+    r"`([^`\n]+)`|\[([^\]\n]+)\]\(([^)\n]+)\)"
+)
 RECORDED_PATH_LINE_RE = re.compile(
     r"(?m)^\s*(?:-\s*)?(?:\*\*)?改动范围(?:\*\*)?：(?P<value>.+?)\s*$"
 )
@@ -126,16 +129,28 @@ def _has_recorded_path_evidence(
     for match in RECORDED_PATH_LINE_RE.finditer(log_text):
         value = match.group("value").strip()
         tokens = {
-            token.strip()
+            _normalize_recorded_path(token, wi_rel)
             for token_match in RECORDED_PATH_TOKEN_RE.finditer(value)
-            for token in (token_match.group(1) or token_match.group(2) or "",)
+            for token in (
+                token_match.group(3)
+                or token_match.group(1)
+                or token_match.group(2)
+                or "",
+            )
             if token.strip()
         }
         if tokens:
             recorded_paths.update(tokens)
         elif value:
-            recorded_paths.add(value)
+            recorded_paths.add(_normalize_recorded_path(value, wi_rel))
     return any(path not in allowed and path in recorded_paths for path in paths)
+
+
+def _normalize_recorded_path(token: str, wi_rel: str) -> str:
+    normalized = token.strip().strip("`").replace("\\", "/")
+    if normalized.startswith(("./", "../")):
+        return posixpath.normpath(posixpath.join(wi_rel, normalized))
+    return normalized
 
 
 def _root_commit_has_implementation(

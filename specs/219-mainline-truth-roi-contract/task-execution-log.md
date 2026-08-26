@@ -543,3 +543,21 @@
   同时消除误归因，ROI 裁决为保留。
 - Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
   0 unmapped、两个 release target ready；root manifest test=`1 passed in 124.32s`。
+
+## Batch 2026-08-26-026 | PR #175 relative Markdown path and cyclic symlink remediation
+
+- Codex 在 `d67f40d72688960346d26eb43b93ad3853fc0ced` 提出 2 个 P2：仓库常见
+  ``[`../../src/foo.py`](../../src/foo.py)`` 在 token equality 中仍是 WI-relative，无法匹配 Git repo-relative
+  path；linked WI 的 cyclic symlink 令 `Path.resolve()` 抛异常，status 会崩溃而非返回 unavailable。
+- Unicode implementation topology 改用真实 relative Markdown link 后稳定 RED：返回 `formal_freeze_only`；
+  cyclic resolver 显式抛 `RuntimeError` 后稳定 RED：异常逃逸。
+- GREEN 优先使用 Markdown link destination，对 `./`/`../` token 仅按 WI 目录做 POSIX 词法归一化，不访问目标、
+  不推断后缀；linked spec resolve 捕获 `OSError/RuntimeError` 并沿既有 unavailable 路径 fail closed。未新增状态、
+  schema、持久化或扫描面。
+- truth topology `15 passed`；linked unavailable `3 passed`；truth/status/readiness/Program Truth/context/resume/
+  recover/handoff 扩大回归 `739 passed in 126.45s`；final exact-tree full
+  `3375 passed, 3 skipped in 834.27s`；全库 Ruff PASS；constraints=`no BLOCKERs`。
+- 相对上一候选，本批运行时代码 23 additions / 5 deletions，净增 18；测试 31 additions / 3 deletions，净增 28。
+  两项改动都复用既有 path/unavailable 合同，没有新增治理层，ROI 裁决为保留。
+- Program Truth execute 写入最新 snapshot；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 127.21s`。
