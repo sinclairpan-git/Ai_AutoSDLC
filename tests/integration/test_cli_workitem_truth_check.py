@@ -497,19 +497,26 @@ class TestCliWorkitemTruthCheck:
         ]
 
     @pytest.mark.parametrize(
-        "topology", ["merged_mainline", "formal_branch", "root_bootstrap"]
+        ("topology", "expected_classification"),
+        [
+            ("merged_mainline", "formal_freeze_only"),
+            ("formal_branch", "formal_freeze_only"),
+            ("root_bootstrap", "formal_freeze_only"),
+            ("root_arbitrary_implementation", "mainline_merged"),
+        ],
     )
-    def test_truth_check_keeps_scaffolded_execution_log_formal_only(
+    def test_truth_check_distinguishes_formal_only_from_implementation_history(
         self,
         tmp_path: Path,
         monkeypatch: pytest.MonkeyPatch,
         topology: str,
+        expected_classification: str,
     ) -> None:
         root = tmp_path / "repo"
         root.mkdir()
         _init_repo(root)
         work_item_id = "219-mainline-truth-roi-contract"
-        if topology != "root_bootstrap":
+        if not topology.startswith("root_"):
             _commit_all(root, "init")
 
         if topology == "merged_mainline":
@@ -537,16 +544,25 @@ class TestCliWorkitemTruthCheck:
             _commit_all(root, "update formal 219")
         else:
             _write_formal_control_change_set(root, work_item_id)
-            (root / "pyproject.toml").write_text(
-                "[project]\nname = 'bootstrap'\n", encoding="utf-8"
-            )
-            _commit_all(root, "bootstrap repository with formal 219")
+            if topology == "root_bootstrap":
+                (root / "pyproject.toml").write_text(
+                    "[project]\nname = 'bootstrap'\n", encoding="utf-8"
+                )
+            else:
+                (root / "product-config.yaml").write_text(
+                    "feature_enabled: true\n", encoding="utf-8"
+                )
+                (root / "specs" / work_item_id / "task-execution-log.md").write_text(
+                    "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+                    encoding="utf-8",
+                )
+            _commit_all(root, f"seed {topology} 219")
 
         payload = _truth_payload(root, monkeypatch, work_item_id)
 
         assert payload["formal_docs"]["execution_log"] is True
-        assert payload["execution_started"] is False
-        assert payload["classification"] == "formal_freeze_only"
+        assert payload["execution_started"] is (expected_classification == "mainline_merged")
+        assert payload["classification"] == expected_classification
 
     def test_truth_check_text_renders_next_actions(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

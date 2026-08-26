@@ -345,3 +345,24 @@
   constraints=`no BLOCKERs`。
 - 本批运行时代码净增 28 行、测试净增 12 行；以一个强证据 predicate 关闭误报，不扩展到文件内容、commit
   message 或语言后缀启发式，ROI 裁决为保留。
+
+## Batch 2026-08-26-015 | PR #175 project-layout flexibility remediation
+
+- Codex 在 `842b9befabb062d2d9f7ad4ef6cf6a9fdbc419ab` 指出新的 P2：root commit 的固定实现目录
+  白名单会拒绝 `app/`、`lib/`、根级产品配置等合法项目布局，把框架的默认习惯错误升级为项目结构硬规则；
+  这与 WI219 保留模型自主性、避免僵化治理的目标冲突。
+- 新增 root arbitrary-layout topology：根提交只携带 `product-config.yaml` 与已填写的 execution log；旧实现稳定
+  RED，四 topology 合计 `1 failed, 3 passed`。这证明问题来自固定目录假设，而非既有 merge/fast-forward
+  规则。
+- GREEN 删除全部实现目录白名单。root commit 现要求“至少一个非 formal changed path”与“同一提交中的
+  execution log 已具备真实执行证据”同时成立；证据谓词与 close-check 共用既有三项语义 marker，并拒绝
+  `YYYY-MM-DD-X`、`T0XX`、`待补充` 等未填写 scaffold token。目录、文件名、语言与后缀保持开放，也没有
+  新增第二 parser、schema、状态或持久化面。
+- target topology `5 passed in 3.58s`；close-check `71 passed in 14.73s`；truth/status/readiness/execute/
+  GitClient/ProgramService 扩大回归 `639 passed in 91.81s`；final exact-tree full
+  `3361 passed, 3 skipped in 730.42s`；全库 Ruff PASS；constraints=`no BLOCKERs`。
+- Program Truth execute 写入 snapshot `84db6bf8...`；随后独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 117.97s`。
+- 相对上一候选，本批运行时代码 36 additions / 21 deletions，净增 15；测试 25 additions / 9 deletions，
+  净增 16。新增投入只用于共享证据判定和四类 root truth 对抗矩阵；删除过度刚性的路径规则后，误报与漏报
+  同时受约束，ROI 裁决为保留。

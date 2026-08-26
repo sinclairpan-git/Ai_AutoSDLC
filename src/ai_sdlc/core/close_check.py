@@ -39,6 +39,7 @@ from ai_sdlc.core.verify_constraints import (
 )
 from ai_sdlc.core.verify_constraints import collect_frontend_evidence_class_blockers
 from ai_sdlc.core.workitem_traceability import (
+    EXECUTION_LOG_EVIDENCE_MARKERS,
     analyze_completion_truth,
     evaluate_work_item_branch_lifecycle,
 )
@@ -46,11 +47,7 @@ from ai_sdlc.models.work import WorkItemStatus
 from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root
 
-REQUIRED_LOG_MARKERS = (
-    "统一验证命令",
-    "代码审查",
-    "任务/计划同步状态",
-)
+REQUIRED_LOG_MARKERS = EXECUTION_LOG_EVIDENCE_MARKERS
 DOCS_UNIMPLEMENTED_HINTS = ("未实现前", "未来可能提供")
 COMMIT_STATUS_RE = re.compile(r"(?m)^\s*-\s*\*\*已完成 git 提交\*\*：(?P<value>.+?)\s*$")
 COMMIT_HASH_RE = re.compile(r"(?m)^\s*-\s*\*\*提交哈希\*\*：(?P<value>.+?)\s*$")

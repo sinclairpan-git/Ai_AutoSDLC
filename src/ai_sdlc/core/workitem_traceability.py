@@ -28,6 +28,12 @@ WORKTREE_STATUS_DISPOSITION_RE = re.compile(
     r"(?m)^\s*-\s*当前批次 worktree disposition 状态：(?P<value>.+?)\s*$"
 )
 WI_SEQ_RE = re.compile(r"^(?P<seq>\d{3})\b")
+EXECUTION_LOG_EVIDENCE_MARKERS = (
+    "统一验证命令",
+    "代码审查",
+    "任务/计划同步状态",
+)
+EXECUTION_LOG_SCAFFOLD_TOKENS = ("YYYY-MM-DD-X", "T0XX", "待补充")
 
 
 def _dedupe_int_items(values: object) -> list[int]:
@@ -239,6 +245,13 @@ def extract_execution_batches(log_text: str) -> list[int]:
         if explicit_batches:
             batches.extend(explicit_batches)
     return _unique_preserve_order(batches)
+
+
+def execution_log_has_recorded_evidence(log_text: str) -> bool:
+    """判断执行日志已记录证据，而不是未填写的 scaffold。"""
+    return all(marker in log_text for marker in EXECUTION_LOG_EVIDENCE_MARKERS) and not any(
+        token in log_text for token in EXECUTION_LOG_SCAFFOLD_TOKENS
+    )
 
 
 def _has_reopened_status_note(*texts: str) -> bool:
@@ -507,10 +520,12 @@ __all__ = [
     "CompletionTruthResult",
     "WorkItemBranchLifecycleEntry",
     "WorkItemBranchLifecycleResult",
+    "EXECUTION_LOG_EVIDENCE_MARKERS",
     "analyze_completion_truth",
     "analyze_work_item_branch_lifecycle",
     "branch_matches_work_item",
     "evaluate_work_item_branch_lifecycle",
+    "execution_log_has_recorded_evidence",
     "extract_execution_batches",
     "extract_planned_batches",
     "parse_branch_disposition_truth",

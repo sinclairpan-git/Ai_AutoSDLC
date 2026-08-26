@@ -8,18 +8,9 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
+from ai_sdlc.core.workitem_traceability import execution_log_has_recorded_evidence
 from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root
-
-_ROOT_IMPLEMENTATION_PREFIXES = (
-    "src/",
-    "tests/",
-    "governance/",
-    "providers/",
-    "kernel/",
-    "scripts/",
-    "templates/",
-)
 
 
 @dataclass
@@ -121,12 +112,21 @@ def _is_formal_freeze_only_change_set(paths: tuple[str, ...], wi_rel: str) -> bo
     return bool(paths) and all(path in allowed for path in paths)
 
 
-def _root_commit_has_implementation(paths: tuple[str, ...], wi_rel: str) -> bool:
+def _root_commit_has_implementation(
+    git: GitClient,
+    *,
+    commit: str,
+    paths: tuple[str, ...],
+    wi_rel: str,
+) -> bool:
     allowed = _formal_control_paths(wi_rel)
-    return any(
-        path not in allowed and path.startswith(_ROOT_IMPLEMENTATION_PREFIXES)
-        for path in paths
-    )
+    if not any(path not in allowed for path in paths):
+        return False
+    try:
+        log_text = git.read_file_at_revision(commit, f"{wi_rel}/task-execution-log.md")
+    except GitError:
+        return False
+    return execution_log_has_recorded_evidence(log_text)
 
 
 def _history_contains_implementation(
@@ -139,7 +139,10 @@ def _history_contains_implementation(
     for commit in git.commits_touching_path(revision, execution_log_path):
         commit_paths = git.changed_paths_for_commit(commit)
         if git.first_parent(commit) is None and not _root_commit_has_implementation(
-            commit_paths, wi_rel
+            git,
+            commit=commit,
+            paths=commit_paths,
+            wi_rel=wi_rel,
         ):
             continue
         if commit_paths and not _is_formal_freeze_only_change_set(commit_paths, wi_rel):
