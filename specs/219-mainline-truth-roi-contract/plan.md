@@ -105,7 +105,7 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
 - 消费：resume filesystem fallback、readiness 的三个 binding loader、Program Truth、frontend evidence、
   branch lifecycle、workitem diagnostics、backlog breach guard 和 execute authorization。
 
-- [ ] **Step 1：写纯 helper 与 consumer matrix RED**
+- [x] **Step 1：写纯 helper 与 consumer matrix RED**
 
   在三个 unit test 文件中使用 historical feature=WI204、linked=WI219 的真实 Checkpoint，覆盖：valid link、
   no/blank link、linked directory missing、formal docs partial、non-main/non-close、main+close 未 merged、
@@ -115,7 +115,7 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
   只有 unit 无法证明 status 聚合闭环时，才在 `tests/integration/test_cli_status.py` 增加一条真实 CLI JSON 用例，
   断言 Program Truth、frontend、branch lifecycle、diagnostics、backlog 与 execute 均绑定 linked target。
 
-- [ ] **Step 2：运行 RED 并确认失败原因**
+- [x] **Step 2：运行 RED 并确认失败原因**
 
   ```powershell
   uv run pytest tests/unit/test_context_state.py tests/unit/test_telemetry_readiness.py tests/unit/test_execute_authorization.py -q
@@ -123,7 +123,7 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
 
   预期：resume 已有局部 linked-first 行为通过，但 readiness/backlog/execute 仍返回历史 feature id/spec-dir。
 
-- [ ] **Step 3：实现单一纯解析 helper 并复用**
+- [x] **Step 3：实现单一纯解析 helper 并复用**
 
   在 `context/state.py` 增加：
 
@@ -142,14 +142,14 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
   resume、readiness 与 execute 只调用 `active_work_item_id` / `active_work_item_spec_dir`；保留现有文件 I/O、
   branch/stage 判断、错误文本和 strict checkpoint 校验。不得修改 backlog guard 本体或 status 展示。
 
-- [ ] **Step 4：运行 GREEN 与真实 CLI 闭环**
+- [x] **Step 4：运行 GREEN 与真实 CLI 闭环**
 
   ```powershell
   uv run pytest tests/unit/test_context_state.py tests/unit/test_telemetry_readiness.py tests/unit/test_execute_authorization.py tests/integration/test_cli_status.py -q
   uv run ruff check src/ai_sdlc/context/state.py src/ai_sdlc/telemetry/readiness.py src/ai_sdlc/core/execute_authorization.py tests/unit/test_context_state.py tests/unit/test_telemetry_readiness.py tests/unit/test_execute_authorization.py tests/integration/test_cli_status.py
   ```
 
-- [ ] **Step 5：A1 Go/No-Go 与提交**
+- [x] **Step 5：A1 Go/No-Go 与提交**
 
   若需要新 writer/schema/status 格式、第二个 resolver 或 silent historical fallback 则 No-Go；否则提交：
 

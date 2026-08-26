@@ -142,3 +142,39 @@
   Git 拓扑、ref 不变、精确 allowlist 和四类范围外证据，未出现 mock-only 或重复矩阵，保留为必要证明。
 - 未修改 GitClient、writer、Runner、ProgramService、status schema/格式或 checkpoint schema；A0=`Go`。
 - 独立提交：`3dbdd8a2 fix: align work item truth with remote main`。
+
+## Batch 2026-08-25-005 | T30-T32 A1 linked-first active binding
+
+### RED
+
+- 在 `tests/unit/test_context_state.py`、`tests/unit/test_telemetry_readiness.py` 与
+  `tests/unit/test_execute_authorization.py` 增加 valid/no-link/missing、branch-stage、main+close 和
+  strict-load 消费矩阵；未修改 `tests/integration/test_cli_status.py`。
+- 首次定向运行得到 `7 failed, 44 passed`；补入 missing-linked backlog fail-closed 用例后，失败面覆盖八个
+  历史 feature 泄漏路径。失败均由 readiness/execute 仍直接读取 `checkpoint.feature` 导致。
+
+### GREEN 与真实 CLI
+
+- `src/ai_sdlc/context/state.py` 新增一个无 I/O 的 `active_work_item_spec_dir`；resume、readiness 与 execute
+  统一复用 `active_work_item_id` / `active_work_item_spec_dir`，link 存在时不再静默回退历史 feature。
+- 没有修改 checkpoint writer/schema、status 输出格式或 backlog guard 本体；missing linked directory 通过
+  readiness 既有 `unavailable` 结果 fail-closed，legacy 无 link 行为保持不变。
+- 三组 unit GREEN：`52 passed in 0.79s`；status CLI：`55 passed in 34.17s`；合并回归：
+  `107 passed in 34.68s`；目标文件 Ruff 与 `git diff --check` 均 PASS。
+- 真实 `uv run ai-sdlc status --json` 返回
+  `branch_lifecycle.active_work_item=219-mainline-truth-roi-contract`、
+  `workitem_diagnostics.active_work_item=219-mainline-truth-roi-contract`、
+  `execute_authorization.active_work_item=219-mainline-truth-roi-contract` 与
+  `execute_authorization.wi_path=specs/219-mainline-truth-roi-contract`；Program Truth 为 ready，
+  `1147/1147` mapped、0 unmapped。
+
+### ROI / Go-No-Go
+
+- 产品 diff 为 53 additions / 13 deletions，净增 40；测试为 216 additions / 1 deletion。测试证明量高于原
+  180–300 总体信号的剩余空间，但来自跨 resume/readiness/backlog/execute 与 branch-stage/main-close 的
+  必要消费矩阵，没有新增运行时层、第二 resolver 或 mock-only 结论；因此不为追逐数字删减关键回归证据。
+- 真实 status 暴露 `tasks.md` 原 checklist 不符合 executable-task parser 格式；补入 T31X/T40B 两个既有
+  parser 合同任务后，`workitem guard` 返回 `ALLOW_CODE_WITH_TASK` 并绑定 T31X。该修复仅调整 WI219 治理
+  文档，不扩展产品 parser。
+- A1=`Go`；独立提交：`6d969546 fix: unify linked work item consumers`。Track B 必须保持仅双模板与两条真实
+  生成路径的最小实现，避免继续放大测试/运行时表面。

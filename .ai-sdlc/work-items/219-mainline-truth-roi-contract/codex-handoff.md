@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-08-26T01:22:30+00:00
-- Reason: 完成 A0 RED/GREEN/refactor、Go/No-Go 与独立提交。
-- Goal: 继续实施 WI219；A0 已 Go，下一批用 TDD 统一 linked-first active binding。
-- State: A0 已提交为 3dbdd8a2；truth-check 14 passed，Ruff PASS；真实 WI219 HEAD formal candidate 正确为 formal_freeze_only。
+- Updated: 2026-08-26T01:40:16+00:00
+- Reason: A1 代码、测试、ROI 复核和独立提交已完成。
+- Goal: 实施 WI219，A1 已完成，进入 B 双模板 ROI semantic set。
+- State: A1 提交为 6d969546；active-WI consumer 全部 linked-first，workitem guard 已绑定 T40B。
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
 - Branch: feature/219-mainline-truth-roi-contract-docs
@@ -14,16 +14,16 @@
 - M specs/219-mainline-truth-roi-contract/tasks.md
 
 ## Key Decisions
-- behind-only 仅使用已有 remote ref；formal-only 仅识别精确路径集合；不加入内容 parser 或新状态。
+- 只修改两份模板和两条真实生成路径测试；不新增 parser、公共面、持久化字段或自动 ROI blocker。
 
 ## Commands / Tests
-- A0 RED：4 failed/10 passed；GREEN：14 passed；Ruff 与 diff-check PASS；产品 38增/3删、测试 161增。
+- A1: 52 unit passed；55 status CLI passed；合并 107 passed；Ruff 和 diff-check PASS；真实 status 全部 active WI=219。
 
 ## Blockers / Risks
-- 当前无 blocker；A1 若需要第二 resolver、writer/schema/status 格式或 silent historical fallback 则 No-Go。
+- 当前无 blocker；A0+A1 测试证明量已超过初始信号，B 必须最小化且不得为数字删除关键回归证据。
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 执行 T30：先为 active_work_item_spec_dir 和全部 linked-first consumer matrix 写失败测试。
+- 执行 T40B：先为 direct scaffold 与 stage/native render 写 semantic RED。

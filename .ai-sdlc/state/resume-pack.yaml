@@ -11,14 +11,13 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 继续实施 WI219；A0 已 Go，下一批用 TDD 统一 linked-first active binding。
-    | State: A0 已提交为 3dbdd8a2；truth-check 14 passed，Ruff PASS；真实 WI219 HEAD formal
-    candidate 正确为 formal_freeze_only。 | Next: 执行 T30：先为 active_work_item_spec_dir
-    和全部 linked-first consumer matrix 写失败测试。'
+  context_summary: 'Goal: 实施 WI219，A1 已完成，进入 B 双模板 ROI semantic set。 | State: A1 提交为
+    6d969546；active-WI consumer 全部 linked-first，workitem guard 已绑定 T40B。 | Next: 执行
+    T40B：先为 direct scaffold 与 stage/native render 写 semantic RED。'
 current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-26T01:22:30+00:00'
+timestamp: '2026-08-26T01:40:16+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

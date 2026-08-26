@@ -66,24 +66,59 @@
 
 ## Batch 3：A1 linked-first active binding
 
-- [ ] **T30 active spec-dir helper 与 consumer matrix RED**
+- [x] **T30 active spec-dir helper 与 consumer matrix RED**
   - 依赖：T22
   - 范围：`tests/unit/test_context_state.py`、`tests/unit/test_telemetry_readiness.py`、
     `tests/unit/test_execute_authorization.py`；只有 unit 证据不足时才修改 `tests/integration/test_cli_status.py`。
   - 验收：valid/no-link/missing/partial、branch-stage、main+close 与 strict-load 矩阵先复现历史 feature 泄漏。
 
-- [ ] **T31 单一 linked-first id/spec-dir GREEN**
+- [x] **T31 单一 linked-first id/spec-dir GREEN**
   - 依赖：T30
   - 范围：`src/ai_sdlc/context/state.py`、`src/ai_sdlc/telemetry/readiness.py`、
     `src/ai_sdlc/core/execute_authorization.py`
   - 验收：resume/status/execute 全部复用一个无 I/O spec-dir helper；missing/partial fail-closed；legacy 无 link
     行为、错误文本、writer/schema/status 格式保持不变。
 
-- [ ] **T32 A1 Go/No-Go 与提交**
+- [x] **T32 A1 Go/No-Go 与提交**
   - 依赖：T31
   - 验收：三组 unit、必要的 status CLI 与 Ruff 全绿；无第二 resolver、无 silent fallback；A1 独立提交。
 
+### Task 3.1 linked-first active binding 收口
+
+- task_id: T31X
+- status: done
+- goal: 完成 A1 的回归、ROI 复核、独立提交和证据记录。
+- depends:
+  - T22
+- scope:
+  - src/ai_sdlc/context/state.py
+  - src/ai_sdlc/telemetry/readiness.py
+  - src/ai_sdlc/core/execute_authorization.py
+- acceptance:
+  - 全部 active-WI consumer 使用 linked-first id/spec-dir，missing linked target fail-closed。
+  - 不修改 writer、schema、status 格式或 backlog guard 本体。
+- verify:
+  - uv run pytest tests/unit/test_context_state.py tests/unit/test_telemetry_readiness.py tests/unit/test_execute_authorization.py tests/integration/test_cli_status.py -q
+  - uv run ruff check src/ai_sdlc/context/state.py src/ai_sdlc/telemetry/readiness.py src/ai_sdlc/core/execute_authorization.py tests/unit/test_context_state.py tests/unit/test_telemetry_readiness.py tests/unit/test_execute_authorization.py
+
 ## Batch 4：B 双模板 ROI semantic set
+
+### Task 4.1 双模板 ROI semantic set
+
+- task_id: T40B
+- status: todo
+- goal: 先以两条真实生成路径复现语义缺口，再只修改两份现有模板完成 GREEN。
+- depends:
+  - T31X
+- scope:
+  - templates/spec-template.md
+  - src/ai_sdlc/templates/spec.md.j2
+- acceptance:
+  - direct-formal 与 stage/native 输出均包含六项提示、四个 decision、轻量例外、risk-only 数值和 blocker 边界。
+  - 不新增 parser、constraint blocker、Python 公共面或持久化字段。
+- verify:
+  - uv run pytest tests/unit/test_workitem_scaffold.py tests/unit/test_doc_gen.py tests/integration/test_cli_workitem_init.py -q
+  - uv run ruff check tests/unit/test_workitem_scaffold.py tests/unit/test_doc_gen.py
 
 - [ ] **T40 两条真实 render/scaffold semantic RED**
   - 依赖：T32
