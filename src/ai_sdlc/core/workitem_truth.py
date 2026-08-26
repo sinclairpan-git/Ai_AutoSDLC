@@ -140,8 +140,8 @@ def _build_detail(
 ) -> str:
     if classification == "formal_freeze_only":
         detail = (
-            "formal docs exist at the requested revision, but no task-execution-log or "
-            "implementation changes indicate execute has started"
+            "changed paths are limited to formal controls; no implementation path "
+            "proves execute has started"
         )
     elif classification == "branch_only_implemented":
         detail = (
@@ -185,7 +185,7 @@ def _build_next_required_actions(
 
     if classification == "formal_freeze_only":
         actions.append(
-            "start execute work on the work item branch and record task-execution-log or implementation evidence"
+            "start execute work on the work item branch and record implementation evidence"
         )
     elif classification == "branch_only_implemented":
         actions.append(
@@ -298,7 +298,14 @@ def run_truth_check(
             )
 
         merge_base = git.merge_base(base_ref, requested_revision)
-        changed_paths = git.changed_paths(merge_base, requested_revision)
+        changed_paths = tuple(
+            _dedupe_text_items(
+                (
+                    *git.changed_paths(merge_base, requested_revision),
+                    *git.changed_paths(requested_revision, merge_base),
+                )
+            )
+        )
         divergence = git.revision_divergence(requested_revision, base=base_ref)
         code_paths, test_paths, doc_paths, other_paths = _classify_paths(changed_paths)
         execution_log_path = f"{wi_rel}/task-execution-log.md"

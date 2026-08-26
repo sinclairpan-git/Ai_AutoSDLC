@@ -153,6 +153,12 @@ def _load_checkpoint_feature_spec_dir(
     spec_dir_raw = active_work_item_spec_dir(checkpoint)
     if not spec_dir_raw or spec_dir_raw == "specs/unknown":
         return checkpoint, None
+    if (checkpoint.linked_wi_id or "").strip():
+        resolved = _resolve_spec_dir_path(repo_root, spec_dir_raw)
+        if not resolved.is_relative_to(repo_root.resolve()) or not resolved.is_relative_to(
+            (repo_root / "specs").resolve()
+        ):
+            return checkpoint, None
     return checkpoint, spec_dir_raw
 
 
@@ -591,13 +597,13 @@ def _build_backlog_breach_guard_surface(repo_root: Path) -> dict[str, Any]:
         candidate = _resolve_spec_dir_path(repo_root, spec_dir_raw)
         if candidate.is_dir():
             spec_dir = candidate
-        elif _checkpoint is not None and (_checkpoint.linked_wi_id or "").strip():
-            return _guard_surface_json(
-                BacklogBreachGuardResult(
-                    state="unavailable",
-                    detail="active work item directory is unavailable",
-                )
+    if _checkpoint is not None and (_checkpoint.linked_wi_id or "").strip() and spec_dir is None:
+        return _guard_surface_json(
+            BacklogBreachGuardResult(
+                state="unavailable",
+                detail="active work item directory is unavailable",
             )
+        )
     return _guard_surface_json(
         evaluate_backlog_breach_guard(
             root=repo_root,

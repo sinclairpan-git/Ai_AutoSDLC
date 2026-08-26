@@ -29,24 +29,16 @@ def _assert_lightweight_roi_contract(text: str) -> None:
         "用户可观察收益或可复现风险",
         "现状证据",
         "最小方案 / 备选方案",
-        "总投入",
+        "4. **总投入**",
         "产品、测试/harness、CI、评审、迁移和长期维护",
         "范围与退出条件",
-        "public API",
-        "持久化状态",
-        "回退/删除触发器",
-        "`implement`",
-        "`defer`",
-        "`needs_user`",
-        "`not-applicable`",
+        "public API、依赖、持久化状态，以及回退/删除触发器",
+        "`implement` / `defer` / `needs_user` / `not-applicable`",
+        "一行 `not-applicable` 理由",
+        "`400/50`、辅助代码大于核心、少于三个调用方的公共抽象仅是风险信号，不单独构成 blocker",
+        "未经授权的范围扩展、缺失可执行证据，或可复现的安全、隐私、数据、兼容、回归问题可以成为 blocker",
     )
     assert not [marker for marker in required if marker not in text]
-    assert "一行 `not-applicable` 理由" in text
-    assert "`400/50`" in text
-    assert "仅是风险信号，不单独构成 blocker" in text
-    blocker_line = next(line for line in text.splitlines() if "可以成为 blocker" in line)
-    for marker in ("未经授权的范围扩展", "缺失可执行证据", "安全", "隐私", "数据", "兼容", "回归"):
-        assert marker in blocker_line
 
 
 class FakeTemplateGenerator:

@@ -233,7 +233,7 @@ class TestCliWorkitemTruthCheck:
         assert payload["head_matches_revision"] is False
         assert payload["contained_in_main"] is False
         assert payload["next_required_actions"] == [
-            "start execute work on the work item branch and record task-execution-log or implementation evidence",
+            "start execute work on the work item branch and record implementation evidence",
             "checkout the requested revision if you need the current workspace to match",
         ]
         assert payload["code_paths"] == []
@@ -264,6 +264,11 @@ class TestCliWorkitemTruthCheck:
         payload = _truth_payload(root, monkeypatch, work_item_id)
         assert payload["classification"] == "formal_freeze_only"
         assert payload["execution_started"] is False
+        assert payload["formal_docs"]["execution_log"] is True
+        assert "no task-execution-log" not in payload["detail"]
+        assert payload["next_required_actions"] == [
+            "start execute work on the work item branch and record implementation evidence"
+        ]
         assert "src/mainline.py" not in payload["changed_paths"]
         assert _run(root, "git", "show-ref") == refs_before
 
@@ -342,6 +347,44 @@ class TestCliWorkitemTruthCheck:
         assert payload["classification"] == "branch_only_implemented"
         assert payload["execution_started"] is True
         assert outside_path in payload["changed_paths"]
+
+    def test_truth_check_retains_outside_source_of_rename_into_formal_controls(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo(root)
+        source = root / "src" / "feature.py"
+        source.parent.mkdir()
+        source.write_text("def test_inventory():\n    assert 1 == 1\n", encoding="utf-8")
+        _commit_all(root, "add outside source")
+
+        work_item_id = "219-mainline-truth-roi-contract"
+        subprocess.run(
+            ["git", "checkout", "-b", "feature/219-formal"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        _write_formal_control_change_set(root, work_item_id)
+        renamed_target = root / "tests" / "integration" / "test_repo_program_manifest.py"
+        renamed_target.unlink()
+        subprocess.run(
+            ["git", "mv", "src/feature.py", str(renamed_target.relative_to(root))],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        _commit_all(root, "rename source into formal control path")
+        refs_before = _run(root, "git", "show-ref")
+
+        payload = _truth_payload(root, monkeypatch, work_item_id)
+
+        assert payload["classification"] == "branch_only_implemented"
+        assert payload["execution_started"] is True
+        assert "src/feature.py" in payload["changed_paths"]
+        assert "tests/integration/test_repo_program_manifest.py" in payload["changed_paths"]
+        assert _run(root, "git", "show-ref") == refs_before
 
     def test_truth_check_reports_branch_only_implemented_for_unmerged_revision(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

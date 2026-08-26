@@ -88,6 +88,11 @@ def test_active_work_item_spec_dir_prefers_linked_and_preserves_legacy_path() ->
     assert context_state.active_work_item_spec_dir(checkpoint) == "specs/001"
     assert context_state.active_work_item_spec_dir(None) == ""
 
+    for invalid in ("../outside", r"..\outside", "C:outside"):
+        checkpoint.linked_wi_id = invalid
+        assert context_state.active_work_item_id(checkpoint) == ""
+        assert context_state.active_work_item_spec_dir(checkpoint) == ""
+
 
 class TestCheckpointManager:
     def test_save_and_load(self, tmp_path: Path) -> None:
@@ -332,6 +337,27 @@ class TestResumePack:
         legacy.feature.id = "nonstandard"
         save_checkpoint(tmp_path, legacy)
         assert Path(build_resume_pack(tmp_path).working_set_snapshot.spec_path).parent.name == "001"
+
+    def test_build_resume_pack_rejects_linked_symlink_outside_repo(
+        self, tmp_path: Path
+    ) -> None:
+        expected_paths = _seed_linked_checkpoint(tmp_path)
+        linked_dir = tmp_path / "specs" / LINKED_WI
+        for relative_path in expected_paths:
+            (tmp_path / relative_path).unlink()
+        linked_dir.rmdir()
+        outside = tmp_path.parent / f"{tmp_path.name}-outside"
+        outside.mkdir()
+        for filename in ("spec.md", "plan.md", "tasks.md"):
+            (outside / filename).write_text("# outside\n", encoding="utf-8")
+        try:
+            linked_dir.symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"symlink unavailable: {exc}")
+
+        snapshot = build_resume_pack(tmp_path).working_set_snapshot
+
+        assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
 
     def test_load_resume_pack_rebuilds_fresh_legacy_linked_working_set(self, tmp_path: Path) -> None:
         expected_paths = _seed_linked_checkpoint(tmp_path)

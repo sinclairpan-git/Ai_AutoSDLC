@@ -240,8 +240,9 @@ def test_backlog_breach_guard_scans_linked_work_item_instead_of_historical_featu
     ]
 
 
-def test_backlog_breach_guard_fails_closed_when_linked_directory_is_missing(
-    tmp_path: Path,
+@pytest.mark.parametrize("escaped", [False, True])
+def test_backlog_breach_guard_fails_closed_when_linked_directory_is_unavailable(
+    tmp_path: Path, escaped: bool
 ) -> None:
     _save_linked_checkpoint(tmp_path)
     (tmp_path / "specs" / FEATURE_WI / "spec.md").write_text(
@@ -250,6 +251,14 @@ def test_backlog_breach_guard_fails_closed_when_linked_directory_is_missing(
     linked_spec = tmp_path / "specs" / LINKED_WI / "spec.md"
     linked_spec.unlink()
     linked_spec.parent.rmdir()
+    if escaped:
+        outside = tmp_path.parent / f"{tmp_path.name}-outside"
+        outside.mkdir()
+        (outside / "spec.md").write_text("# Outside\nFD-2026-08-25-999\n", encoding="utf-8")
+        try:
+            linked_spec.parent.symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"symlink unavailable: {exc}")
 
     result = _build_backlog_breach_guard_surface(tmp_path)
 

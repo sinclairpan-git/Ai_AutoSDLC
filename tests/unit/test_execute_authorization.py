@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 import ai_sdlc.core.execute_authorization as execute_authorization_module
 from ai_sdlc.core.execute_authorization import ExecuteAuthorizationResult
 from ai_sdlc.core.workitem_truth import WorkitemTruthResult
@@ -353,14 +355,25 @@ def test_execute_authorization_prefers_linked_work_item_directory(
     assert inspected_paths == [(root / "specs" / linked_wi).resolve()]
 
 
-def test_execute_authorization_fails_closed_when_linked_directory_is_missing(
+@pytest.mark.parametrize("escaped", [False, True])
+def test_execute_authorization_fails_closed_when_linked_directory_is_unavailable(
     tmp_path: Path,
     monkeypatch,
+    escaped: bool,
 ) -> None:
     root = tmp_path / "repo"
     root.mkdir()
     historical = root / "specs" / "116-wi"
     historical.mkdir(parents=True)
+    linked_wi = "219-missing"
+    if escaped:
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        (outside / "tasks.md").write_text("# outside\n", encoding="utf-8")
+        try:
+            (root / "specs" / linked_wi).symlink_to(outside, target_is_directory=True)
+        except OSError as exc:
+            pytest.skip(f"symlink unavailable: {exc}")
     monkeypatch.setattr(
         execute_authorization_module,
         "run_truth_check",
@@ -374,12 +387,12 @@ def test_execute_authorization_fails_closed_when_linked_directory_is_missing(
 
     result = execute_authorization_module.evaluate_execute_authorization(
         root=root,
-        checkpoint=_checkpoint(stage="execute", linked_wi_id="219-missing"),
+        checkpoint=_checkpoint(stage="execute", linked_wi_id=linked_wi),
     )
 
     assert result.state == "unavailable"
-    assert result.active_work_item == "219-missing"
-    assert result.wi_path == "specs/219-missing"
+    assert result.active_work_item == linked_wi
+    assert result.wi_path == f"specs/{linked_wi}"
     assert result.detail == "active work item directory is unavailable"
 
 

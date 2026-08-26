@@ -85,6 +85,18 @@ def evaluate_execute_authorization(
         )
 
     wi_dir = (root / spec_dir_raw).resolve()
+    if (cp.linked_wi_id or "").strip() and (
+        not wi_dir.is_relative_to(root.resolve())
+        or not wi_dir.is_relative_to((root / "specs").resolve())
+    ):
+        return ExecuteAuthorizationResult(
+            state="unavailable",
+            active_work_item=active_work_item,
+            current_stage=current_stage,
+            authorized=False,
+            wi_path=spec_dir_raw,
+            detail="active work item directory is unavailable",
+        )
     if not wi_dir.is_dir():
         return ExecuteAuthorizationResult(
             state="unavailable",
