@@ -535,8 +535,9 @@ def _build_resume_working_set_from_filesystem(
         spec_dir_raw = active_work_item_spec_dir(checkpoint)
         if spec_dir_raw:
             spec_dir = (root / spec_dir_raw).resolve()
-            if spec_dir.is_relative_to(root.resolve()) and spec_dir.is_relative_to(
-                (root / "specs").resolve()
+            linked = bool((checkpoint.linked_wi_id or "").strip())
+            if spec_dir.is_relative_to(root.resolve()) and (
+                not linked or spec_dir.is_relative_to((root / "specs").resolve())
             ):
                 for field, filename in (
                     ("spec_path", "spec.md"),

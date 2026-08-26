@@ -16,6 +16,7 @@ from ai_sdlc.telemetry.readiness import (
     _load_active_work_item_dir,
     _load_checkpoint_feature_binding,
     _sort_workitem_diagnostic_items,
+    build_status_json_surface,
 )
 
 FEATURE_WI = "204-historical"
@@ -266,3 +267,13 @@ def test_backlog_breach_guard_fails_closed_when_linked_directory_is_unavailable(
     assert result["missing_ids"] == []
     assert result["sample_entries"] == []
     assert result["detail"] == "active work item directory is unavailable"
+    if escaped:
+        status = build_status_json_surface(
+            tmp_path,
+            include_program_truth=False,
+            include_truth_ledger=False,
+        )
+        for surface_name in ("branch_lifecycle", "workitem_diagnostics"):
+            surface = status[surface_name]
+            assert surface["active_work_item"] == LINKED_WI
+            assert surface["detail"] == "active work item directory is unavailable"

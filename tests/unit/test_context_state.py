@@ -335,8 +335,22 @@ class TestResumePack:
         assert not any((snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path))
         legacy = _make_checkpoint()
         legacy.feature.id = "nonstandard"
+        legacy.feature.spec_dir = "formal/nonstandard"
+        legacy_dir = tmp_path / legacy.feature.spec_dir
+        legacy_dir.mkdir(parents=True)
+        for filename in ("spec.md", "plan.md", "tasks.md"):
+            (legacy_dir / filename).write_text("# legacy\n", encoding="utf-8")
         save_checkpoint(tmp_path, legacy)
-        assert Path(build_resume_pack(tmp_path).working_set_snapshot.spec_path).parent.name == "001"
+        legacy_snapshot = build_resume_pack(tmp_path).working_set_snapshot
+        assert (
+            legacy_snapshot.spec_path,
+            legacy_snapshot.plan_path,
+            legacy_snapshot.tasks_path,
+        ) == (
+            "formal/nonstandard/spec.md",
+            "formal/nonstandard/plan.md",
+            "formal/nonstandard/tasks.md",
+        )
 
     def test_build_resume_pack_rejects_linked_symlink_outside_repo(
         self, tmp_path: Path

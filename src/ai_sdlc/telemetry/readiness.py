@@ -195,7 +195,13 @@ def _load_active_work_item_dir(
     if checkpoint is None or checkpoint.feature is None:
         return None, None, "no active work item checkpoint"
     if spec_dir_raw is None:
-        return None, None, "checkpoint has no concrete spec_dir"
+        active_work_item = active_work_item_id(checkpoint) or None
+        detail = (
+            "active work item directory is unavailable"
+            if active_work_item and (checkpoint.linked_wi_id or "").strip()
+            else "checkpoint has no concrete spec_dir"
+        )
+        return active_work_item, None, detail
     if not _checkpoint_feature_binding_is_active(
         repo_root,
         checkpoint=checkpoint,
@@ -252,11 +258,12 @@ def _live_current_branch(repo_root: Path, checkpoint: Any) -> str:
 def _unavailable_active_work_item_surface(
     *,
     detail: str | None,
+    active_work_item: str | None,
     builder: Callable[..., dict[str, Any]],
 ) -> dict[str, Any]:
     return builder(
         detail=detail or "no active work item checkpoint",
-        active_work_item=None,
+        active_work_item=active_work_item,
     )
 
 
@@ -665,6 +672,7 @@ def _build_branch_lifecycle_surface(repo_root: Path) -> dict[str, Any]:
     if unavailable_detail is not None or wi_dir is None:
         return _unavailable_active_work_item_surface(
             detail=unavailable_detail,
+            active_work_item=_active_work_item,
             builder=_unavailable_branch_lifecycle_surface,
         )
     if not wi_dir.is_dir() or not (repo_root / ".git").exists():
@@ -752,6 +760,7 @@ def _build_workitem_diagnostics_surface(
     if unavailable_detail is not None or wi_dir is None:
         return _unavailable_active_work_item_surface(
             detail=unavailable_detail,
+            active_work_item=_active_work_item,
             builder=_unavailable_workitem_diagnostics_surface,
         )
     if not wi_dir.is_dir():
