@@ -1,29 +1,31 @@
 # Continuity Handoff
 
-- Updated: 2026-08-26T02:10:51+00:00
-- Reason: 统一验证与 ROI 复核完成，准备交付审查。
-- Goal: 完成 WI219 exact-head 验证、只读 review 与主线 PR 闭环。
-- State: A0/A1/B 已提交；focused 172、full 3349 通过；Ruff/constraints/Truth/manifest/diff-check 全绿；ROI 裁决 retain。
+- Updated: 2026-08-26T02:33:52+00:00
+- Reason: exact-head review 的定向 RED/GREEN 与产品提交完成。
+- Goal: 重新验证和复审 WI219 review remediation exact HEAD。
+- State: 3 个 Important 已定向修复并提交为 33fd1e50；Lean helper 净删 16 行；尚未 push/PR。
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
 - Branch: feature/219-mainline-truth-roi-contract-docs
 
 ## Changed Files
-- M specs/219-mainline-truth-roi-contract/plan.md
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md
 - M specs/219-mainline-truth-roi-contract/task-execution-log.md
 - M specs/219-mainline-truth-roi-contract/tasks.md
 
 ## Key Decisions
-- 保留 75 行运行时修复、30 行双模板与 440 行独立风险证明；不为数字删除 Git/fail-closed/双入口证据，禁止继续扩面。
+- rename 用双向 changed_paths；非法/越界 linked path 双层 fail-closed；formal-only 文案独立于 log 缺失；无新治理层。
 
 ## Commands / Tests
-- focused 172 passed；full 3349 passed/3 skipped；Ruff PASS；constraints no BLOCKERs；Truth ready/fresh 1147/1147；manifest 1 passed。
+- truth 15 passed；linked consumers 55 passed；模板/init 51 passed；目标 Ruff 和 diff-check PASS。
 
 ## Blockers / Risks
-- 当前无 blocker；待 exact-head 只读 review、push/PR/Codex review 与 required checks。
+- 当前待重新执行 focused/full/constraints/Truth/manifest 和同 reviewer 复审；复审通过前不交付。
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 冻结当前 evidence HEAD，执行本地只读 review；无可操作问题后按 Local Repository PR Protocol 交付。
+- 提交整改证据，运行新 exact HEAD 全门禁，再请求 reviewer 复审 3 个 Important 与 Lean Minor。

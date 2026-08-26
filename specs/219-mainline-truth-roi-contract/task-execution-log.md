@@ -226,3 +226,49 @@
 - 冻结允许文件以外 0 项产品/测试修改；没有新增命令、依赖、writer、schema、status 格式、parser、constraint、
   Enum、持久化字段或治理生命周期。仅为追逐数字合并/删除 Git 拓扑、fail-closed 或双入口证明会降低回归
   防护，因此裁决为 `implement/retain`，并把测试规模作为后续变更不得继续扩面的风险基线。
+
+## Batch 2026-08-25-008 | T52 exact-head read-only review
+
+- 独立 reviewer 固定检查
+  `762527466119dde127d7488b73d5592e44afaaa6..d02dbcc3fc8dd966a1dc91debf4a8976e3f56c95`；
+  工作树 clean、远端 `main` 与冻结 base 仍为同一 SHA。
+- verdict=`With fixes`，Critical=0，Important=3：rename-aware `git diff --name-only` 只暴露 allowlist 目标；
+  未校验 linked ID 和 resolved containment 可读取仓库外目录；formal-only 在 execution log 已存在时仍声称其缺失。
+- Minor=1：两测试文件复制同一 26 行 ROI assertion helper。复核确认前三项均有当前代码或真实 Git probe
+  证据；进入 T53 定向整改，不 push、不创建 PR。
+- 冻结整改边界：复用既有 GitClient 双向 changed-path 读取，不修改 GitClient；在 canonical active ID 与三个
+  I/O 消费面 fail-closed，不修改 link writer/schema；修正文案不解析 execution log；Minor 只压缩重复断言，
+  不新增共享运行时或越界 test helper 文件。
+
+## Batch 2026-08-25-009 | T53 review remediation
+
+### Important 1：rename 来源路径
+
+- 真实 Git fixture 把 `src/feature.py` rename 到 allowlisted root manifest test；RED 为
+  `1 failed, 14 deselected`，当前分类错误为 `formal_freeze_only`。
+- GREEN 在 truth-check 内对既有 `GitClient.changed_paths(base,target)` 与反向结果去重并集；不修改 GitClient、
+  不解析 name-status、不写 ref。truth-check 全文件 `15 passed in 6.89s`，rename 的旧/新路径均进入 inventory，
+  分类为 `branch_only_implemented`。
+
+### Important 2：linked path fail-closed
+
+- RED 为 `3 failed, 3 passed`：POSIX traversal 未校验；readiness 对仓库外 symlink 抛 `ValueError`；execute
+  把外部目录误判为 ready。resume 的同类用例因既有 portable-path 防护已通过。
+- canonical `active_work_item_id` 现在拒绝 POSIX/Windows path segment 和 drive-relative 字符串；spec-dir helper
+  对非法非空 link 返回空，不回退历史 feature。resume/readiness/execute 在 linked 场景下还独立要求 resolved
+  path 同时位于仓库和仓库 `specs/` 下，防止 symlink escape。
+- 三组 consumer unit GREEN：`55 passed in 0.82s`；无 link writer/schema/status format 修改。
+
+### Important 3 与 Lean Minor
+
+- 已有 execution-log formal fixture 的文案断言先 RED；detail 改为“changed paths limited to formal controls”，
+  next action 只要求记录 implementation evidence，不再谎称 log 缺失。随 truth suite 一并 `15 passed`。
+- 两真实模板入口保留独立 semantic assertions，但把每份 26 行重复 helper 压缩为 13 行精确语义锚点；未新增
+  第三个 test helper 文件或运行时常量。模板/workitem-init 回归 `51 passed in 8.56s`，测试净删 16 行。
+
+### ROI / 提交
+
+- 本批运行时代码 51 additions / 21 deletions，净增 30；测试 110 additions / 35 deletions，净增 75。新增量
+  对应两个已复现的 truth/fail-closed Important 和一项错误提示修复，没有新命令、依赖、parser、schema、
+  state 或治理层；安全/兼容证明属于 ROI 合同允许超过一般支撑比例的必要例外。
+- 目标 Ruff 与 `git diff --check` PASS；独立提交：`33fd1e50 fix: close WI219 review gaps`。

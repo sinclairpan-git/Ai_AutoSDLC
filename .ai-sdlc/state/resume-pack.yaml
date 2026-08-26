@@ -11,14 +11,13 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 完成 WI219 exact-head 验证、只读 review 与主线 PR 闭环。 | State: A0/A1/B
-    已提交；focused 172、full 3349 通过；Ruff/constraints/Truth/manifest/diff-check 全绿；ROI
-    裁决 retain。 | Next: 冻结当前 evidence HEAD，执行本地只读 review；无可操作问题后按 Local Repository
-    PR Protocol 交付。'
+  context_summary: 'Goal: 重新验证和复审 WI219 review remediation exact HEAD。 | State: 3
+    个 Important 已定向修复并提交为 33fd1e50；Lean helper 净删 16 行；尚未 push/PR。 | Next: 提交整改证据，运行新
+    exact HEAD 全门禁，再请求 reviewer 复审 3 个 Important 与 Lean Minor。'
 current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-26T02:10:51+00:00'
+timestamp: '2026-08-26T02:33:52+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

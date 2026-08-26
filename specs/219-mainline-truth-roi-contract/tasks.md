@@ -149,6 +149,16 @@
   - .ai-sdlc/work-items/219-mainline-truth-roi-contract/
   - program-manifest.yaml
   - tests/integration/test_repo_program_manifest.py
+  - src/ai_sdlc/core/workitem_truth.py
+  - src/ai_sdlc/context/state.py
+  - src/ai_sdlc/telemetry/readiness.py
+  - src/ai_sdlc/core/execute_authorization.py
+  - tests/integration/test_cli_workitem_truth_check.py
+  - tests/unit/test_context_state.py
+  - tests/unit/test_telemetry_readiness.py
+  - tests/unit/test_execute_authorization.py
+  - tests/unit/test_doc_gen.py
+  - tests/unit/test_workitem_scaffold.py
 - acceptance:
   - focused/full pytest、Ruff、constraints、Program Truth、manifest 与 diff-check 全绿。
   - exact-head 只读 review 无可操作问题，required checks 通过后合并主线。
@@ -170,3 +180,8 @@
 - [ ] **T52 本地只读 review 与主线 PR 流程**
   - 依赖：T51
   - 验收：exact-head 本地 review 无可操作问题；随后 push/PR/Codex review/required checks 按仓库协议闭环。
+
+- [x] **T53 exact-head review 定向整改**
+  - 依赖：T51
+  - 验收：rename 来源路径进入 truth inventory；linked ID 和 resolved path 均 fail-closed；formal-only 文案不再
+    谎称 execution log 缺失；双模板语义测试的重复支撑显著下降。
