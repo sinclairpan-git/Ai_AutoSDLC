@@ -259,6 +259,7 @@ def _write_branch_lifecycle_fixture(
 ) -> None:
     _init_git_repo(root)
     init_project(root)
+    _commit_all(root, "chore: initialize branch lifecycle fixture")
     wi_dir = root / "specs" / wi_name
     wi_dir.mkdir(parents=True, exist_ok=True)
     (wi_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
@@ -280,6 +281,9 @@ def _write_branch_lifecycle_fixture(
         "- 当前批次 worktree disposition 状态：`待最终收口`\n",
         encoding="utf-8",
     )
+    implementation = root / "src" / "branch_lifecycle_fixture.py"
+    implementation.parent.mkdir(parents=True, exist_ok=True)
+    implementation.write_text("IMPLEMENTED = True\n", encoding="utf-8")
     save_checkpoint(
         root,
         Checkpoint(
@@ -2256,6 +2260,7 @@ def test_status_json_blocks_frontend_inheritance_drift_in_truth_ledger(
 ) -> None:
     _init_git_repo(tmp_path)
     init_project(tmp_path)
+    _commit_all(tmp_path, "chore: initialize inheritance fixture")
     _write_truth_ledger_fixture(tmp_path)
     _write_builtin_frontend_delivery_truth(tmp_path)
     materialize_frontend_generation_constraint_artifacts(

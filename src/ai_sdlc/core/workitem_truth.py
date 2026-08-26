@@ -111,6 +111,20 @@ def _is_formal_freeze_only_change_set(paths: tuple[str, ...], wi_rel: str) -> bo
     return bool(paths) and all(path in allowed for path in paths)
 
 
+def _history_contains_implementation(
+    git: GitClient,
+    *,
+    revision: str,
+    wi_rel: str,
+) -> bool:
+    execution_log_path = f"{wi_rel}/task-execution-log.md"
+    for commit in git.commits_touching_path(revision, execution_log_path):
+        commit_paths = git.changed_paths_for_commit(commit)
+        if commit_paths and not _is_formal_freeze_only_change_set(commit_paths, wi_rel):
+            return True
+    return False
+
+
 def _classify_paths(paths: tuple[str, ...]) -> tuple[list[str], list[str], list[str], list[str]]:
     code_paths: list[str] = []
     test_paths: list[str] = []
@@ -311,8 +325,16 @@ def run_truth_check(
         execution_log_path = f"{wi_rel}/task-execution-log.md"
         formal_freeze_only = _is_formal_freeze_only_change_set(changed_paths, wi_rel)
         execution_started = bool(
-            (formal_docs["execution_log"] and execution_log_path not in changed_paths)
-            or (changed_paths and not formal_freeze_only)
+            (changed_paths and not formal_freeze_only)
+            or (
+                formal_docs["execution_log"]
+                and execution_log_path not in changed_paths
+                and _history_contains_implementation(
+                    git,
+                    revision=requested_revision,
+                    wi_rel=wi_rel,
+                )
+            )
         )
         contained_in_main = git.is_ancestor(requested_revision, base_ref)
 

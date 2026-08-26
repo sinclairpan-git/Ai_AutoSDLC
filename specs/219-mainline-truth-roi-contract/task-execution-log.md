@@ -313,3 +313,20 @@
 - 新回归 `4 passed in 0.58s`；扩大 checkpoint/resume/status/handoff/execute/manifest 回归
   `123 passed in 158.43s`；exact-tree full `3357 passed, 3 skipped in 880.47s`；全库 Ruff PASS；
   constraints=`no BLOCKERs`。
+
+## Batch 2026-08-26-013 | PR #175 execution-history P2 remediation
+
+- Codex 在 `4876ffc171fe2435162865ad41b8cd207f3f2193` 发现新的 P2：mainline/base 已有 scaffold
+  `task-execution-log.md` 时，旧条件会以“日志存在且不在当前 diff”替代实施证据，把纯 formal revision 误判
+  `mainline_merged`，并令 close-stage linked binding 错误 terminal-inactive。
+- 两种真实 Git topology 先稳定 RED：已 merge 的纯 formal revision 与 base 已有日志、branch 只改 formal control
+  均返回 `execution_started=True`；合计 `2 failed`。
+- GREEN 新增两个窄的只读 Git 原语：沿 first-parent 枚举触及该 execution log 的提交，并读取单提交变更路径；
+  普通/merge commit 复用双向 parent diff，root commit 使用 `diff-tree --root`。只有同一证据提交包含非 formal
+  路径时才承认历史实施，不读取日志内容、不 fetch、不写 ref、不新增 parser/schema/state。
+- 首轮扩大回归暴露 2 个 status fixture 仍把“仅日志”当实施，已改为 baseline 后在证据提交携带真实实现路径；
+  随后的 full 暴露 root/fast-forward history 被跳过，补齐 root commit path inventory 后相关 `7 passed`。
+- truth/status/readiness/GitClient/ProgramService 扩大回归 `532 passed in 80.59s`；final exact-tree full
+  `3359 passed, 3 skipped in 861.35s`；全库 Ruff PASS；constraints=`no BLOCKERs`。
+- 本批运行时代码净增 40 行、测试净增 48 行；投入对应 mainline、base-branch、merge、root、fast-forward 五类
+  已复现 topology，未增加第二 truth classifier 或持久化面，ROI 裁决为保留。

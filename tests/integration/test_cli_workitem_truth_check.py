@@ -496,6 +496,49 @@ class TestCliWorkitemTruthCheck:
             "use this revision as mainline execution truth"
         ]
 
+    @pytest.mark.parametrize("topology", ["merged_mainline", "formal_branch"])
+    def test_truth_check_keeps_scaffolded_execution_log_formal_only(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        topology: str,
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo(root)
+        _commit_all(root, "init")
+        work_item_id = "219-mainline-truth-roi-contract"
+
+        if topology == "merged_mainline":
+            _commit_formal_branch(root, work_item_id)
+            subprocess.run(
+                ["git", "checkout", "main"], cwd=root, check=True, capture_output=True
+            )
+            subprocess.run(
+                ["git", "merge", "--no-ff", "feature/219-formal", "-m", "merge formal 219"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+        else:
+            _write_formal_control_change_set(root, work_item_id)
+            _commit_all(root, "formalize 219 on main")
+            subprocess.run(
+                ["git", "checkout", "-b", "feature/219-formal-update"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            spec_path = root / "specs" / work_item_id / "spec.md"
+            spec_path.write_text("# spec\nformal update\n", encoding="utf-8")
+            _commit_all(root, "update formal 219")
+
+        payload = _truth_payload(root, monkeypatch, work_item_id)
+
+        assert payload["formal_docs"]["execution_log"] is True
+        assert payload["execution_started"] is False
+        assert payload["classification"] == "formal_freeze_only"
+
     def test_truth_check_text_renders_next_actions(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:

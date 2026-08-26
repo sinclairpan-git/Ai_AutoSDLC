@@ -516,6 +516,24 @@ class GitClient:
         raw = self._run("diff", "--name-only", f"{base}..{target}")
         return tuple(path for path in raw.splitlines() if path.strip())
 
+    def commits_touching_path(self, revision: str, path: str) -> tuple[str, ...]:
+        """Return first-parent commits that changed ``path`` by newest first."""
+        raw = self._run("log", "--first-parent", "--format=%H", revision, "--", path)
+        return _dedupe_text_items(raw.splitlines())
+
+    def changed_paths_for_commit(self, commit: str) -> tuple[str, ...]:
+        """Return changed paths for one commit, including a repository root commit."""
+        try:
+            parent = self.resolve_revision(f"{commit}^1")
+        except GitError:
+            raw = self._run(
+                "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit
+            )
+            return _dedupe_text_items(raw.splitlines())
+        return _dedupe_text_items(
+            (*self.changed_paths(parent, commit), *self.changed_paths(commit, parent))
+        )
+
     def revision_divergence(
         self, revision: str, *, base: str | None = None
     ) -> BranchDivergence:
