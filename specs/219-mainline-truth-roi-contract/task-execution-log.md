@@ -201,3 +201,28 @@
   `git diff --check` 均 PASS。
 - 模板净增 30 行，测试净增 64 行；测试重复的是两条独立入口的同一 canonical semantic set，未增加运行时
   支撑层。B=`Go`；独立提交：`ffad821f docs: add lightweight ROI prompts to specs`。
+
+## Batch 2026-08-25-007 | T50 unified verification and ROI review
+
+### 当前 HEAD 新鲜验证
+
+- focused：`172 passed in 47.30s`；覆盖 truth-check、context、readiness、execute authorization、status、
+  direct-formal scaffold、stage/native render 与 workitem-init。
+- full：`3349 passed, 3 skipped in 744.89s`；exit code 0。
+- `uv run ruff check .`：`All checks passed`；`uv run ai-sdlc verify constraints`：`no BLOCKERs`；
+  `git diff --check 762527466119dde127d7488b73d5592e44afaaa6..HEAD`：PASS。
+- `uv run ai-sdlc program truth audit`：`ready/fresh`，`1147/1147` mapped、0 unmapped、1 missing；两个 release
+  target ready。`program truth sync` 默认 dry-run 计算 snapshot hash `03bbc350...`，未产生文件变更；
+  `tests/integration/test_repo_program_manifest.py` 为 `1 passed in 101.56s`，随后 audit 仍为 fresh。
+
+### ROI / 瘦身裁决
+
+- 相对批准计划提交 `e6567e63`，Track A 运行时代码净增 75 行：A0 truth baseline/classification 35 行，A1
+  linked-first binding 40 行；Track B 两模板净增 30 行。产品/模板合计净增 105 行，高于 40–80 初始
+  cost signal 25 行，但超出部分全部是两份用户可见模板提示，不是新的运行时支撑层。
+- 定向测试净增 440 行，高于 180–300 signal；构成是 4 类 Git 拓扑、ref 不变、4 类 formal allowlist 越界、
+  resume/readiness/backlog/execute 的 linked valid/missing/terminal 矩阵，以及 direct/stage 两条真实生成路径。
+  审计未发现 mock-only 结论、第二 resolver 或可删除而不损失独立风险证明的重复矩阵。
+- 冻结允许文件以外 0 项产品/测试修改；没有新增命令、依赖、writer、schema、status 格式、parser、constraint、
+  Enum、持久化字段或治理生命周期。仅为追逐数字合并/删除 Git 拓扑、fail-closed 或双入口证明会降低回归
+  防护，因此裁决为 `implement/retain`，并把测试规模作为后续变更不得继续扩面的风险基线。

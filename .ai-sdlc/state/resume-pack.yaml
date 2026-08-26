@@ -11,13 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 实施 WI219；A0/A1/B 已完成，进入统一验证与主线交付。 | State: B 提交为 ffad821f；两条真实生成路径均含轻量
-    ROI 合同，workitem guard 应绑定 T50V。 | Next: 执行 T50V focused/full verification，随后同步
-    Program Truth 与 manifest。'
+  context_summary: 'Goal: 完成 WI219 exact-head 验证、只读 review 与主线 PR 闭环。 | State: A0/A1/B
+    已提交；focused 172、full 3349 通过；Ruff/constraints/Truth/manifest/diff-check 全绿；ROI
+    裁决 retain。 | Next: 冻结当前 evidence HEAD，执行本地只读 review；无可操作问题后按 Local Repository
+    PR Protocol 交付。'
 current_branch: feature/219-mainline-truth-roi-contract-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-26T01:45:17+00:00'
+timestamp: '2026-08-26T02:10:51+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

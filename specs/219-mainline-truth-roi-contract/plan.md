@@ -202,7 +202,7 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
 
 ### Task 4：统一验证、证据刷新与交付
 
-- [ ] **Step 1：运行 focused 与 full verification**
+- [x] **Step 1：运行 focused 与 full verification**
 
   ```powershell
   uv run pytest tests/integration/test_cli_workitem_truth_check.py tests/unit/test_context_state.py tests/unit/test_telemetry_readiness.py tests/unit/test_execute_authorization.py tests/integration/test_cli_status.py tests/unit/test_workitem_scaffold.py tests/unit/test_doc_gen.py tests/integration/test_cli_workitem_init.py -q
@@ -213,12 +213,12 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
   git diff --check 762527466119dde127d7488b73d5592e44afaaa6..HEAD
   ```
 
-- [ ] **Step 2：核对 ROI 与冻结边界**
+- [x] **Step 2：核对 ROI 与冻结边界**
 
   记录产品/测试净新增、修改文件、调用方覆盖和任何例外；数字超预期只触发证据复核，不自动删测试或停工。
   若修改了冻结范围外文件或引入新 public/persistent/runtime surface，则回退对应 batch 并 No-Go。
 
-- [ ] **Step 3：刷新 task log、Program Truth 与 continuity**
+- [x] **Step 3：刷新 task log、Program Truth 与 continuity**
 
   通过 `uv run ai-sdlc handoff update` 记录准确命令、结果、风险和下一步；同步 manifest 后重跑 root manifest test。
 

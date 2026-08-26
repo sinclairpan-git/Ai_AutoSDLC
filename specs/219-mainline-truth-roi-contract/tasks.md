@@ -158,12 +158,12 @@
   - uv run ai-sdlc verify constraints
   - uv run ai-sdlc program truth audit
 
-- [ ] **T50 focused/full verification 与 ROI 复核**
+- [x] **T50 focused/full verification 与 ROI 复核**
   - 依赖：T42
   - 验收：focused/full pytest、Ruff、constraints、Program Truth audit、diff-check 全绿；记录产品/测试净新增与
     冻结范围差异。
 
-- [ ] **T51 continuity 与 Program Truth 收口**
+- [x] **T51 continuity 与 Program Truth 收口**
   - 依赖：T50
   - 验收：task log、plan/tasks、manifest、root tuple 与 canonical/scoped handoff 准确；工作树干净。
 
