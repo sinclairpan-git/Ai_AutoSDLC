@@ -383,3 +383,23 @@
   0 unmapped、两个 release target ready；root manifest test=`1 passed in 114.16s`。
 - 本批运行时代码 22 additions / 1 deletion，净增 21；测试净增 13。投入只覆盖一个已复现且会错误保持已实施
   WI active 的 P2，并用“相邻日志区间”限制误归因半径；不把一次边界修复扩成通用历史推断引擎，ROI 裁决为保留。
+
+## Batch 2026-08-26-017 | PR #175 work-item-specific evidence and continuity remediation
+
+- Codex 在 `4b3e77eb4de66d73c79d910facc7db61d87f77c8` 提出 2 个 P2：相邻日志更新之间的无关产品提交会被
+  错归因给当前 WI；已提交 remediation 的 handoff 仍要求下一会话重复 audit/commit/push。
+- 新增“formal log → 无关产品提交 → 已填写但未记录该路径的 log”真实 topology，旧实现稳定 RED：
+  `1 failed, 20 deselected`。与分离实现 topology 的唯一差异是日志是否明确记录 `product-config.yaml`。
+- GREEN 新增一个 4 行 path-evidence predicate：相邻日志区间只有非 formal path 被较新日志明确提及时才承认
+  work-item-specific implementation evidence；仍要求共享 evidence marker。没有 commit-message 推断、全历史扫描、
+  路径白名单、新 Git API、parser/schema/state 或持久化面。
+- 首次把该路径要求错误扩到 root legacy 语义时，扩大回归稳定暴露 5 个 Program Truth 失败；没有改旧断言，
+  而是把约束收窄回新增的“分离提交区间”。5 个回归点加 6 topology=`11 passed`；扩大回归
+  `641 passed in 93.26s`；final exact-tree full `3363 passed, 3 skipped in 810.42s`；全库 Ruff PASS；
+  constraints=`no BLOCKERs`。
+- Program Truth execute 写入 snapshot `053c9228...`；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 133.97s`。
+- handoff 的 next step 改为监控 PR 最新 head 的 Codex review/required checks，并在全绿后完成治理收口与合并；
+  不再把已经提交的 remediation 作为恢复动作。
+- 相对上一候选，本批运行时代码 8 additions / 3 deletions，净增 5；测试 15 additions / 4 deletions，净增 11。
+  一项 predicate 同时区分真实分离实现与无关主线噪声，且显式保留 legacy root 行为，ROI 裁决为保留。

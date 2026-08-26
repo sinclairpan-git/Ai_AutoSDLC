@@ -502,6 +502,7 @@ class TestCliWorkitemTruthCheck:
             ("merged_mainline", "formal_freeze_only"),
             ("formal_branch", "formal_freeze_only"),
             ("separate_implementation_and_log", "mainline_merged"),
+            ("unrelated_between_log_updates", "formal_freeze_only"),
             ("root_bootstrap", "formal_freeze_only"),
             ("root_arbitrary_implementation", "mainline_merged"),
         ],
@@ -543,15 +544,24 @@ class TestCliWorkitemTruthCheck:
             spec_path = root / "specs" / work_item_id / "spec.md"
             spec_path.write_text("# spec\nformal update\n", encoding="utf-8")
             _commit_all(root, "update formal 219")
-        elif topology == "separate_implementation_and_log":
+        elif topology in {
+            "separate_implementation_and_log",
+            "unrelated_between_log_updates",
+        }:
             _write_formal_control_change_set(root, work_item_id)
             _commit_all(root, "formalize 219 on main")
             (root / "product-config.yaml").write_text(
                 "feature_enabled: true\n", encoding="utf-8"
             )
-            _commit_all(root, "implement 219 separately")
+            _commit_all(root, f"land {topology} change")
+            recorded_path = (
+                "改动范围：product-config.yaml\n"
+                if topology == "separate_implementation_and_log"
+                else ""
+            )
             (root / "specs" / work_item_id / "task-execution-log.md").write_text(
-                "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+                "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+                + recorded_path,
                 encoding="utf-8",
             )
             _commit_all(root, "record 219 execution evidence")
@@ -566,7 +576,8 @@ class TestCliWorkitemTruthCheck:
                     "feature_enabled: true\n", encoding="utf-8"
                 )
                 (root / "specs" / work_item_id / "task-execution-log.md").write_text(
-                    "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+                    "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
+                    "改动范围：product-config.yaml\n",
                     encoding="utf-8",
                 )
             _commit_all(root, f"seed {topology} 219")

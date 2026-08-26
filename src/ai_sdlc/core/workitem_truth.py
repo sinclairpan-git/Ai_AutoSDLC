@@ -112,6 +112,13 @@ def _is_formal_freeze_only_change_set(paths: tuple[str, ...], wi_rel: str) -> bo
     return bool(paths) and all(path in allowed for path in paths)
 
 
+def _has_recorded_path_evidence(
+    paths: tuple[str, ...], wi_rel: str, log_text: str
+) -> bool:
+    allowed = _formal_control_paths(wi_rel)
+    return any(path not in allowed and path in log_text for path in paths)
+
+
 def _root_commit_has_implementation(
     git: GitClient,
     *,
@@ -164,9 +171,7 @@ def _history_contains_implementation(
                 *git.changed_paths(latest_log_commit, previous_log_commit),
             )
         )
-        if history_paths and not _is_formal_freeze_only_change_set(
-            tuple(history_paths), wi_rel
-        ):
+        if _has_recorded_path_evidence(tuple(history_paths), wi_rel, log_text):
             return True
     return False
 
