@@ -330,3 +330,18 @@
   `3359 passed, 3 skipped in 861.35s`；全库 Ruff PASS；constraints=`no BLOCKERs`。
 - 本批运行时代码净增 40 行、测试净增 48 行；投入对应 mainline、base-branch、merge、root、fast-forward 五类
   已复现 topology，未增加第二 truth classifier 或持久化面，ROI 裁决为保留。
+
+## Batch 2026-08-26-014 | PR #175 root-bootstrap P2 remediation
+
+- Codex 在 `1da23c513eb30344d43605ab74cb808a0244fec1` 发现 root-commit P2：scaffold work item
+  若与 `README.md`、`pyproject.toml` 等普通 bootstrap 文件同处初始提交，root inventory 会把这些无关文件
+  当成实施路径，再次误判 `mainline_merged`。
+- 新增 root-bootstrap 真实 Git topology 后稳定 RED：`1 failed`，`execution_started=True`。
+- root commit 现只接受明确实现载体前缀 `src/tests/governance/providers/kernel/scripts/templates`，并排除 formal
+  allowlist；普通/merge commit 仍沿用既有非 formal 规则。GitClient 只增加 first-parent 查询，root diff 仍为只读；
+  不解析日志、不增加持久化或第二 classifier。
+- root formal/bootstrap、root implementation、merge、fast-forward 关键矩阵 `8 passed`；ProgramService/truth/status
+  扩大回归 `533 passed in 73.66s`；final exact-tree full `3360 passed, 3 skipped in 728.74s`；全库 Ruff PASS；
+  constraints=`no BLOCKERs`。
+- 本批运行时代码净增 28 行、测试净增 12 行；以一个强证据 predicate 关闭误报，不扩展到文件内容、commit
+  message 或语言后缀启发式，ROI 裁决为保留。

@@ -496,7 +496,9 @@ class TestCliWorkitemTruthCheck:
             "use this revision as mainline execution truth"
         ]
 
-    @pytest.mark.parametrize("topology", ["merged_mainline", "formal_branch"])
+    @pytest.mark.parametrize(
+        "topology", ["merged_mainline", "formal_branch", "root_bootstrap"]
+    )
     def test_truth_check_keeps_scaffolded_execution_log_formal_only(
         self,
         tmp_path: Path,
@@ -506,8 +508,9 @@ class TestCliWorkitemTruthCheck:
         root = tmp_path / "repo"
         root.mkdir()
         _init_repo(root)
-        _commit_all(root, "init")
         work_item_id = "219-mainline-truth-roi-contract"
+        if topology != "root_bootstrap":
+            _commit_all(root, "init")
 
         if topology == "merged_mainline":
             _commit_formal_branch(root, work_item_id)
@@ -520,7 +523,7 @@ class TestCliWorkitemTruthCheck:
                 check=True,
                 capture_output=True,
             )
-        else:
+        elif topology == "formal_branch":
             _write_formal_control_change_set(root, work_item_id)
             _commit_all(root, "formalize 219 on main")
             subprocess.run(
@@ -532,6 +535,12 @@ class TestCliWorkitemTruthCheck:
             spec_path = root / "specs" / work_item_id / "spec.md"
             spec_path.write_text("# spec\nformal update\n", encoding="utf-8")
             _commit_all(root, "update formal 219")
+        else:
+            _write_formal_control_change_set(root, work_item_id)
+            (root / "pyproject.toml").write_text(
+                "[project]\nname = 'bootstrap'\n", encoding="utf-8"
+            )
+            _commit_all(root, "bootstrap repository with formal 219")
 
         payload = _truth_payload(root, monkeypatch, work_item_id)
 

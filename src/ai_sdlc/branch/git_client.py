@@ -521,11 +521,17 @@ class GitClient:
         raw = self._run("log", "--first-parent", "--format=%H", revision, "--", path)
         return _dedupe_text_items(raw.splitlines())
 
+    def first_parent(self, commit: str) -> str | None:
+        """Return a commit's first parent, or ``None`` for a root commit."""
+        try:
+            return self.resolve_revision(f"{commit}^1")
+        except GitError:
+            return None
+
     def changed_paths_for_commit(self, commit: str) -> tuple[str, ...]:
         """Return changed paths for one commit, including a repository root commit."""
-        try:
-            parent = self.resolve_revision(f"{commit}^1")
-        except GitError:
+        parent = self.first_parent(commit)
+        if parent is None:
             raw = self._run(
                 "diff-tree", "--root", "--no-commit-id", "--name-only", "-r", commit
             )

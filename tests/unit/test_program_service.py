@@ -3990,6 +3990,9 @@ specs:
 """,
     )
     _write_151_truth_checkpoint(tmp_path)
+    implementation = tmp_path / "src" / "provider_expansion.py"
+    implementation.parent.mkdir(parents=True)
+    implementation.write_text("IMPLEMENTED = True\n", encoding="utf-8")
     _commit_truth_repo(tmp_path, "seed 151 truth ledger guidance fixture")
 
     svc = ProgramService(tmp_path)

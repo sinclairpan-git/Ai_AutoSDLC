@@ -11,6 +11,16 @@ from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root
 
+_ROOT_IMPLEMENTATION_PREFIXES = (
+    "src/",
+    "tests/",
+    "governance/",
+    "providers/",
+    "kernel/",
+    "scripts/",
+    "templates/",
+)
+
 
 @dataclass
 class WorkitemTruthResult:
@@ -111,6 +121,14 @@ def _is_formal_freeze_only_change_set(paths: tuple[str, ...], wi_rel: str) -> bo
     return bool(paths) and all(path in allowed for path in paths)
 
 
+def _root_commit_has_implementation(paths: tuple[str, ...], wi_rel: str) -> bool:
+    allowed = _formal_control_paths(wi_rel)
+    return any(
+        path not in allowed and path.startswith(_ROOT_IMPLEMENTATION_PREFIXES)
+        for path in paths
+    )
+
+
 def _history_contains_implementation(
     git: GitClient,
     *,
@@ -120,6 +138,10 @@ def _history_contains_implementation(
     execution_log_path = f"{wi_rel}/task-execution-log.md"
     for commit in git.commits_touching_path(revision, execution_log_path):
         commit_paths = git.changed_paths_for_commit(commit)
+        if git.first_parent(commit) is None and not _root_commit_has_implementation(
+            commit_paths, wi_rel
+        ):
+            continue
         if commit_paths and not _is_formal_freeze_only_change_set(commit_paths, wi_rel):
             return True
     return False
