@@ -287,3 +287,15 @@
   `55 passed in 38.20s`；目标 Ruff 与 diff-check PASS。
 - 本批运行时代码净增 10 行，测试净增 25 行；不增加新 resolver、状态或格式字段。独立提交：
   `2b23c8c1 fix: preserve legacy resume paths`。下一步为新 exact HEAD focused/full 与最终复审。
+
+## Batch 2026-08-25-011 | final exact-head verification
+
+- 候选产品/测试/证据 HEAD=`a121b672a3cbbbe672dbcab05301100a65fa58c8`；GitHub
+  `refs/heads/main` 仍为冻结 base `762527466119dde127d7488b73d5592e44afaaa6`，工作树 clean。
+- focused：`176 passed in 49.79s`；full：`3353 passed, 3 skipped in 830.41s`；均 exit 0。
+- `uv run ruff check .`：PASS；`uv run ai-sdlc verify constraints`：`no BLOCKERs`；full-range
+  `git diff --check`：PASS。
+- `uv run ai-sdlc program truth audit`：`ready/fresh`，`1147/1147` mapped、0 unmapped、1 missing，两个 release
+  target ready；root manifest：`1 passed in 122.06s`。
+- 以上为 second-review regression 后的新鲜证据；无需再重复 full verification，除非后续改动产品/测试内容或
+  required check 报告新的可复现失败。下一步仅为 exact-head 最终 reviewer 与仓库 PR 协议。

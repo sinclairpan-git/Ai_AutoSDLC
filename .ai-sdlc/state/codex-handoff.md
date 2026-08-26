@@ -1,28 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-08-26T03:17:26+00:00
-- Reason: 第二轮 review regression 已定向 RED/GREEN 并提交。
-- Goal: 完成 WI219 新 exact HEAD 全量验证、最终复审和 PR 闭环。
-- State: 复审新 Important 已修复并提交 2b23c8c1；unit/status 各 55 通过；尚未 push/PR。
+- Updated: 2026-08-26T03:37:58+00:00
+- Reason: 最终候选全部本地门禁完成，刷新可恢复证据。
+- Goal: 完成 WI219 exact-head 最终复审与主线 PR 闭环。
+- State: second-review regression 已修复；final focused 176、full 3353/3 skipped、Ruff/constraints/Truth/manifest/diff-check 全绿；远端 main 未漂移。
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
 - Branch: feature/219-mainline-truth-roi-contract-docs
 
 ## Changed Files
 - M specs/219-mainline-truth-roi-contract/task-execution-log.md
-- M specs/219-mainline-truth-roi-contract/tasks.md
 
 ## Key Decisions
-- containment 仅约束 linked target，no-link 非标准 spec-dir 保持兼容；unavailable status 保留 linked 身份和准确原因。
+- 产品/测试候选冻结；除 required check 或 reviewer 给出可复现 blocker，不再修改实现。
 
 ## Commands / Tests
-- 定向 3 passed；consumer unit 55 passed；status CLI 55 passed；Ruff/diff-check PASS。
+- focused 176 passed；full 3353 passed/3 skipped；Ruff PASS；constraints no BLOCKERs；Truth ready/fresh 1147/1147；manifest 1 passed。
 
 ## Blockers / Risks
-- 待新 exact HEAD focused/full、Truth sync/audit、manifest 与最终 reviewer APPROVE。
+- 当前仅待 exact-head reviewer APPROVE、push/PR/Codex review 和 required checks。
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交本批证据，运行 focused/full 与全部非测试门禁，刷新 Truth/continuity 后最终复审。
+- 提交 final verification continuity，完成 exact-head 只读复审；APPROVE 后 push 并按 heartbeat 协议闭环。
