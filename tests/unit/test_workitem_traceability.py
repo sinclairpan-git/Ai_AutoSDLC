@@ -12,6 +12,7 @@ from ai_sdlc.core.workitem_traceability import (
     WorkItemBranchLifecycleResult,
     _explicit_contract_lines,
     analyze_work_item_branch_lifecycle,
+    execution_log_has_recorded_evidence,
 )
 
 
@@ -88,6 +89,21 @@ def test_completion_truth_result_canonicalizes_runtime_batch_lists() -> None:
 
     assert result.planned_batches == [1, 2]
     assert result.executed_batches == [2, 3]
+
+
+def test_execution_log_evidence_ignores_placeholders_before_latest_batch() -> None:
+    log_text = """### Batch YYYY-MM-DD-X | T0XX
+统一验证命令：待补充
+代码审查：待补充
+任务/计划同步状态：待补充
+
+### Batch 2026-08-26-001 | T11
+统一验证命令：passed
+代码审查：passed
+任务/计划同步状态：done
+"""
+
+    assert execution_log_has_recorded_evidence(log_text) is True
 
 
 def test_completion_truth_to_json_dict_deduplicates_batch_lists() -> None:

@@ -23,7 +23,9 @@ FEATURE_WI = "204-historical"
 LINKED_WI = "219-active"
 
 
-def _save_linked_checkpoint(root: Path, *, stage: str = "verify") -> None:
+def _save_linked_checkpoint(
+    root: Path, *, stage: str = "verify", checkpoint_branch: str | None = None
+) -> None:
     for work_item_id in (FEATURE_WI, LINKED_WI):
         spec_dir = root / "specs" / work_item_id
         spec_dir.mkdir(parents=True, exist_ok=True)
@@ -37,7 +39,7 @@ def _save_linked_checkpoint(root: Path, *, stage: str = "verify") -> None:
                 spec_dir=f"specs/{FEATURE_WI}",
                 design_branch=f"design/{FEATURE_WI}",
                 feature_branch=f"feature/{FEATURE_WI}",
-                current_branch=f"feature/{FEATURE_WI}",
+                current_branch=checkpoint_branch or f"feature/{FEATURE_WI}",
             ),
             linked_wi_id=LINKED_WI,
         ),
@@ -266,6 +268,22 @@ def test_checkpoint_binding_uses_linked_truth_for_main_close_terminal_state(
         assert _load_checkpoint_feature_binding(tmp_path) == expected_binding
 
     assert inspected_paths == [(tmp_path / "specs" / LINKED_WI).resolve()]
+
+
+def test_linked_main_close_truth_precedes_historical_main_branch_match(
+    tmp_path: Path,
+) -> None:
+    _save_linked_checkpoint(tmp_path, stage="close", checkpoint_branch="main")
+    merged_truth = type(
+        "TruthResult", (), {"error": None, "classification": "mainline_merged"}
+    )()
+
+    with patch(
+        "ai_sdlc.telemetry.readiness.GitClient.current_branch", return_value="main"
+    ), patch(
+        "ai_sdlc.telemetry.readiness.run_truth_check", return_value=merged_truth
+    ):
+        assert _load_checkpoint_feature_binding(tmp_path) == (None, None)
 
 
 def test_backlog_breach_guard_scans_linked_work_item_instead_of_historical_feature(

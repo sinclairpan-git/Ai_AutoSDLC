@@ -403,3 +403,21 @@
   不再把已经提交的 remediation 作为恢复动作。
 - 相对上一候选，本批运行时代码 8 additions / 3 deletions，净增 5；测试 15 additions / 4 deletions，净增 11。
   一项 predicate 同时区分真实分离实现与无关主线噪声，且显式保留 legacy root 行为，ROI 裁决为保留。
+
+## Batch 2026-08-26-018 | PR #175 latest-batch and linked-main-close remediation
+
+- Codex 在 `4c400cd97a365092cea17649cba21ade3d1e643a` 提出 2 个 P2：append-only execution log 前部保留
+  scaffold placeholder 时，文件级 token 判断会永久拒绝后续已完成 batch；linked checkpoint 的历史
+  `feature.current_branch=main` 会让分支相等快捷返回绕过 close-stage terminal truth。
+- 两个最小回归稳定 RED：scaffold batch 后追加完整 batch 仍返回无 evidence；linked/main/close +
+  `mainline_merged` 仍返回 active binding；合计 `2 failed`。
+- GREEN 直接复用 `workitem_traceability` 已有 `_latest_batch_text()`，evidence marker/scaffold token 只在最新 batch
+  内判断；readiness 的 branch-equality shortcut 仅在无 linked WI 时返回，linked main-close 继续进入既有 truth-check。
+  未新增 parser、Git 调用、状态/schema、持久化或公共 API。
+- 定向 `2 passed`；truth/status/readiness/execute/GitClient/close/ProgramService 扩大回归
+  `643 passed in 101.22s`；final exact-tree full `3365 passed, 3 skipped in 824.93s`；全库 Ruff PASS；
+  constraints=`no BLOCKERs`。
+- Program Truth execute 写入 snapshot `1ed4fadf...`；独立 audit=`ready/fresh`、`1147/1147` mapped、
+  0 unmapped、两个 release target ready；root manifest test=`1 passed in 134.40s`。
+- 本批运行时代码 6 additions / 3 deletions，净增 3；测试 36 additions / 2 deletions，净增 34。两个 P2 各由
+  一个现有语义的顺序/作用域修正关闭，没有引入新抽象，ROI 裁决为保留。

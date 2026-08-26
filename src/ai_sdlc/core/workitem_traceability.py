@@ -249,8 +249,9 @@ def extract_execution_batches(log_text: str) -> list[int]:
 
 def execution_log_has_recorded_evidence(log_text: str) -> bool:
     """判断执行日志已记录证据，而不是未填写的 scaffold。"""
-    return all(marker in log_text for marker in EXECUTION_LOG_EVIDENCE_MARKERS) and not any(
-        token in log_text for token in EXECUTION_LOG_SCAFFOLD_TOKENS
+    batch_text = _latest_batch_text(log_text)
+    return all(marker in batch_text for marker in EXECUTION_LOG_EVIDENCE_MARKERS) and not any(
+        token in batch_text for token in EXECUTION_LOG_SCAFFOLD_TOKENS
     )
 
 

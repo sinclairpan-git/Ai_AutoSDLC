@@ -244,7 +244,9 @@ def _checkpoint_feature_binding_is_active(
     )
     if not current_branch:
         return True
-    if current_branch == checkpoint_branch:
+    if current_branch == checkpoint_branch and not (
+        checkpoint.linked_wi_id or ""
+    ).strip():
         return True
     if current_branch not in {"main", "master"}:
         return True
