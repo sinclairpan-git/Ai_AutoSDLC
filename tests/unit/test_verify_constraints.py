@@ -2473,7 +2473,7 @@ def test_release_docs_consistency_passes_when_release_entry_docs_align(
         "recover --reconcile\n"
         "ai-sdlc run --dry-run reported repo-state reconciliation diagnostics; treating this as smoke pass.\n"
         "expected upgraded ai-sdlc version 0.9.8\n"
-        "$upgradedVersion -notmatch \"0\\.9\\.7\"\n",
+        "$upgradedVersion -notmatch \"0\\.9\\.8\"\n",
         encoding="utf-8",
     )
 
@@ -2490,8 +2490,8 @@ def test_release_docs_consistency_blocks_stale_windows_upgrade_smoke_version(
     workflows_dir = tmp_path / ".github" / "workflows"
     workflows_dir.mkdir(parents=True, exist_ok=True)
     (workflows_dir / "windows-offline-smoke.yml").write_text(
-        "expected upgraded ai-sdlc version 0.8.1\n"
-        "$upgradedVersion -notmatch \"0\\.8\\.1\"\n",
+        "expected upgraded ai-sdlc version 0.9.8\n"
+        "$upgradedVersion -notmatch \"0\\.9\\.7\"\n",
         encoding="utf-8",
     )
 

@@ -79,6 +79,8 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert "ai-sdlc --help" in workflow
     assert "Legacy Artifact Probe" in workflow
     assert "recover --reconcile" in workflow
+    assert '$upgradedVersion -notmatch "0\\.9\\.8"' in workflow
+    assert '$upgradedVersion -notmatch "0\\.9\\.7"' not in workflow
 
 
 def test_posix_offline_smoke_workflow_covers_macos_linux_bundle_install_and_cli_checks() -> None:

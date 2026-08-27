@@ -344,7 +344,7 @@ RELEASE_DOCS_CONSISTENCY_SURFACES: dict[Path, tuple[str, ...]] = {
     RELEASE_ARTIFACT_SMOKE_WORKFLOW_REL: ("default: v0.9.8",),
     WINDOWS_OFFLINE_SMOKE_WORKFLOW_REL: (
         "expected upgraded ai-sdlc version 0.9.8",
-        r"0\.9\.7",
+        r"0\.9\.8",
     ),
 }
 BEGINNER_GUIDE_REQUIRED_TOKENS = (
