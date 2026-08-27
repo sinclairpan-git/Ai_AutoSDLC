@@ -12,13 +12,14 @@ working_set_snapshot:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
   context_summary: 'Goal: 记录 WI219 合并后 Lean 决策并维持发布闸门 | State: WI219 精确合并树 origin/main@cf67d395f8adf34808609b26df28540772f51838
-    的 truth-check 可复现返回 formal_freeze_only、execution_started=false；因此主线真值仍不可信，发布判定为
-    No-Go。 | Next: 等待用户对 C1 bounded correction 明确授权；获授权后先复现 v0.9.7..cf67d395 主线回归并冻结最小归因规则，再实施单一修正轮并重新验证；在此之前保持
-    No-Go。'
+    的 truth-check 可复现返回 formal_freeze_only、execution_started=false；主线真值仍不可信，发布判定为
+    No-Go。 | Next: 请用户明确回答是否授权上述精确定义的 C1（主线 squash truth attribution correction、先
+    amend formal docs、再 RED exact truth-check/real-Git topology、限定文件边界与验收条件）；未授权前保持
+    Release No-Go，排除 C2 与 v0.9.8。'
 current_branch: codex/wi219-post-merge-closeout
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-27T06:22:22+00:00'
+timestamp: '2026-08-27T07:09:59+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1
