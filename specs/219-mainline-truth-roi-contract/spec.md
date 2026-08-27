@@ -258,3 +258,50 @@ readiness/status、execute authorization、resume 和 handoff 都选择 WI219，
 | 回退 | 原子 revert 模板与真值更新；不影响历史 specs |
 
 本项的成功不是新增一套 ROI 系统，而是以最小增量让正常开发在编码前回答正确的问题。
+
+## 9. C1 修订：主线 squash 后的显式真值归因（2026-08-27）
+
+### 9.1 问题与授权
+
+WI219 经 GitHub squash 合并为 `cf67d395f8adf34808609b26df28540772f51838` 后，
+`workitem truth-check --wi specs/219-mainline-truth-roi-contract --rev origin/main --json` 在
+`origin/main@bcbc54e9c49f72aca073663619ce0011176c6482` 仍返回 `formal_freeze_only`、
+`execution_started=false`，同时 `contained_in_main=true`。Git 已正确保留 squash 提交的 29 个路径；漏判发生在
+历史归因只接受最新 canonical execution-log 证据，而 WI219 原日志使用章节式叙事，未提供现有
+`统一验证命令` / `代码审查` / `任务/计划同步状态` / `改动范围` 合同。
+
+用户于 2026-08-27 批准 C1，只允许修正该归因缺口；C2 active-WI path validation centralization 与
+v0.9.8 发布均不属于本批实现。
+
+### 9.2 最小行为合同
+
+- C1 必须通过新的 canonical execution-log 批次显式记录实施路径；不得把旧章节式叙事、普通正文或 commit
+  message 推断为实施证据。
+- 当 requested revision 已被 main 包含且顶层 diff 为空时，历史恢复可以把**最新 canonical 批次明确记录的
+  非 formal 路径**与**当前 WI 首次进入历史之后、截至 requested revision 的真实 Git changed paths**匹配。
+- 历史下界必须是最早 WI commit 的 first parent；WI 建立前的路径、未记录路径、记录但不存在的路径、只含
+  formal controls 的路径均不得令 `execution_started=true`。
+- 成功结果必须为 `classification=mainline_merged`、`execution_started=true`、
+  `contained_in_main=true`，且不得再输出 `start execute work`。
+- 不新增 command、schema、state、ledger、parser subsystem、持久化面或公共 API；不修改 GitClient、
+  `workitem_traceability.py`、context/readiness、Runner、ProgramService 或发布面。
+
+### 9.3 精确范围与验收
+
+允许修改：
+
+- 本 WI 的 `spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`；
+- `src/ai_sdlc/core/workitem_truth.py`；
+- `tests/integration/test_cli_workitem_truth_check.py`；
+- AGENTS.md 要求的 canonical/scoped continuity 文件。
+
+真实 Git topology 必须先 RED 后 GREEN，至少覆盖：
+
+1. 旧 narrative WI 与实现被 squash 到 main，随后由 canonical 批次明确纠正原实施路径，结果为
+   `mainline_merged`；
+2. 同样拓扑但路径发生于 WI 建立前，保持 `formal_freeze_only`；
+3. canonical 批次未记录路径或记录不存在路径，保持 `formal_freeze_only`；
+4. 现有 separate/suffix/root/unrelated/Unicode/path-collision topology 不改变结论。
+
+投入上限为一个工作日、一个实现 PR、最多两轮 review。若实现需要超出上述文件、增加第二 classifier 或放宽
+到普通正文扫描，C1 立即 No-Go；通过后才允许进入 v0.9.8 发布。

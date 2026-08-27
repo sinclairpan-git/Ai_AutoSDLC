@@ -1,27 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-08-27T07:09:59+00:00
-- Reason: 最终 records-only 修正轮：补齐 C1/C2 的可执行定义、文件边界、验收与精确用户授权入口
-- Goal: 记录 WI219 合并后 Lean 决策并维持发布闸门
-- State: WI219 精确合并树 origin/main@cf67d395f8adf34808609b26df28540772f51838 的 truth-check 可复现返回 formal_freeze_only、execution_started=false；主线真值仍不可信，发布判定为 No-Go。
+- Updated: 2026-08-27T11:04:35+00:00
+- Reason: PR #177 P2 最终本地验证收口
+- Goal: 完成 PR #177 C1 并验证合并后 origin/main truth
+- State: Codex P2 已以同批次取证一致性整改；RED/GREEN、38 truth、580 扩大回归、3386 full、Ruff、constraints 全绿；Batch 033 已记录，待推送重审
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
-- Branch: codex/wi219-post-merge-closeout
+- Branch: codex/wi219-squash-truth-attribution
 
 ## Changed Files
-- none
+- M specs/219-mainline-truth-roi-contract/task-execution-log.md
 
 ## Key Decisions
-- C1 = 主线 squash truth attribution correction：仍等待用户批准。获批后先 amend WI219 formal docs，再 RED exact truth-check --rev origin/main 与 real-Git topology；候选边界为 formal spec.md/plan.md/tasks.md/task-execution-log.md，runtime 仅 workitem_truth.py/workitem_traceability.py/git_client.py（须由 formal amendment 明确正当化），tests 仅 test_cli_workitem_truth_check.py/test_workitem_traceability.py。验收：merged revision=mainline_merged、execution_started=true、无 start execute；unrelated/pre-WI/no-recorded-path 仍 non-implemented；focused/full suites green；无新 command/schema/state/ledger/parser subsystem；one PR、最多两轮 review、一个工作日后 No-Go。C2 = context/readiness active-WI path validation centralization，明确 defer，不纳入 C1 文件或实现。不得进入 v0.9.8，不得创建 WI220。
+- 冻结 241c5bf8 运行时；只在同一 PR 做 Codex 重审与 CI，不进入新设计/C2/v0.9.8
 
 ## Commands / Tests
-- 后续串行验证：focused tests、verify constraints、exact truth reproduction、canonical/scoped handoff byte-identical、diff check、clean status。
+- P2 RED 3 failed；GREEN 3 passed；truth 38 passed；expanded 580 passed；full 3386 passed/3 skipped；Ruff PASS；constraints clean
 
 ## Blockers / Risks
-- P0 主线合并拓扑仍被误分类；P1 已跨越冻结 GitClient/Markdown 解析边界。当前唯一恢复入口是用户明确授权上述精确定义的 C1；C2 保持 defer。
+- Codex 重审、required checks 或合并后 origin/main truth 任一失败则 C1 不完成；若需扩大设计面则 No-Go
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 请用户明确回答是否授权上述精确定义的 C1（主线 squash truth attribution correction、先 amend formal docs、再 RED exact truth-check/real-Git topology、限定文件边界与验收条件）；未授权前保持 Release No-Go，排除 C2 与 v0.9.8。
+- 提交 Batch 033，push PR #177，回复 inline comment，请求 Codex 重审并 heartbeat 到合并

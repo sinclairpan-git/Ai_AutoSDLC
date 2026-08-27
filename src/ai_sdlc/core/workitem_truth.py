@@ -10,7 +10,10 @@ from pathlib import Path
 from typing import Any
 
 from ai_sdlc.branch.git_client import GitClient, GitError
-from ai_sdlc.core.workitem_traceability import execution_log_has_recorded_evidence
+from ai_sdlc.core.workitem_traceability import (
+    _latest_batch_text,
+    execution_log_has_recorded_evidence,
+)
 from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root
 
@@ -171,7 +174,9 @@ def _root_commit_has_implementation(
     if not any(path not in allowed for path in paths):
         return False
     try:
-        log_text = git.read_file_at_revision(commit, f"{wi_rel}/task-execution-log.md")
+        log_text = _latest_batch_text(
+            git.read_file_at_revision(commit, f"{wi_rel}/task-execution-log.md")
+        )
     except GitError:
         return False
     return execution_log_has_recorded_evidence(
@@ -199,7 +204,9 @@ def _history_contains_implementation(
                 return True
             continue
         try:
-            log_text = git.read_file_at_revision(commit, execution_log_path)
+            log_text = _latest_batch_text(
+                git.read_file_at_revision(commit, execution_log_path)
+            )
         except GitError:
             continue
         if execution_log_has_recorded_evidence(
@@ -210,7 +217,9 @@ def _history_contains_implementation(
     if log_commits:
         newest_log_commit = log_commits[0]
         try:
-            log_text = git.read_file_at_revision(newest_log_commit, execution_log_path)
+            log_text = _latest_batch_text(
+                git.read_file_at_revision(newest_log_commit, execution_log_path)
+            )
         except GitError:
             pass
         else:
@@ -231,7 +240,9 @@ def _history_contains_implementation(
         log_commits, log_commits[1:], strict=False
     ):
         try:
-            log_text = git.read_file_at_revision(latest_log_commit, execution_log_path)
+            log_text = _latest_batch_text(
+                git.read_file_at_revision(latest_log_commit, execution_log_path)
+            )
         except GitError:
             continue
         if not execution_log_has_recorded_evidence(log_text):
@@ -249,10 +260,11 @@ def _history_contains_implementation(
         return False
     oldest_log_commit = log_commits[-1]
     try:
-        log_text = git.read_file_at_revision(oldest_log_commit, execution_log_path)
+        log_text = git.read_file_at_revision(log_commits[0], execution_log_path)
     except GitError:
         return False
-    if not execution_log_has_recorded_evidence(log_text):
+    latest_batch_text = _latest_batch_text(log_text)
+    if not execution_log_has_recorded_evidence(latest_batch_text):
         return False
     work_item_commits = git.commits_touching_path(oldest_log_commit, wi_rel)
     if not work_item_commits:
@@ -263,17 +275,18 @@ def _history_contains_implementation(
     if initial_parent is None:
         history_paths = git.changed_paths_for_commit(initial_work_item_commit)
     history_base = initial_parent or initial_work_item_commit
-    if history_base != oldest_log_commit:
+    # 后补 canonical 批次可以显式纠正 squash 中的 WI 路径；下界仍排除 WI 建立前的历史。
+    if history_base != revision:
         history_paths = tuple(
             _dedupe_text_items(
                 (
                     *history_paths,
-                    *git.changed_paths(history_base, oldest_log_commit),
-                    *git.changed_paths(oldest_log_commit, history_base),
+                    *git.changed_paths(history_base, revision),
+                    *git.changed_paths(revision, history_base),
                 )
             )
         )
-    return _has_recorded_path_evidence(history_paths, wi_rel, log_text)
+    return _has_recorded_path_evidence(history_paths, wi_rel, latest_batch_text)
 
 
 def _classify_paths(paths: tuple[str, ...]) -> tuple[list[str], list[str], list[str], list[str]]:

@@ -607,3 +607,104 @@
   `149 passed in 60.22s`；final exact-tree full `3378 passed, 3 skipped in 840.78s`；全库 Ruff PASS。
 - 相对上一候选，本批运行时代码 24 additions / 17 deletions，净增 7；测试 1 addition / 1 deletion，
   复用既有 topology。兼容仓库正式日志格式且未形成 parser 子系统，ROI 裁决为保留。
+
+### Batch 2026-08-27-030 | T60 C1 formal amendment and root-cause freeze
+
+- 改动范围：
+  - `specs/219-mainline-truth-roi-contract/spec.md`
+  - `specs/219-mainline-truth-roi-contract/plan.md`
+  - `specs/219-mainline-truth-roi-contract/tasks.md`
+  - `specs/219-mainline-truth-roi-contract/task-execution-log.md`
+- 统一验证命令：`uv run pytest -q` 在 `origin/main@bcbc54e9` 基线得到
+  `3378 passed, 3 skipped in 1096.91s`；精确 truth-check 仍返回
+  `formal_freeze_only / execution_started=false / contained_in_main=true`。
+- 代码审查：尚未进入产品实现；根因追踪确认 GitClient 正确返回 PR #175 squash commit 与 29 个路径，失败点为
+  最新 canonical evidence/path 与 WI-anchored history 未配对。
+- 任务/计划同步状态：T60 完成；T61–T63 未开始；用户于 2026-08-27 批准 C1；C2 与 v0.9.8 排除。
+- 裁决：不扫描旧 narrative 正文，不读取 commit message；只允许最新 canonical 批次明确记录的路径匹配 WI
+  首次进入历史之后的真实 Git path。若需要修改 GitClient、`workitem_traceability.py` 或新增 parser/state，C1
+  No-Go。
+
+### Batch 2026-08-27-031 | T61-T62 C1 RED and minimal GREEN
+
+- 验证画像：`code-change`。
+- 改动范围：
+  - `src/ai_sdlc/core/workitem_truth.py`
+  - `tests/integration/test_cli_workitem_truth_check.py`
+- 统一验证命令：相同 argv
+  `uv run pytest tests/integration/test_cli_workitem_truth_check.py -q -k binds_latest_canonical_correction_to_squashed_wi_history`
+  先得到 `1 failed, 3 passed, 30 deselected in 4.16s`，最小 GREEN 后得到
+  `4 passed, 30 deselected in 4.17s`；truth/GitClient/traceability focused suite 得到 `89 passed in 21.88s`；
+  扩大回归得到 `661 passed in 120.48s`；目标/全库 Ruff PASS；constraints 无 blocker/advisory。隔离 clone 从
+  `origin/main@bcbc54e9` squash 当前候选并同时前移 clone 内 `main/origin/main` 后，source CLI 返回
+  `mainline_merged / execution_started=true / contained_in_main=true / changed_paths=[]`。
+- 代码审查：生产改动仅 5 行既有流程差异，无新函数/API/parser；独立 review 尚待 T63。
+- 任务/计划同步状态：T61、T62 完成，T63 pending；C2 与 v0.9.8 仍排除。
+- 裁决：保留真实 Git 四 topology 测试。正例证明 later canonical correction 可绑定 WI 后 squash path；pre-WI、
+  missing-path、unrecorded 三个反例保持 fail-closed。若扩大回归改变旧 topology，则回退本批而不修改断言。
+
+### Batch 2026-08-27-032 | T63 independent review remediation and pre-merge freeze
+
+- **验证画像**：`code-change`
+- **改动范围**：
+  - `src/ai_sdlc/core/workitem_truth.py`
+  - `tests/integration/test_cli_workitem_truth_check.py`
+  - `specs/219-mainline-truth-roi-contract/spec.md`
+  - `specs/219-mainline-truth-roi-contract/plan.md`
+  - `specs/219-mainline-truth-roi-contract/tasks.md`
+  - `specs/219-mainline-truth-roi-contract/task-execution-log.md`
+  - `.ai-sdlc/state/codex-handoff.md`
+  - `.ai-sdlc/state/resume-pack.yaml`
+  - `.ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md`
+- **统一验证命令**：首轮评审新增 older-recorded-path topology 后，相同定向 argv 先得到
+  `1 failed, 4 passed, 30 deselected`，最小整改后得到 `5 passed, 30 deselected`；完整 truth 文件
+  `35 passed`；truth/status/execute/GitClient/close/ProgramService 扩大回归 `577 passed`；最终
+  `uv run pytest -q` 得到 `3383 passed, 3 skipped in 863.97s`；`uv run ruff check .`、
+  `uv run ai-sdlc verify constraints --json` 与 `git diff --check origin/main...HEAD` 均通过，constraints 为
+  0 blocker / 0 advisory。预合并 `workitem close-check --json` 的 execution-log fields、review gate、verification
+  profile、completion truth、Program Truth 与 docs consistency 均通过；仅 T63 未勾选、记录尚未提交和
+  `merge-pending` 三项未闭合，后二者中的提交状态将在本批提交后消除，T63/分支处置必须等待真实合并。
+- **代码审查**：第一轮独立 review 提出 1 个 Important：最新批次负责 execution marker，但历史 fallback 的 path
+  evidence 仍扫描整份 append-only log。整改复用既有 `_latest_batch_text()`，令 marker/path 同域；同一 reviewer
+  第二轮结论为 `Approve / no actionable Critical or Important`，仅提示刷新 handoff 下一步文字。
+- **任务/计划同步状态**：T61/T62 完成；T63 的本地验证与独立两轮 review 完成，PR/Codex review/required
+  checks/合并后 `origin/main` truth 仍 pending；C2 与 v0.9.8 继续排除本批。
+- **已完成 git 提交**：是（运行时与测试候选已提交）
+- **提交哈希**：`bf825971e916c948b369232e913c6e04857fd631`
+- 关联 branch/worktree disposition 计划：`merge-pending`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`retained(C1 PR review and merge verification)`
+- **ROI 裁决**：相对 `origin/main@bcbc54e9`，产品代码 12 additions / 7 deletions，净增 5；测试 89 additions。
+  该投入关闭一个已复现主线漏判与一个评审复现的跨批次误归因，未新增公共面、状态或 parser，批准保留。若 PR gate
+  发现仍需越界设计或第三轮本地对抗整改，则 C1 No-Go，不继续膨胀。
+
+### Batch 2026-08-27-033 | PR #177 same-batch evidence completion
+
+- **验证画像**：`code-change`
+- **改动范围**：
+  - `src/ai_sdlc/core/workitem_truth.py`
+  - `tests/integration/test_cli_workitem_truth_check.py`
+  - `specs/219-mainline-truth-roi-contract/task-execution-log.md`
+  - `.ai-sdlc/state/codex-handoff.md`
+  - `.ai-sdlc/state/resume-pack.yaml`
+  - `.ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md`
+- **统一验证命令**：Codex P2 的同提交、两日志间、root 三个提前返回 topology 先得到
+  `3 failed, 35 deselected`，将既有 latest-batch 切片前移到全部既有 evidence/path 取证点后得到
+  `3 passed, 35 deselected`；完整 truth 文件 `38 passed`；truth/status/execute/GitClient/close/ProgramService
+  扩大回归 `580 passed`；最终 `uv run pytest -q` 得到 `3386 passed, 3 skipped in 861.93s`；
+  `uv run ruff check .`、`uv run ai-sdlc verify constraints --json` 与
+  `git diff --check origin/main...HEAD` 均通过，constraints 为 0 blocker / 0 advisory。
+- **代码审查**：PR #177 Codex 在 `ea2de1260a442e095092675218776ad9c67047a6` 提出 1 个 P2：最终 fallback
+  虽已绑定最新批次，但同提交、两日志间与 root 分支仍可在提前返回时复用旧批次路径。三个真实 Git 反例分别复现后，
+  整改只复用 `_latest_batch_text()`，未引入第三轮本地对抗设计、helper、公共面或状态；原 inline thread 与 Codex
+  重审待 push 后闭环。
+- **任务/计划同步状态**：T61/T62 保持完成；T63 的第二次本地验证完成，等待 PR #177 新 head 的 Codex review、
+  required checks、合并与 `origin/main` truth；C2 与 v0.9.8 继续排除。
+- **已完成 git 提交**：是（P2 运行时与测试整改已提交）
+- **提交哈希**：`241c5bf8537772a6c64d6f43e75dcef3ba1f1dd0`
+- 关联 branch/worktree disposition 计划：`merge-pending`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`retained(PR #177 Codex re-review and merge verification)`
+- **ROI 裁决**：相对 `origin/main@bcbc54e9`，产品代码 24 additions / 11 deletions，净增 13；测试 117 additions。
+  新增 8 行产品净量统一了同一不变量在既有返回点的作用域，3 个测试分别锁定可复现提前返回；仍未越过冻结边界，
+  批准保留。若 Codex 重审再发现需要扩大设计面的同类问题，则 C1 No-Go，不继续追加实现。

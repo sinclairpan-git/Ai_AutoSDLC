@@ -226,3 +226,35 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
 
   冻结 exact HEAD/diff，执行本地独立只读 review；无可操作问题后 push、开 PR、请求 Codex review，并按仓库
   Local Repository PR Protocol 持续监控 required checks，直到合并或出现用户输入 blocker。
+
+### Task 5：C1 主线 squash truth attribution correction
+
+**状态**：用户已于 2026-08-27 批准；C2 与 v0.9.8 排除。
+
+**接口**：只调整 `workitem_truth.py` 内既有私有历史归因流程，不新增 GitClient 方法、parser、公共 API 或状态。
+
+- [x] **Step 1：修订 formal contract 并记录根因**
+
+  固定 `origin/main@bcbc54e9` 的失败输出、PR #175 squash path inventory、最新日志 evidence/path 判定与
+  一天/一 PR/两轮 review 的停止条件。
+
+- [x] **Step 2：写真实 squash + later correction RED**
+
+  在 `tests/integration/test_cli_workitem_truth_check.py` 使用真实临时 Git 仓库构造 narrative WI/实施 squash 到
+  main，随后追加 canonical correction log。正例记录 WI 后真实路径；反例覆盖 pre-WI、缺失 recorded path 和
+  missing path；首轮评审再补“旧日志段有路径、最新 correction 无路径”的污染反例。以同一 pytest argv 证明旧实现
+  对应失败，整改后五个 topology 全绿。
+
+- [x] **Step 3：实现最小 WI-anchored GREEN**
+
+  在 `_history_contains_implementation()` 复用现有 log commits、first parent、双向 changed paths、
+  `execution_log_has_recorded_evidence()` 与 `_has_recorded_path_evidence()`：让最新 canonical log 对从最早 WI
+  anchor first parent 到 requested revision 的路径作一次精确匹配；execution marker 与 path evidence 必须绑定
+  既有 `_latest_batch_text()` 返回的同一最新批次。不得读取普通正文或 commit message，不得修改 GitClient /
+  `workitem_traceability.py` 实现。
+
+- [ ] **Step 4：回归、ROI、评审与主线闭环**
+
+  运行 focused/full pytest、Ruff、constraints、exact truth reproduction 与 diff-check；运行时代码若越过单一私有
+  流程或负控制变化则 No-Go。验证通过后独立 review、push/PR、Codex review、required checks、合并与
+  `origin/main` truth-check；成功后立即转入 v0.9.8，不追加 C2。

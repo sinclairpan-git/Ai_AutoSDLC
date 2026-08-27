@@ -11,15 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 记录 WI219 合并后 Lean 决策并维持发布闸门 | State: WI219 精确合并树 origin/main@cf67d395f8adf34808609b26df28540772f51838
-    的 truth-check 可复现返回 formal_freeze_only、execution_started=false；主线真值仍不可信，发布判定为
-    No-Go。 | Next: 请用户明确回答是否授权上述精确定义的 C1（主线 squash truth attribution correction、先
-    amend formal docs、再 RED exact truth-check/real-Git topology、限定文件边界与验收条件）；未授权前保持
-    Release No-Go，排除 C2 与 v0.9.8。'
-current_branch: codex/wi219-post-merge-closeout
+  context_summary: 'Goal: 完成 PR #177 C1 并验证合并后 origin/main truth | State: Codex P2
+    已以同批次取证一致性整改；RED/GREEN、38 truth、580 扩大回归、3386 full、Ruff、constraints 全绿；Batch 033
+    已记录，待推送重审 | Next: 提交 Batch 033，push PR #177，回复 inline comment，请求 Codex 重审并 heartbeat
+    到合并'
+current_branch: codex/wi219-squash-truth-attribution
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-27T07:09:59+00:00'
+timestamp: '2026-08-27T11:04:35+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

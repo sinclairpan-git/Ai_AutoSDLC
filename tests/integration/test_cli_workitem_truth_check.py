@@ -507,6 +507,112 @@ class TestCliWorkitemTruthCheck:
         ]
 
     @pytest.mark.parametrize(
+        ("topology", "recorded_path", "expected_classification"),
+        [
+            ("implemented_after_wi", "product-config.yaml", "mainline_merged"),
+            ("implemented_before_wi", "product-config.yaml", "formal_freeze_only"),
+            ("missing_recorded_path", "src/missing.py", "formal_freeze_only"),
+            ("unrecorded_path", "", "formal_freeze_only"),
+            ("older_recorded_path", "", "formal_freeze_only"),
+            ("latest_correction_changes_older_path", "", "formal_freeze_only"),
+            ("between_logs_changes_older_path", "", "formal_freeze_only"),
+        ],
+    )
+    def test_truth_check_binds_latest_canonical_correction_to_squashed_wi_history(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        topology: str,
+        recorded_path: str,
+        expected_classification: str,
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo(root)
+        _commit_all(root, "init")
+        if topology == "implemented_before_wi":
+            (root / "product-config.yaml").write_text(
+                "feature_enabled: true\n", encoding="utf-8"
+            )
+            _commit_all(root, "land implementation before work item")
+
+        work_item_id = "219-mainline-truth-roi-contract"
+        subprocess.run(
+            ["git", "checkout", "-b", "feature/219-squashed-history"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        _write_formal_control_change_set(root, work_item_id)
+        execution_log = root / "specs" / work_item_id / "task-execution-log.md"
+        historical_scope = (
+            "\n改动范围：product-config.yaml\n"
+            if topology
+            in {
+                "older_recorded_path",
+                "latest_correction_changes_older_path",
+                "between_logs_changes_older_path",
+            }
+            else ""
+        )
+        execution_log.write_text(
+            "# Log\n\n## Narrative batch\n\nImplemented product configuration.\n"
+            + historical_scope,
+            encoding="utf-8",
+        )
+        if topology != "implemented_before_wi":
+            (root / "product-config.yaml").write_text(
+                "feature_enabled: true\n", encoding="utf-8"
+            )
+        _commit_all(root, "implement 219 with narrative evidence")
+
+        subprocess.run(["git", "checkout", "main"], cwd=root, check=True, capture_output=True)
+        subprocess.run(
+            ["git", "merge", "--squash", "feature/219-squashed-history"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        _commit_all(root, "squash 219")
+
+        if topology == "between_logs_changes_older_path":
+            (root / "product-config.yaml").write_text(
+                "feature_enabled: changed between logs\n", encoding="utf-8"
+            )
+            _commit_all(root, "change product between execution logs")
+
+        recorded_scope = f"改动范围：{recorded_path}\n" if recorded_path else ""
+        execution_log.write_text(
+            execution_log.read_text(encoding="utf-8")
+            + "\n### Batch 2026-08-27-001 | correction\n\n"
+            + "统一验证命令\n代码审查\n任务/计划同步状态\n"
+            + recorded_scope,
+            encoding="utf-8",
+        )
+        if topology == "latest_correction_changes_older_path":
+            (root / "product-config.yaml").write_text(
+                "feature_enabled: changed with correction\n", encoding="utf-8"
+            )
+        _commit_all(root, "record canonical correction")
+
+        payload = _truth_payload(root, monkeypatch, work_item_id)
+
+        assert payload["execution_started"] is (
+            expected_classification == "mainline_merged"
+        )
+        assert payload["classification"] == expected_classification
+        assert payload["contained_in_main"] is True
+        assert payload["changed_paths"] == []
+        if expected_classification == "mainline_merged":
+            assert payload["next_required_actions"] == [
+                "use this revision as mainline execution truth"
+            ]
+        else:
+            assert payload["next_required_actions"] == [
+                "start execute work on the work item branch and record implementation evidence"
+            ]
+
+    @pytest.mark.parametrize(
         ("topology", "expected_classification"),
         [
             ("merged_mainline", "formal_freeze_only"),
@@ -523,6 +629,7 @@ class TestCliWorkitemTruthCheck:
             ("nonroot_arbitrary_implementation", "mainline_merged"),
             ("root_bootstrap", "formal_freeze_only"),
             ("root_recorded_missing_path", "formal_freeze_only"),
+            ("root_older_recorded_path", "formal_freeze_only"),
             ("root_arbitrary_implementation", "mainline_merged"),
         ],
     )
@@ -662,6 +769,16 @@ class TestCliWorkitemTruthCheck:
                 (root / "specs" / work_item_id / "task-execution-log.md").write_text(
                     "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
                     "改动范围：src/missing.py\n",
+                    encoding="utf-8",
+                )
+            elif topology == "root_older_recorded_path":
+                (root / "product-config.yaml").write_text(
+                    "feature_enabled: true\n", encoding="utf-8"
+                )
+                (root / "specs" / work_item_id / "task-execution-log.md").write_text(
+                    "# Log\n\n## Older batch\n\n改动范围：product-config.yaml\n\n"
+                    "### Batch 2026-08-27-001 | correction\n\n"
+                    "统一验证命令\n代码审查\n任务/计划同步状态\n",
                     encoding="utf-8",
                 )
             else:
