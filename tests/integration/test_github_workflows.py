@@ -79,6 +79,8 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert "ai-sdlc --help" in workflow
     assert "Legacy Artifact Probe" in workflow
     assert "recover --reconcile" in workflow
+    assert '$upgradedVersion -notmatch "0\\.9\\.8"' in workflow
+    assert '$upgradedVersion -notmatch "0\\.9\\.7"' not in workflow
 
 
 def test_posix_offline_smoke_workflow_covers_macos_linux_bundle_install_and_cli_checks() -> None:
@@ -138,7 +140,7 @@ def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "release:" in workflow
-    assert "default: v0.9.7" in workflow
+    assert "default: v0.9.8" in workflow
     assert "gh release download" in workflow
     assert "windows-latest" in workflow
     assert "macos-latest" in workflow
@@ -174,7 +176,7 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     workflow = workflow_path.read_text(encoding="utf-8")
 
     assert "workflow_dispatch:" in workflow
-    assert "default: v0.9.7" in workflow
+    assert "default: v0.9.8" in workflow
     assert "windows-latest" in workflow
     assert "macos-latest" in workflow
     assert "ubuntu-latest" in workflow
@@ -213,15 +215,15 @@ def test_windows_user_guide_e2e_replays_existing_project_install_path() -> None:
     assert "workflow_dispatch:" in workflow
     assert "pull_request:" in workflow
     assert "windows-latest" in workflow
-    assert "default: v0.9.7" in workflow
+    assert "default: v0.9.8" in workflow
     assert "Build Windows offline bundle for pull request replay" in workflow
     assert "build_offline_bundle.sh" in workflow
     assert 'AI_SDLC_OFFLINE_ASSET_SUFFIX="-windows-amd64"' in workflow
     assert "pull_request_local_bundle" in workflow
     assert "USER_GUIDE.zh-CN.md Chapter 2, Scenario B" in workflow
     assert "my-existing-project" in workflow
-    assert "ai-sdlc-offline-0.9.7-windows-amd64" in workflow
-    assert "releases/download/v0.9.7" in workflow
+    assert "ai-sdlc-offline-0.9.8-windows-amd64" in workflow
+    assert "releases/download/v0.9.8" in workflow
     assert "Invoke-WebRequest" in workflow
     assert "Expand-Archive" in workflow
     assert "-ExecutionPolicy Bypass -File .\\install_offline.ps1 -AddToPath" in workflow
