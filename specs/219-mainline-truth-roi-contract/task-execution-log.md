@@ -642,3 +642,38 @@
 - 任务/计划同步状态：T61、T62 完成，T63 pending；C2 与 v0.9.8 仍排除。
 - 裁决：保留真实 Git 四 topology 测试。正例证明 later canonical correction 可绑定 WI 后 squash path；pre-WI、
   missing-path、unrecorded 三个反例保持 fail-closed。若扩大回归改变旧 topology，则回退本批而不修改断言。
+
+### Batch 2026-08-27-032 | T63 independent review remediation and pre-merge freeze
+
+- **验证画像**：`code-change`
+- **改动范围**：
+  - `src/ai_sdlc/core/workitem_truth.py`
+  - `tests/integration/test_cli_workitem_truth_check.py`
+  - `specs/219-mainline-truth-roi-contract/spec.md`
+  - `specs/219-mainline-truth-roi-contract/plan.md`
+  - `specs/219-mainline-truth-roi-contract/tasks.md`
+  - `specs/219-mainline-truth-roi-contract/task-execution-log.md`
+  - `.ai-sdlc/state/codex-handoff.md`
+  - `.ai-sdlc/state/resume-pack.yaml`
+  - `.ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md`
+- **统一验证命令**：首轮评审新增 older-recorded-path topology 后，相同定向 argv 先得到
+  `1 failed, 4 passed, 30 deselected`，最小整改后得到 `5 passed, 30 deselected`；完整 truth 文件
+  `35 passed`；truth/status/execute/GitClient/close/ProgramService 扩大回归 `577 passed`；最终
+  `uv run pytest -q` 得到 `3383 passed, 3 skipped in 863.97s`；`uv run ruff check .`、
+  `uv run ai-sdlc verify constraints --json` 与 `git diff --check origin/main...HEAD` 均通过，constraints 为
+  0 blocker / 0 advisory。预合并 `workitem close-check --json` 的 execution-log fields、review gate、verification
+  profile、completion truth、Program Truth 与 docs consistency 均通过；仅 T63 未勾选、记录尚未提交和
+  `merge-pending` 三项未闭合，后二者中的提交状态将在本批提交后消除，T63/分支处置必须等待真实合并。
+- **代码审查**：第一轮独立 review 提出 1 个 Important：最新批次负责 execution marker，但历史 fallback 的 path
+  evidence 仍扫描整份 append-only log。整改复用既有 `_latest_batch_text()`，令 marker/path 同域；同一 reviewer
+  第二轮结论为 `Approve / no actionable Critical or Important`，仅提示刷新 handoff 下一步文字。
+- **任务/计划同步状态**：T61/T62 完成；T63 的本地验证与独立两轮 review 完成，PR/Codex review/required
+  checks/合并后 `origin/main` truth 仍 pending；C2 与 v0.9.8 继续排除本批。
+- **已完成 git 提交**：是（运行时与测试候选已提交）
+- **提交哈希**：`bf825971e916c948b369232e913c6e04857fd631`
+- 关联 branch/worktree disposition 计划：`merge-pending`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`retained(C1 PR review and merge verification)`
+- **ROI 裁决**：相对 `origin/main@bcbc54e9`，产品代码 12 additions / 7 deletions，净增 5；测试 89 additions。
+  该投入关闭一个已复现主线漏判与一个评审复现的跨批次误归因，未新增公共面、状态或 parser，批准保留。若 PR gate
+  发现仍需越界设计或第三轮本地对抗整改，则 C1 No-Go，不继续膨胀。

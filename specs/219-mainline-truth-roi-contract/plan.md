@@ -242,14 +242,16 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
 
   在 `tests/integration/test_cli_workitem_truth_check.py` 使用真实临时 Git 仓库构造 narrative WI/实施 squash 到
   main，随后追加 canonical correction log。正例记录 WI 后真实路径；反例覆盖 pre-WI、缺失 recorded path 和
-  missing path。以同一 pytest argv 证明旧实现仅正例失败。
+  missing path；首轮评审再补“旧日志段有路径、最新 correction 无路径”的污染反例。以同一 pytest argv 证明旧实现
+  对应失败，整改后五个 topology 全绿。
 
 - [x] **Step 3：实现最小 WI-anchored GREEN**
 
   在 `_history_contains_implementation()` 复用现有 log commits、first parent、双向 changed paths、
   `execution_log_has_recorded_evidence()` 与 `_has_recorded_path_evidence()`：让最新 canonical log 对从最早 WI
-  anchor first parent 到 requested revision 的路径作一次精确匹配。不得读取普通正文或 commit message，不得修改
-  GitClient / `workitem_traceability.py`。
+  anchor first parent 到 requested revision 的路径作一次精确匹配；execution marker 与 path evidence 必须绑定
+  既有 `_latest_batch_text()` 返回的同一最新批次。不得读取普通正文或 commit message，不得修改 GitClient /
+  `workitem_traceability.py` 实现。
 
 - [ ] **Step 4：回归、ROI、评审与主线闭环**
 

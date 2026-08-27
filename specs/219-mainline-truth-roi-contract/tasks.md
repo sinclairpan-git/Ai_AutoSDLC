@@ -202,13 +202,14 @@
 - [x] **T61 真实 squash + later correction RED**
   - 依赖：T60
   - 范围：`tests/integration/test_cli_workitem_truth_check.py`。
-  - 验收：正例因当前历史窗口仍使用旧 narrative log 而失败；pre-WI、unrecorded、missing-path 三个反例继续通过。
+  - 验收：正例因当前历史窗口仍使用旧 narrative log 而失败；pre-WI、unrecorded、missing-path 三个反例继续通过；
+    首轮评审新增的 older-recorded-path 污染反例在整改前稳定失败、整改后通过。
 
 - [x] **T62 最小 WI-anchored history GREEN**
   - 依赖：T61
   - 范围：`src/ai_sdlc/core/workitem_truth.py`。
-  - 验收：只复用既有 Git/path/evidence primitive；正例为 `mainline_merged`，全部负控制不变；不修改 GitClient、
-    `workitem_traceability.py` 或其他 runtime。
+  - 验收：只复用既有 Git/path/evidence primitive，最新批次同时约束 marker/path；正例为 `mainline_merged`，全部
+    负控制不变；不修改 GitClient、`workitem_traceability.py` 实现或其他 runtime。
 
 - [ ] **T63 C1 验证、评审与主线交付**
   - 依赖：T62
