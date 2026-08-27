@@ -11,15 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 完成 WI219 PR #175 exact-head 复审并合并远端主线。 | State: Batch 029
-    final exact-tree 全部门禁通过：truth 15/15、expanded 149/149、full 3378/3 skipped、Truth
-    ready/fresh 1147/1147、root manifest 1/1、Ruff PASS、constraints no BLOCKERs；运行时代码净增
-    7 行。 | Next: 监控 PR #175 最终 exact-head Codex review/required checks；无 actionable
-    finding 且全绿后合并并验证 origin/main。'
-current_branch: feature/219-mainline-truth-roi-contract-docs
+  context_summary: 'Goal: 记录 WI219 合并后 Lean 决策并维持发布闸门 | State: WI219 精确合并树 origin/main@cf67d395f8adf34808609b26df28540772f51838
+    的 truth-check 可复现返回 formal_freeze_only、execution_started=false；因此主线真值仍不可信，发布判定为
+    No-Go。 | Next: 等待用户对 C1 bounded correction 明确授权；获授权后先复现 v0.9.7..cf67d395 主线回归并冻结最小归因规则，再实施单一修正轮并重新验证；在此之前保持
+    No-Go。'
+current_branch: codex/wi219-post-merge-closeout
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-26T17:44:12+00:00'
+timestamp: '2026-08-27T06:22:22+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1
