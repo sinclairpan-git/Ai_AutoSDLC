@@ -607,3 +607,20 @@
   `149 passed in 60.22s`；final exact-tree full `3378 passed, 3 skipped in 840.78s`；全库 Ruff PASS。
 - 相对上一候选，本批运行时代码 24 additions / 17 deletions，净增 7；测试 1 addition / 1 deletion，
   复用既有 topology。兼容仓库正式日志格式且未形成 parser 子系统，ROI 裁决为保留。
+
+### Batch 2026-08-27-030 | T60 C1 formal amendment and root-cause freeze
+
+- 改动范围：
+  - `specs/219-mainline-truth-roi-contract/spec.md`
+  - `specs/219-mainline-truth-roi-contract/plan.md`
+  - `specs/219-mainline-truth-roi-contract/tasks.md`
+  - `specs/219-mainline-truth-roi-contract/task-execution-log.md`
+- 统一验证命令：`uv run pytest -q` 在 `origin/main@bcbc54e9` 基线得到
+  `3378 passed, 3 skipped in 1096.91s`；精确 truth-check 仍返回
+  `formal_freeze_only / execution_started=false / contained_in_main=true`。
+- 代码审查：尚未进入产品实现；根因追踪确认 GitClient 正确返回 PR #175 squash commit 与 29 个路径，失败点为
+  最新 canonical evidence/path 与 WI-anchored history 未配对。
+- 任务/计划同步状态：T60 完成；T61–T63 未开始；用户于 2026-08-27 批准 C1；C2 与 v0.9.8 排除。
+- 裁决：不扫描旧 narrative 正文，不读取 commit message；只允许最新 canonical 批次明确记录的路径匹配 WI
+  首次进入历史之后的真实 Git path。若需要修改 GitClient、`workitem_traceability.py` 或新增 parser/state，C1
+  No-Go。
