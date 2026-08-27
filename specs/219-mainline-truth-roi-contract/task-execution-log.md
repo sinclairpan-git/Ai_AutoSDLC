@@ -677,3 +677,34 @@
 - **ROI 裁决**：相对 `origin/main@bcbc54e9`，产品代码 12 additions / 7 deletions，净增 5；测试 89 additions。
   该投入关闭一个已复现主线漏判与一个评审复现的跨批次误归因，未新增公共面、状态或 parser，批准保留。若 PR gate
   发现仍需越界设计或第三轮本地对抗整改，则 C1 No-Go，不继续膨胀。
+
+### Batch 2026-08-27-033 | PR #177 same-batch evidence completion
+
+- **验证画像**：`code-change`
+- **改动范围**：
+  - `src/ai_sdlc/core/workitem_truth.py`
+  - `tests/integration/test_cli_workitem_truth_check.py`
+  - `specs/219-mainline-truth-roi-contract/task-execution-log.md`
+  - `.ai-sdlc/state/codex-handoff.md`
+  - `.ai-sdlc/state/resume-pack.yaml`
+  - `.ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md`
+- **统一验证命令**：Codex P2 的同提交、两日志间、root 三个提前返回 topology 先得到
+  `3 failed, 35 deselected`，将既有 latest-batch 切片前移到全部既有 evidence/path 取证点后得到
+  `3 passed, 35 deselected`；完整 truth 文件 `38 passed`；truth/status/execute/GitClient/close/ProgramService
+  扩大回归 `580 passed`；最终 `uv run pytest -q` 得到 `3386 passed, 3 skipped in 861.93s`；
+  `uv run ruff check .`、`uv run ai-sdlc verify constraints --json` 与
+  `git diff --check origin/main...HEAD` 均通过，constraints 为 0 blocker / 0 advisory。
+- **代码审查**：PR #177 Codex 在 `ea2de1260a442e095092675218776ad9c67047a6` 提出 1 个 P2：最终 fallback
+  虽已绑定最新批次，但同提交、两日志间与 root 分支仍可在提前返回时复用旧批次路径。三个真实 Git 反例分别复现后，
+  整改只复用 `_latest_batch_text()`，未引入第三轮本地对抗设计、helper、公共面或状态；原 inline thread 与 Codex
+  重审待 push 后闭环。
+- **任务/计划同步状态**：T61/T62 保持完成；T63 的第二次本地验证完成，等待 PR #177 新 head 的 Codex review、
+  required checks、合并与 `origin/main` truth；C2 与 v0.9.8 继续排除。
+- **已完成 git 提交**：是（P2 运行时与测试整改已提交）
+- **提交哈希**：`241c5bf8537772a6c64d6f43e75dcef3ba1f1dd0`
+- 关联 branch/worktree disposition 计划：`merge-pending`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`retained(PR #177 Codex re-review and merge verification)`
+- **ROI 裁决**：相对 `origin/main@bcbc54e9`，产品代码 24 additions / 11 deletions，净增 13；测试 117 additions。
+  新增 8 行产品净量统一了同一不变量在既有返回点的作用域，3 个测试分别锁定可复现提前返回；仍未越过冻结边界，
+  批准保留。若 Codex 重审再发现需要扩大设计面的同类问题，则 C1 No-Go，不继续追加实现。

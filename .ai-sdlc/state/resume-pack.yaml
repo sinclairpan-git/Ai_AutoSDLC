@@ -11,14 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 关闭 PR #177 Codex P2：所有 history return 使用同一最新批次 marker/path
-    | State: P2 三个提前返回拓扑均先 RED 后 GREEN；truth 38 passed、扩大回归 580 passed、定向 Ruff PASS；待
-    exact-tree full/Ruff/constraints 与 PR 重审 | Next: 提交聚焦 P2 修复，跑最终全量与 gates，追加 Batch
-    033 后推送同一 PR 并回复原 thread'
+  context_summary: 'Goal: 完成 PR #177 C1 并验证合并后 origin/main truth | State: Codex P2
+    已以同批次取证一致性整改；RED/GREEN、38 truth、580 扩大回归、3386 full、Ruff、constraints 全绿；Batch 033
+    已记录，待推送重审 | Next: 提交 Batch 033，push PR #177，回复 inline comment，请求 Codex 重审并 heartbeat
+    到合并'
 current_branch: codex/wi219-squash-truth-attribution
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-27T10:48:04+00:00'
+timestamp: '2026-08-27T11:04:35+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1
