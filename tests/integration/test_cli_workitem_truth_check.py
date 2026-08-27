@@ -514,6 +514,8 @@ class TestCliWorkitemTruthCheck:
             ("missing_recorded_path", "src/missing.py", "formal_freeze_only"),
             ("unrecorded_path", "", "formal_freeze_only"),
             ("older_recorded_path", "", "formal_freeze_only"),
+            ("latest_correction_changes_older_path", "", "formal_freeze_only"),
+            ("between_logs_changes_older_path", "", "formal_freeze_only"),
         ],
     )
     def test_truth_check_binds_latest_canonical_correction_to_squashed_wi_history(
@@ -545,7 +547,12 @@ class TestCliWorkitemTruthCheck:
         execution_log = root / "specs" / work_item_id / "task-execution-log.md"
         historical_scope = (
             "\n改动范围：product-config.yaml\n"
-            if topology == "older_recorded_path"
+            if topology
+            in {
+                "older_recorded_path",
+                "latest_correction_changes_older_path",
+                "between_logs_changes_older_path",
+            }
             else ""
         )
         execution_log.write_text(
@@ -568,6 +575,12 @@ class TestCliWorkitemTruthCheck:
         )
         _commit_all(root, "squash 219")
 
+        if topology == "between_logs_changes_older_path":
+            (root / "product-config.yaml").write_text(
+                "feature_enabled: changed between logs\n", encoding="utf-8"
+            )
+            _commit_all(root, "change product between execution logs")
+
         recorded_scope = f"改动范围：{recorded_path}\n" if recorded_path else ""
         execution_log.write_text(
             execution_log.read_text(encoding="utf-8")
@@ -576,6 +589,10 @@ class TestCliWorkitemTruthCheck:
             + recorded_scope,
             encoding="utf-8",
         )
+        if topology == "latest_correction_changes_older_path":
+            (root / "product-config.yaml").write_text(
+                "feature_enabled: changed with correction\n", encoding="utf-8"
+            )
         _commit_all(root, "record canonical correction")
 
         payload = _truth_payload(root, monkeypatch, work_item_id)
@@ -612,6 +629,7 @@ class TestCliWorkitemTruthCheck:
             ("nonroot_arbitrary_implementation", "mainline_merged"),
             ("root_bootstrap", "formal_freeze_only"),
             ("root_recorded_missing_path", "formal_freeze_only"),
+            ("root_older_recorded_path", "formal_freeze_only"),
             ("root_arbitrary_implementation", "mainline_merged"),
         ],
     )
@@ -751,6 +769,16 @@ class TestCliWorkitemTruthCheck:
                 (root / "specs" / work_item_id / "task-execution-log.md").write_text(
                     "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n"
                     "改动范围：src/missing.py\n",
+                    encoding="utf-8",
+                )
+            elif topology == "root_older_recorded_path":
+                (root / "product-config.yaml").write_text(
+                    "feature_enabled: true\n", encoding="utf-8"
+                )
+                (root / "specs" / work_item_id / "task-execution-log.md").write_text(
+                    "# Log\n\n## Older batch\n\n改动范围：product-config.yaml\n\n"
+                    "### Batch 2026-08-27-001 | correction\n\n"
+                    "统一验证命令\n代码审查\n任务/计划同步状态\n",
                     encoding="utf-8",
                 )
             else:

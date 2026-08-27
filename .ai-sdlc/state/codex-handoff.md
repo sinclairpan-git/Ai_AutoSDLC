@@ -1,29 +1,28 @@
 # Continuity Handoff
 
-- Updated: 2026-08-27T10:26:03+00:00
-- Reason: T63 预合并 exact-tree 与独立终审收口
-- Goal: 执行已批准的 C1：修正主线 squash 后的 WI219 truth attribution
-- State: 代码候选 bf825971 通过最终全量 3383 passed/3 skipped、Ruff、constraints 和第二轮独立终审；正式记录已追加，T63 等待 PR/Codex/checks/merge/origin-main truth
+- Updated: 2026-08-27T10:48:04+00:00
+- Reason: PR #177 Codex P2 聚焦整改检查点
+- Goal: 关闭 PR #177 Codex P2：所有 history return 使用同一最新批次 marker/path
+- State: P2 三个提前返回拓扑均先 RED 后 GREEN；truth 38 passed、扩大回归 580 passed、定向 Ruff PASS；待 exact-tree full/Ruff/constraints 与 PR 重审
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
 - Branch: codex/wi219-squash-truth-attribution
 
 ## Changed Files
-- M specs/219-mainline-truth-roi-contract/plan.md
-- M specs/219-mainline-truth-roi-contract/task-execution-log.md
-- M specs/219-mainline-truth-roi-contract/tasks.md
+- M src/ai_sdlc/core/workitem_truth.py
+- M tests/integration/test_cli_workitem_truth_check.py
 
 ## Key Decisions
-- 冻结运行时；只交付当前 C1 PR，主线合并前不勾选 T63，不进入 C2 或 v0.9.8
+- 把既有 _latest_batch_text 切片应用到所有已有 evidence/path 取证点；无新 helper/API/parser/state，不进入新设计轮
 
 ## Commands / Tests
-- targeted 5 passed；truth 35 passed；expanded 577 passed；full 3383 passed/3 skipped；Ruff PASS；constraints clean；independent review Approve
+- P2 RED 3 failed/35 deselected；GREEN 3 passed；truth 38 passed；expanded 580 passed；target Ruff PASS
 
 ## Blockers / Risks
-- PR Codex review、required checks 或合并后 origin/main truth 任一失败则 C1 不完成；本地旧 WI219 分支/工作树按用户要求不纳入远端主线裁决
+- 若全量、Codex 重审或 CI 失败，或整改需要新设计面，则 C1 No-Go
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交正式记录，push/open PR，请求 Codex review 并按 5 分钟 heartbeat 监控到合并或用户输入 blocker
+- 提交聚焦 P2 修复，跑最终全量与 gates，追加 Batch 033 后推送同一 PR 并回复原 thread

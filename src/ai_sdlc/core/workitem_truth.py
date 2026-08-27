@@ -174,7 +174,9 @@ def _root_commit_has_implementation(
     if not any(path not in allowed for path in paths):
         return False
     try:
-        log_text = git.read_file_at_revision(commit, f"{wi_rel}/task-execution-log.md")
+        log_text = _latest_batch_text(
+            git.read_file_at_revision(commit, f"{wi_rel}/task-execution-log.md")
+        )
     except GitError:
         return False
     return execution_log_has_recorded_evidence(
@@ -202,7 +204,9 @@ def _history_contains_implementation(
                 return True
             continue
         try:
-            log_text = git.read_file_at_revision(commit, execution_log_path)
+            log_text = _latest_batch_text(
+                git.read_file_at_revision(commit, execution_log_path)
+            )
         except GitError:
             continue
         if execution_log_has_recorded_evidence(
@@ -213,7 +217,9 @@ def _history_contains_implementation(
     if log_commits:
         newest_log_commit = log_commits[0]
         try:
-            log_text = git.read_file_at_revision(newest_log_commit, execution_log_path)
+            log_text = _latest_batch_text(
+                git.read_file_at_revision(newest_log_commit, execution_log_path)
+            )
         except GitError:
             pass
         else:
@@ -234,7 +240,9 @@ def _history_contains_implementation(
         log_commits, log_commits[1:], strict=False
     ):
         try:
-            log_text = git.read_file_at_revision(latest_log_commit, execution_log_path)
+            log_text = _latest_batch_text(
+                git.read_file_at_revision(latest_log_commit, execution_log_path)
+            )
         except GitError:
             continue
         if not execution_log_has_recorded_evidence(log_text):
