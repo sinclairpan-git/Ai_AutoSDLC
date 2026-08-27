@@ -12,13 +12,12 @@ working_set_snapshot:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
   context_summary: 'Goal: 执行已批准的 C1：修正主线 squash 后的 WI219 truth attribution | State:
-    T60 formal amendment 已完成；根因冻结为 latest canonical evidence 未与 WI-anchored history
-    配对；尚未修改 runtime/tests | Next: 提交 T60 formal amendment；随后在真实 Git squash + later
-    correction topology 写 T61 RED'
+    首轮独立评审 Important 已用最新批次同域取证修复；新增旧批次路径污染反例，5 topology、35 truth、577 扩大回归通过；待第二轮终审与最终全量
+    | Next: 提交最小 review fix，交同一独立 reviewer 第二轮终审；通过后更新正式记录并跑 exact-tree 全量'
 current_branch: codex/wi219-squash-truth-attribution
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-27T08:56:32+00:00'
+timestamp: '2026-08-27T10:06:30+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

@@ -238,13 +238,13 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
   固定 `origin/main@bcbc54e9` 的失败输出、PR #175 squash path inventory、最新日志 evidence/path 判定与
   一天/一 PR/两轮 review 的停止条件。
 
-- [ ] **Step 2：写真实 squash + later correction RED**
+- [x] **Step 2：写真实 squash + later correction RED**
 
   在 `tests/integration/test_cli_workitem_truth_check.py` 使用真实临时 Git 仓库构造 narrative WI/实施 squash 到
   main，随后追加 canonical correction log。正例记录 WI 后真实路径；反例覆盖 pre-WI、缺失 recorded path 和
   missing path。以同一 pytest argv 证明旧实现仅正例失败。
 
-- [ ] **Step 3：实现最小 WI-anchored GREEN**
+- [x] **Step 3：实现最小 WI-anchored GREEN**
 
   在 `_history_contains_implementation()` 复用现有 log commits、first parent、双向 changed paths、
   `execution_log_has_recorded_evidence()` 与 `_has_recorded_path_evidence()`：让最新 canonical log 对从最早 WI

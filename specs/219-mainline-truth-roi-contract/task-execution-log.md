@@ -624,3 +624,21 @@
 - 裁决：不扫描旧 narrative 正文，不读取 commit message；只允许最新 canonical 批次明确记录的路径匹配 WI
   首次进入历史之后的真实 Git path。若需要修改 GitClient、`workitem_traceability.py` 或新增 parser/state，C1
   No-Go。
+
+### Batch 2026-08-27-031 | T61-T62 C1 RED and minimal GREEN
+
+- 验证画像：`code-change`。
+- 改动范围：
+  - `src/ai_sdlc/core/workitem_truth.py`
+  - `tests/integration/test_cli_workitem_truth_check.py`
+- 统一验证命令：相同 argv
+  `uv run pytest tests/integration/test_cli_workitem_truth_check.py -q -k binds_latest_canonical_correction_to_squashed_wi_history`
+  先得到 `1 failed, 3 passed, 30 deselected in 4.16s`，最小 GREEN 后得到
+  `4 passed, 30 deselected in 4.17s`；truth/GitClient/traceability focused suite 得到 `89 passed in 21.88s`；
+  扩大回归得到 `661 passed in 120.48s`；目标/全库 Ruff PASS；constraints 无 blocker/advisory。隔离 clone 从
+  `origin/main@bcbc54e9` squash 当前候选并同时前移 clone 内 `main/origin/main` 后，source CLI 返回
+  `mainline_merged / execution_started=true / contained_in_main=true / changed_paths=[]`。
+- 代码审查：生产改动仅 5 行既有流程差异，无新函数/API/parser；独立 review 尚待 T63。
+- 任务/计划同步状态：T61、T62 完成，T63 pending；C2 与 v0.9.8 仍排除。
+- 裁决：保留真实 Git 四 topology 测试。正例证明 later canonical correction 可绑定 WI 后 squash path；pre-WI、
+  missing-path、unrecorded 三个反例保持 fail-closed。若扩大回归改变旧 topology，则回退本批而不修改断言。

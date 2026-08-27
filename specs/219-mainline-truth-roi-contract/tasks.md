@@ -199,12 +199,12 @@
   - 验收：用户批准、真实失败输出、单一根因、精确文件边界、负控制和一天/一 PR/两轮 review 停止条件均已记录；
     C2 与 v0.9.8 排除。
 
-- [ ] **T61 真实 squash + later correction RED**
+- [x] **T61 真实 squash + later correction RED**
   - 依赖：T60
   - 范围：`tests/integration/test_cli_workitem_truth_check.py`。
   - 验收：正例因当前历史窗口仍使用旧 narrative log 而失败；pre-WI、unrecorded、missing-path 三个反例继续通过。
 
-- [ ] **T62 最小 WI-anchored history GREEN**
+- [x] **T62 最小 WI-anchored history GREEN**
   - 依赖：T61
   - 范围：`src/ai_sdlc/core/workitem_truth.py`。
   - 验收：只复用既有 Git/path/evidence primitive；正例为 `mainline_merged`，全部负控制不变；不修改 GitClient、
