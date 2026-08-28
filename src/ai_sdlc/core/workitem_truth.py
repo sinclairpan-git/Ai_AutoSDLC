@@ -126,6 +126,12 @@ def _is_formal_freeze_only_change_set(paths: tuple[str, ...], wi_rel: str) -> bo
     return bool(paths) and all(path in allowed for path in paths)
 
 
+def _has_workitem_scoped_change(paths: tuple[str, ...], wi_rel: str) -> bool:
+    work_item_id = Path(wi_rel).name
+    scoped_prefixes = (f"{wi_rel}/", f".ai-sdlc/work-items/{work_item_id}/")
+    return any(path.startswith(scoped_prefixes) for path in paths)
+
+
 def _has_recorded_path_evidence(
     paths: tuple[str, ...], wi_rel: str, log_text: str
 ) -> bool:
@@ -484,6 +490,8 @@ def run_truth_check(
                 )
             )
         )
+        if not _has_workitem_scoped_change(changed_paths, wi_rel):
+            changed_paths = ()
         divergence = git.revision_divergence(requested_revision, base=base_ref)
         code_paths, test_paths, doc_paths, other_paths = _classify_paths(changed_paths)
         execution_log_path = f"{wi_rel}/task-execution-log.md"

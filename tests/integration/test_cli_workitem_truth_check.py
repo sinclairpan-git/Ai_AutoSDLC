@@ -316,6 +316,34 @@ class TestCliWorkitemTruthCheck:
         assert "src/local_main.py" not in payload["changed_paths"]
         assert _run(root, "git", "show-ref") == refs_before
 
+    def test_truth_check_ignores_unrelated_formal_branch_for_historical_work_item(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo(root)
+        _commit_all(root, "init")
+        historical_id = "095-historical-formal-only"
+        _write_formal_docs(root / "specs" / historical_id, include_exec_log=True)
+        _commit_all(root, "formalize historical work item")
+
+        subprocess.run(
+            ["git", "checkout", "-b", "feature/220-formal"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        _write_formal_control_change_set(root, "220-unrelated-formal")
+        _commit_all(root, "formalize unrelated work item")
+
+        payload = _truth_payload(root, monkeypatch, historical_id)
+
+        assert payload["classification"] == "formal_freeze_only"
+        assert payload["execution_started"] is False
+        assert payload["changed_paths"] == []
+        assert payload["code_paths"] == []
+        assert payload["test_paths"] == []
+
     @pytest.mark.parametrize(
         ("outside_path", "content"),
         [
