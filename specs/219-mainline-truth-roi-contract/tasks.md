@@ -2,7 +2,7 @@
 
 **编号**：`219-mainline-truth-roi-contract`
 **来源**：`spec.md`
-**阶段**：execute
+**阶段**：close
 
 ## Batch 1：Formal 规格
 
@@ -211,7 +211,7 @@
   - 验收：只复用既有 Git/path/evidence primitive，最新批次同时约束 marker/path；正例为 `mainline_merged`，全部
     负控制不变；不修改 GitClient、`workitem_traceability.py` 实现或其他 runtime。
 
-- [ ] **T63 C1 验证、评审与主线交付**
+- [x] **T63 C1 验证、评审与主线交付**
   - 依赖：T62
   - 验收：focused/full pytest、Ruff、constraints、diff-check、独立 review、Codex review 和 required checks 全绿；
     合并后 `origin/main` 精确 truth-check 返回 `mainline_merged` 且无 `start execute work`。

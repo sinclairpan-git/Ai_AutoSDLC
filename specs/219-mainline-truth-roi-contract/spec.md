@@ -2,7 +2,7 @@
 
 **功能编号**：`219-mainline-truth-roi-contract`
 **创建日期**：2026-08-25
-**状态**：formal remediation candidate（adversarial round 2）
+**状态**：已完成并随 `v0.9.8` 发布
 **类型**：mainline truth maintenance + delivery contract optimization
 **冻结基线**：`origin/main@762527466119dde127d7488b73d5592e44afaaa6`（`v0.9.7`）
 
