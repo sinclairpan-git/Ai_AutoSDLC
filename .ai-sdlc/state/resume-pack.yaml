@@ -10,16 +10,20 @@ working_set_snapshot:
   tasks_path: specs/219-mainline-truth-roi-contract/tasks.md
   active_files:
   - docs/FRAMEWORK_ROADMAP.zh-CN.md
+  - program-manifest.yaml
+  - tests/integration/test_repo_program_manifest.py
+  - specs/219-mainline-truth-roi-contract/task-execution-log.md
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 归档 v0.9.8 后 P0-P4 ROI 路线并形成可直接恢复的下一步 | State: PR #179 首轮
-    Codex review 的唯一 P2 已整改：路线图明确主仓与参赛版独立 URL、checkout 语义和可执行 SHA 核对命令；本地复验通过，待提交、复审和
-    CI 合并 | Next: 提交并推送 P2 修复，回复 review thread，请求 Codex 复审并 heartbeat 到合并；随后从新 origin/main
-    执行 program truth sync --execute --yes；收口后按路线图创建 P1 独立 work item'
-current_branch: codex/post-v098-roi-roadmap
+  context_summary: 'Goal: 完成 v0.9.8 后 ROI 路线归档与可恢复 Program Truth 收口 | State: PR #179
+    已合并为 6002cd7a；post-merge evidence-set 根因已用 RED/GREEN 最小修复；最终 Program Truth snapshot
+    4a030ebc 为 fresh/ready，两个 release capability closed/ready，待 records-only PR 评审合并
+    | Next: 提交并推送 records-only 分支，创建 PR，请求 Codex review 并 heartbeat 到合并；合并后从 origin/main
+    复验 Program Truth fresh/ready；随后按路线图创建 P1 独立 work item'
+current_branch: codex/post-v098-roadmap-truth
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-28T02:35:33+00:00'
+timestamp: '2026-08-28T03:31:22+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

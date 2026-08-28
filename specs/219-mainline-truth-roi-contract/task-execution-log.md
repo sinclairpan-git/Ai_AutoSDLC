@@ -735,3 +735,31 @@
 - 当前批次 worktree disposition 状态：`historical; not required for recovery`
 - **ROI 裁决**：本批不修改 runtime 或测试行为，只消除会让恢复者误以为 PR #177 尚未合并的记录漂移；未来工作
   从 P1 Diff-local Lean Advisory 独立建项，不继续追加 WI219 细节实现。
+
+### Batch 2026-08-28-035 | post-roadmap Program Truth evidence-set repair
+
+- **验证画像**：`records-only / evidence-contract correction`
+- **改动范围**：
+  - `program-manifest.yaml`
+  - `tests/integration/test_repo_program_manifest.py`
+  - `specs/219-mainline-truth-roi-contract/task-execution-log.md`
+  - `.ai-sdlc/state/codex-handoff.md`
+  - `.ai-sdlc/state/resume-pack.yaml`
+  - `.ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md`
+- **根因证据**：PR #179 已于 2026-08-28 squash merge 为
+  `6002cd7a6f61325e16d3f9b465f5d667b23597c4`。从该远端主线首次执行
+  `uv run ai-sdlc program truth sync --execute --yes` 后，source inventory 已是 1149/1149、unmapped 0，
+  但两个 release capability 被 16 个 `truth_check` 阻断。逐项 `workitem truth-check --rev HEAD --json`
+  证明这些引用是 `formal_freeze_only`；旧 ready snapshot 则生成于未被主线包含的 release branch
+  `ef1f41b3`，其 squash 前发布变更曾被误归为这些历史 work item 的 `branch_only_implemented`。
+- **RED/GREEN**：根级 manifest 回归先新增“两个 release capability 必须 `audit_state=ready` 且无 blocker”行为断言，
+  得到 `1 failed in 151.50s`，失败项精确为上述 16 个 truth refs。最小整改只把前端执行真值收敛到真实 runtime
+  载体 143/144、Adapter 执行真值收敛到 159/200；形式基线仍保留在 `spec_refs` 与 `close_check_refs`。
+  相同测试随后得到 `1 passed in 135.27s`；再次 sync 得到两个 capability 均
+  `closure=closed / audit=ready`，source inventory 1149/1149、unmapped 0。
+- **代码审查**：本批不修改 runtime、CLI、状态机或 truth 算法；只校正 root manifest 的 required evidence 集合并
+  增加真实快照行为回归。不得通过放宽 `formal_freeze_only` 判定或手改 computed snapshot 消除 blocker。
+- **任务/计划同步状态**：WI219 保持 completed/close，不重新打开 C2；本批是 PR #179 合并后承诺的唯一
+  Program Truth records 收口，完成后下一产品项仍为路线图 P1 Diff-local Lean Advisory。
+- **ROI 裁决**：批准最小证据集合修复。它删除 16 个已证伪的执行真值要求、保留全部关闭合同，避免继续维护
+  squash 分支偶然产生的假 ready；若后续要求改 truth 算法或追加平行 ledger，则立即 No-Go 并独立立项。
