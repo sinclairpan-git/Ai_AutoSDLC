@@ -2078,26 +2078,26 @@ specs:
   path: specs/219-mainline-truth-roi-contract
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-08-27T13:33:00Z'
+  generated_at: '2026-08-28T07:07:46Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: ef1f41b3
-  authoring_hash: 9c568984f1df554b9a7365ab8aa07d506e28c056e62713056ecfb0b1f37086bc
+  repo_revision: 0294bd6a
+  authoring_hash: 9e0fea84829d981c8305299c841116f5398a87693361023aef595fcd619773ae
   source_hashes:
-    truth_check:specs/095-frontend-mainline-product-delivery-baseline: 32b6ed147f281ea7b9237b6daf75e07d856a3263cc966798f93cfa75db5d7b5f
-    truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 01c3db2eed14ae56d4d4e493386fc2293d4b33c42f54e5a58d115f50127f76ee
-    truth_check:specs/098-frontend-mainline-posture-detector-baseline: 2bc6c269678336b821f8a2d82e2033a45411ef07293faceb6c5214067e53a24c
-    truth_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: 738025eeac7cf11997817ffa0bdf04a22a5d71a45d753fe3874b809b1e35eefb
-    truth_check:specs/100-frontend-mainline-action-plan-binding-baseline: 0cb7326d1a6fe9621a1e853c2b879bf5377c6c3cf6206c9f3c36f0c15ca3c696
-    truth_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: e744c7005f41d3ef8566a6e5413706560e506b01ee3c391816fae6d0e172951f
-    truth_check:specs/102-frontend-mainline-browser-quality-gate-baseline: e3a7262dd0f1e9246b31db2796cfdedbae5f366717958e7b9b4877546b805e67
-    truth_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: c399e0b7aef65ddca1038f5a67d79408ce062c59b4a3709b3a27034f5a7538bd
-    truth_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: 1c56fceaba366581427f64d47d959a0b1ba66dbd12872a251b020090acb466c0
-    truth_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: 469591f27e014069df596b5f5ea992cf4c0f1c341ce8fa90685bbe6961887d0a
-    truth_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: 7959f0fdade77398333c643ea2a60fe875df4381e1be0e1b3b79cc6e1ca5b934
-    truth_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: 29e61aece4be8c817c53d6d988807c35bb43033851bf26fad4f390ad54449405
-    truth_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: fd34350647108380af7a23b159b18a30d4b33545b7d33c66c45221b65cdaa62d
-    truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 28b5818f820176a8322737c23724fe2f94b07d1f9d4bf718a64965819f5df201
+    truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
+    truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 694fbf058775409c9ac373054323501942cebddcce74f540b4a8df9e9c2ce5a9
+    truth_check:specs/098-frontend-mainline-posture-detector-baseline: 1c0470bb967c1345723039eea641a6cf6ed54217b0f6f98d1dad4205952f3c95
+    truth_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline: e088d15002371a061c99fa95235c47e80c637357f3907818ba2694056b2c2b06
+    truth_check:specs/100-frontend-mainline-action-plan-binding-baseline: 4e1bf93ab5936d0c18a32cc3a10c10bfc6084f4bf8f020d27118c94427774ec7
+    truth_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline: 62ee01fe5188df2a429f09f14ff76396d29c8ae52de278eec0f8bfebc377b0d0
+    truth_check:specs/102-frontend-mainline-browser-quality-gate-baseline: c70046b38d5b2c2d7ca314123518aa495b8f79031b1a66243188cf6890bfd644
+    truth_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline: ffa47d6300c25e2f621faf946ad2895441662b8fa00bf575c9f3c3b4346dcacb
+    truth_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline: 3560ad584cb71dc9e3db785d411e77d4dae35e6be2fb233390fcfe0f494fb8a6
+    truth_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline: fb856814e6c22fda5e154d040aeb967cd8b10a07a6d492d9ba643ef94d032ca3
+    truth_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline: 2aeb6ea244d3290e4e24345ca03af9e8cb6f1aeb8193a2c2936cfbe3ce068537
+    truth_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline: fedb6be2ad9b8771e9526247bb24c7b43b2ddd2513214419292062bc7df5218f
+    truth_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline: 8ca025b5ac9a39845fd8d3603224fd8d2ddcac420aaa53955a35bf0207a855b6
+    truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline: 25c1cf7913af3cbb9edd9e8226d189de671d7b540e3987319dd267aaac452555
     truth_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: 0cd9111a1aae1ce6528397f4b0863e30785d8d93f80c92985a7163f5e0e82458
     truth_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: a6e4428769fcdbe693233daafce600de050f629be407e7bf4d4dc067b90c45ce
     close_check:specs/095-frontend-mainline-product-delivery-baseline: c3219ffe6f9fabf6ee4ddd490cc923d8717a72cc31127cb0b95d9a81d0093c18
@@ -2117,33 +2117,49 @@ truth_snapshot:
     close_check:specs/143-frontend-mainline-browser-gate-real-probe-runtime-baseline: c3219ffe6f9fabf6ee4ddd490cc923d8717a72cc31127cb0b95d9a81d0093c18
     close_check:specs/144-frontend-mainline-host-remediation-and-workspace-integration-closure-baseline: c3219ffe6f9fabf6ee4ddd490cc923d8717a72cc31127cb0b95d9a81d0093c18
     verify:uv run ai-sdlc verify constraints: 67c162e8ce6369708f41fd003c4d3b2703509ebeb85aefbbc2a2d67663c45333
-    truth_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: b5999f3bfb2b29fa50299306cd0287459a6c274279ecfe0aed612406ebe33b26
-    truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 1d2e4d2374f9b6d8ee82d4afd25b059233b49d40c6f8dee4224d56a3be0c766d
+    truth_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: c1b0621b395b478844e6047225fd09baf39c7e766f60c1151cf51deecdb16fec
+    truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 0e0874f39368a0c356bedafd0209944a482e140e5f593d2dabe9d5b85d977832
     truth_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 0e70bb633146509dbf1491cc850fc76206326eb92f8c0367246989ddeaa934fb
     truth_check:specs/200-adapter-canonical-consumption-truth: 2ec890f304752558c9e5ca96598462195922836effbd275d3f260bbabf5e01bf
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 6320c6177eefdfbf933f2399888f21e50b2970dfeea174a1e4c8d63c71ed0430
+  snapshot_hash: 924ab4763ea2ddfd0c37e2168d8b620f16d65c29a0a04f9349a64cfe8873f812
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
-    audit_state: ready
-    blocking_refs: []
+    audit_state: blocked
+    blocking_refs:
+    - truth_check:specs/095-frontend-mainline-product-delivery-baseline
+    - truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline
+    - truth_check:specs/098-frontend-mainline-posture-detector-baseline
+    - truth_check:specs/099-frontend-mainline-delivery-registry-resolver-baseline
+    - truth_check:specs/100-frontend-mainline-action-plan-binding-baseline
+    - truth_check:specs/101-frontend-mainline-managed-delivery-apply-runtime-baseline
+    - truth_check:specs/102-frontend-mainline-browser-quality-gate-baseline
+    - truth_check:specs/103-frontend-mainline-browser-gate-probe-runtime-baseline
+    - truth_check:specs/104-frontend-mainline-browser-gate-recheck-remediation-binding-baseline
+    - truth_check:specs/105-frontend-mainline-browser-gate-recheck-remediation-runtime-implementation-baseline
+    - truth_check:specs/123-frontend-mainline-managed-delivery-apply-runtime-implementation-baseline
+    - truth_check:specs/124-frontend-mainline-delivery-materialization-runtime-baseline
+    - truth_check:specs/125-frontend-mainline-browser-gate-probe-runtime-implementation-baseline
+    - truth_check:specs/126-frontend-mainline-browser-gate-recheck-remediation-runtime-closure-baseline
     stale_reason: ''
   - capability_id: agent-adapter-verified-host-ingress
     closure_state: closed
-    audit_state: ready
-    blocking_refs: []
+    audit_state: blocked
+    blocking_refs:
+    - truth_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline
+    - truth_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1148
-    mapped_sources: 1148
+    total_sources: 1149
+    mapped_sources: 1149
     unmapped_sources: 0
     missing_sources: 1
-    phase_signal_count: 3740
-    deferred_signal_count: 6715
+    phase_signal_count: 3763
+    deferred_signal_count: 6741
     non_goal_signal_count: 398
     layer_totals:
       blueprint: 1
@@ -2152,9 +2168,9 @@ truth_snapshot:
       tasks: 218
       execution: 218
       close: 218
+      design: 9
       requirements: 2
       defect: 3
-      design: 8
       release: 44
     layer_materialized:
       blueprint: 1
@@ -2163,9 +2179,9 @@ truth_snapshot:
       tasks: 218
       execution: 218
       close: 217
+      design: 9
       requirements: 2
       defect: 3
-      design: 8
       release: 44
     entries:
     - path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
@@ -11975,8 +11991,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 219-mainline-truth-roi-contract
-      phase_signal_count: 26
-      deferred_signal_count: 30
+      phase_signal_count: 31
+      deferred_signal_count: 36
       non_goal_signal_count: 0
     - path: specs/219-mainline-truth-roi-contract/development-summary.md
       source_type: development_summary
@@ -11986,6 +12002,15 @@ truth_snapshot:
       mapping_ref: 219-mainline-truth-roi-contract
       phase_signal_count: 0
       deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/FRAMEWORK_ROADMAP.zh-CN.md
+      source_type: design_doc
+      truth_layer: design
+      mapped: true
+      exists: true
+      mapping_ref: docs/FRAMEWORK_ROADMAP.zh-CN.md
+      phase_signal_count: 18
+      deferred_signal_count: 20
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
@@ -12501,4 +12526,4 @@ truth_snapshot:
       deferred_signal_count: 6
       non_goal_signal_count: 1
     unmapped_paths: []
-  state: ready
+  state: blocked
