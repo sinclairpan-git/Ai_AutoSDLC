@@ -1,27 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-08-28T07:18:52+00:00
-- Reason: 提交后 branch-relative 审计边界已完成隔离验证
-- Goal: 完成 v0.9.8 后 ROI 路线归档与诚实 Program Truth 收口
-- State: 纯 snapshot 已提交；PR 分支因 branch-relative provenance 重算为 stale/false-ready，但隔离模拟同一提交成为 tracking main 后恢复 fresh/blocked 且 16 个 blocker 一致
+- Updated: 2026-08-28T08:04:41+00:00
+- Reason: PR #181 合并后终态 continuity 收口
+- Goal: 启动路线图 P1 Diff-local Lean Advisory；保持真实 Program Truth blocked
+- State: v0.9.8 后 ROI 路线已归档；PR #179/#180/#181 均已合并，origin/main@bd9cea91；Program Truth 在真实主线上 blocked/fresh，16 个历史 provenance blocker 已持久化
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
-- Branch: codex/post-v098-truth-snapshot
+- Branch: codex/post-v098-main-verify
 
 ## Changed Files
 - none
 
 ## Key Decisions
-- 保留 pre-commit 生成的 blocked snapshot，不在 PR 分支刷新假 ready；以隔离 main 模拟和合并后 origin/main 复验作为验收门
+- 下一产品项直接建 P1，不先做 D2；D2 仅在下一次要求 release-target-ready 的发布前触发。继续禁止删 truth refs、放宽 formal_freeze_only、手改 snapshot 或追逐低 ROI 细枝末节
 
 ## Commands / Tests
-- sync worktree=blocked hash 924ab476...；pre-commit audit=blocked/fresh；root test 1 passed；post-commit branch audit=stale/current ready；isolated tracking-main audit=blocked/fresh
+- PR #181 Codex clean、10/10 checks；main verify constraints no BLOCKERs；main Program Truth audit blocked/fresh、inventory 1149/1149；root manifest test 1 passed in 137.75s
 
 ## Blockers / Risks
-- D2 历史 provenance 回填仍是下一 release-target-ready 发布前置；PR 分支的 transient stale 属已证实的 main-relative 归因语义
+- D2 历史 provenance 回填是未来 release-target-ready 前置，但不阻断 P1 建项与开发
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- amend 后在精确新提交做 tracking-main 模拟；推送纯 snapshot PR，Codex review 和 checks 通过后合并；在真实 origin/main 复验 blocked/fresh
+- 为 P1 Diff-local Lean Advisory 建立 formal work item，先锁定只读 advisory、差异局部、单次预算与停止条件；未经新 ROI 证据不扩展到自动重写或全仓治理

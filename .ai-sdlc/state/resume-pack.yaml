@@ -11,14 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 完成 v0.9.8 后 ROI 路线归档与诚实 Program Truth 收口 | State: 纯 snapshot
-    已提交；PR 分支因 branch-relative provenance 重算为 stale/false-ready，但隔离模拟同一提交成为 tracking
-    main 后恢复 fresh/blocked 且 16 个 blocker 一致 | Next: amend 后在精确新提交做 tracking-main
-    模拟；推送纯 snapshot PR，Codex review 和 checks 通过后合并；在真实 origin/main 复验 blocked/fresh'
-current_branch: codex/post-v098-truth-snapshot
+  context_summary: 'Goal: 启动路线图 P1 Diff-local Lean Advisory；保持真实 Program Truth blocked
+    | State: v0.9.8 后 ROI 路线已归档；PR #179/#180/#181 均已合并，origin/main@bd9cea91；Program
+    Truth 在真实主线上 blocked/fresh，16 个历史 provenance blocker 已持久化 | Next: 为 P1 Diff-local
+    Lean Advisory 建立 formal work item，先锁定只读 advisory、差异局部、单次预算与停止条件；未经新 ROI 证据不扩展到自动重写或全仓治理'
+current_branch: codex/post-v098-main-verify
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-28T07:18:52+00:00'
+timestamp: '2026-08-28T08:04:41+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1
