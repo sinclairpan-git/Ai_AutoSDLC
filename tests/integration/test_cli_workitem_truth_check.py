@@ -344,6 +344,38 @@ class TestCliWorkitemTruthCheck:
         assert payload["code_paths"] == []
         assert payload["test_paths"] == []
 
+    def test_truth_check_ignores_auxiliary_note_under_historical_work_item(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo(root)
+        _commit_all(root, "init")
+        historical_id = "095-historical-formal-only"
+        historical_dir = root / "specs" / historical_id
+        _write_formal_docs(historical_dir, include_exec_log=True)
+        _commit_all(root, "formalize historical work item")
+
+        subprocess.run(
+            ["git", "checkout", "-b", "feature/220-implementation"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        (historical_dir / "notes.md").write_text(
+            "# Auxiliary note\n", encoding="utf-8"
+        )
+        (root / "src").mkdir(exist_ok=True)
+        (root / "src" / "unrelated.py").write_text("VALUE = 220\n", encoding="utf-8")
+        _commit_all(root, "implement unrelated work item with historical note")
+
+        payload = _truth_payload(root, monkeypatch, historical_id)
+
+        assert payload["classification"] == "formal_freeze_only"
+        assert payload["execution_started"] is False
+        assert payload["changed_paths"] == []
+        assert payload["code_paths"] == []
+
     @pytest.mark.parametrize(
         ("outside_path", "content"),
         [
