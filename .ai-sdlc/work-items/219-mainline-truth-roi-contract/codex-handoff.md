@@ -1,27 +1,37 @@
 # Continuity Handoff
 
-- Updated: 2026-08-27T11:04:35+00:00
-- Reason: PR #177 P2 最终本地验证收口
-- Goal: 完成 PR #177 C1 并验证合并后 origin/main truth
-- State: Codex P2 已以同批次取证一致性整改；RED/GREEN、38 truth、580 扩大回归、3386 full、Ruff、constraints 全绿；Batch 033 已记录，待推送重审
+- Updated: 2026-08-28T02:16:46+00:00
+- Reason: 对抗评审批准后的 canonical continuity 收口
+- Goal: 归档 v0.9.8 后 P0-P4 ROI 路线并形成可直接恢复的下一步
+- State: 路线图已完成单一专职对抗评审并整改通过；WI219 已核销为 v0.9.8 已发布；当前分支只剩归档验证、PR 合并与合并后 Program Truth snapshot 收口
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
-- Branch: codex/wi219-squash-truth-attribution
+- Branch: codex/post-v098-roi-roadmap
 
 ## Changed Files
+- A docs/FRAMEWORK_ROADMAP.zh-CN.md
+- M README.md
+- M program-manifest.yaml
+- M tests/integration/test_repo_program_manifest.py
+- M specs/219-mainline-truth-roi-contract/spec.md
+- M specs/219-mainline-truth-roi-contract/plan.md
+- M specs/219-mainline-truth-roi-contract/tasks.md
 - M specs/219-mainline-truth-roi-contract/task-execution-log.md
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md
 
 ## Key Decisions
-- 冻结 241c5bf8 运行时；只在同一 PR 做 Codex 重审与 CI，不进入新设计/C2/v0.9.8
+- 唯一规划入口为 docs/FRAMEWORK_ROADMAP.zh-CN.md；P1 Diff-local Lean Advisory 是下一产品项；P2-P4、O1、D1 按路线图边界执行，不复制参赛版、不预建空 work item
 
 ## Commands / Tests
-- P2 RED 3 failed；GREEN 3 passed；truth 38 passed；expanded 580 passed；full 3386 passed/3 skipped；Ruff PASS；constraints clean
+- root manifest 1 passed；verify constraints 无 BLOCKER；git diff --check PASS；WI219 truth-check origin/main=mainline_merged；对抗评审 3 Important+1 Minor 已关闭
 
 ## Blockers / Risks
-- Codex 重审、required checks 或合并后 origin/main truth 任一失败则 C1 不完成；若需扩大设计面则 No-Go
+- 无产品 blocker；Program Truth 持久化 snapshot 必须等待本归档分支合并后从新 origin/main 机械同步，预合并不得写入 blocked snapshot
 
 ## Local PR Review
-- none
+- 单一专职只读 reviewer 审阅 `4f3e55c3..a51714a5`，结论 `With fixes`：0 Critical、3 Important、1 Minor；全部在 `5e06282b` 关闭，focused manifest test、constraints 与 diff-check 通过。
 
 ## Exact Next Steps
-- 提交 Batch 033，push PR #177，回复 inline comment，请求 Codex 重审并 heartbeat 到合并
+- 完成最终验证并创建 PR；Codex review/required checks 通过后合并；随后从新 origin/main 执行 program truth sync --execute --yes 并提交唯一 records-only snapshot 收口；之后按路线图创建 P1 独立 work item
