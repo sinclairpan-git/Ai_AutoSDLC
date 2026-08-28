@@ -1,32 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-08-28T03:31:22+00:00
-- Reason: Program Truth final ready pre-PR checkpoint
-- Goal: 完成 v0.9.8 后 ROI 路线归档与可恢复 Program Truth 收口
-- State: PR #179 已合并为 6002cd7a；post-merge evidence-set 根因已用 RED/GREEN 最小修复；最终 Program Truth snapshot 4a030ebc 为 fresh/ready，两个 release capability closed/ready，待 records-only PR 评审合并
+- Updated: 2026-08-28T06:41:52+00:00
+- Reason: PR #180 整改验证完成，记录分支审计边界
+- Goal: 完成 v0.9.8 后 ROI 路线归档与诚实 Program Truth 收口
+- State: PR #180 已整改为纯 D2/No-Go 记录；manifest/test 净差异为零。分支 audit=stale 且 current recompute=ready，确认含撤回提交的历史会污染归因，不能在本分支刷新 snapshot
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
 - Branch: codex/post-v098-roadmap-truth
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md
-- M program-manifest.yaml
-- M specs/219-mainline-truth-roi-contract/task-execution-log.md
-- M tests/integration/test_repo_program_manifest.py
+- none
 
 ## Key Decisions
-- 不放宽 formal_freeze_only 算法；前端 truth refs 仅 143/144，Adapter 仅 159/200，形式基线继续保留 spec_refs/close_check_refs；下一产品项仍为 P1 Diff-local Lean Advisory
+- 批准归档 D2，否决删 truth refs、放宽 formal_freeze_only 或手改 snapshot；PR #180 合并后从新 origin/main 生成真实 blocked snapshot
 
 ## Commands / Tests
-- root manifest RED 1 failed/151.50s、最终 GREEN 1 passed/130.22s；program truth audit fresh/ready；constraints 无 BLOCKER；diff-check PASS；inventory 1149/1149、unmapped 0
+- root manifest integration: 1 passed in 465.95s；verify constraints: no BLOCKERs；diff-check PASS；Program Truth audit: stale，branch recompute false-ready
 
 ## Blockers / Risks
-- 无产品 blocker；仅待 records-only PR 的 Codex review、required checks 与合并后 origin/main audit
+- Program Truth 两个 release target 的 16 个历史 provenance blocker 待纯 main snapshot 显式持久化；D2 仅在下一次 release-target-ready 发布前处理
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交并推送 records-only 分支，创建 PR，请求 Codex review 并 heartbeat 到合并；合并后从 origin/main 复验 Program Truth fresh/ready；随后按路线图创建 P1 独立 work item
+- amend/push PR #180，回复 Codex P1 并复审至合并；从新 origin/main 建纯 snapshot PR，sync/audit/merge；复验远端 main

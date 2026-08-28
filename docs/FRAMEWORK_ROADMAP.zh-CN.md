@@ -285,6 +285,21 @@
 - 若获批，只统一已有纯路径判定；不修改 checkpoint schema、work item identity、状态机或用户可见合同。
 - 预计超过 1–2 人日、需要新公共 API 或迁移时 No-Go。
 
+### 10.4 D2：历史 release-target provenance 回填
+
+**延后，下一次要求 release target `ready` 前置处理；不阻断 P1 建项与开发。** PR #179 合并后的真实
+`origin/main@6002cd7a` 首次刷新 Program Truth 时，前端 14 个、Adapter 2 个历史 truth refs 被判定为
+`formal_freeze_only`。旧 ready snapshot 生成于未进入主线的 squash 前 release branch，其发布改动被误归为这些
+历史 work item 的执行证据；因此当前必须保留真实 `blocked`，不得删 gate 换取假 ready。
+
+- 价值：7.5/10；预计投入：3–6 人日；ROI 约 1.3。价值集中在恢复未来发布可信度，不新增用户特性。
+- 触发器：准备下一次依赖 Program Truth release target 的发布，或有独立证据能把这些 work item 与真实主线实现提交、
+  路径和批次一一绑定。
+- 实施边界：建立独立 formal work item，逐项验证实际 implementation carrier；只回填可证明的 provenance，无法证明的
+  项保持 blocker。不得修改历史叙事伪造执行，不得让无关提交充当证据。
+- 停止条件：需要放宽 `formal_freeze_only`、删除 WI200 明确冻结的 121/122/159/200 truth refs、修改 3 个以上真值子系统，
+  或两轮整改后仍不能形成确定归因时 No-Go，返回用户决定是否接受 blocked release target。
+
 ## 11. 明确 No-Go 清单
 
 以下内容不进入当前路线：
@@ -298,6 +313,7 @@
 - 一次性实现五类动态专家、长期专家身份、评分、Finding Ledger、StageCloseCertificate 或第二套状态机；
 - 在选中当前项之前，为所有未来候选预建空 spec/plan/tasks；
 - 因对抗评审提出推测性边界而无限追加修复；两轮后必须返回用户。
+- 为让 Program Truth 变绿而删除正式 truth refs、放宽 `formal_freeze_only` 或手改 computed snapshot。
 
 ## 12. 恢复与启动协议
 
@@ -321,5 +337,6 @@
 - [ ] P4 Phase A 证明 Requirement/Design/Implementation 动态专家 ROI。
 - [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。
+- [ ] D2 在下一次要求 release target ready 前回填可证明的历史 provenance；当前保持真实 blocked。
 
 当检查表与聊天记忆冲突时，以远端主线事实、正式 work item 和本文件最近一次经评审的更新为准。

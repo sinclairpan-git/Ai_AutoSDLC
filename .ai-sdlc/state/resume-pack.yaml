@@ -9,21 +9,16 @@ working_set_snapshot:
   plan_path: specs/219-mainline-truth-roi-contract/plan.md
   tasks_path: specs/219-mainline-truth-roi-contract/tasks.md
   active_files:
-  - docs/FRAMEWORK_ROADMAP.zh-CN.md
-  - program-manifest.yaml
-  - tests/integration/test_repo_program_manifest.py
-  - specs/219-mainline-truth-roi-contract/task-execution-log.md
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 完成 v0.9.8 后 ROI 路线归档与可恢复 Program Truth 收口 | State: PR #179
-    已合并为 6002cd7a；post-merge evidence-set 根因已用 RED/GREEN 最小修复；最终 Program Truth snapshot
-    4a030ebc 为 fresh/ready，两个 release capability closed/ready，待 records-only PR 评审合并
-    | Next: 提交并推送 records-only 分支，创建 PR，请求 Codex review 并 heartbeat 到合并；合并后从 origin/main
-    复验 Program Truth fresh/ready；随后按路线图创建 P1 独立 work item'
+  context_summary: 'Goal: 完成 v0.9.8 后 ROI 路线归档与诚实 Program Truth 收口 | State: PR #180
+    已整改为纯 D2/No-Go 记录；manifest/test 净差异为零。分支 audit=stale 且 current recompute=ready，确认含撤回提交的历史会污染归因，不能在本分支刷新
+    snapshot | Next: amend/push PR #180，回复 Codex P1 并复审至合并；从新 origin/main 建纯 snapshot
+    PR，sync/audit/merge；复验远端 main'
 current_branch: codex/post-v098-roadmap-truth
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-28T03:31:22+00:00'
+timestamp: '2026-08-28T06:41:52+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1
