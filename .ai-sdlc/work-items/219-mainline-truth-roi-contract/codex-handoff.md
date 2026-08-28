@@ -1,37 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-08-28T02:35:32+00:00
-- Reason: PR #179 Codex P2 repository locator 整改
-- Goal: 归档 v0.9.8 后 P0-P4 ROI 路线并形成可直接恢复的下一步
-- State: PR #179 首轮 Codex review 的唯一 P2 已整改：路线图明确主仓与参赛版独立 URL、checkout 语义和可执行 SHA 核对命令；本地复验通过，待提交、复审和 CI 合并
+- Updated: 2026-08-28T06:41:52+00:00
+- Reason: PR #180 整改验证完成，记录分支审计边界
+- Goal: 完成 v0.9.8 后 ROI 路线归档与诚实 Program Truth 收口
+- State: PR #180 已整改为纯 D2/No-Go 记录；manifest/test 净差异为零。分支 audit=stale 且 current recompute=ready，确认含撤回提交的历史会污染归因，不能在本分支刷新 snapshot
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
-- Branch: codex/post-v098-roi-roadmap
+- Branch: codex/post-v098-roadmap-truth
 
 ## Changed Files
-- M README.md
-- A docs/FRAMEWORK_ROADMAP.zh-CN.md
-- M program-manifest.yaml
-- M tests/integration/test_repo_program_manifest.py
-- M specs/219-mainline-truth-roi-contract/spec.md
-- M specs/219-mainline-truth-roi-contract/plan.md
-- M specs/219-mainline-truth-roi-contract/tasks.md
-- M specs/219-mainline-truth-roi-contract/task-execution-log.md
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md
+- none
 
 ## Key Decisions
-- 唯一规划入口仍为 docs/FRAMEWORK_ROADMAP.zh-CN.md，P1 Diff-local Lean Advisory 仍是下一产品项；恢复协议必须用两个显式仓库 URL 区分同名 origin，只比较各自远端 main，不引入新 remote、状态或治理层
+- 批准归档 D2，否决删 truth refs、放宽 formal_freeze_only 或手改 snapshot；PR #180 合并后从新 origin/main 生成真实 blocked snapshot
 
 ## Commands / Tests
-- git ls-remote 两个 URL 命中冻结 SHA；root manifest 1 passed；verify constraints 无 BLOCKER；git diff --check PASS；WI219 truth-check origin/main=mainline_merged
+- root manifest integration: 1 passed in 465.95s；verify constraints: no BLOCKERs；diff-check PASS；Program Truth audit: stale，branch recompute false-ready
 
 ## Blockers / Risks
-- 无产品 blocker；等待 PR #179 Codex 复审和 required checks，合并后仍需 records-only Program Truth snapshot 同步
+- Program Truth 两个 release target 的 16 个历史 provenance blocker 待纯 main snapshot 显式持久化；D2 仅在下一次 release-target-ready 发布前处理
 
 ## Local PR Review
-- 路线图专职对抗评审的 3 Important + 1 Minor 已关闭；PR #179 首轮 Codex review 提出 1 个 P2 repository locator 缺口，已做最小整改并本地复验，待复审。
+- none
 
 ## Exact Next Steps
-- 提交并推送 P2 修复，回复 review thread，请求 Codex 复审并 heartbeat 到合并；随后从新 origin/main 执行 program truth sync --execute --yes；收口后按路线图创建 P1 独立 work item
+- amend/push PR #180，回复 Codex P1 并复审至合并；从新 origin/main 建纯 snapshot PR，sync/audit/merge；复验远端 main
