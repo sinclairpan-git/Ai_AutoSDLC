@@ -30,7 +30,7 @@
 |---|---|---|---:|---:|---:|---|
 | P0 | 主线真值复位 + 轻量 ROI 合同 | **已完成** | 9.5/10 | 实际已投入 | 4.5（原估） | 无 |
 | P1 | Diff-local Lean Advisory | **下一项** | 8.0/10 | 2–3 人日 | 2.7 | P0 与 v0.9.8 已完成 |
-| P2 | 普通用户单入口收敛 | **排队** | 9.0/10 | 4–6 人日 | 1.5 | P1 证明低噪声且无治理膨胀 |
+| P2 | 普通用户单入口收敛 | **排队** | 9.0/10 | 4–6 人日 | 1.5 | P1 已完成，或按 No-Go 有证据关闭且未保留治理膨胀 |
 | P3 | 跨平台首次用户 12 路完整闭环 | **排队** | 9.5/10 | 6–10 人日 | 1.1 | P2 默认入口稳定 |
 | P4 | 五类 Loop 有界动态专家 | **条件候选** | 10/10 | 10–15 人日 | 0.6 | P1–P3 的真实收益支持继续投资 |
 
@@ -165,11 +165,11 @@
 
 | 平台 | 空项目在线 | 已有项目在线 | 空项目离线 | 已有项目离线 |
 |---|---|---|---|---|
-| Windows | 路线 1 | 路线 2 | 路线 3 | 路线 4 |
-| macOS | 路线 5 | 路线 6 | 路线 7 | 路线 8 |
-| Linux | 路线 9 | 路线 10 | 路线 11 | 路线 12 |
+| Windows AMD64 | 路线 1 | 路线 2 | 路线 3 | 路线 4 |
+| macOS Apple Silicon（arm64） | 路线 5 | 路线 6 | 路线 7 | 路线 8 |
+| Linux AMD64 | 路线 9 | 路线 10 | 路线 11 | 路线 12 |
 
-每条路线都必须自包含：环境准备、安装/升级、`init` 或 adopt、正常 Result/Next、成功证据、失败后的本地恢复、产物/版本绑定。
+每条路线都必须自包含：环境准备、获取正式版本或平台资产、版本与 SHA256（或在线渠道的等价完整性证据）验证、安装/升级、`init` 或 adopt、正常 Result/Next、成功证据、失败后的本地恢复、产物/版本绑定。不得把资产获取或完整性验证留给路线外的共享说明。
 
 ### 7.3 可直接派生的实施任务
 
@@ -215,7 +215,7 @@
 ### 8.3 冻结行为合同
 
 - 复用现有 LoopRun/LoopRound、状态、artifact 和 close 语义，不建立第二套 stage-review 状态机。
-- 每个 Loop 最多两个动态只读专家，最多一次修复后的复审。
+- 每个 Loop 必须选择一个与当前阶段语义匹配的 primary 只读专家；只有当前风险证据需要时，才额外选择至多一个不重复的 cross-risk 只读专家。最多一次修复后的复审。
 - 输入绑定 work item、tasks/acceptance、declared scope、base/head、changed files、diff hash、verification evidence 和前轮结论。
 - 输入或 diff 变化立即使旧 PASS 失效；复审必须重新绑定当前 identity。
 - Reviewer 不能写代码、不能 close、不能 merge；Implementation Agent 才能修改代码。
@@ -226,7 +226,7 @@
 
 - [ ] 重新核对主仓五类 Loop 现状和参赛版远端稳定行为，只提取缺口，不复制 stage-review 实现。
 - [ ] 为 Phase A 冻结统一 Candidate/Input Digest/Reviewer Result 的最小合同，优先复用现有模型。
-- [ ] 定义风险到角色的有界映射；无足够证据时使用固定少量角色或 `needs_user`，不生成无限角色。
+- [ ] 定义阶段到 primary 角色、风险证据到可选 cross-risk 角色的有界映射；始终保留一个阶段 primary，不因缺少额外风险信号降为零 reviewer，也不生成无限角色。
 - [ ] 实现 Requirement 单 Loop 纵向薄片并验证输入变化使旧结果失效。
 - [ ] 证明投入产出后扩展 Design Contract、Implementation；每次扩展独立 Go/No-Go。
 - [ ] Phase A 在真实项目中证明缺陷拦截收益后，才评估 Frontend Evidence 与 Local PR Review。
