@@ -9,16 +9,17 @@ working_set_snapshot:
   plan_path: specs/219-mainline-truth-roi-contract/plan.md
   tasks_path: specs/219-mainline-truth-roi-contract/tasks.md
   active_files:
+  - docs/FRAMEWORK_ROADMAP.zh-CN.md
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 完成 PR #177 C1 并验证合并后 origin/main truth | State: Codex P2
-    已以同批次取证一致性整改；RED/GREEN、38 truth、580 扩大回归、3386 full、Ruff、constraints 全绿；Batch 033
-    已记录，待推送重审 | Next: 提交 Batch 033，push PR #177，回复 inline comment，请求 Codex 重审并 heartbeat
-    到合并'
-current_branch: codex/wi219-squash-truth-attribution
+  context_summary: 'Goal: 归档 v0.9.8 后 P0-P4 ROI 路线并形成可直接恢复的下一步 | State: PR #179 首轮
+    Codex review 的唯一 P2 已整改：路线图明确主仓与参赛版独立 URL、checkout 语义和可执行 SHA 核对命令；本地复验通过，待提交、复审和
+    CI 合并 | Next: 提交并推送 P2 修复，回复 review thread，请求 Codex 复审并 heartbeat 到合并；随后从新 origin/main
+    执行 program truth sync --execute --yes；收口后按路线图创建 P1 独立 work item'
+current_branch: codex/post-v098-roi-roadmap
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-27T11:04:35+00:00'
+timestamp: '2026-08-28T02:35:33+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

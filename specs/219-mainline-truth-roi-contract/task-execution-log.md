@@ -708,3 +708,30 @@
 - **ROI 裁决**：相对 `origin/main@bcbc54e9`，产品代码 24 additions / 11 deletions，净增 13；测试 117 additions。
   新增 8 行产品净量统一了同一不变量在既有返回点的作用域，3 个测试分别锁定可复现提前返回；仍未越过冻结边界，
   批准保留。若 Codex 重审再发现需要扩大设计面的同类问题，则 C1 No-Go，不继续追加实现。
+
+### Batch 2026-08-27-034 | post-merge mainline truth and v0.9.8 closure
+
+- **验证画像**：`records-only`
+- **改动范围**：
+  - `specs/219-mainline-truth-roi-contract/spec.md`
+  - `specs/219-mainline-truth-roi-contract/plan.md`
+  - `specs/219-mainline-truth-roi-contract/tasks.md`
+  - `specs/219-mainline-truth-roi-contract/task-execution-log.md`
+- **统一验证命令**：`uv run ai-sdlc workitem truth-check --wi specs/219-mainline-truth-roi-contract --rev origin/main --json`
+  在 `origin/main@4f3e55c300dab20fb4fea93818d79394a927f77e` 返回 `ok=true`、
+  `classification=mainline_merged`、`contained_in_main=true`、`execution_started=true`、`changed_paths=[]`，
+  且 next actions 不再包含 `start execute work`。
+- **代码审查**：PR #177 已于 2026-08-27 合并为
+  `6be1120e441f523b3d1d59ad93836a6081ca1de5`；其 Codex P2 已在同一 PR 完成整改，required checks 全绿。
+  PR #178 随后合并为 `4f3e55c300dab20fb4fea93818d79394a927f77e` 并发布 tag `v0.9.8`。
+- **任务/计划同步状态**：T60–T63 全部完成；spec、plan、tasks 顶部状态同步为已完成/close。C2 active-WI
+  path validation centralization 仍未获实现授权，作为 `docs/FRAMEWORK_ROADMAP.zh-CN.md` 的 D1 延后候选保存；
+  不重新打开 WI219。
+- **已完成 git 提交**：是（产品实现由 PR #177 合并；本批仅补充主线后验记录）
+- **提交哈希**：`6be1120e441f523b3d1d59ad93836a6081ca1de5`（C1 merge），
+  `4f3e55c300dab20fb4fea93818d79394a927f77e`（v0.9.8 release）
+- 关联 branch/worktree disposition 计划：`merged / historical worktree no longer required`
+- 当前批次 branch disposition 状态：`merged`
+- 当前批次 worktree disposition 状态：`historical; not required for recovery`
+- **ROI 裁决**：本批不修改 runtime 或测试行为，只消除会让恢复者误以为 PR #177 尚未合并的记录漂移；未来工作
+  从 P1 Diff-local Lean Advisory 独立建项，不继续追加 WI219 细节实现。

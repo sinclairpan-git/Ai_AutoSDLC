@@ -4,7 +4,7 @@
 > `superpowers:executing-plans` 内联执行。每个产品批次必须先看到预期 RED，再做最小 GREEN，并独立提交。
 
 **编号**：`219-mainline-truth-roi-contract`
-**状态**：用户已批准实施（2026-08-25）
+**状态**：已完成并随 `v0.9.8` 发布（2026-08-27）
 **规格**：`specs/219-mainline-truth-roi-contract/spec.md`
 
 ## 目标与架构
@@ -253,7 +253,7 @@ Track A1 在 `context/state.py` 增加一个无 I/O 的 spec-dir 纯解析 helpe
   既有 `_latest_batch_text()` 返回的同一最新批次。不得读取普通正文或 commit message，不得修改 GitClient /
   `workitem_traceability.py` 实现。
 
-- [ ] **Step 4：回归、ROI、评审与主线闭环**
+- [x] **Step 4：回归、ROI、评审与主线闭环**
 
   运行 focused/full pytest、Ruff、constraints、exact truth reproduction 与 diff-check；运行时代码若越过单一私有
   流程或负控制变化则 No-Go。验证通过后独立 review、push/PR、Codex review、required checks、合并与

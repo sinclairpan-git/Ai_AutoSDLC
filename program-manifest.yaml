@@ -95,6 +95,9 @@ capability_closure_audit:
   reviewed_at: '2026-04-18'
   open_clusters: []
 source_registry:
+- path: docs/FRAMEWORK_ROADMAP.zh-CN.md
+  source_type: design_doc
+  truth_layer: design
 - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
   source_type: requirement_doc
   truth_layer: requirements

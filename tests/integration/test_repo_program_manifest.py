@@ -26,6 +26,11 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
         for item in manifest.source_registry
         if item.path in release_paths
     }
+    roadmap_registry = {
+        (item.path, item.source_type, item.truth_layer)
+        for item in manifest.source_registry
+        if item.path == "docs/FRAMEWORK_ROADMAP.zh-CN.md"
+    }
     capability_closure_states = {
         item.capability_id: item.closure_state
         for item in snapshot.computed_capabilities
@@ -39,9 +44,12 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
 
     assert validation.valid, validation.errors
     assert inventory is not None
-    assert (inventory.state, inventory.total_sources, inventory.mapped_sources, inventory.unmapped_sources, inventory.missing_sources) == ("complete", 1148, 1148, 0, 1)
+    assert (inventory.state, inventory.total_sources, inventory.mapped_sources, inventory.unmapped_sources, inventory.missing_sources) == ("complete", 1149, 1149, 0, 1)
     assert (inventory.layer_totals["close"], inventory.layer_materialized["close"]) == (218, 217)
     assert release_registry == {(path, "release_doc", "release") for path in release_paths}
+    assert roadmap_registry == {
+        ("docs/FRAMEWORK_ROADMAP.zh-CN.md", "design_doc", "design")
+    }
     assert not any(warning.startswith("migration_pending: truth source unmapped for ") for warning in validation.warnings)
     assert capability_closure_states == {"frontend-mainline-delivery": "closed", "agent-adapter-verified-host-ingress": "closed"}
     assert missing_entry_warnings == []

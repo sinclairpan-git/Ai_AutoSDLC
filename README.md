@@ -495,6 +495,7 @@ The file `.ai-sdlc/project/config/project-config.yaml` holds IDE detection metad
 ## Documentation
 
 - Current release notes: `docs/releases/v0.9.8.md`
+- Canonical post-v0.9.8 ROI roadmap: `docs/FRAMEWORK_ROADMAP.zh-CN.md`
 - Chinese user guide: `USER_GUIDE.zh-CN.md` (start with the **目录**, then jump to Chapter 1 or Chapter 2)
 - Offline install bundle (build + one-command install): `packaging/offline/README.md`
 - Offline Python runtime release checklist: `packaging/offline/RELEASE_CHECKLIST.md`
