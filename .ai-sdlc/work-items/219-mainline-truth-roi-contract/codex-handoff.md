@@ -1,16 +1,16 @@
 # Continuity Handoff
 
-- Updated: 2026-08-28T02:16:46+00:00
-- Reason: 对抗评审批准后的 canonical continuity 收口
+- Updated: 2026-08-28T02:35:32+00:00
+- Reason: PR #179 Codex P2 repository locator 整改
 - Goal: 归档 v0.9.8 后 P0-P4 ROI 路线并形成可直接恢复的下一步
-- State: 路线图已完成单一专职对抗评审并整改通过；WI219 已核销为 v0.9.8 已发布；当前分支只剩归档验证、PR 合并与合并后 Program Truth snapshot 收口
+- State: PR #179 首轮 Codex review 的唯一 P2 已整改：路线图明确主仓与参赛版独立 URL、checkout 语义和可执行 SHA 核对命令；本地复验通过，待提交、复审和 CI 合并
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
 - Branch: codex/post-v098-roi-roadmap
 
 ## Changed Files
-- A docs/FRAMEWORK_ROADMAP.zh-CN.md
 - M README.md
+- A docs/FRAMEWORK_ROADMAP.zh-CN.md
 - M program-manifest.yaml
 - M tests/integration/test_repo_program_manifest.py
 - M specs/219-mainline-truth-roi-contract/spec.md
@@ -22,16 +22,16 @@
 - M .ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md
 
 ## Key Decisions
-- 唯一规划入口为 docs/FRAMEWORK_ROADMAP.zh-CN.md；P1 Diff-local Lean Advisory 是下一产品项；P2-P4、O1、D1 按路线图边界执行，不复制参赛版、不预建空 work item
+- 唯一规划入口仍为 docs/FRAMEWORK_ROADMAP.zh-CN.md，P1 Diff-local Lean Advisory 仍是下一产品项；恢复协议必须用两个显式仓库 URL 区分同名 origin，只比较各自远端 main，不引入新 remote、状态或治理层
 
 ## Commands / Tests
-- root manifest 1 passed；verify constraints 无 BLOCKER；git diff --check PASS；WI219 truth-check origin/main=mainline_merged；对抗评审 3 Important+1 Minor 已关闭
+- git ls-remote 两个 URL 命中冻结 SHA；root manifest 1 passed；verify constraints 无 BLOCKER；git diff --check PASS；WI219 truth-check origin/main=mainline_merged
 
 ## Blockers / Risks
-- 无产品 blocker；Program Truth 持久化 snapshot 必须等待本归档分支合并后从新 origin/main 机械同步，预合并不得写入 blocked snapshot
+- 无产品 blocker；等待 PR #179 Codex 复审和 required checks，合并后仍需 records-only Program Truth snapshot 同步
 
 ## Local PR Review
-- 单一专职只读 reviewer 审阅 `4f3e55c3..a51714a5`，结论 `With fixes`：0 Critical、3 Important、1 Minor；全部在 `5e06282b` 关闭，focused manifest test、constraints 与 diff-check 通过。
+- 路线图专职对抗评审的 3 Important + 1 Minor 已关闭；PR #179 首轮 Codex review 提出 1 个 P2 repository locator 缺口，已做最小整改并本地复验，待复审。
 
 ## Exact Next Steps
-- 完成最终验证并创建 PR；Codex review/required checks 通过后合并；随后从新 origin/main 执行 program truth sync --execute --yes 并提交唯一 records-only snapshot 收口；之后按路线图创建 P1 独立 work item
+- 提交并推送 P2 修复，回复 review thread，请求 Codex 复审并 heartbeat 到合并；随后从新 origin/main 执行 program truth sync --execute --yes；收口后按路线图创建 P1 独立 work item

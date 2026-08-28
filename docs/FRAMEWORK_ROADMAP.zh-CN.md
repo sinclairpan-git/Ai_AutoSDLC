@@ -7,8 +7,8 @@
 ## 1. 冻结基线与适用范围
 
 - 路线图冻结日期：`2026-08-27`。
-- 主仓远端基线：`origin/main@4f3e55c300dab20fb4fea93818d79394a927f77e`，已发布 `v0.9.8`。
-- 参赛版远端参考基线：`origin/main@b6addbab22ab069ea1d6d7306fe1c676bd056333`。
+- 主仓远端定位符：`https://github.com/sinclairpan-git/Ai_AutoSDLC.git`；在主仓 checkout 中默认远端名为 `origin`，冻结基线为 `origin/main@4f3e55c300dab20fb4fea93818d79394a927f77e`，已发布 `v0.9.8`。
+- 参赛版远端定位符：`https://github.com/SinclairPan/Ai_AutoSDLC.git`；在参赛版 checkout 中默认远端名为 `origin`，冻结参考基线为 `origin/main@b6addbab22ab069ea1d6d7306fe1c676bd056333`。
 - 比较范围只包含两个仓库的远端 `main`；产品站、比赛材料、本地分支和未合并 worktree 均不作为路线真值。
 - 主仓不被参赛版覆盖，不 cherry-pick 参赛版实现。只借鉴经过验证的行为边界、失败经验和投入产出结论，由主仓按自身架构重新实现。
 - 若远端主线已经变化，恢复者先核对相关能力是否已落地；只有真实证据改变价值、投入或依赖时才修订本路线图，不因会话切换重新从零规划。
@@ -303,7 +303,7 @@
 
 任何新会话或中断恢复都按以下顺序执行：
 
-1. Fetch 主仓与参赛版远端 `main`，记录精确 SHA；不读取产品站和本地材料分支作为决策真值。
+1. 分别用上文两个仓库 URL 定位远端，并以 `git ls-remote <仓库 URL> refs/heads/main` 核对 `main` 精确 SHA；需要读取树时，只在各自独立 checkout 中 fetch 对应 `origin/main`。不得把两个 checkout 的 `origin` 当作同一仓库，也不读取产品站和本地材料分支作为决策真值。
 2. 阅读本文件，核对“总体队列”和当前项状态，不重新从零生成 P0–P4。
 3. 核对当前远端主线是否已经改变相关能力。若没有改变，直接选择队列中第一个“下一项/排队”事项。
 4. 当前固定下一项是 **P1 Diff-local Lean Advisory**。使用 `.ai-sdlc/project/config/project-state.yaml` 的 next work item sequence 创建独立 formal work item。
