@@ -4,8 +4,8 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 
 # 实施计划：普通用户单入口收敛
 
-**编号**：`220-ordinary-user-single-entry-convergence` | **日期**：2026-08-29  
-**规格**：`specs/220-ordinary-user-single-entry-convergence/spec.md`  
+**编号**：`220-ordinary-user-single-entry-convergence` | **日期**：2026-08-29
+**规格**：`specs/220-ordinary-user-single-entry-convergence/spec.md`
 **状态**：Formal 候选；生产实现等待用户批准
 
 ## 1. 概述
@@ -19,12 +19,12 @@ checkpoint、`get_loop_status()`、`build_status_json_surface()`、现有 next a
 
 ## 2. 技术背景
 
-**语言/版本**：Python 3.11+  
-**CLI**：Typer + Rich  
-**现有真值**：checkpoint/resume、`core.loop_status`、`telemetry.readiness.build_status_json_surface`、RulesLoader  
-**测试**：pytest、Typer `CliRunner`、Ruff、跨平台 GitHub Actions  
-**目标平台**：Windows PowerShell/cmd、macOS、Linux  
-**存储**：无新增；只读现有 `.ai-sdlc/` 状态  
+**语言/版本**：Python 3.11+
+**CLI**：Typer + Rich
+**现有真值**：checkpoint/resume、`core.loop_status`、`telemetry.readiness.build_status_json_surface`、RulesLoader
+**测试**：pytest、Typer `CliRunner`、Ruff、跨平台 GitHub Actions
+**目标平台**：Windows PowerShell/cmd、macOS、Linux
+**存储**：无新增；只读现有 `.ai-sdlc/` 状态
 **总预算**：4–6 人日；P2A 2–3，P2B 1–2，验证/评审 1
 
 ## 3. 宪章与 ROI 检查
@@ -127,40 +127,40 @@ Applicable Rules 只使用 checkpoint stage 与现有 `RulesLoader`；最多输�
 
 ### Phase 0：Formal freeze（当前阶段）
 
-**目标**：冻结证据、用户合同、兼容矩阵、允许文件面、RED 顺序、预算和停止条件。  
-**产物**：四份 canonical Formal 文档、manifest/continuity。  
-**验证**：constraints、program validate/truth、manifest test、diff-check、exact-head 只读 review。  
-**回退**：只回退 WI220 Formal/continuity，不触碰产品代码。  
+**目标**：冻结证据、用户合同、兼容矩阵、允许文件面、RED 顺序、预算和停止条件。
+**产物**：四份 canonical Formal 文档、manifest/continuity。
+**验证**：constraints、program validate/truth、manifest test、diff-check、exact-head 只读 review。
+**回退**：只回退 WI220 Formal/continuity，不触碰产品代码。
 **出口**：用户明确批准后才能创建 dev 分支和 RED。
 
 ### Phase 1：P2A characterization / RED
 
-**目标**：先锁定 run/status/Loop pointer/exit/JSON 基线，再写预期新输出 RED。  
-**验证**：`test_cli_run.py`、`test_cli_status.py`、新的纯投影 unit tests。  
+**目标**：先锁定 run/status/Loop pointer/exit/JSON 基线，再写预期新输出 RED。
+**验证**：`test_cli_run.py`、`test_cli_status.py`、新的纯投影 unit tests。
 **停止**：若需要修改 Runner、ProgramService、Loop model 或 status JSON builder，回到 Formal 复审。
 
 ### Phase 2：P2A minimal GREEN
 
-**目标**：落一个内部纯投影，接入 run/status，新增 `status --details`。  
-**验证**：正常/open/preflight/halt、single/multiple/malformed/no-loop、default/details/json 矩阵。  
+**目标**：落一个内部纯投影，接入 run/status，新增 `status --details`。
+**验证**：正常/open/preflight/halt、single/multiple/malformed/no-loop、default/details/json 矩阵。
 **回退**：独立 revert P2A commit。
 
 ### Phase 3：P2A adversarial ROI gate
 
-**目标**：检查输出真假、重复实现、实现体积、异常处理与兼容。  
-**Go**：P2A ≤3 人日、投影 ≤180 行、无新状态/API/schema、定向回归通过。  
+**目标**：检查输出真假、重复实现、实现体积、异常处理与兼容。
+**Go**：P2A ≤3 人日、投影 ≤180 行、无新状态/API/schema、定向回归通过。
 **No-Go/降级**：超限则只保留 run 五项摘要和 status details 迁移桥，暂停 help 隐藏。
 
 ### Phase 4：P2B default help convergence（条件）
 
-**目标**：默认 help 六入口，高级命令直接可达，README 提供分类索引。  
-**验证**：根 help allowlist、所有隐藏命令 `--help`、representative advanced argv、command inventory。  
+**目标**：默认 help 六入口，高级命令直接可达，README 提供分类索引。
+**验证**：根 help allowlist、所有隐藏命令 `--help`、representative advanced argv、command inventory。
 **回退**：只恢复 `hidden` 元数据和 README 段落。
 
 ### Phase 5：一致性、全量验证与交付
 
-**目标**：只修正真实漂移的 guidance，完成新用户/高级用户/三平台验证与独立评审。  
-**验证**：focused/full pytest、Ruff、constraints、Program Truth、manifest、diff-check、required checks。  
+**目标**：只修正真实漂移的 guidance，完成新用户/高级用户/三平台验证与独立评审。
+**验证**：focused/full pytest、Ruff、constraints、Program Truth、manifest、diff-check、required checks。
 **交付**：按本仓库 PR/Codex review/heartbeat/merge protocol 闭环。
 
 ## 7. 关键路径验证矩阵

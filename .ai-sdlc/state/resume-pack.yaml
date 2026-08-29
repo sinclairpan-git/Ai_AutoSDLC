@@ -11,13 +11,13 @@ working_set_snapshot:
   active_files:
   - specs/220-ordinary-user-single-entry-convergence/tasks.md
   - specs/220-ordinary-user-single-entry-convergence/spec.md
-  context_summary: 'Goal: 完成 WI220 普通用户单入口收敛 Formal，停在生产实现批准前 | State: T01 完成；Program
-    Truth fresh/blocked、inventory 1154/1154；准备提交 Formal exact-head review 候选 | Next:
-    运行提交前新鲜校验，提交 Formal 候选并执行独立 exact-head review'
+  context_summary: 'Goal: 完成 WI220 普通用户单入口收敛 Formal，停在生产实现批准前 | State: T01 完成；第一轮
+    exact-head review 两项 P2 已聚焦整改；等待第二轮精确提交评审 | Next: 提交 Formal 评审整改，执行第二轮 exact-head
+    独立评审；clean 后记录 T02 done 并做最终验证'
 current_branch: feature/220-ordinary-user-single-entry-convergence-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-29T15:41:20+00:00'
+timestamp: '2026-08-29T15:55:58+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-29T15:19:45+00:00'
 checkpoint_fingerprint: ffd508c45213b64bfe56b31a5ea474a0e3446531e5abd2fe30469e47673a27eb

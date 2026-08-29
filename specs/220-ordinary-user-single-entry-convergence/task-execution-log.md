@@ -1,7 +1,7 @@
 # 任务执行日志：普通用户单入口收敛
 
-**功能编号**：`220-ordinary-user-single-entry-convergence`  
-**创建日期**：2026-08-29  
+**功能编号**：`220-ordinary-user-single-entry-convergence`
+**创建日期**：2026-08-29
 **状态**：Formal 候选；生产实现未授权
 
 ## 1. 归档规则
@@ -56,7 +56,12 @@
 #### 2.4 评审与验证状态
 
 - 宪章/规格对齐：已冻结 MVP、验证、回退、无新状态、docs/dev 分支边界。
-- T01 Formal evidence/contract freeze：完成；exact-head review 待 T02。
+- T01 Formal evidence/contract freeze：完成。
+- T02 第一轮 exact-head review：候选 `602365c6`；发现两项 P2：新增 Markdown 行尾空格导致范围
+  `git diff --check` 失败，以及 T41 无条件依赖 T32 导致 P2A-only 降级路径无法收口。
+- 第一轮聚焦整改：删除四份 Formal 文档的行尾空格；将 T41 基础依赖改为 T24/T31，并在 acceptance 中
+  明确 P2B Go 必须先完成 T32、P2B 暂停则以 T31 降级决策为前置证据。整改后 diff-check、guard 和
+  plan-check 通过；第二轮 exact-head review 待执行。
 - 用户生产实现批准：待 T03；当前明确未授权。
 - Program Truth：待 Formal 最终内容后执行 sync/audit；历史 provenance blocker 必须保持诚实，不属于 P2 修复。
 

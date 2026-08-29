@@ -1,10 +1,10 @@
 # 产品需求文档：普通用户单入口收敛
 
-**功能编号**：`220-ordinary-user-single-entry-convergence`  
-**创建日期**：2026-08-29  
-**状态**：Formal 候选，等待用户批准生产实现  
-**类型**：CLI beginner UX + compatibility-preserving presentation convergence  
-**主线冻结基线**：`origin/main@e70ced9028ca967865386565f4e23eab999ef320`  
+**功能编号**：`220-ordinary-user-single-entry-convergence`
+**创建日期**：2026-08-29
+**状态**：Formal 候选，等待用户批准生产实现
+**类型**：CLI beginner UX + compatibility-preserving presentation convergence
+**主线冻结基线**：`origin/main@e70ced9028ca967865386565f4e23eab999ef320`
 **参赛版参考基线**：远端 `main@b6addbab22ab069ea1d6d7306fe1c676bd056333`
 
 ## 1. 问题、证据与用户价值
