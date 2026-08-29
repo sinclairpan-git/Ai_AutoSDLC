@@ -125,7 +125,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.3 收敛 status default 并保留 details/json
 
 - task_id: T23
-- status: todo
+- status: done
 - goal: 默认只显示四项摘要，新增 details 迁移桥，JSON 早返回合同不变。
 - depends:
   - T21
@@ -142,7 +142,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.4 P2A adversarial ROI gate
 
 - task_id: T24
-- status: blocked
+- status: todo
 - goal: 以新鲜 diff、测试和独立评审决定进入 P2B、降级或 No-Go。
 - depends:
   - T22

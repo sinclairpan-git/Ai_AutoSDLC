@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +15,10 @@ from rich.table import Table
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.cli.beginner_guidance import render_init_complete_guidance
+from ai_sdlc.cli.default_summary import (
+    build_default_summary,
+    render_default_summary,
+)
 from ai_sdlc.context.state import (
     CHECKPOINT_PATH,
     CheckpointLoadError,
@@ -38,6 +43,8 @@ from ai_sdlc.core.frontend_contract_observation_runtime_policy import (
     classify_frontend_contract_observation_source,
 )
 from ai_sdlc.core.handoff import check_handoff
+from ai_sdlc.core.loop_models import LoopType
+from ai_sdlc.core.loop_status import LoopStatusCommandStatus, get_loop_status
 from ai_sdlc.core.p1_artifacts import (
     load_execution_path,
     load_latest_reviewer_decision,
@@ -948,8 +955,16 @@ def status_command(
         "--json",
         help="Machine-readable bounded telemetry summary.",
     ),
+    details: bool = typer.Option(
+        False,
+        "--details",
+        help="Show the previous detailed human-readable status surface.",
+    ),
 ) -> None:
     """Show current AI-SDLC pipeline status."""
+    if details and as_json:
+        raise typer.BadParameter("--details cannot be combined with --json")
+
     root = find_project_root()
     if root is None:
         console.print(
@@ -967,17 +982,51 @@ def status_command(
         typer.echo(json.dumps(status_surface, indent=2))
         raise typer.Exit(code=0)
 
-    note = format_adapter_notice(ensure_ide_adaptation(root))
-    if note:
-        console.print(note)
-
     state = load_project_state(root)
-    adapter_governance = build_adapter_governance_surface(root)
     if state.status == ProjectStatus.UNINITIALIZED:
         console.print("[yellow]Project found but not initialized.[/yellow]")
         raise typer.Exit(code=1)
 
     hint = detect_reconcile_hint(root)
+    if not details:
+        cp = load_checkpoint(root, warn=False)
+        loop_statuses = tuple(
+            get_loop_status(root, loop_type=loop_type) for loop_type in LoopType
+        )
+        loop_is_blocked = any(
+            str(item.status) == LoopStatusCommandStatus.BLOCKED.value
+            for item in loop_statuses
+        )
+        active_loop_count = sum(
+            item.current_loop is not None
+            and str(item.current_loop.status) != "closed"
+            for item in loop_statuses
+        )
+        summary = build_default_summary(
+            checkpoint_stage=cp.current_stage if cp is not None else "init",
+            result=(
+                "blocked"
+                if hint is not None or loop_is_blocked or active_loop_count > 1
+                else "ready"
+            ),
+            loop_statuses=loop_statuses,
+            primary_next_actions=(
+                ("ai-sdlc recover --reconcile",) if hint is not None else ()
+            ),
+            workitem_next_actions=_status_next_actions(status_surface),
+            blockers=((hint.reason,) if hint is not None else ()),
+            status_surface=status_surface,
+        )
+        if summary.blockers and summary.result == "ready":
+            summary = replace(summary, result="blocked")
+        console.print(render_default_summary(summary, include_rules=False), markup=False)
+        raise typer.Exit(code=0)
+
+    note = format_adapter_notice(ensure_ide_adaptation(root))
+    if note:
+        console.print(note)
+
+    adapter_governance = build_adapter_governance_surface(root)
     table = _property_table("AI-SDLC Status")
 
     table.add_row("Project", state.project_name)
@@ -1067,6 +1116,20 @@ def status_command(
             blocking=False,
         )
     raise typer.Exit(code=0)
+
+
+def _status_next_actions(status_surface: dict[str, Any]) -> tuple[str, ...]:
+    """只选取既有 status surface 中最具体的工作项下一步。"""
+
+    diagnostics = status_surface.get("workitem_diagnostics")
+    if not isinstance(diagnostics, dict):
+        return ()
+    candidate = diagnostics.get("next_required_action") or diagnostics.get(
+        "next_action"
+    )
+    if isinstance(candidate, str) and candidate.strip():
+        return (candidate.strip(),)
+    return ()
 
 
 # ---------------------------------------------------------------------------

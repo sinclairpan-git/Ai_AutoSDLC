@@ -131,3 +131,13 @@
   default summary `6 passed in 0.37s`；Ruff PASS。
 - 未改 Runner、ProgramService、Loop model、status JSON builder、frontend attachment 或 AgentOps 上报。
 - T22 done；仅激活 T23。
+
+### Batch 2026-08-29-006 | T23 status convergence GREEN
+
+- `status` 默认路径仅消费既有 status surface、checkpoint 与五类只读 Loop status，输出 Current Loop/Result/Next/
+  Blockers；不调用 IDE adaptation、resume rebuild 或详细 renderer。
+- 新增 `--details` 承载原完整人类表格、handoff 和诊断摘要；既有 text assertions 原样迁移，不删除旧合同。
+- `--json` 保持原 early return；`--details --json` 明确 exit 2，并输出互斥原因。
+- 七条关键路径 `7 passed in 2.27s`；status 全文件 `57 passed in 46.98s`；Ruff PASS。
+- 单一投影当前 147 行，仍低于 180 行停止线；未修改 status JSON builder 或持久化层。
+- T23 done；仅激活 T24 adversarial ROI gate。
