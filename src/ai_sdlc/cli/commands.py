@@ -1000,7 +1000,12 @@ def status_command(
         console.print("[yellow]Project found but not initialized.[/yellow]")
         raise typer.Exit(code=1)
 
-    hint = detect_reconcile_hint(root)
+    if compact_checkpoint_unreadable:
+        hint = None
+        with suppress(CheckpointLoadError, YamlStoreError):
+            hint = detect_reconcile_hint(root)
+    else:
+        hint = detect_reconcile_hint(root)
     if not details:
         cp = compact_checkpoint
         raw_checkpoint = (

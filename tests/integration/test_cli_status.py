@@ -652,9 +652,8 @@ feature:
             else:
                 backup_path.unlink(missing_ok=True)
 
-            with (
-                patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
-                patch("ai_sdlc.cli.commands.detect_reconcile_hint", return_value=None),
+            with patch(
+                "ai_sdlc.cli.commands.find_project_root", return_value=tmp_path
             ):
                 result = runner.invoke(app, ["status"])
 

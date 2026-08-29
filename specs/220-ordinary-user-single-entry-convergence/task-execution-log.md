@@ -322,5 +322,17 @@
 - Program Truth 刷新：snapshot hash=`776b7f049bb7cdd7a81cbefcf96814e6460ebe01ad6140d80d07743435c29578`；
   state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
 - `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 163.94s`。
+
+### Batch 2026-08-29-019 | PR #185 reconcile-load fail-closed follow-up
+
+- Codex 对 `09886d57efd89287a1df9ad090af588142ec3d04` 指出同一双损坏路径仍会经 `detect_reconcile_hint()`
+  触发 non-strict checkpoint load；既有回归错误 mock 掉该函数，未覆盖真实调用链。
+- 移除 mock 后 RED 复现。最小修复仅在 compact strict recovery 已失败时容错 reconcile 检测，捕获既有
+  checkpoint loader 异常；没有改 reconcile 或 loader 实现。
+- 对抗兼容验证拒绝无条件跳过 reconcile：空 checkpoint + 旧产物仍必须提示 `recover --reconcile`。
+  focused 双路径 `2 passed`，status 全文件 `59 passed in 46.74s`，目标 Ruff 与 `git diff --check` PASS。
+- Program Truth 刷新：snapshot hash=`2abe9cca3dded30cbb51d801177bc1af4e25dabe0321359c8e5bc9d043686e1d`；
+  state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
+- `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 176.48s`。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。

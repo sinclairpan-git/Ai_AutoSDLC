@@ -12,17 +12,16 @@ working_set_snapshot:
   - specs/220-ordinary-user-single-entry-convergence/tasks.md
   - specs/220-ordinary-user-single-entry-convergence/spec.md
   context_summary: 'Goal: Merge PR #185 and complete WI220 post-merge truth closeout.
-    | State: Exact-head Codex P2 and the six-platform CI regression are closed locally.
-    Compact status now strict-preflights checkpoint recovery and skips checkpoint-derived
-    surface when both primary and backup are unreadable; run dry-run gate messages
-    keep all open-stage truth while rendering project-root paths relatively. Truth
-    and exit gates are refreshed. | Next: Audit diff, commit and push the same WI220
-    branch, reply to review comment 3887861175, request exact-head Codex review, and
-    resume required-check monitoring.'
+    | State: Exact-head 09886d57 reconcile-load P2 is closed locally. The unreadable-checkpoint
+    regression no longer mocks detect_reconcile_hint; compact strict-recovery failure
+    now guards reconcile detection against existing loader exceptions while preserving
+    blank-checkpoint legacy reconcile guidance. Truth and exit gates are refreshed.
+    | Next: Audit diff, commit and push same WI220 branch, reply to review comment
+    3887922501, request exact-head Codex review, and resume check monitoring.'
 current_branch: feature/220-ordinary-user-single-entry-convergence-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-29T23:06:57+00:00'
+timestamp: '2026-08-29T23:24:58+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-29T15:19:45+00:00'
 checkpoint_fingerprint: ffd508c45213b64bfe56b31a5ea474a0e3446531e5abd2fe30469e47673a27eb
