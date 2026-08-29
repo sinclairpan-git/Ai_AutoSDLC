@@ -285,7 +285,7 @@ def run_command(
         open_gate = bool(open_stage_results)
         open_stage, open_result = open_stage_results[-1] if open_gate else ("", None)
         open_gate_messages = _dedupe_text_items(
-            message
+            message.replace(str(root), ".")
             for _stage, stage_result in open_stage_results
             for message in _failed_gate_messages(stage_result)
         )

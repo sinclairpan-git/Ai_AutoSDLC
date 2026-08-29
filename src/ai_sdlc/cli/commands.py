@@ -973,11 +973,23 @@ def status_command(
         )
         raise typer.Exit(code=1)
 
-    status_surface = build_status_json_surface(
-        root,
-        include_program_truth=as_json,
-        include_truth_ledger=as_json,
-        include_workitem_truth=as_json or not details,
+    checkpoint_exists = (root / CHECKPOINT_PATH).exists()
+    compact_checkpoint = None
+    if not details and not as_json and checkpoint_exists:
+        with suppress(CheckpointLoadError, YamlStoreError):
+            compact_checkpoint = load_checkpoint(root, strict=True, warn=False)
+    compact_checkpoint_unreadable = (
+        not details and not as_json and checkpoint_exists and compact_checkpoint is None
+    )
+    status_surface = (
+        {}
+        if compact_checkpoint_unreadable
+        else build_status_json_surface(
+            root,
+            include_program_truth=as_json,
+            include_truth_ledger=as_json,
+            include_workitem_truth=as_json or not details,
+        )
     )
     if as_json:
         typer.echo(json.dumps(status_surface, indent=2))
@@ -990,13 +1002,13 @@ def status_command(
 
     hint = detect_reconcile_hint(root)
     if not details:
-        checkpoint_exists = (root / CHECKPOINT_PATH).exists()
-        cp = None
-        if checkpoint_exists:
-            with suppress(CheckpointLoadError, YamlStoreError):
-                cp = load_checkpoint(root, strict=True, warn=False)
-        raw_checkpoint = load_checkpoint(root, warn=False) if checkpoint_exists else None
-        checkpoint_unreadable = checkpoint_exists and cp is None
+        cp = compact_checkpoint
+        raw_checkpoint = (
+            load_checkpoint(root, warn=False)
+            if checkpoint_exists and cp is not None
+            else None
+        )
+        checkpoint_unreadable = compact_checkpoint_unreadable
         surface_from_rejected_checkpoint = (
             cp is not None and raw_checkpoint is not None and cp != raw_checkpoint
         )

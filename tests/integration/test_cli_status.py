@@ -644,9 +644,13 @@ feature:
 """,
         )
 
-        for checkpoint_text in invalid_checkpoints:
+        for index, checkpoint_text in enumerate(invalid_checkpoints):
             checkpoint_path.write_text(checkpoint_text, encoding="utf-8")
-            checkpoint_path.with_suffix(".yml.bak").unlink(missing_ok=True)
+            backup_path = checkpoint_path.with_suffix(".yml.bak")
+            if index == 0:
+                backup_path.write_text("current_stage: [", encoding="utf-8")
+            else:
+                backup_path.unlink(missing_ok=True)
 
             with (
                 patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),

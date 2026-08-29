@@ -305,5 +305,22 @@
 - Program Truth 刷新：snapshot hash=`1c51b524fda1d1eb667c3ebef984da7849b02587ca59440554f88171ff421d9a`；
   state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
 - `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 162.42s`。
+
+### Batch 2026-08-29-018 | PR #185 malformed-backup fail-closed and CI closeout
+
+- Codex 对 `8e79402a2073b3e82cb159e23d228d53fcac4564` 提出 P2：主 checkpoint 与备份均不可解析时，
+  compact status 的非严格读取会逸出 `YamlStoreError`，而不是输出 `pipeline/unavailable` / blocked。
+- finding 通过改造既有 unreadable-checkpoint 测试 RED 复现。整改在 compact caller 先做 strict recovery 预检；
+  预检失败即跳过依赖 checkpoint 的派生 surface，且不再执行 raw checkpoint 读取。未改 loader、schema 或 readiness builder。
+- 同一 exact head 的六个跨平台 Pytest 作业均只有一个共同失败：聚合全部 open-stage blocker 后把项目绝对路径带入
+  beginner 输出，使既有 ingress 隔离断言误中测试目录名。整改仅把 gate message 中的项目根路径缩为 `.`，
+  保留全部 stage 的 open-gate 真值与 blocker 聚合，不新增 renderer 或脱敏框架。
+- malformed-backup focused `1 passed`；status 全文件 `59 passed`；beginner/run/status 相关文件 `108 passed`；
+  目标 Ruff 与 `git diff --check` PASS。全量套件以 `-x -vv` 精确复现 CI 首个失败后止损；CI 日志确认每个矩阵
+  `3406 passed, 3 skipped, 1 failed`，无需重复本地跑完 3410 项。
+- ROI 裁决：两处均为现有 caller 的 fail-closed/输出边界修补；拒绝扩展 checkpoint 诊断系统或新增路径模型。
+- Program Truth 刷新：snapshot hash=`776b7f049bb7cdd7a81cbefcf96814e6460ebe01ad6140d80d07743435c29578`；
+  state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
+- `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 163.94s`。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。
