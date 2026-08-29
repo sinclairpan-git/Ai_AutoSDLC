@@ -12,6 +12,7 @@ from unittest.mock import patch
 
 import pytest
 import yaml
+from click import unstyle
 from typer.testing import CliRunner
 
 import ai_sdlc.core.program_service as program_service_module
@@ -470,7 +471,8 @@ class TestCliStatus:
             result = runner.invoke(app, ["status", "--details", "--json"])
 
         assert result.exit_code == 2
-        assert "--details cannot be combined with --json" in result.output
+        plain_output = "".join(unstyle(result.output).split())
+        assert "--detailscannotbecombinedwith--json" in plain_output
 
     def test_status_displays_adapter_target_and_activation_truth(
         self, tmp_path: Path

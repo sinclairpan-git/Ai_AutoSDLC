@@ -235,5 +235,15 @@
 - 同一独立 reviewer 对 clean HEAD `41a2708feaa5c607660013dd06ca5c3739f771a6` 复审：0 Critical、0 Important；
   上轮三项全部闭合，未触发 scope/ROI/bloat stop-condition，结论 `Ready to push/open PR: Yes`。
 - 唯一 Minor 为 `tasks.md` 顶部阶段与 handoff next step 滞后；随本记录同步修正，不开启第二轮产品代码整改或复审。
+
+### Batch 2026-08-29-013 | PR #185 Python 3.11 colored-output test repair
+
+- PR #185 Compatibility Gate 在 Ubuntu/macOS Python 3.11 各失败一项：
+  `TestCliStatus.test_status_rejects_details_with_json`；业务 exit 2 和错误文案均正确。
+- CI 的 Rich/Typer 彩色输出把 `--details` / `--json` 插入 ANSI 控制码，旧断言直接匹配原始 `result.output`，
+  因终端颜色环境产生跨平台假失败；同一日志其余 `3404 passed, 3 skipped`。
+- 仅将该测试断言改为 `click.unstyle()` 后压缩空白再比较；未修改生产代码或 CLI 合同。
+- focused `1 passed in 0.83s`；status 全文件 `57 passed in 47.43s`；目标 Ruff 与 `git diff --check` PASS。
+- 下一步：刷新 Program Truth、push 同一分支、重新请求 Codex review，并继续 heartbeat 直到 required checks 全绿。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。
