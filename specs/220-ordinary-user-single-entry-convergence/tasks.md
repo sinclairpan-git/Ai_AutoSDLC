@@ -166,7 +166,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 3.1 help visibility 与高级可达性 RED
 
 - task_id: T31
-- status: todo
+- status: done
 - goal: 锁定六个默认入口和全部隐藏命令的直接调用兼容。
 - depends:
   - T24
@@ -183,19 +183,21 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 3.2 最小 hidden 元数据与高级索引 GREEN
 
 - task_id: T32
-- status: blocked
+- status: todo
 - goal: 不移动实现，只收敛默认 help 并提供 README 高级命令索引。
 - depends:
   - T31
 - scope:
   - src/ai_sdlc/cli/main.py
   - src/ai_sdlc/__main__.py
+  - src/ai_sdlc/cli/command_names.py
   - README.md
   - tests/unit/test_command_names.py
   - tests/integration/test_cli_beginner_ux.py
   - tests/integration/test_cli_module_invocation.py
 - acceptance:
   - 只改 Typer hidden/help 元数据、module ASCII fallback 和文档；不新增 advanced 命令、注册表或配置。
+  - 既有全量 command inventory 继续包含只从根 help 隐藏的命令，不削弱 close-check 文档一致性验证。
   - 直接 argv、参数解析和 exit contract 不变。
 - verify:
   - uv run pytest tests/unit/test_command_names.py tests/integration/test_cli_beginner_ux.py tests/integration/test_cli_module_invocation.py -q

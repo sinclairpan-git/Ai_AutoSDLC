@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -10,9 +11,69 @@ from ai_sdlc.cli.main import app
 
 runner = CliRunner()
 
+_BEGINNER_COMMANDS = {
+    "adopt",
+    "init",
+    "recover",
+    "run",
+    "self-update",
+    "status",
+}
+_ADVANCED_COMMANDS = {
+    "adapter",
+    "agentops",
+    "doctor",
+    "enterprise",
+    "gate",
+    "handoff",
+    "host-runtime",
+    "index",
+    "loop",
+    "pr-review",
+    "program",
+    "provenance",
+    "refresh",
+    "rules",
+    "scan",
+    "stage",
+    "studio",
+    "telemetry",
+    "trace",
+    "verify",
+    "workitem",
+}
+
 
 def _single_space(text: str) -> str:
     return " ".join(text.split())
+
+
+def test_root_help_only_exposes_six_beginner_commands() -> None:
+    import typer.main
+
+    root = typer.main.get_command(app)
+    visible = {
+        name for name, command in root.commands.items() if not command.hidden
+    }
+    result = runner.invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    assert visible == _BEGINNER_COMMANDS
+    assert set(root.commands) == _BEGINNER_COMMANDS | _ADVANCED_COMMANDS
+    assert (
+        "Common commands are shown here; advanced commands remain directly callable."
+        in _single_space(result.output)
+    )
+
+
+def test_advanced_command_help_remains_directly_callable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    for command in sorted(_ADVANCED_COMMANDS):
+        monkeypatch.setattr(sys, "argv", ["ai-sdlc", command, "--help"])
+        result = runner.invoke(app, [command, "--help"])
+        assert result.exit_code == 0, f"{command}: {result.output}"
 
 
 def test_vibe_coder_can_initialize_without_reading_internal_state(

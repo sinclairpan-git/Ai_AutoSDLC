@@ -159,3 +159,17 @@
   audit=`fresh/blocked`（预期 16 个历史 truth-check blocker）；inventory `1154/1154`、unmapped 0、missing 2；
   manifest 集成测试 `1 passed in 158.08s`。
 - T24 done；仅激活 T31。下一步先写 console/module 六入口与高级命令直接可达性的 RED，不提前修改实现。
+
+### Batch 2026-08-29-008 | T31 help visibility and compatibility RED
+
+- 新增 console root visible allowlist：精确为 `init/adopt/run/status/recover/self-update`，并要求根帮助明确高级命令
+  仍可直接调用。
+- 新增 module ASCII fallback 同一 allowlist；新增 21 个高级顶层入口逐项 `--help` characterization。
+- 对抗发现：既有 `command_names._walk_group()` 会跳过 `hidden` 命令；直接添加 Typer hidden 元数据会让 close-check
+  使用的全量 command inventory 静默缩水。以 synthetic hidden command RED 锁住“help 隐藏不等于治理发现删除”。
+- RED 结果：三条新行为按预期失败，21 个高级入口直接 `--help` 通过，合计 `3 failed, 1 passed in 1.80s`；
+  Ruff PASS。
+- 测试隔离：CliRunner 对非只读顶层组执行 `--help` 时会触发现有 adapter hook；改为在临时非项目目录验证，避免
+  污染 checkout，未修改该既有 hook 行为。
+- T31 done；仅激活 T32。T32 允许范围补入既有 `cli/command_names.py`，只移除 hidden 过滤，不新增注册表或第二
+  帮助系统；这是满足已冻结 command inventory 兼容合同所需的两行级修正。
