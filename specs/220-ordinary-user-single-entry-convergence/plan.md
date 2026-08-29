@@ -64,12 +64,14 @@ tests/
 
 ```text
 src/ai_sdlc/cli/main.py
+src/ai_sdlc/__main__.py
 tests/unit/test_command_names.py
 tests/integration/test_cli_beginner_ux.py
+tests/integration/test_cli_module_invocation.py
 README.md
 ```
 
-仅允许调整 Typer `hidden` 元数据、根帮助文字、可见/可调用矩阵测试和高级命令索引；不得移动命令实现。
+仅允许调整 Typer `hidden` 元数据、module ASCII fallback 根帮助、可见/可调用矩阵测试和高级命令索引；不得移动命令实现。
 
 ### 4.3 最终一致性范围
 
@@ -154,7 +156,7 @@ Applicable Rules 只使用 checkpoint stage 与现有 `RulesLoader`；最多输�
 ### Phase 4：P2B default help convergence（条件）
 
 **目标**：默认 help 六入口，高级命令直接可达，README 提供分类索引。
-**验证**：根 help allowlist、所有隐藏命令 `--help`、representative advanced argv、command inventory。
+**验证**：console/module 根 help allowlist、所有隐藏命令 `--help`、representative advanced argv、command inventory。
 **回退**：只恢复 `hidden` 元数据和 README 段落。
 
 ### Phase 5：一致性、全量验证与交付
@@ -172,7 +174,7 @@ Applicable Rules 只使用 checkpoint stage 与现有 `RulesLoader`；最多输�
 | Applicable Rules | unit fixture + CLI | stage-based，≤2，name/title only |
 | status default/details | before/after characterization | details 保留旧关键行，default 仅四项 |
 | status JSON | parsed deep contract + no-write assertion | shape/语义/exit/只读不变 |
-| root help | exact visible allowlist | 仅六入口 |
+| console/module root help | exact visible allowlist | 两条入口均仅六入口 |
 | advanced commands | command inventory + representative `--help` | 所有命令仍可调用 |
 | docs/guidance | bounded rg + doc assertions | init/run 默认路径一致 |
 | clean new user | init → run E2E | 不要求手动 diagnostics |

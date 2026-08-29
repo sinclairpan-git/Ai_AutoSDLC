@@ -167,11 +167,12 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 - scope:
   - tests/unit/test_command_names.py
   - tests/integration/test_cli_beginner_ux.py
+  - tests/integration/test_cli_module_invocation.py
 - acceptance:
-  - root help 可见集合精确为 init/adopt/run/status/recover/self-update。
+  - `ai-sdlc --help` 与 `python -m ai_sdlc --help` 可见集合都精确为 init/adopt/run/status/recover/self-update。
   - 18 个命令组与 doctor/index/scan/refresh 的 command discovery 和代表性 `--help` 仍通过。
 - verify:
-  - uv run pytest tests/unit/test_command_names.py tests/integration/test_cli_beginner_ux.py -q
+  - uv run pytest tests/unit/test_command_names.py tests/integration/test_cli_beginner_ux.py tests/integration/test_cli_module_invocation.py -q
 
 ### Task 3.2 最小 hidden 元数据与高级索引 GREEN
 
@@ -182,14 +183,16 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
   - T31
 - scope:
   - src/ai_sdlc/cli/main.py
+  - src/ai_sdlc/__main__.py
   - README.md
   - tests/unit/test_command_names.py
   - tests/integration/test_cli_beginner_ux.py
+  - tests/integration/test_cli_module_invocation.py
 - acceptance:
-  - 只改 Typer hidden/help 元数据和文档；不新增 advanced 命令、注册表或配置。
+  - 只改 Typer hidden/help 元数据、module ASCII fallback 和文档；不新增 advanced 命令、注册表或配置。
   - 直接 argv、参数解析和 exit contract 不变。
 - verify:
-  - uv run pytest tests/unit/test_command_names.py tests/integration/test_cli_beginner_ux.py -q
+  - uv run pytest tests/unit/test_command_names.py tests/integration/test_cli_beginner_ux.py tests/integration/test_cli_module_invocation.py -q
 
 ## Batch 4：一致性、全量验证与主线交付
 

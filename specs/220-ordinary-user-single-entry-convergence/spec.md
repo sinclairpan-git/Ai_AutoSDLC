@@ -94,7 +94,7 @@ P2 不新建完整五 Loop router。单一展示投影只允许：
 
 ### 3.4 默认帮助与高级兼容矩阵
 
-冻结的默认根帮助仅展示：
+冻结的默认根帮助在 `ai-sdlc --help` 与无裸命令时的 `python -m ai_sdlc --help` 两条入口上均仅展示：
 
 | 默认可见 | 用途 |
 |---|---|
@@ -130,6 +130,7 @@ P2 不新建完整五 Loop router。单一展示投影只允许：
 | status default | 四项紧凑摘要 | initialized status 仍为 0 | 0 |
 | status `--details` | 旧完整表格 | 不创建第二计算路径 | 0 |
 | status `--json` | 只输出 JSON | shape/语义/只读性不变 | 0 |
+| console/module 根帮助 | 两条入口都只显示六个普通用户命令 | module ASCII fallback 与 Typer 同步 | 0 |
 | 隐藏高级命令直接调用 | 不受默认 help 影响 | argv/参数/行为不变 | 不变 |
 
 ## 5. 功能需求
@@ -139,10 +140,10 @@ P2 不新建完整五 Loop router。单一展示投影只允许：
 - **FR-220-003**：Current Loop 必须遵守 §3.3 的单一投影与 fail-closed 规则；不得引入五 Loop 路由器。
 - **FR-220-004**：Applicable Rules 只复用既有 stage-active rules，最多两条 name/title，不读取或倾倒全文。
 - **FR-220-005**：`status` 默认紧凑；`--details` 承载旧终端面；`--json` 合同与只读边界不变。
-- **FR-220-006**：默认 help 只展示 §3.4 六个入口；所有隐藏命令仍可直接调用且参数/exit contract 不变。
+- **FR-220-006**：console script 与 module fallback 的默认 help 都只展示 §3.4 六个入口；所有隐藏命令仍可直接调用且参数/exit contract 不变。
 - **FR-220-007**：README、AGENTS/template adapter 指导和 CLI help 必须一致，不再要求普通用户先理解诊断命令。
 - **FR-220-008**：实现最多新增一个内部、无持久化的默认展示投影边界；不得新增公共 schema/状态/配置。
-- **FR-220-009**：只允许局部修改 `run/status/main/help/docs/tests`；越过范围必须停止并重新批准。
+- **FR-220-009**：只允许局部修改 `run/status/cli/main.py/__main__.py/help/docs/tests`；越过范围必须停止并重新批准。
 
 ## 6. 用户故事与独立验收
 
@@ -159,7 +160,7 @@ Next 最多一项，rules 最多两项，exit code 与主线基线一致。
 作为已有脚本/运维使用者，我希望默认界面变短，但仍能获取原完整 status 和 JSON，不需要迁移高级命令。
 
 **独立验收**：同一 fixture 的变更前默认 status 与变更后 `status --details` 关键行一致；`status --json` 深比较
-shape/值语义且命令前后工作树无新写入；所有高级命令的 `--help` 和代表性调用仍可达。
+shape/值语义且命令前后工作树无新写入；console/module 两种根帮助一致，所有高级命令的 `--help` 和代表性调用仍可达。
 
 ### US-3：维护者不再为入口优化重建治理系统（P0）
 

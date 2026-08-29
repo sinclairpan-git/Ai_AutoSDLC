@@ -66,8 +66,13 @@
   Formal 整改后刷新，且 T31 仍会阻塞 P2B 暂停路径。
 - 第二轮也是最后一轮聚焦整改：T41 仅以拥有 Go/暂停裁决的 T24 为静态依赖；P2B Go 时 acceptance
   条件要求先完成 T31/T32，暂停时直接使用 T24 的降级证据；随后刷新 Program Truth。
+- 最终 exact-head review：候选 `e0383b53`；P2A 无新增问题，Program Truth 为 `fresh/blocked`，但发现 P2B
+  未覆盖普通用户 fallback `python -m ai_sdlc --help` 的硬编码 module help；另有一行 truth 状态未回写。
+- ROI 裁决：module fallback 是既有普通用户安装恢复合同，不属于低价值扩张；以一个既有入口文件和一条既有
+  integration test 补齐 console/module 同合同。若此后再出现新的范围项，则执行 No-Go，不继续整改。
 - 用户生产实现批准：待 T03；当前明确未授权。
-- Program Truth：待 Formal 最终内容后执行 sync/audit；历史 provenance blocker 必须保持诚实，不属于 P2 修复。
+- Program Truth：整改后 sync/audit 已得 `snapshot=fresh`、整体 `blocked`；`1154/1154` mapped、unmapped 0、
+  missing 2，16 个历史 provenance blocker 原样保留，不属于 P2 修复。
 
 #### 2.5 ROI 裁决
 

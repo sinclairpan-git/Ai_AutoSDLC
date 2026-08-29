@@ -1,28 +1,30 @@
 # Continuity Handoff
 
-- Updated: 2026-08-29T16:08:24+00:00
-- Reason: Formal review round 2 final remediation
+- Updated: 2026-08-29T16:29:53+00:00
+- Reason: include ordinary-user module help fallback
 - Goal: 完成 WI220 普通用户单入口收敛 Formal，停在生产实现批准前
-- State: T01 完成；两轮对抗整改均已聚焦处理；准备刷新 Program Truth 并做最终 exact-head clean review
+- State: P2A Formal clean；P2B 已补齐 console/module 两种根帮助合同；准备最终真值刷新与停止性复核
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
 - Branch: feature/220-ordinary-user-single-entry-convergence-docs
 
 ## Changed Files
+- M specs/220-ordinary-user-single-entry-convergence/plan.md
+- M specs/220-ordinary-user-single-entry-convergence/spec.md
 - M specs/220-ordinary-user-single-entry-convergence/task-execution-log.md
 - M specs/220-ordinary-user-single-entry-convergence/tasks.md
 
 ## Key Decisions
-- T24 是 P2B Go/暂停 authority；T41 仅静态依赖 T24，Go 时条件要求 T31/T32，暂停时使用 T24 降级证据
+- module fallback 属于现有普通用户路径的高 ROI 合同补全，仅新增既有 __main__.py 与 module invocation test 到 P2B scope；后续新范围项一律 No-Go
 
 ## Commands / Tests
-- 第二轮 review 候选 e5c6bb97；manifest test、constraints、guard、plan-check 通过；truth audit 准确识别整改后 snapshot stale
+- e0383b53 review: Program Truth fresh/blocked，manifest test 1 passed；发现 module help scope 与一行状态记录，已聚焦修正
 
 ## Blockers / Risks
-- 最终 exact-head clean review 未完成；T03 用户生产实现批准仍 blocked
+- 停止性 exact-head review 未完成；T03 用户生产实现批准仍 blocked
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 刷新 Program Truth，提交第二轮整改，执行最终 exact-head review；若再出现同类扩张则 No-Go
+- 刷新 Program Truth，提交最终 Formal 候选，只做一次停止性 exact-head review；clean 后记录 T02 done
