@@ -227,5 +227,7 @@
   `193 passed in 60.76s`；全库 Ruff 与 `git diff --check` PASS。
 - 首次 constraints 运行准确拦截上述 docstring 迁移记录缺少同一新增行的 path + summary；改为规范化单行删除原因后，
   `verify constraints: no BLOCKERs`。`program validate: PASS`。
+- 整改提交后刷新 Program Truth：snapshot hash=`6104f6afabced2e1b6b75f48e3a3a5d28bc4281f13cf12b444303b17a43e43e0`；
+  state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。
