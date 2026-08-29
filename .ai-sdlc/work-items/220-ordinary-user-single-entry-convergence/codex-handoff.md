@@ -1,30 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-08-29T23:24:58+00:00
-- Reason: Closed exact-head reconcile-load review finding without regressing legacy recovery guidance.
+- Updated: 2026-08-29T23:42:36+00:00
+- Reason: Escalating from no-op ref refresh to a normal auditable fast-forward commit after prolonged PR synchronization failure.
 - Goal: Merge PR #185 and complete WI220 post-merge truth closeout.
-- State: Exact-head 09886d57 reconcile-load P2 is closed locally. The unreadable-checkpoint regression no longer mocks detect_reconcile_hint; compact strict-recovery failure now guards reconcile detection against existing loader exceptions while preserving blank-checkpoint legacy reconcile guidance. Truth and exit gates are refreshed.
+- State: P2 code fix remains committed at 43aea852 and remote branch matches, but PR #185 head remains stale at 09886d57 despite API recovery and a same-SHA non-force ref refresh. Required handoff files are the only local changes.
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
 - Branch: feature/220-ordinary-user-single-entry-convergence-docs
 
 ## Changed Files
-- M program-manifest.yaml
-- M specs/220-ordinary-user-single-entry-convergence/task-execution-log.md
-- M src/ai_sdlc/cli/commands.py
-- M tests/integration/test_cli_status.py
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/220-ordinary-user-single-entry-convergence/codex-handoff.md
 
 ## Key Decisions
-- Do not unconditionally skip reconcile after strict failure because it breaks the blank-checkpoint + legacy-artifact recovery contract. Use a caller-only suppressed probe in that narrow state; no reconcile/loader changes.
+- Create one normal handoff checkpoint commit to produce a real fast-forward branch transition and trigger PR synchronization. Do not force-push, rewrite history, close/reopen the PR, or modify product code.
 
 ## Commands / Tests
-- Focused unreadable plus blank-reconcile paths 2 passed; status 59 passed in 46.74s; Ruff and diff check pass; truth hash 2abe9cca3dded30cbb51d801177bc1af4e25dabe0321359c8e5bc9d043686e1d; constraints no BLOCKER; program validate PASS; manifest 1 passed in 176.48s.
+- Verified branch ref=43aea852 and refs/pull/185/head=09886d57; PATCH of branch ref to the same SHA succeeded but PR head stayed stale.
 
 ## Blockers / Risks
-- PR remains blocked until this focused fix is pushed and exact-head Codex review plus required checks pass.
+- GitHub PR head is detached from the current branch ref until a new ref transition is observed.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Audit diff, commit and push same WI220 branch, reply to review comment 3887922501, request exact-head Codex review, and resume check monitoring.
+- Commit the required handoff checkpoint only, push the same branch, verify PR head advances, then post the pending inline reply and exact-head Codex review request.
