@@ -182,7 +182,7 @@ class TestWorkitemLinkStatus:
         assert "linked_wi_id" in result.output
 
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
-            st = runner.invoke(app, ["status"])
+            st = runner.invoke(app, ["status", "--details"])
         assert st.exit_code == 0
         assert "Linked WI ID" in st.output
         assert "001-ai-sdlc-framework" in st.output
@@ -308,7 +308,7 @@ class TestWorkitemLinkStatus:
         )
 
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
-            st = runner.invoke(app, ["status"])
+            st = runner.invoke(app, ["status", "--details"])
         assert st.exit_code == 0
         assert "Latest Reviewer Decision" in st.output
         assert "pre_close:approve -> WI-2026-777" in st.output

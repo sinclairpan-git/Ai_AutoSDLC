@@ -196,3 +196,18 @@
   与 `git diff --check` PASS。
 - T41 done；仅激活 T42。下一步执行 clean init→run/兼容矩阵、full pytest、Ruff、constraints、Program validate、
   manifest 与工作树副作用检查。
+
+### Batch 2026-08-29-011 | T42 full verification and regression reconciliation
+
+- 首轮静态门禁：`uv run ruff check .` PASS；`verify constraints` 无 BLOCKER；`program validate` PASS。
+- 首轮 full pytest：`3396 passed, 3 skipped, 5 failed in 1122.92s`。五个失败均为 WI220 新合同下的旧测试遗漏：
+  三个默认 `status` 仍期待旧详细面/adapter 写入，两个 module 根帮助仍期待显示 help-hidden 命令。
+- 按 systematic debugging 完成根因复核：对照已迁移的 status tests 与既有 module direct-help 模式，确认产品行为
+  符合冻结 spec；只将详细面断言改为 `status --details`，将 loop/pr-review 改为 module 直接 `--help`，未改生产代码。
+- 五条失败路径最小复测 `5 passed in 2.17s`；四个受影响文件完整回归 `65 passed in 7.57s`；目标 Ruff PASS。
+- 第二轮 full pytest：`3401 passed, 3 skipped in 1055.59s`；全套无运行副作用，`git diff --check` PASS。
+- Program Truth 刷新：snapshot hash=`2e6ae15c788ca0359c720ea8e27d14dc7caaee10cf2594f007b4c642516fbfe6`；
+  audit=`fresh/blocked`（预期历史 blocker）；inventory `1154/1154`、unmapped 0、missing 2；manifest 集成测试
+  `1 passed in 157.83s`。
+- T42 本地出口通过；Windows/macOS/Linux required checks 按仓库协议在 T43 PR 上取得，避免把尚未发生的远端 CI
+  写成已完成事实。T42 done；仅激活 T43。

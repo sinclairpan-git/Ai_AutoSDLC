@@ -380,9 +380,9 @@ def test_pr_review_rerun_json_regenerates_current_review(tmp_path: Path) -> None
     assert new_head != old_head
 
 
-def test_python_module_help_fallback_lists_pr_review() -> None:
+def test_python_module_direct_pr_review_help_remains_available() -> None:
     result = subprocess.run(
-        [sys.executable, "-m", "ai_sdlc", "--help"],
+        [sys.executable, "-m", "ai_sdlc", "pr-review", "--help"],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -391,7 +391,8 @@ def test_python_module_help_fallback_lists_pr_review() -> None:
     )
 
     assert result.returncode == 0
-    assert "pr-review" in result.stdout
+    assert "Run local adversarial PR review loops" in result.stdout
+    assert "doctor" in result.stdout
 
 
 def _init_repo(path: Path, *, branch: str = "main") -> str:

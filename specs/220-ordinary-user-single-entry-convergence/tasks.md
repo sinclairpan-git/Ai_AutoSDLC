@@ -227,7 +227,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 4.2 新用户、高级兼容与全量验证
 
 - task_id: T42
-- status: todo
+- status: done
 - goal: 证明单入口收益和存量兼容同时成立。
 - depends:
   - T41
@@ -253,7 +253,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 4.3 exact-head review、PR 与合并后真值
 
 - task_id: T43
-- status: blocked
+- status: todo
 - goal: 完成独立 review、Codex PR review、required checks、merge 和远端主线核验。
 - depends:
   - T42
