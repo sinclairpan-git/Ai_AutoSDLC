@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -34,7 +35,7 @@ from ai_sdlc.context.state import (
 )
 from ai_sdlc.core.artifact_target_guard import evaluate_formal_artifact_target_guard
 from ai_sdlc.core.backlog_breach_guard import evaluate_backlog_breach_guard
-from ai_sdlc.core.config import load_project_config, load_project_state
+from ai_sdlc.core.config import YamlStoreError, load_project_config, load_project_state
 from ai_sdlc.core.execute_authorization import evaluate_execute_authorization
 from ai_sdlc.core.frontend_contract_observation_provider import (
     load_frontend_contract_observation_artifact,
@@ -989,8 +990,12 @@ def status_command(
 
     hint = detect_reconcile_hint(root)
     if not details:
-        cp = load_checkpoint(root, warn=False)
-        checkpoint_unreadable = (root / CHECKPOINT_PATH).exists() and cp is None
+        checkpoint_exists = (root / CHECKPOINT_PATH).exists()
+        cp = None
+        if checkpoint_exists:
+            with suppress(CheckpointLoadError, YamlStoreError):
+                cp = load_checkpoint(root, strict=True, warn=False)
+        checkpoint_unreadable = checkpoint_exists and cp is None
         checkpoint_stage = (
             cp.current_stage if cp is not None else "unavailable"
             if checkpoint_unreadable

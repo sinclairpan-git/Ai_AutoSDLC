@@ -263,5 +263,19 @@
   state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
 - `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 163.75s`。
 - 下一步：提交并 push 同一 WI220 分支，回复两项 review finding 后重新请求 Codex review。
+
+### Batch 2026-08-29-015 | PR #185 checkpoint semantic validation closeout
+
+- Codex 对 `409db4f658c762bbf099978b0a999cd8178d4b44` 复审确认前两项已闭合，并补充一个同边界的 P2：
+  checkpoint 即使 YAML/Pydantic 可解析，未知 stage、缺失更新时间等 recovery invariant 仍可能被默认 status 误报 ready。
+- finding 经 RED 复现为 `pipeline/bogus` / `ready`。整改复用既有 strict checkpoint loader 及其主文件→备份回退，
+  只在 compact status caller 将最终验证失败投影为 unavailable/blocked；未新增校验器、状态或恢复分支。
+- 同一测试同时覆盖语法损坏与语义损坏；focused `1 passed`，status 全文件 `58 passed in 47.51s`，
+  checkpoint unit `14 passed`；目标 Ruff 与 `git diff --check` PASS。
+- ROI/止损：本次生产改动仅切换既有 strict contract 并捕获既有两类 loader 异常；不继续扩展 checkpoint 诊断文案、
+  新错误类型或第二套校验路径。下一步刷新 truth 与门禁后 push 复审。
+- Program Truth 刷新：snapshot hash=`d8c3ed2ecbfcaaca288a2bb7e0ca4831978463644dff5525f874363ded0c9a60`；
+  state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
+- `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 164.13s`。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。

@@ -593,20 +593,33 @@ class TestCliStatus:
     ) -> None:
         init_project(tmp_path)
         checkpoint_path = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
-        checkpoint_path.write_text("current_stage: [", encoding="utf-8")
-        checkpoint_path.with_suffix(".yml.bak").unlink(missing_ok=True)
+        invalid_checkpoints = (
+            "current_stage: [",
+            """current_stage: bogus
+feature:
+  id: unknown
+  spec_dir: specs/unknown
+  design_branch: design/unknown
+  feature_branch: feature/unknown
+  current_branch: main
+""",
+        )
 
-        with (
-            patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
-            patch("ai_sdlc.cli.commands.detect_reconcile_hint", return_value=None),
-        ):
-            result = runner.invoke(app, ["status"])
+        for checkpoint_text in invalid_checkpoints:
+            checkpoint_path.write_text(checkpoint_text, encoding="utf-8")
+            checkpoint_path.with_suffix(".yml.bak").unlink(missing_ok=True)
 
-        assert result.exit_code == 0, result.output
-        assert "Current Loop: pipeline/unavailable" in result.output
-        assert "Result: blocked" in result.output
-        assert "Restore a valid .ai-sdlc/state/checkpoint.yml" in result.output
-        assert "checkpoint.yml exists but could not be loaded" in result.output
+            with (
+                patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+                patch("ai_sdlc.cli.commands.detect_reconcile_hint", return_value=None),
+            ):
+                result = runner.invoke(app, ["status"])
+
+            assert result.exit_code == 0, result.output
+            assert "Current Loop: pipeline/unavailable" in result.output
+            assert "Result: blocked" in result.output
+            assert "Restore a valid .ai-sdlc/state/checkpoint.yml" in result.output
+            assert "checkpoint.yml exists but could not be loaded" in result.output
 
     def test_status_json_reports_not_initialized_when_telemetry_is_absent(
         self, tmp_path: Path
