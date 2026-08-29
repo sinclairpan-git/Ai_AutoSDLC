@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-08-29T16:43:34+00:00
-- Reason: Formal 停止性评审完成并进入用户批准门
+- Updated: 2026-08-29T16:51:37+00:00
+- Reason: 最终 guard 负控制发现并修正任务激活建模
 - Goal: 收口 WI220 Formal 并停在生产实现批准门前
-- State: T01/T02 done；T03 blocked；未修改 src 或特性 tests；Formal 候选已通过停止性复核
+- State: T01/T02 done；T03 与全部生产任务 blocked；guard 负控制已阻止越过用户批准；无 src 改动
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
 - Branch: feature/220-ordinary-user-single-entry-convergence-docs
@@ -13,16 +13,16 @@
 - M specs/220-ordinary-user-single-entry-convergence/tasks.md
 
 ## Key Decisions
-- 批准 P2A 高 ROI 合同；P2B 仅在 T24 ROI 门禁 Go 且总预算不超过 6 人日时执行；不迁移参赛版代码或五 Loop router
+- 任务 guard 不解释 depends；未来生产任务默认 blocked，批准后只激活 T11，之后按完成与 ROI 门禁逐项激活
 
 ## Commands / Tests
-- exact-head eea14a30e 本地 findings-first 复核无 Critical/Important；Program Truth 待记录变更后刷新
+- workitem guard=BLOCK_CODE_PREPARE_TASKS/allowed=false/task_id=null；constraints clean；program validate PASS；diff-check PASS
 
 ## Blockers / Risks
-- 生产实现仍需用户明确批准；16 个历史 provenance blocker 保持原状，不属于 WI220
+- 生产实现仍需用户明确批准；16 个历史 provenance blocker 不属于 WI220
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 刷新 Program Truth，跑最终 Formal 门禁并提交记录；随后等待用户批准生产实现
+- 刷新 Program Truth，提交 guard 建模整改，运行 exact-head truth audit 与 manifest test，然后停在 T03

@@ -56,15 +56,20 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
   - specs/220-ordinary-user-single-entry-convergence/
 - acceptance:
   - 用户明确回复批准生产实现，或给出需回写 Formal 的整改意见。
+  - 等待批准期间 T11–T43 全部保持 blocked；批准后只将 T03 置为 done、T11 置为 todo。
+- notes:
+  - 当前 workitem guard 只选择首个 todo/doing，不解释 depends；后续任务必须在前项完成和 ROI 门禁通过后逐项激活，
+    不得预先把未来生产任务批量置为 todo。
 - verify:
   - 用户决策记录
+  - uv run ai-sdlc workitem guard --wi specs/220-ordinary-user-single-entry-convergence --request "进入生产实现" --json
 
 ## Batch 1：P2A characterization / RED
 
 ### Task 1.1 冻结既有行为与五项摘要 RED
 
 - task_id: T11
-- status: todo
+- status: blocked
 - goal: 先证明主线缺少默认摘要/details，再锁定所有既有 exit/JSON/上报行为。
 - depends:
   - T03
@@ -84,7 +89,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.1 实现单一默认展示投影
 
 - task_id: T21
-- status: todo
+- status: blocked
 - goal: 以一个内部纯投影统一 current loop/result/next/blockers/rules 的优先级与有界输出。
 - depends:
   - T11
@@ -103,7 +108,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.2 接入 run 五项摘要
 
 - task_id: T22
-- status: todo
+- status: blocked
 - goal: 在不改变执行和上报语义的前提下覆盖 run 全部终态。
 - depends:
   - T21
@@ -119,7 +124,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.3 收敛 status default 并保留 details/json
 
 - task_id: T23
-- status: todo
+- status: blocked
 - goal: 默认只显示四项摘要，新增 details 迁移桥，JSON 早返回合同不变。
 - depends:
   - T21
@@ -136,7 +141,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.4 P2A adversarial ROI gate
 
 - task_id: T24
-- status: todo
+- status: blocked
 - goal: 以新鲜 diff、测试和独立评审决定进入 P2B、降级或 No-Go。
 - depends:
   - T22
@@ -160,7 +165,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 3.1 help visibility 与高级可达性 RED
 
 - task_id: T31
-- status: todo
+- status: blocked
 - goal: 锁定六个默认入口和全部隐藏命令的直接调用兼容。
 - depends:
   - T24
@@ -177,7 +182,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 3.2 最小 hidden 元数据与高级索引 GREEN
 
 - task_id: T32
-- status: todo
+- status: blocked
 - goal: 不移动实现，只收敛默认 help 并提供 README 高级命令索引。
 - depends:
   - T31
@@ -199,7 +204,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 4.1 有界 guidance 对账
 
 - task_id: T41
-- status: todo
+- status: blocked
 - goal: 只修正与 init/run/status 新合同直接冲突的用户/adapter 文案。
 - depends:
   - T24
@@ -218,7 +223,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 4.2 新用户、高级兼容与全量验证
 
 - task_id: T42
-- status: todo
+- status: blocked
 - goal: 证明单入口收益和存量兼容同时成立。
 - depends:
   - T41
@@ -244,7 +249,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 4.3 exact-head review、PR 与合并后真值
 
 - task_id: T43
-- status: todo
+- status: blocked
 - goal: 完成独立 review、Codex PR review、required checks、merge 和远端主线核验。
 - depends:
   - T42

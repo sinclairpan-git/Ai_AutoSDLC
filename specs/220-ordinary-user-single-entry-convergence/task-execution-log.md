@@ -78,6 +78,9 @@
   P2B 冻结范围与测试；Program Truth snapshot 自校验、authoring hash 和 WI220 source inventory 一致；无新增
   Critical/Important，按停止条件不再发现或扩张范围。独立评审客户端尾端因模型清单兼容告警未正常输出
   final，但其只读证据检查已完成；由同口径本地 findings-first 复核收口，不重启大评审。
+- 最终 guard 负控制发现：T03=blocked 时，guard 会按既有契约跳到首个 todo 的 T11；`depends` 不是运行时门禁。
+  这是任务状态建模遗漏，不是新增产品范围。整改不修改 guard：T11–T43 全部置为 blocked；用户批准后只激活
+  T11，后续任务在前项完成和 ROI 决策后逐项激活。负控制必须返回 `BLOCK_CODE_PREPARE_TASKS` 且不绑定任务。
 
 #### 2.5 ROI 裁决
 
@@ -87,7 +90,7 @@
 
 #### 2.6 任务/计划同步与处置
 
-- `tasks.md`：T01/T02 done；T03 blocked；生产任务全部 todo。
+- `tasks.md`：T01/T02 done；T03 blocked；T11–T43 全部 blocked，等待逐项授权激活。
 - branch disposition：`retained(Formal accepted; production approval pending)`。
 - worktree disposition：`retained(Formal accepted; production approval pending)`。
 - 下一步：刷新并验证 Program Truth 后停在 T03；用户明确批准生产实现后，才进入 P2A characterization/RED。
