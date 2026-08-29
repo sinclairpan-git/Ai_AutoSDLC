@@ -11,13 +11,13 @@ working_set_snapshot:
   active_files:
   - specs/220-ordinary-user-single-entry-convergence/tasks.md
   - specs/220-ordinary-user-single-entry-convergence/spec.md
-  context_summary: 'Goal: 完成 WI220 第一轮限界整改并通过 exact-head 复审 | State: 整改候选 full gates
-    全部通过；准备提交证据并发起同一 reviewer 复审 | Next: 提交仅证据/handoff 变更，复查 truth freshness 与 clean
-    HEAD，然后请求同一 reviewer 复审'
+  context_summary: 'Goal: 完成 WI220 PR required checks、Codex review、merge 与合并后真值 |
+    State: 独立复审批准且最终 Program Truth 已刷新；准备 push/open PR | Next: 提交最终治理记录，push 分支、open
+    PR、request Codex review，并启动约 5 分钟 heartbeat 直到 merge/blocker'
 current_branch: feature/220-ordinary-user-single-entry-convergence-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-29T20:31:24+00:00'
+timestamp: '2026-08-29T20:49:18+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-29T15:19:45+00:00'
 checkpoint_fingerprint: ffd508c45213b64bfe56b31a5ea474a0e3446531e5abd2fe30469e47673a27eb

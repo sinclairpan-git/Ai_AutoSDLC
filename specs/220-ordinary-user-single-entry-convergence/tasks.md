@@ -6,7 +6,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 
 **编号**：`220-ordinary-user-single-entry-convergence` | **日期**：2026-08-29
 **来源**：`spec.md` + `plan.md`
-**阶段**：P2A characterization/RED
+**阶段**：T43 exact-head review / PR delivery
 
 ## Batch 0：Formal freeze
 

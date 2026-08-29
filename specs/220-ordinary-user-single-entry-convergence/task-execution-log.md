@@ -232,5 +232,8 @@
 - 候选 `f4071c6d5784b60840459652acea47285eba276a` fresh 全量门禁：`3405 passed, 3 skipped in 1054.41s`；
   Ruff PASS；constraints no BLOCKERs；program validate PASS；manifest gate `1 passed in 155.94s`；truth audit
   `fresh/blocked`，阻断归因仍为上述 16 个历史 truth-check。
+- 同一独立 reviewer 对 clean HEAD `41a2708feaa5c607660013dd06ca5c3739f771a6` 复审：0 Critical、0 Important；
+  上轮三项全部闭合，未触发 scope/ROI/bloat stop-condition，结论 `Ready to push/open PR: Yes`。
+- 唯一 Minor 为 `tasks.md` 顶部阶段与 handoff next step 滞后；随本记录同步修正，不开启第二轮产品代码整改或复审。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。

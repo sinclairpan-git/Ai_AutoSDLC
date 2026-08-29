@@ -1,27 +1,32 @@
 # Continuity Handoff
 
-- Updated: 2026-08-29T20:31:24+00:00
-- Reason: fresh full and exact-head gates completed
-- Goal: 完成 WI220 第一轮限界整改并通过 exact-head 复审
-- State: 整改候选 full gates 全部通过；准备提交证据并发起同一 reviewer 复审
+- Updated: 2026-08-29T20:49:18+00:00
+- Reason: final Program Truth refresh completed
+- Goal: 完成 WI220 PR required checks、Codex review、merge 与合并后真值
+- State: 独立复审批准且最终 Program Truth 已刷新；准备 push/open PR
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
 - Branch: feature/220-ordinary-user-single-entry-convergence-docs
 
 ## Changed Files
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/220-ordinary-user-single-entry-convergence/codex-handoff.md
+- M program-manifest.yaml
 - M specs/220-ordinary-user-single-entry-convergence/task-execution-log.md
+- M specs/220-ordinary-user-single-entry-convergence/tasks.md
 
 ## Key Decisions
-- f4071c6d 产品候选无回归；truth audit fresh/blocked 仅由 16 个历史 truth-check 导致
+- 0 Critical/Important；不再做产品整改；snapshot blocked 仅为 16 个既有历史 truth-check
 
 ## Commands / Tests
-- 3405 passed, 3 skipped in 1054.41s；Ruff PASS；constraints PASS；program validate PASS；manifest 1 passed；truth fresh/blocked
+- final truth hash 1f8afda1c2678df78f3f2a642ab1b8b975fac25787b25d332cab1290b68da4ae；inventory 1154/1154；review Ready Yes
 
 ## Blockers / Risks
-- 独立复审与 PR Windows/macOS/Linux required checks 尚未完成
+- 仅剩 PR Windows/macOS/Linux required checks、GitHub Codex review 和合并后 origin/main 核验
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交仅证据/handoff 变更，复查 truth freshness 与 clean HEAD，然后请求同一 reviewer 复审
+- 提交最终治理记录，push 分支、open PR、request Codex review，并启动约 5 分钟 heartbeat 直到 merge/blocker
