@@ -200,14 +200,13 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 - goal: 只修正与 init/run/status 新合同直接冲突的用户/adapter 文案。
 - depends:
   - T24
-  - T31
 - scope:
   - AGENTS.md
   - src/ai_sdlc/templates/AGENTS.md.j2
   - src/ai_sdlc/templates/adapters/
   - docs/
 - acceptance:
-  - P2B Go 时，必须先完成 T32；P2B 暂停时，以 T31 的 ROI/降级决策作为该分支的前置证据。
+  - P2B Go 时，必须先完成 T31/T32；P2B 暂停时，以 T24 的 ROI/降级决策作为该分支的前置证据。
   - `rg` 证明确有漂移的文件才修改；不做全库措辞优化。
   - 规范正文、可选建议、已经落地继续分离。
 - verify:

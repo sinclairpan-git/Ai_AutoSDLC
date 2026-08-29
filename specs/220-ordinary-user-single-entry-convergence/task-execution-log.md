@@ -61,7 +61,11 @@
   `git diff --check` 失败，以及 T41 无条件依赖 T32 导致 P2A-only 降级路径无法收口。
 - 第一轮聚焦整改：删除四份 Formal 文档的行尾空格；将 T41 基础依赖改为 T24/T31，并在 acceptance 中
   明确 P2B Go 必须先完成 T32、P2B 暂停则以 T31 降级决策为前置证据。整改后 diff-check、guard 和
-  plan-check 通过；第二轮 exact-head review 待执行。
+  plan-check 通过。
+- T02 第二轮 exact-head review：候选 `e5c6bb97`；确认行尾空格已修复，但发现 Program Truth 需在
+  Formal 整改后刷新，且 T31 仍会阻塞 P2B 暂停路径。
+- 第二轮也是最后一轮聚焦整改：T41 仅以拥有 Go/暂停裁决的 T24 为静态依赖；P2B Go 时 acceptance
+  条件要求先完成 T31/T32，暂停时直接使用 T24 的降级证据；随后刷新 Program Truth。
 - 用户生产实现批准：待 T03；当前明确未授权。
 - Program Truth：待 Formal 最终内容后执行 sync/audit；历史 provenance blocker 必须保持诚实，不属于 P2 修复。
 
