@@ -111,3 +111,12 @@
   `--details --json` 明确互斥，共七条。
 - 首轮结果：`12 failed, 1 passed in 1.80s`；随后修正互斥测试的假阳性，要求明确错误文本，单测按预期 RED。
 - T11 done；仅激活 T21。下一步先实现不超过 180 行的单一纯投影并只跑 unit GREEN，不提前接入 run/status。
+
+### Batch 2026-08-29-004 | T21 pure projection GREEN
+
+- 新增 `src/ai_sdlc/cli/default_summary.py`，只包含内部不可变摘要与纯投影；未修改 `beginner_guidance.py`，
+  因此不存在双 projection。
+- `uv run pytest tests/unit/test_default_summary.py -q`：`6 passed in 0.36s`。
+- `uv run ruff check src/ai_sdlc/cli tests/unit/test_default_summary.py`：PASS。
+- 投影模块 121 行；无持久化、public schema/config/router，Next/Blockers/Rules 上限由 unit tests 锁定。
+- T21 done；仅激活 T22。Program Truth 在 P2A 切片完成后统一刷新，避免每个微任务重复昂贵扫描。

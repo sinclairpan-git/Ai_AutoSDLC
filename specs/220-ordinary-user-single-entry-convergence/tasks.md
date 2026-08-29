@@ -89,7 +89,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.1 实现单一默认展示投影
 
 - task_id: T21
-- status: todo
+- status: done
 - goal: 以一个内部纯投影统一 current loop/result/next/blockers/rules 的优先级与有界输出。
 - depends:
   - T11
@@ -108,7 +108,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.2 接入 run 五项摘要
 
 - task_id: T22
-- status: blocked
+- status: todo
 - goal: 在不改变执行和上报语义的前提下覆盖 run 全部终态。
 - depends:
   - T21
