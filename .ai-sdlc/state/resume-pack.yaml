@@ -11,14 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/219-mainline-truth-roi-contract/tasks.md
   - specs/219-mainline-truth-roi-contract/spec.md
-  context_summary: 'Goal: 启动路线图 P1 Diff-local Lean Advisory；保持真实 Program Truth blocked
-    | State: v0.9.8 后 ROI 路线已归档；PR #179/#180/#181 均已合并，origin/main@bd9cea91；Program
-    Truth 在真实主线上 blocked/fresh，16 个历史 provenance blocker 已持久化 | Next: 为 P1 Diff-local
-    Lean Advisory 建立 formal work item，先锁定只读 advisory、差异局部、单次预算与停止条件；未经新 ROI 证据不扩展到自动重写或全仓治理'
-current_branch: codex/post-v098-main-verify
+  context_summary: 'Goal: 完成 P1 No-Go 主线 records-only 收口，并把 P2 设为唯一下一项 | State: records-only
+    diff 已完成；Program Truth blocked/fresh 且 16 个历史 blocker 原样保留，等待 exact-head 独立评审
+    | Next: 提交 records-only candidate，运行 exact-head 独立 review；clean 后推送并创建 PR，监控 Codex
+    review 和 required checks 至合并'
+current_branch: codex/p1-no-go-mainline-closeout
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-28T08:04:41+00:00'
+timestamp: '2026-08-29T14:16:19+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-25T11:54:47+00:00'
 checkpoint_fingerprint: c43f73d871530cbd4a628e425d8ad10c538830c1fe3cb03cd88d55df866711a1

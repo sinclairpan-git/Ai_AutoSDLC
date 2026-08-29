@@ -1,27 +1,31 @@
 # Continuity Handoff
 
-- Updated: 2026-08-28T08:04:41+00:00
-- Reason: PR #181 合并后终态 continuity 收口
-- Goal: 启动路线图 P1 Diff-local Lean Advisory；保持真实 Program Truth blocked
-- State: v0.9.8 后 ROI 路线已归档；PR #179/#180/#181 均已合并，origin/main@bd9cea91；Program Truth 在真实主线上 blocked/fresh，16 个历史 provenance blocker 已持久化
+- Updated: 2026-08-29T14:16:19+00:00
+- Reason: records-only verification complete before independent review
+- Goal: 完成 P1 No-Go 主线 records-only 收口，并把 P2 设为唯一下一项
+- State: records-only diff 已完成；Program Truth blocked/fresh 且 16 个历史 blocker 原样保留，等待 exact-head 独立评审
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
-- Branch: codex/post-v098-main-verify
+- Branch: codex/p1-no-go-mainline-closeout
 
 ## Changed Files
-- none
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/219-mainline-truth-roi-contract/codex-handoff.md
+- M docs/FRAMEWORK_ROADMAP.zh-CN.md
+- M program-manifest.yaml
 
 ## Key Decisions
-- 下一产品项直接建 P1，不先做 D2；D2 仅在下一次要求 release-target-ready 的发布前触发。继续禁止删 truth refs、放宽 formal_freeze_only、手改 snapshot 或追逐低 ROI 细枝末节
+- P1 有证据 No-Go，WI220 实现不 push、不建 PR、不合并；P2 是合并后的唯一下一项
 
 ## Commands / Tests
-- PR #181 Codex clean、10/10 checks；main verify constraints no BLOCKERs；main Program Truth audit blocked/fresh、inventory 1149/1149；root manifest test 1 passed in 137.75s
+- verify constraints no BLOCKERs；Manifest test 1 passed in 158.96s；git diff --check passed；Truth sync execute blocked，audit blocked/fresh，dry-run blocked，inventory 1149/1149
 
 ## Blockers / Risks
-- D2 历史 provenance 回填是未来 release-target-ready 前置，但不阻断 P1 建项与开发
+- 历史 provenance blockers 仍阻断 release targets，这是预期真值；本收口不得修改或绕过
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 为 P1 Diff-local Lean Advisory 建立 formal work item，先锁定只读 advisory、差异局部、单次预算与停止条件；未经新 ROI 证据不扩展到自动重写或全仓治理
+- 提交 records-only candidate，运行 exact-head 独立 review；clean 后推送并创建 PR，监控 Codex review 和 required checks 至合并
