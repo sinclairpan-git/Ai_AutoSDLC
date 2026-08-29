@@ -1062,15 +1062,15 @@ class TestRunCommand:
         ) -> GateResult:
             if stage == "init":
                 return original_run_gate(self, stage, cp, dry_run=dry_run)
-            if stage == "close":
+            if stage == "refine":
                 return GateResult(
                     stage=stage,
                     verdict=GateVerdict.RETRY,
                     checks=[
                         GateCheck(
-                            name="final_tests_passed",
+                            name="refine_ready",
                             passed=False,
-                            message="Final tests did not pass",
+                            message="Refine gate remains open",
                         )
                     ],
                 )
@@ -1085,10 +1085,10 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"])
 
         assert result.exit_code == 0
-        assert "Stage close: RETRY" in result.output
+        assert "Stage refine: RETRY" in result.output
         assert "Pipeline completed." not in result.output
-        assert "Dry-run completed with open gates. Last stage: close (RETRY)" in result.output
-        assert "reason: Final tests did not pass" in result.output
+        assert "Dry-run completed with open gates. Last stage: refine (RETRY)" in result.output
+        assert "reason: Refine gate remains open" in result.output
         assert "Current Loop:" in result.output
         assert "Result: open_gates" in result.output
         assert "Next:" in result.output

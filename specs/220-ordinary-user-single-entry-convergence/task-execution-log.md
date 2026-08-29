@@ -291,5 +291,19 @@
 - Program Truth 刷新：snapshot hash=`5c96b9bfa6bc4f0602d280c5fd725dde2d122e390f3fbe10cd75d971743abc69`；
   state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
 - `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 164.22s`。
+
+### Batch 2026-08-29-017 | PR #185 multi-stage dry-run truth aggregation
+
+- Codex 对 `cdc19b8b9e326dbf1b821c87493d6b0587da44bf` 提出 P1：较早 stage 为 RETRY、最终 stage 为 PASS 时，
+  run 只看 `last_result` 会误报 completed。
+- finding 经既有 open-gate 测试最小改造后 RED 复现；没有新增场景矩阵。整改直接复用已记录的 `stage_results`，
+  聚合全部非 PASS stage 及失败消息，展示最后一个 open stage，摘要保持 `Result: open_gates`。
+- 删除重复 `last_result` 状态和第二次 open-gate 判定；未改 Runner、gate retry、exit code、AgentOps stage facts 或
+  非 dry-run 行为。生产净复杂度未增加第二套真值。
+- focused `1 passed`；run 全文件 `41 passed in 10.44s`；目标 Ruff 与 `git diff --check` PASS。
+- ROI 裁决：P1 为真实结果误报且修复复用既有列表，批准最小闭合；不扩展 dry-run renderer 或新增聚合模型。
+- Program Truth 刷新：snapshot hash=`1c51b524fda1d1eb667c3ebef984da7849b02587ca59440554f88171ff421d9a`；
+  state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
+- `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 162.42s`。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。

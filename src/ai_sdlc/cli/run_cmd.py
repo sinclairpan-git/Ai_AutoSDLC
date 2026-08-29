@@ -258,12 +258,9 @@ def run_command(
         return confirmed
 
     callback = _tracked_confirm_callback if mode == "confirm" else None
-    last_result: Any | None = None
     stage_results: list[tuple[str, Any]] = []
 
     def _record_stage_finish(stage: str, result: Any) -> None:
-        nonlocal last_result
-        last_result = result
         stage_results.append((stage, result))
         _stage_finish_callback(stage, result)
 
@@ -277,25 +274,35 @@ def run_command(
             ),
             on_stage_finish=_record_stage_finish,
         )
-        if (
-            dry_run
-            and last_result is not None
-            and str(getattr(last_result.verdict, "value", last_result.verdict)).upper()
+        open_stage_results = [
+            (stage, stage_result)
+            for stage, stage_result in stage_results
+            if str(
+                getattr(stage_result.verdict, "value", stage_result.verdict)
+            ).upper()
             != "PASS"
-        ):
+        ] if dry_run else []
+        open_gate = bool(open_stage_results)
+        open_stage, open_result = open_stage_results[-1] if open_gate else ("", None)
+        open_gate_messages = _dedupe_text_items(
+            message
+            for _stage, stage_result in open_stage_results
+            for message in _failed_gate_messages(stage_result)
+        )
+        if open_gate:
             verdict = str(
-                getattr(last_result.verdict, "value", last_result.verdict)
+                getattr(open_result.verdict, "value", open_result.verdict)
             ).upper()
             console.print(
                 "[bold yellow]"
                 f"Dry-run completed with open gates. Last stage: "
-                f"{cp.current_stage} ({verdict})"
+                f"{open_stage} ({verdict})"
                 "[/bold yellow]"
             )
-            for message in _failed_gate_messages(last_result)[:2]:
+            for message in open_gate_messages[:2]:
                 console.print(f"  reason: {message}", markup=False)
             console.print("")
-            console.print(render_dry_run_open_gate_guidance(_failed_gate_messages(last_result)))
+            console.print(render_dry_run_open_gate_guidance(open_gate_messages))
         elif paused_by_user:
             console.print(
                 f"\n[bold yellow]Pipeline paused. Stage: {cp.current_stage}[/bold yellow]"
@@ -308,12 +315,6 @@ def run_command(
                 console.print("")
                 console.print(render_dry_run_pass_guidance())
         _render_frontend_contract_runtime_attachment_summary(root, cp)
-        open_gate = bool(
-            dry_run
-            and last_result is not None
-            and str(getattr(last_result.verdict, "value", last_result.verdict)).upper()
-            != "PASS"
-        )
         result = "open_gates" if open_gate else "paused" if paused_by_user else "completed"
         primary_next_actions = (
             (
@@ -324,7 +325,7 @@ def run_command(
                 else ""
             ),
         )
-        blockers = tuple(_failed_gate_messages(last_result)) if open_gate else ()
+        blockers = tuple(open_gate_messages)
         try:
             _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
         except typer.Exit:
