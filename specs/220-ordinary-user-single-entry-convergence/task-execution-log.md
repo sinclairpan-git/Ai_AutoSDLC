@@ -277,5 +277,19 @@
 - Program Truth 刷新：snapshot hash=`d8c3ed2ecbfcaaca288a2bb7e0ca4831978463644dff5525f874363ded0c9a60`；
   state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
 - `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 164.13s`。
+
+### Batch 2026-08-29-016 | PR #185 recovered-surface and details compatibility closeout
+
+- Codex 对 `39c4f023e501a3f70da82c6c6cf0f953a8e9e7ce` 提出两个同 caller 边界的 P2：strict loader 从备份
+  恢复时，先构造的 surface 仍可能来自被拒绝主 checkpoint；`status --details` 不应因 compact 修复而启用完整
+  work-item truth。
+- 两项均经 RED 复现。最小整改仅做 caller 隔离：compact 检测 strict recovery 与原始 non-strict checkpoint 不一致时
+  丢弃不可信 surface；work-item truth 开关精确限定为 JSON 或 compact，details 保持迁移前设置。
+- 未改 readiness builder、checkpoint loader、schema、缓存或持久化；没有为稀有恢复边界新增诊断系统。
+- focused 三路径 `3 passed`；status 全文件 `59 passed in 47.69s`；checkpoint unit `14 passed`；
+  目标 Ruff 与 `git diff --check` PASS。下一步刷新 truth 与出口门禁后 push exact-head 复审。
+- Program Truth 刷新：snapshot hash=`5c96b9bfa6bc4f0602d280c5fd725dde2d122e390f3fbe10cd75d971743abc69`；
+  state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
+- `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 164.22s`。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。

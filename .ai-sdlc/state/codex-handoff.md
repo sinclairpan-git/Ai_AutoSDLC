@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-08-29T21:52:07+00:00
-- Reason: PR #185 semantic checkpoint remediation verified and truth refreshed
+- Updated: 2026-08-29T22:13:07+00:00
+- Reason: PR #185 recovered-surface and details compatibility findings verified
 - Goal: 完成 PR #185 required checks、Codex review、merge 与合并后真值
-- State: semantic-checkpoint P2 已最小整改，Program Truth 与本地出口门禁已刷新，准备提交/push
+- State: recovered-surface 与 details compatibility 两项 P2 已最小整改，Program Truth 与出口门禁已刷新，准备提交/push
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
 - Branch: feature/220-ordinary-user-single-entry-convergence-docs
@@ -18,10 +18,10 @@
 - M tests/integration/test_cli_status.py
 
 ## Key Decisions
-- 复用 strict checkpoint recovery invariants；不新增校验器、错误类型或第二恢复路径
+- strict/non-strict checkpoint 不一致时丢弃不可信 compact surface；work-item truth 只对 JSON/compact 开启，details 保持旧合同
 
 ## Commands / Tests
-- status 58 passed；checkpoint unit 14 passed；manifest 1 passed；Ruff/diff/constraints/program validate PASS
+- focused 3 passed；status 59 passed；checkpoint unit 14 passed；manifest 1 passed；Ruff/diff/constraints/program validate PASS
 
 ## Blockers / Risks
 - push 后需重新跑 required checks 与 Codex exact-head review
@@ -30,4 +30,4 @@
 - none
 
 ## Exact Next Steps
-- 提交/push，回复 P2，重新请求 Codex review并持续监控
+- 提交/push，回复两项 P2，重新请求 Codex review并持续监控

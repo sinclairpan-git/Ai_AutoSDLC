@@ -977,7 +977,7 @@ def status_command(
         root,
         include_program_truth=as_json,
         include_truth_ledger=as_json,
-        include_workitem_truth=True,
+        include_workitem_truth=as_json or not details,
     )
     if as_json:
         typer.echo(json.dumps(status_surface, indent=2))
@@ -995,7 +995,13 @@ def status_command(
         if checkpoint_exists:
             with suppress(CheckpointLoadError, YamlStoreError):
                 cp = load_checkpoint(root, strict=True, warn=False)
+        raw_checkpoint = load_checkpoint(root, warn=False) if checkpoint_exists else None
         checkpoint_unreadable = checkpoint_exists and cp is None
+        surface_from_rejected_checkpoint = (
+            cp is not None and raw_checkpoint is not None and cp != raw_checkpoint
+        )
+        if checkpoint_unreadable or surface_from_rejected_checkpoint:
+            status_surface = {}
         checkpoint_stage = (
             cp.current_stage if cp is not None else "unavailable"
             if checkpoint_unreadable

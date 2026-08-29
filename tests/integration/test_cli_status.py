@@ -541,9 +541,48 @@ class TestCliStatus:
             ),
         ):
             result = runner.invoke(app, ["status"])
+            details_result = runner.invoke(app, ["status", "--details"])
 
         assert result.exit_code == 0, result.output
-        assert calls == [(False, False, True)]
+        assert details_result.exit_code == 0, details_result.output
+        assert calls == [(False, False, True), (False, False, False)]
+
+    def test_status_drops_surface_derived_from_rejected_primary_checkpoint(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        checkpoint_path = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        checkpoint_path.write_text("current_stage: bogus\n", encoding="utf-8")
+        recovered = Checkpoint.model_construct(current_stage="init")
+        rejected = recovered.model_copy(update={"current_stage": "bogus"})
+        corrupt_surface = {
+            "workitem_diagnostics": {
+                "next_required_action": "Follow the rejected primary checkpoint.",
+                "items": [{"blocking": True, "detail": "Rejected primary blocker."}],
+            }
+        }
+
+        with (
+            patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+            patch("ai_sdlc.cli.commands.detect_reconcile_hint", return_value=None),
+            patch(
+                "ai_sdlc.cli.commands.build_status_json_surface",
+                return_value=corrupt_surface,
+            ),
+            patch(
+                "ai_sdlc.cli.commands.load_checkpoint",
+                side_effect=lambda _root, *, strict=False, **_kwargs: (
+                    recovered if strict else rejected
+                ),
+            ),
+        ):
+            result = runner.invoke(app, ["status"])
+
+        assert result.exit_code == 0, result.output
+        assert "Current Loop: pipeline/init" in result.output
+        assert "Follow the rejected primary checkpoint." not in result.output
+        assert "Rejected primary blocker." not in result.output
 
     def test_status_guides_user_when_legacy_artifacts_need_reconcile(
         self, tmp_path: Path
