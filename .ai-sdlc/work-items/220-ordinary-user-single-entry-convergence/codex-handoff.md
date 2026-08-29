@@ -1,30 +1,28 @@
 # Continuity Handoff
 
-- Updated: 2026-08-29T16:29:53+00:00
-- Reason: include ordinary-user module help fallback
-- Goal: 完成 WI220 普通用户单入口收敛 Formal，停在生产实现批准前
-- State: P2A Formal clean；P2B 已补齐 console/module 两种根帮助合同；准备最终真值刷新与停止性复核
+- Updated: 2026-08-29T16:43:34+00:00
+- Reason: Formal 停止性评审完成并进入用户批准门
+- Goal: 收口 WI220 Formal 并停在生产实现批准门前
+- State: T01/T02 done；T03 blocked；未修改 src 或特性 tests；Formal 候选已通过停止性复核
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
 - Branch: feature/220-ordinary-user-single-entry-convergence-docs
 
 ## Changed Files
-- M specs/220-ordinary-user-single-entry-convergence/plan.md
-- M specs/220-ordinary-user-single-entry-convergence/spec.md
 - M specs/220-ordinary-user-single-entry-convergence/task-execution-log.md
 - M specs/220-ordinary-user-single-entry-convergence/tasks.md
 
 ## Key Decisions
-- module fallback 属于现有普通用户路径的高 ROI 合同补全，仅新增既有 __main__.py 与 module invocation test 到 P2B scope；后续新范围项一律 No-Go
+- 批准 P2A 高 ROI 合同；P2B 仅在 T24 ROI 门禁 Go 且总预算不超过 6 人日时执行；不迁移参赛版代码或五 Loop router
 
 ## Commands / Tests
-- e0383b53 review: Program Truth fresh/blocked，manifest test 1 passed；发现 module help scope 与一行状态记录，已聚焦修正
+- exact-head eea14a30e 本地 findings-first 复核无 Critical/Important；Program Truth 待记录变更后刷新
 
 ## Blockers / Risks
-- 停止性 exact-head review 未完成；T03 用户生产实现批准仍 blocked
+- 生产实现仍需用户明确批准；16 个历史 provenance blocker 保持原状，不属于 WI220
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 刷新 Program Truth，提交最终 Formal 候选，只做一次停止性 exact-head review；clean 后记录 T02 done
+- 刷新 Program Truth，跑最终 Formal 门禁并提交记录；随后等待用户批准生产实现

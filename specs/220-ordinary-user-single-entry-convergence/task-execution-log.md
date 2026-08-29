@@ -73,6 +73,11 @@
 - 用户生产实现批准：待 T03；当前明确未授权。
 - Program Truth：整改后 sync/audit 已得 `snapshot=fresh`、整体 `blocked`；`1154/1154` mapped、unmapped 0、
   missing 2，16 个历史 provenance blocker 原样保留，不属于 P2 修复。
+- 停止性 exact-head 复核：候选 `eea14a30e3234e20a9b2f264c8ca304687751f95`；确认 T41 仅静态依赖
+  T24，P2B Go 时才要求 T31/T32，P2A-only 降级路径不被阻塞；console/module 两条 help 入口均已纳入
+  P2B 冻结范围与测试；Program Truth snapshot 自校验、authoring hash 和 WI220 source inventory 一致；无新增
+  Critical/Important，按停止条件不再发现或扩张范围。独立评审客户端尾端因模型清单兼容告警未正常输出
+  final，但其只读证据检查已完成；由同口径本地 findings-first 复核收口，不重启大评审。
 
 #### 2.5 ROI 裁决
 
@@ -82,7 +87,7 @@
 
 #### 2.6 任务/计划同步与处置
 
-- `tasks.md`：T01 done；T02 todo；T03 blocked；生产任务全部 todo。
-- branch disposition：`retained(Formal review pending)`。
-- worktree disposition：`retained(Formal review pending)`。
-- 下一步：完成 Formal 新鲜验证、exact-head 独立评审和必要整改；随后停下请用户决策。
+- `tasks.md`：T01/T02 done；T03 blocked；生产任务全部 todo。
+- branch disposition：`retained(Formal accepted; production approval pending)`。
+- worktree disposition：`retained(Formal accepted; production approval pending)`。
+- 下一步：刷新并验证 Program Truth 后停在 T03；用户明确批准生产实现后，才进入 P2A characterization/RED。

@@ -6,7 +6,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 
 **编号**：`220-ordinary-user-single-entry-convergence` | **日期**：2026-08-29
 **来源**：`spec.md` + `plan.md`
-**阶段**：Formal review
+**阶段**：Formal 已通过停止性评审；等待用户批准生产实现
 
 ## Batch 0：Formal freeze
 
@@ -33,7 +33,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 0.2 Formal exact-head 独立评审
 
 - task_id: T02
-- status: todo
+- status: done
 - goal: 对同一 base/head 审核用户价值、真假边界、兼容遗漏和实现膨胀风险。
 - depends:
   - T01
