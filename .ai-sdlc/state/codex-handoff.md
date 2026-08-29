@@ -1,28 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-08-29T16:51:37+00:00
-- Reason: 最终 guard 负控制发现并修正任务激活建模
+- Updated: 2026-08-29T17:00:26+00:00
+- Reason: 记录 WI220 Formal 最终验证结果
 - Goal: 收口 WI220 Formal 并停在生产实现批准门前
-- State: T01/T02 done；T03 与全部生产任务 blocked；guard 负控制已阻止越过用户批准；无 src 改动
+- State: Formal 已验证；T01/T02 done；T03 与 T11–T43 blocked；无 src 改动；等待用户批准生产实现
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
 - Branch: feature/220-ordinary-user-single-entry-convergence-docs
 
 ## Changed Files
-- M specs/220-ordinary-user-single-entry-convergence/task-execution-log.md
-- M specs/220-ordinary-user-single-entry-convergence/tasks.md
+- none
 
 ## Key Decisions
-- 任务 guard 不解释 depends；未来生产任务默认 blocked，批准后只激活 T11，之后按完成与 ROI 门禁逐项激活
+- P2A 批准为高 ROI；P2B 仅在 T24 Go 且总预算内执行；未来任务逐项激活，禁止 guard 越过批准门
 
 ## Commands / Tests
-- workitem guard=BLOCK_CODE_PREPARE_TASKS/allowed=false/task_id=null；constraints clean；program validate PASS；diff-check PASS
+- guard BLOCK/allowed=false/task_id=null；constraints clean；plan-check drift=false；program validate PASS；truth audit fresh/blocked；manifest test 1 passed in 154.49s；diff-check PASS
 
 ## Blockers / Risks
-- 生产实现仍需用户明确批准；16 个历史 provenance blocker 不属于 WI220
+- 仅剩用户生产实现批准；16 个历史 provenance blocker 保持原状，不属于 WI220
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 刷新 Program Truth，提交 guard 建模整改，运行 exact-head truth audit 与 manifest test，然后停在 T03
+- 用户明确批准后记录 T03 done 并仅激活 T11，进入 P2A characterization/RED；否则按意见整改 Formal
