@@ -141,3 +141,21 @@
 - 七条关键路径 `7 passed in 2.27s`；status 全文件 `57 passed in 46.98s`；Ruff PASS。
 - 单一投影当前 147 行，仍低于 180 行停止线；未修改 status JSON builder 或持久化层。
 - T23 done；仅激活 T24 adversarial ROI gate。
+
+### Batch 2026-08-29-007 | T24 adversarial ROI gate
+
+- exact-head：`24e05e106cc05448e0f986b7b29421ab3ca77933`；工作树在评审前干净。
+- 新鲜范围统计：生产代码净增 304 行、删除 5 行；其中唯一投影 `default_summary.py` 为 147 行，低于 180 行
+  止损线。投影仅由 run/status 两处消费，没有新增状态、持久化、API、schema、配置、规则引擎或 Loop router。
+- 新鲜门禁：P2A 三文件组合回归 `102 passed in 57.69s`；目标 Ruff PASS；`verify constraints` 无 BLOCKER。
+- 对抗复核：未发现 Critical/Important 可操作问题。独立 Codex review 客户端因 0.137.0 无法解析模型目录中的
+  `max` 档位持续输出兼容噪声，按有界止损终止；其未形成产品 finding，本地 findings-first 复核覆盖输出真值、
+  exit/JSON/只读边界、Loop fail-closed、单投影复用与范围膨胀。
+- 残余风险：仅内置规则文件自身编码损坏时，标题读取可能失败；正常分发路径无证据触发，且不值得为该低概率
+  场景扩大本切片测试/异常策略，留作出现真实故障证据后处理。
+- ROI 裁决：**Go P2B**。P2A 在同日四个有界批次完成，低于 3 人日预算；价值目标完整达成且没有触发任一
+  降级条件。P2B 仍限定 1–2 人日，只做 help 可见性元数据、module fallback 与 README 高级索引。
+- Program Truth 刷新：snapshot hash=`928cd534732bf777b593cbcda72f1f852216505bb5e560ad6a1349fedc7a274c`；
+  audit=`fresh/blocked`（预期 16 个历史 truth-check blocker）；inventory `1154/1154`、unmapped 0、missing 2；
+  manifest 集成测试 `1 passed in 158.08s`。
+- T24 done；仅激活 T31。下一步先写 console/module 六入口与高级命令直接可达性的 RED，不提前修改实现。

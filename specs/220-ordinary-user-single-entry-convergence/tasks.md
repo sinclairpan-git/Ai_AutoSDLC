@@ -142,7 +142,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.4 P2A adversarial ROI gate
 
 - task_id: T24
-- status: todo
+- status: done
 - goal: 以新鲜 diff、测试和独立评审决定进入 P2B、降级或 No-Go。
 - depends:
   - T22
@@ -166,7 +166,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 3.1 help visibility 与高级可达性 RED
 
 - task_id: T31
-- status: blocked
+- status: todo
 - goal: 锁定六个默认入口和全部隐藏命令的直接调用兼容。
 - depends:
   - T24
