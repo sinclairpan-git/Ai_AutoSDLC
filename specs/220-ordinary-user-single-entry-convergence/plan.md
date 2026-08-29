@@ -6,7 +6,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 
 **编号**：`220-ordinary-user-single-entry-convergence` | **日期**：2026-08-29
 **规格**：`specs/220-ordinary-user-single-entry-convergence/spec.md`
-**状态**：Formal 候选；生产实现等待用户批准
+**状态**：Formal 已批准；P2A characterization/RED 执行中
 
 ## 1. 概述
 
@@ -195,5 +195,5 @@ Applicable Rules 只使用 checkpoint stage 与现有 `RulesLoader`；最多输�
 
 | 决策 | 当前状态 | 阻塞阶段 |
 |---|---|---|
-| Formal 是否批准进入生产实现 | 等待用户 | Phase 1 |
+| Formal 是否批准进入生产实现 | 已批准（2026-08-29） | 已解除 |
 | P2B 是否执行 | P2A ROI gate 后自动按冻结条件决定 | Phase 4 |

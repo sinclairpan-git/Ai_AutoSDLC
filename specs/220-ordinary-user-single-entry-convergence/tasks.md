@@ -6,7 +6,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 
 **编号**：`220-ordinary-user-single-entry-convergence` | **日期**：2026-08-29
 **来源**：`spec.md` + `plan.md`
-**阶段**：Formal 已通过停止性评审；等待用户批准生产实现
+**阶段**：P2A characterization/RED
 
 ## Batch 0：Formal freeze
 
@@ -48,7 +48,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 0.3 用户批准生产实现
 
 - task_id: T03
-- status: blocked
+- status: done
 - goal: 用户审阅 Formal 结论并明确批准或整改；批准前不进入 src/tests。
 - depends:
   - T02
@@ -69,7 +69,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 1.1 冻结既有行为与五项摘要 RED
 
 - task_id: T11
-- status: blocked
+- status: done
 - goal: 先证明主线缺少默认摘要/details，再锁定所有既有 exit/JSON/上报行为。
 - depends:
   - T03
@@ -89,7 +89,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.1 实现单一默认展示投影
 
 - task_id: T21
-- status: blocked
+- status: todo
 - goal: 以一个内部纯投影统一 current loop/result/next/blockers/rules 的优先级与有界输出。
 - depends:
   - T11

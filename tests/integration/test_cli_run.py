@@ -289,6 +289,11 @@ class TestRunCommand:
         assert result.exit_code == 2
         assert "Pipeline halted:" in result.output
         assert "AgentOps report pending: missing_token" in result.output
+        assert "Current Loop:" in result.output
+        assert "Result: halted" in result.output
+        assert "Next:" in result.output
+        assert "Blockers:" in result.output
+        assert "Applicable Rules:" in result.output
 
     def test_run_required_agentops_blocks_when_profile_is_malformed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -996,6 +1001,11 @@ class TestRunCommand:
         assert "Pipeline completed." not in result.output
         assert "Dry-run completed with open gates. Last stage: close (RETRY)" in result.output
         assert "reason: Final tests did not pass" in result.output
+        assert "Current Loop:" in result.output
+        assert "Result: open_gates" in result.output
+        assert "Next:" in result.output
+        assert "Blockers:" in result.output
+        assert "Applicable Rules:" in result.output
 
     def test_run_dry_run_surfaces_frontend_inheritance_risk_from_program_truth_audit(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1239,6 +1249,11 @@ class TestRunCommand:
         assert result.exit_code == 0
         assert "Pipeline completed. Stage: close" in result.output
         assert "Not a git repository" not in result.output
+        assert "Current Loop:" in result.output
+        assert "Result: completed" in result.output
+        assert "Next:" in result.output
+        assert "Blockers: None" in result.output
+        assert "Applicable Rules:" in result.output
 
     def test_run_non_dry_run_executes_batches_updates_checkpoint_and_summary(
         self, git_repo: Path, monkeypatch: pytest.MonkeyPatch
@@ -1392,6 +1407,11 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"])
         assert result.exit_code == 1
         assert "recover --reconcile" in result.output
+        assert "Current Loop:" in result.output
+        assert "Result: blocked" in result.output
+        assert "Next:" in result.output
+        assert "Blockers:" in result.output
+        assert "Applicable Rules:" in result.output
 
     def test_run_dry_run_continues_after_reconcile(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

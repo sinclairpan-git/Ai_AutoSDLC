@@ -447,8 +447,30 @@ class TestCliStatus:
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
             result = runner.invoke(app, ["status"])
             assert result.exit_code == 0
-            assert "AI-SDLC Status" in result.output
-            assert tmp_path.name in result.output
+            assert "Current Loop:" in result.output
+            assert "Result:" in result.output
+            assert "Next:" in result.output
+            assert "Blockers:" in result.output
+            assert "AI-SDLC Status" not in result.output
+
+    def test_status_details_preserves_the_existing_human_surface(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["status", "--details"])
+
+        assert result.exit_code == 0
+        assert "AI-SDLC Status" in result.output
+        assert tmp_path.name in result.output
+
+    def test_status_rejects_details_with_json(self, tmp_path: Path) -> None:
+        init_project(tmp_path)
+        with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
+            result = runner.invoke(app, ["status", "--details", "--json"])
+
+        assert result.exit_code == 2
+        assert "--details cannot be combined with --json" in result.output
 
     def test_status_displays_adapter_target_and_activation_truth(
         self, tmp_path: Path

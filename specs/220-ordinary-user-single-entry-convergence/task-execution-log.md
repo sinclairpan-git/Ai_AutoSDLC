@@ -94,3 +94,20 @@
 - branch disposition：`retained(Formal accepted; production approval pending)`。
 - worktree disposition：`retained(Formal accepted; production approval pending)`。
 - 下一步：刷新并验证 Program Truth 后停在 T03；用户明确批准生产实现后，才进入 P2A characterization/RED。
+
+### Batch 2026-08-29-002 | T03 production approval and T11 activation
+
+- 用户明确批准生产实现；T03 从 blocked 置为 done。
+- 按逐项授权规则仅将 T11 置为 todo；T21–T43 继续 blocked。
+- 当前允许范围仅为既有行为 characterization 与 P2A RED 测试；尚未授权写入生产实现。
+- 下一步：锁定 run/status/Loop/JSON/exit 基线，写出会因缺少默认摘要或 `status --details` 而失败的真实 CLI 测试。
+
+### Batch 2026-08-29-003 | T11 characterization and RED
+
+- 既有基线：normal/open/preflight/halt、status text/json 七条代表性测试 `7 passed in 3.42s`。
+- 新增纯投影 RED：no-loop fallback、single current、multiple current、malformed pointer、Next/Blockers/Rules 上限、
+  仅提升 `blocking=true` status item，共六条。
+- 新增 CLI RED：run normal/open/preflight/halt 五项摘要，status default compact、`--details` 迁移桥和
+  `--details --json` 明确互斥，共七条。
+- 首轮结果：`12 failed, 1 passed in 1.80s`；随后修正互斥测试的假阳性，要求明确错误文本，单测按预期 RED。
+- T11 done；仅激活 T21。下一步先实现不超过 180 行的单一纯投影并只跑 unit GREEN，不提前接入 run/status。
