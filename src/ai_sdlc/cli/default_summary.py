@@ -86,6 +86,32 @@ def build_default_summary(
     )
 
 
+def render_default_summary(
+    summary: DefaultSummary,
+    *,
+    include_rules: bool,
+) -> str:
+    """渲染稳定的纯文本摘要，不解释或改变执行结果。"""
+
+    lines = [
+        f"Current Loop: {summary.current_loop}",
+        f"Result: {summary.result}",
+        f"Next: {summary.next_action or 'None'}",
+    ]
+    if summary.blockers:
+        lines.append("Blockers:")
+        lines.extend(f"  - {item}" for item in summary.blockers)
+    else:
+        lines.append("Blockers: None")
+    if include_rules:
+        if summary.applicable_rules:
+            lines.append("Applicable Rules:")
+            lines.extend(f"  - {item}" for item in summary.applicable_rules)
+        else:
+            lines.append("Applicable Rules: None")
+    return "\n".join(lines)
+
+
 def _first_text(*groups: Sequence[str]) -> str | None:
     for group in groups:
         for value in group:

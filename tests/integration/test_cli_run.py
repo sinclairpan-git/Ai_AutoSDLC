@@ -149,10 +149,16 @@ class TestRunCommand:
         package_init.parent.mkdir(parents=True, exist_ok=True)
         package_init.write_text("", encoding="utf-8")
 
-    def test_run_outside_project(self, tmp_path: Path) -> None:
+    def test_run_outside_project(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Not inside a project → exit 1 (not found) or 2 (halt), never success."""
-        result = runner.invoke(app, ["run", "--dry-run"], cwd=str(tmp_path))
-        assert result.exit_code in (1, 2)
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["run", "--dry-run"])
+        assert result.exit_code == 1
+        assert "Current Loop: pipeline/uninitialized" in result.output
+        assert "Result: blocked" in result.output
+        assert "Next: ai-sdlc init ." in result.output
 
     def test_run_help(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1187,6 +1193,11 @@ class TestRunCommand:
         assert "ai-sdlc adapter select" in result.output
         assert "重新选择实际用于聊天开发的 AI" in result.output
         assert "工具入口" in result.output
+        assert "Current Loop:" in result.output
+        assert "Result: blocked" in result.output
+        assert "Next: ai-sdlc adapter select" in result.output
+        assert "Blockers:" in result.output
+        assert "Applicable Rules:" in result.output
 
     def test_run_non_dry_run_continues_when_adapter_is_verified_loaded(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

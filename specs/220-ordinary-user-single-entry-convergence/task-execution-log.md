@@ -120,3 +120,14 @@
 - `uv run ruff check src/ai_sdlc/cli tests/unit/test_default_summary.py`：PASS。
 - 投影模块 121 行；无持久化、public schema/config/router，Next/Blockers/Rules 上限由 unit tests 锁定。
 - T21 done；仅激活 T22。Program Truth 在 P2A 切片完成后统一刷新，避免每个微任务重复昂贵扫描。
+
+### Batch 2026-08-29-005 | T22 run summary GREEN
+
+- 在既有 run 分支上追加同一纯投影 renderer；未初始化、adapter/reconcile preflight、normal、open gate、halt
+  均保留原输出与 exit contract。
+- 修正既有 `test_run_outside_project` 假阳性：移除不受支持的 `CliRunner.invoke(cwd=...)`，改用真实 cwd；
+  旧测试此前把 `TypeError` 的 exit 2 误认为业务失败。
+- 六条关键路径测试 `6 passed in 1.49s`；run 全文件与 unit 回归 `45 passed in 9.12s`；
+  default summary `6 passed in 0.37s`；Ruff PASS。
+- 未改 Runner、ProgramService、Loop model、status JSON builder、frontend attachment 或 AgentOps 上报。
+- T22 done；仅激活 T23。

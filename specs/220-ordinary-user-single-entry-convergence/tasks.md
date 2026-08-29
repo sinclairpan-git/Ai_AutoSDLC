@@ -108,11 +108,12 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.2 接入 run 五项摘要
 
 - task_id: T22
-- status: todo
+- status: done
 - goal: 在不改变执行和上报语义的前提下覆盖 run 全部终态。
 - depends:
   - T21
 - scope:
+  - src/ai_sdlc/cli/default_summary.py
   - src/ai_sdlc/cli/run_cmd.py
   - tests/integration/test_cli_run.py
 - acceptance:
@@ -124,7 +125,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 2.3 收敛 status default 并保留 details/json
 
 - task_id: T23
-- status: blocked
+- status: todo
 - goal: 默认只显示四项摘要，新增 details 迁移桥，JSON 早返回合同不变。
 - depends:
   - T21
