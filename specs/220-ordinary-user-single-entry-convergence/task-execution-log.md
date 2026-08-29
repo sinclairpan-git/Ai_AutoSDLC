@@ -229,5 +229,8 @@
   `verify constraints: no BLOCKERs`。`program validate: PASS`。
 - 整改提交后刷新 Program Truth：snapshot hash=`6104f6afabced2e1b6b75f48e3a3a5d28bc4281f13cf12b444303b17a43e43e0`；
   state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
+- 候选 `f4071c6d5784b60840459652acea47285eba276a` fresh 全量门禁：`3405 passed, 3 skipped in 1054.41s`；
+  Ruff PASS；constraints no BLOCKERs；program validate PASS；manifest gate `1 passed in 155.94s`；truth audit
+  `fresh/blocked`，阻断归因仍为上述 16 个历史 truth-check。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。
