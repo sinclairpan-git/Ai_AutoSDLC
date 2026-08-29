@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 from ai_sdlc.cli.main import app
 
 runner = CliRunner()
+_REPO_ROOT = Path(__file__).resolve().parents[2]
 
 _BEGINNER_COMMANDS = {
     "adopt",
@@ -74,6 +75,15 @@ def test_advanced_command_help_remains_directly_callable(
         monkeypatch.setattr(sys, "argv", ["ai-sdlc", command, "--help"])
         result = runner.invoke(app, [command, "--help"])
         assert result.exit_code == 0, f"{command}: {result.output}"
+
+
+def test_readme_indexes_every_command_hidden_from_root_help() -> None:
+    readme = (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    _, advanced_section = readme.split("### Advanced Command Index", maxsplit=1)
+    advanced_section, _ = advanced_section.split("### Requirement Loop", maxsplit=1)
+
+    for command in _ADVANCED_COMMANDS:
+        assert f"`ai-sdlc {command}`" in advanced_section
 
 
 def test_vibe_coder_can_initialize_without_reading_internal_state(

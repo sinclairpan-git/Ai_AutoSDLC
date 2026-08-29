@@ -173,3 +173,15 @@
   污染 checkout，未修改该既有 hook 行为。
 - T31 done；仅激活 T32。T32 允许范围补入既有 `cli/command_names.py`，只移除 hidden 过滤，不新增注册表或第二
   帮助系统；这是满足已冻结 command inventory 兼容合同所需的两行级修正。
+
+### Batch 2026-08-29-009 | T32 minimal help convergence GREEN
+
+- console root help 仅通过 Typer `hidden=True` 收敛为六个入口；帮助正文明确高级命令仍可直接调用。未移动、删除、
+  重命名命令或修改参数/实现。
+- `python -m ai_sdlc --help` 的 ASCII fallback 同步为相同六入口和说明；无参数 module 路径继续复用该输出。
+- `command_names._walk_group()` 不再把 help-hidden 当作 inventory 删除，close-check 继续看到 134 条叶子命令；
+  `adapter status`、`program truth audit`、`loop status`、`pr-review doctor` 抽样均存在。
+- README 新增有界 Advanced Command Index，按四类精确列出 21 个 help-hidden 顶层入口；测试逐项校验索引完整。
+- T32 focused GREEN：先 `4 passed in 1.73s`；三文件完整回归加入 README 断言后 `16 passed in 5.27s`；
+  目标 Ruff PASS，`git diff --check` PASS。
+- T32 done；仅激活 T41。有界 guidance 对账只修改 `rg` 证明与 init/run/status 新合同冲突的文件。

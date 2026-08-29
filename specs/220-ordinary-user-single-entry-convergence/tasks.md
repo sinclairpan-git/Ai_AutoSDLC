@@ -183,7 +183,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 3.2 最小 hidden 元数据与高级索引 GREEN
 
 - task_id: T32
-- status: todo
+- status: done
 - goal: 不移动实现，只收敛默认 help 并提供 README 高级命令索引。
 - depends:
   - T31
@@ -207,7 +207,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 4.1 有界 guidance 对账
 
 - task_id: T41
-- status: blocked
+- status: todo
 - goal: 只修正与 init/run/status 新合同直接冲突的用户/adapter 文案。
 - depends:
   - T24

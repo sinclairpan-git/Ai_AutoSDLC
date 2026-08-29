@@ -42,6 +42,28 @@ uv run ai-sdlc --help
 
 Run the CLI from the source checkout with `uv run ai-sdlc ...`, or use `python -m ai_sdlc ...` inside an environment where the current checkout has been installed.
 
+The default root help shows the six everyday entry points: `init`, `adopt`,
+`run`, `status`, `recover`, and `self-update`. Start or adopt a project once,
+then use `ai-sdlc run` as the normal daily entry. Commands hidden from root help
+remain directly callable; hiding changes discovery noise only, not command names,
+arguments, behavior, or exit codes.
+
+### Advanced Command Index
+
+- Diagnostics and maintenance: `ai-sdlc doctor`, `ai-sdlc index`,
+  `ai-sdlc scan`, `ai-sdlc refresh`, `ai-sdlc adapter`,
+  `ai-sdlc host-runtime`, `ai-sdlc handoff`.
+- Authoring and governance: `ai-sdlc workitem`, `ai-sdlc stage`,
+  `ai-sdlc gate`, `ai-sdlc rules`, `ai-sdlc studio`, `ai-sdlc program`,
+  `ai-sdlc verify`.
+- Observability and enterprise operations: `ai-sdlc telemetry`,
+  `ai-sdlc provenance`, `ai-sdlc trace`, `ai-sdlc agentops`,
+  `ai-sdlc enterprise`.
+- Specialized loops and review: `ai-sdlc loop`, `ai-sdlc pr-review`.
+
+Use `<command> --help` for the exact subcommands and options available in the
+installed version.
+
 If the target machine does not already have Python 3.11, prefer the packaged installers so the runtime can be detected and provisioned automatically instead of asking the user to install Python by hand. The offline bundle can now carry a bundled `python-runtime/` payload for zero-preinstalled-Python installs on the target host.
 
 ### Requirement Loop

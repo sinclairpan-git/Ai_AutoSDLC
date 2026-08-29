@@ -21,8 +21,6 @@ def _walk_group(group: Any, prefix: tuple[str, ...]) -> list[str]:
     commands = getattr(group, "commands", {})
     for name in sorted(commands):
         cmd = commands[name]
-        if getattr(cmd, "hidden", False):
-            continue
         if hasattr(cmd, "commands"):
             out.extend(_walk_group(cmd, prefix + (name,)))
         else:

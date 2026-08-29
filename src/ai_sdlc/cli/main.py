@@ -37,7 +37,10 @@ from ai_sdlc.cli.workitem_cmd import _WORKITEM_ADAPTER_HOOK_META_KEY, workitem_a
 
 app = typer.Typer(
     name="ai-sdlc",
-    help="AI-native SDLC automation framework.",
+    help=(
+        "AI-native SDLC automation framework. Common commands are shown here; "
+        "advanced commands remain directly callable."
+    ),
     no_args_is_help=True,
 )
 
@@ -104,30 +107,30 @@ def _global_before_command(
 
 app.command(name="init")(init_command)
 app.command(name="adopt")(adopt_command)
-app.command(name="doctor")(doctor_command)
+app.command(name="doctor", hidden=True)(doctor_command)
 app.command(name="status")(status_command)
 app.command(name="recover")(recover_command)
-app.command(name="index")(index_command)
-app.command(name="scan")(scan_command)
-app.command(name="refresh")(refresh_command)
+app.command(name="index", hidden=True)(index_command)
+app.command(name="scan", hidden=True)(scan_command)
+app.command(name="refresh", hidden=True)(refresh_command)
 app.command(name="run")(run_command)
-app.add_typer(adapter_app, name="adapter")
-app.add_typer(agentops_app, name="agentops")
-app.add_typer(enterprise_app, name="enterprise")
-app.add_typer(gate_app, name="gate")
-app.add_typer(rules_app, name="rules")
-app.add_typer(studio_app, name="studio")
-app.add_typer(stage_app, name="stage")
-app.add_typer(program_app, name="program")
-app.add_typer(host_runtime_app, name="host-runtime")
-app.add_typer(handoff_app, name="handoff")
-app.add_typer(workitem_app, name="workitem")
-app.add_typer(verify_app, name="verify")
-app.add_typer(telemetry_app, name="telemetry")
-app.add_typer(provenance_app, name="provenance")
-app.add_typer(trace_app, name="trace")
-app.add_typer(loop_app, name="loop")
-app.add_typer(pr_review_app, name="pr-review")
+app.add_typer(adapter_app, name="adapter", hidden=True)
+app.add_typer(agentops_app, name="agentops", hidden=True)
+app.add_typer(enterprise_app, name="enterprise", hidden=True)
+app.add_typer(gate_app, name="gate", hidden=True)
+app.add_typer(rules_app, name="rules", hidden=True)
+app.add_typer(studio_app, name="studio", hidden=True)
+app.add_typer(stage_app, name="stage", hidden=True)
+app.add_typer(program_app, name="program", hidden=True)
+app.add_typer(host_runtime_app, name="host-runtime", hidden=True)
+app.add_typer(handoff_app, name="handoff", hidden=True)
+app.add_typer(workitem_app, name="workitem", hidden=True)
+app.add_typer(verify_app, name="verify", hidden=True)
+app.add_typer(telemetry_app, name="telemetry", hidden=True)
+app.add_typer(provenance_app, name="provenance", hidden=True)
+app.add_typer(trace_app, name="trace", hidden=True)
+app.add_typer(loop_app, name="loop", hidden=True)
+app.add_typer(pr_review_app, name="pr-review", hidden=True)
 app.add_typer(self_update_app, name="self-update")
 
 if __name__ == "__main__":
