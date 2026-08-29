@@ -1,27 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-08-28T08:04:41+00:00
-- Reason: PR #181 合并后终态 continuity 收口
-- Goal: 启动路线图 P1 Diff-local Lean Advisory；保持真实 Program Truth blocked
-- State: v0.9.8 后 ROI 路线已归档；PR #179/#180/#181 均已合并，origin/main@bd9cea91；Program Truth 在真实主线上 blocked/fresh，16 个历史 provenance blocker 已持久化
+- Updated: 2026-08-29T14:32:38+00:00
+- Reason: independent review clean; advance to PR protocol
+- Goal: 完成 P1 No-Go 主线 records-only 收口，并把 P2 设为唯一下一项
+- State: candidate 58291928 已通过独立 exact-head review：无可操作问题；准备推送 records-only PR
 - Stage: close
 - Work Item: 219-mainline-truth-roi-contract
-- Branch: codex/post-v098-main-verify
+- Branch: codex/p1-no-go-mainline-closeout
 
 ## Changed Files
 - none
 
 ## Key Decisions
-- 下一产品项直接建 P1，不先做 D2；D2 仅在下一次要求 release-target-ready 的发布前触发。继续禁止删 truth refs、放宽 formal_freeze_only、手改 snapshot 或追逐低 ROI 细枝末节
+- P1 有证据 No-Go，WI220 实现不 push、不建 PR、不合并；P2 是合并后的唯一下一项
 
 ## Commands / Tests
-- PR #181 Codex clean、10/10 checks；main verify constraints no BLOCKERs；main Program Truth audit blocked/fresh、inventory 1149/1149；root manifest test 1 passed in 137.75s
+- local independent review clean；verify constraints no BLOCKERs；Manifest tests passed；program validate passed；Truth audit blocked/fresh；inventory 1149/1149
 
 ## Blockers / Risks
-- D2 历史 provenance 回填是未来 release-target-ready 前置，但不阻断 P1 建项与开发
+- 历史 provenance blockers 仍阻断 release targets，这是预期真值；本收口不得修改或绕过
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 为 P1 Diff-local Lean Advisory 建立 formal work item，先锁定只读 advisory、差异局部、单次预算与停止条件；未经新 ROI 证据不扩展到自动重写或全仓治理
+- 推送并创建 records-only PR，请求 Codex review；required checks 全绿且无 finding 后合并，再从合并后 main 创建 P2 Formal

@@ -29,8 +29,8 @@
 | 顺序 | 事项 | 状态 | 用户/工程价值 | 预计投入 | ROI | 前置条件 |
 |---|---|---|---:|---:|---:|---|
 | P0 | 主线真值复位 + 轻量 ROI 合同 | **已完成** | 9.5/10 | 实际已投入 | 4.5（原估） | 无 |
-| P1 | Diff-local Lean Advisory | **下一项** | 8.0/10 | 2–3 人日 | 2.7 | P0 与 v0.9.8 已完成 |
-| P2 | 普通用户单入口收敛 | **排队** | 9.0/10 | 4–6 人日 | 1.5 | P1 已完成，或按 No-Go 有证据关闭且未保留治理膨胀 |
+| P1 | Diff-local Lean Advisory | **No-Go 已关闭（未合并）** | 8.0/10 | 实际：1 个 WI + 2 轮评审 | No-Go（及时止损） | P0 与 v0.9.8 已完成 |
+| P2 | 普通用户单入口收敛 | **下一项** | 9.0/10 | 4–6 人日 | 1.5 | P1 已完成，或按 No-Go 有证据关闭且未保留治理膨胀 |
 | P3 | 跨平台首次用户 12 路完整闭环 | **排队** | 9.5/10 | 6–10 人日 | 1.1 | P2 默认入口稳定 |
 | P4 | 五类 Loop 有界动态专家 | **条件候选** | 10/10 | 10–15 人日 | 0.6 | P1–P3 的真实收益支持继续投资 |
 
@@ -61,6 +61,10 @@
 - 若出现可复现问题，只建立聚焦缺陷 work item；不重启 WI219，不扩大成真值平台重构。
 
 ## 5. P1：Diff-local Lean Advisory
+
+**状态：已按有证据 No-Go 关闭，主线未合并任何 P1 实现。** 候选在 1 个 formal work item、实现和两轮独立评审预算内完成验证；focused 38、provider/service 122、full 3402（另 3 skipped）、Ruff 与 constraints 均通过，但 exact-head 独立评审及真实 `local-unstaged` ReviewPack 复现了运行时合同缺陷：当 Git 启用 `diff.mnemonicPrefix=true` 时，ReviewPack 仍返回 `ready`，Lean advisory 却静默缺失。
+
+继续修复需要扩大到已冻结范围之外的 runtime prefix/parser/Git diff 合同，当前新增价值不足以支撑继续投入，因此触发有界评审硬停止。候选分支未 push、未创建 PR、未合并；主线继续保留 WI219 的轻量 ROI prompt，不保留 collector、schema、状态或其他治理膨胀。只有新的 Formal 明确批准 runtime prefix contract 时才可重新立项；本节其余内容保留为冻结方案与 No-Go 审计依据，不再作为当前待办。
 
 ### 5.1 目标与价值
 
@@ -322,7 +326,7 @@
 1. 分别用上文两个仓库 URL 定位远端，并以 `git ls-remote <仓库 URL> refs/heads/main` 核对 `main` 精确 SHA；需要读取树时，只在各自独立 checkout 中 fetch 对应 `origin/main`。不得把两个 checkout 的 `origin` 当作同一仓库，也不读取产品站和本地材料分支作为决策真值。
 2. 阅读本文件，核对“总体队列”和当前项状态，不重新从零生成 P0–P4。
 3. 核对当前远端主线是否已经改变相关能力。若没有改变，直接选择队列中第一个“下一项/排队”事项。
-4. 当前固定下一项是 **P1 Diff-local Lean Advisory**。使用 `.ai-sdlc/project/config/project-state.yaml` 的 next work item sequence 创建独立 formal work item。
+4. 当前固定下一项是 **P2 普通用户单入口收敛**。P1 已按有证据 No-Go 关闭且未向主线保留实现或治理膨胀；使用 `.ai-sdlc/project/config/project-state.yaml` 的 next work item sequence 创建独立 formal work item。
 5. 路线图只作为规划输入；formal spec、plan、tasks、评审和用户 execute 批准仍分别完成。
 6. 每完成一个事项，在同一收口 PR 或紧随其后的 records-only PR 中更新：状态、实际投入、证据、未完成项、下一项和 handoff。
 7. 只有出现新事实导致价值、投入、风险或依赖显著变化时才重新排序；修订时保留旧决策和变化原因。
@@ -331,8 +335,8 @@
 
 - [x] P0 主线真值复位与轻量 ROI 合同已发布为 v0.9.8。
 - [ ] O1 在 3–5 个真实项目完成 v0.9.8 真值观察。
-- [ ] P1 Diff-local Lean Advisory 完成 formal、实现、校准、评审与主线合并。
-- [ ] P2 普通用户单入口完成默认路径与高级兼容验证。
+- [x] P1 Diff-local Lean Advisory 已按运行时合同缺陷有证据 No-Go 关闭；实现未合并，主线保留 WI219 轻量 ROI prompt。
+- [ ] P2 普通用户单入口完成默认路径与高级兼容验证。（当前下一项）
 - [ ] P3 十二条首次用户路线完成真实 clean-environment E2E。
 - [ ] P4 Phase A 证明 Requirement/Design/Implementation 动态专家 ROI。
 - [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
