@@ -2,7 +2,7 @@
 
 **功能编号**：`220-ordinary-user-single-entry-convergence`
 **创建日期**：2026-08-29
-**状态**：Formal 候选；生产实现未授权
+**状态**：P2A/P2B 已完成；T43 第一轮 exact-head 对抗整改中
 
 ## 1. 归档规则
 
@@ -211,3 +211,21 @@
   `1 passed in 157.83s`。
 - T42 本地出口通过；Windows/macOS/Linux required checks 按仓库协议在 T43 PR 上取得，避免把尚未发生的远端 CI
   写成已完成事实。T42 done；仅激活 T43。
+
+### Batch 2026-08-29-012 | T43 exact-head review remediation round 1
+
+- 独立评审 exact HEAD `8031d7885182bbaf669866deaa4c5318936aa05c`：0 Critical、3 Important；未批准 push/PR。
+- 三类缺口均经代码与测试复现：run 未消费 status surface；malformed Loop 丢失既有修复动作；confirm pause 与
+  required AgentOps 失败被摘要误报为 completed。没有采纳超出冻结范围的重构。
+- RED：新增共享 run/status 真值、malformed next action、confirm pause、AgentOps final-result 测试；
+  `6 failed, 43 passed in 9.45s`。
+- 最小 GREEN：共享投影直接从既有 status surface 选择工作项动作；run 只读复用 fast status surface；跟踪既有
+  confirm callback 的拒绝结果；AgentOps 上报成功后才渲染 completed，失败时保留 exit 2 并摘要为 blocked。
+- 删除注释：`src/ai_sdlc/cli/commands.py` 的“只选取既有 status surface 中最具体的工作项下一步”随重复 `_status_next_actions()` 移除；等价意图迁移到 `default_summary.py` 的共享投影函数注释，避免 status/run 两处选择逻辑再次漂移。
+- 聚焦回归 `49 passed in 10.09s`；目标 Ruff PASS。未改 Runner、schema、持久化、命令面或 Loop router。
+- 相关子系统回归覆盖 default summary、五 Loop status、Runner confirm、run/status CLI 与 telemetry readiness：
+  `193 passed in 60.76s`；全库 Ruff 与 `git diff --check` PASS。
+- 首次 constraints 运行准确拦截上述 docstring 迁移记录缺少同一新增行的 path + summary；改为规范化单行删除原因后，
+  `verify constraints: no BLOCKERs`。`program validate: PASS`。
+- 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
+- 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。

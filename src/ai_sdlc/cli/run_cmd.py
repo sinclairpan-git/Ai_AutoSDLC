@@ -56,6 +56,7 @@ from ai_sdlc.integrations.ide_adapter import (
 )
 from ai_sdlc.models.state import Checkpoint
 from ai_sdlc.rules import RulesLoader
+from ai_sdlc.telemetry.readiness import build_status_json_surface
 from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root, now_iso
 
@@ -248,7 +249,15 @@ def run_command(
         raise typer.Exit(code=1)
 
     runner = SDLCRunner(root)
-    callback = _confirm_callback if mode == "confirm" else None
+    paused_by_user = False
+
+    def _tracked_confirm_callback(stage: str, result: Any) -> bool:
+        nonlocal paused_by_user
+        confirmed = _confirm_callback(stage, result)
+        paused_by_user = not confirmed
+        return confirmed
+
+    callback = _tracked_confirm_callback if mode == "confirm" else None
     last_result: Any | None = None
     stage_results: list[tuple[str, Any]] = []
 
@@ -287,6 +296,10 @@ def run_command(
                 console.print(f"  reason: {message}", markup=False)
             console.print("")
             console.print(render_dry_run_open_gate_guidance(_failed_gate_messages(last_result)))
+        elif paused_by_user:
+            console.print(
+                f"\n[bold yellow]Pipeline paused. Stage: {cp.current_stage}[/bold yellow]"
+            )
         else:
             console.print(
                 f"\n[bold green]Pipeline completed. Stage: {cp.current_stage}[/bold green]"
@@ -301,18 +314,37 @@ def run_command(
             and str(getattr(last_result.verdict, "value", last_result.verdict)).upper()
             != "PASS"
         )
+        result = "open_gates" if open_gate else "paused" if paused_by_user else "completed"
+        primary_next_actions = (
+            (
+                "Resolve the first open gate, then rerun ai-sdlc run --dry-run."
+                if open_gate
+                else "Rerun ai-sdlc run --mode confirm when ready."
+                if paused_by_user
+                else ""
+            ),
+        )
+        blockers = tuple(_failed_gate_messages(last_result)) if open_gate else ()
+        try:
+            _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
+        except typer.Exit:
+            _render_run_summary(
+                root=root,
+                checkpoint=cp,
+                result="blocked",
+                primary_next_actions=(
+                    "Fix required AgentOps reporting, then rerun ai-sdlc run.",
+                ),
+                blockers=("Required AgentOps reporting did not complete.",),
+            )
+            raise
         _render_run_summary(
             root=root,
             checkpoint=cp,
-            result="open_gates" if open_gate else "completed",
-            primary_next_actions=(
-                ("Resolve the first open gate, then rerun ai-sdlc run --dry-run.")
-                if open_gate
-                else ""
-            ,),
-            blockers=tuple(_failed_gate_messages(last_result)) if open_gate else (),
+            result=result,
+            primary_next_actions=primary_next_actions,
+            blockers=blockers,
         )
-        _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
     except PipelineHaltError as exc:
         _record_halt_result(stage_results, exc)
         cp = load_checkpoint(root, warn=False)
@@ -340,6 +372,7 @@ def _render_run_summary(
 
     stage = checkpoint.current_stage if checkpoint is not None else "uninitialized"
     loop_statuses = ()
+    status_surface: dict[str, Any] = {}
     applicable_rules: tuple[str, ...] = ()
     if root is not None:
         loop_statuses = tuple(
@@ -354,12 +387,22 @@ def _render_run_summary(
                 title = "unavailable"
             rule_lines.append(f"{name} — {title}")
         applicable_rules = tuple(rule_lines)
+        try:
+            status_surface = build_status_json_surface(
+                root,
+                include_program_truth=False,
+                include_truth_ledger=False,
+                include_workitem_truth=False,
+            )
+        except (OSError, RuntimeError, ValueError):
+            status_surface = {}
     summary = build_default_summary(
         checkpoint_stage=stage,
         result=result,
         loop_statuses=loop_statuses,
         primary_next_actions=primary_next_actions,
         blockers=blockers,
+        status_surface=status_surface,
         applicable_rules=applicable_rules,
     )
     console.print("")

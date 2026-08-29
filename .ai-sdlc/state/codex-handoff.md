@@ -1,33 +1,38 @@
 # Continuity Handoff
 
-- Updated: 2026-08-29T19:31:32+00:00
-- Reason: T42 本地验证完成并切换到 T43
-- Goal: 完成 WI220 exact-head review、PR、required checks 与合并后真值
-- State: T42 local gates done；仅 T43 todo
+- Updated: 2026-08-29T20:03:52+00:00
+- Reason: constraints 失败已按治理合同整改并复验通过
+- Goal: 完成 WI220 第一轮限界整改并通过 exact-head 复审
+- State: T43 第一轮整改本地相关门禁通过，准备提交候选
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
 - Branch: feature/220-ordinary-user-single-entry-convergence-docs
 
 ## Changed Files
-- M docs/FRAMEWORK_ROADMAP.zh-CN.md
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/220-ordinary-user-single-entry-convergence/codex-handoff.md
+- M specs/220-ordinary-user-single-entry-convergence/plan.md
+- M specs/220-ordinary-user-single-entry-convergence/spec.md
 - M specs/220-ordinary-user-single-entry-convergence/task-execution-log.md
 - M specs/220-ordinary-user-single-entry-convergence/tasks.md
-- M tests/integration/test_cli_ide_adapter.py
-- M tests/integration/test_cli_loop.py
-- M tests/integration/test_cli_pr_review.py
-- M tests/integration/test_cli_workitem_link.py
+- M src/ai_sdlc/cli/commands.py
+- M src/ai_sdlc/cli/default_summary.py
+- M src/ai_sdlc/cli/run_cmd.py
+- M tests/integration/test_cli_run.py
+- M tests/unit/test_default_summary.py
 
 ## Key Decisions
-- 首轮 5 个失败均为旧测试合同遗漏；只迁移 tests，生产代码不改；第二轮 full pytest 全绿
+- 注释删除原因按 path + summary 规范化记录；不恢复重复 commands helper
 
 ## Commands / Tests
-- full pytest 3401 passed, 3 skipped in 1055.59s；Ruff PASS；constraints no BLOCKER；program validate PASS
+- related 193 passed；Ruff PASS；constraints no BLOCKERs；program validate PASS；git diff --check PASS
 
 ## Blockers / Risks
-- 远端 Windows/macOS/Linux required checks 尚未运行，将在 T43 PR 上取得
+- 尚需 commit 后 Program Truth、full pytest、manifest、exact-head 复审与 PR 跨平台 checks
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 刷新 Program Truth 并提交 T42；执行 exact-head findings-first review，无 Critical/Important 后 push/open PR/request Codex review/heartbeat 直到 merge
+- 提交第一轮整改，刷新 Program Truth 并执行 fresh exact-head 全量门禁

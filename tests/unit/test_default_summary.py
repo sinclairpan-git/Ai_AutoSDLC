@@ -99,12 +99,50 @@ def test_default_summary_fails_closed_for_malformed_loop_pointer() -> None:
                 status=LoopStatusCommandStatus.BLOCKED,
                 result="Current loop pointer is malformed.",
                 blocker="Current implementation pointer is malformed.",
+                next_action="Rerun ai-sdlc loop implementation start.",
             ),
         ),
     )
 
     assert summary.current_loop == "blocked"
     assert summary.blockers == ("Current implementation pointer is malformed.",)
+    assert summary.next_action == "Rerun ai-sdlc loop implementation start."
+
+
+def test_default_summary_uses_status_surface_workitem_action_before_loop() -> None:
+    summary = _build_summary(
+        checkpoint_stage="execute",
+        result="blocked",
+        loop_statuses=(
+            _active_loop(
+                LoopType.IMPLEMENTATION,
+                "impl-1",
+                next_action="Run implementation review.",
+            ),
+        ),
+        status_surface={
+            "workitem_diagnostics": {
+                "next_required_action": "Continue T43 exact-head remediation.",
+            }
+        },
+    )
+
+    assert summary.next_action == "Continue T43 exact-head remediation."
+
+
+def test_default_summary_falls_back_to_branch_lifecycle_action() -> None:
+    summary = _build_summary(
+        checkpoint_stage="close",
+        result="ready",
+        status_surface={
+            "workitem_diagnostics": {"next_required_action": ""},
+            "branch_lifecycle": {
+                "next_required_action": "Record the branch disposition.",
+            },
+        },
+    )
+
+    assert summary.next_action == "Record the branch disposition."
 
 
 def test_default_summary_bounds_next_blockers_and_rules() -> None:

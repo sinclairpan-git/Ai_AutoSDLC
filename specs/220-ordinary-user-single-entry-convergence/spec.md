@@ -2,7 +2,7 @@
 
 **功能编号**：`220-ordinary-user-single-entry-convergence`
 **创建日期**：2026-08-29
-**状态**：Formal 已批准；P2A characterization/RED 执行中
+**状态**：P2A/P2B 已完成；T43 第一轮 exact-head 对抗整改中
 **类型**：CLI beginner UX + compatibility-preserving presentation convergence
 **主线冻结基线**：`origin/main@e70ced9028ca967865386565f4e23eab999ef320`
 **参赛版参考基线**：远端 `main@b6addbab22ab069ea1d6d7306fe1c676bd056333`

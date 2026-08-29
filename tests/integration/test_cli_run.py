@@ -260,10 +260,74 @@ class TestRunCommand:
         assert result.exit_code == 2
         assert "Pipeline completed. Stage: close" in result.output
         assert "AgentOps report pending: missing_token" in result.output
+        assert "Result: blocked" in result.output
+        assert "Result: completed" not in result.output
+        assert "Next: Fix required AgentOps reporting" in result.output
         diagnostic_files = list(
             (tmp_path / ".ai-sdlc" / "agentops" / "diagnostics").glob("*.json")
         )
         assert diagnostic_files
+
+    def test_run_confirm_rejection_reports_paused_result(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run", "--mode", "confirm"], input="n\n")
+
+        assert result.exit_code == 0
+        assert "Pipeline paused. Stage:" in result.output
+        assert "Result: paused" in result.output
+        assert "Result: completed" not in result.output
+        assert "Next: Rerun ai-sdlc run --mode confirm when ready." in result.output
+
+    def test_run_and_compact_status_share_workitem_summary_truth(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+        status_surface = {
+            "telemetry": {"state": "ready", "current": None, "latest": None},
+            "workitem_diagnostics": {
+                "next_required_action": "Continue T43 exact-head remediation.",
+                "items": [
+                    {
+                        "blocking": True,
+                        "detail": "Exact-head review has important findings.",
+                    }
+                ],
+            },
+            "branch_lifecycle": {"state": "ready", "detail": ""},
+            "formal_artifact_target": {"state": "ready", "detail": ""},
+            "backlog_breach_guard": {"state": "ready", "detail": ""},
+            "execute_authorization": {"state": "ready", "detail": ""},
+            "adapter_governance": {"state": "ready", "detail": ""},
+        }
+
+        monkeypatch.setattr(
+            "ai_sdlc.cli.run_cmd.build_status_json_surface",
+            lambda *_args, **_kwargs: status_surface,
+            raising=False,
+        )
+        monkeypatch.setattr(
+            "ai_sdlc.cli.commands.build_status_json_surface",
+            lambda *_args, **_kwargs: status_surface,
+        )
+        monkeypatch.setattr("ai_sdlc.cli.commands.detect_reconcile_hint", lambda _root: None)
+
+        run_result = runner.invoke(app, ["run", "--dry-run"])
+        status_result = runner.invoke(app, ["status"])
+
+        assert run_result.exit_code == 0, run_result.output
+        assert status_result.exit_code == 0, status_result.output
+        for output in (run_result.output, status_result.output):
+            assert "Next: Continue T43 exact-head remediation." in output
+            assert "Exact-head review has important findings." in output
 
     def test_run_halt_output_survives_required_agentops_block(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

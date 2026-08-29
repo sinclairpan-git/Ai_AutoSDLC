@@ -1013,7 +1013,6 @@ def status_command(
             primary_next_actions=(
                 ("ai-sdlc recover --reconcile",) if hint is not None else ()
             ),
-            workitem_next_actions=_status_next_actions(status_surface),
             blockers=((hint.reason,) if hint is not None else ()),
             status_surface=status_surface,
         )
@@ -1116,20 +1115,6 @@ def status_command(
             blocking=False,
         )
     raise typer.Exit(code=0)
-
-
-def _status_next_actions(status_surface: dict[str, Any]) -> tuple[str, ...]:
-    """只选取既有 status surface 中最具体的工作项下一步。"""
-
-    diagnostics = status_surface.get("workitem_diagnostics")
-    if not isinstance(diagnostics, dict):
-        return ()
-    candidate = diagnostics.get("next_required_action") or diagnostics.get(
-        "next_action"
-    )
-    if isinstance(candidate, str) and candidate.strip():
-        return (candidate.strip(),)
-    return ()
 
 
 # ---------------------------------------------------------------------------

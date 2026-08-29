@@ -49,6 +49,13 @@ def build_default_summary(
     loop_next_actions: tuple[str, ...] = ()
     if loop_blockers:
         current_loop = "blocked"
+        loop_next_actions = _unique_text(
+            tuple(
+                item.next_action
+                for item in loop_statuses
+                if str(item.status) == LoopStatusCommandStatus.BLOCKED.value
+            )
+        )
     elif len(active_loops) > 1:
         current_loop = "ambiguous"
         loop_blockers.append(
@@ -67,6 +74,7 @@ def build_default_summary(
     next_action = _first_text(
         primary_next_actions,
         workitem_next_actions,
+        _status_surface_next_actions(status_surface or {}),
         loop_next_actions,
     )
     bounded_blockers = _unique_text(
@@ -128,6 +136,24 @@ def _unique_text(values: Sequence[str]) -> tuple[str, ...]:
         if normalized and normalized not in unique:
             unique.append(normalized)
     return tuple(unique)
+
+
+def _status_surface_next_actions(status_surface: Mapping[str, Any]) -> tuple[str, ...]:
+    """从既有工作项真值中选择最具体的首个动作。"""
+
+    for key in ("workitem_diagnostics", "branch_lifecycle"):
+        surface = status_surface.get(key)
+        if not isinstance(surface, Mapping):
+            continue
+        candidate = surface.get("next_required_action") or surface.get("next_action")
+        if isinstance(candidate, str) and candidate.strip():
+            return (candidate.strip(),)
+        candidates = surface.get("next_required_actions")
+        if isinstance(candidates, Sequence) and not isinstance(candidates, (str, bytes)):
+            selected = _unique_text(tuple(str(item) for item in candidates))
+            if selected:
+                return selected
+    return ()
 
 
 def _blocking_details(value: Any) -> tuple[str, ...]:

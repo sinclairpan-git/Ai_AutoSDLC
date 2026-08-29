@@ -240,8 +240,8 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
   - docs/
   - specs/220-ordinary-user-single-entry-convergence/
 - acceptance:
-  - clean init→run、status modes、advanced commands、full pytest、Ruff、constraints、manifest 全部通过。
-  - Windows/macOS/Linux required checks 通过；工作树无运行副作用。
+  - 本地 clean init→run、status modes、advanced commands、full pytest、Ruff、constraints、manifest 全部通过。
+  - 本地全套验证后工作树无运行副作用；跨平台 required checks 由 T43 的 PR 出口验收。
 - verify:
   - uv run pytest -q
   - uv run ruff check .
@@ -253,7 +253,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 4.3 exact-head review、PR 与合并后真值
 
 - task_id: T43
-- status: todo
+- status: doing
 - goal: 完成独立 review、Codex PR review、required checks、merge 和远端主线核验。
 - depends:
   - T42
@@ -264,6 +264,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
   - program-manifest.yaml
 - acceptance:
   - 无未关闭 Critical/Important；同类整改不超过两轮。
+  - Windows/macOS/Linux required checks 通过。
   - PR heartbeat 持续到 merged 或 user blocker；合并后核对 exact origin/main。
 - verify:
   - local exact-head review + GitHub required checks + post-merge truth
