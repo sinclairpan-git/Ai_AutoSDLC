@@ -207,12 +207,13 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 4.1 有界 guidance 对账
 
 - task_id: T41
-- status: todo
+- status: done
 - goal: 只修正与 init/run/status 新合同直接冲突的用户/adapter 文案。
 - depends:
   - T24
 - scope:
   - AGENTS.md
+  - USER_GUIDE.zh-CN.md
   - src/ai_sdlc/templates/AGENTS.md.j2
   - src/ai_sdlc/templates/adapters/
   - docs/
@@ -226,7 +227,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 4.2 新用户、高级兼容与全量验证
 
 - task_id: T42
-- status: blocked
+- status: todo
 - goal: 证明单入口收益和存量兼容同时成立。
 - depends:
   - T41

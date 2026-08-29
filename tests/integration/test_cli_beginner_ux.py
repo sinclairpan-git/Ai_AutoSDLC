@@ -86,6 +86,13 @@ def test_readme_indexes_every_command_hidden_from_root_help() -> None:
         assert f"`ai-sdlc {command}`" in advanced_section
 
 
+def test_user_guide_distinguishes_compact_and_detailed_status() -> None:
+    guide = (_REPO_ROOT / "USER_GUIDE.zh-CN.md").read_text(encoding="utf-8")
+
+    assert "`ai-sdlc status` | 紧凑查看 Current Loop、Result、Next 和 Blockers" in guide
+    assert "`ai-sdlc status --details` | 查看完整项目、阶段、治理和交接诊断面" in guide
+
+
 def test_vibe_coder_can_initialize_without_reading_internal_state(
     tmp_path: Path,
 ) -> None:

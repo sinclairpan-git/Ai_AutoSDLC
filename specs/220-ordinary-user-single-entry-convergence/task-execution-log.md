@@ -185,3 +185,14 @@
 - T32 focused GREEN：先 `4 passed in 1.73s`；三文件完整回归加入 README 断言后 `16 passed in 5.27s`；
   目标 Ruff PASS，`git diff --check` PASS。
 - T32 done；仅激活 T41。有界 guidance 对账只修改 `rg` 证明与 init/run/status 新合同冲突的文件。
+
+### Batch 2026-08-29-010 | T41 bounded guidance reconciliation
+
+- `rg` 复核 AGENTS、四个 adapter canonical guidance、USER_GUIDE、docs 和 README；AGENTS/adapter 已明确 init 后
+  不要求手动执行 diagnostics，历史 release/defect/plan 记录不改。
+- 唯一真实漂移位于 `USER_GUIDE.zh-CN.md` 常用命令表：将默认 `status` 修正为 Current Loop/Result/Next/
+  Blockers 紧凑面，并新增 `status --details` 完整诊断入口；没有全库措辞优化。
+- 新增有界用户指南断言；`test_cli_beginner_ux.py + test_ide_adapter.py` 为 `45 passed in 1.86s`；目标 Ruff
+  与 `git diff --check` PASS。
+- T41 done；仅激活 T42。下一步执行 clean init→run/兼容矩阵、full pytest、Ruff、constraints、Program validate、
+  manifest 与工作树副作用检查。
