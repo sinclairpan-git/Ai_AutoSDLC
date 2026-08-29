@@ -245,5 +245,23 @@
 - 仅将该测试断言改为 `click.unstyle()` 后压缩空白再比较；未修改生产代码或 CLI 合同。
 - focused `1 passed in 0.83s`；status 全文件 `57 passed in 47.43s`；目标 Ruff 与 `git diff --check` PASS。
 - 下一步：刷新 Program Truth、push 同一分支、重新请求 Codex review，并继续 heartbeat 直到 required checks 全绿。
+
+### Batch 2026-08-29-014 | PR #185 Codex review remediation round 2
+
+- Codex 对 exact HEAD `e9ee957d71f5ca94c59ae53683f6fbc8780369e6` 提出两项可操作问题：默认 status/run
+  跳过 work-item truth，可能误报 `Next: None` / `Result: ready`；损坏且无可用备份的 checkpoint 会回落为
+  `pipeline/init` / `ready`。
+- 先验证投入产出：只启用 work-item diagnostics、继续跳过 Program Truth 与 truth ledger 的真实仓库采集耗时
+  `5.08s`，未触发新增缓存、schema、持久化或第二套投影的必要性。采纳两处布尔开关修复，不扩张 readiness builder。
+- RED：status 与 run 调用参数合同各失败；损坏 checkpoint 场景准确复现 `pipeline/init` / `ready` / `Next: None`。
+- 最小 GREEN：默认 status/run 均加载有界 work-item diagnostics；status 对“文件存在但主文件和备份均无法加载”
+  fail-closed 为 `pipeline/unavailable` / `blocked`，给出恢复有效 checkpoint 的动作。不存在 checkpoint 的新项目仍为
+  `pipeline/init`，可用备份仍由既有 loader 自动接管。
+- focused `2 passed`；status 全文件 `58 passed in 48.52s`；run + default summary + telemetry readiness
+  `66 passed in 10.47s`；目标 Ruff 与 `git diff --check` PASS。
+- Program Truth 刷新：snapshot hash=`8d14dc48d0ffd1ed1b1309ceec40191672f0b9ec6d58ad94ed0eaf5c1d13a837`；
+  state=`blocked`（16 个既有历史 truth-check blocker），inventory `1154/1154`、unmapped 0、missing 2。
+- `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 163.75s`。
+- 下一步：提交并 push 同一 WI220 分支，回复两项 review finding 后重新请求 Codex review。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。

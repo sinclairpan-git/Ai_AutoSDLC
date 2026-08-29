@@ -976,7 +976,7 @@ def status_command(
         root,
         include_program_truth=as_json,
         include_truth_ledger=as_json,
-        include_workitem_truth=as_json,
+        include_workitem_truth=True,
     )
     if as_json:
         typer.echo(json.dumps(status_surface, indent=2))
@@ -990,6 +990,25 @@ def status_command(
     hint = detect_reconcile_hint(root)
     if not details:
         cp = load_checkpoint(root, warn=False)
+        checkpoint_unreadable = (root / CHECKPOINT_PATH).exists() and cp is None
+        checkpoint_stage = (
+            cp.current_stage if cp is not None else "unavailable"
+            if checkpoint_unreadable
+            else "init"
+        )
+        checkpoint_actions = (
+            (
+                "Restore a valid .ai-sdlc/state/checkpoint.yml, then rerun "
+                "ai-sdlc status.",
+            )
+            if checkpoint_unreadable
+            else ()
+        )
+        checkpoint_blockers = (
+            ("checkpoint.yml exists but could not be loaded.",)
+            if checkpoint_unreadable
+            else ()
+        )
         loop_statuses = tuple(
             get_loop_status(root, loop_type=loop_type) for loop_type in LoopType
         )
@@ -1003,17 +1022,24 @@ def status_command(
             for item in loop_statuses
         )
         summary = build_default_summary(
-            checkpoint_stage=cp.current_stage if cp is not None else "init",
+            checkpoint_stage=checkpoint_stage,
             result=(
                 "blocked"
-                if hint is not None or loop_is_blocked or active_loop_count > 1
+                if checkpoint_unreadable
+                or hint is not None
+                or loop_is_blocked
+                or active_loop_count > 1
                 else "ready"
             ),
             loop_statuses=loop_statuses,
             primary_next_actions=(
-                ("ai-sdlc recover --reconcile",) if hint is not None else ()
+                ("ai-sdlc recover --reconcile",)
+                if hint is not None
+                else checkpoint_actions
             ),
-            blockers=((hint.reason,) if hint is not None else ()),
+            blockers=(
+                (hint.reason,) if hint is not None else checkpoint_blockers
+            ),
             status_surface=status_surface,
         )
         if summary.blockers and summary.result == "ready":

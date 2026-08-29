@@ -497,11 +497,11 @@ class TestCliStatus:
             result = runner.invoke(app, ["status"])
             assert result.exit_code == 1
 
-    def test_status_text_skips_full_truth_ledger_surface(
+    def test_status_text_loads_workitem_truth_without_full_program_surfaces(
         self, tmp_path: Path
     ) -> None:
         init_project(tmp_path)
-        calls: list[bool] = []
+        calls: list[tuple[bool, bool, bool]] = []
 
         def _fake_status_surface(
             _root: Path,
@@ -511,7 +511,11 @@ class TestCliStatus:
             include_workitem_truth: bool = True,
         ) -> dict[str, object]:
             calls.append(
-                include_program_truth or include_truth_ledger or include_workitem_truth
+                (
+                    include_program_truth,
+                    include_truth_ledger,
+                    include_workitem_truth,
+                )
             )
             return {
                 "telemetry": {"state": "ready", "current": None, "latest": None},
@@ -539,7 +543,7 @@ class TestCliStatus:
             result = runner.invoke(app, ["status"])
 
         assert result.exit_code == 0, result.output
-        assert calls == [False]
+        assert calls == [(False, False, True)]
 
     def test_status_guides_user_when_legacy_artifacts_need_reconcile(
         self, tmp_path: Path
@@ -583,6 +587,26 @@ class TestCliStatus:
         assert "旧版产物" in result.output
         assert "Invalid checkpoint" not in result.output
         assert "trying backup" not in result.output
+
+    def test_status_fails_closed_when_checkpoint_is_unreadable(
+        self, tmp_path: Path
+    ) -> None:
+        init_project(tmp_path)
+        checkpoint_path = tmp_path / ".ai-sdlc" / "state" / "checkpoint.yml"
+        checkpoint_path.write_text("current_stage: [", encoding="utf-8")
+        checkpoint_path.with_suffix(".yml.bak").unlink(missing_ok=True)
+
+        with (
+            patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path),
+            patch("ai_sdlc.cli.commands.detect_reconcile_hint", return_value=None),
+        ):
+            result = runner.invoke(app, ["status"])
+
+        assert result.exit_code == 0, result.output
+        assert "Current Loop: pipeline/unavailable" in result.output
+        assert "Result: blocked" in result.output
+        assert "Restore a valid .ai-sdlc/state/checkpoint.yml" in result.output
+        assert "checkpoint.yml exists but could not be loaded" in result.output
 
     def test_status_json_reports_not_initialized_when_telemetry_is_absent(
         self, tmp_path: Path

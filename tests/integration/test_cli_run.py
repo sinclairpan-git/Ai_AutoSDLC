@@ -308,15 +308,32 @@ class TestRunCommand:
             "execute_authorization": {"state": "ready", "detail": ""},
             "adapter_governance": {"state": "ready", "detail": ""},
         }
+        surface_calls: list[tuple[bool, bool, bool]] = []
+
+        def _status_surface(
+            _root: Path,
+            *,
+            include_program_truth: bool = True,
+            include_truth_ledger: bool = True,
+            include_workitem_truth: bool = True,
+        ) -> dict[str, object]:
+            surface_calls.append(
+                (
+                    include_program_truth,
+                    include_truth_ledger,
+                    include_workitem_truth,
+                )
+            )
+            return status_surface
 
         monkeypatch.setattr(
             "ai_sdlc.cli.run_cmd.build_status_json_surface",
-            lambda *_args, **_kwargs: status_surface,
+            _status_surface,
             raising=False,
         )
         monkeypatch.setattr(
             "ai_sdlc.cli.commands.build_status_json_surface",
-            lambda *_args, **_kwargs: status_surface,
+            _status_surface,
         )
         monkeypatch.setattr("ai_sdlc.cli.commands.detect_reconcile_hint", lambda _root: None)
 
@@ -328,6 +345,7 @@ class TestRunCommand:
         for output in (run_result.output, status_result.output):
             assert "Next: Continue T43 exact-head remediation." in output
             assert "Exact-head review has important findings." in output
+        assert surface_calls == [(False, False, True), (False, False, True)]
 
     def test_run_halt_output_survives_required_agentops_block(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

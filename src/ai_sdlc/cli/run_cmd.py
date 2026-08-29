@@ -392,7 +392,7 @@ def _render_run_summary(
                 root,
                 include_program_truth=False,
                 include_truth_ledger=False,
-                include_workitem_truth=False,
+                include_workitem_truth=True,
             )
         except (OSError, RuntimeError, ValueError):
             status_surface = {}
