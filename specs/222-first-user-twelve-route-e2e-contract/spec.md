@@ -122,26 +122,61 @@
 
 严格按上述合同，当前结论是 **0/12 fully proven，12/12 partial，0/12 missing**。这不表示 12 条路线要从零实现：用户指南已覆盖全部组合，且三平台安装/发布 smoke 提供了大量共享证据；缺口集中在自包含绑定、完整性、项目模式矩阵和主动恢复。
 
-| 路线 | 当前状态 | 已有主线证据 | 仍缺的自包含字段 |
-|---|---|---|---|
-| R01 | partial | `USER_GUIDE.zh-CN.md` 空项目/Windows/在线说明；Windows 与 release smoke 的共享安装证据 | 正式 archive SHA256、完整空项目在线链、主动恢复、同版本绑定 |
-| R02 | partial | `windows-user-guide-e2e.yml` 已有项目在线安装、`init/adopt`、`Result / Next`、业务文件保留 | 正式 release event/asset SHA256、主动恢复、发布版本自包含绑定 |
-| R03 | partial | `USER_GUIDE.zh-CN.md` 空项目/Windows/离线说明；`windows-offline-smoke.yml` 离线安装与 init 片段 | 完整空项目链、离线包完整性绑定、主动恢复 |
-| R04 | partial | Windows 离线安装共享 smoke；指南已有项目接入说明 | 完整已有项目 adopt/保留证据、离线包完整性、主动恢复 |
-| R05 | partial | macOS 在线指南；`release-artifact-smoke.yml` 的 macOS asset 安装 smoke | 空项目 init、`Result / Next`、archive SHA256、主动恢复、同版本链 |
-| R06 | partial | macOS 在线指南；release asset 安装共享证据 | 已有项目 adopt/保留、`Result / Next`、archive SHA256、主动恢复 |
-| R07 | partial | macOS 离线指南；`posix-offline-smoke.yml` 的 macOS arm64 离线安装 smoke | 空项目 init、离线包完整性、`Result / Next`、主动恢复 |
-| R08 | partial | macOS 离线指南；POSIX 离线安装共享证据 | 已有项目 adopt/保留、离线包完整性、`Result / Next`、主动恢复 |
-| R09 | partial | Linux 在线指南；`release-artifact-smoke.yml` 的 Linux asset 安装 smoke | 空项目 init、`Result / Next`、archive SHA256、主动恢复、同版本链 |
-| R10 | partial | Linux 在线指南；release asset 安装共享证据 | 已有项目 adopt/保留、`Result / Next`、archive SHA256、主动恢复 |
-| R11 | partial | Linux 离线指南；`posix-offline-smoke.yml` 的 Linux AMD64 离线安装 smoke | 空项目 init、离线包完整性、`Result / Next`、主动恢复 |
-| R12 | partial | Linux 离线指南；POSIX 离线安装共享证据 | 已有项目 adopt/保留、离线包完整性、`Result / Next`、主动恢复 |
+为避免复制 12 份长证据说明，先冻结可直接打开的证据注册表；矩阵单元格只引用这些固定入口：
+
+| 引用 | 精确证据位置 |
+|---|---|
+| E-B0 | [`origin/main@2e507df`](https://github.com/sinclairpan-git/Ai_AutoSDLC/tree/2e507df62c65cdd6d3137764bb492dc445a82074) |
+| E-UG | [该基线的 `USER_GUIDE.zh-CN.md`](https://github.com/sinclairpan-git/Ai_AutoSDLC/blob/2e507df62c65cdd6d3137764bb492dc445a82074/USER_GUIDE.zh-CN.md) |
+| E-WON | [该基线的 Windows 在线已有项目 E2E](https://github.com/sinclairpan-git/Ai_AutoSDLC/blob/2e507df62c65cdd6d3137764bb492dc445a82074/.github/workflows/windows-user-guide-e2e.yml) |
+| E-WOFF | [该基线的 Windows 离线 smoke](https://github.com/sinclairpan-git/Ai_AutoSDLC/blob/2e507df62c65cdd6d3137764bb492dc445a82074/.github/workflows/windows-offline-smoke.yml) |
+| E-POFF | [该基线的 POSIX 离线 smoke](https://github.com/sinclairpan-git/Ai_AutoSDLC/blob/2e507df62c65cdd6d3137764bb492dc445a82074/.github/workflows/posix-offline-smoke.yml) |
+| E-RSMK | [该基线的三平台 release asset smoke](https://github.com/sinclairpan-git/Ai_AutoSDLC/blob/2e507df62c65cdd6d3137764bb492dc445a82074/.github/workflows/release-artifact-smoke.yml) |
+| E-REL | [`v0.9.8` release、三资产与 GitHub digest](https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/tag/v0.9.8)；精确 digest 见 1.3 |
+| E-RB | [`Release Build` run 33084090992](https://github.com/sinclairpan-git/Ai_AutoSDLC/actions/runs/33084090992) |
+| E-RS | [`Release Artifact Smoke` run 33084560424](https://github.com/sinclairpan-git/Ai_AutoSDLC/actions/runs/33084560424) |
+
+字段标记只描述单字段证据：`P(value; refs)` 表示直接固定，`~(value; refs; gap)` 表示存在共享或间接证据但未形成逐路绑定，`M(gap)` 表示没有有效证据。它们不新增路线状态；路线总状态仍只使用 `proven / partial / missing`。
+
+#### 4.0.1 字段实例 A：身份、环境、项目、获取与资产绑定
+
+| route_id | environment | project_mode | acquisition_mode | source_binding | asset_integrity |
+|---|---|---|---|---|---|
+| P(R01) | ~(Windows AMD64；E-WON/E-RSMK；G1) | ~(空项目；E-UG；G3) | ~(在线 release；E-UG/E-REL；G6) | ~(E-B0/E-REL/E-RB/E-RS；无逐路 receipt；G6) | ~(Windows digest 见 1.3/E-REL；未逐路校验；G2) |
+| P(R02) | ~(Windows AMD64；E-WON；G1) | P(已有项目；E-WON) | ~(在线 release；E-WON/E-REL；G5/G6) | ~(E-B0/E-REL/E-RB/E-RS；无逐路 receipt；G6) | ~(Windows digest 见 1.3/E-REL；E-WON 未绑定该 digest；G2) |
+| P(R03) | ~(Windows AMD64；E-WOFF；G1) | ~(空项目；E-WOFF；G3) | ~(预传离线包；E-UG/E-WOFF；G6) | ~(E-B0/E-REL/E-RB；无逐路 receipt；G6) | ~(Windows digest 见 1.3/E-REL；E-WOFF 未绑定该 digest；G2) |
+| P(R04) | ~(Windows AMD64；E-WOFF；G1) | ~(已有项目；E-UG；G3) | ~(预传离线包；E-UG/E-WOFF；G6) | ~(E-B0/E-REL/E-RB；无逐路 receipt；G6) | ~(Windows digest 见 1.3/E-REL；E-WOFF 未绑定该 digest；G2) |
+| P(R05) | ~(macOS arm64；E-RSMK；G1) | ~(空项目；E-UG；G3) | ~(在线 release；E-UG/E-REL；G6) | ~(E-B0/E-REL/E-RB/E-RS；无逐路 receipt；G6) | ~(macOS digest 见 1.3/E-REL；未逐路校验；G2) |
+| P(R06) | ~(macOS arm64；E-RSMK；G1) | ~(已有项目；E-UG；G3) | ~(在线 release；E-UG/E-REL；G6) | ~(E-B0/E-REL/E-RB/E-RS；无逐路 receipt；G6) | ~(macOS digest 见 1.3/E-REL；未逐路校验；G2) |
+| P(R07) | ~(macOS arm64；E-POFF；G1) | ~(空项目；E-UG；G3) | ~(预传离线包；E-UG/E-POFF；G6) | ~(E-B0/E-REL/E-RB；无逐路 receipt；G6) | ~(macOS digest 见 1.3/E-REL；E-POFF 未绑定该 digest；G2) |
+| P(R08) | ~(macOS arm64；E-POFF；G1) | ~(已有项目；E-UG；G3) | ~(预传离线包；E-UG/E-POFF；G6) | ~(E-B0/E-REL/E-RB；无逐路 receipt；G6) | ~(macOS digest 见 1.3/E-REL；E-POFF 未绑定该 digest；G2) |
+| P(R09) | ~(Linux AMD64；E-RSMK；G1) | ~(空项目；E-UG；G3) | ~(在线 release；E-UG/E-REL；G6) | ~(E-B0/E-REL/E-RB/E-RS；无逐路 receipt；G6) | ~(Linux digest 见 1.3/E-REL；未逐路校验；G2) |
+| P(R10) | ~(Linux AMD64；E-RSMK；G1) | ~(已有项目；E-UG；G3) | ~(在线 release；E-UG/E-REL；G6) | ~(E-B0/E-REL/E-RB/E-RS；无逐路 receipt；G6) | ~(Linux digest 见 1.3/E-REL；未逐路校验；G2) |
+| P(R11) | ~(Linux AMD64；E-POFF；G1) | ~(空项目；E-UG；G3) | ~(预传离线包；E-UG/E-POFF；G6) | ~(E-B0/E-REL/E-RB；无逐路 receipt；G6) | ~(Linux digest 见 1.3/E-REL；E-POFF 未绑定该 digest；G2) |
+| P(R12) | ~(Linux AMD64；E-POFF；G1) | ~(已有项目；E-UG；G3) | ~(预传离线包；E-UG/E-POFF；G6) | ~(E-B0/E-REL/E-RB；无逐路 receipt；G6) | ~(Linux digest 见 1.3/E-REL；E-POFF 未绑定该 digest；G2) |
+
+#### 4.0.2 字段实例 B：安装、生命周期、回执与恢复
+
+| route_id | installation | lifecycle | result_next | success_receipt | fault_recovery | evidence_links | 路线状态 |
+|---|---|---|---|---|---|---|---|
+| R01 | ~(Windows 共享安装；E-WON/E-RSMK；G1/G5) | ~(空项目说明；E-UG；G3) | M(G3) | ~(安装/版本共享回执；E-RSMK；G1/G6) | M(G4) | P(E-B0/E-UG/E-WON/E-RSMK/E-REL/E-RS) | partial |
+| R02 | ~(在线安装；E-WON；G5/G6) | P(init/adopt 与业务文件保护；E-WON) | P(Result/Next；E-WON) | ~(业务文件/状态回执；E-WON；未绑定正式 release；G5/G6) | M(G4) | P(E-B0/E-UG/E-WON/E-REL/E-RB/E-RS) | partial |
+| R03 | ~(离线安装；E-WOFF；G2/G6) | ~(init 片段；E-WOFF；G3) | M(G3) | ~(安装/init 共享回执；E-WOFF；G1/G6) | M(G4) | P(E-B0/E-UG/E-WOFF/E-REL/E-RB) | partial |
+| R04 | ~(离线安装共享；E-WOFF；G1/G2) | M(G3) | M(G3) | ~(安装共享回执；E-WOFF；G1/G6) | M(G4) | P(E-B0/E-UG/E-WOFF/E-REL/E-RB) | partial |
+| R05 | ~(release asset 安装；E-RSMK/E-RS；G1/G2) | M(G3) | M(G3) | ~(安装/版本共享回执；E-RSMK/E-RS；G1/G6) | M(G4) | P(E-B0/E-UG/E-RSMK/E-REL/E-RS) | partial |
+| R06 | ~(release asset 安装；E-RSMK/E-RS；G1/G2) | M(G3) | M(G3) | ~(安装/版本共享回执；E-RSMK/E-RS；G1/G6) | M(G4) | P(E-B0/E-UG/E-RSMK/E-REL/E-RS) | partial |
+| R07 | ~(离线安装；E-POFF；G1/G2) | M(G3) | M(G3) | ~(安装/版本共享回执；E-POFF；G1/G6) | M(G4) | P(E-B0/E-UG/E-POFF/E-REL/E-RB) | partial |
+| R08 | ~(离线安装；E-POFF；G1/G2) | M(G3) | M(G3) | ~(安装/版本共享回执；E-POFF；G1/G6) | M(G4) | P(E-B0/E-UG/E-POFF/E-REL/E-RB) | partial |
+| R09 | ~(release asset 安装；E-RSMK/E-RS；G1/G2) | M(G3) | M(G3) | ~(安装/版本共享回执；E-RSMK/E-RS；G1/G6) | M(G4) | P(E-B0/E-UG/E-RSMK/E-REL/E-RS) | partial |
+| R10 | ~(release asset 安装；E-RSMK/E-RS；G1/G2) | M(G3) | M(G3) | ~(安装/版本共享回执；E-RSMK/E-RS；G1/G6) | M(G4) | P(E-B0/E-UG/E-RSMK/E-REL/E-RS) | partial |
+| R11 | ~(离线安装；E-POFF；G1/G2) | M(G3) | M(G3) | ~(安装/版本共享回执；E-POFF；G1/G6) | M(G4) | P(E-B0/E-UG/E-POFF/E-REL/E-RB) | partial |
+| R12 | ~(离线安装；E-POFF；G1/G2) | M(G3) | M(G3) | ~(安装/版本共享回执；E-POFF；G1/G6) | M(G4) | P(E-B0/E-UG/E-POFF/E-REL/E-RB) | partial |
 
 ### 4.1 去重后的共性缺口
 
 1. 没有统一 route ID、证据 schema 和逐路 owner，现有证明分散在指南与不同 smoke 中。
 2. 路线 workflow 没有以正式发布的 checksum 证明下载 archive 完整性；安装后文件 hash 不能替代它。
-3. macOS/Linux 缺少空项目与已有项目的完整 `init/adopt` 生命周期矩阵；Windows 也不是四路完整矩阵。
+3. macOS/Linux 缺少空项目与已有项目的完整 `init/adopt`、`Result / Next` 生命周期矩阵；Windows 也不是四路完整矩阵。
 4. 恢复路径主要停留在指南说明，没有主动 fault injection 和成功回执。
 5. PR 本地 bundle 重放与正式 released asset 证明没有形成统一、不可混淆的状态合同。
 6. 在线/离线资产边界、触发事件、tag/commit/run 绑定没有被一份机器可复核的路线合同统一冻结。

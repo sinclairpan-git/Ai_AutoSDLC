@@ -100,7 +100,7 @@ Batch 3: 同步 roadmap/Program Truth、验证、独立评审与 PR
 - **任务编号**：T32
 - **优先级**：P0
 - **依赖**：T31
-- **文件**：`specs/222-first-user-twelve-route-e2e-contract/task-execution-log.md`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/222-first-user-twelve-route-e2e-contract/codex-handoff.md`、`.ai-sdlc/work-items/222-first-user-twelve-route-e2e-contract/resume-pack.yaml`
+- **文件**：`specs/222-first-user-twelve-route-e2e-contract/task-execution-log.md`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/222-first-user-twelve-route-e2e-contract/codex-handoff.md`（scoped `resume-pack.yaml` 按 `.gitignore` 仅作本地恢复缓存，不强制入库）
 - **可并行**：否
 - **任务**：
   - [x] 运行 constraints、plan-check、program validate/truth、focused tests、Ruff 和 `git diff --check`。

@@ -65,12 +65,14 @@
 - 代码质量：无产品代码变更；唯一测试改动只同步固定库存数字。
 - 测试质量：Program Truth 固定库存回归与 workflow 定义回归均通过。
 - 本地独立评审：`codex review --uncommitted` 返回 2 个 P2 和 1 个 P3，分别是未钉死发布证据基线、计划保留不可执行命令、路线三态混入 `needs_user`；三项均已在 formal 文档内聚焦整改，未触达 runtime/workflow/release。
-- 复核结果：评审整改后的 constraints、plan-check、program validate、focused tests、Ruff 与 `git diff --check` 全部通过；PR exact-head Codex review 仍是正式合并门禁。
+- PR #189 首轮 exact-head 评审：`c9093ccc8c54ba9ec514ec684ecfd1fd8fff8642` 返回 3 个 P2，分别是 canonical resume YAML 无效、handoff 停留在 truth sync 前状态、12 路未逐字段实例化证据合同。
+- 聚焦整改：使用仓库源码 `handoff update` 重建 canonical/scoped continuity 并通过 PyYAML 解析；按 `.gitignore` 保留 scoped resume 为本地缓存；在 `spec.md` 用一个直接证据注册表和两张矩阵实例化 12 路全部 12 字段，没有新增 ledger、workflow 或 runtime。
+- 聚焦整改复核：两份 resume pack 均通过 PyYAML 解析，12 路字段矩阵行列断言通过；constraints、plan-check、program validate、truth sync、Program Manifest/workflow 回归与 `git diff --check` 全部通过，库存仍为 1164/1164 mapped、missing 3、close 218/221；仅待 commit/push 与 PR exact-head Codex re-review。
 - 当前结论：formal/admission 本地 Go；runtime 继续 defer。
 
 #### 2.6 任务/计划同步状态
 
-- `tasks.md`：T11–T31 已完成；T32 的本地验证、continuity 与独立评审已完成，仅待 commit/push/PR 与 Codex exact-head review。
+- `tasks.md`：T11–T31 已完成；T32 的本地验证、continuity 与独立评审已完成，PR 已创建；仅待 focused fix commit/push 与 Codex exact-head re-review。
 - `related_plan`：`docs/FRAMEWORK_ROADMAP.zh-CN.md` 已同步 WI222 状态、严格基线与 runtime 未授权边界。
 - branch disposition：`merge-pending`。
 - worktree disposition：`retained(formal-pr-and-review)`。
