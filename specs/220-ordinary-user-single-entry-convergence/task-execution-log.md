@@ -336,3 +336,65 @@
 - `verify constraints` 无 BLOCKER；`program validate` PASS；manifest gate `1 passed in 176.48s`。
 - 生命周期纠偏：T42 只承载已完成的本地验证，跨平台 required checks 明确归入 T43；T43 置为 doing。
 - 下一步：完成首轮变更审计、全量门禁与 exact-head 复审；无 Critical/Important 后才 push/open PR。
+
+### Batch 2026-08-30-020 | post-merge mainline truth closeout source
+
+- **验证画像**：`records-only`
+- **改动范围**：
+  - `README.md`
+  - `USER_GUIDE.zh-CN.md`
+  - `docs/FRAMEWORK_ROADMAP.zh-CN.md`
+  - `src/ai_sdlc/__main__.py`
+  - `src/ai_sdlc/cli/command_names.py`
+  - `src/ai_sdlc/cli/commands.py`
+  - `src/ai_sdlc/cli/default_summary.py`
+  - `src/ai_sdlc/cli/main.py`
+  - `src/ai_sdlc/cli/run_cmd.py`
+  - `tests/integration/test_cli_beginner_ux.py`
+  - `tests/integration/test_cli_ide_adapter.py`
+  - `tests/integration/test_cli_loop.py`
+  - `tests/integration/test_cli_module_invocation.py`
+  - `tests/integration/test_cli_pr_review.py`
+  - `tests/integration/test_cli_run.py`
+  - `tests/integration/test_cli_status.py`
+  - `tests/integration/test_cli_workitem_link.py`
+  - `tests/integration/test_repo_program_manifest.py`
+  - `tests/unit/test_command_names.py`
+  - `tests/unit/test_default_summary.py`
+- **本批 records-only 实际改动**：`spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`、
+  `development-summary.md`、Program Truth snapshot、对应 inventory truth 断言与 continuity handoff；不修改 `src/`、
+  runtime 行为测试、依赖、配置或产品行为。
+- **统一验证命令**：
+  - `uv run ai-sdlc workitem truth-check --wi specs/220-ordinary-user-single-entry-convergence --rev origin/main --json`
+  - `uv run pytest tests/integration/test_cli_beginner_ux.py tests/integration/test_cli_run.py tests/integration/test_cli_status.py -q`
+  - `uv run ruff check src/ai_sdlc/cli/default_summary.py src/ai_sdlc/cli/run_cmd.py src/ai_sdlc/cli/commands.py tests/integration/test_cli_beginner_ux.py tests/integration/test_cli_run.py tests/integration/test_cli_status.py`
+  - `uv run ai-sdlc verify constraints`
+  - `uv run ai-sdlc program validate`
+  - `uv run ai-sdlc program truth sync --execute --yes`
+  - `uv run ai-sdlc program truth audit`
+  - `uv run ai-sdlc workitem close-check --wi specs/220-ordinary-user-single-entry-convergence --json`
+  - `uv run pytest tests/integration/test_repo_program_manifest.py -q`
+  - `git diff --check`
+- **代码审查**：PR #185 exact head=`2cf63d83ca4e2acaa80ec09e286d2b958e43b29b`，Codex 明确返回
+  “Didn't find any major issues”；required checks=`23/23`，merge commit=
+  `3258160213ec42291ee9e12244ae3e04ec0431f2`。评审期间只闭合真实 caller 结果/恢复边界，不新增状态模型、
+  loader、renderer 或诊断系统。
+- **任务/计划同步状态**：T01～T43 全部完成；spec、plan、tasks 同步为完成。该状态以本 records-only closure
+  合入 `main` 为生效点，分支 source 不提前代表远端主线已归档。
+- **主线后验事实**：fresh `origin/main@32581602` 的相关 CLI 套件 `108 passed in 59.40s`，目标 Ruff 与
+  constraints PASS。首次 truth-check 诚实返回 `formal_freeze_only`，根因为此前批次缺少 close-check 所需的
+  结构化 implementation provenance 和 `development-summary.md`，本批只补齐记录载体，不改 truth-check 规则。
+- **Program Truth**：snapshot hash=`b1adcb49e83678bec7ee36aa6e59b242268ea9473c2c87efbb39c3ccd89819db`；
+  inventory `1154/1154`、unmapped 0、missing 1、close `218/219`。Program audit 仍由 16 个既有历史
+  `truth_check` honest-blocked；`program validate` PASS，manifest gate `1 passed in 177.16s`。
+- **ROI 裁决**：相对 PR #185 base `e70ced90`，产品/测试/用户文档合计 19 个文件、`+1056/-124`；核心收益是
+  默认 help、run/status 有界摘要与兼容恢复边界。该体量已达到停止线：closure 后不继续打磨细枝末节；新增能力
+  必须独立 ROI 立项，不能借 WI220 延伸。
+- **已完成 git 提交**：是（实现与评审整改已提交；本 receipt envelope 不自引用自身）
+- **提交哈希**：implementation reviewed head=`2cf63d83ca4e2acaa80ec09e286d2b958e43b29b`；
+  main merge=`3258160213ec42291ee9e12244ae3e04ec0431f2`
+- 关联 branch/worktree disposition 计划：`merged`
+- 当前批次 branch disposition 状态：`merged`
+- 当前批次 worktree disposition 状态：`removed`
+- **远端范围说明**：上述 disposition 仅以远端 `main` 与 PR #185 source ref 为准；用户已明确排除的本地材料分支/
+  worktree 不属于本 closeout，也不在本批删除、重命名或修改。

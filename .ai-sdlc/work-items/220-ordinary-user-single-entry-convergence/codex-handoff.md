@@ -1,29 +1,33 @@
 # Continuity Handoff
 
-- Updated: 2026-08-29T23:42:36+00:00
-- Reason: Escalating from no-op ref refresh to a normal auditable fast-forward commit after prolonged PR synchronization failure.
-- Goal: Merge PR #185 and complete WI220 post-merge truth closeout.
-- State: P2 code fix remains committed at 43aea852 and remote branch matches, but PR #185 head remains stale at 09886d57 despite API recovery and a same-SHA non-force ref refresh. Required handoff files are the only local changes.
+- Updated: 2026-08-30T00:32:57+00:00
+- Reason: Post-merge truth revealed missing structured implementation provenance and close layer; records-only closeout source is now prepared.
+- Goal: Complete WI220 records-only post-merge truth closeout after PR #185.
+- State: Implementation is merged at origin/main 32581602. A generic records-only closure branch now contains synchronized spec/plan/tasks, structured implementation provenance, a new development summary, Program Truth snapshot, and the two directly coupled inventory assertions; src/runtime behavior tests are unchanged.
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
-- Branch: feature/220-ordinary-user-single-entry-convergence-docs
+- Branch: codex/post-merge-truth-closeout-20260830
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/220-ordinary-user-single-entry-convergence/codex-handoff.md
+- M program-manifest.yaml
+- M specs/220-ordinary-user-single-entry-convergence/plan.md
+- M specs/220-ordinary-user-single-entry-convergence/spec.md
+- M specs/220-ordinary-user-single-entry-convergence/task-execution-log.md
+- M specs/220-ordinary-user-single-entry-convergence/tasks.md
+- M tests/integration/test_repo_program_manifest.py
+- ?? specs/220-ordinary-user-single-entry-convergence/development-summary.md
 
 ## Key Decisions
-- Create one normal handoff checkpoint commit to produce a real fast-forward branch transition and trigger PR synchronization. Do not force-push, rewrite history, close/reopen the PR, or modify product code.
+- Use remote/fresh-clone truth and ignore user-excluded local material branches/worktrees. Keep Program Truth honest-blocked on the 16 historical refs. WI220 reaches a hard stop after closure; no further detail optimization.
 
 ## Commands / Tests
-- Verified branch ref=43aea852 and refs/pull/185/head=09886d57; PATCH of branch ref to the same SHA succeeded but PR head stayed stale.
+- Fresh main relevant CLI suite 108 passed in 59.40s; target Ruff and constraints pass; program validate PASS; truth snapshot b1adcb49 with inventory 1154/1154, missing 1, close 218/219; manifest gate 1 passed in 177.16s; Program audit retains 16 historical blockers.
 
 ## Blockers / Risks
-- GitHub PR head is detached from the current branch ref until a new ref transition is observed.
+- Closure source is not yet committed/reviewed/merged. Final mainline_merged truth and clean-clone close-check must be proven after committing the structured receipt and again after closure merge.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit the required handoff checkpoint only, push the same branch, verify PR head advances, then post the pending inline reply and exact-head Codex review request.
+- Audit records-only diff, commit it, verify HEAD truth becomes branch_only_implemented, validate close-check in an isolated remote-truth clone, then push a closure PR and request Codex review.
