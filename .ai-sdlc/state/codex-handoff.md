@@ -1,33 +1,27 @@
 # Continuity Handoff
 
-- Updated: 2026-08-30T00:32:57+00:00
-- Reason: Post-merge truth revealed missing structured implementation provenance and close layer; records-only closeout source is now prepared.
+- Updated: 2026-08-30T00:38:10+00:00
+- Reason: Fresh remote-truth close-check and branch truth now pass.
 - Goal: Complete WI220 records-only post-merge truth closeout after PR #185.
-- State: Implementation is merged at origin/main 32581602. A generic records-only closure branch now contains synchronized spec/plan/tasks, structured implementation provenance, a new development summary, Program Truth snapshot, and the two directly coupled inventory assertions; src/runtime behavior tests are unchanged.
+- State: Closure source is committed and verified: HEAD truth is branch_only_implemented with execution_started=true; an isolated clone pinned to main 32581602 and implementation source 2cf63d83 passes workitem close-check with blockers empty and done_gate ready. Manifest gate passes after synchronizing missing=1 and close=218/219.
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
 - Branch: codex/post-merge-truth-closeout-20260830
 
 ## Changed Files
-- M program-manifest.yaml
-- M specs/220-ordinary-user-single-entry-convergence/plan.md
-- M specs/220-ordinary-user-single-entry-convergence/spec.md
 - M specs/220-ordinary-user-single-entry-convergence/task-execution-log.md
-- M specs/220-ordinary-user-single-entry-convergence/tasks.md
-- M tests/integration/test_repo_program_manifest.py
-- ?? specs/220-ordinary-user-single-entry-convergence/development-summary.md
 
 ## Key Decisions
-- Use remote/fresh-clone truth and ignore user-excluded local material branches/worktrees. Keep Program Truth honest-blocked on the 16 historical refs. WI220 reaches a hard stop after closure; no further detail optimization.
+- Use supported code-change verification profile for the WI-wide implementation receipt while keeping the actual closure file scope records/truth-only. Remote-truth clone is authoritative; user-excluded local material branches remain untouched.
 
 ## Commands / Tests
-- Fresh main relevant CLI suite 108 passed in 59.40s; target Ruff and constraints pass; program validate PASS; truth snapshot b1adcb49 with inventory 1154/1154, missing 1, close 218/219; manifest gate 1 passed in 177.16s; Program audit retains 16 historical blockers.
+- Fresh close-check ok=true blockers=[]; HEAD truth branch_only_implemented ahead=1; fresh-main relevant tests 108 passed; Ruff/constraints/program validate pass; manifest 1 passed in 177.16s; Program Truth b1adcb49 remains honest-blocked only by 16 historical refs.
 
 ## Blockers / Risks
-- Closure source is not yet committed/reviewed/merged. Final mainline_merged truth and clean-clone close-check must be proven after committing the structured receipt and again after closure merge.
+- Closure branch must be pushed at its final exact head, opened as a PR, reviewed by Codex, pass required checks, merge, and then prove mainline_merged on exact origin/main.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Audit records-only diff, commit it, verify HEAD truth becomes branch_only_implemented, validate close-check in an isolated remote-truth clone, then push a closure PR and request Codex review.
+- Amend the unpushed profile commit with final receipt/handoff, push, open records-only closure PR, request Codex review, and repoint heartbeat monitoring to that PR.

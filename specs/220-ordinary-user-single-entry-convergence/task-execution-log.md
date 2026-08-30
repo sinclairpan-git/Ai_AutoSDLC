@@ -339,7 +339,7 @@
 
 ### Batch 2026-08-30-020 | post-merge mainline truth closeout source
 
-- **验证画像**：`records-only`
+- **验证画像**：`code-change`
 - **改动范围**：
   - `README.md`
   - `USER_GUIDE.zh-CN.md`
@@ -387,6 +387,9 @@
 - **Program Truth**：snapshot hash=`b1adcb49e83678bec7ee36aa6e59b242268ea9473c2c87efbb39c3ccd89819db`；
   inventory `1154/1154`、unmapped 0、missing 1、close `218/219`。Program audit 仍由 16 个既有历史
   `truth_check` honest-blocked；`program validate` PASS，manifest gate `1 passed in 177.16s`。
+- **Fresh close-check**：隔离 clone 锁定 `main@32581602`、已合并 source `2cf63d83` 与 committed closure
+  candidate 后，`workitem close-check --json` 返回 `ok=true`、`blockers=[]`、`done_gate=ready for completion`；
+  本地共享仓库的材料分支/worktree 未参与该远端真值判断。
 - **ROI 裁决**：相对 PR #185 base `e70ced90`，产品/测试/用户文档合计 19 个文件、`+1056/-124`；核心收益是
   默认 help、run/status 有界摘要与兼容恢复边界。该体量已达到停止线：closure 后不继续打磨细枝末节；新增能力
   必须独立 ROI 立项，不能借 WI220 延伸。
