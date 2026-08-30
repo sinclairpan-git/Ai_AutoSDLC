@@ -6,7 +6,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 **功能编号**：`221-release-target-provenance-recovery`
 **创建日期**：2026-08-30
-**状态**：formal admission audit 已完成；`needs_user`
+**状态**：formal admission audit 已合并；records-only closeout 合入后归档；真实能力补缺保持 `needs_user`
 **唯一基线**：`origin/main@263abb3d0171a58762d382e73db9a9a692707268`
 
 ## 目标

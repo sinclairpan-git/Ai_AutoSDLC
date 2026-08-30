@@ -5,6 +5,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 # 任务分解：发布目标历史归因恢复
 
 **编号**：`221-release-target-provenance-recovery` | **日期**：2026-08-30
+**阶段**：admission audit 已合并；records-only closeout；真实能力补缺 `needs_user`
 
 ## Batch 1：基线与 formal
 
@@ -40,10 +41,17 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 - [x] 记录唯一获批的测试例外：只更新 manifest inventory/close layer 两条固定期望，不改其他测试或弱化断言
 - [x] 更新 canonical/scoped handoff
 
+### T15 合并后远端真值收口（P1）
+
+- [x] 记录 PR #187 exact head、merge commit、Codex 结论与 required checks
+- [x] 将未授权能力改为显式 No-Go 清单，避免被 close-check 误读为待执行任务
+- [x] 补齐 latest batch 的 verification profile、统一验证、git lifecycle 与真实主线路径证据
+- [x] 保持 Program Truth 的 16 个历史 blocker、11/16 admission 结论和既有测试基线
+
 ## 明确未授权任务
 
-- [ ] 实现 `098` posture detector
-- [ ] 实现 `099` posture-gated resolver
-- [ ] 补齐 `100/101` whole-plan rollback、同 action retry 与 honest replay
-- [ ] 修改 095/098 或其余历史 execution log
-- [ ] 修改 truth classifier、删除 blocker 或发布 v0.9.9
+- 未授权且未执行：实现 `098` posture detector。
+- 未授权且未执行：实现 `099` posture-gated resolver。
+- 未授权且未执行：补齐 `100/101` whole-plan rollback、同 action retry 与 honest replay。
+- 未授权且未执行：修改 095/098 或其余历史 execution log。
+- 未授权且未执行：修改 truth classifier、删除 blocker 或发布 v0.9.9。

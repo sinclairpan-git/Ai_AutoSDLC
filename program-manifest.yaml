@@ -2084,10 +2084,10 @@ specs:
   path: specs/221-release-target-provenance-recovery
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-08-30T10:00:35Z'
+  generated_at: '2026-08-30T11:52:31Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 0838bcf1
+  repo_revision: 5971a89e
   authoring_hash: 5bad2b5cf7117906b1ee7a07ceda4bdd06e350745ff89a5d94569a1c5ba24b6c
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
@@ -2130,7 +2130,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 3edfa46803327245ec7f59c69686828daffa599d3eb5b1baf154122005668104
+  snapshot_hash: 1095f01a482ba76cb1bc5d55585fa0c1feaba1f1c54d67a704e94294b6794be8
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2164,8 +2164,8 @@ truth_snapshot:
     mapped_sources: 1159
     unmapped_sources: 0
     missing_sources: 2
-    phase_signal_count: 3790
-    deferred_signal_count: 6779
+    phase_signal_count: 3794
+    deferred_signal_count: 6783
     non_goal_signal_count: 401
     layer_totals:
       blueprint: 1
@@ -12078,8 +12078,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 221-release-target-provenance-recovery
-      phase_signal_count: 3
-      deferred_signal_count: 3
+      phase_signal_count: 4
+      deferred_signal_count: 4
       non_goal_signal_count: 0
     - path: specs/221-release-target-provenance-recovery/task-execution-log.md
       source_type: execution_log
@@ -12087,8 +12087,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 221-release-target-provenance-recovery
-      phase_signal_count: 3
-      deferred_signal_count: 5
+      phase_signal_count: 6
+      deferred_signal_count: 8
       non_goal_signal_count: 0
     - path: specs/221-release-target-provenance-recovery/development-summary.md
       source_type: development_summary
