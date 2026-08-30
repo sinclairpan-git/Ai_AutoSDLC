@@ -44,8 +44,8 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
 
     assert validation.valid, validation.errors
     assert inventory is not None
-    assert (inventory.state, inventory.total_sources, inventory.mapped_sources, inventory.unmapped_sources, inventory.missing_sources) == ("complete", 1154, 1154, 0, 1)
-    assert (inventory.layer_totals["close"], inventory.layer_materialized["close"]) == (219, 218)
+    assert (inventory.state, inventory.total_sources, inventory.mapped_sources, inventory.unmapped_sources, inventory.missing_sources) == ("complete", 1159, 1159, 0, 2)
+    assert (inventory.layer_totals["close"], inventory.layer_materialized["close"]) == (220, 218)
     assert release_registry == {(path, "release_doc", "release") for path in release_paths}
     assert roadmap_registry == {
         ("docs/FRAMEWORK_ROADMAP.zh-CN.md", "design_doc", "design")
