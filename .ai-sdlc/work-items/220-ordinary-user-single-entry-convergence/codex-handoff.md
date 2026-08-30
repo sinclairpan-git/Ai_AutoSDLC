@@ -1,29 +1,28 @@
 # Continuity Handoff
 
-- Updated: 2026-08-29T23:42:36+00:00
-- Reason: Escalating from no-op ref refresh to a normal auditable fast-forward commit after prolonged PR synchronization failure.
-- Goal: Merge PR #185 and complete WI220 post-merge truth closeout.
-- State: P2 code fix remains committed at 43aea852 and remote branch matches, but PR #185 head remains stale at 09886d57 despite API recovery and a same-SHA non-force ref refresh. Required handoff files are the only local changes.
+- Updated: 2026-08-30T00:59:32+00:00
+- Reason: Focused response to exact-head review findings on stale continuity state and non-reproducible ROI statistics.
+- Goal: Complete WI220 records-only post-merge truth closeout through PR #186.
+- State: PR #186 closure candidate contains focused review corrections: continuity now advances to exact-head monitoring, and the ROI subset is reproducibly defined as 19 files at +1056/-123. No src/runtime behavior change is introduced.
 - Stage: close
 - Work Item: 220-ordinary-user-single-entry-convergence
-- Branch: feature/220-ordinary-user-single-entry-convergence-docs
+- Branch: codex/post-merge-truth-closeout-20260830
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/220-ordinary-user-single-entry-convergence/codex-handoff.md
+- M specs/220-ordinary-user-single-entry-convergence/development-summary.md
+- M specs/220-ordinary-user-single-entry-convergence/task-execution-log.md
 
 ## Key Decisions
-- Create one normal handoff checkpoint commit to produce a real fast-forward branch transition and trigger PR synchronization. Do not force-push, rewrite history, close/reopen the PR, or modify product code.
+- Keep the correction records-only; preserve the 16 unrelated historical Program Truth blockers and exclude local material/product-site branches and worktrees from remote truth.
 
 ## Commands / Tests
-- Verified branch ref=43aea852 and refs/pull/185/head=09886d57; PATCH of branch ref to the same SHA succeeded but PR head stayed stale.
+- Verified e70ced90..2cf63d83 over the explicitly named 19-file product-source/behavior-test/user-doc subset: +1056/-123. Current branch is two commits ahead of origin/main before this focused correction.
 
 ## Blockers / Risks
-- GitHub PR head is detached from the current branch ref until a new ref transition is observed.
+- PR #186 must carry the current branch head, receive fresh Codex exact-head review, and pass all required checks before merge.
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- Commit the required handoff checkpoint only, push the same branch, verify PR head advances, then post the pending inline reply and exact-head Codex review request.
+- Ensure PR #186 head matches the current closure branch, request or confirm Codex review on that exact head, monitor required checks, then merge and prove WI220 mainline_merged on exact origin/main.

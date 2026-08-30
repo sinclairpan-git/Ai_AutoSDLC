@@ -11,16 +11,17 @@ working_set_snapshot:
   active_files:
   - specs/220-ordinary-user-single-entry-convergence/tasks.md
   - specs/220-ordinary-user-single-entry-convergence/spec.md
-  context_summary: 'Goal: Merge PR #185 and complete WI220 post-merge truth closeout.
-    | State: P2 code fix remains committed at 43aea852 and remote branch matches,
-    but PR #185 head remains stale at 09886d57 despite API recovery and a same-SHA
-    non-force ref refresh. Required handoff files are the only local changes. | Next:
-    Commit the required handoff checkpoint only, push the same branch, verify PR head
-    advances, then post the pending inline reply and exact-head Codex review request.'
-current_branch: feature/220-ordinary-user-single-entry-convergence-docs
+  context_summary: 'Goal: Complete WI220 records-only post-merge truth closeout through
+    PR #186. | State: PR #186 closure candidate contains focused review corrections:
+    continuity now advances to exact-head monitoring, and the ROI subset is reproducibly
+    defined as 19 files at +1056/-123. No src/runtime behavior change is introduced.
+    | Next: Ensure PR #186 head matches the current closure branch, request or confirm
+    Codex review on that exact head, monitor required checks, then merge and prove
+    WI220 mainline_merged on exact origin/main.'
+current_branch: codex/post-merge-truth-closeout-20260830
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-29T23:42:36+00:00'
+timestamp: '2026-08-30T00:59:32+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-29T15:19:45+00:00'
 checkpoint_fingerprint: ffd508c45213b64bfe56b31a5ea474a0e3446531e5abd2fe30469e47673a27eb

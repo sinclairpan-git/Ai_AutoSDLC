@@ -6,7 +6,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 
 **编号**：`220-ordinary-user-single-entry-convergence` | **日期**：2026-08-29
 **来源**：`spec.md` + `plan.md`
-**阶段**：T43 exact-head review / PR delivery
+**阶段**：已完成；records-only closure 合入主线后生效
 
 ## Batch 0：Formal freeze
 
@@ -253,7 +253,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 ### Task 4.3 exact-head review、PR 与合并后真值
 
 - task_id: T43
-- status: doing
+- status: done
 - goal: 完成独立 review、Codex PR review、required checks、merge 和远端主线核验。
 - depends:
   - T42

@@ -6,7 +6,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 
 **编号**：`220-ordinary-user-single-entry-convergence` | **日期**：2026-08-29
 **规格**：`specs/220-ordinary-user-single-entry-convergence/spec.md`
-**状态**：P2A/P2B 已完成；T43 第一轮 exact-head 对抗整改中
+**状态**：已完成；PR #185 已合并，records-only closure 合入主线后生效
 
 ## 1. 概述
 
