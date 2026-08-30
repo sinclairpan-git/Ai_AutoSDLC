@@ -149,10 +149,16 @@ class TestRunCommand:
         package_init.parent.mkdir(parents=True, exist_ok=True)
         package_init.write_text("", encoding="utf-8")
 
-    def test_run_outside_project(self, tmp_path: Path) -> None:
+    def test_run_outside_project(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Not inside a project → exit 1 (not found) or 2 (halt), never success."""
-        result = runner.invoke(app, ["run", "--dry-run"], cwd=str(tmp_path))
-        assert result.exit_code in (1, 2)
+        monkeypatch.chdir(tmp_path)
+        result = runner.invoke(app, ["run", "--dry-run"])
+        assert result.exit_code == 1
+        assert "Current Loop: pipeline/uninitialized" in result.output
+        assert "Result: blocked" in result.output
+        assert "Next: ai-sdlc init ." in result.output
 
     def test_run_help(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -254,10 +260,92 @@ class TestRunCommand:
         assert result.exit_code == 2
         assert "Pipeline completed. Stage: close" in result.output
         assert "AgentOps report pending: missing_token" in result.output
+        assert "Result: blocked" in result.output
+        assert "Result: completed" not in result.output
+        assert "Next: Fix required AgentOps reporting" in result.output
         diagnostic_files = list(
             (tmp_path / ".ai-sdlc" / "agentops" / "diagnostics").glob("*.json")
         )
         assert diagnostic_files
+
+    def test_run_confirm_rejection_reports_paused_result(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+
+        result = runner.invoke(app, ["run", "--mode", "confirm"], input="n\n")
+
+        assert result.exit_code == 0
+        assert "Pipeline paused. Stage:" in result.output
+        assert "Result: paused" in result.output
+        assert "Result: completed" not in result.output
+        assert "Next: Rerun ai-sdlc run --mode confirm when ready." in result.output
+
+    def test_run_and_compact_status_share_workitem_summary_truth(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("OPENAI_CODEX", "1")
+        monkeypatch.chdir(tmp_path)
+        assert runner.invoke(app, ["init", ".", "--agent-target", "codex"]).exit_code == 0
+        self._force_passing_gates(monkeypatch)
+        status_surface = {
+            "telemetry": {"state": "ready", "current": None, "latest": None},
+            "workitem_diagnostics": {
+                "next_required_action": "Continue T43 exact-head remediation.",
+                "items": [
+                    {
+                        "blocking": True,
+                        "detail": "Exact-head review has important findings.",
+                    }
+                ],
+            },
+            "branch_lifecycle": {"state": "ready", "detail": ""},
+            "formal_artifact_target": {"state": "ready", "detail": ""},
+            "backlog_breach_guard": {"state": "ready", "detail": ""},
+            "execute_authorization": {"state": "ready", "detail": ""},
+            "adapter_governance": {"state": "ready", "detail": ""},
+        }
+        surface_calls: list[tuple[bool, bool, bool]] = []
+
+        def _status_surface(
+            _root: Path,
+            *,
+            include_program_truth: bool = True,
+            include_truth_ledger: bool = True,
+            include_workitem_truth: bool = True,
+        ) -> dict[str, object]:
+            surface_calls.append(
+                (
+                    include_program_truth,
+                    include_truth_ledger,
+                    include_workitem_truth,
+                )
+            )
+            return status_surface
+
+        monkeypatch.setattr(
+            "ai_sdlc.cli.run_cmd.build_status_json_surface",
+            _status_surface,
+            raising=False,
+        )
+        monkeypatch.setattr(
+            "ai_sdlc.cli.commands.build_status_json_surface",
+            _status_surface,
+        )
+        monkeypatch.setattr("ai_sdlc.cli.commands.detect_reconcile_hint", lambda _root: None)
+
+        run_result = runner.invoke(app, ["run", "--dry-run"])
+        status_result = runner.invoke(app, ["status"])
+
+        assert run_result.exit_code == 0, run_result.output
+        assert status_result.exit_code == 0, status_result.output
+        for output in (run_result.output, status_result.output):
+            assert "Next: Continue T43 exact-head remediation." in output
+            assert "Exact-head review has important findings." in output
+        assert surface_calls == [(False, False, True), (False, False, True)]
 
     def test_run_halt_output_survives_required_agentops_block(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -289,6 +377,11 @@ class TestRunCommand:
         assert result.exit_code == 2
         assert "Pipeline halted:" in result.output
         assert "AgentOps report pending: missing_token" in result.output
+        assert "Current Loop:" in result.output
+        assert "Result: halted" in result.output
+        assert "Next:" in result.output
+        assert "Blockers:" in result.output
+        assert "Applicable Rules:" in result.output
 
     def test_run_required_agentops_blocks_when_profile_is_malformed(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -969,15 +1062,15 @@ class TestRunCommand:
         ) -> GateResult:
             if stage == "init":
                 return original_run_gate(self, stage, cp, dry_run=dry_run)
-            if stage == "close":
+            if stage == "refine":
                 return GateResult(
                     stage=stage,
                     verdict=GateVerdict.RETRY,
                     checks=[
                         GateCheck(
-                            name="final_tests_passed",
+                            name="refine_ready",
                             passed=False,
-                            message="Final tests did not pass",
+                            message="Refine gate remains open",
                         )
                     ],
                 )
@@ -992,10 +1085,15 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"])
 
         assert result.exit_code == 0
-        assert "Stage close: RETRY" in result.output
+        assert "Stage refine: RETRY" in result.output
         assert "Pipeline completed." not in result.output
-        assert "Dry-run completed with open gates. Last stage: close (RETRY)" in result.output
-        assert "reason: Final tests did not pass" in result.output
+        assert "Dry-run completed with open gates. Last stage: refine (RETRY)" in result.output
+        assert "reason: Refine gate remains open" in result.output
+        assert "Current Loop:" in result.output
+        assert "Result: open_gates" in result.output
+        assert "Next:" in result.output
+        assert "Blockers:" in result.output
+        assert "Applicable Rules:" in result.output
 
     def test_run_dry_run_surfaces_frontend_inheritance_risk_from_program_truth_audit(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1177,6 +1275,11 @@ class TestRunCommand:
         assert "ai-sdlc adapter select" in result.output
         assert "重新选择实际用于聊天开发的 AI" in result.output
         assert "工具入口" in result.output
+        assert "Current Loop:" in result.output
+        assert "Result: blocked" in result.output
+        assert "Next: ai-sdlc adapter select" in result.output
+        assert "Blockers:" in result.output
+        assert "Applicable Rules:" in result.output
 
     def test_run_non_dry_run_continues_when_adapter_is_verified_loaded(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -1239,6 +1342,11 @@ class TestRunCommand:
         assert result.exit_code == 0
         assert "Pipeline completed. Stage: close" in result.output
         assert "Not a git repository" not in result.output
+        assert "Current Loop:" in result.output
+        assert "Result: completed" in result.output
+        assert "Next:" in result.output
+        assert "Blockers: None" in result.output
+        assert "Applicable Rules:" in result.output
 
     def test_run_non_dry_run_executes_batches_updates_checkpoint_and_summary(
         self, git_repo: Path, monkeypatch: pytest.MonkeyPatch
@@ -1392,6 +1500,11 @@ class TestRunCommand:
         result = runner.invoke(app, ["run", "--dry-run"])
         assert result.exit_code == 1
         assert "recover --reconcile" in result.output
+        assert "Current Loop:" in result.output
+        assert "Result: blocked" in result.output
+        assert "Next:" in result.output
+        assert "Blockers:" in result.output
+        assert "Applicable Rules:" in result.output
 
     def test_run_dry_run_continues_after_reconcile(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

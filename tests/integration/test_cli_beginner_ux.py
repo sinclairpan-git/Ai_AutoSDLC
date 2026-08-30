@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -9,10 +10,87 @@ from typer.testing import CliRunner
 from ai_sdlc.cli.main import app
 
 runner = CliRunner()
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+
+_BEGINNER_COMMANDS = {
+    "adopt",
+    "init",
+    "recover",
+    "run",
+    "self-update",
+    "status",
+}
+_ADVANCED_COMMANDS = {
+    "adapter",
+    "agentops",
+    "doctor",
+    "enterprise",
+    "gate",
+    "handoff",
+    "host-runtime",
+    "index",
+    "loop",
+    "pr-review",
+    "program",
+    "provenance",
+    "refresh",
+    "rules",
+    "scan",
+    "stage",
+    "studio",
+    "telemetry",
+    "trace",
+    "verify",
+    "workitem",
+}
 
 
 def _single_space(text: str) -> str:
     return " ".join(text.split())
+
+
+def test_root_help_only_exposes_six_beginner_commands() -> None:
+    import typer.main
+
+    root = typer.main.get_command(app)
+    visible = {
+        name for name, command in root.commands.items() if not command.hidden
+    }
+    result = runner.invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    assert visible == _BEGINNER_COMMANDS
+    assert set(root.commands) == _BEGINNER_COMMANDS | _ADVANCED_COMMANDS
+    assert (
+        "Common commands are shown here; advanced commands remain directly callable."
+        in _single_space(result.output)
+    )
+
+
+def test_advanced_command_help_remains_directly_callable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    for command in sorted(_ADVANCED_COMMANDS):
+        monkeypatch.setattr(sys, "argv", ["ai-sdlc", command, "--help"])
+        result = runner.invoke(app, [command, "--help"])
+        assert result.exit_code == 0, f"{command}: {result.output}"
+
+
+def test_readme_indexes_every_command_hidden_from_root_help() -> None:
+    readme = (_REPO_ROOT / "README.md").read_text(encoding="utf-8")
+    _, advanced_section = readme.split("### Advanced Command Index", maxsplit=1)
+    advanced_section, _ = advanced_section.split("### Requirement Loop", maxsplit=1)
+
+    for command in _ADVANCED_COMMANDS:
+        assert f"`ai-sdlc {command}`" in advanced_section
+
+
+def test_user_guide_distinguishes_compact_and_detailed_status() -> None:
+    guide = (_REPO_ROOT / "USER_GUIDE.zh-CN.md").read_text(encoding="utf-8")
+
+    assert "`ai-sdlc status` | 紧凑查看 Current Loop、Result、Next 和 Blockers" in guide
+    assert "`ai-sdlc status --details` | 查看完整项目、阶段、治理和交接诊断面" in guide
 
 
 def test_vibe_coder_can_initialize_without_reading_internal_state(

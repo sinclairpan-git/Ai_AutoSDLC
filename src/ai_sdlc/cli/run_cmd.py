@@ -19,6 +19,10 @@ from ai_sdlc.cli.beginner_guidance import (
     render_mutating_run_blocker,
 )
 from ai_sdlc.cli.commands import _print_reconcile_guidance
+from ai_sdlc.cli.default_summary import (
+    build_default_summary,
+    render_default_summary,
+)
 from ai_sdlc.context.state import load_checkpoint
 from ai_sdlc.core.agentops_bridge import (
     ENTERPRISE_PROFILE_ENV,
@@ -41,6 +45,8 @@ from ai_sdlc.core.frontend_contract_runtime_attachment import (
     build_frontend_contract_runtime_attachment,
     is_frontend_contract_runtime_attachment_work_item,
 )
+from ai_sdlc.core.loop_models import LoopType
+from ai_sdlc.core.loop_status import get_loop_status
 from ai_sdlc.core.plan_check import git_changed_paths
 from ai_sdlc.core.reconcile import detect_reconcile_hint
 from ai_sdlc.core.runner import PipelineHaltError, SDLCRunner
@@ -49,6 +55,8 @@ from ai_sdlc.integrations.ide_adapter import (
     build_adapter_governance_surface,
 )
 from ai_sdlc.models.state import Checkpoint
+from ai_sdlc.rules import RulesLoader
+from ai_sdlc.telemetry.readiness import build_status_json_surface
 from ai_sdlc.utils.helpers import _dedupe_text_items as _dedupe_text_items
 from ai_sdlc.utils.helpers import find_project_root, now_iso
 
@@ -186,6 +194,13 @@ def run_command(
     root = find_project_root()
     if root is None:
         console.print("[red]Not inside an AI-SDLC project.[/red]")
+        _render_run_summary(
+            root=None,
+            checkpoint=None,
+            result="blocked",
+            primary_next_actions=("ai-sdlc init .",),
+            blockers=("Not inside an AI-SDLC project.",),
+        )
         raise typer.Exit(code=1)
 
     hint = detect_reconcile_hint(root)
@@ -197,6 +212,13 @@ def run_command(
         )
         console.print(
             "[yellow]已停止当前运行，避免基于过时 checkpoint 继续执行。[/yellow]"
+        )
+        _render_run_summary(
+            root=root,
+            checkpoint=load_checkpoint(root, warn=False),
+            result="blocked",
+            primary_next_actions=("ai-sdlc recover --reconcile",),
+            blockers=(hint.reason,),
         )
         raise typer.Exit(code=1)
 
@@ -217,16 +239,28 @@ def run_command(
                 border_style="yellow",
             )
         )
+        _render_run_summary(
+            root=root,
+            checkpoint=load_checkpoint(root, warn=False),
+            result="blocked",
+            primary_next_actions=("ai-sdlc adapter select",),
+            blockers=("The configured AI adapter entry is not ready.",),
+        )
         raise typer.Exit(code=1)
 
     runner = SDLCRunner(root)
-    callback = _confirm_callback if mode == "confirm" else None
-    last_result: Any | None = None
+    paused_by_user = False
+
+    def _tracked_confirm_callback(stage: str, result: Any) -> bool:
+        nonlocal paused_by_user
+        confirmed = _confirm_callback(stage, result)
+        paused_by_user = not confirmed
+        return confirmed
+
+    callback = _tracked_confirm_callback if mode == "confirm" else None
     stage_results: list[tuple[str, Any]] = []
 
     def _record_stage_finish(stage: str, result: Any) -> None:
-        nonlocal last_result
-        last_result = result
         stage_results.append((stage, result))
         _stage_finish_callback(stage, result)
 
@@ -240,25 +274,39 @@ def run_command(
             ),
             on_stage_finish=_record_stage_finish,
         )
-        if (
-            dry_run
-            and last_result is not None
-            and str(getattr(last_result.verdict, "value", last_result.verdict)).upper()
+        open_stage_results = [
+            (stage, stage_result)
+            for stage, stage_result in stage_results
+            if str(
+                getattr(stage_result.verdict, "value", stage_result.verdict)
+            ).upper()
             != "PASS"
-        ):
+        ] if dry_run else []
+        open_gate = bool(open_stage_results)
+        open_stage, open_result = open_stage_results[-1] if open_gate else ("", None)
+        open_gate_messages = _dedupe_text_items(
+            message.replace(str(root), ".")
+            for _stage, stage_result in open_stage_results
+            for message in _failed_gate_messages(stage_result)
+        )
+        if open_gate:
             verdict = str(
-                getattr(last_result.verdict, "value", last_result.verdict)
+                getattr(open_result.verdict, "value", open_result.verdict)
             ).upper()
             console.print(
                 "[bold yellow]"
                 f"Dry-run completed with open gates. Last stage: "
-                f"{cp.current_stage} ({verdict})"
+                f"{open_stage} ({verdict})"
                 "[/bold yellow]"
             )
-            for message in _failed_gate_messages(last_result)[:2]:
+            for message in open_gate_messages[:2]:
                 console.print(f"  reason: {message}", markup=False)
             console.print("")
-            console.print(render_dry_run_open_gate_guidance(_failed_gate_messages(last_result)))
+            console.print(render_dry_run_open_gate_guidance(open_gate_messages))
+        elif paused_by_user:
+            console.print(
+                f"\n[bold yellow]Pipeline paused. Stage: {cp.current_stage}[/bold yellow]"
+            )
         else:
             console.print(
                 f"\n[bold green]Pipeline completed. Stage: {cp.current_stage}[/bold green]"
@@ -267,14 +315,99 @@ def run_command(
                 console.print("")
                 console.print(render_dry_run_pass_guidance())
         _render_frontend_contract_runtime_attachment_summary(root, cp)
-        _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
+        result = "open_gates" if open_gate else "paused" if paused_by_user else "completed"
+        primary_next_actions = (
+            (
+                "Resolve the first open gate, then rerun ai-sdlc run --dry-run."
+                if open_gate
+                else "Rerun ai-sdlc run --mode confirm when ready."
+                if paused_by_user
+                else ""
+            ),
+        )
+        blockers = tuple(open_gate_messages)
+        try:
+            _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
+        except typer.Exit:
+            _render_run_summary(
+                root=root,
+                checkpoint=cp,
+                result="blocked",
+                primary_next_actions=(
+                    "Fix required AgentOps reporting, then rerun ai-sdlc run.",
+                ),
+                blockers=("Required AgentOps reporting did not complete.",),
+            )
+            raise
+        _render_run_summary(
+            root=root,
+            checkpoint=cp,
+            result=result,
+            primary_next_actions=primary_next_actions,
+            blockers=blockers,
+        )
     except PipelineHaltError as exc:
         _record_halt_result(stage_results, exc)
         cp = load_checkpoint(root, warn=False)
         console.print(f"\n[bold red]Pipeline halted: {exc}[/bold red]")
         if cp is not None:
+            _render_run_summary(
+                root=root,
+                checkpoint=cp,
+                result="halted",
+                blockers=tuple(_failed_gate_messages(exc.result)) or (str(exc),),
+            )
             _flush_agentops_runtime_report(root, cp, stage_results, dry_run=dry_run)
         raise typer.Exit(code=2) from None
+
+
+def _render_run_summary(
+    *,
+    root: Path | None,
+    checkpoint: Checkpoint | None,
+    result: str,
+    primary_next_actions: tuple[str, ...] = (),
+    blockers: tuple[str, ...] = (),
+) -> None:
+    """读取既有只读真值并追加一次 run 结果摘要。"""
+
+    stage = checkpoint.current_stage if checkpoint is not None else "uninitialized"
+    loop_statuses = ()
+    status_surface: dict[str, Any] = {}
+    applicable_rules: tuple[str, ...] = ()
+    if root is not None:
+        loop_statuses = tuple(
+            get_loop_status(root, loop_type=loop_type) for loop_type in LoopType
+        )
+        loader = RulesLoader()
+        rule_lines: list[str] = []
+        for name in loader.get_active_rules(stage):
+            try:
+                title = loader.get_rule_title(name)
+            except OSError:
+                title = "unavailable"
+            rule_lines.append(f"{name} — {title}")
+        applicable_rules = tuple(rule_lines)
+        try:
+            status_surface = build_status_json_surface(
+                root,
+                include_program_truth=False,
+                include_truth_ledger=False,
+                include_workitem_truth=True,
+            )
+        except (OSError, RuntimeError, ValueError):
+            status_surface = {}
+    summary = build_default_summary(
+        checkpoint_stage=stage,
+        result=result,
+        loop_statuses=loop_statuses,
+        primary_next_actions=primary_next_actions,
+        blockers=blockers,
+        status_surface=status_surface,
+        applicable_rules=applicable_rules,
+    )
+    console.print("")
+    console.print(render_default_summary(summary, include_rules=True), markup=False)
 
 
 def _render_frontend_contract_runtime_attachment_summary(

@@ -10,6 +10,14 @@ from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _SRC = _REPO_ROOT / "src"
+_BEGINNER_COMMANDS = {
+    "adopt",
+    "init",
+    "recover",
+    "run",
+    "self-update",
+    "status",
+}
 
 
 def _env_with_src_on_path() -> dict[str, str]:
@@ -27,6 +35,15 @@ def _env_without_pythonpath() -> dict[str, str]:
     env["PYTHONUTF8"] = "1"
     env["PYTHONIOENCODING"] = "utf-8"
     return env
+
+
+def _module_help_commands(output: str) -> set[str]:
+    _, commands = output.split("Commands:\n", maxsplit=1)
+    return {
+        line.strip()
+        for line in commands.splitlines()
+        if line.startswith("  ") and line.strip()
+    }
 
 
 def _env_without_pythonpath() -> dict[str, str]:
@@ -48,6 +65,11 @@ def test_python_m_ai_sdlc_help_exits_zero() -> None:
     assert result.returncode == 0, result.stderr
     combined = f"{result.stdout}\n{result.stderr}"
     assert "ai-sdlc" in combined.lower() or "SDLC" in combined
+    assert _module_help_commands(result.stdout) == _BEGINNER_COMMANDS
+    assert (
+        "Common commands are shown here; advanced commands remain directly callable."
+        in result.stdout
+    )
 
 
 def test_python_m_ai_sdlc_version_exits_zero() -> None:

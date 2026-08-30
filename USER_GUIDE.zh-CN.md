@@ -757,7 +757,8 @@ AI-SDLC 会把下面几条作为写代码时的默认约束；普通用户不需
 | `ai-sdlc --version` | 查看当前安装版本 |
 | `ai-sdlc init .` | 在当前项目初始化 AI-SDLC；新版本会自动执行必要检查和安全预演 |
 | `ai-sdlc adopt .` | 接入已有项目的 JSON、Markdown、TODO、issue 或 Git 任务进度，不修改原任务文件 |
-| `ai-sdlc status` | 查看项目状态、阶段状态和关键路径 |
+| `ai-sdlc status` | 紧凑查看 Current Loop、Result、Next 和 Blockers |
+| `ai-sdlc status --details` | 查看完整项目、阶段、治理和交接诊断面 |
 | `ai-sdlc adapter status` | 排查 AI 入口和规则安装状态；普通开发主路径通常不需要手动执行 |
 | `ai-sdlc adapter status --json` | 查看机器可读的 adapter 诊断状态 |
 | `ai-sdlc adapter select` | 手工选择真实聊天入口 |

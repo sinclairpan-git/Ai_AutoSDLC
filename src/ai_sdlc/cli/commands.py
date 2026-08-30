@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from contextlib import suppress
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +16,10 @@ from rich.table import Table
 
 from ai_sdlc.branch.git_client import GitClient, GitError
 from ai_sdlc.cli.beginner_guidance import render_init_complete_guidance
+from ai_sdlc.cli.default_summary import (
+    build_default_summary,
+    render_default_summary,
+)
 from ai_sdlc.context.state import (
     CHECKPOINT_PATH,
     CheckpointLoadError,
@@ -29,7 +35,7 @@ from ai_sdlc.context.state import (
 )
 from ai_sdlc.core.artifact_target_guard import evaluate_formal_artifact_target_guard
 from ai_sdlc.core.backlog_breach_guard import evaluate_backlog_breach_guard
-from ai_sdlc.core.config import load_project_config, load_project_state
+from ai_sdlc.core.config import YamlStoreError, load_project_config, load_project_state
 from ai_sdlc.core.execute_authorization import evaluate_execute_authorization
 from ai_sdlc.core.frontend_contract_observation_provider import (
     load_frontend_contract_observation_artifact,
@@ -38,6 +44,8 @@ from ai_sdlc.core.frontend_contract_observation_runtime_policy import (
     classify_frontend_contract_observation_source,
 )
 from ai_sdlc.core.handoff import check_handoff
+from ai_sdlc.core.loop_models import LoopType
+from ai_sdlc.core.loop_status import LoopStatusCommandStatus, get_loop_status
 from ai_sdlc.core.p1_artifacts import (
     load_execution_path,
     load_latest_reviewer_decision,
@@ -948,8 +956,16 @@ def status_command(
         "--json",
         help="Machine-readable bounded telemetry summary.",
     ),
+    details: bool = typer.Option(
+        False,
+        "--details",
+        help="Show the previous detailed human-readable status surface.",
+    ),
 ) -> None:
     """Show current AI-SDLC pipeline status."""
+    if details and as_json:
+        raise typer.BadParameter("--details cannot be combined with --json")
+
     root = find_project_root()
     if root is None:
         console.print(
@@ -957,27 +973,113 @@ def status_command(
         )
         raise typer.Exit(code=1)
 
-    status_surface = build_status_json_surface(
-        root,
-        include_program_truth=as_json,
-        include_truth_ledger=as_json,
-        include_workitem_truth=as_json,
+    checkpoint_exists = (root / CHECKPOINT_PATH).exists()
+    compact_checkpoint = None
+    if not details and not as_json and checkpoint_exists:
+        with suppress(CheckpointLoadError, YamlStoreError):
+            compact_checkpoint = load_checkpoint(root, strict=True, warn=False)
+    compact_checkpoint_unreadable = (
+        not details and not as_json and checkpoint_exists and compact_checkpoint is None
+    )
+    status_surface = (
+        {}
+        if compact_checkpoint_unreadable
+        else build_status_json_surface(
+            root,
+            include_program_truth=as_json,
+            include_truth_ledger=as_json,
+            include_workitem_truth=as_json or not details,
+        )
     )
     if as_json:
         typer.echo(json.dumps(status_surface, indent=2))
+        raise typer.Exit(code=0)
+
+    state = load_project_state(root)
+    if state.status == ProjectStatus.UNINITIALIZED:
+        console.print("[yellow]Project found but not initialized.[/yellow]")
+        raise typer.Exit(code=1)
+
+    if compact_checkpoint_unreadable:
+        hint = None
+        with suppress(CheckpointLoadError, YamlStoreError):
+            hint = detect_reconcile_hint(root)
+    else:
+        hint = detect_reconcile_hint(root)
+    if not details:
+        cp = compact_checkpoint
+        raw_checkpoint = (
+            load_checkpoint(root, warn=False)
+            if checkpoint_exists and cp is not None
+            else None
+        )
+        checkpoint_unreadable = compact_checkpoint_unreadable
+        surface_from_rejected_checkpoint = (
+            cp is not None and raw_checkpoint is not None and cp != raw_checkpoint
+        )
+        if checkpoint_unreadable or surface_from_rejected_checkpoint:
+            status_surface = {}
+        checkpoint_stage = (
+            cp.current_stage if cp is not None else "unavailable"
+            if checkpoint_unreadable
+            else "init"
+        )
+        checkpoint_actions = (
+            (
+                "Restore a valid .ai-sdlc/state/checkpoint.yml, then rerun "
+                "ai-sdlc status.",
+            )
+            if checkpoint_unreadable
+            else ()
+        )
+        checkpoint_blockers = (
+            ("checkpoint.yml exists but could not be loaded.",)
+            if checkpoint_unreadable
+            else ()
+        )
+        loop_statuses = tuple(
+            get_loop_status(root, loop_type=loop_type) for loop_type in LoopType
+        )
+        loop_is_blocked = any(
+            str(item.status) == LoopStatusCommandStatus.BLOCKED.value
+            for item in loop_statuses
+        )
+        active_loop_count = sum(
+            item.current_loop is not None
+            and str(item.current_loop.status) != "closed"
+            for item in loop_statuses
+        )
+        summary = build_default_summary(
+            checkpoint_stage=checkpoint_stage,
+            result=(
+                "blocked"
+                if checkpoint_unreadable
+                or hint is not None
+                or loop_is_blocked
+                or active_loop_count > 1
+                else "ready"
+            ),
+            loop_statuses=loop_statuses,
+            primary_next_actions=(
+                ("ai-sdlc recover --reconcile",)
+                if hint is not None
+                else checkpoint_actions
+            ),
+            blockers=(
+                (hint.reason,) if hint is not None else checkpoint_blockers
+            ),
+            status_surface=status_surface,
+        )
+        if summary.blockers and summary.result == "ready":
+            summary = replace(summary, result="blocked")
+        console.print(render_default_summary(summary, include_rules=False), markup=False)
         raise typer.Exit(code=0)
 
     note = format_adapter_notice(ensure_ide_adaptation(root))
     if note:
         console.print(note)
 
-    state = load_project_state(root)
     adapter_governance = build_adapter_governance_surface(root)
-    if state.status == ProjectStatus.UNINITIALIZED:
-        console.print("[yellow]Project found but not initialized.[/yellow]")
-        raise typer.Exit(code=1)
-
-    hint = detect_reconcile_hint(root)
     table = _property_table("AI-SDLC Status")
 
     table.add_row("Project", state.project_name)

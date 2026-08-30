@@ -1292,9 +1292,9 @@ def test_loop_frontend_evidence_skip_json_closes_with_audit(
     assert status_payload["next_guidance"]["command"] == "ai-sdlc pr-review start"
 
 
-def test_python_module_help_fallback_lists_loop() -> None:
+def test_python_module_direct_loop_help_remains_available() -> None:
     result = subprocess.run(
-        [sys.executable, "-m", "ai_sdlc", "--help"],
+        [sys.executable, "-m", "ai_sdlc", "loop", "--help"],
         capture_output=True,
         text=True,
         encoding="utf-8",
@@ -1303,7 +1303,8 @@ def test_python_module_help_fallback_lists_loop() -> None:
     )
 
     assert result.returncode == 0
-    assert "loop" in result.stdout
+    assert "Inspect read-only Loop Engine artifacts" in result.stdout
+    assert "status" in result.stdout
 
 
 def _write_frontend_work_item(root: Path) -> Path:

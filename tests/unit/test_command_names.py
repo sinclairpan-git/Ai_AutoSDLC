@@ -2,7 +2,23 @@
 
 from __future__ import annotations
 
-from ai_sdlc.cli.command_names import collect_flat_command_strings
+from types import SimpleNamespace
+
+from ai_sdlc.cli.command_names import _walk_group, collect_flat_command_strings
+
+
+def test_command_inventory_includes_commands_hidden_only_from_root_help() -> None:
+    group = SimpleNamespace(
+        commands={
+            "visible": SimpleNamespace(hidden=False),
+            "advanced": SimpleNamespace(hidden=True),
+        }
+    )
+
+    assert _walk_group(group, ("ai-sdlc",)) == [
+        "ai-sdlc advanced",
+        "ai-sdlc visible",
+    ]
 
 
 def test_collect_flat_command_strings_includes_nested_subcommands() -> None:
