@@ -30,7 +30,8 @@
 |---|---|---|---:|---:|---:|---|
 | P0 | 主线真值复位 + 轻量 ROI 合同 | **已完成** | 9.5/10 | 实际已投入 | 4.5（原估） | 无 |
 | P1 | Diff-local Lean Advisory | **No-Go 已关闭（未合并）** | 8.0/10 | 实际：1 个 WI + 2 轮评审 | No-Go（及时止损） | P0 与 v0.9.8 已完成 |
-| P2 | 普通用户单入口收敛 | **下一项** | 9.0/10 | 4–6 人日 | 1.5 | P1 已完成，或按 No-Go 有证据关闭且未保留治理膨胀 |
+| P2 | 普通用户单入口收敛 | **已完成（WI220）** | 9.0/10 | 实际已投入 | 1.5（原估） | P1 已有证据 No-Go |
+| D2 | 历史 release-target provenance 恢复 | **WI221 admission No-Go；待用户决策** | 7.5/10 | 审计 <0.5 人日；补缺粗估 8–13 人日 | 0.6–0.9 | v0.9.9 的硬前置 |
 | P3 | 跨平台首次用户 12 路完整闭环 | **排队** | 9.5/10 | 6–10 人日 | 1.1 | P2 默认入口稳定 |
 | P4 | 五类 Loop 有界动态专家 | **条件候选** | 10/10 | 10–15 人日 | 0.6 | P1–P3 的真实收益支持继续投资 |
 
@@ -291,18 +292,23 @@
 
 ### 10.4 D2：历史 release-target provenance 回填
 
-**延后，下一次要求 release target `ready` 前置处理；不阻断 P1 建项与开发。** PR #179 合并后的真实
-`origin/main@6002cd7a` 首次刷新 Program Truth 时，前端 14 个、Adapter 2 个历史 truth refs 被判定为
+**已进入 WI221；provenance-only admission 为 No-Go，等待用户决定是否补真实能力。** 在真实
+`origin/main@263abb3d0171a58762d382e73db9a9a692707268` 刷新 Program Truth 时，前端 14 个、Adapter 2 个历史 truth refs 仍被判定为
 `formal_freeze_only`。旧 ready snapshot 生成于未进入主线的 squash 前 release branch，其发布改动被误归为这些
 历史 work item 的执行证据；因此当前必须保留真实 `blocked`，不得删 gate 换取假 ready。
 
-- 价值：7.5/10；预计投入：3–6 人日；ROI 约 1.3。价值集中在恢复未来发布可信度，不新增用户特性。
+- 价值：7.5/10；审计投入小于 0.5 人日；若补齐真实能力，当前粗估 8–13 人日、ROI 约 0.6–0.9。价值集中在恢复未来发布可信度，不新增用户特性。
 - 触发器：准备下一次依赖 Program Truth release target 的发布，或有独立证据能把这些 work item 与真实主线实现提交、
   路径和批次一一绑定。
 - 实施边界：建立独立 formal work item，逐项验证实际 implementation carrier；只回填可证明的 provenance，无法证明的
   项保持 blocker。不得修改历史叙事伪造执行，不得让无关提交充当证据。
 - 停止条件：需要放宽 `formal_freeze_only`、删除 WI200 明确冻结的 121/122/159/200 truth refs、修改 3 个以上真值子系统，
   或两轮整改后仍不能形成确定归因时 No-Go，返回用户决定是否接受 blocked release target。
+- 2026-08-30 WI221 admission 结果：11/16 可绑定完整主线载体；`098` 缺少五态 posture detector / evidence precedence /
+  sidecar recommendation，`099` 未消费 posture gate，`100/101` 缺少完整的 ledger whole-plan rollback 与同 action retry，
+  `095` 因继承这些子合同只能部分归因。不得批量改历史 log 伪造 16/16。
+- 当前推荐保持 release target blocked。若业务仍要求解除发布门，需由用户另行批准一个重新定界的多能力实现批次；粗估
+  8–13 人日，已超过 WI221 的 provenance-only 边界。在新范围获批前不进入 runtime execute，也不启动 v0.9.9 版本变更。
 
 ## 11. 明确 No-Go 清单
 
@@ -326,7 +332,7 @@
 1. 分别用上文两个仓库 URL 定位远端，并以 `git ls-remote <仓库 URL> refs/heads/main` 核对 `main` 精确 SHA；需要读取树时，只在各自独立 checkout 中 fetch 对应 `origin/main`。不得把两个 checkout 的 `origin` 当作同一仓库，也不读取产品站和本地材料分支作为决策真值。
 2. 阅读本文件，核对“总体队列”和当前项状态，不重新从零生成 P0–P4。
 3. 核对当前远端主线是否已经改变相关能力。若没有改变，直接选择队列中第一个“下一项/排队”事项。
-4. 当前固定下一项是 **P2 普通用户单入口收敛**。P1 已按有证据 No-Go 关闭且未向主线保留实现或治理膨胀；使用 `.ai-sdlc/project/config/project-state.yaml` 的 next work item sequence 创建独立 formal work item。
+4. P2 已由 WI220 完成。当前 v0.9.9 固定门禁是 **WI221 release-target provenance recovery**；其 admission 审计为 11/16，默认保持 blocked。若要解除该发布门，必须先由用户另行批准覆盖 `098/099/100/101` 缺口的新范围，不能直接进入 v0.9.9。
 5. 路线图只作为规划输入；formal spec、plan、tasks、评审和用户 execute 批准仍分别完成。
 6. 每完成一个事项，在同一收口 PR 或紧随其后的 records-only PR 中更新：状态、实际投入、证据、未完成项、下一项和 handoff。
 7. 只有出现新事实导致价值、投入、风险或依赖显著变化时才重新排序；修订时保留旧决策和变化原因。
@@ -336,11 +342,11 @@
 - [x] P0 主线真值复位与轻量 ROI 合同已发布为 v0.9.8。
 - [ ] O1 在 3–5 个真实项目完成 v0.9.8 真值观察。
 - [x] P1 Diff-local Lean Advisory 已按运行时合同缺陷有证据 No-Go 关闭；实现未合并，主线保留 WI219 轻量 ROI prompt。
-- [ ] P2 普通用户单入口完成默认路径与高级兼容验证。（当前下一项）
+- [x] P2 普通用户单入口完成默认路径与高级兼容验证（WI220）。
 - [ ] P3 十二条首次用户路线完成真实 clean-environment E2E。
 - [ ] P4 Phase A 证明 Requirement/Design/Implementation 动态专家 ROI。
 - [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。
-- [ ] D2 在下一次要求 release target ready 前回填可证明的历史 provenance；当前保持真实 blocked。
+- [ ] D2/WI221 已完成 11/16 admission audit；当前保持真实 blocked，等待用户决定是否另行批准多能力补缺范围。
 
 当检查表与聊天记忆冲突时，以远端主线事实、正式 work item 和本文件最近一次经评审的更新为准。
