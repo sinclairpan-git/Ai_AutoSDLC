@@ -32,7 +32,7 @@
 | P1 | Diff-local Lean Advisory | **No-Go 已关闭（未合并）** | 8.0/10 | 实际：1 个 WI + 2 轮评审 | No-Go（及时止损） | P0 与 v0.9.8 已完成 |
 | P2 | 普通用户单入口收敛 | **已完成（WI220）** | 9.0/10 | 实际已投入 | 1.5（原估） | P1 已有证据 No-Go |
 | D2 | 历史 release-target provenance 恢复 | **WI221 admission No-Go；待用户决策** | 7.5/10 | 审计 <0.5 人日；补缺粗估 8–13 人日 | 0.6–0.9 | v0.9.9 的硬前置 |
-| P3 | 跨平台首次用户 12 路完整闭环 | **排队** | 9.5/10 | 6–10 人日 | 1.1 | P2 默认入口稳定 |
+| P3 | 跨平台首次用户 12 路完整闭环 | **WI222 formal/admission 进行中；runtime 未授权** | 9.5/10 | admission ≤1 人日；完整实现仍估 6–10 人日 | admission 优先 | P2 默认入口稳定 |
 | P4 | 五类 Loop 有界动态专家 | **条件候选** | 10/10 | 10–15 人日 | 0.6 | P1–P3 的真实收益支持继续投资 |
 
 此外保留两个非产品队列：`O1` 是发布后真实项目观察；`D1` 是无当前实现授权的延后候选。它们不得抢占 P1–P4 的正常产品顺序。
@@ -160,6 +160,13 @@
 
 ## 7. P3：跨平台首次用户 12 路完整闭环
 
+**状态：WI222 正在完成 P3-A formal/admission，尚未批准 runtime execute。** 基于
+`origin/main@2e507df62c65cdd6d3137764bb492dc445a82074` 的严格证据合同，当前为
+`0/12 proven、12/12 partial、0/12 missing`：指南覆盖了全部组合，三平台安装/发布 smoke 提供了共享基础，
+但没有任何一路形成同时包含正式资产完整性、`init/adopt`、`Result / Next`、主动恢复和版本绑定的自包含证据链。
+正式合同与逐路差距表见 `specs/222-first-user-twelve-route-e2e-contract/`。WI222 只冻结真值、ROI 和止损线，
+不得据此直接修改 workflow、runtime、release 或启动 v0.9.9。
+
 ### 7.1 目标与价值
 
 把“发布资产存在”升级为“新用户在干净环境中能完成安装、初始化/接入、得到成功证据，并能就地恢复”。
@@ -178,8 +185,8 @@
 
 ### 7.3 可直接派生的实施任务
 
-- [ ] 冻结一份 12 路用户指南发布标准，定义每条路线的准备、命令、证据和恢复合同。
-- [ ] 复用已有 Windows E2E、离线安装和三平台 release smoke，先做差距映射，不重写安装系统。
+- [x] WI222 冻结 12 路证据合同，定义每条路线的准备、命令、证据、恢复和版本绑定字段。
+- [x] WI222 复用已有 Windows E2E、离线安装和三平台 release smoke 完成差距映射，不重写安装系统。
 - [ ] 抽取跨平台共享步骤，使用矩阵参数化；禁止复制一份超过核心安装逻辑数倍的 POSIX workflow。
 - [ ] 补齐 macOS/Linux 完整 user-guide E2E、在线 bootstrap、系统 Python、下载工具和 glibc 等真实兼容边界。
 - [ ] 在干净 Windows/macOS/Linux 环境执行 12 条路线；模拟测试或文档 lint 不能替代真实 E2E。
@@ -343,7 +350,7 @@
 - [ ] O1 在 3–5 个真实项目完成 v0.9.8 真值观察。
 - [x] P1 Diff-local Lean Advisory 已按运行时合同缺陷有证据 No-Go 关闭；实现未合并，主线保留 WI219 轻量 ROI prompt。
 - [x] P2 普通用户单入口完成默认路径与高级兼容验证（WI220）。
-- [ ] P3 十二条首次用户路线完成真实 clean-environment E2E。
+- [ ] P3 十二条首次用户路线完成真实 clean-environment E2E；WI222 formal/admission 已启动，runtime 未授权。
 - [ ] P4 Phase A 证明 Requirement/Design/Implementation 动态专家 ROI。
 - [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。
