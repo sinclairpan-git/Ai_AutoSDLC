@@ -8,7 +8,7 @@ related_plan: docs/FRAMEWORK_ROADMAP.zh-CN.md
 
 ## 概述
 
-本阶段只完成 WI221 formal 建项和半天 admission audit。退出结果是可复核的 Go/No-Go，不是自动进入历史记录回填；发现任何真实实现缺口即停在用户决策门前。
+WI221 formal 建项和半天 admission audit 已通过 PR #187 合入主线。records-only closeout 只归档真实审计执行与远端主线证据，不自动进入历史记录回填；发现的真实实现缺口继续停在用户决策门前。
 
 ## 技术背景
 
@@ -74,7 +74,8 @@ tests/integration/test_repo_program_manifest.py  # 仅更新获批的两条固�
 
 ## 后续顺序
 
-1. 合并 WI221 formal/admission record。
-2. 默认保持 release target blocked，不在 WI221 内启动 runtime。
-3. 若用户明确要求解除发布门，先建立并评审覆盖 posture、resolver/action 与 apply continuity 的新范围；仅在批准且真实实现通过后回填可证明的 provenance。
-4. release target `ready` 后再进入 v0.9.9。
+1. PR #187 已合并 WI221 formal/admission record。
+2. 合并 records-only closeout，完成远端主线 truth/close-check 归档；不修改 runtime、classifier、测试基线或历史 blocker。
+3. 默认保持 release target blocked，不在 WI221 内启动 runtime。
+4. 若用户明确要求解除发布门，先建立并评审覆盖 posture、resolver/action 与 apply continuity 的新范围；仅在批准且真实实现通过后回填可证明的 provenance。
+5. release target `ready` 后再进入 v0.9.9。

@@ -2,7 +2,7 @@
 
 **功能编号**：`221-release-target-provenance-recovery`
 **创建日期**：2026-08-30
-**状态**：formal admission audit 完成；`needs_user`
+**状态**：formal admission audit 已合并；records-only closeout receipt 已形成；真实能力补缺 `needs_user`
 
 ## Batch 2026-08-30-001 | exact-main carrier census
 
@@ -92,3 +92,36 @@ carrier 均已对 exact `origin/main` 得到退出码 0；`098` 无 carrier，�
 - 已完成 git 提交：是（由本批 formal commit 统一承载）。
 - 提交哈希：`HEAD`（以 amend 后 exact SHA 重跑 truth-check）。
 - 下一步：完成第二轮 formal review；通过后提交 formal PR。不得启动 runtime implementation。
+
+### Batch 2026-08-30-002 | post-merge remote-truth closeout
+
+- **验证画像**：`truth-only`
+- **改动范围**：`docs/FRAMEWORK_ROADMAP.zh-CN.md`、`specs/221-release-target-provenance-recovery/spec.md`、`specs/221-release-target-provenance-recovery/plan.md`、`specs/221-release-target-provenance-recovery/tasks.md`、`specs/221-release-target-provenance-recovery/task-execution-log.md`、`program-manifest.yaml`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/221-release-target-provenance-recovery/codex-handoff.md`
+- **真实执行路径说明**：`docs/FRAMEWORK_ROADMAP.zh-CN.md` 是 WI221 建立后由 PR #187 实际修改并合入的非 formal-control 路径，用于归档 P2 已完成和 P3 独立排队的审计结果；该证据只证明 WI221 admission audit 已执行，不表示 095/098 runtime 已实现。
+- **本批 records-only 实际改动**：WI221 spec/plan/tasks/log、Program Truth snapshot 与 continuity handoff；不新增 `development-summary.md`，不改 `src/`、tests、历史 work-item log、classifier、P3 或 16 个 blocker，也不改变已批准的 inventory/close layer 基线 `1159/1159/0/2`、`220/218`。
+- **统一验证命令**：
+  - `uv run ai-sdlc workitem truth-check --wi specs/221-release-target-provenance-recovery --rev HEAD --json`
+  - `uv run pytest tests/integration/test_cli_workitem_truth_check.py -q`
+  - `uv run pytest tests/integration/test_repo_program_manifest.py -q`
+  - `uv run ai-sdlc verify constraints`
+  - `uv run ai-sdlc program validate`
+  - `uv run ai-sdlc workitem plan-check --wi specs/221-release-target-provenance-recovery`
+  - `uv run ai-sdlc program truth sync --dry-run`
+  - `uv run ai-sdlc program truth sync --execute --yes`
+  - `uv run ai-sdlc program truth audit`
+  - clean clone 中执行 `git fetch origin refs/heads/archive/221-release-target-provenance-recovery-pr187:refs/remotes/origin/archive/221-release-target-provenance-recovery-pr187`
+  - `git rev-parse refs/remotes/origin/archive/221-release-target-provenance-recovery-pr187`（必须等于 `66bb40994ab75131a64eca57484ec841bf83016f`）
+  - clean clone 中执行 `git branch archive/221-release-target-provenance-recovery-pr187 refs/remotes/origin/archive/221-release-target-provenance-recovery-pr187`
+  - `uv run ai-sdlc workitem close-check --wi specs/221-release-target-provenance-recovery --json`
+  - `git diff --check`
+- **代码审查**：PR #187 reviewed head=`66bb40994ab75131a64eca57484ec841bf83016f`；Codex 返回无重大问题；13 项 required/aggregate checks 全部通过；merge commit=`6e21daaa028e477092696c9b70cc1b85f4580035`。
+- **任务/计划同步状态**：T11-T15 已完成；五项 runtime/history/classifier/release 内容改为明确的“未授权且未执行”No-Go 清单，不再使用会被 close-check 当成未完成任务的 checkbox。spec/plan 保持 11/16 与 `needs_user`，没有把 release target 写成 ready。
+- **主线后验事实**：隔离远端副本的 exact `main@6e21daaa` 与 `git ls-remote origin refs/heads/main` 一致。closeout 前 truth-check 诚实返回 `formal_freeze_only`、`execution_started=false`、`contained_in_main=true`，原因是 latest batch 未以结构化路径记录已合入的 WI221 路线图执行载体；close-check 同时报出任务表达、验证画像、统一验证与 git lifecycle 字段缺口。本批只补真实 receipt，不修改 truth-check 规则。
+- **Program Truth**：closeout sync/audit 保持 snapshot fresh、source inventory `1159/1159` mapped、0 unmapped、missing 2、close `218/220`；两个 release target 继续由原 16 个历史 truth refs honest-blocked。
+- **ROI 裁决**：该 closeout 只消除归档歧义，不追求文案或细节优化。11/16 不足以解除发布门；8–13 人日真实能力补缺仍需单独定界和用户批准。
+- **已完成 git 提交**：是（PR #187 implementation/audit source 与评审整改已提交；本 closeout receipt envelope 不自引用自身）
+- **提交哈希**：reviewed head=`66bb40994ab75131a64eca57484ec841bf83016f`；main merge=`6e21daaa028e477092696c9b70cc1b85f4580035`
+- 关联 branch/worktree disposition 计划：`archived(PR #187 squash carrier retained locally)`
+- 当前批次 branch disposition 状态：`archived(PR #187 squash carrier retained locally)`
+- 当前批次 worktree disposition 状态：`removed`
+- **生效边界**：上述最终 disposition 与 `mainline_merged` 只在本 records-only closeout PR 合入远端 `main` 后成立；用户排除的本地材料/产品站分支和 worktree 不属于本批范围。
