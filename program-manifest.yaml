@@ -2083,12 +2083,15 @@ specs:
 - id: 221-release-target-provenance-recovery
   path: specs/221-release-target-provenance-recovery
   depends_on: []
+- id: 222-first-user-twelve-route-e2e-contract
+  path: specs/222-first-user-twelve-route-e2e-contract
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-08-30T11:52:31Z'
+  generated_at: '2026-08-30T15:57:37Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 5971a89e
-  authoring_hash: 5bad2b5cf7117906b1ee7a07ceda4bdd06e350745ff89a5d94569a1c5ba24b6c
+  repo_revision: 2e507df6
+  authoring_hash: 41982bbe8f35cbb79ae50782c51c9439fd117d0bd683c38a809aaa302d4f7aa2
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 694fbf058775409c9ac373054323501942cebddcce74f540b4a8df9e9c2ce5a9
@@ -2130,7 +2133,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 1095f01a482ba76cb1bc5d55585fa0c1feaba1f1c54d67a704e94294b6794be8
+  snapshot_hash: c5d6b66a6b090f894ccfec16f7592452a0d006a07686074c7a9fe396bf0ca352
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2160,30 +2163,30 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1159
-    mapped_sources: 1159
+    total_sources: 1164
+    mapped_sources: 1164
     unmapped_sources: 0
-    missing_sources: 2
-    phase_signal_count: 3794
-    deferred_signal_count: 6783
-    non_goal_signal_count: 401
+    missing_sources: 3
+    phase_signal_count: 3822
+    deferred_signal_count: 6831
+    non_goal_signal_count: 403
     layer_totals:
       blueprint: 1
-      spec: 220
-      plan: 220
-      tasks: 220
-      execution: 220
-      close: 220
+      spec: 221
+      plan: 221
+      tasks: 221
+      execution: 221
+      close: 221
       design: 9
       requirements: 2
       defect: 3
       release: 44
     layer_materialized:
       blueprint: 1
-      spec: 220
-      plan: 220
-      tasks: 220
-      execution: 220
+      spec: 221
+      plan: 221
+      tasks: 221
+      execution: 221
       close: 218
       design: 9
       requirements: 2
@@ -12099,14 +12102,59 @@ truth_snapshot:
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0
+    - path: specs/222-first-user-twelve-route-e2e-contract/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 222-first-user-twelve-route-e2e-contract
+      phase_signal_count: 6
+      deferred_signal_count: 16
+      non_goal_signal_count: 1
+    - path: specs/222-first-user-twelve-route-e2e-contract/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 222-first-user-twelve-route-e2e-contract
+      phase_signal_count: 8
+      deferred_signal_count: 12
+      non_goal_signal_count: 0
+    - path: specs/222-first-user-twelve-route-e2e-contract/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 222-first-user-twelve-route-e2e-contract
+      phase_signal_count: 6
+      deferred_signal_count: 10
+      non_goal_signal_count: 1
+    - path: specs/222-first-user-twelve-route-e2e-contract/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 222-first-user-twelve-route-e2e-contract
+      phase_signal_count: 7
+      deferred_signal_count: 9
+      non_goal_signal_count: 0
+    - path: specs/222-first-user-twelve-route-e2e-contract/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 222-first-user-twelve-route-e2e-contract
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
     - path: docs/FRAMEWORK_ROADMAP.zh-CN.md
       source_type: design_doc
       truth_layer: design
       mapped: true
       exists: true
       mapping_ref: docs/FRAMEWORK_ROADMAP.zh-CN.md
-      phase_signal_count: 18
-      deferred_signal_count: 20
+      phase_signal_count: 19
+      deferred_signal_count: 21
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
