@@ -11,14 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/224-native-release-attestation-r02/tasks.md
   - specs/224-native-release-attestation-r02/spec.md
-  context_summary: 'Goal: 交付 WI224 bounded implementation；PR #194 进入 exact-head review/check
-    监控 | State: PR #194 是唯一 dev 载体；live remote PR HEAD 是唯一评审候选；producer run 33387100262、manual
-    partial run 33388433742 与本地全量 3412/3 已通过 | Next: 冻结并提交当前树，推送到 PR #194，标记 ready
-    并请求一次 Codex review；监控 review 与 required checks，聚焦修复最多两轮，clean/green 后 merge'
+  context_summary: 'Goal: 完成 WI224 PR #194 首轮 P2 聚焦修复并进入 exact-live-head 复评 | State:
+    首轮 Codex review 的 fork 自然发布下载仓库绑定 P2 已完成 RED→GREEN；产品范围仅改 Windows workflow，测试与本地门禁全部通过，等待提交推送
+    | Next: 提交并推送当前聚焦修复到 PR #194；从 clean pushed tree 生成稳定 PR-monitor continuity，推送后更新
+    heartbeat exact head 并只请求一次 Codex 复评'
 current_branch: feature/224-native-release-attestation-r02
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-31T12:10:36+00:00'
+timestamp: '2026-08-31T12:43:09+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-31T07:12:30+00:00'
 checkpoint_fingerprint: b47fe77b2fabc3abb8a72b3052929c7cf195b740a4de40d9c5fad7c378e6aab2

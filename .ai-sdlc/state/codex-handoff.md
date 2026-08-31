@@ -1,31 +1,29 @@
 # Continuity Handoff
 
-- Updated: 2026-08-31T12:10:36+00:00
-- Reason: stable PR-monitor continuity before final exact-tree verification
-- Goal: 交付 WI224 bounded implementation；PR #194 进入 exact-head review/check 监控
-- State: PR #194 是唯一 dev 载体；live remote PR HEAD 是唯一评审候选；producer run 33387100262、manual partial run 33388433742 与本地全量 3412/3 已通过
+- Updated: 2026-08-31T12:43:09+00:00
+- Reason: Codex review round 1 focused P2 remediation validated
+- Goal: 完成 WI224 PR #194 首轮 P2 聚焦修复并进入 exact-live-head 复评
+- State: 首轮 Codex review 的 fork 自然发布下载仓库绑定 P2 已完成 RED→GREEN；产品范围仅改 Windows workflow，测试与本地门禁全部通过，等待提交推送
 - Stage: close
 - Work Item: 224-native-release-attestation-r02
 - Branch: feature/224-native-release-attestation-r02
 
 ## Changed Files
-- M .ai-sdlc/state/codex-handoff.md
-- M .ai-sdlc/state/resume-pack.yaml
-- M .ai-sdlc/work-items/224-native-release-attestation-r02/codex-handoff.md
+- M .github/workflows/windows-user-guide-e2e.yml
 - M specs/224-native-release-attestation-r02/task-execution-log.md
-- M specs/224-native-release-attestation-r02/tasks.md
+- M tests/integration/test_github_workflows.py
 
 ## Key Decisions
-- 冻结三个产品文件范围；Codex review 最多两轮；只处理直接影响安全/正确性/范围/真值的聚焦 finding，禁止继续磨细枝末节
+- 自然 release 下载源绑定 GITHUB_REPOSITORY；workflow_dispatch 手工 replay 保留官方上游；不扩展 WI224 范围，不重跑未受影响的约 15 分钟全量套件
 
 ## Commands / Tests
-- T20 3 failed/9 passed→T21 12 passed；T30 2 failed/12 passed→T31 14 passed；full 3412 passed/3 skipped；manifest truth 1 passed；所有门禁 PASS
+- focused workflow contract: 1 failed/13 passed -> 14 passed; Ruff/YAML/PowerShell AST/diff-check/constraints/plan-check/program validate PASS
 
 ## Blockers / Risks
-- 自然 release receipt 未发生，路线保持 0/12 proven、12/12 partial；这不是 PR blocker。Program Truth 的 16 个历史 blocker 不在本 WI 删除范围
+- 自然 release receipt 尚未发生，保持 0/12 proven、12/12 partial；16 个历史 Program Truth blocker 不在本 WI 删除范围
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 冻结并提交当前树，推送到 PR #194，标记 ready 并请求一次 Codex review；监控 review 与 required checks，聚焦修复最多两轮，clean/green 后 merge
+- 提交并推送当前聚焦修复到 PR #194；从 clean pushed tree 生成稳定 PR-monitor continuity，推送后更新 heartbeat exact head 并只请求一次 Codex 复评

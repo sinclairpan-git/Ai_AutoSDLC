@@ -335,7 +335,10 @@ def test_windows_user_guide_e2e_verifies_natural_release_before_install() -> Non
     assert "github.event.release.tag_name" in job["env"]["RELEASE_TAG"]
     assert "github.event.release.tag_name" in checkout["with"]["ref"]
     assert '$releaseVersion = $env:RELEASE_TAG -replace' in replay
-    assert 'releases/download/$env:RELEASE_TAG/$PackageName' in replay
+    assert '$releaseRepository = if ($env:GITHUB_EVENT_NAME -eq "release")' in replay
+    assert '$env:GITHUB_REPOSITORY' in replay
+    assert '"sinclairpan-git/Ai_AutoSDLC"' in replay
+    assert 'https://github.com/$releaseRepository/releases/download/$env:RELEASE_TAG/$PackageName' in replay
     assert "USER_GUIDE.zh-CN.md" in replay
 
     verify_index = replay.index("gh attestation verify")

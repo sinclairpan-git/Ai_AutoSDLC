@@ -57,3 +57,11 @@
 - **剩余真值**：实现 PR 只能证明 producer 和 manual partial；自然 `release.published` 尚未发生，因此合并后仍保持 `0/12 proven、12/12 partial`，未来真实 receipt 另做最小 closeout。
 - **PR 载体**：draft PR #194 已创建；最终评审候选只认 push 后的 live remote PR HEAD，不把 draft 创建时的 predecessor SHA 当成 review target。
 - **下一步**：最终 continuity 后冻结候选，复跑 exact-tree 全量验证，提交推送并将 PR #194 标记 ready；请求 Codex review，最多两轮，clean/green 后合并。
+
+## Batch 2026-08-31-007 | T42 Codex review round 1 focused P2
+
+- **评审 finding**：PR #194 exact head `f6f055ca57a3df6467618b13dc4080ad11705808` 的首轮 Codex review 指出，fork 中的自然 `release.published` 会从固定官方上游下载，但随后按 fork 的 `GITHUB_REPOSITORY` 验证，导致仓库身份自相矛盾。
+- **RED→GREEN**：先把合同收紧为“自然 release 使用当前 `GITHUB_REPOSITORY`，手工 replay 才使用官方上游”；同一 focused suite 从 `1 failed, 13 passed` 转为 `14 passed`。
+- **聚焦修复**：只在现有 Windows R02 workflow 中按事件选择下载仓库；未改 producer、runtime、installer、USER_GUIDE、版本状态、receipt 字段或路线真值。
+- **复验**：focused `14 passed`；Ruff、两份 workflow YAML parse、内嵌 PowerShell AST、`git diff --check`、constraints、plan-check（`Drift=NO`）与 program validate 全部通过。既有 exact-tree 全量 `3412 passed, 3 skipped` 不因本次单一字符串/分支绑定修复重复消耗约 15 分钟。
+- **剩余边界**：保持 `0/12 proven、12/12 partial` 与 16 个历史 Program Truth blocker；推送同一 PR 后仅再请求一次 exact-live-head Codex review，仍受最多两轮约束。

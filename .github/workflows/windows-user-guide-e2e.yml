@@ -145,7 +145,12 @@ jobs:
             }
             Copy-Item -LiteralPath $localPackage.FullName -Destination $packagePath -Force
           } else {
-            $downloadUri = "https://github.com/sinclairpan-git/Ai_AutoSDLC/releases/download/$env:RELEASE_TAG/$PackageName"
+            $releaseRepository = if ($env:GITHUB_EVENT_NAME -eq "release") {
+              $env:GITHUB_REPOSITORY
+            } else {
+              "sinclairpan-git/Ai_AutoSDLC"
+            }
+            $downloadUri = "https://github.com/$releaseRepository/releases/download/$env:RELEASE_TAG/$PackageName"
             Invoke-WebRequest -Uri $downloadUri -OutFile $packagePath
           }
 
