@@ -2,8 +2,8 @@
 
 **功能编号**：`222-first-user-twelve-route-e2e-contract`
 **创建日期**：2026-08-30
-**状态**：formal/admission 本地验证与独立评审整改完成；PR/Codex review 待完成
-**验证 profile**：`code-change`（唯一代码侧变更是固定 Program Truth 库存期望；无 runtime/测试逻辑变更）
+**状态**：formal/admission 已由 PR #189 合入主线；post-merge remote-truth closeout 进行中
+**验证 profile**：formal PR 使用 `code-change`；post-merge 收口使用 `truth-only`，均无 runtime/测试逻辑变更
 
 ## 1. 归档规则
 
@@ -90,3 +90,54 @@
 - 后续唯一候选是 R02 正式 release route receipt；必须在本 formal PR 合并后重新请求 execute 批准。
 - 本批提交哈希：`HEAD`（本批唯一语义提交，以 PR exact head 复核）。
 - 是否继续 runtime：否；等待 formal review/merge 与新的用户批准。
+
+### Batch 2026-08-30-002 | PR #189 post-merge remote-truth closeout
+
+- **验证画像**：`truth-only`
+- **改动范围**：`specs/222-first-user-twelve-route-e2e-contract/tasks.md`、`specs/222-first-user-twelve-route-e2e-contract/task-execution-log.md`、`program-manifest.yaml`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/222-first-user-twelve-route-e2e-contract/codex-handoff.md`
+- **本批边界**：只补 WI222 的任务完成、验证、审查、git closure、branch/worktree lifecycle 与 continuity receipt；不新增 `development-summary.md`，不修改 runtime、workflow、installer、USER_GUIDE 正文、tests、release/version、D2/P4、历史 execution log 或 truth classifier。
+- **真实终态**：WI222 是已合入主线的 formal/admission carrier，终态必须保持 `formal_freeze_only`、`execution_started=false`、`contained_in_main=true`；该终态不表示 R01-R12 中任何路线已升级为 runtime `proven`。
+
+#### 2.2 统一验证命令
+
+- `uv run ai-sdlc verify constraints`
+- `uv run ai-sdlc workitem plan-check --wi specs/222-first-user-twelve-route-e2e-contract`
+- `uv run ai-sdlc program validate`
+- `uv run ai-sdlc program truth sync --dry-run`
+- `uv run ai-sdlc program truth sync --execute --yes`
+- `uv run ai-sdlc program truth audit`
+- `uv run ai-sdlc workitem truth-check --wi specs/222-first-user-twelve-route-e2e-contract --rev HEAD --json`
+- `uv run ai-sdlc workitem close-check --wi specs/222-first-user-twelve-route-e2e-contract --json`
+- `uv run pytest tests/integration/test_repo_program_manifest.py -q`
+- `uv run pytest tests/integration/test_github_workflows.py -q`
+- clean clone 中执行 `git fetch origin refs/heads/archive/222-first-user-twelve-route-e2e-contract-pr189:refs/remotes/origin/archive/222-first-user-twelve-route-e2e-contract-pr189`
+- `git rev-parse refs/remotes/origin/archive/222-first-user-twelve-route-e2e-contract-pr189`，结果必须等于 `7946629a563c69181865a97ddb37060a8f10837d`
+- clean clone 中执行 `git branch archive/222-first-user-twelve-route-e2e-contract-pr189 refs/remotes/origin/archive/222-first-user-twelve-route-e2e-contract-pr189`
+- `git diff --check`
+
+#### 2.3 任务记录
+
+- T11-T32 全部完成；PR #189 reviewed head `7946629a563c69181865a97ddb37060a8f10837d` 已 squash merge 到 exact `origin/main@024c38a4607ea86b83d60330410c49c2e2e70d5c`。
+- 隔离远端副本在 closeout 前返回 `formal_freeze_only / execution_started=false / contained_in_main=true`；六个 close-check 阻塞全部是未归档的任务、验证、审查和 git lifecycle receipt，不是 runtime 缺口。
+- PR #189 原 feature ref 在远端 archive 精确保存并核验后才移除；旧 WI222 worktree 经 clean 检查后移除。归档 ref 为 `archive/222-first-user-twelve-route-e2e-contract-pr189@7946629a563c69181865a97ddb37060a8f10837d`。
+- Program Truth 必须保持 snapshot fresh/blocked、原 16 个 blocker、`1164/1164 mapped`、`missing 3`、close `218/221`；R02 runtime 薄片仍未授权。
+
+#### 2.4 代码审查（`rules/code-review.md` 摘要）
+
+- PR #189 exact head `7946629a563c69181865a97ddb37060a8f10837d` 的 Codex re-review 无可操作问题，required checks 全部通过后合入；本批沿用已批准的 records/truth/continuity-only 边界，不借收口追加实现或细枝末节。
+- 六维自审结论：规格真值、任务可追溯性、验证证据、兼容边界、可维护性和 ROI 止损均 PASS；唯一待外部复核事项是本 records-only closeout PR 的 exact-head review。
+
+#### 2.5 任务/计划同步状态（Mandatory）
+
+- `tasks.md`：T11-T32 全部完成；T32 仅表示 formal PR #189 已完成，不表示 runtime execute 已启动。
+- `related_plan`：roadmap 的 P3-A formal/admission 事实保持不变；R02 runtime 工作继续 defer，需新授权。
+- 关联 branch/worktree disposition 计划：`archived(PR #189 squash carrier retained at exact remote archive ref)`
+
+#### 2.8 归档后动作
+
+- **已完成 git 提交**：是（本 Batch 002 首次由 closeout records commit `2488d89e74b5cff71e0c537efdf907144f9e6076` 承载）
+- **提交哈希**：closeout records=`2488d89e74b5cff71e0c537efdf907144f9e6076`；PR #189 reviewed head=`7946629a563c69181865a97ddb37060a8f10837d`；main merge=`024c38a4607ea86b83d60330410c49c2e2e70d5c`
+- 当前批次 branch disposition 状态：`archived(PR #189 squash carrier retained at exact remote archive ref)`
+- 当前批次 worktree disposition 状态：`removed`
+- **生效边界**：最终零阻塞 close-check 只在本 records-only closeout PR 合入远端 `main`、其临时分支被处置，并在 isolated remote clone 中 materialize 上述 archive branch 后成立。
+- **下一步**：只完成本 closeout PR 的验证、Codex review、合并和 exact-main 复核；随后结束 WI222，不自动启动 R02 或其他 P3 runtime。
