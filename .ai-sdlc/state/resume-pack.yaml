@@ -5,23 +5,19 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/222-first-user-twelve-route-e2e-contract/spec.md
-  plan_path: specs/222-first-user-twelve-route-e2e-contract/plan.md
-  tasks_path: specs/222-first-user-twelve-route-e2e-contract/tasks.md
+  spec_path: specs/224-native-release-attestation-r02/spec.md
+  plan_path: specs/224-native-release-attestation-r02/plan.md
+  tasks_path: specs/224-native-release-attestation-r02/tasks.md
   active_files:
-  - specs/222-first-user-twelve-route-e2e-contract/tasks.md
-  - specs/222-first-user-twelve-route-e2e-contract/spec.md
-  context_summary: 'Goal: Monitor and merge WI222 records-only closeout PR #190 without
-    runtime expansion | State: PR #190 remains draft; exact-head review at 1a63333e
-    found one P2 stale changed-files inventory; current branch lineage contains only
-    the focused clean-state handoff regeneration and the live remote HEAD remains
-    the sole candidate | Next: Resolve PR #190 live remote HEAD before every decision;
-    request Codex review after this handoff-only head change; merge only when that
-    exact live HEAD is clean and green, then run isolated exact-main closeout'
-current_branch: codex/wi222-post-merge-truth-closeout
+  - specs/224-native-release-attestation-r02/tasks.md
+  - specs/224-native-release-attestation-r02/spec.md
+  context_summary: 'Goal: 完成 WI224 formal PR #192 评审并在 clean/green 后合并 | State: PR #192
+    前两轮各返回 1 个 continuity P2；用户只授权修正第二轮 execution-log 状态并进行一次 final review，当前等待 live remote head
+    的最终结论 | Next: 等待 live remote PR head 的 final Codex review'
+current_branch: feature/224-native-release-attestation-r02-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-31T01:56:21+00:00'
+timestamp: '2026-08-31T08:12:41+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-08-30T15:12:18+00:00'
-checkpoint_fingerprint: 2a35828c2346fc2512ca525f2eab0c8039e011a77707e6d0af9ab1020dd8be48
+checkpoint_last_updated: '2026-08-31T07:12:30+00:00'
+checkpoint_fingerprint: b47fe77b2fabc3abb8a72b3052929c7cf195b740a4de40d9c5fad7c378e6aab2
