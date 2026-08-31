@@ -28,17 +28,29 @@ Batch 6: next natural release evidence (deferred; no release authorization)
 - **文件**：`spec.md`、`plan.md`、`tasks.md`、`task-execution-log.md`、`docs/FRAMEWORK_ROADMAP.zh-CN.md`、`program-manifest.yaml`
 - **验收**：
   - [x] 固定 exact main、v0.9.8 Windows digest、release run 与 `3407/3` 基线。
-  - [x] 只批准 R02；记录真实 `release` event 才能 `proven`。
+  - [x] 只批准 R02；记录真实 `release` event 与 build provenance 同时成立才能 `proven`。
   - [x] 固定 3 人日、两轮 review、无 runtime/installer/version/D2/P4 的退出条件。
   - [x] `plan-check`、Program Truth 同步、constraints、库存测试和 diff-check 通过。
 - **提交**：`docs: formalize WI223 R02 release route proof`
 
-## Batch 2：RED route proof contracts
+## Batch 2：build provenance and route proof RED
+
+### T20：先写 release-build provenance 合同并实现最小 sidecar
+
+- **优先级**：P0 / blocked
+- **依赖**：T11 formal PR 合并；用户另行批准修改 `release-build.yml`
+- **文件**：修改 `tests/integration/test_github_workflows.py`、`.github/workflows/release-build.yml`
+- **步骤**：
+  - [ ] 先写 RED，要求 release build checkout 精确使用 `ref: ${{ inputs.tag }}`，并要求 workflow 生成 `release-build-provenance.json`。
+  - [ ] sidecar 只包含 `schema_version`、`release_tag`、`source_commit`、`archive_name`、`archive_digest`、`workflow_run_id`；不新增通用 attestation 框架或持久化 ledger。
+  - [ ] 在上传前验证 `$GITHUB_SHA`/checkout commit 等于 tag commit，并用实际 archive SHA256 写 `archive_digest`；不一致时禁止 `gh release upload`。
+  - [ ] 将 sidecar 与对应 archive 一起上传到同一 release；focused test 由 RED 转 GREEN。
+- **提交**：与 T21/T31 的同一 provenance + receipt 逻辑批次提交。
 
 ### T21：先写共享执行器与 receipt 合同测试
 
 - **优先级**：P0
-- **依赖**：T11 formal PR 合并；用户另行批准 release-build provenance 扩展
+- **依赖**：T20 provenance sidecar 合同已 GREEN
 - **文件**：新建 `tests/integration/test_windows_r02_route_proof.py`
 - **接口**：测试读取 `scripts/ci/Invoke-WindowsR02RouteProof.ps1`，要求脚本公开 plan 中的五个参数，并固定 R02 与 12 字段。
 - **步骤**：
@@ -50,10 +62,11 @@ Batch 6: next natural release evidence (deferred; no release authorization)
         for field in _REQUIRED_RECEIPT_FIELDS:
             assert f'"{field}"' in script
         assert '$env:GITHUB_EVENT_NAME -eq "release"' in script
-        assert 'status = if ($isFormalReleaseProof) { "proven" } else { "partial" }' in script
+        assert '$buildProvenanceVerified' in script
+        assert 'status = if ($isFormalReleaseProof -and $buildProvenanceVerified) { "proven" } else { "partial" }' in script
     ```
 
-  - [ ] 增加 digest fail-closed、`resume-pack.yaml` 故障注入、`recover` 执行、业务 hash 再比较的文本合同断言。
+  - [ ] 增加 sidecar 的 `source_commit == tag commit`、`archive_digest == local digest`、digest fail-closed、`resume-pack.yaml` 故障注入、`recover` 执行和业务 hash 再比较断言。
   - [ ] 运行 `uv run pytest tests/integration/test_windows_r02_route_proof.py -q`，记录预期 FAIL 为缺少脚本，而不是语法/收集错误。
 - **提交**：与 T31 的 GREEN 实现合并为同一逻辑批次提交，不单独提交永久 RED。
 
@@ -64,8 +77,8 @@ Batch 6: next natural release evidence (deferred; no release authorization)
 - **优先级**：P0
 - **依赖**：T21 RED 已记录；build provenance 范围已获新授权
 - **文件**：新建 `scripts/ci/Invoke-WindowsR02RouteProof.ps1`
-- **输入**：`ArchivePath`、`ReleaseTag`、`PackageSourceMode`、`EvidenceRoot`、`ProjectRoot`
-- **输出**：安装/init/adopt/recover 日志、业务文件前后 hash、release metadata、`route-receipt.json`
+- **输入**：`ArchivePath`、`BuildProvenancePath`、`ReleaseTag`、`PackageSourceMode`、`EvidenceRoot`、`ProjectRoot`
+- **输出**：安装/init/adopt/recover 日志、业务文件前后 hash、release/build metadata、`route-receipt.json`
 - **步骤**：
   - [ ] 从现有 Windows guide replay 抽取已有项目构造、安装、direct shim、stale PATH、init/adopt 与业务文件保护；不增加新的产品行为。
   - [ ] `published_release` 模式运行：
@@ -75,11 +88,19 @@ Batch 6: next natural release evidence (deferred; no release authorization)
     $asset = $release.assets | Where-Object { $_.name -eq (Split-Path $ArchivePath -Leaf) }
     $localDigest = "sha256:$((Get-FileHash -Algorithm SHA256 -LiteralPath $ArchivePath).Hash.ToLowerInvariant())"
     if (-not $asset.digest -or $asset.digest -ne $localDigest) { throw "release asset digest mismatch" }
+    $provenance = Get-Content -LiteralPath $BuildProvenancePath -Raw | ConvertFrom-Json
+    $tagCommit = $release.targetCommitish
+    $buildProvenanceVerified = (
+      $provenance.release_tag -eq $ReleaseTag -and
+      $provenance.source_commit -eq $tagCommit -and
+      $provenance.archive_name -eq $asset.name -and
+      $provenance.archive_digest -eq $localDigest
+    )
     ```
 
   - [ ] 在 init/adopt 后写坏 `.ai-sdlc/state/resume-pack.yaml`，执行 direct shim `recover`，验证恢复成功且 YAML 不再是注入内容。
   - [ ] 再次比较四个业务文件 hash；任何变化 fail closed。
-  - [ ] 用 `ConvertTo-Json -Depth 8` 写 receipt；仅 `$env:GITHUB_EVENT_NAME -eq "release"`、published digest 匹配和全部核心检查成功时输出 `proven`。
+  - [ ] 用 `ConvertTo-Json -Depth 8` 写 receipt；仅 `$env:GITHUB_EVENT_NAME -eq "release"`、published digest、build provenance 与全部核心检查同时成功时输出 `proven`。
   - [ ] 运行 focused test 由 RED 转 GREEN，并运行 PowerShell parser 无错误。
 - **提交**：`feat: add shared Windows R02 route proof executor`
 

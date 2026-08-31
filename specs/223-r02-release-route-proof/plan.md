@@ -62,13 +62,27 @@ program-manifest.yaml
 ```powershell
 pwsh -NoProfile -File scripts/ci/Invoke-WindowsR02RouteProof.ps1 `
   -ArchivePath <absolute-zip> `
+  -BuildProvenancePath <absolute-json> `
   -ReleaseTag <vX.Y.Z> `
   -PackageSourceMode <pull_request_local_bundle|published_release> `
   -EvidenceRoot <absolute-dir> `
   -ProjectRoot <absolute-dir>
 ```
 
-执行器从 GitHub Actions 环境读取 `GITHUB_EVENT_NAME`、`GITHUB_REPOSITORY`、`GITHUB_RUN_ID`、`GITHUB_SHA`、`GITHUB_WORKFLOW_REF` 和 `RUNNER_*`。`published_release` 模式需要 `GH_TOKEN` 并通过 `gh release view` 取得 asset digest；本地产物模式明确记录无正式 digest。
+执行器从 GitHub Actions 环境读取 `GITHUB_EVENT_NAME`、`GITHUB_REPOSITORY`、`GITHUB_RUN_ID`、`GITHUB_SHA`、`GITHUB_WORKFLOW_REF` 和 `RUNNER_*`。`published_release` 模式需要 `GH_TOKEN`，通过 `gh release view` 取得 asset digest，并读取 `release-build-provenance.json` 验证 tag、build source commit、archive name/digest 与 run；本地产物模式明确记录无正式 provenance。
+
+候选 provenance sidecar 固定为最小结构：
+
+```json
+{
+  "schema_version": "1.0",
+  "release_tag": "vX.Y.Z",
+  "source_commit": "40-char commit",
+  "archive_name": "ai-sdlc-offline-X.Y.Z-windows-amd64.zip",
+  "archive_digest": "sha256:...",
+  "workflow_run_id": "..."
+}
+```
 
 `route-receipt.json` 顶层结构固定为：
 
@@ -110,10 +124,12 @@ pwsh -NoProfile -File scripts/ci/Invoke-WindowsR02RouteProof.ps1 `
 
 只有用户明确批准以下新增范围后才解锁本阶段：允许聚焦修改 `release-build.yml`，固定构建 ref 并输出可验证 provenance sidecar；否则本阶段取消。
 
-1. 在 dev 分支先增加 focused tests，要求 build provenance、共享执行器、12 字段、恢复与事件分级；运行并记录 RED。
-2. 抽出 `Invoke-WindowsR02RouteProof.ps1`，从 Windows guide workflow 删除内联核心块，使 RED 转 GREEN。
-3. 将 release artifact smoke Windows job 改为同一执行器的薄调用；保留 `verify_offline_bundle.py` 和 POSIX jobs。
-4. 运行 focused tests、YAML parse、PowerShell parser、Ruff、constraints 与全量 pytest。
+1. 在 dev 分支先增加 release-build RED：checkout 必须绑定 `inputs.tag`，sidecar 必须记录 tag/source/archive digest/run，上传前必须验证 source commit 等于 tag commit。
+2. 最小修改 `release-build.yml` 生成并上传 sidecar；不新增通用 attestation 层。
+3. 增加 R02 focused RED，要求 sidecar source/tag 和 archive digest 验证、共享执行器、12 字段、恢复与事件分级。
+4. 抽出 `Invoke-WindowsR02RouteProof.ps1`，从 Windows guide workflow 删除内联核心块，使 RED 转 GREEN。
+5. 将 release artifact smoke Windows job 改为同一执行器的薄调用；保留 `verify_offline_bundle.py` 和 POSIX jobs。
+6. 运行 focused tests、YAML parse、PowerShell parser、Ruff、constraints 与全量 pytest。
 
 ### Phase 3：真实 PR Windows 验证与 Lean 复核
 

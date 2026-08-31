@@ -120,3 +120,24 @@
 - `uv run pytest tests/integration/test_repo_program_manifest.py -q`：`1 passed in 145.79s`，无并发状态写入。
 - `uv run ai-sdlc verify constraints`：`no BLOCKERs`。
 - `git diff --check` 与 formal 文档行尾扫描：`PASS`；提交后还必须执行 commit-range diff-check。
+
+## 4. Batch 2026-08-31-003 | 第二轮 Codex review remediation
+
+### 4.1 Finding 与核验
+
+- Review 指出 spec 已要求 build provenance，但 `tasks.md` 的 RED 和 receipt 任务仍只要求 release event + asset digest；执行者可能再次产生假 `proven`。核验 T21/T31 后 finding 成立。
+
+### 4.2 聚焦整改
+
+- 在 blocked Batch 2 中增加 T20：只有用户批准后，先以 RED 约束 `release-build.yml` 固定 tag checkout，并生成最小 provenance sidecar。
+- T21 RED 明确断言 sidecar source commit 等于 tag commit、archive digest 等于本地/Release digest。
+- T31 receipt 只有在 `$isFormalReleaseProof -and $buildProvenanceVerified` 时才能 `proven`。
+- plan 同步 sidecar 最小字段和阶段顺序；未获得新增授权前所有任务保持 blocked，不修改实际 workflow。
+
+### 4.3 验证
+
+- `workitem plan-check`：`Pending todos=0`、`Drift=NO`；`program validate`：`PASS`。
+- Program Truth dry-run/execute 保持原 16 blocker、`1169/1169 mapped`、missing `4`、close `218/222`；写入 snapshot hash `6dbd9a3537965a85460ed9fa2dcee93e5a65d4f25f05b4b7ead80a02e1b615ad`。
+- `uv run pytest tests/integration/test_repo_program_manifest.py -q`：`1 passed in 154.70s`。
+- `uv run ai-sdlc verify constraints`：`no BLOCKERs`；working-tree diff-check 与行尾扫描 `PASS`。
+- 本批提交后执行 commit-range diff-check，再从 clean committed state 刷新 continuity。
