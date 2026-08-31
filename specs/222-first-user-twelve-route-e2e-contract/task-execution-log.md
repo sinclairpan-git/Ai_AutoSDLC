@@ -135,8 +135,8 @@
 
 #### 2.8 归档后动作
 
-- **已完成 git 提交**：是（由 PR #189 formal carrier 承载；本 closeout receipt 不自引用自身）
-- **提交哈希**：reviewed head=`7946629a563c69181865a97ddb37060a8f10837d`；main merge=`024c38a4607ea86b83d60330410c49c2e2e70d5c`
+- **已完成 git 提交**：是（本 Batch 002 首次由 closeout records commit `2488d89e74b5cff71e0c537efdf907144f9e6076` 承载）
+- **提交哈希**：closeout records=`2488d89e74b5cff71e0c537efdf907144f9e6076`；PR #189 reviewed head=`7946629a563c69181865a97ddb37060a8f10837d`；main merge=`024c38a4607ea86b83d60330410c49c2e2e70d5c`
 - 当前批次 branch disposition 状态：`archived(PR #189 squash carrier retained at exact remote archive ref)`
 - 当前批次 worktree disposition 状态：`removed`
 - **生效边界**：最终零阻塞 close-check 只在本 records-only closeout PR 合入远端 `main`、其临时分支被处置，并在 isolated remote clone 中 materialize 上述 archive branch 后成立。
