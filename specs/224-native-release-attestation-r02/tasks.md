@@ -40,24 +40,24 @@ related_doc:
 
 ### T30：写 natural-release receipt RED（P0）
 
-- [ ] 测试先要求 `release.published`、动态 tag/asset、同 tag 指南命令匹配、安装前强验证、signed `buildTrigger=workflow_dispatch`、主动 recover 和 WI222 12 字段 receipt。
-- [ ] 测试要求 PR/manual receipt 恒为 `partial`，只有 natural release + 全部检查成功才能为 `proven`。
-- [ ] 运行 focused test，确认因现有 Windows workflow 缺少这些行为而失败。
+- [x] 测试先要求 `release.published`、动态 tag/asset、同 tag 指南命令匹配、安装前强验证、signed `buildTrigger=workflow_dispatch`、主动 recover 和 WI222 12 字段 receipt。
+- [x] 测试要求 PR/manual receipt 恒为 `partial`，只有 natural release + 全部检查成功才能为 `proven`。
+- [x] 运行 focused test，确认因现有 Windows workflow 缺少这些行为而失败。
 
 ### T31：实现 consumer 并转 GREEN（P0）
 
-- [ ] 保留现有 PR/manual 路径；新增自然 release tag 来源并移除仅阻止未来 tag 的硬编码分支，同时验证 checkout 中指南包含该 tag/asset。
-- [ ] release 路径下载后、解压前验证 attestation 的 repo/signer/ref/digest/trigger/runner。
-- [ ] 复用现有 init/adopt/Result-Next/业务 hash；主动损坏 continuity 后执行已发布 CLI `recover` 并复核业务文件。
-- [ ] 将 12 字段 `route-receipt.json` 写入现有 evidence artifact；不新增 workflow 或持久化状态。
+- [x] 保留现有 PR/manual 路径；新增自然 release tag 来源并移除仅阻止未来 tag 的硬编码分支，同时验证 checkout 中指南包含该 tag/asset。
+- [x] release 路径下载后、解压前验证 attestation 的 repo/signer/ref/digest/trigger/runner。
+- [x] 复用现有 init/adopt/Result-Next/业务 hash；主动损坏 continuity 后执行已发布 CLI `recover` 并复核业务文件。
+- [x] 将 12 字段 `route-receipt.json` 写入现有 evidence artifact；不新增 workflow 或持久化状态。
 
 ## Batch 4：真实验证与交付
 
 ### T41：远端 producer 证明（P0）
 
-- [ ] 从 dev exact head 创建临时 tag，以 `--ref <tag>` 调度 Release Build 且 `upload_to_release=false`。
-- [ ] 三平台 build/smoke/attest/verify 全绿；不得创建或修改 Release。
-- [ ] 查询 attestation 证据，确认 exact tag ref/commit/signer workflow。
+- [x] 从 dev exact head 创建临时 tag，以 `--ref <tag>` 调度 Release Build 且 `upload_to_release=false`。
+- [x] 三平台 build/smoke/attest/verify 全绿；不得创建或修改 Release。
+- [x] 查询 attestation 证据，确认 exact tag ref/commit/signer workflow。
 
 ### T42：Lean 复核、PR 与收口（P0）
 

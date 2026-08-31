@@ -295,8 +295,9 @@ def test_windows_user_guide_e2e_replays_existing_project_install_path() -> None:
     assert "pull_request_local_bundle" in workflow
     assert "USER_GUIDE.zh-CN.md Chapter 2, Scenario B" in workflow
     assert "my-existing-project" in workflow
-    assert "ai-sdlc-offline-0.9.8-windows-amd64" in workflow
-    assert "releases/download/v0.9.8" in workflow
+    assert '$releaseVersion = $env:RELEASE_TAG -replace' in workflow
+    assert '$BundleName = "ai-sdlc-offline-$releaseVersion-windows-amd64"' in workflow
+    assert "releases/download/$env:RELEASE_TAG/$PackageName" in workflow
     assert "Invoke-WebRequest" in workflow
     assert "Expand-Archive" in workflow
     assert "-ExecutionPolicy Bypass -File .\\install_offline.ps1 -AddToPath" in workflow
@@ -316,6 +317,70 @@ def test_windows_user_guide_e2e_replays_existing_project_install_path() -> None:
     assert "init/adopt modified existing business files" in workflow
     assert "windows-user-guide-existing-project-evidence" in workflow
     assert "actions/upload-artifact@v7" in workflow
+
+
+def test_windows_user_guide_e2e_verifies_natural_release_before_install() -> None:
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "windows-user-guide-e2e.yml").read_text(encoding="utf-8")
+    )
+    events = workflow.get("on", workflow.get(True))
+    job = workflow["jobs"]["existing-project-online-install"]
+    steps = job["steps"]
+    checkout = next(step for step in steps if step.get("uses") == "actions/checkout@v6")
+    replay = next(
+        step for step in steps if step.get("name") == "Replay Windows existing-project guide path"
+    )["run"]
+
+    assert events["release"]["types"] == ["published"]
+    assert "github.event.release.tag_name" in job["env"]["RELEASE_TAG"]
+    assert "github.event.release.tag_name" in checkout["with"]["ref"]
+    assert '$releaseVersion = $env:RELEASE_TAG -replace' in replay
+    assert 'releases/download/$env:RELEASE_TAG/$PackageName' in replay
+    assert "USER_GUIDE.zh-CN.md" in replay
+
+    verify_index = replay.index("gh attestation verify")
+    assert replay.index("Invoke-WebRequest") < verify_index < replay.index("Expand-Archive")
+    for required_contract in (
+        "--signer-workflow",
+        "--source-ref",
+        "--source-digest",
+        "--deny-self-hosted-runners",
+        "buildTrigger",
+        "workflow_dispatch",
+    ):
+        assert required_contract in replay
+
+
+def test_windows_user_guide_e2e_records_recovery_bound_r02_receipt() -> None:
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "windows-user-guide-e2e.yml").read_text(encoding="utf-8")
+    )
+    steps = workflow["jobs"]["existing-project-online-install"]["steps"]
+    replay = next(
+        step for step in steps if step.get("name") == "Replay Windows existing-project guide path"
+    )["run"]
+
+    assert "resume-pack.yaml" in replay
+    assert "& $directShim recover" in replay
+    assert '$receiptStatus = if ($env:GITHUB_EVENT_NAME -eq "release")' in replay
+    assert '"proven"' in replay
+    assert '"partial"' in replay
+    assert "route-receipt.json" in replay
+    for evidence_field in (
+        "route_id",
+        "environment",
+        "project_mode",
+        "acquisition_mode",
+        "source_binding",
+        "asset_integrity",
+        "installation",
+        "lifecycle",
+        "result_next",
+        "success_receipt",
+        "fault_recovery",
+        "evidence_links",
+    ):
+        assert evidence_field in replay
 
 
 def test_posix_offline_smoke_matrix_concurrency_is_job_scoped() -> None:
