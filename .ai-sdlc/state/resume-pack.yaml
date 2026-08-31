@@ -11,14 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/223-r02-release-route-proof/tasks.md
   - specs/223-r02-release-route-proof/spec.md
-  context_summary: 'Goal: 完成 WI223 R02 正式发布路线证明载体 formal，并在独立 review 后进入 dev 实现 |
-    State: Batch 001 formal complete；Program Truth 已同步；等待提交、formal PR、Codex review
-    与 required checks | Next: 恢复无关 Cursor adapter drift；复核 diff；提交并推送 formal 分支，创建
-    PR 并请求 Codex review'
+  context_summary: 'Goal: 完成 WI223 formal review 收口，保留 build provenance needs_user
+    边界 | State: Codex 三项 finding 已在正式提交中整改；WI223 dev 因 release-build provenance 超出原授权而停止
+    | Next: 每次决策先解析 PR #191 live remote HEAD；若最新 head 尚未 review 则只请求一次 Codex re-review；clean/green
+    后合并 formal 并停止 dev 执行等待用户决策'
 current_branch: feature/223-r02-release-route-proof-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-31T03:37:53+00:00'
+timestamp: '2026-08-31T04:06:57+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-31T03:33:28+00:00'
 checkpoint_fingerprint: 3a4d708b21f3726f85ed99456a2c086c90dc63f4d73954633940dbcac04737dd
