@@ -21,20 +21,20 @@ related_doc:
 - [x] 运行 constraints、plan-check、program validate/truth、manifest/workflow tests、Ruff、diff-check。
 - [x] 更新 execution log/continuity，提交 formal PR；两轮后经用户批准一次最终例外，final review 无 finding。
 - [x] formal PR required checks 全绿后合并，exact `origin/main@547e78fd4f03083f2e8c6bb6d258523c8776b0d7` 已验证。
-- [ ] post-merge truth closeout 合并后，再从新的 exact main 创建 dev 分支。
+- [x] post-merge truth closeout 合并后，再从新的 exact main 创建 dev 分支。
 
 ## Batch 2：Release Build producer
 
 ### T20：写 tag guard 与原生 attestation RED（P0）
 
-- [ ] 在 `test_github_workflows.py` 先要求：tag ref/commit guard；`id-token/attestations/artifact-metadata` 权限；`actions/attest@v4` 在 smoke 后、release upload 前；禁止 `.provenance.json`。
-- [ ] 运行 focused test，确认因现有 workflow 缺少这些行为而失败。
+- [x] 在 `test_github_workflows.py` 先要求：tag ref/commit guard；`id-token/attestations/artifact-metadata` 权限；`actions/attest@v4` 在 smoke 后、release upload 前；禁止 `.provenance.json`。
+- [x] 运行 focused test，确认因现有 workflow 缺少这些行为而失败。
 
 ### T21：实现最小 producer 并转 GREEN（P0）
 
-- [ ] Release Build checkout 精确 tag，验证 `GITHUB_REF == refs/tags/$RELEASE_TAG` 且 tag/checkout/GITHUB_SHA 相同。
-- [ ] 每个平台 archive 在 smoke 后签发，并执行 `gh attestation verify --repo ... --signer-workflow ... --source-ref ... --source-digest ... --deny-self-hosted-runners`。
-- [ ] 签发/复验失败时不得执行 `gh release upload`；focused test 转 GREEN。
+- [x] Release Build checkout 精确 tag，验证 `GITHUB_REF == refs/tags/$RELEASE_TAG` 且 tag/checkout/GITHUB_SHA 相同。
+- [x] 每个平台 archive 在 smoke 后签发，并执行 `gh attestation verify --repo ... --signer-workflow ... --source-ref ... --source-digest ... --deny-self-hosted-runners`。
+- [x] 签发/复验失败时不得执行 `gh release upload`；focused test 转 GREEN。
 
 ## Batch 3：Windows R02 consumer
 

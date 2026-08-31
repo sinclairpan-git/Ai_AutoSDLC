@@ -205,6 +205,79 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     assert "command -v ai-sdlc" in workflow
 
 
+def test_release_build_workflow_requires_exact_tag_checkout() -> None:
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "release-build.yml").read_text(encoding="utf-8")
+    )
+    steps = workflow["jobs"]["build-smoke-upload"]["steps"]
+    checkout = next(step for step in steps if step.get("uses") == "actions/checkout@v6")
+
+    assert checkout["with"]["ref"] == "${{ inputs.tag }}"
+    assert checkout["with"]["fetch-depth"] == 0
+
+    guard = next(step for step in steps if "git rev-parse" in step.get("run", ""))
+    guard_script = guard["run"]
+    build_index = next(
+        index for index, step in enumerate(steps) if step.get("name") == "Build offline bundle"
+    )
+    assert steps.index(checkout) < steps.index(guard) < build_index
+    assert "GITHUB_REF" in guard_script
+    assert 'refs/tags/${RELEASE_TAG}' in guard_script
+    assert '${RELEASE_TAG}^{commit}' in guard_script
+    assert "GITHUB_SHA" in guard_script
+
+
+def test_release_build_workflow_grants_native_attestation_permissions() -> None:
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "release-build.yml").read_text(encoding="utf-8")
+    )
+
+    assert workflow["permissions"] == {
+        "contents": "write",
+        "id-token": "write",
+        "attestations": "write",
+        "artifact-metadata": "write",
+    }
+
+
+def test_release_build_workflow_attests_and_verifies_before_release_upload() -> None:
+    workflow_path = _WORKFLOWS_DIR / "release-build.yml"
+    workflow_text = workflow_path.read_text(encoding="utf-8")
+    workflow = yaml.safe_load(workflow_text)
+    steps = workflow["jobs"]["build-smoke-upload"]["steps"]
+
+    smoke_indexes = [
+        index for index, step in enumerate(steps) if step.get("name", "").startswith("Smoke ")
+    ]
+    attest_index = next(
+        index for index, step in enumerate(steps) if step.get("uses") == "actions/attest@v4"
+    )
+    verify_index = next(
+        index
+        for index, step in enumerate(steps)
+        if "gh attestation verify" in step.get("run", "")
+    )
+    upload_index = next(
+        index
+        for index, step in enumerate(steps)
+        if "gh release upload" in step.get("run", "")
+    )
+
+    assert smoke_indexes
+    assert max(smoke_indexes) < attest_index < verify_index < upload_index
+
+    verify_script = steps[verify_index]["run"]
+    for required_flag in (
+        "--repo",
+        "--signer-workflow",
+        "--source-ref",
+        "--source-digest",
+        "--deny-self-hosted-runners",
+    ):
+        assert required_flag in verify_script
+    assert ".provenance.json" not in workflow_text
+
+
 def test_windows_user_guide_e2e_replays_existing_project_install_path() -> None:
     workflow_path = _WORKFLOWS_DIR / "windows-user-guide-e2e.yml"
 

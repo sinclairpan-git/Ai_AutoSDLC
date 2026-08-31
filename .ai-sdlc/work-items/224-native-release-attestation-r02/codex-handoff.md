@@ -1,27 +1,33 @@
 # Continuity Handoff
 
-- Updated: 2026-08-31T09:42:48+00:00
-- Reason: WI224 formal closeout 完成后切换到 bounded development phase
-- Goal: 在 exact main 之后启动 WI224 T20-T42 bounded implementation；当前只初始化 T20 连续性，不写实现
-- State: PR #193 已 squash 合并；origin/main 与本 dev worktree 均为 1f6f3eba3ff429e7e7a175c6f1545ccec7360925；分支 feature/224-native-release-attestation-r02 已创建，尚未修改 runtime/workflow/tests
+- Updated: 2026-08-31T11:27:33+00:00
+- Reason: T21 local GREEN checkpoint before remote canary
+- Goal: 执行 WI224 T20-T42 bounded implementation；producer 本地 RED→GREEN 完成，准备远端无上传 canary
+- State: T20 focused RED 为 3 failed/9 passed；T21 同一套件 GREEN 为 12 passed；release-build.yml 已实现精确 tag guard、原生 attest、同源复验和 upload 前 fail-closed
 - Stage: close
 - Work Item: 224-native-release-attestation-r02
 - Branch: feature/224-native-release-attestation-r02
 
 ## Changed Files
-- none
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- M .ai-sdlc/work-items/224-native-release-attestation-r02/codex-handoff.md
+- M .github/workflows/release-build.yml
+- M specs/224-native-release-attestation-r02/task-execution-log.md
+- M specs/224-native-release-attestation-r02/tasks.md
+- M tests/integration/test_github_workflows.py
 
 ## Key Decisions
-- 保持 WI224 formal_freeze_only 基线；执行从 T20 RED 测试开始，范围仅限两个既有 workflow 与 tests/integration/test_github_workflows.py，禁止扩展 R03-R12
+- 先提交 producer checkpoint，再从 exact dev head 创建临时 tag，以 upload_to_release=false 做三平台真实验证；远端通过前不投入 consumer
 
 ## Commands / Tests
-- PR #193 Codex clean 且 10/10 checks success；merge commit 1f6f3eba；dev worktree clean；workitem truth-check 在 exact main 上复核
+- 全量基线 3407 passed, 3 skipped；focused 12 passed；Ruff PASS；workflow YAML PASS；constraints 无 BLOCKER；plan-check Drift=NO；program validate PASS；diff-check PASS
 
 ## Blockers / Risks
-- Program Truth 预期仍 blocked/fresh，保留 16 个历史 provenance blockers；当前无用户输入 blocker
+- 无用户 blocker；远端 canary 是进入 T30 的 fail-fast gate，失败时只允许范围内聚焦修复
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 先读取 T20 验收与现有 workflow 测试，写最小 tag guard 与 native attestation RED；RED 证据成立后再进入 T21 producer GREEN
+- 提交并推送当前 producer checkpoint；创建唯一临时 tag；调度 Release Build upload_to_release=false；核验三平台 attestation

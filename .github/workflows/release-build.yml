@@ -18,6 +18,9 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 concurrency:
   group: release-build-${{ inputs.tag }}
@@ -51,6 +54,27 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact release tag checkout
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_ref="refs/tags/${RELEASE_TAG}"
+          if [[ "${GITHUB_REF}" != "${expected_ref}" ]]; then
+            echo "Release Build must run from ${expected_ref}; got ${GITHUB_REF}." >&2
+            exit 1
+          fi
+
+          tag_commit="$(git rev-parse "${RELEASE_TAG}^{commit}")"
+          checkout_commit="$(git rev-parse HEAD)"
+          if [[ "${tag_commit}" != "${GITHUB_SHA}" || "${checkout_commit}" != "${GITHUB_SHA}" ]]; then
+            echo "Tag, event, and checkout commits must be identical." >&2
+            exit 1
+          fi
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -244,8 +268,8 @@ jobs:
           path: ${{ runner.temp }}/ai-sdlc-release-build-evidence
           if-no-files-found: error
 
-      - name: Upload smoke-passed asset to release
-        if: inputs.upload_to_release == 'true'
+      - name: Resolve smoke-passed release asset
+        id: release_asset
         shell: bash
         run: |
           set -euo pipefail
@@ -255,8 +279,34 @@ jobs:
             asset="$(find dist-offline -maxdepth 1 -name 'ai-sdlc-offline-*.tar.gz' -type f | head -n 1)"
           fi
           if [[ -z "${asset}" ]]; then
-            echo "No asset found for release upload." >&2
+            echo "No smoke-passed release asset found." >&2
             exit 1
           fi
+          echo "path=${asset}" >> "${GITHUB_OUTPUT}"
+
+      - name: Attest smoke-passed release asset
+        uses: actions/attest@v4
+        with:
+          subject-path: ${{ steps.release_asset.outputs.path }}
+
+      - name: Verify smoke-passed release asset attestation
+        shell: bash
+        env:
+          EXPECTED_SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/release-build.yml
+        run: |
+          set -euo pipefail
+          gh attestation verify "${{ steps.release_asset.outputs.path }}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --signer-workflow "${EXPECTED_SIGNER_WORKFLOW}" \
+            --source-ref "${GITHUB_REF}" \
+            --source-digest "${GITHUB_SHA}" \
+            --deny-self-hosted-runners
+
+      - name: Upload smoke-passed asset to release
+        if: inputs.upload_to_release == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          asset="${{ steps.release_asset.outputs.path }}"
           gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" >/dev/null
           gh release upload "${RELEASE_TAG}" "${asset}" --clobber --repo "${GITHUB_REPOSITORY}"

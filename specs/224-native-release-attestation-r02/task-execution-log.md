@@ -2,7 +2,7 @@
 
 **功能编号**：`224-native-release-attestation-r02`
 **创建日期**：2026-08-31
-**状态**：formal 已合并；post-merge truth closeout 进行中；dev 未开始
+**状态**：formal/closeout 已合并；dev producer 本地 GREEN；远端 canary 待执行
 
 ## Batch 2026-08-31-001 | T11–T12 formal
 
@@ -22,4 +22,13 @@
 - **执行真值**：exact main 分类 `formal_freeze_only`、`execution_started=false`、`contained_in_main=true`；尚无 workflow/runtime 实现，不虚报 execute 已启动。
 - **Program Truth**：合并后审计为 stale，仅因最终 execution-log authoring 未进入上一个 snapshot；本批只刷新 truth/roadmap/continuity，保留 16 blockers 与 `1169/1169`、missing `4`、close `218/222`。
 - **下一步**：closeout clean/green 合并后，从新的 exact main 创建 dev worktree，按 T20 的 RED 测试启动 bounded execute。
-- **分支处置**：formal=`mainline_merged`；closeout=`merge-pending`；spike=`retained(no-merge evidence)`。
+- **分支处置**：formal=`mainline_merged`；closeout=`mainline_merged`；spike=`retained(no-merge evidence)`。
+
+## Batch 2026-08-31-003 | T20–T21 producer RED→GREEN
+
+- **开发基线**：PR #193 squash merge 后 exact `origin/main@1f6f3eba3ff429e7e7a175c6f1545ccec7360925`；dev 分支 `feature/224-native-release-attestation-r02` 从该提交创建。
+- **基线验证**：实现前全量 `uv run pytest -q` 为 `3407 passed, 3 skipped in 919.71s`；focused workflow tests 为 `9 passed`。
+- **RED**：仅新增 producer 合同测试后，同一 focused 命令为 `3 failed, 9 passed`；失败分别对应 checkout 未绑定 tag、三项原生 attestation 权限缺失、`actions/attest@v4`/复验步骤缺失。
+- **GREEN**：Release Build 增加精确 tag/commit guard、原生签发、按 repo/signer/ref/digest/hosted-runner 复验，并复用同一 smoke-passed asset path 后，同一 focused 命令为 `12 passed`；Ruff、YAML parse、`git diff --check` 均通过。
+- **范围/Lean**：产品改动仍为 1 个既有 workflow + 1 个既有测试文件；0 新 runtime、依赖、状态、sidecar、workflow 或通用抽象。测试只保护 tag、权限、顺序和 fail-closed 合同，不复制 workflow 实现。
+- **下一步**：提交并推送 producer checkpoint，从 exact dev head 创建临时 tag，以 `upload_to_release=false` 调度三平台 Release Build；远端失败且不能在范围内聚焦修复则 No-Go，成功后才进入 T30。
