@@ -45,5 +45,15 @@
 - **RED**：仅增加 natural-release/recovery receipt 合同测试后，focused suite 为 `2 failed, 12 passed`；失败分别对应缺少 `release.published` 与缺少 resume-pack corruption/recover/receipt。
 - **GREEN**：现有 Windows E2E 增加自然 release tag checkout、动态 package/tag、同 tag 指南保护、下载后解压前 attestation 强验证、主动破坏并恢复 resume-pack，以及 12 字段 `route-receipt.json`；同一 focused suite 为 `14 passed`。
 - **状态边界**：PR 和 `workflow_dispatch` receipt 固定为 `partial`；只有 `release.published` 且 attestation、安装、init/adopt、Result/Next、业务 hash 与 recover 全部成功，脚本执行到末尾时才写 `proven`。
+- **manual 真实回放**：exact head `8c65f652e3f876fc322f9492e418c4a6d9a922fc` 的 Windows run `33388433742` / job `99476251047` success；下载 evidence 后验证 receipt 恰为 12 字段、`route_id=R02`、`status=partial`、`acquisition_mode=published_release_manual`、`attestation_verified=false`，recover log 含 rebuilt success，业务文件前后 hash 相同。
 - **范围/Lean**：仍只修改两个既有 workflow 和一个既有测试文件；receipt 进入现有临时 evidence artifact，0 新 runtime、依赖、状态、sidecar、workflow 或通用抽象。
-- **下一步**：完成 PowerShell/YAML/本地门禁后提交 consumer checkpoint，并从 exact branch head 调度一次 manual `v0.9.8` partial path；通过后进入 T42 全量验证与 PR。
+- **下一步**：进入 T42 全量验证、Lean 复核与开发 PR；实现合并仍保持路线真值 `0/12 proven、12/12 partial`，等待未来自然 release receipt。
+
+## Batch 2026-08-31-006 | T42 full verification / Lean
+
+- **全量验证**：冻结同一候选后，`uv run pytest -q` 为 `3412 passed, 3 skipped in 890.16s`；此前 focused `14 passed`、Ruff、YAML、内嵌 PowerShell AST、constraints、plan-check、program validate、`git diff --check` 均通过。
+- **变化预算**：产品改动净限于 `release-build.yml +53/-3`、`windows-user-guide-e2e.yml +96/-8`、`test_github_workflows.py +140/-2`；测试与两个 workflow 的新增量约 1:1，不存在测试细节数倍于核心实现。无新增文件，0 新 runtime/依赖/状态/sidecar/workflow/通用抽象。
+- **400 行信号**：测试文件当前 409 行，仅作为 advisory；新增合同直接覆盖 149 行 workflow 行为、RED→GREEN 与两次远端真实回放，未伴随复杂 helper、耦合或职责扩张，不升级为 REQUIRED。
+- **剩余真值**：实现 PR 只能证明 producer 和 manual partial；自然 `release.published` 尚未发生，因此合并后仍保持 `0/12 proven、12/12 partial`，未来真实 receipt 另做最小 closeout。
+- **PR 载体**：draft PR #194 已创建；最终评审候选只认 push 后的 live remote PR HEAD，不把 draft 创建时的 predecessor SHA 当成 review target。
+- **下一步**：最终 continuity 后冻结候选，复跑 exact-tree 全量验证，提交推送并将 PR #194 标记 ready；请求 Codex review，最多两轮，clean/green 后合并。

@@ -61,6 +61,6 @@ related_doc:
 
 ### T42：Lean 复核、PR 与收口（P0）
 
-- [ ] 运行 plan 中全部本地验证；确认 0 新 runtime/状态/sidecar/workflow，改动未超 2.5 人日边界。
+- [x] 运行 plan 中全部本地验证；确认 0 新 runtime/状态/sidecar/workflow，改动未超 2.5 人日边界。
 - [ ] dev PR 请求 Codex review，最多两轮；clean/green 后合并。
 - [ ] 合并后保持 `0/12 proven、12/12 partial`；未来自然 release receipt 另开最小 truth closeout。

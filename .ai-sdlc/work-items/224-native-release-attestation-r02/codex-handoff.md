@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-08-31T11:43:13+00:00
-- Reason: T31 local GREEN checkpoint before manual remote replay
-- Goal: 完成 WI224 bounded dev；consumer 本地 GREEN，准备真实 manual partial 验证与 T42
-- State: producer remote run 33387100262 三平台 success；T30 RED 2 failed/12 passed；T31 同一 suite GREEN 14 passed；Windows workflow 内嵌 PowerShell AST parse PASS
+- Updated: 2026-08-31T12:10:36+00:00
+- Reason: stable PR-monitor continuity before final exact-tree verification
+- Goal: 交付 WI224 bounded implementation；PR #194 进入 exact-head review/check 监控
+- State: PR #194 是唯一 dev 载体；live remote PR HEAD 是唯一评审候选；producer run 33387100262、manual partial run 33388433742 与本地全量 3412/3 已通过
 - Stage: close
 - Work Item: 224-native-release-attestation-r02
 - Branch: feature/224-native-release-attestation-r02
@@ -12,22 +12,20 @@
 - M .ai-sdlc/state/codex-handoff.md
 - M .ai-sdlc/state/resume-pack.yaml
 - M .ai-sdlc/work-items/224-native-release-attestation-r02/codex-handoff.md
-- M .github/workflows/windows-user-guide-e2e.yml
 - M specs/224-native-release-attestation-r02/task-execution-log.md
 - M specs/224-native-release-attestation-r02/tasks.md
-- M tests/integration/test_github_workflows.py
 
 ## Key Decisions
-- PR/manual receipt 永远 partial；自然 release only 在完整成功链末尾写 proven；不创建额外服务、脚本、workflow 或持久化状态
+- 冻结三个产品文件范围；Codex review 最多两轮；只处理直接影响安全/正确性/范围/真值的聚焦 finding，禁止继续磨细枝末节
 
 ## Commands / Tests
-- focused 14 passed；Ruff PASS；embedded PowerShell parse 1619 tokens/0 errors；YAML PASS；constraints 无 BLOCKER；plan-check Drift=NO；program validate PASS；diff-check PASS
+- T20 3 failed/9 passed→T21 12 passed；T30 2 failed/12 passed→T31 14 passed；full 3412 passed/3 skipped；manifest truth 1 passed；所有门禁 PASS
 
 ## Blockers / Risks
-- 无用户 blocker；自然 release proven 仍必须等待未来真实 release.published，不由本实现或 manual run伪造
+- 自然 release receipt 未发生，路线保持 0/12 proven、12/12 partial；这不是 PR blocker。Program Truth 的 16 个历史 blocker 不在本 WI 删除范围
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交并推送 consumer checkpoint；从 exact branch head dispatch windows-user-guide-e2e.yml tag=v0.9.8，核验 manual receipt=partial、recover 与业务 hash；随后 T42 全量验证
+- 冻结并提交当前树，推送到 PR #194，标记 ready 并请求一次 Codex review；监控 review 与 required checks，聚焦修复最多两轮，clean/green 后 merge
