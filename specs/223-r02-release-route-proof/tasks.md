@@ -43,7 +43,7 @@ Batch 6: next natural release evidence (deferred; no release authorization)
 - **步骤**：
   - [ ] 先写 RED，要求 release build checkout 精确使用 `ref: ${{ inputs.tag }}`，并要求 workflow 为每个 archive 生成唯一的 `<archive-name>.provenance.json`；三平台矩阵不得上传同名 sidecar。
   - [ ] sidecar 只包含 `schema_version`、`release_tag`、`source_commit`、`archive_name`、`archive_digest`、`workflow_run_id`；不新增通用 attestation 框架或持久化 ledger。
-  - [ ] 在上传前验证 `$GITHUB_SHA`/checkout commit 等于 tag commit，并用实际 archive SHA256 写 `archive_digest`；不一致时禁止 `gh release upload`。
+  - [ ] 在上传前通过 GitHub commit/ref API 把 tag 解析为精确 40 位 commit，验证 `$GITHUB_SHA`/checkout commit 等于该 commit，并用实际 archive SHA256 写 `archive_digest`；`workflow_run_id` 必须取当前 `$GITHUB_RUN_ID`，任一字段缺失或不一致时禁止 `gh release upload`。
   - [ ] 将 archive-qualified sidecar 与对应 archive 一起上传到同一 release；禁止依赖 `--clobber` 覆盖其他平台的 provenance；focused test 由 RED 转 GREEN。
 - **提交**：与 T21/T31 的同一 provenance + receipt 逻辑批次提交。
 
@@ -66,7 +66,7 @@ Batch 6: next natural release evidence (deferred; no release authorization)
         assert 'status = if ($isFormalReleaseProof -and $buildProvenanceVerified) { "proven" } else { "partial" }' in script
     ```
 
-  - [ ] 增加 sidecar 的 `source_commit == tag commit`、`archive_digest == local digest`、digest fail-closed、`resume-pack.yaml` 故障注入、`recover` 执行和业务 hash 再比较断言。
+  - [ ] 增加 tag 必须解析为 40 位 commit、sidecar 的 `source_commit == tag commit`、`archive_digest == local digest`、run ID/workflow/event/status/conclusion/headSha 全部匹配、digest/provenance fail-closed、`resume-pack.yaml` 故障注入、`recover` 执行和业务 hash 再比较断言。
   - [ ] 运行 `uv run pytest tests/integration/test_windows_r02_route_proof.py -q`，记录预期 FAIL 为缺少脚本，而不是语法/收集错误。
 - **提交**：与 T31 的 GREEN 实现合并为同一逻辑批次提交，不单独提交永久 RED。
 
@@ -84,23 +84,36 @@ Batch 6: next natural release evidence (deferred; no release authorization)
   - [ ] `published_release` 模式运行：
 
     ```powershell
-    $release = gh release view $ReleaseTag --repo $env:GITHUB_REPOSITORY --json tagName,targetCommitish,assets | ConvertFrom-Json
+    $release = gh release view $ReleaseTag --repo $env:GITHUB_REPOSITORY --json tagName,assets | ConvertFrom-Json
     $asset = $release.assets | Where-Object { $_.name -eq (Split-Path $ArchivePath -Leaf) }
     $localDigest = "sha256:$((Get-FileHash -Algorithm SHA256 -LiteralPath $ArchivePath).Hash.ToLowerInvariant())"
     if (-not $asset.digest -or $asset.digest -ne $localDigest) { throw "release asset digest mismatch" }
     $provenance = Get-Content -LiteralPath $BuildProvenancePath -Raw | ConvertFrom-Json
-    $tagCommit = $release.targetCommitish
+    $tagCommit = gh api "repos/$($env:GITHUB_REPOSITORY)/commits/$ReleaseTag" --jq .sha
+    if ($LASTEXITCODE -ne 0 -or $tagCommit -notmatch '^[0-9a-f]{40}$') { throw "release tag commit resolution failed" }
+    $buildRunId = [string]$provenance.workflow_run_id
+    if ($buildRunId -notmatch '^\d+$') { throw "release build run id is missing or invalid" }
+    $buildRunJson = gh run view $buildRunId --repo $env:GITHUB_REPOSITORY `
+      --json databaseId,workflowName,event,headSha,status,conclusion,url
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($buildRunJson)) { throw "release build run lookup failed" }
+    $buildRun = $buildRunJson | ConvertFrom-Json
     $buildProvenanceVerified = (
       $provenance.release_tag -eq $ReleaseTag -and
       $provenance.source_commit -eq $tagCommit -and
       $provenance.archive_name -eq $asset.name -and
-      $provenance.archive_digest -eq $localDigest
+      $provenance.archive_digest -eq $localDigest -and
+      [string]$buildRun.databaseId -eq $buildRunId -and
+      $buildRun.workflowName -eq "Release Build" -and
+      $buildRun.event -eq "workflow_dispatch" -and
+      $buildRun.headSha -eq $tagCommit -and
+      $buildRun.status -eq "completed" -and
+      $buildRun.conclusion -eq "success"
     )
     ```
 
   - [ ] 在 init/adopt 后写坏 `.ai-sdlc/state/resume-pack.yaml`，执行 direct shim `recover`，验证恢复成功且 YAML 不再是注入内容。
   - [ ] 再次比较四个业务文件 hash；任何变化 fail closed。
-  - [ ] 用 `ConvertTo-Json -Depth 8` 写 receipt；仅 `$env:GITHUB_EVENT_NAME -eq "release"`、published digest、build provenance 与全部核心检查同时成功时输出 `proven`。
+  - [ ] 用 `ConvertTo-Json -Depth 8` 写 receipt；仅 `$env:GITHUB_EVENT_NAME -eq "release"`、published digest、tag commit、Release Build run、build provenance 与全部核心检查同时成功时输出 `proven`。
   - [ ] 运行 focused test 由 RED 转 GREEN，并运行 PowerShell parser 无错误。
 - **提交**：`feat: add shared Windows R02 route proof executor`
 

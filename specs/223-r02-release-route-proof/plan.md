@@ -11,7 +11,7 @@ related_doc:
 
 **目标**：冻结并实施 R02 所需的最小 build provenance：每个平台 archive 使用唯一 sidecar，formal 合并后进入共享执行器实现。
 
-**批准架构**：release build 先为每个 archive 输出唯一的 `<archive-name>.provenance.json`，把 archive digest、tag commit、build source commit 和 run 绑定；R02 PowerShell 执行器再负责安装、生命周期、故障恢复与 receipt。只做消费 workflow 而不补 build provenance 时，receipt 永远保持 `partial`。
+**批准架构**：release build 先为每个 archive 输出唯一的 `<archive-name>.provenance.json`，把 archive digest、精确 tag commit、build source commit 和 Release Build run 绑定；R02 PowerShell 执行器解析 tag ref、查询被引用 run，再负责安装、生命周期、故障恢复与 receipt。只做消费 workflow 而不补 build provenance 时，receipt 永远保持 `partial`。
 
 **技术栈**：PowerShell 7 / Windows PowerShell installer、GitHub Actions、GitHub CLI、Python 3.11+ / pytest / PyYAML。无新增产品依赖，无数据库或持久化服务。
 
@@ -69,7 +69,7 @@ pwsh -NoProfile -File scripts/ci/Invoke-WindowsR02RouteProof.ps1 `
   -ProjectRoot <absolute-dir>
 ```
 
-执行器从 GitHub Actions 环境读取 `GITHUB_EVENT_NAME`、`GITHUB_REPOSITORY`、`GITHUB_RUN_ID`、`GITHUB_SHA`、`GITHUB_WORKFLOW_REF` 和 `RUNNER_*`。`published_release` 模式需要 `GH_TOKEN`，通过 `gh release view` 取得 asset digest，并读取与 archive 同名派生的 `<archive-name>.provenance.json` 验证 tag、build source commit、archive name/digest 与 run；本地产物模式明确记录无正式 provenance。
+执行器从 GitHub Actions 环境读取 `GITHUB_EVENT_NAME`、`GITHUB_REPOSITORY`、`GITHUB_RUN_ID`、`GITHUB_SHA`、`GITHUB_WORKFLOW_REF` 和 `RUNNER_*`。`published_release` 模式需要 `GH_TOKEN`：通过 `gh release view` 取得 asset digest，通过 GitHub commit/ref API 把 tag 解析为精确 40 位 commit，再读取与 archive 同名派生的 `<archive-name>.provenance.json` 并查询其 `workflow_run_id`。只有 run ID 相等、workflow 为 `Release Build`、event 为 `workflow_dispatch`、状态为 `completed/success`、run `headSha` 与 sidecar `source_commit` 均等于 tag commit，并且 archive name/digest 匹配时，provenance 才通过；本地产物模式明确记录无正式 provenance。
 
 provenance sidecar 名称固定为 `<archive-name>.provenance.json`，例如 `ai-sdlc-offline-0.9.8-windows-amd64.zip.provenance.json`；三平台矩阵不得上传同名 sidecar。内容固定为最小结构：
 
@@ -124,9 +124,9 @@ provenance sidecar 名称固定为 `<archive-name>.provenance.json`，例如 `ai
 
 用户已明确批准聚焦修改 `release-build.yml`：固定构建 ref，并为每个 archive 输出唯一且可验证的 provenance sidecar。本阶段仍受 formal 先合并、独立 dev 分支和 3 人日上限约束。
 
-1. 在 dev 分支先增加 release-build RED：checkout 必须绑定 `inputs.tag`；每个 sidecar 必须以对应 archive 完整文件名派生唯一名称，记录 tag/source/archive digest/run；上传前必须验证 source commit 等于 tag commit。
+1. 在 dev 分支先增加 release-build RED：checkout 必须绑定 `inputs.tag`；每个 sidecar 必须以对应 archive 完整文件名派生唯一名称，记录 tag/source/archive digest/run；上传前必须验证 source commit 等于解析后的 tag commit。
 2. 最小修改 `release-build.yml` 生成并与对应 archive 一起上传 sidecar；不新增通用 attestation 层或矩阵聚合器。
-3. 增加 R02 focused RED，要求 sidecar source/tag 和 archive digest 验证、共享执行器、12 字段、恢复与事件分级。
+3. 增加 R02 focused RED，要求精确解析 tag commit，并验证 sidecar source/tag、archive digest 与被引用 Release Build run 的 ID/workflow/event/status/conclusion/headSha；同时锁定共享执行器、12 字段、恢复与事件分级。
 4. 抽出 `Invoke-WindowsR02RouteProof.ps1`，从 Windows guide workflow 删除内联核心块，使 RED 转 GREEN。
 5. 将 release artifact smoke Windows job 改为同一执行器的薄调用；保留 `verify_offline_bundle.py` 和 POSIX jobs。
 6. 运行 focused tests、YAML parse、PowerShell parser、Ruff、constraints 与全量 pytest。

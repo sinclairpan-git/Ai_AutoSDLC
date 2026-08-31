@@ -166,3 +166,22 @@
 - Program Truth dry-run/execute 保持原 16 blocker、`1169/1169 mapped`、missing `4`、close `218/222`；写入 snapshot hash `ec7d1e18244069a3cb0af270d164407c8cf1d2307db2bb0c26e5b348de22530a`。
 - `uv run pytest tests/integration/test_repo_program_manifest.py -q`：`1 passed in 140.90s`。
 - `uv run ai-sdlc verify constraints`：`no BLOCKERs`；`git diff --check`：`PASS`。
+
+## 6. Batch 2026-08-31-005 | tag commit 与 Release Build run 终局授权
+
+### 6.1 Findings 与核验
+
+- P1：T31 使用 `release.targetCommitish` 作为 tag commit；`gh release create --help` 明确该字段可来自分支或完整 SHA，默认是主分支，因此不能保证为 40 位 commit，finding 成立。
+- P2：sidecar 包含 `workflow_run_id`，但原 `$buildProvenanceVerified` 未检查该字段，也未查询被引用 run 的 workflow/event/status/conclusion/headSha；无关或失败 run 仍可能产生假 `proven`，finding 成立。
+- `gh run view --json` 原生支持 `databaseId`、`workflowName`、`event`、`headSha`、`status`、`conclusion` 和 `url`，无需新增服务或证明框架。
+
+### 6.2 用户对抗决策
+
+- **有条件批准**：只允许解析 release tag 的精确 commit，并验证 sidecar 引用的 Release Build run ID、workflow、event、completed/success 与 headSha。
+- **边界不变**：不新增 provenance 字段、聚合器、通用 attestation、ledger、其他路线、release/version 或 runtime 改动。
+- 本批为终局 formal 合同修正；若终审再出现新的核心缺口，直接 No-Go，不再扩大范围。
+
+### 6.3 formal 修正
+
+- spec/plan/tasks 禁止把 `targetCommitish` 当作 commit，要求 GitHub commit/ref API 返回 40 位 tag commit。
+- T20 固定 `workflow_run_id=$GITHUB_RUN_ID`；T21/T31 要求 run 的 ID/workflow/event/status/conclusion/headSha 与 tag/source 精确一致，任一缺失均 fail closed。
