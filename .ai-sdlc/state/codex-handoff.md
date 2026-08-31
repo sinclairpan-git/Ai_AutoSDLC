@@ -1,23 +1,21 @@
 # Continuity Handoff
 
-- Updated: 2026-08-31T12:57:54+00:00
-- Reason: Codex review round 2 final focused P2 remediation validated
-- Goal: 完成 WI224 PR #194 第二轮也是最后一轮 P2 聚焦修复并进入 final exact-live-head review
-- State: 手工 replay receipt 假 provenance 已完成 RED→GREEN；source_binding 分离 asset/workflow，远端 tag commit 解析与所有 focused 本地门禁通过，等待提交推送
+- Updated: 2026-08-31T12:58:40+00:00
+- Reason: stable pushed-tree continuity after final allowed review remediation
+- Goal: 完成 WI224 PR #194 最终聚焦修复并监控 final exact-live-head review
+- State: 第二轮也是最后一轮 P2 修复已提交并推送；source_binding 真实分离 asset/workflow；focused 14 passed、证据 tag exact 解析与全部本地门禁全绿；进入稳定 PR-monitor
 - Stage: close
 - Work Item: 224-native-release-attestation-r02
 - Branch: feature/224-native-release-attestation-r02
 
 ## Changed Files
-- M .github/workflows/windows-user-guide-e2e.yml
-- M specs/224-native-release-attestation-r02/task-execution-log.md
-- M tests/integration/test_github_workflows.py
+- none
 
 ## Key Decisions
-- 保持 12 个顶层 receipt 字段；asset 与 workflow 身份分别记录；这是第二次也是最后一次 remediation，后续若仍有 finding 停止并报告
+- 不再接受第三轮实现循环；final review clean 且 required checks 全绿则合并，若仍有 finding 停止并报告用户
 
 ## Commands / Tests
-- focused workflow contract: 1 failed/13 passed -> 14 passed; evidence tag resolved exact 0c6c9d6d43f98dcfd169f418e6f6dc616c996c4b; Ruff/YAML/PowerShell AST/diff-check/constraints/plan-check/program validate PASS
+- round 2 RED 1 failed/13 passed -> GREEN 14 passed; tag resolution/Ruff/YAML/PowerShell AST/diff-check/constraints/plan-check/program validate PASS; pushed 2eca670c
 
 ## Blockers / Risks
 - 自然 release receipt 尚未发生，保持 0/12 proven、12/12 partial；16 个历史 Program Truth blocker 不在本 WI 删除范围
@@ -26,4 +24,4 @@
 - none
 
 ## Exact Next Steps
-- 提交并推送当前最终聚焦修复；从 clean pushed tree 生成稳定 PR-monitor continuity，更新 heartbeat exact head，回复 inline finding 并请求 final Codex review
+- 提交并推送本次 stable continuity，更新 heartbeat 到新的 live remote PR HEAD，回复第二轮 inline finding 并仅请求一次 final Codex review；监控 required checks 与 final review
