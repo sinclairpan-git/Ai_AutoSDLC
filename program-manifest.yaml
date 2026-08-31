@@ -2091,10 +2091,10 @@ specs:
   depends_on:
   - 222-first-user-twelve-route-e2e-contract
 truth_snapshot:
-  generated_at: '2026-08-31T14:50:15Z'
+  generated_at: '2026-08-31T15:20:38Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 29d7e0de
+  repo_revision: 1f932591
   authoring_hash: fa4f8ac32ab424925d9b71d7036d5e1543ae2995daad93be8f44a95cbcf8b578
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
@@ -2137,7 +2137,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 18e90776a9975041a0075fa1a143d9a5bf1f8f7d5b97cc1cb66466d1c91e1ca8
+  snapshot_hash: 892a161f0ca291f8e7378926b3801eee6a5c0b1cc133a45a759abe5e4502788a
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed

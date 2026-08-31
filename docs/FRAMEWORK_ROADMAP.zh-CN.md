@@ -353,7 +353,7 @@ repo、signer workflow、tag ref/commit 与 build trigger。WI224 只允许修�
 - [ ] O1 在 3–5 个真实项目完成 v0.9.8 真值观察。
 - [x] P1 Diff-local Lean Advisory 已按运行时合同缺陷有证据 No-Go 关闭；实现未合并，主线保留 WI219 轻量 ROI prompt。
 - [x] P2 普通用户单入口完成默认路径与高级兼容验证（WI220）。
-- [ ] P3 十二条首次用户路线完成真实 clean-environment E2E；WI222 formal/admission 已启动，runtime 未授权。
+- [ ] P3 十二条首次用户路线完成真实 clean-environment E2E；WI224 的 R02 bounded runtime 已合并并等待自然 release receipt，其余 11 路 runtime 仍未授权。
 - [ ] P4 Phase A 证明 Requirement/Design/Implementation 动态专家 ROI。
 - [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。
