@@ -15,6 +15,8 @@ related_doc:
 
 **Spec:** `specs/224-native-release-attestation-r02/spec.md`
 
+**状态：** PR #194 已以 reviewed tree 精确匹配的 squash merge 进入 `origin/main@3155af394c5739518145d736e0766d779c0728f8`；本计划只剩 records/truth/continuity 收口，路线真值保持 `0/12 proven、12/12 partial`。
+
 **编号**：`224-native-release-attestation-r02` | **日期**：2026-08-31 | **规格**：`specs/224-native-release-attestation-r02/spec.md`
 
 ## 1. 架构

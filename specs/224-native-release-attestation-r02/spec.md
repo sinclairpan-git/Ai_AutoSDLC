@@ -2,8 +2,8 @@
 
 **功能编号**：`224-native-release-attestation-r02`
 **创建日期**：2026-08-31
-**状态**：P3-B formal；实现已获用户授权，但须在本 formal 合并后进入独立 dev 分支
-**远端主线基线**：`origin/main@49d43c459cdabe5d3664dafd4600192c01333500`
+**状态**：P3-B 实现已合并；正在完成 records/truth/continuity-only post-merge closeout，R02 在自然发布回执前保持 `partial`
+**远端主线基线**：`origin/main@3155af394c5739518145d736e0766d779c0728f8`
 **关联基线**：`specs/222-first-user-twelve-route-e2e-contract/spec.md`
 
 ## 1. 目标与边界
