@@ -1,0 +1,112 @@
+name: Native Artifact Attestation Spike
+
+on:
+  push:
+    tags:
+      - spike-native-attestation-*
+
+jobs:
+  build-attest:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+
+    steps:
+      - name: Checkout tag source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build Windows probe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $tagCommit = git rev-parse "$env:GITHUB_REF_NAME^{commit}"
+          $checkoutCommit = git rev-parse HEAD
+          if ($tagCommit -ne $env:GITHUB_SHA -or $checkoutCommit -ne $env:GITHUB_SHA) {
+            throw "Tag, event, and checkout commits must be identical."
+          }
+
+          $probeRoot = Join-Path $env:RUNNER_TEMP "ai-sdlc-attestation-spike"
+          $distRoot = Join-Path $env:GITHUB_WORKSPACE "dist"
+          New-Item -ItemType Directory -Force -Path $probeRoot, $distRoot | Out-Null
+          Copy-Item -LiteralPath "AGENTS.md" -Destination $probeRoot
+          [ordered]@{
+            repository = $env:GITHUB_REPOSITORY
+            source_ref = $env:GITHUB_REF
+            source_commit = $env:GITHUB_SHA
+            event = $env:GITHUB_EVENT_NAME
+            runner_os = $env:RUNNER_OS
+          } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $probeRoot "build-context.json") -Encoding utf8
+
+          $archive = Join-Path $distRoot "ai-sdlc-attestation-spike-windows-amd64.zip"
+          Compress-Archive -Path (Join-Path $probeRoot "*") -DestinationPath $archive -Force
+          Get-FileHash -Algorithm SHA256 -LiteralPath $archive | Format-List
+
+      - name: Attest Windows probe
+        uses: actions/attest@v4
+        with:
+          subject-path: dist/ai-sdlc-attestation-spike-windows-amd64.zip
+
+      - name: Upload Windows probe
+        uses: actions/upload-artifact@v7
+        with:
+          name: ai-sdlc-attestation-spike-windows-amd64
+          path: dist/ai-sdlc-attestation-spike-windows-amd64.zip
+          if-no-files-found: error
+
+  verify:
+    needs: build-attest
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      attestations: read
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/native-artifact-attestation-spike.yml
+
+    steps:
+      - name: Download Windows probe
+        uses: actions/download-artifact@v8
+        with:
+          name: ai-sdlc-attestation-spike-windows-amd64
+          path: verified
+
+      - name: Verify repository, workflow, ref, and commit
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $artifact = Get-Item -LiteralPath "verified/ai-sdlc-attestation-spike-windows-amd64.zip"
+          $verificationJson = gh attestation verify $artifact.FullName `
+            --repo $env:GITHUB_REPOSITORY `
+            --signer-workflow $env:EXPECTED_SIGNER_WORKFLOW `
+            --source-ref $env:GITHUB_REF `
+            --source-digest $env:GITHUB_SHA `
+            --deny-self-hosted-runners `
+            --format json
+          if ($LASTEXITCODE -ne 0) {
+            throw "gh attestation verify failed with exit code $LASTEXITCODE"
+          }
+
+          $verificationJson | Set-Content -LiteralPath "verified/verification-result.json" -Encoding utf8
+          $verification = @($verificationJson | ConvertFrom-Json)
+          if ($verification.Count -lt 1) {
+            throw "Expected at least one verified attestation."
+          }
+          $certificate = $verification[0].verificationResult.signature.certificate
+          if ($certificate.buildTrigger -ne "push") {
+            throw "Expected the signed build trigger to be push, got $($certificate.buildTrigger)."
+          }
+          if ($certificate.sourceRepositoryDigest -ne $env:GITHUB_SHA) {
+            throw "Signed source digest does not match the tag commit."
+          }
+          if ($certificate.sourceRepositoryRef -ne $env:GITHUB_REF) {
+            throw "Signed source ref does not match the pushed tag."
+          }

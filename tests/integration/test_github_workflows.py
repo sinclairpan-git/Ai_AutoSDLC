@@ -269,3 +269,54 @@ def test_github_workflows_use_node24_compatible_core_actions() -> None:
             assert legacy_action not in workflow, (
                 f"{workflow_path.relative_to(_REPO_ROOT)} still uses {legacy_action}"
             )
+
+
+def test_native_artifact_attestation_spike_is_tag_bound_and_verifies_provenance() -> None:
+    workflow_path = _WORKFLOWS_DIR / "native-artifact-attestation-spike.yml"
+
+    workflow = yaml.load(
+        workflow_path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader
+    )
+
+    assert workflow["on"] == {
+        "push": {"tags": ["spike-native-attestation-*"]}
+    }
+
+    build = workflow["jobs"]["build-attest"]
+    assert build["runs-on"] == "windows-latest"
+    assert build["permissions"] == {
+        "contents": "read",
+        "id-token": "write",
+        "attestations": "write",
+        "artifact-metadata": "write",
+    }
+    build_steps = {step["name"]: step for step in build["steps"]}
+    assert build_steps["Attest Windows probe"]["uses"] == "actions/attest@v4"
+    assert build_steps["Attest Windows probe"]["with"] == {
+        "subject-path": "dist/ai-sdlc-attestation-spike-windows-amd64.zip"
+    }
+    assert build_steps["Upload Windows probe"]["uses"] == "actions/upload-artifact@v7"
+
+    verify = workflow["jobs"]["verify"]
+    assert verify["needs"] == "build-attest"
+    assert verify["runs-on"] == "windows-latest"
+    assert verify["permissions"] == {
+        "actions": "read",
+        "attestations": "read",
+        "contents": "read",
+    }
+    verify_steps = {step["name"]: step for step in verify["steps"]}
+    assert verify_steps["Download Windows probe"]["uses"] == "actions/download-artifact@v8"
+
+    command = verify_steps["Verify repository, workflow, ref, and commit"]["run"]
+    assert "gh attestation verify" in command
+    assert "--repo $env:GITHUB_REPOSITORY" in command
+    assert "--signer-workflow $env:EXPECTED_SIGNER_WORKFLOW" in command
+    assert "--source-ref $env:GITHUB_REF" in command
+    assert "--source-digest $env:GITHUB_SHA" in command
+    assert "--deny-self-hosted-runners" in command
+    assert '$certificate.buildTrigger -ne "push"' in command
+
+    rendered = workflow_path.read_text(encoding="utf-8")
+    assert "gh release" not in rendered
+    assert "workflow_dispatch" not in rendered
