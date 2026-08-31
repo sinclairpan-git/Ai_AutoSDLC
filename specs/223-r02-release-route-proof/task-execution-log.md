@@ -2,7 +2,7 @@
 
 **功能编号**：`223-r02-release-route-proof`
 **创建日期**：2026-08-30
-**状态**：Batch 002 review remediation；dev `needs_user`
+**状态**：Batch 004 final formal remediation；bounded dev 已批准、待 formal 合并
 
 ## 1. 归档规则
 
@@ -141,3 +141,28 @@
 - `uv run pytest tests/integration/test_repo_program_manifest.py -q`：`1 passed in 154.70s`。
 - `uv run ai-sdlc verify constraints`：`no BLOCKERs`；working-tree diff-check 与行尾扫描 `PASS`。
 - 本批提交后执行 commit-range diff-check，再从 clean committed state 刷新 continuity。
+
+## 5. Batch 2026-08-31-004 | 用户合议授权与 final P1 remediation
+
+### 5.1 Finding 与核验
+
+- final review 指出 release build 是 Windows/macOS/Linux 三平台矩阵，而 T20 让三个 job 都上传固定名 `release-build-provenance.json`。
+- 核验 `.github/workflows/release-build.yml`：三个 job 均执行 `gh release upload ... --clobber`；同名 sidecar 会由最后完成的平台覆盖，Windows R02 可能读取 macOS/Linux provenance，finding 成立。
+
+### 5.2 对抗合议
+
+- **批准**：允许在独立 dev 分支聚焦修改 `release-build.yml`，固定 tag checkout，并为每个 archive 生成唯一的 `<archive-name>.provenance.json`。
+- **拒绝扩张**：不引入矩阵聚合器、通用 attestation、持久化 ledger、额外路线、release/version 或 runtime 改动。
+- formal PR 仍先于 dev；本次是用户对两轮上限后的显式一次性授权，若 final re-review 再出现可操作问题则停止，不继续滚动整改。
+
+### 5.3 formal 修正
+
+- spec/plan/tasks 将 provenance 定义收敛为 archive-qualified 一一绑定，并把 dev 状态从 `needs_user` 更新为“已批准、待 formal 合并”。
+- Program Truth 的 16 个既有 blocker、`0/12 proven` 与 R02 `partial` 均保持，不因开发授权而漂白。
+
+### 5.4 验证
+
+- `workitem plan-check`：`Pending todos=0`、`Drift=NO`；`program validate`：`PASS`。
+- Program Truth dry-run/execute 保持原 16 blocker、`1169/1169 mapped`、missing `4`、close `218/222`；写入 snapshot hash `ec7d1e18244069a3cb0af270d164407c8cf1d2307db2bb0c26e5b348de22530a`。
+- `uv run pytest tests/integration/test_repo_program_manifest.py -q`：`1 passed in 140.90s`。
+- `uv run ai-sdlc verify constraints`：`no BLOCKERs`；`git diff --check`：`PASS`。

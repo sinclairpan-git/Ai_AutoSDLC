@@ -32,7 +32,7 @@
 | P1 | Diff-local Lean Advisory | **No-Go 已关闭（未合并）** | 8.0/10 | 实际：1 个 WI + 2 轮评审 | No-Go（及时止损） | P0 与 v0.9.8 已完成 |
 | P2 | 普通用户单入口收敛 | **已完成（WI220）** | 9.0/10 | 实际已投入 | 1.5（原估） | P1 已有证据 No-Go |
 | D2 | 历史 release-target provenance 恢复 | **WI221 admission No-Go；待用户决策** | 7.5/10 | 审计 <0.5 人日；补缺粗估 8–13 人日 | 0.6–0.9 | v0.9.9 的硬前置 |
-| P3 | 跨平台首次用户 12 路完整闭环 | **WI222 formal 已完成；WI223 发现 build provenance 缺口，dev `needs_user`** | 9.5/10 | 已止损于 formal；若扩展仍受 3 人日上限约束 | 等待是否批准 release-build provenance | P2 默认入口稳定 |
+| P3 | 跨平台首次用户 12 路完整闭环 | **WI222 formal 已完成；WI223 archive-qualified build provenance 已批准，待 formal 合并后 dev** | 9.5/10 | 仍受 3 人日上限约束 | 先完成 R02 单路证明载体 | P2 默认入口稳定 |
 | P4 | 五类 Loop 有界动态专家 | **条件候选** | 10/10 | 10–15 人日 | 0.6 | P1–P3 的真实收益支持继续投资 |
 
 此外保留两个非产品队列：`O1` 是发布后真实项目观察；`D1` 是无当前实现授权的延后候选。它们不得抢占 P1–P4 的正常产品顺序。
@@ -160,14 +160,14 @@
 
 ## 7. P3：跨平台首次用户 12 路完整闭环
 
-**状态：WI222 已完成 P3-A formal/admission；WI223 formal 发现现有 release asset 缺少可验证 build provenance，dev 转为 `needs_user`。** 基于
+**状态：WI222 已完成 P3-A formal/admission；WI223 已获批补齐 archive-qualified build provenance，待 formal 合并后进入 dev。** 基于
 `origin/main@49d43c459cdabe5d3664dafd4600192c01333500` 的严格证据合同，当前仍为
 `0/12 proven、12/12 partial、0/12 missing`：指南覆盖了全部组合，三平台安装/发布 smoke 提供了共享基础，
 但没有任何一路形成同时包含正式资产完整性、`init/adopt`、`Result / Next`、主动恢复和版本绑定的自包含证据链。
 正式合同与逐路差距表见 `specs/222-first-user-twelve-route-e2e-contract/`；WI223 只允许用一个共享 Windows
 执行器复用 guide replay 与 release smoke，生成临时 R02 receipt。Codex review 进一步证明 asset digest 只能绑定
-Release 上的内容，不能证明该 archive 来自 tag commit；未经用户另行批准，不得扩大到 `release-build.yml` 或 attestation，
-也不得把 PR、手工 dispatch 或无 build provenance 的 release event 冒充正式证明。
+Release 上的内容，不能证明该 archive 来自 tag commit。用户已批准最小修改 `release-build.yml`：固定 tag checkout，并为
+每个 archive 生成唯一 `<archive-name>.provenance.json`；仍不得扩展为通用 attestation，也不得把 PR、手工 dispatch 或无 build provenance 的 release event 冒充正式证明。
 
 ### 7.1 目标与价值
 
@@ -189,7 +189,7 @@ Release 上的内容，不能证明该 archive 来自 tag commit；未经用户�
 
 - [x] WI222 冻结 12 路证据合同，定义每条路线的准备、命令、证据、恢复和版本绑定字段。
 - [x] WI222 复用已有 Windows E2E、离线安装和三平台 release smoke 完成差距映射，不重写安装系统。
-- [ ] WI223 等待用户决定是否批准 release-build provenance 扩展；未经批准不创建 dev 分支，R02 保持 `partial`。
+- [ ] WI223 formal clean/green 合并后，按已批准的 archive-qualified release-build provenance 边界创建独立 dev 分支；真实 release receipt 前 R02 保持 `partial`。
 - [ ] 抽取跨平台共享步骤，使用矩阵参数化；禁止复制一份超过核心安装逻辑数倍的 POSIX workflow。
 - [ ] 补齐 macOS/Linux 完整 user-guide E2E、在线 bootstrap、系统 Python、下载工具和 glibc 等真实兼容边界。
 - [ ] 在干净 Windows/macOS/Linux 环境执行 12 条路线；模拟测试或文档 lint 不能替代真实 E2E。
@@ -353,7 +353,7 @@ Release 上的内容，不能证明该 archive 来自 tag commit；未经用户�
 - [ ] O1 在 3–5 个真实项目完成 v0.9.8 真值观察。
 - [x] P1 Diff-local Lean Advisory 已按运行时合同缺陷有证据 No-Go 关闭；实现未合并，主线保留 WI219 轻量 ROI prompt。
 - [x] P2 普通用户单入口完成默认路径与高级兼容验证（WI220）。
-- [ ] P3 十二条首次用户路线完成真实 clean-environment E2E；WI222 formal 已完成，WI223 因 build provenance 缺口停在 `needs_user`。
+- [ ] P3 十二条首次用户路线完成真实 clean-environment E2E；WI222 formal 已完成，WI223 的 R02 archive-qualified build provenance 已批准、待实现。
 - [ ] P4 Phase A 证明 Requirement/Design/Implementation 动态专家 ROI。
 - [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。

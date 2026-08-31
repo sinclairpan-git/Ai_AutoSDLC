@@ -35,16 +35,16 @@ Batch 6: next natural release evidence (deferred; no release authorization)
 
 ## Batch 2：build provenance and route proof RED
 
-### T20：先写 release-build provenance 合同并实现最小 sidecar
+### T20：先写 release-build provenance 合同并实现 archive-qualified sidecar
 
-- **优先级**：P0 / blocked
-- **依赖**：T11 formal PR 合并；用户另行批准修改 `release-build.yml`
+- **优先级**：P0 / approved after formal merge
+- **依赖**：T11 formal PR clean/green 合并；用户已批准聚焦修改 `release-build.yml`
 - **文件**：修改 `tests/integration/test_github_workflows.py`、`.github/workflows/release-build.yml`
 - **步骤**：
-  - [ ] 先写 RED，要求 release build checkout 精确使用 `ref: ${{ inputs.tag }}`，并要求 workflow 生成 `release-build-provenance.json`。
+  - [ ] 先写 RED，要求 release build checkout 精确使用 `ref: ${{ inputs.tag }}`，并要求 workflow 为每个 archive 生成唯一的 `<archive-name>.provenance.json`；三平台矩阵不得上传同名 sidecar。
   - [ ] sidecar 只包含 `schema_version`、`release_tag`、`source_commit`、`archive_name`、`archive_digest`、`workflow_run_id`；不新增通用 attestation 框架或持久化 ledger。
   - [ ] 在上传前验证 `$GITHUB_SHA`/checkout commit 等于 tag commit，并用实际 archive SHA256 写 `archive_digest`；不一致时禁止 `gh release upload`。
-  - [ ] 将 sidecar 与对应 archive 一起上传到同一 release；focused test 由 RED 转 GREEN。
+  - [ ] 将 archive-qualified sidecar 与对应 archive 一起上传到同一 release；禁止依赖 `--clobber` 覆盖其他平台的 provenance；focused test 由 RED 转 GREEN。
 - **提交**：与 T21/T31 的同一 provenance + receipt 逻辑批次提交。
 
 ### T21：先写共享执行器与 receipt 合同测试

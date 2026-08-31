@@ -2,7 +2,7 @@
 
 **功能编号**：`223-r02-release-route-proof`
 **创建日期**：2026-08-30
-**状态**：P3-B formal remediation；build provenance 缺口触发 `needs_user`，dev 未授权
+**状态**：P3-B formal final remediation；build provenance 最小扩展已获用户批准，dev 待 formal 合并
 **远端主线基线**：`origin/main@49d43c459cdabe5d3664dafd4600192c01333500`
 **发布基线**：GitHub Release `v0.9.8` / tag commit `4f3e55c300dab20fb4fea93818d79394a927f77e`
 **输入**：`specs/222-first-user-twelve-route-e2e-contract/spec.md` 与 `docs/FRAMEWORK_ROADMAP.zh-CN.md`
@@ -17,7 +17,7 @@
 - 对 GitHub Release 返回的资产 `digest` 与下载文件 SHA256 做精确比较；同时要求可验证的 build provenance 把该资产绑定到 release tag commit，不以 release metadata、`AGENTS.md` 或业务文件 hash 代替构建来源证明。
 - 主动损坏 `.ai-sdlc/state/resume-pack.yaml`，调用已发布 CLI 的 `recover` 恢复，并保存故障前后与恢复输出。
 - 生成 CI 临时 receipt；receipt 不是产品运行时状态、Program Truth、ledger 或长期数据库。
-- PR 本地产物、`workflow_dispatch` 正式包重放与 `release` event 可以使用同一执行器，但在 build provenance 未补齐前全部保持 `partial`。
+- PR 本地产物、`workflow_dispatch` 正式包重放与 `release` event 可以使用同一执行器，但在 archive-qualified build provenance 未补齐前全部保持 `partial`。
 
 ### 1.2 本次不覆盖
 
@@ -40,7 +40,7 @@
 5. 隔离 worktree 在任何改动前全量基线为 `3407 passed, 3 skipped`。
 6. Codex review 对 `.github/workflows/release-build.yml` 的精确核验表明：workflow-dispatch job 的 checkout 未固定 `ref: inputs.tag`，但可以把当前 dispatch ref 构建的包用 `gh release upload ... --clobber` 写入目标 release。因而“release target commit + asset digest”不能证明 archive 源自 tag commit。
 
-**闸门修正结论**：原 `Go` 不成立，状态改为 `needs_user`。现有授权只允许两个消费 workflow 和一个共享执行器，不能自行扩大到第三个 release build workflow 或发布 attestation。用户若另行批准，可在新边界中选择“固定 release-build checkout 并生成可验证 provenance sidecar”；未批准则 WI223 以 formal No-Go 收口，不进入 dev。
+**闸门最终结论**：用户在复核 build provenance 缺口与三平台同名 sidecar 覆盖风险后，批准 `Go` 的最小扩展。允许聚焦修改 `release-build.yml`：固定 tag checkout，并为每个 archive 生成唯一的 `<archive-name>.provenance.json`，把 source commit、tag、archive digest 与 run 绑定。仍禁止通用 attestation、聚合服务、持久化 ledger 或 R02 之外的路线扩张；formal 合并前不进入 dev。
 
 ## 3. 用户场景与验收
 
@@ -67,7 +67,7 @@
 
 - **FR-223-001**：receipt 必须包含且只使用 WI222 定义的 12 个必需顶层证据字段：`route_id`、`environment`、`project_mode`、`acquisition_mode`、`source_binding`、`asset_integrity`、`installation`、`lifecycle`、`result_next`、`success_receipt`、`fault_recovery`、`evidence_links`；允许另有 `schema_version` 和 `status` 元数据。
 - **FR-223-002**：R02 固定为 Windows AMD64、已有项目、在线正式 release 获取；执行器不得接受任意 route ID 或扩展为未授权矩阵框架。
-- **FR-223-003**：正式资产模式必须从 GitHub Release API 取得资产名、tag/target commit 与 digest，比较本地 SHA256，并验证构建该资产的 run/source commit 等于 tag commit。release metadata 与 digest 不能替代 build provenance；缺字段或不一致必须 fail closed 为 `partial`。
+- **FR-223-003**：正式资产模式必须从 GitHub Release API 取得资产名、tag/target commit 与 digest，比较本地 SHA256，并读取与 archive 一一对应的 `<archive-name>.provenance.json`，验证构建该资产的 run/source commit 等于 tag commit。release metadata、digest 或其他平台的 sidecar 不能替代本 archive 的 build provenance；缺字段或不一致必须 fail closed 为 `partial`。
 - **FR-223-004**：共享执行器必须被两个既有 workflow 调用；不得在 workflow 中保留第二份完整安装/init/adopt/recover 实现。
 - **FR-223-005**：故障恢复必须真实损坏 resume pack 后调用 `ai-sdlc recover`；不得用字符串断言或预制成功 JSON 代替执行。
 - **FR-223-006**：PR、本地候选或手工 dispatch 的 receipt 状态必须为 `partial`；仅 `GITHUB_EVENT_NAME=release`、build provenance 精确绑定 tag commit 且所有必需检查通过时允许 `proven`。
@@ -81,7 +81,7 @@
 - 为完成 R02 复制第三份近似 workflow，或无法删除现有重复核心步骤；
 - 实际总投入预计超过 3 人日；
 - 需要削弱“真实 release event 才能 proven”的合同；
-- 无法在不扩展到 release-build/attestation 的前提下证明 archive 的构建来源；
+- 需要超出已批准的 release-build tag checkout 与 archive-qualified sidecar，才能证明 archive 的构建来源；
 - 两轮独立评审后仍有可操作问题。
 
 不设置机械 LOC 上限；文件大小和支撑比例只触发 Lean 复核。只要实现直接映射 12 字段、复用两条既有路径且无持久化治理扩张，可保留必要的 Windows/恢复支撑代码。
@@ -92,7 +92,7 @@
 2. **投入**：特征化已完成；实现、测试、CI、评审与收口目标 `1.5–2.5` 人日，硬上限 `3` 人日。
 3. **最小方案**：一个 R02 执行器、两个薄 workflow 调用、一个临时 receipt；不实现通用路线平台。
 4. **备选方案**：复制现有 PowerShell 到 release smoke 投入更小但会形成双轨；一次实现 12 路需 6–10 人日且未证明复用；两者均拒绝。
-5. **决策**：`needs_user`。用户批准的是“闸门通过后继续”；review 证明闸门缺少 build provenance。不得把既有批准解释为修改第三个 workflow 的权限。
+5. **决策**：`Go`。用户已明确批准聚焦修改 release build 与 archive-qualified provenance；该授权不包含通用 attestation、额外路线、版本发布或产品 runtime 变更。
 
 ## 6. 成功标准
 
@@ -101,4 +101,4 @@
 - **SC-223-003**：正式资产模式对本地 archive SHA256、GitHub asset digest、release tag commit 与 build source commit 做精确比较，任何缺失或不一致均保持 `partial` 或失败。
 - **SC-223-004**：receipt 的 12 个必需字段完整，且非 `release` 事件或缺少 build provenance 时不能产生 `proven`。
 - **SC-223-005**：实现 PR 不触达禁止范围；全量测试、Ruff、constraints 与 diff-check 通过。
-- **SC-223-006**：本 formal PR 合并后停在 `needs_user`；只有用户批准 build provenance 扩展后才重新建立 dev 计划。在真实 `proven` receipt 前，Program Truth 与 WI222 的路线结论保持 blocked/partial。
+- **SC-223-006**：本 formal PR clean/green 合并后才创建独立 dev 分支，按已批准的 build provenance 边界执行 T20–T51。在真实 `proven` receipt 前，Program Truth 与 WI222 的路线结论保持 blocked/partial。
