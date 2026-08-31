@@ -73,3 +73,11 @@
 - **聚焦修复**：保留 12 个顶层 receipt 字段，只将 `source_binding` 拆为 `asset(repository/tag/commit)` 与 `workflow(repository/commit/event/run_id)`；手工 replay 用 `git ls-remote` 解析官方 tag 的 peeled commit，自然 release 复用已校验 tag commit，PR 本地制品沿用 PR workflow commit。
 - **复验**：focused `14 passed`；证据 tag `spike-native-release-attestation-0c6c9d6d` 远端解析为 exact `0c6c9d6d43f98dcfd169f418e6f6dc616c996c4b`；Ruff、YAML、内嵌 PowerShell AST、`git diff --check`、constraints、plan-check（`Drift=NO`）与 program validate 全部通过。
 - **轮次边界**：这是批准范围内第二次也是最后一次 review remediation；推送后只请求 final exact-live-head review。若仍有 finding，不再循环实现，停止并向用户报告；若 clean 且 required checks 全绿则合并。
+
+## Batch 2026-08-31-009 | T42 terminal sponsor decision
+
+- **终局 finding**：final review 指出同 tag 的 `release.published` 与 `workflow_dispatch` 共用 concurrency group；手工 replay 会因 `cancel-in-progress=true` 取消唯一自然发布 `proven` 路径。两轮整改额度耗尽后先进入 `needs_user`，监控暂停，未自动继续。
+- **Sponsor 决策**：用户只授权一次终局微修复，并冻结唯一产品改动为 concurrency key 加入 event identity；投入限于一个 workflow 表达式、一个合同测试及必要 WI224 records/continuity。此后 review 只给 verdict，不再整改。
+- **RED→GREEN**：先增加自然发布与手工 replay 必须隔离的独立合同；focused suite 从 `1 failed, 14 passed` 转为 `15 passed`。GREEN 后将断言合并进既有 natural-release 合同以避免测试膨胀，最终为 `14 passed`。产品改动仅一行，0 新文件、runtime、依赖、状态、workflow 或抽象。
+- **复验**：Lean 后 focused `14 passed`；Ruff、YAML parse、`git diff --check`、constraints、plan-check（`Drift=NO`）与 program validate 全部通过；本机无 actionlint，远端 required checks 作为 workflow 最终执行门禁。
+- **收敛规则**：两轮后统一进入一次 terminal sponsor decision；决策必须冻结唯一改动、投入边界和终止结果。终局复评 clean/green 才合并；若出现新的核心 P2 以上 finding 则直接 No-Go/再次 `needs_user`，不得开启第四次实现。该通用规则在 WI224 收口后另立 formal governance work item，不混入本实现 PR。

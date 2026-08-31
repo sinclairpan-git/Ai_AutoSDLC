@@ -332,6 +332,10 @@ def test_windows_user_guide_e2e_verifies_natural_release_before_install() -> Non
     )["run"]
 
     assert events["release"]["types"] == ["published"]
+    assert workflow["concurrency"] == {
+        "group": "windows-user-guide-e2e-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.release.tag_name || inputs.tag || github.ref }}",
+        "cancel-in-progress": True,
+    }
     assert "github.event.release.tag_name" in job["env"]["RELEASE_TAG"]
     assert "github.event.release.tag_name" in checkout["with"]["ref"]
     assert '$releaseVersion = $env:RELEASE_TAG -replace' in replay
@@ -389,7 +393,6 @@ def test_windows_user_guide_e2e_records_recovery_bound_r02_receipt() -> None:
         "evidence_links",
     ):
         assert evidence_field in replay
-
 
 def test_posix_offline_smoke_matrix_concurrency_is_job_scoped() -> None:
     workflow_path = _WORKFLOWS_DIR / "posix-offline-smoke.yml"

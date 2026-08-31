@@ -22,7 +22,7 @@ permissions:
   attestations: read
 
 concurrency:
-  group: windows-user-guide-e2e-${{ github.event.pull_request.number || github.event.release.tag_name || inputs.tag || github.ref }}
+  group: windows-user-guide-e2e-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.release.tag_name || inputs.tag || github.ref }}
   cancel-in-progress: true
 
 jobs:
