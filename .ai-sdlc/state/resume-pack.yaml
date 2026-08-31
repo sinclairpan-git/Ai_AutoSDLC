@@ -11,15 +11,16 @@ working_set_snapshot:
   active_files:
   - specs/222-first-user-twelve-route-e2e-contract/tasks.md
   - specs/222-first-user-twelve-route-e2e-contract/spec.md
-  context_summary: 'Goal: Close WI222 after PR #189 without runtime expansion | State:
-    Records-only closeout batch drafted; Program Truth refreshed and focused gates
-    passed on codex/wi222-post-merge-truth-closeout | Next: Perform final diff/YAML
-    checks, resync truth after this handoff, commit/push, open records-only PR and
-    request Codex exact-head review'
+  context_summary: 'Goal: Monitor and merge WI222 records-only closeout PR #190 without
+    runtime expansion | State: PR #190 is open as draft at reviewed candidate head
+    2488d89e on exact base 024c38a4; closeout content and focused verification are
+    complete | Next: Monitor PR #190 exact head for Codex findings and required checks;
+    fix only in-scope records issues; when clean and green, mark ready, merge, remove
+    temporary branch, and verify exact main in an isolated clone'
 current_branch: codex/wi222-post-merge-truth-closeout
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-31T00:54:40+00:00'
+timestamp: '2026-08-31T01:03:58+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-08-30T15:12:18+00:00'
 checkpoint_fingerprint: 2a35828c2346fc2512ca525f2eab0c8039e011a77707e6d0af9ab1020dd8be48
