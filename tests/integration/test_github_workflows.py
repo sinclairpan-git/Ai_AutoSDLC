@@ -205,6 +205,79 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     assert "command -v ai-sdlc" in workflow
 
 
+def test_release_build_workflow_requires_exact_tag_checkout() -> None:
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "release-build.yml").read_text(encoding="utf-8")
+    )
+    steps = workflow["jobs"]["build-smoke-upload"]["steps"]
+    checkout = next(step for step in steps if step.get("uses") == "actions/checkout@v6")
+
+    assert checkout["with"]["ref"] == "${{ inputs.tag }}"
+    assert checkout["with"]["fetch-depth"] == 0
+
+    guard = next(step for step in steps if "git rev-parse" in step.get("run", ""))
+    guard_script = guard["run"]
+    build_index = next(
+        index for index, step in enumerate(steps) if step.get("name") == "Build offline bundle"
+    )
+    assert steps.index(checkout) < steps.index(guard) < build_index
+    assert "GITHUB_REF" in guard_script
+    assert 'refs/tags/${RELEASE_TAG}' in guard_script
+    assert '${RELEASE_TAG}^{commit}' in guard_script
+    assert "GITHUB_SHA" in guard_script
+
+
+def test_release_build_workflow_grants_native_attestation_permissions() -> None:
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "release-build.yml").read_text(encoding="utf-8")
+    )
+
+    assert workflow["permissions"] == {
+        "contents": "write",
+        "id-token": "write",
+        "attestations": "write",
+        "artifact-metadata": "write",
+    }
+
+
+def test_release_build_workflow_attests_and_verifies_before_release_upload() -> None:
+    workflow_path = _WORKFLOWS_DIR / "release-build.yml"
+    workflow_text = workflow_path.read_text(encoding="utf-8")
+    workflow = yaml.safe_load(workflow_text)
+    steps = workflow["jobs"]["build-smoke-upload"]["steps"]
+
+    smoke_indexes = [
+        index for index, step in enumerate(steps) if step.get("name", "").startswith("Smoke ")
+    ]
+    attest_index = next(
+        index for index, step in enumerate(steps) if step.get("uses") == "actions/attest@v4"
+    )
+    verify_index = next(
+        index
+        for index, step in enumerate(steps)
+        if "gh attestation verify" in step.get("run", "")
+    )
+    upload_index = next(
+        index
+        for index, step in enumerate(steps)
+        if "gh release upload" in step.get("run", "")
+    )
+
+    assert smoke_indexes
+    assert max(smoke_indexes) < attest_index < verify_index < upload_index
+
+    verify_script = steps[verify_index]["run"]
+    for required_flag in (
+        "--repo",
+        "--signer-workflow",
+        "--source-ref",
+        "--source-digest",
+        "--deny-self-hosted-runners",
+    ):
+        assert required_flag in verify_script
+    assert ".provenance.json" not in workflow_text
+
+
 def test_windows_user_guide_e2e_replays_existing_project_install_path() -> None:
     workflow_path = _WORKFLOWS_DIR / "windows-user-guide-e2e.yml"
 
@@ -222,8 +295,9 @@ def test_windows_user_guide_e2e_replays_existing_project_install_path() -> None:
     assert "pull_request_local_bundle" in workflow
     assert "USER_GUIDE.zh-CN.md Chapter 2, Scenario B" in workflow
     assert "my-existing-project" in workflow
-    assert "ai-sdlc-offline-0.9.8-windows-amd64" in workflow
-    assert "releases/download/v0.9.8" in workflow
+    assert '$releaseVersion = $env:RELEASE_TAG -replace' in workflow
+    assert '$BundleName = "ai-sdlc-offline-$releaseVersion-windows-amd64"' in workflow
+    assert "releases/download/$env:RELEASE_TAG/$PackageName" in workflow
     assert "Invoke-WebRequest" in workflow
     assert "Expand-Archive" in workflow
     assert "-ExecutionPolicy Bypass -File .\\install_offline.ps1 -AddToPath" in workflow
@@ -244,6 +318,81 @@ def test_windows_user_guide_e2e_replays_existing_project_install_path() -> None:
     assert "windows-user-guide-existing-project-evidence" in workflow
     assert "actions/upload-artifact@v7" in workflow
 
+
+def test_windows_user_guide_e2e_verifies_natural_release_before_install() -> None:
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "windows-user-guide-e2e.yml").read_text(encoding="utf-8")
+    )
+    events = workflow.get("on", workflow.get(True))
+    job = workflow["jobs"]["existing-project-online-install"]
+    steps = job["steps"]
+    checkout = next(step for step in steps if step.get("uses") == "actions/checkout@v6")
+    replay = next(
+        step for step in steps if step.get("name") == "Replay Windows existing-project guide path"
+    )["run"]
+
+    assert events["release"]["types"] == ["published"]
+    assert workflow["concurrency"] == {
+        "group": "windows-user-guide-e2e-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.release.tag_name || inputs.tag || github.ref }}",
+        "cancel-in-progress": True,
+    }
+    assert "github.event.release.tag_name" in job["env"]["RELEASE_TAG"]
+    assert "github.event.release.tag_name" in checkout["with"]["ref"]
+    assert '$releaseVersion = $env:RELEASE_TAG -replace' in replay
+    assert '$releaseRepository = if ($env:GITHUB_EVENT_NAME -eq "release")' in replay
+    assert '$env:GITHUB_REPOSITORY' in replay
+    assert '"sinclairpan-git/Ai_AutoSDLC"' in replay
+    assert 'https://github.com/$releaseRepository/releases/download/$env:RELEASE_TAG/$PackageName' in replay
+    assert "USER_GUIDE.zh-CN.md" in replay
+
+    verify_index = replay.index("gh attestation verify")
+    assert replay.index("Invoke-WebRequest") < verify_index < replay.index("Expand-Archive")
+    for required_contract in (
+        "--signer-workflow",
+        "--source-ref",
+        "--source-digest",
+        "--deny-self-hosted-runners",
+        "buildTrigger",
+        "workflow_dispatch",
+    ):
+        assert required_contract in replay
+
+
+def test_windows_user_guide_e2e_records_recovery_bound_r02_receipt() -> None:
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "windows-user-guide-e2e.yml").read_text(encoding="utf-8")
+    )
+    steps = workflow["jobs"]["existing-project-online-install"]["steps"]
+    replay = next(
+        step for step in steps if step.get("name") == "Replay Windows existing-project guide path"
+    )["run"]
+
+    assert "resume-pack.yaml" in replay
+    assert "& $directShim recover" in replay
+    assert '$receiptStatus = if ($env:GITHUB_EVENT_NAME -eq "release")' in replay
+    assert '"proven"' in replay
+    assert '"partial"' in replay
+    assert "route-receipt.json" in replay
+    assert '$workflowRepository = $env:GITHUB_REPOSITORY' in replay
+    assert '$workflowCommit = $env:GITHUB_SHA' in replay
+    assert 'git ls-remote --exit-code "https://github.com/$releaseRepository.git"' in replay
+    assert 'asset = [ordered]@{ repository = $releaseRepository; tag = $env:RELEASE_TAG; commit = $assetCommit }' in replay
+    assert 'workflow = [ordered]@{ repository = $workflowRepository; commit = $workflowCommit; event = $env:GITHUB_EVENT_NAME; run_id = $env:GITHUB_RUN_ID }' in replay
+    for evidence_field in (
+        "route_id",
+        "environment",
+        "project_mode",
+        "acquisition_mode",
+        "source_binding",
+        "asset_integrity",
+        "installation",
+        "lifecycle",
+        "result_next",
+        "success_receipt",
+        "fault_recovery",
+        "evidence_links",
+    ):
+        assert evidence_field in replay
 
 def test_posix_offline_smoke_matrix_concurrency_is_job_scoped() -> None:
     workflow_path = _WORKFLOWS_DIR / "posix-offline-smoke.yml"
