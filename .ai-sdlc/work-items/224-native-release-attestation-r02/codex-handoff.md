@@ -1,23 +1,24 @@
 # Continuity Handoff
 
-- Updated: 2026-08-31T08:12:41+00:00
-- Reason: 用户批准的最终评审例外
-- Goal: 完成 WI224 formal PR #192 评审并在 clean/green 后合并
-- State: PR #192 前两轮各返回 1 个 continuity P2；用户只授权修正第二轮 execution-log 状态并进行一次 final review，当前等待 live remote head 的最终结论
+- Updated: 2026-08-31T08:59:32+00:00
+- Reason: WI224 formal post-merge truth closeout
+- Goal: 完成 WI224 formal 合并后真值收口，再从 exact main 启动 bounded dev
+- State: PR #192 已 clean/green 合并到 exact origin/main@547e78fd；formal 分类与 Program Truth 已冻结，等待 closeout PR 评审合并
 - Stage: close
 - Work Item: 224-native-release-attestation-r02
-- Branch: feature/224-native-release-attestation-r02-docs
+- Branch: codex/wi224-formal-post-merge-closeout
 
 ## Changed Files
 - none
 
 ## Key Decisions
-- 最终例外只允许修正 execution log 并同步稳定 continuity；不修改 spec/plan/tasks/roadmap/Program Truth 结论或产品代码
-- final review 若仍有 finding，立即 No-Go，不再整改或请求下一轮
+- formal terminal truth 固定为 formal_freeze_only、execution_started=false、contained_in_main=true
+- closeout 只刷新 tasks/execution-log、roadmap、Program Truth 与 continuity；不修改产品代码或扩大 R02 范围
 
 ## Commands / Tests
-- PR #192 exact base 49d43c459cdabe5d3664dafd4600192c01333500；首轮 reviewed head a77a3381，第二轮 reviewed head 89ba139d
-- 首轮 handoff P2 已修复；第二轮 execution-log P2 已按用户批准的单次最终例外修正
+- PR #192 squash merge `547e78fd4f03083f2e8c6bb6d258523c8776b0d7` 与 exact origin/main 一致；final reviewed head `9a61ca7d` 无 finding，全部 required checks 通过
+- exact-main truth-check: formal_freeze_only、execution_started=false、contained_in_main=true
+- Program Truth execute hash `54730fc7b11cdd725d3d049c1647f6268b19caf560a44647f35129492fe83050`；blocked/fresh；16 blockers；1169/1169 mapped；missing 4；close 218/222
 
 ## Blockers / Risks
 - Program Truth 的 16 个历史 blocker 原样保留；不是 WI224 formal PR 合并 blocker
@@ -26,6 +27,6 @@
 - none
 
 ## Exact Next Steps
-- 等待 live remote PR head 的 final Codex review
-- 若仍有 finding，立即 No-Go 并报告，不再修改
-- Codex 无可操作问题且 required checks 全绿后 merge PR #192
+- 监控 live remote closeout PR exact head 的 Codex review 与 required checks
+- closeout clean/green 后合并并验证新的 exact origin/main
+- 删除 closeout automation/worktree，然后从 exact main 创建 WI224 dev worktree 执行 T20-T42

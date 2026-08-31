@@ -19,8 +19,9 @@ related_doc:
 
 - [x] 更新 roadmap、manifest dependency、项目序号和固定库存期望。
 - [x] 运行 constraints、plan-check、program validate/truth、manifest/workflow tests、Ruff、diff-check。
-- [ ] 更新 execution log/continuity，提交、推送 formal PR 并请求 Codex review；最多两轮。
-- [ ] formal PR clean/green 后合并，再从 exact main 创建 dev 分支。
+- [x] 更新 execution log/continuity，提交 formal PR；两轮后经用户批准一次最终例外，final review 无 finding。
+- [x] formal PR required checks 全绿后合并，exact `origin/main@547e78fd4f03083f2e8c6bb6d258523c8776b0d7` 已验证。
+- [ ] post-merge truth closeout 合并后，再从新的 exact main 创建 dev 分支。
 
 ## Batch 2：Release Build producer
 
