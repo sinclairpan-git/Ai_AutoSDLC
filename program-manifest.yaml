@@ -2086,12 +2086,15 @@ specs:
 - id: 222-first-user-twelve-route-e2e-contract
   path: specs/222-first-user-twelve-route-e2e-contract
   depends_on: []
+- id: 223-r02-release-route-proof
+  path: specs/223-r02-release-route-proof
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-08-31T01:58:39Z'
+  generated_at: '2026-08-31T03:28:29Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 1a63333e
-  authoring_hash: 41982bbe8f35cbb79ae50782c51c9439fd117d0bd683c38a809aaa302d4f7aa2
+  repo_revision: 49d43c45
+  authoring_hash: 58306c9497b889285e61b004d69f3ec6cfb994dad197673e2492eafbf6a7b1b0
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 694fbf058775409c9ac373054323501942cebddcce74f540b4a8df9e9c2ce5a9
@@ -2133,7 +2136,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 442f51cf83ebb3c3b869293d5a5d2dd17115ee6762b098101c21a8b5004d715c
+  snapshot_hash: f9336bc3da77487f6a8e70403e23432eb3ff07f4b3f00ecf4e74ac69d55b39d0
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2163,30 +2166,30 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1164
-    mapped_sources: 1164
+    total_sources: 1169
+    mapped_sources: 1169
     unmapped_sources: 0
-    missing_sources: 3
-    phase_signal_count: 3825
-    deferred_signal_count: 6834
-    non_goal_signal_count: 403
+    missing_sources: 4
+    phase_signal_count: 3830
+    deferred_signal_count: 6841
+    non_goal_signal_count: 404
     layer_totals:
       blueprint: 1
-      spec: 221
-      plan: 221
-      tasks: 221
-      execution: 221
-      close: 221
+      spec: 222
+      plan: 222
+      tasks: 222
+      execution: 222
+      close: 222
       design: 9
       requirements: 2
       defect: 3
       release: 44
     layer_materialized:
       blueprint: 1
-      spec: 221
-      plan: 221
-      tasks: 221
-      execution: 221
+      spec: 222
+      plan: 222
+      tasks: 222
+      execution: 222
       close: 218
       design: 9
       requirements: 2
@@ -12144,6 +12147,51 @@ truth_snapshot:
       mapped: true
       exists: false
       mapping_ref: 222-first-user-twelve-route-e2e-contract
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/223-r02-release-route-proof/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 223-r02-release-route-proof
+      phase_signal_count: 1
+      deferred_signal_count: 1
+      non_goal_signal_count: 1
+    - path: specs/223-r02-release-route-proof/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 223-r02-release-route-proof
+      phase_signal_count: 2
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/223-r02-release-route-proof/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 223-r02-release-route-proof
+      phase_signal_count: 1
+      deferred_signal_count: 3
+      non_goal_signal_count: 0
+    - path: specs/223-r02-release-route-proof/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 223-r02-release-route-proof
+      phase_signal_count: 1
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/223-r02-release-route-proof/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 223-r02-release-route-proof
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0
