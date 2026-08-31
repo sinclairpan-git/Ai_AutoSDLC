@@ -106,7 +106,7 @@ Batch 3: 同步 roadmap/Program Truth、验证、独立评审与 PR
   - [x] 运行 constraints、plan-check、program validate/truth、focused tests、Ruff 和 `git diff --check`。
   - [x] 更新 execution log 与 continuity，记录实际结果和 branch/worktree disposition。
   - [x] 请求一次独立对抗 formal/ROI 评审，只整改可操作的 P0/P1 或真值 P2。
-  - [ ] 无可操作问题后形成单一语义 commit、push、PR 和 Codex review；仍不进入 runtime execute。
+  - [x] 无可操作问题后形成单一语义 commit、push、PR 和 Codex review；PR #189 已合入 `main`，仍未进入 runtime execute。
 - **验收标准**：所有验证通过；评审无可操作问题；formal PR 只包含允许范围；后续薄片保持未授权。
 - **验证**：`git diff --check`；`git status --short`；execution log 中的命令回执；PR exact-head review。
 
