@@ -369,6 +369,11 @@ def test_windows_user_guide_e2e_records_recovery_bound_r02_receipt() -> None:
     assert '"proven"' in replay
     assert '"partial"' in replay
     assert "route-receipt.json" in replay
+    assert '$workflowRepository = $env:GITHUB_REPOSITORY' in replay
+    assert '$workflowCommit = $env:GITHUB_SHA' in replay
+    assert 'git ls-remote --exit-code "https://github.com/$releaseRepository.git"' in replay
+    assert 'asset = [ordered]@{ repository = $releaseRepository; tag = $env:RELEASE_TAG; commit = $assetCommit }' in replay
+    assert 'workflow = [ordered]@{ repository = $workflowRepository; commit = $workflowCommit; event = $env:GITHUB_EVENT_NAME; run_id = $env:GITHUB_RUN_ID }' in replay
     for evidence_field in (
         "route_id",
         "environment",

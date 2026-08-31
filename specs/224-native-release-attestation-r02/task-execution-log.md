@@ -65,3 +65,11 @@
 - **聚焦修复**：只在现有 Windows R02 workflow 中按事件选择下载仓库；未改 producer、runtime、installer、USER_GUIDE、版本状态、receipt 字段或路线真值。
 - **复验**：focused `14 passed`；Ruff、两份 workflow YAML parse、内嵌 PowerShell AST、`git diff --check`、constraints、plan-check（`Drift=NO`）与 program validate 全部通过。既有 exact-tree 全量 `3412 passed, 3 skipped` 不因本次单一字符串/分支绑定修复重复消耗约 15 分钟。
 - **剩余边界**：保持 `0/12 proven、12/12 partial` 与 16 个历史 Program Truth blocker；推送同一 PR 后仅再请求一次 exact-live-head Codex review，仍受最多两轮约束。
+
+## Batch 2026-08-31-008 | T42 Codex review round 2 final focused P2
+
+- **评审 finding**：exact head `41b31796bebaa77db183cc2dab2b3a1a4eb35af6` 的第二轮 Codex review 指出，手工重放虽已从官方上游下载，但 receipt 仍把当前 workflow 仓库和触发 SHA 写成 asset 来源，产生错误 provenance。
+- **RED→GREEN**：合同先要求 `source_binding` 分别记录 asset 与 workflow 身份，并要求手工 replay 解析远端 tag commit；focused suite 从 `1 failed, 13 passed` 转为 `14 passed`。
+- **聚焦修复**：保留 12 个顶层 receipt 字段，只将 `source_binding` 拆为 `asset(repository/tag/commit)` 与 `workflow(repository/commit/event/run_id)`；手工 replay 用 `git ls-remote` 解析官方 tag 的 peeled commit，自然 release 复用已校验 tag commit，PR 本地制品沿用 PR workflow commit。
+- **复验**：focused `14 passed`；证据 tag `spike-native-release-attestation-0c6c9d6d` 远端解析为 exact `0c6c9d6d43f98dcfd169f418e6f6dc616c996c4b`；Ruff、YAML、内嵌 PowerShell AST、`git diff --check`、constraints、plan-check（`Drift=NO`）与 program validate 全部通过。
+- **轮次边界**：这是批准范围内第二次也是最后一次 review remediation；推送后只请求 final exact-live-head review。若仍有 finding，不再循环实现，停止并向用户报告；若 clean 且 required checks 全绿则合并。

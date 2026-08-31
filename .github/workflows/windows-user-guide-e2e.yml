@@ -137,6 +137,10 @@ jobs:
           $PackageDir = (Get-Location).Path
           $ExtractRoot = Join-Path $PackageDir ".ai-sdlc-install"
           $packagePath = Join-Path $PackageDir $PackageName
+          $workflowRepository = $env:GITHUB_REPOSITORY
+          $workflowCommit = $env:GITHUB_SHA
+          $releaseRepository = $workflowRepository
+          $assetCommit = $workflowCommit
           if ($env:GITHUB_EVENT_NAME -eq "pull_request") {
             $localPackage = Get-ChildItem -LiteralPath (Join-Path $env:GITHUB_WORKSPACE "dist-offline") -Filter $PackageName -File |
               Select-Object -First 1
@@ -151,6 +155,23 @@ jobs:
               "sinclairpan-git/Ai_AutoSDLC"
             }
             $downloadUri = "https://github.com/$releaseRepository/releases/download/$env:RELEASE_TAG/$PackageName"
+            if ($env:GITHUB_EVENT_NAME -eq "workflow_dispatch") {
+              $directTagRef = "refs/tags/$env:RELEASE_TAG"
+              $peeledTagRef = "$directTagRef^{}"
+              $assetCommitRows = @(git ls-remote --exit-code "https://github.com/$releaseRepository.git" $directTagRef $peeledTagRef)
+              if ($LASTEXITCODE -ne 0 -or $assetCommitRows.Count -lt 1) {
+                throw "Could not resolve asset tag $env:RELEASE_TAG in $releaseRepository."
+              }
+              $assetCommitRow = $assetCommitRows |
+                Where-Object { ($_ -split "`t", 2)[1] -eq $peeledTagRef } |
+                Select-Object -First 1
+              if (-not $assetCommitRow) {
+                $assetCommitRow = $assetCommitRows |
+                  Where-Object { ($_ -split "`t", 2)[1] -eq $directTagRef } |
+                  Select-Object -First 1
+              }
+              $assetCommit = (($assetCommitRow -split "`t", 2)[0]).Trim()
+            }
             Invoke-WebRequest -Uri $downloadUri -OutFile $packagePath
           }
 
@@ -165,6 +186,7 @@ jobs:
 
             $expectedRef = "refs/tags/$env:RELEASE_TAG"
             $tagCommit = (git rev-parse "$env:RELEASE_TAG^{commit}").Trim()
+            $assetCommit = $tagCommit
             $checkoutCommit = (git rev-parse HEAD).Trim()
             if ($env:GITHUB_REF -ne $expectedRef -or $checkoutCommit -ne $tagCommit -or $env:GITHUB_SHA -ne $tagCommit) {
               throw "Natural release source ref, tag, event, and checkout commits must be identical."
@@ -334,13 +356,15 @@ jobs:
           }
 
           $receiptStatus = if ($env:GITHUB_EVENT_NAME -eq "release") { "proven" } else { "partial" }
-          $sourceCommit = if ($env:GITHUB_EVENT_NAME -eq "release") { $tagCommit } else { $env:GITHUB_SHA }
           [ordered]@{
             route_id = "R02"
             environment = [ordered]@{ os = "windows"; architecture = "amd64"; runner = $env:RUNNER_NAME }
             project_mode = [ordered]@{ kind = "existing"; protected_files = $businessFiles.Count }
             acquisition_mode = $packageSourceMode
-            source_binding = [ordered]@{ repository = $env:GITHUB_REPOSITORY; tag = $env:RELEASE_TAG; commit = $sourceCommit; event = $env:GITHUB_EVENT_NAME; run_id = $env:GITHUB_RUN_ID }
+            source_binding = [ordered]@{
+              asset = [ordered]@{ repository = $releaseRepository; tag = $env:RELEASE_TAG; commit = $assetCommit }
+              workflow = [ordered]@{ repository = $workflowRepository; commit = $workflowCommit; event = $env:GITHUB_EVENT_NAME; run_id = $env:GITHUB_RUN_ID }
+            }
             asset_integrity = [ordered]@{ name = $PackageName; sha256 = $packageHash; attestation_verified = $attestationVerified }
             installation = [ordered]@{ command = "install_offline.ps1 -AddToPath"; exit_code = 0 }
             lifecycle = [ordered]@{ init = "passed"; adopt = "passed" }
