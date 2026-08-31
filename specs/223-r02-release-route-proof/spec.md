@@ -1,10 +1,10 @@
 # 功能规格：R02 正式发布路线证明载体
 
-**功能编号**：`223-r02-release-route-proof`  
-**创建日期**：2026-08-30  
-**状态**：P3-B formal；实现已获用户批准，须在 formal review 通过后进入 dev 分支  
-**远端主线基线**：`origin/main@49d43c459cdabe5d3664dafd4600192c01333500`  
-**发布基线**：GitHub Release `v0.9.8` / tag commit `4f3e55c300dab20fb4fea93818d79394a927f77e`  
+**功能编号**：`223-r02-release-route-proof`
+**创建日期**：2026-08-30
+**状态**：P3-B formal remediation；build provenance 缺口触发 `needs_user`，dev 未授权
+**远端主线基线**：`origin/main@49d43c459cdabe5d3664dafd4600192c01333500`
+**发布基线**：GitHub Release `v0.9.8` / tag commit `4f3e55c300dab20fb4fea93818d79394a927f77e`
 **输入**：`specs/222-first-user-twelve-route-e2e-contract/spec.md` 与 `docs/FRAMEWORK_ROADMAP.zh-CN.md`
 
 ## 1. 目标与边界
@@ -14,10 +14,10 @@
 ### 1.1 本次覆盖
 
 - 把现有 Windows 已有项目 E2E 的长内联步骤抽成一个 CI 专用共享执行器，由 `windows-user-guide-e2e.yml` 与 `release-artifact-smoke.yml` 复用。
-- 对 GitHub Release 返回的资产 `digest` 与下载文件 SHA256 做精确比较；不以 `AGENTS.md` 或业务文件 hash 代替 archive 完整性。
+- 对 GitHub Release 返回的资产 `digest` 与下载文件 SHA256 做精确比较；同时要求可验证的 build provenance 把该资产绑定到 release tag commit，不以 release metadata、`AGENTS.md` 或业务文件 hash 代替构建来源证明。
 - 主动损坏 `.ai-sdlc/state/resume-pack.yaml`，调用已发布 CLI 的 `recover` 恢复，并保存故障前后与恢复输出。
 - 生成 CI 临时 receipt；receipt 不是产品运行时状态、Program Truth、ledger 或长期数据库。
-- PR 本地产物、`workflow_dispatch` 正式包重放与 `release` event 使用同一执行器，但保持不同证明等级。
+- PR 本地产物、`workflow_dispatch` 正式包重放与 `release` event 可以使用同一执行器，但在 build provenance 未补齐前全部保持 `partial`。
 
 ### 1.2 本次不覆盖
 
@@ -38,8 +38,9 @@
 3. `.github/workflows/windows-user-guide-e2e.yml` 已有 `init/adopt`、双语 `Result / Next` 和业务文件 hash 保持；`.github/workflows/release-artifact-smoke.yml` 已有正式 Windows asset 下载与安装。抽出一份共享执行器可以删除重复内联步骤，不需要第二套实现。
 4. 当前 CLI 已支持损坏或缺失 resume pack 后执行 `recover` 重建；本工作项只使用该既有公开恢复入口，不新增恢复语义。
 5. 隔离 worktree 在任何改动前全量基线为 `3407 passed, 3 skipped`。
+6. Codex review 对 `.github/workflows/release-build.yml` 的精确核验表明：workflow-dispatch job 的 checkout 未固定 `ref: inputs.tag`，但可以把当前 dispatch ref 构建的包用 `gh release upload ... --clobber` 写入目标 release。因而“release target commit + asset digest”不能证明 archive 源自 tag commit。
 
-**闸门结论**：`Go`。若实现中出现第 4 节退出条件，则自动转为 `No-Go / needs_user`，不得用追加支撑层强行完成。
+**闸门修正结论**：原 `Go` 不成立，状态改为 `needs_user`。现有授权只允许两个消费 workflow 和一个共享执行器，不能自行扩大到第三个 release build workflow 或发布 attestation。用户若另行批准，可在新边界中选择“固定 release-build checkout 并生成可验证 provenance sidecar”；未批准则 WI223 以 formal No-Go 收口，不进入 dev。
 
 ## 3. 用户场景与验收
 
@@ -60,16 +61,16 @@
 
 1. **Given** PR 本地构建包通过全部生命周期步骤，**When** 生成 receipt，**Then** 状态仍为 `partial`，资产字段明确标注非正式 release digest。
 2. **Given** `workflow_dispatch` 下载 v0.9.8 正式包并校验 digest，**When** 生成 receipt，**Then** 它是候选重放证据，不能替代 `release` event。
-3. **Given** 下一次自然 `release` event 在同一 job 中满足 12 字段，**When** receipt 完成，**Then** 才可输出 `proven`；WI223 合并本身不得提前更改 WI222 的 `0/12 proven` 基线。
+3. **Given** 下一次自然 `release` event 在同一 job 中满足 12 字段，**When** receipt 完成，**Then** 仍必须验证资产的 build source commit 等于 release tag commit，才可输出 `proven`；WI223 合并本身不得提前更改 WI222 的 `0/12 proven` 基线。
 
 ## 4. 功能需求与退出条件
 
 - **FR-223-001**：receipt 必须包含且只使用 WI222 定义的 12 个必需顶层证据字段：`route_id`、`environment`、`project_mode`、`acquisition_mode`、`source_binding`、`asset_integrity`、`installation`、`lifecycle`、`result_next`、`success_receipt`、`fault_recovery`、`evidence_links`；允许另有 `schema_version` 和 `status` 元数据。
 - **FR-223-002**：R02 固定为 Windows AMD64、已有项目、在线正式 release 获取；执行器不得接受任意 route ID 或扩展为未授权矩阵框架。
-- **FR-223-003**：正式资产模式必须从 GitHub Release API 取得资产名、tag/target commit 与 digest，比较本地 SHA256；缺字段或不一致必须 fail closed。
+- **FR-223-003**：正式资产模式必须从 GitHub Release API 取得资产名、tag/target commit 与 digest，比较本地 SHA256，并验证构建该资产的 run/source commit 等于 tag commit。release metadata 与 digest 不能替代 build provenance；缺字段或不一致必须 fail closed 为 `partial`。
 - **FR-223-004**：共享执行器必须被两个既有 workflow 调用；不得在 workflow 中保留第二份完整安装/init/adopt/recover 实现。
 - **FR-223-005**：故障恢复必须真实损坏 resume pack 后调用 `ai-sdlc recover`；不得用字符串断言或预制成功 JSON 代替执行。
-- **FR-223-006**：PR、本地候选或手工 dispatch 的 receipt 状态必须为 `partial`；仅 `GITHUB_EVENT_NAME=release` 且所有必需检查通过时允许 `proven`。
+- **FR-223-006**：PR、本地候选或手工 dispatch 的 receipt 状态必须为 `partial`；仅 `GITHUB_EVENT_NAME=release`、build provenance 精确绑定 tag commit 且所有必需检查通过时允许 `proven`。
 - **FR-223-007**：receipt 只作为 Actions artifact 上传，不写入产品 `.ai-sdlc/` 状态或仓库历史真值。
 - **FR-223-008**：实现必须保留现有 Windows guide replay 的直接 shim、Git Bash stale PATH、双语输出和业务文件保护合同，以及 release smoke 的离线包验证入口。
 
@@ -80,6 +81,7 @@
 - 为完成 R02 复制第三份近似 workflow，或无法删除现有重复核心步骤；
 - 实际总投入预计超过 3 人日；
 - 需要削弱“真实 release event 才能 proven”的合同；
+- 无法在不扩展到 release-build/attestation 的前提下证明 archive 的构建来源；
 - 两轮独立评审后仍有可操作问题。
 
 不设置机械 LOC 上限；文件大小和支撑比例只触发 Lean 复核。只要实现直接映射 12 字段、复用两条既有路径且无持久化治理扩张，可保留必要的 Windows/恢复支撑代码。
@@ -90,13 +92,13 @@
 2. **投入**：特征化已完成；实现、测试、CI、评审与收口目标 `1.5–2.5` 人日，硬上限 `3` 人日。
 3. **最小方案**：一个 R02 执行器、两个薄 workflow 调用、一个临时 receipt；不实现通用路线平台。
 4. **备选方案**：复制现有 PowerShell 到 release smoke 投入更小但会形成双轨；一次实现 12 路需 6–10 人日且未证明复用；两者均拒绝。
-5. **决策**：`implement`。用户已批准“半天闸门通过后继续最小实现”；formal review 通过后进入 dev 分支。
+5. **决策**：`needs_user`。用户批准的是“闸门通过后继续”；review 证明闸门缺少 build provenance。不得把既有批准解释为修改第三个 workflow 的权限。
 
 ## 6. 成功标准
 
 - **SC-223-001**：focused 契约测试先 RED 后 GREEN，证明共享执行器存在、两个 workflow 复用它、旧的重复核心块被移除。
 - **SC-223-002**：PR Windows E2E 在真实 Windows runner 上执行安装/init/adopt/故障恢复并上传 `route-receipt.json`；PR receipt 保持 `partial`。
-- **SC-223-003**：正式资产模式对本地 archive SHA256 与 GitHub asset digest 做精确比较，任何缺失或不一致均失败。
-- **SC-223-004**：receipt 的 12 个必需字段完整，且非 `release` 事件不能产生 `proven`。
+- **SC-223-003**：正式资产模式对本地 archive SHA256、GitHub asset digest、release tag commit 与 build source commit 做精确比较，任何缺失或不一致均保持 `partial` 或失败。
+- **SC-223-004**：receipt 的 12 个必需字段完整，且非 `release` 事件或缺少 build provenance 时不能产生 `proven`。
 - **SC-223-005**：实现 PR 不触达禁止范围；全量测试、Ruff、constraints 与 diff-check 通过。
-- **SC-223-006**：实现后完成半天 Lean/ROI 复核；在下一次自然 release event 产生真实 `proven` receipt 前，Program Truth 与 WI222 的路线结论保持真实 blocked/partial。
+- **SC-223-006**：本 formal PR 合并后停在 `needs_user`；只有用户批准 build provenance 扩展后才重新建立 dev 计划。在真实 `proven` receipt 前，Program Truth 与 WI222 的路线结论保持 blocked/partial。

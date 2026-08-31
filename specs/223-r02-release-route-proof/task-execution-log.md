@@ -1,8 +1,8 @@
 # 任务执行日志：R02 正式发布路线证明载体
 
-**功能编号**：`223-r02-release-route-proof`  
-**创建日期**：2026-08-30  
-**状态**：Batch 001 formal complete；等待独立 PR review
+**功能编号**：`223-r02-release-route-proof`
+**创建日期**：2026-08-30
+**状态**：Batch 002 review remediation；dev `needs_user`
 
 ## 1. 归档规则
 
@@ -90,3 +90,33 @@
 - formal branch：`merge-pending`
 - worktree：`retained(formal review and later dev transition)`
 - 下一步：完成 formal 验证与 continuity，提交并创建 formal PR；review clean 后才进入 dev 分支。
+
+## 3. Batch 2026-08-30-002 | Codex review remediation
+
+### 3.1 Review findings 与核验
+
+- P1：资产 digest 未绑定 build source commit。核验 `.github/workflows/release-build.yml`：checkout 未使用 `ref: inputs.tag`，而上传步骤可对目标 release 执行 `--clobber`；finding 成立。
+- P2：提交中的 canonical/scoped handoff 仍记录未跟踪文件和待提交步骤；finding 成立。
+- P2：`git diff --check HEAD^ HEAD` 报告 spec/tasks/execution log 的 Markdown 行尾空格，而 Batch 001 只检查了提交后的空 working tree；原 PASS 证据口径不完整，finding 成立。
+
+### 3.2 聚焦整改
+
+- 把 build provenance 纳入 `source_binding` 硬条件；仅 release metadata + asset digest 不再允许 `proven`。
+- 原授权不含 `release-build.yml` 或 attestation，故 dev 状态从 `implement` 修正为 `needs_user`，不自行创建实现分支。
+- 删除本批新增 formal 文档的行尾空格，并改用 commit-range diff-check。
+- 本批内容提交后，从 clean committed state 重新生成 canonical/scoped handoff；不得保留待 commit/push 的过期步骤。
+
+### 3.3 边界
+
+- 本批只修改 WI223 formal、路线图、truth/continuity；不修改 workflow、runtime、installer、release/version 或历史 work item log。
+- 若用户不批准 build provenance 扩展，WI223 以 formal No-Go 收口；若批准，再建立新的 bounded dev 计划。
+
+### 3.4 Truth 与 focused 验证
+
+- `workitem plan-check`：`Pending todos=0`、`Drift=NO`。
+- `program validate`：`PASS`。
+- Program Truth dry-run：原 16 blocker、`1169/1169 mapped`、missing `4`、close `218/222` 保持。
+- Program Truth execute：snapshot hash `0a34feef4644dfdd1092bbaf9cdd6d075d5e6d8ebef41a86209275b1fd1ab7f0`；状态保持 `blocked`。
+- `uv run pytest tests/integration/test_repo_program_manifest.py -q`：`1 passed in 145.79s`，无并发状态写入。
+- `uv run ai-sdlc verify constraints`：`no BLOCKERs`。
+- `git diff --check` 与 formal 文档行尾扫描：`PASS`；提交后还必须执行 commit-range diff-check。

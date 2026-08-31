@@ -9,18 +9,18 @@ related_doc:
 
 ## 1. 目标与架构
 
-**目标**：用一份 CI 专用 Windows 执行器复用现有 guide replay 与 release smoke，生成 WI222 12 字段的 R02 临时 receipt，并保持非 release 事件 fail-closed 为 `partial`。
+**目标**：先冻结 R02 证明所需的 build provenance 缺口；在用户另行批准前，不进入共享执行器实现。
 
-**架构**：PowerShell 执行器接收既有项目根、archive、release tag、资产来源模式和 evidence 根目录，负责安装、生命周期、故障恢复、digest 与 receipt；两个 workflow 只负责取得输入、设置 GitHub 运行上下文和上传 evidence。pytest 以文本/YAML 合同锁定调用关系、12 字段、事件分级和禁止重复，真实 Windows PR job 验证安装与恢复。
+**候选架构（未授权）**：若用户批准扩展，release build 必须先输出可验证 provenance，把 archive digest、tag commit、build source commit 和 run 绑定；R02 PowerShell 执行器再负责安装、生命周期、故障恢复与 receipt。只做消费 workflow 而不补 build provenance 时，receipt 永远保持 `partial`。
 
 **技术栈**：PowerShell 7 / Windows PowerShell installer、GitHub Actions、GitHub CLI、Python 3.11+ / pytest / PyYAML。无新增产品依赖，无数据库或持久化服务。
 
 ## 2. 全局约束
 
-- formal 文档在 `feature/223-r02-release-route-proof-docs` 完成并通过评审后，代码只在 `feature/223-r02-release-route-proof-dev` 实现。
+- formal 文档在 `feature/223-r02-release-route-proof-docs` 完成；用户未批准 build provenance 扩展前，不创建 dev 分支。
 - 不修改 `src/ai_sdlc/`、installer、用户指南正文、版本/release、D2/P4、历史 execution log、truth classifier 或既有 16 blocker。
 - 只实现 R02；不参数化为 R01–R12 通用运行平台。
-- 只有真实 `release` event 且全部检查通过时 receipt 才可为 `proven`；本 PR 不发布新版本。
+- 只有真实 `release` event、asset digest 与 build source/tag commit 精确绑定且全部检查通过时 receipt 才可为 `proven`；本 PR 不发布新版本。
 - 每个实现批次遵循 RED → GREEN → refactor；不得先写执行器再补测试。
 - 当前改动前基线为 `3407 passed, 3 skipped in 957.27s`。
 
@@ -28,7 +28,10 @@ related_doc:
 
 ```text
 scripts/ci/Invoke-WindowsR02RouteProof.ps1
-  唯一 R02 Windows 执行器；安装、init/adopt、恢复、digest、receipt
+  候选唯一 R02 Windows 执行器；当前未授权创建
+
+.github/workflows/release-build.yml
+  若用户另行批准，固定 tag checkout 并产生 asset provenance；当前不得修改
 
 .github/workflows/windows-user-guide-e2e.yml
   PR 本地 bundle 与手工正式包重放入口；调用共享执行器并上传 evidence
@@ -90,12 +93,12 @@ pwsh -NoProfile -File scripts/ci/Invoke-WindowsR02RouteProof.ps1 `
 
 ## 5. 阶段计划
 
-### Phase 0：特征化与 Go/No-Go（已完成）
+### Phase 0：特征化与 Go/No-Go（已完成，结论已修正）
 
 - 验证 GitHub Release API 暴露 v0.9.8 Windows digest。
 - 验证 release run `33084560424` 为真实 `release` event，但旧 run 缺逐路 receipt，不能追认 proven。
 - 验证已有 workflow 与 `recover` 能力足以抽取复用，不需 runtime 变更。
-- 结论：Go；证据归档到 spec 与 execution log。
+- 初判为 Go；Codex review 证明 release asset 缺 build provenance，修正为 `needs_user`。
 
 ### Phase 1：formal review
 
@@ -103,9 +106,11 @@ pwsh -NoProfile -File scripts/ci/Invoke-WindowsR02RouteProof.ps1 `
 - 运行 plan-check、program validate、truth dry-run/execute、constraints 和库存测试。
 - 单独提交、推送 formal PR，请求 Codex review；无可操作问题且 checks 通过后合并。
 
-### Phase 2：TDD 实现
+### Phase 2：TDD 实现（blocked）
 
-1. 在 dev 分支先增加 focused tests，要求共享执行器、12 字段、恢复与事件分级；运行并记录因入口不存在而 RED。
+只有用户明确批准以下新增范围后才解锁本阶段：允许聚焦修改 `release-build.yml`，固定构建 ref 并输出可验证 provenance sidecar；否则本阶段取消。
+
+1. 在 dev 分支先增加 focused tests，要求 build provenance、共享执行器、12 字段、恢复与事件分级；运行并记录 RED。
 2. 抽出 `Invoke-WindowsR02RouteProof.ps1`，从 Windows guide workflow 删除内联核心块，使 RED 转 GREEN。
 3. 将 release artifact smoke Windows job 改为同一执行器的薄调用；保留 `verify_offline_bundle.py` 和 POSIX jobs。
 4. 运行 focused tests、YAML parse、PowerShell parser、Ruff、constraints 与全量 pytest。
@@ -148,6 +153,7 @@ git diff --check
 
 - formal 与实现分别独立 commit/PR，可用单次 `git revert` 回退。
 - digest API 不稳定、v0.9.8 CLI 无法完成真实 recovery、共享执行器必须修改 runtime、投入将超过 3 人日，或两轮 review 仍不 clean 时立即停止。
+- build provenance 需要第三个 workflow；在当前授权下已触发停止，等待用户决定是否扩展。
 - 停止时保留真实 RED/CI 证据，标记 `No-Go / needs_user`；不得增加适配层、放宽 proven 或发布新版本来掩盖失败。
 
 ## 8. 开放状态
@@ -155,5 +161,6 @@ git diff --check
 | 问题 | 当前结论 | 阻塞点 |
 |---|---|---|
 | v0.9.8 是否能被旧 release run 追认 proven | 否；旧 run 没有逐路 receipt | 无；保持 partial |
+| 当前 asset digest 是否证明 archive 来自 tag commit | 否；release-build checkout 未绑定 `inputs.tag` | dev execute / needs_user |
 | 是否立即发布 v0.9.9 取得 release event | 否；D2 与版本均未授权 | release |
 | 是否扩展其他 11 路 | 否；先完成 R02 Lean/ROI | 新用户批准 |

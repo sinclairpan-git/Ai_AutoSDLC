@@ -5,7 +5,7 @@ related_doc:
 ---
 # 任务分解：R02 正式发布路线证明载体
 
-**编号**：`223-r02-release-route-proof` | **日期**：2026-08-30  
+**编号**：`223-r02-release-route-proof` | **日期**：2026-08-30
 **来源**：`spec.md` + `plan.md`
 
 ## 分批策略
@@ -38,7 +38,7 @@ Batch 6: next natural release evidence (deferred; no release authorization)
 ### T21：先写共享执行器与 receipt 合同测试
 
 - **优先级**：P0
-- **依赖**：T11 formal PR 合并
+- **依赖**：T11 formal PR 合并；用户另行批准 release-build provenance 扩展
 - **文件**：新建 `tests/integration/test_windows_r02_route_proof.py`
 - **接口**：测试读取 `scripts/ci/Invoke-WindowsR02RouteProof.ps1`，要求脚本公开 plan 中的五个参数，并固定 R02 与 12 字段。
 - **步骤**：
@@ -62,7 +62,7 @@ Batch 6: next natural release evidence (deferred; no release authorization)
 ### T31：抽取唯一 R02 Windows 执行器
 
 - **优先级**：P0
-- **依赖**：T21 RED 已记录
+- **依赖**：T21 RED 已记录；build provenance 范围已获新授权
 - **文件**：新建 `scripts/ci/Invoke-WindowsR02RouteProof.ps1`
 - **输入**：`ArchivePath`、`ReleaseTag`、`PackageSourceMode`、`EvidenceRoot`、`ProjectRoot`
 - **输出**：安装/init/adopt/recover 日志、业务文件前后 hash、release metadata、`route-receipt.json`
@@ -88,7 +88,7 @@ Batch 6: next natural release evidence (deferred; no release authorization)
 ### T41：先写 workflow 复用 RED
 
 - **优先级**：P0
-- **依赖**：T31
+- **依赖**：T31；build provenance 范围已获新授权
 - **文件**：修改 `tests/integration/test_github_workflows.py`
 - **步骤**：
   - [ ] 要求两个 workflow 都包含 `scripts/ci/Invoke-WindowsR02RouteProof.ps1`。
