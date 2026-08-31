@@ -62,5 +62,5 @@ related_doc:
 ### T42：Lean 复核、PR 与收口（P0）
 
 - [x] 运行 plan 中全部本地验证；确认 0 新 runtime/状态/sidecar/workflow，改动未超 2.5 人日边界。
-- [ ] dev PR 请求 Codex review；两轮后进入 `needs_user`。用户已授权一次冻结 concurrency key 的 terminal microfix；final review 只给 verdict，clean/green 后合并，否则 No-Go，不再实现。
-- [ ] 合并后保持 `0/12 proven、12/12 partial`；未来自然 release receipt 另开最小 truth closeout。
+- [x] dev PR #194 经两轮后进入 `needs_user`；用户只授权一次冻结 concurrency key 的 terminal microfix，final review 无可操作问题、required checks 全绿后已 squash merge，不再实现。
+- [x] 合并后保持 `0/12 proven、12/12 partial`；未来自然 release receipt 另开最小 truth closeout。

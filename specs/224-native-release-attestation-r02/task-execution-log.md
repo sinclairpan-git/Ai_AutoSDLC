@@ -2,7 +2,7 @@
 
 **功能编号**：`224-native-release-attestation-r02`
 **创建日期**：2026-08-31
-**状态**：formal/closeout 已合并；dev producer 远端 GREEN；consumer 本地 GREEN
+**状态**：PR #194 实现已合并；records/truth/continuity-only post-merge closeout 进行中；R02 保持 `partial`
 
 ## Batch 2026-08-31-001 | T11–T12 formal
 
@@ -81,3 +81,21 @@
 - **RED→GREEN**：先增加自然发布与手工 replay 必须隔离的独立合同；focused suite 从 `1 failed, 14 passed` 转为 `15 passed`。GREEN 后将断言合并进既有 natural-release 合同以避免测试膨胀，最终为 `14 passed`。产品改动仅一行，0 新文件、runtime、依赖、状态、workflow 或抽象。
 - **复验**：Lean 后 focused `14 passed`；Ruff、YAML parse、`git diff --check`、constraints、plan-check（`Drift=NO`）与 program validate 全部通过；本机无 actionlint，远端 required checks 作为 workflow 最终执行门禁。
 - **收敛规则**：两轮后统一进入一次 terminal sponsor decision；决策必须冻结唯一改动、投入边界和终止结果。终局复评 clean/green 才合并；若出现新的核心 P2 以上 finding 则直接 No-Go/再次 `needs_user`，不得开启第四次实现。该通用规则在 WI224 收口后另立 formal governance work item，不混入本实现 PR。
+
+### Batch 2026-08-31-010 | PR #194 post-merge truth closeout source
+
+- **验证画像**：`truth-only`
+- **本批边界**：只修改 WI224 spec/plan/tasks/execution log、roadmap、Program Truth snapshot 与 continuity，不触碰产品实现、测试、release/version 或 truth classifier。
+- **改动范围：** 已进入主线的实现精确限于 `.github/workflows/release-build.yml`、`.github/workflows/windows-user-guide-e2e.yml`、`tests/integration/test_github_workflows.py`；本批仅为上述实现补齐 mainline truth 载体。
+- **合并证据**：PR #194 final reviewed head `8efab7410abe0bab9bda35427205cb4a34b8fdfb` 获 Codex verdict “Didn't find any major issues”，全部 required checks 通过；squash merge 为 exact `origin/main@3155af394c5739518145d736e0766d779c0728f8`。reviewed head tree 与 main tree 均为 `08ea7ad559a98c41a0dc8946489dbf2e8d64dbcd`，因此不以 squash 后不成立的 ancestor 关系冒充 containment。
+- **实现终态**：terminal fix commit `3acb73fa` 只将 event identity 加入 concurrency key；合同先 RED `1 failed, 14 passed`，初始 GREEN `15 passed`，Lean 合并断言后最终 focused `14 passed`。产品净改动 1 行、既有测试净增 3 行，未开启第四次整改。
+- **归档与清理**：实现载体保存在 remote `archive/224-native-release-attestation-r02-pr194@8efab7410abe0bab9bda35427205cb4a34b8fdfb`；formal 载体保存在 `archive/224-native-release-attestation-r02-docs-pr192@9a61ca7da39c5beca93e8eac2030e324d23483be`。原 dev/formal 分支与 formal worktree 已在 exact archive 验证后删除；证据 tag `spike-native-release-attestation-0c6c9d6d` 保留。
+- **统一验证命令**：`uv run pytest tests/integration/test_github_workflows.py -q`、`uv run pytest tests/integration/test_repo_program_manifest.py -q`、`uv run ai-sdlc verify constraints`、`uv run ai-sdlc program validate`、`uv run ai-sdlc workitem plan-check --wi specs/224-native-release-attestation-r02`、`uv run ai-sdlc program truth sync --dry-run`、`uv run ai-sdlc program truth sync --execute --yes`、`uv run ai-sdlc program truth audit`、`uv run ai-sdlc workitem truth-check --wi specs/224-native-release-attestation-r02 --rev HEAD --json`、`uv run ai-sdlc workitem close-check --wi specs/224-native-release-attestation-r02 --json`、branch lifecycle、continuity parity/YAML 与 `git diff --check`。
+- **代码审查**：final review 只验证冻结的稳定 finding 及回归面并给 verdict；无可操作问题后合并。两轮后的通用收敛机制只登记为后续 G1 formal governance work item，本批不修改 review runtime、schema、ledger 或状态机。
+- **任务/计划同步状态**：T42 完成；PR #194 已进入主线。自然 `release.published` receipt 尚未发生，因此仍为 `0/12 proven、12/12 partial、0/12 missing`；16 个历史 Program Truth blocker、inventory `1169/1169`、missing `4`、close `218/222` 保持不变。
+- **改动范围**：`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/state/resume-pack.yaml`、`.ai-sdlc/work-items/224-native-release-attestation-r02/codex-handoff.md`、`docs/FRAMEWORK_ROADMAP.zh-CN.md`、`program-manifest.yaml`、`specs/224-native-release-attestation-r02/spec.md`、`specs/224-native-release-attestation-r02/plan.md`、`specs/224-native-release-attestation-r02/tasks.md`、`specs/224-native-release-attestation-r02/task-execution-log.md`。
+- **已完成 git 提交**：是（本 Batch 010 由当前 closeout records `HEAD` 承载，以 live PR exact head 复核）。
+- **提交哈希**：`HEAD`（非自引用稳定标记；实际 SHA 以 live PR exact head 为准）。
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`retained(closeout PR review)`
+- **生效边界**：本记录只有在唯一 records/truth/continuity closeout PR 合并后才成为 exact-main 终态；随后在隔离远端 clone 中物化唯一主 archive 并验证 `mainline_merged`、`execution_started=true`、`contained_in_main=true` 与 close-check 零 blocker。

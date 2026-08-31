@@ -19,7 +19,7 @@
 2. **特性主导、局部收敛**：不启动独立全仓减重；正常特性经过旧代码时允许做与该特性直接相关的局部收敛。
 3. **信号不等于裁决**：文件行数、函数行数、支撑/核心比例、调用方数量只能触发复核，不能单独成为 blocker。
 4. **保留模型自主性**：模型可以根据安全、兼容、恢复、迁移、跨平台和外部协议证据保留较大的必要实现，但必须说明价值、替代方案和退出条件。
-5. **有界评审**：一个候选默认最多一个 work item、一个实现 PR 和两轮修复/复审；超过边界必须停到 `needs_user` 或 No-Go。
+5. **有界评审**：一个候选默认最多一个 work item、一个实现 PR 和两轮修复/复审；超过边界必须停到 `needs_user` 或 No-Go。Sponsor 若基于 ROI 批准终局动作，必须同时冻结唯一改动、投入上限和终止结果；随后只验证稳定 finding 及其回归面，不重新开启无限问题空间。
 6. **不复制治理**：优先复用现有 Loop、Local PR Review、handoff 和 Program Truth，不新建平行状态机、ledger、certificate、waiver 或 retry engine。
 
 ## 3. 总体队列
@@ -32,7 +32,7 @@
 | P1 | Diff-local Lean Advisory | **No-Go 已关闭（未合并）** | 8.0/10 | 实际：1 个 WI + 2 轮评审 | No-Go（及时止损） | P0 与 v0.9.8 已完成 |
 | P2 | 普通用户单入口收敛 | **已完成（WI220）** | 9.0/10 | 实际已投入 | 1.5（原估） | P1 已有证据 No-Go |
 | D2 | 历史 release-target provenance 恢复 | **WI221 admission No-Go；待用户决策** | 7.5/10 | 审计 <0.5 人日；补缺粗估 8–13 人日 | 0.6–0.9 | v0.9.9 的硬前置 |
-| P3 | 跨平台首次用户 12 路完整闭环 | **WI224 formal 已合并；R02 dev 待 truth closeout** | 9.5/10 | R02 目标 1–2 人日；完整实现仍估 6–10 人日 | 先证一条路线 | P2 默认入口稳定 |
+| P3 | 跨平台首次用户 12 路完整闭环 | **WI224 实现已合并；R02 等待自然 release receipt** | 9.5/10 | R02 实际完成 bounded execute；完整实现仍估 6–10 人日 | 先证一条路线 | P2 默认入口稳定 |
 | P4 | 五类 Loop 有界动态专家 | **条件候选** | 10/10 | 10–15 人日 | 0.6 | P1–P3 的真实收益支持继续投资 |
 
 此外保留两个非产品队列：`O1` 是发布后真实项目观察；`D1` 是无当前实现授权的延后候选。它们不得抢占 P1–P4 的正常产品顺序。
@@ -160,7 +160,7 @@
 
 ## 7. P3：跨平台首次用户 12 路完整闭环
 
-**状态：WI222 P3-A 与 WI224 原生发布证明 formal 均已合并；R02 bounded execute 等待 post-merge truth closeout。** 基于
+**状态：WI222 P3-A formal 与 WI224 原生发布证明实现均已合并；R02 等待未来自然 `release.published` receipt。** 基于
 WI222 的严格证据合同，当前仍为
 `0/12 proven、12/12 partial、0/12 missing`：指南覆盖了全部组合，三平台安装/发布 smoke 提供了共享基础，
 但没有任何一路形成同时包含正式资产完整性、`init/adopt`、`Result / Next`、主动恢复和版本绑定的自包含证据链。
@@ -189,7 +189,7 @@ repo、signer workflow、tag ref/commit 与 build trigger。WI224 只允许修�
 - [x] WI222 冻结 12 路证据合同，定义每条路线的准备、命令、证据、恢复和版本绑定字段。
 - [x] WI222 复用已有 Windows E2E、离线安装和三平台 release smoke 完成差距映射，不重写安装系统。
 - [x] WI224 前置 spike 证明原生 Artifact Attestation 可替代自定义 sidecar，PR #191 已止损关闭。
-- [ ] WI224 只为 Release Build producer 与 R02 natural-release consumer 增加签发、强验证、恢复和临时 receipt。
+- [x] WI224 只为 Release Build producer 与 R02 natural-release consumer 增加签发、强验证、恢复和临时 receipt；实现已合并，尚未发生自然 release receipt。
 - [ ] 抽取跨平台共享步骤，使用矩阵参数化；禁止复制一份超过核心安装逻辑数倍的 POSIX workflow。
 - [ ] 补齐 macOS/Linux 完整 user-guide E2E、在线 bootstrap、系统 Python、下载工具和 glibc 等真实兼容边界。
 - [ ] 在干净 Windows/macOS/Linux 环境执行 12 条路线；模拟测试或文档 lint 不能替代真实 E2E。
@@ -358,5 +358,6 @@ repo、signer workflow、tag ref/commit 与 build trigger。WI224 只允许修�
 - [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。
 - [ ] D2/WI221 已完成 11/16 admission audit；当前保持真实 blocked，等待用户决定是否另行批准多能力补缺范围。
+- [ ] G1 另立 formal governance work item，评估“稳定 finding 对比 + 两轮后 terminal sponsor decision”的最小落地；不得在 WI224 closeout 中修改通用 runtime、review schema 或状态机。
 
 当检查表与聊天记忆冲突时，以远端主线事实、正式 work item 和本文件最近一次经评审的更新为准。
