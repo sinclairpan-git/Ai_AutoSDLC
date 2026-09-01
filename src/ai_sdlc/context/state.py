@@ -18,7 +18,7 @@ from ai_sdlc.models.state import (
     RuntimeState,
     WorkingSet,
 )
-from ai_sdlc.utils.helpers import now_iso
+from ai_sdlc.utils.helpers import ensure_local_cache_excluded, now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -694,6 +694,7 @@ def _emit_resume_pack_event(
 
 
 def _write_resume_pack_files(root: Path, pack: ResumePack, work_item_id: str) -> None:
+    ensure_local_cache_excluded(root)
     root_path = root / LOCAL_RESUME_PACK_PATH
     if not work_item_id:
         YamlStore.save(root_path, pack)

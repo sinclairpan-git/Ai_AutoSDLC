@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -219,6 +220,28 @@ class TestResumePack:
         save_resume_pack(tmp_path, pack)
         resume_file = tmp_path / ".ai-sdlc" / "local" / "resume-pack.yaml"
         assert resume_file.exists()
+
+    def test_save_resume_pack_backfills_local_cache_exclude(
+        self, git_repo: Path
+    ) -> None:
+        self._prepare_checkpoint(git_repo)
+        pack = build_resume_pack(git_repo)
+        assert pack is not None
+
+        save_resume_pack(git_repo, pack)
+
+        ignored = subprocess.run(
+            [
+                "git",
+                "check-ignore",
+                "--no-index",
+                ".ai-sdlc/local/resume-pack.yaml",
+            ],
+            cwd=git_repo,
+            capture_output=True,
+            text=True,
+        )
+        assert ignored.returncode == 0, ignored.stderr
 
     def test_save_resume_pack_writes_local_canonical_and_scoped_only(
         self, tmp_path: Path

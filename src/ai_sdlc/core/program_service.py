@@ -187,6 +187,7 @@ from ai_sdlc.models.program import (
     ProgramTruthSourceInventory,
 )
 from ai_sdlc.telemetry.clock import utc_now_z
+from ai_sdlc.utils.helpers import ensure_local_cache_excluded
 
 FRONTEND_EVIDENCE_CLASS_ALLOWED_VALUES = (
     "framework_capability",
@@ -3158,6 +3159,7 @@ class ProgramService:
         return snapshot
 
     def write_truth_snapshot(self, snapshot: ProgramTruthSnapshot) -> Path:
+        ensure_local_cache_excluded(self.root)
         path = self.root / LOCAL_TRUTH_SNAPSHOT_PATH
         self._atomic_write_text(
             path,

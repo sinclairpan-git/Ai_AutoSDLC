@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import subprocess
 from pathlib import Path
 
 from ai_sdlc.core.config import (
@@ -12,7 +11,12 @@ from ai_sdlc.core.config import (
     save_project_state,
 )
 from ai_sdlc.models.project import ProjectState, ProjectStatus
-from ai_sdlc.utils.helpers import AI_SDLC_DIR, has_project_markers, now_iso
+from ai_sdlc.utils.helpers import (
+    AI_SDLC_DIR,
+    ensure_local_cache_excluded,
+    has_project_markers,
+    now_iso,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +64,7 @@ def init_project(
         The resulting ProjectState.
     """
     existing = detect_project_state(root)
-    _ensure_local_cache_excluded(root)
+    ensure_local_cache_excluded(root)
     if existing == EXISTING_INITIALIZED:
         logger.info("Project already initialized at %s", root)
         return load_project_state(root)
@@ -111,42 +115,6 @@ def init_project(
 
     logger.info("Initialized AI-SDLC project '%s' at %s", project_name, root)
     return state
-
-
-def _ensure_local_cache_excluded(root: Path) -> None:
-    """Keep AI-SDLC's regenerable local cache out of a Git work tree's index."""
-    try:
-        is_work_tree = subprocess.run(
-            ["git", "rev-parse", "--is-inside-work-tree"],
-            cwd=root,
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
-        if is_work_tree != "true":
-            return
-        git_path = subprocess.run(
-            ["git", "rev-parse", "--git-path", "info/exclude"],
-            cwd=root,
-            check=True,
-            capture_output=True,
-            text=True,
-        ).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        return
-
-    exclude_path = Path(git_path)
-    if not exclude_path.is_absolute():
-        exclude_path = root / exclude_path
-    existing = exclude_path.read_bytes() if exclude_path.exists() else b""
-    if b".ai-sdlc/local/" in existing.splitlines():
-        return
-
-    exclude_path.parent.mkdir(parents=True, exist_ok=True)
-    separator = b"" if not existing or existing.endswith((b"\n", b"\r")) else b"\n"
-    exclude_path.write_bytes(
-        existing + separator + b".ai-sdlc/local/\n"
-    )
 
 
 def _bootstrap_governance_files(root: Path) -> None:

@@ -2487,6 +2487,18 @@ def test_write_truth_snapshot_writes_local_cache_and_preserves_manifest(
     assert written == tmp_path / ".ai-sdlc/local/program-truth-snapshot.yaml"
     assert written.is_file()
     assert svc.manifest_path.read_bytes() == before
+    ignored = subprocess.run(
+        [
+            "git",
+            "check-ignore",
+            "--no-index",
+            ".ai-sdlc/local/program-truth-snapshot.yaml",
+        ],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+    )
+    assert ignored.returncode == 0, ignored.stderr
 
 
 def test_truth_surface_reports_stale_legacy_snapshot_as_advisory(tmp_path: Path) -> None:

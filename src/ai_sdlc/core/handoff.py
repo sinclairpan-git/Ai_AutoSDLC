@@ -20,7 +20,7 @@ from ai_sdlc.context.state import (
 )
 from ai_sdlc.core.config import YamlStoreError
 from ai_sdlc.core.pr_review_service import CURRENT_REVIEW_PATH
-from ai_sdlc.utils.helpers import now_iso
+from ai_sdlc.utils.helpers import ensure_local_cache_excluded, now_iso
 
 HANDOFF_PATH = Path(".ai-sdlc") / "state" / "codex-handoff.md"
 LOCAL_HANDOFF_PATH = Path(".ai-sdlc") / "local" / "codex-handoff.md"
@@ -74,6 +74,7 @@ def update_handoff(
 ) -> HandoffUpdateResult:
     """Write canonical and scoped handoff artifacts and refresh resume summary."""
     root = root.resolve()
+    ensure_local_cache_excluded(root)
     checkpoint = load_checkpoint(root)
     work_item_id = active_work_item_id(checkpoint)
     stage = checkpoint.current_stage if checkpoint is not None else ""

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import subprocess
 import time
 from pathlib import Path
 
@@ -81,6 +82,25 @@ def test_update_handoff_writes_local_files_without_touching_legacy(
     refreshed = load_resume_pack(tmp_path)
     assert refreshed.working_set_snapshot.context_summary == result.summary
     assert "Add continuity handoff runtime" in result.summary
+
+
+def test_update_handoff_backfills_local_cache_exclude(git_repo: Path) -> None:
+    _seed_checkpoint(git_repo)
+
+    result = update_handoff(git_repo, goal="Keep continuity local")
+
+    ignored = subprocess.run(
+        [
+            "git",
+            "check-ignore",
+            "--no-index",
+            result.canonical_path.relative_to(git_repo).as_posix(),
+        ],
+        cwd=git_repo,
+        capture_output=True,
+        text=True,
+    )
+    assert ignored.returncode == 0, ignored.stderr
 
 
 def test_check_handoff_reports_missing_ready_and_stale(tmp_path: Path) -> None:

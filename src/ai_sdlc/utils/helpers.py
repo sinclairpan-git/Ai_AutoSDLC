@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import subprocess
 import unicodedata
 from datetime import UTC, datetime
 from pathlib import Path
@@ -53,6 +54,46 @@ def is_git_repo(path: Path) -> bool:
     """Check if path is inside a git repository."""
     current = path.resolve()
     return any((parent / ".git").exists() for parent in [current, *current.parents])
+
+
+def ensure_local_cache_excluded(root: Path) -> None:
+    """Keep this project's regenerable local cache out of its Git work tree."""
+    root = root.resolve()
+    try:
+        repo_root_raw = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        git_path_raw = subprocess.run(
+            ["git", "rev-parse", "--git-path", "info/exclude"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return
+
+    try:
+        project_prefix = root.relative_to(Path(repo_root_raw).resolve())
+    except ValueError:
+        return
+    rule_path = project_prefix / AI_SDLC_DIR / "local"
+    rule = f"{rule_path.as_posix()}/".encode()
+
+    exclude_path = Path(git_path_raw)
+    if not exclude_path.is_absolute():
+        exclude_path = root / exclude_path
+    existing = exclude_path.read_bytes() if exclude_path.exists() else b""
+    if rule in existing.splitlines():
+        return
+
+    exclude_path.parent.mkdir(parents=True, exist_ok=True)
+    separator = b"" if not existing or existing.endswith((b"\n", b"\r")) else b"\n"
+    exclude_path.write_bytes(existing + separator + rule + b"\n")
 
 
 def has_project_markers(path: Path) -> bool:

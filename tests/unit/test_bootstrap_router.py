@@ -89,6 +89,32 @@ class TestInitProject:
         assert written.count(b".ai-sdlc/local/") == 1
         assert written == original + b".ai-sdlc/local/\n"
 
+    def test_init_nested_project_scopes_local_cache_exclude_to_project(
+        self, tmp_project_dir: Path
+    ) -> None:
+        exclude = self._init_git_repo(tmp_project_dir)
+        nested = tmp_project_dir / "packages" / "demo"
+        nested.mkdir(parents=True)
+
+        init_project(nested)
+        cache_file = nested / ".ai-sdlc" / "local" / "probe.txt"
+        cache_file.parent.mkdir(parents=True)
+        cache_file.write_text("local only\n", encoding="utf-8")
+
+        ignored = subprocess.run(
+            [
+                "git",
+                "check-ignore",
+                "--no-index",
+                "packages/demo/.ai-sdlc/local/probe.txt",
+            ],
+            cwd=tmp_project_dir,
+            capture_output=True,
+            text=True,
+        )
+        assert ignored.returncode == 0, ignored.stderr
+        assert "packages/demo/.ai-sdlc/local/" in exclude.read_text(encoding="utf-8")
+
     def test_init_non_git_project_does_not_create_git_metadata(
         self, tmp_project_dir: Path
     ) -> None:
