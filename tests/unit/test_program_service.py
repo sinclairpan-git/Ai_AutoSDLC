@@ -2553,8 +2553,7 @@ def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
     assert capability["blocking_refs"] == []
     assert (
         surface["detail"]
-        == "truth snapshot is fresh and release targets are ready; "
-        "truth snapshot freshness is stale (advisory)"
+        == "release targets are ready; truth snapshot freshness is stale (advisory)"
     )
 
 
@@ -3326,7 +3325,7 @@ def test_build_spec_truth_readiness_reuses_fresh_persisted_snapshot_for_unrelate
     )
 
 
-def test_build_spec_truth_readiness_recomputes_when_persisted_snapshot_is_stale(
+def test_build_spec_truth_readiness_treats_stale_snapshot_as_advisory(
     tmp_path: Path,
 ) -> None:
     _init_truth_git_repo(tmp_path)
@@ -3390,8 +3389,8 @@ def test_build_spec_truth_readiness_recomputes_when_persisted_snapshot_is_stale(
     }
     expected_surface = {
         "snapshot_state": "stale",
-        "state": "stale",
-        "detail": "truth snapshot is stale",
+        "state": "ready",
+        "detail": "release targets are ready; truth snapshot freshness is stale (advisory)",
         "release_capabilities": [],
         "migration_pending_specs": [],
         "migration_pending_sources": [],
@@ -3415,10 +3414,61 @@ def test_build_spec_truth_readiness_recomputes_when_persisted_snapshot_is_stale(
         )
 
     assert readiness is not None
-    assert readiness.ready is False
-    assert readiness.state == "stale"
-    assert readiness.summary_token == "truth_snapshot_stale"
+    assert readiness.ready is True
+    assert readiness.state == "ready"
+    assert readiness.summary_token == ""
     build_surface.assert_called_once()
+
+
+@pytest.mark.parametrize("snapshot_state", ["missing", "invalid"])
+def test_build_spec_truth_readiness_keeps_live_blockers_authoritative_when_cache_is_advisory(
+    tmp_path: Path,
+    snapshot_state: str,
+) -> None:
+    svc, manifest = _seed_stale_truth_fixture(tmp_path)
+    spec_dir = tmp_path / "specs" / "082-frontend-example"
+    live_blocked_surface = {
+        "snapshot_state": snapshot_state,
+        "state": "blocked",
+        "detail": "live truth is blocked",
+        "release_capabilities": [
+            {
+                "capability_id": "frontend-mainline-delivery",
+                "audit_state": "blocked",
+                "blocking_refs": ["live:blocker"],
+            }
+        ],
+        "migration_pending_specs": [],
+        "migration_pending_sources": [],
+        "validation_errors": [],
+    }
+    with patch.object(
+        ProgramService,
+        "build_truth_ledger_surface",
+        return_value=live_blocked_surface,
+    ):
+        readiness = svc.build_spec_truth_readiness(manifest, spec_path=spec_dir)
+
+    assert readiness is not None
+    assert readiness.ready is False
+    assert readiness.state == "blocked"
+    assert readiness.summary_token == "capability_blocked"
+
+
+def test_truth_ledger_detail_marks_missing_snapshot_freshness_as_advisory() -> None:
+    svc = ProgramService(Path("/tmp"))
+
+    detail = svc._build_truth_ledger_detail(
+        state="ready",
+        snapshot_state="missing",
+        current_snapshot_state="ready",
+        release_capabilities=[],
+        migration_pending_count=0,
+    )
+
+    assert detail == (
+        "release targets are ready; truth snapshot freshness is missing (advisory)"
+    )
 
 
 def test_build_spec_truth_readiness_does_not_skip_recompute_for_relevant_dirty_spec_changes(

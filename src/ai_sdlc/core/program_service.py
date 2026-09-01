@@ -2221,19 +2221,6 @@ class ProgramService:
             return None
 
         snapshot_state = str(surface.get("snapshot_state", "")).strip()
-        if snapshot_state != "fresh":
-            summary_token = f"truth_snapshot_{snapshot_state or 'missing'}"
-            return ProgramSpecTruthReadinessResult(
-                required=True,
-                ready=False,
-                state=snapshot_state or "missing",
-                summary_token=summary_token,
-                detail=f"{summary_token}: {surface.get('detail', '')}".strip(),
-                next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
-                matched_spec_ids=matched_spec_ids,
-                matched_capabilities=matched_capabilities,
-            )
-
         state = str(surface.get("state", "")).strip()
         if state == "migration_pending":
             if not matched_capabilities:
@@ -4179,8 +4166,11 @@ class ProgramService:
     ) -> str:
         if state == "ready":
             detail = "truth snapshot is fresh and release targets are ready"
-            if snapshot_state in {"invalid", "stale"}:
-                return f"{detail}; truth snapshot freshness is {snapshot_state} (advisory)"
+            if snapshot_state != "fresh":
+                return (
+                    "release targets are ready; "
+                    f"truth snapshot freshness is {snapshot_state} (advisory)"
+                )
             return detail
         prefix = (
             f"migration pending: {migration_pending_count}; "
