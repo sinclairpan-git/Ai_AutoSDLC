@@ -927,12 +927,12 @@ def program_truth_sync(
     dry_run: bool = typer.Option(
         True,
         "--dry-run/--execute",
-        help="Preview truth snapshot materialization or explicitly write truth_snapshot.",
+        help="Preview truth snapshot materialization or explicitly write the local truth cache.",
     ),
     yes: bool = typer.Option(
         False,
         "--yes",
-        help="Confirm truth snapshot write in execute mode.",
+        help="Confirm local truth cache write in execute mode.",
     ),
 ) -> None:
     """Preview or materialize the program truth snapshot."""
@@ -999,9 +999,9 @@ def program_truth_sync(
         )
         raise typer.Exit(code=2)
 
-    svc.write_truth_snapshot(snapshot)
+    written_path = svc.write_truth_snapshot(snapshot)
     console.print(
-        f"  - written path: {root.joinpath(manifest).relative_to(root)}",
+        f"  - written path: {written_path.relative_to(root)}",
         markup=False,
     )
     raise typer.Exit(code=0)
@@ -1033,7 +1033,7 @@ def program_truth_audit(
 
     console.print("[bold cyan]Program Truth Audit[/bold cyan]")
     console.print(f"  - state: {surface['state']}", markup=False)
-    console.print(f"  - snapshot state: {surface['snapshot_state']}", markup=False)
+    _render_truth_observation_lines(surface)
     console.print(f"  - detail: {surface['detail']}", markup=False)
     for action in _dedupe_cli_text_items(surface.get("next_required_actions", [])):
         console.print(f"  - next action: {action}", markup=False)
@@ -5680,7 +5680,7 @@ def _frontend_inheritance_context_risk_note(
 def _render_truth_ledger_lines(surface: dict[str, object]) -> None:
     console.print("\n[bold cyan]Truth Ledger[/bold cyan]")
     console.print(f"  - state: {surface['state']}", markup=False)
-    console.print(f"  - snapshot state: {surface['snapshot_state']}", markup=False)
+    _render_truth_observation_lines(surface)
     console.print(f"  - detail: {surface['detail']}", markup=False)
     for action in _dedupe_cli_text_items(surface.get("next_required_actions", [])):
         console.print(f"  - next action: {action}", markup=False)
@@ -5699,6 +5699,23 @@ def _render_truth_ledger_lines(surface: dict[str, object]) -> None:
             markup=False,
         )
     _render_truth_source_inventory(surface.get("source_inventory"))
+
+
+def _render_truth_observation_lines(surface: dict[str, object]) -> None:
+    console.print(
+        "  - snapshot freshness: "
+        f"{surface.get('snapshot_freshness', surface.get('snapshot_state', 'missing'))} (advisory)",
+        markup=False,
+    )
+    console.print(
+        f"  - observed revision: {surface.get('observed_revision', 'unavailable')}",
+        markup=False,
+    )
+    console.print(
+        "  - semantic tree identity: "
+        f"{surface.get('semantic_tree_identity', 'unavailable')}",
+        markup=False,
+    )
 
 
 def _render_truth_release_capability_lines(items: list[object]) -> None:

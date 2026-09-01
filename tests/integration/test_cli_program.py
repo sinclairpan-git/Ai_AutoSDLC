@@ -1790,6 +1790,12 @@ def _commit_truth_repo(root: Path, message: str) -> None:
     subprocess.run(["git", "commit", "-m", message], cwd=root, check=True, capture_output=True)
 
 
+def _git_output(root: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", *args], cwd=root, check=True, capture_output=True, text=True
+    ).stdout.strip()
+
+
 def _write_program_truth_fixture(root: Path) -> None:
     spec_dir = root / "specs" / "001-auth"
     spec_dir.mkdir(parents=True, exist_ok=True)
@@ -3240,7 +3246,12 @@ specs:
         assert "next step: python -m ai_sdlc program generation-constraints-handoff" in sync.output
         assert "next step: python -m ai_sdlc program quality-platform-handoff" in sync.output
         payload = yaml.safe_load((root / "program-manifest.yaml").read_text(encoding="utf-8"))
-        snapshot = payload["truth_snapshot"]
+        assert "truth_snapshot" not in payload
+        snapshot = yaml.safe_load(
+            (root / ".ai-sdlc" / "local" / "program-truth-snapshot.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
         assert snapshot["state"] == "blocked"
         assert snapshot["computed_capabilities"] == [
             {
@@ -3259,7 +3270,9 @@ specs:
         assert audit.exit_code == 1, audit.output
         assert "Program Truth Audit" in audit.output
         assert "state: blocked" in audit.output.lower()
-        assert "snapshot state: fresh" in audit.output.lower()
+        assert "snapshot freshness: fresh (advisory)" in audit.output.lower()
+        assert "observed revision:" in audit.output.lower()
+        assert "semantic tree identity: unavailable" in audit.output.lower()
         assert "frontend-mainline-delivery" in audit.output
         assert "frontend code generation inheritance is not clear yet" in audit.output
         assert "frontend test inheritance is not clear yet" in audit.output
@@ -3273,6 +3286,28 @@ specs:
         assert [hook.call_count for hook in _no_ide_adapter_hook] == [0, 0]
         assert {path: path.read_bytes() if path.exists() else None for path in adapter_files} == adapter_files
         assert "IDE adapter (" not in sync.output + audit.output + status.output
+
+    def test_program_truth_sync_execute_writes_only_ignored_local_cache(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _init_truth_git_repo(root)
+        _write_program_truth_fixture(root)
+        (root / ".gitignore").write_text(".ai-sdlc/local/\n", encoding="utf-8")
+        _commit_truth_repo(root, "seed local truth cache fixture")
+        before_manifest = (root / "program-manifest.yaml").read_bytes()
+        before_head = _git_output(root, "rev-parse", "HEAD")
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app, ["program", "truth", "sync", "--execute", "--yes"]
+            )
+
+        assert result.exit_code == 0, result.output
+        assert ".ai-sdlc/local/program-truth-snapshot.yaml" in result.output
+        assert (root / "program-manifest.yaml").read_bytes() == before_manifest
+        assert _git_output(root, "rev-parse", "HEAD") == before_head
+        assert _git_output(root, "status", "--porcelain") == ""
 
     def test_program_truth_sync_and_audit_surface_exposes_source_inventory_migration(
         self, initialized_project_dir: Path
@@ -3371,7 +3406,7 @@ specs:
         assert result.output.count("suggestion: run truth sync") == 1
         assert result.output.count("suggestion: update mapping") == 1
 
-    def test_program_status_exposes_next_required_truth_action_when_snapshot_is_stale(
+    def test_program_status_keeps_live_state_authoritative_when_local_cache_is_stale(
         self, initialized_project_dir: Path
     ) -> None:
         root = initialized_project_dir
@@ -3399,11 +3434,13 @@ specs:
 
         assert status.exit_code == 0, status.output
         assert "Truth Ledger" in status.output
-        assert "snapshot state: stale" in status.output.lower()
-        assert "next action" in status.output.lower()
-        assert "python -m ai_sdlc program truth sync --execute --yes" in status.output
+        assert "state: blocked" in status.output.lower()
+        assert "snapshot freshness: stale (advisory)" in status.output.lower()
+        assert "observed revision:" in status.output.lower()
+        assert "semantic tree identity: unavailable" in status.output.lower()
+        assert "python -m ai_sdlc program truth sync --execute --yes" not in status.output
 
-    def test_program_status_exposes_terminal_truth_sync_guidance_when_snapshot_is_stale_but_current_recompute_is_ready(
+    def test_program_status_labels_stale_cache_advisory_when_live_state_is_ready(
         self, initialized_project_dir: Path
     ) -> None:
         root = initialized_project_dir
@@ -3417,17 +3454,15 @@ specs:
                 program_service_module.ProgramService,
                 "build_truth_ledger_surface",
                 return_value={
-                    "state": "stale",
+                    "state": "ready",
+                    "snapshot_freshness": "stale",
                     "snapshot_state": "stale",
-                    "detail": (
-                        "persisted truth snapshot is stale; current recompute is ready. "
-                        "Refresh the snapshot as the terminal close-out step, then rerun program truth audit."
-                    ),
-                    "next_required_actions": [
-                        "python -m ai_sdlc program truth sync --execute --yes"
-                    ],
-                    "next_required_action": "python -m ai_sdlc program truth sync --execute --yes",
+                    "detail": "cached truth snapshot is stale; live recompute is ready.",
+                    "next_required_actions": [],
+                    "next_required_action": "",
                     "snapshot_hash": "abc123",
+                    "observed_revision": "abc123",
+                    "semantic_tree_identity": "unavailable",
                     "release_targets": ["frontend-mainline-delivery"],
                     "release_capabilities": [
                         {
@@ -3451,10 +3486,12 @@ specs:
 
         assert status.exit_code == 0, status.output
         assert "Truth Ledger" in status.output
-        assert "snapshot state: stale" in status.output.lower()
-        assert "current recompute is ready" in status.output
-        assert "terminal close-out step" in status.output
-        assert "python -m ai_sdlc program truth sync --execute --yes" in status.output
+        assert "state: ready" in status.output.lower()
+        assert "snapshot freshness: stale (advisory)" in status.output.lower()
+        assert "live recompute is ready" in status.output
+        assert "observed revision: abc123" in status.output
+        assert "semantic tree identity: unavailable" in status.output
+        assert "python -m ai_sdlc program truth sync --execute --yes" not in status.output
 
     def test_program_status_renders_frontend_delivery_summary_in_truth_ledger(
         self, initialized_project_dir: Path
