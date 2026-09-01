@@ -23,7 +23,10 @@ from ai_sdlc.utils.helpers import now_iso
 logger = logging.getLogger(__name__)
 
 CHECKPOINT_PATH = Path(".ai-sdlc") / "state" / "checkpoint.yml"
-RESUME_PACK_PATH = Path(".ai-sdlc") / "state" / "resume-pack.yaml"
+LEGACY_RESUME_PACK_PATH = Path(".ai-sdlc") / "state" / "resume-pack.yaml"
+LOCAL_STATE_DIR = Path(".ai-sdlc") / "local"
+LOCAL_RESUME_PACK_PATH = LOCAL_STATE_DIR / "resume-pack.yaml"
+RESUME_PACK_PATH = LEGACY_RESUME_PACK_PATH  # import compatibility; never an active writer
 
 STAGE_FILES: dict[str, list[str]] = {
     "init": [],
@@ -186,14 +189,11 @@ def load_resume_pack(
         raise CheckpointLoadError("checkpoint.yml not found")
 
     work_item_id = active_work_item_id(checkpoint)
-    root_pack, root_issue = _load_resume_pack_candidate(
-        root / RESUME_PACK_PATH,
-        checkpoint,
-    )
+    root_path = root / LOCAL_RESUME_PACK_PATH
+    scoped_path = work_item_resume_pack_path(root, work_item_id) if work_item_id else None
+    root_pack, root_issue = _load_resume_pack_candidate(root_path, checkpoint)
     scoped_issue = None
-    if work_item_id:
-        root_path = root / RESUME_PACK_PATH
-        scoped_path = work_item_resume_pack_path(root, work_item_id)
+    if scoped_path:
         scoped_pack, scoped_issue = _load_resume_pack_candidate(
             scoped_path,
             checkpoint,
@@ -214,6 +214,37 @@ def load_resume_pack(
                 different = True
             if different:
                 scoped_issue = "stale"
+
+    if root_issue == "missing" and (not scoped_path or scoped_issue == "missing"):
+        root_path = root / LEGACY_RESUME_PACK_PATH
+        scoped_path = (
+            legacy_work_item_resume_pack_path(root, work_item_id)
+            if work_item_id
+            else None
+        )
+        root_pack, root_issue = _load_resume_pack_candidate(root_path, checkpoint)
+        scoped_issue = None
+        if scoped_path:
+            scoped_pack, scoped_issue = _load_resume_pack_candidate(
+                scoped_path,
+                checkpoint,
+            )
+            if (
+                root_issue is None
+                and scoped_issue is None
+                and root_pack is not None
+                and scoped_pack is not None
+            ):
+                try:
+                    different = (
+                        root_pack.model_dump(mode="json")
+                        != scoped_pack.model_dump(mode="json")
+                        or root_path.read_bytes() != scoped_path.read_bytes()
+                    )
+                except OSError:
+                    different = True
+                if different:
+                    scoped_issue = "stale"
 
     issue = root_issue or scoped_issue
     expected_pack = None
@@ -395,8 +426,16 @@ def latest_summary_path(root: Path, work_item_id: str) -> Path:
     return work_item_dir(root, work_item_id) / "latest-summary.md"
 
 
+def local_work_item_dir(root: Path, work_item_id: str) -> Path:
+    return root / LOCAL_STATE_DIR / "work-items" / work_item_id
+
+
 def work_item_resume_pack_path(root: Path, work_item_id: str) -> Path:
     """Return the work-item scoped resume-pack path."""
+    return local_work_item_dir(root, work_item_id) / "resume-pack.yaml"
+
+
+def legacy_work_item_resume_pack_path(root: Path, work_item_id: str) -> Path:
     return work_item_dir(root, work_item_id) / "resume-pack.yaml"
 
 
@@ -655,7 +694,7 @@ def _emit_resume_pack_event(
 
 
 def _write_resume_pack_files(root: Path, pack: ResumePack, work_item_id: str) -> None:
-    root_path = root / RESUME_PACK_PATH
+    root_path = root / LOCAL_RESUME_PACK_PATH
     if not work_item_id:
         YamlStore.save(root_path, pack)
         return
@@ -741,24 +780,36 @@ def _resume_semantics(pack: ResumePack) -> dict[str, object]:
 def _read_resume_handoff(root: Path, work_item_id: str) -> tuple[str, str, str]:
     if not work_item_id:
         return "absent", "", ""
-    path = root / ".ai-sdlc" / "state" / "codex-handoff.md"
-    try:
-        raw = path.read_bytes()
-    except FileNotFoundError:
-        return "absent", "", ""
-    except OSError:
-        return "invalid", "", ""
-    try:
-        scoped = work_item_dir(root, work_item_id) / "codex-handoff.md"
+    handoff_paths = (
+        (
+            root / LOCAL_STATE_DIR / "codex-handoff.md",
+            local_work_item_dir(root, work_item_id) / "codex-handoff.md",
+        ),
+        (
+            root / ".ai-sdlc" / "state" / "codex-handoff.md",
+            work_item_dir(root, work_item_id) / "codex-handoff.md",
+        ),
+    )
+    for path, scoped in handoff_paths:
         try:
-            scoped_raw = scoped.read_bytes()
+            raw = path.read_bytes()
         except FileNotFoundError:
-            scoped_raw = raw
-        if scoped_raw != raw:
+            continue
+        except OSError:
             return "invalid", "", ""
-        content = raw.decode("utf-8")
-    except (OSError, UnicodeError):
-        return "invalid", "", ""
+        try:
+            try:
+                scoped_raw = scoped.read_bytes()
+            except FileNotFoundError:
+                scoped_raw = raw
+            if scoped_raw != raw:
+                return "invalid", "", ""
+            content = raw.decode("utf-8")
+        except (OSError, UnicodeError):
+            return "invalid", "", ""
+        break
+    else:
+        return "absent", "", ""
 
     lines = content.splitlines()
     values: dict[str, str] = {}

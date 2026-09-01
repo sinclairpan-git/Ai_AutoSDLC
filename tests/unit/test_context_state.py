@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from ai_sdlc.context import state as context_state
+from ai_sdlc.core.config import YamlStore
 from ai_sdlc.context.state import (
     CheckpointLoadError,
     build_resume_pack,
@@ -213,8 +214,46 @@ class TestResumePack:
         pack = build_resume_pack(tmp_path)
         assert pack is not None
         save_resume_pack(tmp_path, pack)
-        resume_file = tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml"
+        resume_file = tmp_path / ".ai-sdlc" / "local" / "resume-pack.yaml"
         assert resume_file.exists()
+
+    def test_save_resume_pack_writes_local_canonical_and_scoped_only(
+        self, tmp_path: Path
+    ) -> None:
+        self._prepare_checkpoint(tmp_path)
+        legacy_root = tmp_path / ".ai-sdlc/state/resume-pack.yaml"
+        legacy_scoped = tmp_path / ".ai-sdlc/work-items/001/resume-pack.yaml"
+        legacy_root.parent.mkdir(parents=True, exist_ok=True)
+        legacy_scoped.parent.mkdir(parents=True, exist_ok=True)
+        legacy_root.write_text("legacy: root\n", encoding="utf-8")
+        legacy_scoped.write_text("legacy: scoped\n", encoding="utf-8")
+        before = (legacy_root.read_bytes(), legacy_scoped.read_bytes())
+        pack = build_resume_pack(tmp_path)
+        assert pack is not None
+
+        save_resume_pack(tmp_path, pack)
+
+        assert (tmp_path / ".ai-sdlc/local/resume-pack.yaml").is_file()
+        assert (
+            tmp_path / ".ai-sdlc/local/work-items/001/resume-pack.yaml"
+        ).is_file()
+        assert (legacy_root.read_bytes(), legacy_scoped.read_bytes()) == before
+
+    def test_load_resume_pack_reads_legacy_without_migrating(
+        self, tmp_path: Path
+    ) -> None:
+        self._prepare_checkpoint(tmp_path)
+        pack = build_resume_pack(tmp_path)
+        assert pack is not None
+        legacy = tmp_path / ".ai-sdlc/state/resume-pack.yaml"
+        legacy_scoped = tmp_path / ".ai-sdlc/work-items/001/resume-pack.yaml"
+        YamlStore.save(legacy, pack)
+        YamlStore.save(legacy_scoped, pack)
+
+        loaded = load_resume_pack(tmp_path)
+
+        assert loaded.current_stage == pack.current_stage
+        assert not (tmp_path / ".ai-sdlc/local/resume-pack.yaml").exists()
 
     def test_load_resume_pack_round_trip(self, tmp_path: Path) -> None:
         self._prepare_checkpoint(tmp_path)
@@ -240,7 +279,7 @@ class TestResumePack:
         assert loaded.current_batch == 0
         assert loaded.working_set_snapshot.spec_path.endswith("spec.md")
         assert loaded.checkpoint_last_updated == checkpoint.pipeline_last_updated
-        assert (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
+        assert (tmp_path / ".ai-sdlc" / "local" / "resume-pack.yaml").exists()
 
     def test_load_resume_pack_corrupted_rebuilds_from_checkpoint(
         self, tmp_path: Path
@@ -555,9 +594,9 @@ class TestResumePack:
         _seed_linked_checkpoint(tmp_path)
         pack = build_resume_pack(tmp_path)
         save_resume_pack(tmp_path, pack)
-        root_pack = tmp_path / ".ai-sdlc/state/resume-pack.yaml"
+        root_pack = tmp_path / ".ai-sdlc/local/resume-pack.yaml"
         scoped_pack = (
-            tmp_path / ".ai-sdlc/work-items" / LINKED_WI / "resume-pack.yaml"
+            tmp_path / ".ai-sdlc/local/work-items" / LINKED_WI / "resume-pack.yaml"
         )
         scoped_pack.write_bytes(scoped_pack.read_bytes() + b"\n")
         events: list[str] = []
@@ -706,6 +745,7 @@ class TestResumePack:
         save_resume_pack(tmp_path, fresh_pack)
         assert load_resume_pack(tmp_path).model_dump(mode="json") == fresh_pack.model_dump(mode="json")
         artifact = tmp_path / ".ai-sdlc" / "work-items" / LINKED_WI / name
+        artifact.parent.mkdir(parents=True, exist_ok=True)
         artifact.write_bytes(payload)
         events: list[str] = []
         loaded = load_resume_pack(tmp_path, event_log=events)
