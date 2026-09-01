@@ -8,7 +8,6 @@ from unittest.mock import patch
 import pytest
 
 from ai_sdlc.context import state as context_state
-from ai_sdlc.core.config import YamlStore
 from ai_sdlc.context.state import (
     CheckpointLoadError,
     build_resume_pack,
@@ -21,6 +20,7 @@ from ai_sdlc.context.state import (
     save_working_set,
     update_stage,
 )
+from ai_sdlc.core.config import YamlStore
 from ai_sdlc.models import state as state_models
 from ai_sdlc.models.state import Checkpoint, ExecuteProgress, FeatureInfo
 
