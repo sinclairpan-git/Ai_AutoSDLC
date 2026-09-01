@@ -11,7 +11,7 @@ from typer.testing import CliRunner
 from ai_sdlc.cli.main import app
 from ai_sdlc.context import state as context_state
 from ai_sdlc.context.state import build_resume_pack, save_checkpoint, save_resume_pack
-from ai_sdlc.core.handoff import HANDOFF_PATH
+from ai_sdlc.core.handoff import HANDOFF_PATH, LOCAL_HANDOFF_PATH
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 
 runner = CliRunner()
@@ -84,6 +84,10 @@ def _seed_current_pr_review(root: Path) -> None:
 def test_handoff_update_show_and_check(tmp_path: Path) -> None:
     _seed_project(tmp_path)
     _seed_current_pr_review(tmp_path)
+    legacy = tmp_path / HANDOFF_PATH
+    legacy.parent.mkdir(parents=True, exist_ok=True)
+    legacy.write_text("# Legacy Handoff\n", encoding="utf-8")
+    legacy_before = legacy.read_bytes()
 
     with patch("ai_sdlc.cli.handoff_cmd.find_project_root", return_value=tmp_path):
         update = runner.invoke(
@@ -112,7 +116,8 @@ def test_handoff_update_show_and_check(tmp_path: Path) -> None:
 
     assert update.exit_code == 0
     assert "codex-handoff.md" in _squashed_output(update.output)
-    assert (tmp_path / HANDOFF_PATH).exists()
+    assert (tmp_path / LOCAL_HANDOFF_PATH).exists()
+    assert legacy.read_bytes() == legacy_before
     assert show.exit_code == 0
     assert "Add continuity handoff runtime" in show.output
     assert "Local PR Review" in show.output
@@ -129,13 +134,18 @@ def test_handoff_update_show_and_check(tmp_path: Path) -> None:
 def test_handoff_update_prefers_linked_work_item_working_set(tmp_path: Path) -> None:
     linked = "198-linked-resume"
     _seed_project(tmp_path, linked)
+    legacy = tmp_path / HANDOFF_PATH
+    legacy.parent.mkdir(parents=True, exist_ok=True)
+    legacy.write_text("# Legacy Handoff\n", encoding="utf-8")
+    legacy_before = legacy.read_bytes()
     with patch("ai_sdlc.cli.handoff_cmd.find_project_root", return_value=tmp_path):
         result = runner.invoke(app, ["handoff", "update", "--goal", "Resume linked WI"])
-    handoff = (tmp_path / HANDOFF_PATH).read_text(encoding="utf-8")
-    scoped_dir = tmp_path / ".ai-sdlc" / "work-items" / linked
+    handoff = (tmp_path / LOCAL_HANDOFF_PATH).read_text(encoding="utf-8")
+    scoped_dir = tmp_path / ".ai-sdlc" / "local" / "work-items" / linked
     snapshot = context_state.load_resume_pack(tmp_path).working_set_snapshot
-    root_pack = (tmp_path / ".ai-sdlc/state/resume-pack.yaml").read_text()
+    root_pack = (tmp_path / ".ai-sdlc/local/resume-pack.yaml").read_text()
     assert result.exit_code == 0
+    assert legacy.read_bytes() == legacy_before
     assert f"Work Item: {linked}" in handoff
     assert handoff == (scoped_dir / "codex-handoff.md").read_text(encoding="utf-8")
     assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == tuple(

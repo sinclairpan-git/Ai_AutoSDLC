@@ -14,6 +14,7 @@ from ai_sdlc.context.state import (
     build_resume_pack,
     load_checkpoint,
     load_resume_pack,
+    local_work_item_dir,
     save_resume_pack,
     work_item_dir,
 )
@@ -22,6 +23,7 @@ from ai_sdlc.core.pr_review_service import CURRENT_REVIEW_PATH
 from ai_sdlc.utils.helpers import now_iso
 
 HANDOFF_PATH = Path(".ai-sdlc") / "state" / "codex-handoff.md"
+LOCAL_HANDOFF_PATH = Path(".ai-sdlc") / "local" / "codex-handoff.md"
 DEFAULT_HANDOFF_MAX_AGE_MINUTES = 20
 
 
@@ -45,13 +47,18 @@ class HandoffCheckResult:
     @property
     def action(self) -> str:
         if self.state == "ready":
-            return "read .ai-sdlc/state/codex-handoff.md before resuming"
-        return "run ai-sdlc handoff update before continuing long-running work"
+            return "ai-sdlc handoff show"
+        return "ai-sdlc handoff update"
 
 
 def scoped_handoff_path(root: Path, work_item_id: str) -> Path:
     """Return the work-item scoped handoff path."""
     return work_item_dir(root, work_item_id) / "codex-handoff.md"
+
+
+def local_scoped_handoff_path(root: Path, work_item_id: str) -> Path:
+    """Return the local work-item scoped handoff path."""
+    return local_work_item_dir(root, work_item_id) / "codex-handoff.md"
 
 
 def update_handoff(
@@ -92,13 +99,13 @@ def update_handoff(
         local_pr_review=local_pr_review,
     )
 
-    canonical = root / HANDOFF_PATH
+    canonical = root / LOCAL_HANDOFF_PATH
     canonical.parent.mkdir(parents=True, exist_ok=True)
     canonical.write_text(content, encoding="utf-8")
 
     scoped: Path | None = None
     if work_item_id:
-        scoped = scoped_handoff_path(root, work_item_id)
+        scoped = local_scoped_handoff_path(root, work_item_id)
         scoped.parent.mkdir(parents=True, exist_ok=True)
         scoped.write_text(content, encoding="utf-8")
 
@@ -107,11 +114,8 @@ def update_handoff(
 
 
 def show_handoff(root: Path) -> str:
-    """Read the canonical handoff content."""
-    path = root / HANDOFF_PATH
-    if not path.exists():
-        raise FileNotFoundError(str(path))
-    return path.read_text(encoding="utf-8")
+    """Read the local handoff, falling back to the legacy tracked handoff."""
+    return _handoff_path(root).read_text(encoding="utf-8")
 
 
 def check_handoff(
@@ -119,9 +123,11 @@ def check_handoff(
     *,
     max_age_minutes: int = DEFAULT_HANDOFF_MAX_AGE_MINUTES,
 ) -> HandoffCheckResult:
-    """Return lightweight freshness metadata for the canonical handoff."""
-    path = root / HANDOFF_PATH
-    if not path.exists():
+    """Return freshness metadata for local handoff with legacy fallback."""
+    try:
+        path = _handoff_path(root)
+    except FileNotFoundError:
+        path = root / LOCAL_HANDOFF_PATH
         return HandoffCheckResult(state="missing", path=path, ready=False)
 
     stat = path.stat()
@@ -137,6 +143,14 @@ def check_handoff(
         summary=_extract_field(content, "Goal") or _first_content_line(content),
         next_steps=tuple(_extract_section_items(content, "Exact Next Steps")),
     )
+
+
+def _handoff_path(root: Path) -> Path:
+    for relative_path in (LOCAL_HANDOFF_PATH, HANDOFF_PATH):
+        path = root / relative_path
+        if path.exists():
+            return path
+    raise FileNotFoundError(str(root / LOCAL_HANDOFF_PATH))
 
 
 def _refresh_resume_pack_summary(root: Path, summary: str) -> None:

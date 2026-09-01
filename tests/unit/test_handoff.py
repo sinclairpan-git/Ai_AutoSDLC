@@ -14,8 +14,10 @@ from ai_sdlc.context.state import (
 )
 from ai_sdlc.core.handoff import (
     HANDOFF_PATH,
+    LOCAL_HANDOFF_PATH,
     check_handoff,
-    scoped_handoff_path,
+    local_scoped_handoff_path,
+    show_handoff,
     update_handoff,
 )
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
@@ -40,30 +42,35 @@ def _seed_checkpoint(root: Path, work_item_id: str = "182-continuity") -> None:
     )
 
 
-def test_update_handoff_writes_canonical_scoped_copy_and_resume_summary(
+def test_update_handoff_writes_local_files_without_touching_legacy(
     tmp_path: Path,
 ) -> None:
     _seed_checkpoint(tmp_path)
     pack = build_resume_pack(tmp_path)
     assert pack is not None
     save_resume_pack(tmp_path, pack)
+    legacy = tmp_path / HANDOFF_PATH
+    legacy.parent.mkdir(parents=True, exist_ok=True)
+    legacy.write_text("# Legacy Handoff\n", encoding="utf-8")
+    before = legacy.read_bytes()
 
     result = update_handoff(
         tmp_path,
         goal="Add continuity handoff runtime",
         state="Core tests are red",
-        decisions=["Use .ai-sdlc/state/codex-handoff.md as canonical path"],
+        decisions=["Use local canonical and scoped handoff files"],
         commands=["python -m pytest tests/unit/test_handoff.py -q: red"],
         blockers=["status/recover integration still pending"],
         next_steps=["Implement core handoff service"],
         reason="after writing failing tests",
     )
 
-    canonical = tmp_path / HANDOFF_PATH
-    scoped = scoped_handoff_path(tmp_path, "182-continuity")
+    canonical = tmp_path / LOCAL_HANDOFF_PATH
+    scoped = local_scoped_handoff_path(tmp_path, "182-continuity")
     assert result.canonical_path == canonical
     assert result.scoped_path == scoped
-    assert canonical.read_text(encoding="utf-8") == scoped.read_text(encoding="utf-8")
+    assert canonical.read_bytes() == scoped.read_bytes()
+    assert legacy.read_bytes() == before
 
     content = canonical.read_text(encoding="utf-8")
     assert "Add continuity handoff runtime" in content
@@ -81,14 +88,29 @@ def test_check_handoff_reports_missing_ready_and_stale(tmp_path: Path) -> None:
     assert missing.state == "missing"
     assert missing.ready is False
 
-    (tmp_path / HANDOFF_PATH).parent.mkdir(parents=True, exist_ok=True)
-    (tmp_path / HANDOFF_PATH).write_text("# Continuity Handoff\n", encoding="utf-8")
+    (tmp_path / LOCAL_HANDOFF_PATH).parent.mkdir(parents=True, exist_ok=True)
+    (tmp_path / LOCAL_HANDOFF_PATH).write_text("# Continuity Handoff\n", encoding="utf-8")
     ready = check_handoff(tmp_path, max_age_minutes=20)
     assert ready.state == "ready"
     assert ready.ready is True
 
     old = time.time() - (21 * 60)
-    os.utime(tmp_path / HANDOFF_PATH, (old, old))
+    os.utime(tmp_path / LOCAL_HANDOFF_PATH, (old, old))
     stale = check_handoff(tmp_path, max_age_minutes=20)
     assert stale.state == "stale"
     assert stale.ready is False
+
+
+def test_show_and_check_prefer_local_then_fall_back_to_legacy(tmp_path: Path) -> None:
+    legacy = tmp_path / HANDOFF_PATH
+    legacy.parent.mkdir(parents=True, exist_ok=True)
+    legacy.write_text("# Legacy Handoff\n", encoding="utf-8")
+
+    assert "Legacy" in show_handoff(tmp_path)
+
+    local = tmp_path / LOCAL_HANDOFF_PATH
+    local.parent.mkdir(parents=True, exist_ok=True)
+    local.write_text("# Local Handoff\n", encoding="utf-8")
+
+    assert "Local" in show_handoff(tmp_path)
+    assert check_handoff(tmp_path).path == local
