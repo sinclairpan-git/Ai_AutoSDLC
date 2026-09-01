@@ -3417,6 +3417,10 @@ def test_build_spec_truth_readiness_treats_stale_snapshot_as_advisory(
     assert readiness.ready is True
     assert readiness.state == "ready"
     assert readiness.summary_token == ""
+    assert readiness.detail == (
+        "live truth is ready; truth snapshot freshness is stale (advisory); "
+        "matched release capabilities are ready"
+    )
     build_surface.assert_called_once()
 
 
@@ -3654,8 +3658,17 @@ def test_build_spec_truth_readiness_does_not_skip_recompute_for_dirty_manifest(
     build_surface.assert_called_once()
 
 
-def test_build_spec_truth_readiness_allows_unrelated_migration_pending_for_non_release_spec(
+@pytest.mark.parametrize(
+    ("surface_state", "detail_suffix"),
+    [
+        ("migration_pending", "unrelated truth inventory remains pending"),
+        ("blocked", "unrelated release targets remain blocked"),
+    ],
+)
+def test_build_spec_truth_readiness_keeps_unrelated_live_blockers_scoped_with_advisory_cache(
     tmp_path: Path,
+    surface_state: str,
+    detail_suffix: str,
 ) -> None:
     _init_truth_git_repo(tmp_path)
     (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
@@ -3699,8 +3712,8 @@ specs:
     svc = ProgramService(tmp_path)
     manifest = svc.load_manifest()
     expected_surface = {
-        "snapshot_state": "fresh",
-        "state": "migration_pending",
+        "snapshot_state": "stale",
+        "state": surface_state,
         "detail": "migration pending: 1; release targets blocked: frontend-mainline-delivery (blocked)",
         "release_capabilities": [
             {
@@ -3728,9 +3741,9 @@ specs:
     assert readiness.ready is True
     assert readiness.state == "ready"
     assert readiness.matched_capabilities == []
-    assert (
-        readiness.detail
-        == "truth snapshot is fresh and spec is mapped; unrelated truth inventory remains pending"
+    assert readiness.detail == (
+        "live truth is ready; truth snapshot freshness is stale (advisory); "
+        f"spec is mapped; {detail_suffix}"
     )
     build_surface.assert_called_once()
 

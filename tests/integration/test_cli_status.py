@@ -223,15 +223,21 @@ def test_status_rebuild_is_portable_after_detached_relocation(tmp_path: Path) ->
         state="Ready",
         next_steps=["Run status"],
     )
-    _commit_all(source, "test: seed relocation")
     relocated = tmp_path / "relocated"
     shutil.copytree(source, relocated)
     _git(relocated, "checkout", "--detach", "HEAD")
-    (relocated / ".ai-sdlc/work-items" / linked / "resume-pack.yaml").unlink()
+    root_resume = relocated / ".ai-sdlc/local/resume-pack.yaml"
+    scoped_resume = (
+        relocated
+        / ".ai-sdlc/local/work-items"
+        / linked
+        / "resume-pack.yaml"
+    )
+    scoped_resume.unlink()
 
     with patch("ai_sdlc.cli.commands.find_project_root", return_value=relocated):
         first = runner.invoke(app, ["status", "--details"])
-        before = (relocated / ".ai-sdlc/state/resume-pack.yaml").read_bytes()
+        before = root_resume.read_bytes()
         second = runner.invoke(app, ["status", "--details"])
     pack = load_resume_pack(relocated)
 
@@ -242,7 +248,10 @@ def test_status_rebuild_is_portable_after_detached_relocation(tmp_path: Path) ->
         "Goal: Resume after relocation | State: Ready | Next: Run status"
     )
     assert all(not Path(path).is_absolute() for path in snapshot.active_files)
-    assert before == (relocated / ".ai-sdlc/state/resume-pack.yaml").read_bytes()
+    assert scoped_resume.exists()
+    assert root_resume.read_bytes() == scoped_resume.read_bytes()
+    assert before == root_resume.read_bytes()
+    assert not (relocated / ".ai-sdlc/state/resume-pack.yaml").exists()
 
 
 def _create_branch_ahead_of_main(root: Path, branch_name: str) -> None:
@@ -2029,6 +2038,8 @@ def test_status_json_includes_truth_ledger_summary(tmp_path: Path) -> None:
     init_project(tmp_path)
     _write_truth_ledger_fixture(tmp_path)
     _commit_all(tmp_path, "docs: seed truth ledger fixture")
+    manifest_path = tmp_path / "program-manifest.yaml"
+    manifest_before = manifest_path.read_bytes()
 
     with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=tmp_path):
         sync = runner.invoke(
@@ -2037,8 +2048,15 @@ def test_status_json_includes_truth_ledger_summary(tmp_path: Path) -> None:
         )
 
     assert sync.exit_code == 0, sync.output
-    manifest = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
-    assert manifest["truth_snapshot"]["state"] == "blocked"
+    assert manifest_path.read_bytes() == manifest_before
+    manifest = yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+    assert "truth_snapshot" not in manifest
+    local_snapshot = yaml.safe_load(
+        (tmp_path / ".ai-sdlc/local/program-truth-snapshot.yaml").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert local_snapshot["state"] == "blocked"
 
     with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path):
         result = runner.invoke(app, ["status", "--json"])

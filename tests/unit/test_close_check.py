@@ -877,12 +877,12 @@ specs:
     assert "update program-manifest.yaml specs[] so specs/001-wi is declared" in (
         program_truth["next_required_actions"]
     )
-    assert "python -m ai_sdlc program truth sync --execute --yes" in (
+    assert "python -m ai_sdlc program truth sync --execute --yes" not in (
         program_truth["next_required_actions"]
     )
 
 
-def test_close_check_blocks_when_program_truth_snapshot_is_stale(
+def test_close_check_treats_stale_program_truth_snapshot_as_advisory(
     tmp_path: Path,
 ) -> None:
     root = tmp_path / "repo3-program-truth-stale"
@@ -914,32 +914,25 @@ specs:
     svc.write_truth_snapshot(snapshot)
     _commit_all(root, "docs: materialize truth snapshot")
 
-    _write_manifest_yaml(
-        root,
-        """
-schema_version: "2"
-program:
-  goal: "Updated goal after truth sync"
-specs:
-  - id: "001-wi"
-    path: "specs/001-wi"
-    depends_on: []
-truth_snapshot:
-"""
-        + (root / "program-manifest.yaml").read_text(encoding="utf-8").split("truth_snapshot:\n", 1)[1],
+    manifest_path = root / "program-manifest.yaml"
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8").replace(
+            "Demo truth ledger",
+            "Updated goal after truth sync",
+        ),
+        encoding="utf-8",
     )
     _commit_all(root, "docs: drift truth authoring after sync")
 
     r = run_close_check(cwd=root, wi=Path(wi_rel))
 
-    assert r.ok is False
+    assert r.ok is True
     program_truth = next(check for check in r.checks if check["name"] == "program_truth")
-    assert program_truth["ok"] is False
-    assert "truth_snapshot_stale" in str(program_truth["detail"])
-    assert any("truth_snapshot_stale" in blocker for blocker in r.blockers)
-    assert program_truth["next_required_actions"] == [
-        "python -m ai_sdlc program truth sync --execute --yes"
-    ]
+    assert program_truth["ok"] is True
+    assert "stale (advisory)" in str(program_truth["detail"])
+    assert "truth snapshot is fresh" not in str(program_truth["detail"])
+    assert not any("truth_snapshot_stale" in blocker for blocker in r.blockers)
+    assert program_truth["next_required_actions"] == []
 
 
 def test_close_check_distinguishes_program_truth_capability_blocker(

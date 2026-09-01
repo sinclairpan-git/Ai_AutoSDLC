@@ -145,12 +145,13 @@ class TestConfirmMode:
         assert resume_pack is not None
         save_resume_pack(tmp_path, resume_pack)
         state_dir = tmp_path / ".ai-sdlc/work-items/204-no-go"
-        tracked_state = [
+        local_state_dir = tmp_path / ".ai-sdlc/local/work-items/204-no-go"
+        persisted_state = [
             tmp_path / ".ai-sdlc/state/checkpoint.yml",
-            tmp_path / ".ai-sdlc/state/resume-pack.yaml",
-            state_dir / "resume-pack.yaml",
+            tmp_path / ".ai-sdlc/local/resume-pack.yaml",
+            local_state_dir / "resume-pack.yaml",
         ]
-        before = {path: path.read_bytes() for path in tracked_state}
+        before = {path: path.read_bytes() for path in persisted_state}
         runner = SDLCRunner(tmp_path)
         monkeypatch.setattr(runner, "_build_executor", build_executor)
 
@@ -164,14 +165,14 @@ class TestConfirmMode:
             ),
         )
         assert dry_run_verdicts["execute"] == "RETRY"
-        assert {path: path.read_bytes() for path in tracked_state} == before
+        assert {path: path.read_bytes() for path in persisted_state} == before
 
         with pytest.raises(PipelineHaltError) as exc_info:
             runner.run()
 
         assert exc_info.value.stage == "execute"
         build_executor.assert_not_called()
-        assert {path: path.read_bytes() for path in tracked_state} == before
+        assert {path: path.read_bytes() for path in persisted_state} == before
         loaded = load_checkpoint(tmp_path)
         assert loaded is not None
         assert loaded.execute_progress == checkpoint.execute_progress
@@ -681,13 +682,12 @@ class TestConfirmMode:
         ctx = runner._build_context("close", cp)
 
         assert ctx["program_truth_audit_required"] is True
-        assert ctx["program_truth_audit_ready"] is False
-        assert ctx["program_truth_audit_state"] == "stale"
-        assert "truth_snapshot_stale" in str(ctx["program_truth_audit_detail"])
+        assert ctx["program_truth_audit_ready"] is True
+        assert ctx["program_truth_audit_state"] == "ready"
+        assert "stale (advisory)" in str(ctx["program_truth_audit_detail"])
+        assert "truth snapshot is fresh" not in str(ctx["program_truth_audit_detail"])
         assert ctx["program_truth_audit_frontend_inheritance_status"] == {}
-        assert ctx["program_truth_audit_next_actions"] == [
-            "python -m ai_sdlc program truth sync --execute --yes"
-        ]
+        assert ctx["program_truth_audit_next_actions"] == []
 
     def test_verify_context_includes_frontend_contract_runtime_attachment_for_active_014(
         self, tmp_path: Path

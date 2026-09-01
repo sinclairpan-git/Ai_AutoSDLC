@@ -69,8 +69,19 @@ class TestRecoverFlow:
         assert pack.working_set_snapshot.constitution_path.endswith("constitution.md")
 
         save_resume_pack(project_dir, pack)
-        resume_file = project_dir / ".ai-sdlc" / "state" / "resume-pack.yaml"
+        resume_file = project_dir / ".ai-sdlc" / "local" / "resume-pack.yaml"
+        scoped_resume_file = (
+            project_dir
+            / ".ai-sdlc"
+            / "local"
+            / "work-items"
+            / "001"
+            / "resume-pack.yaml"
+        )
         assert resume_file.exists()
+        assert scoped_resume_file.exists()
+        assert resume_file.read_bytes() == scoped_resume_file.read_bytes()
+        assert not (project_dir / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
 
     def test_no_checkpoint_means_no_recovery(self, tmp_path: Path) -> None:
         pack = build_resume_pack(tmp_path)

@@ -426,7 +426,7 @@ class TestCliWorkitemCloseCheck:
         assert result.exit_code == 1, result.output
         assert "git" in result.output.lower()
 
-    def test_exit_1_when_program_truth_stale_surfaces_next_actions(
+    def test_program_truth_stale_is_advisory_when_live_truth_is_ready(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         root = tmp_path / "r2b-truth"
@@ -469,10 +469,14 @@ class TestCliWorkitemCloseCheck:
 
         result = runner.invoke(app, ["workitem", "close-check", "--wi", wi_rel])
 
-        assert result.exit_code == 1, result.output
-        assert "Program Truth Next Actions" in result.output
-        assert "python -m ai_sdlc program truth sync --execute --yes" in result.output
-        assert "truth_snapshot_stale" in result.output
+        assert result.exit_code == 0, result.output
+        assert "program_truth" in result.output
+        assert "PASS" in result.output
+        assert "stale (advisory)" in result.output
+        assert "truth snapshot is fresh" not in result.output
+        assert "Program Truth Next Actions" not in result.output
+        assert "python -m ai_sdlc program truth sync --execute --yes" not in result.output
+        assert "truth_snapshot_stale" not in result.output
         assert "; next action:" not in result.output
 
     def test_close_check_surfaces_frontend_delivery_context_from_program_truth(

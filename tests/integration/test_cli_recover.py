@@ -118,9 +118,17 @@ class TestCliRecover:
         save_resume_pack(tmp_path, legacy_pack)
         with patch("ai_sdlc.cli.commands.find_project_root", return_value=tmp_path), patch("ai_sdlc.cli.commands.detect_reconcile_hint", return_value=None):
             result = runner.invoke(app, ["recover"])
-        scoped = tmp_path / ".ai-sdlc" / "work-items" / linked / "resume-pack.yaml"
+        root_pack_path = tmp_path / ".ai-sdlc" / "local" / "resume-pack.yaml"
+        scoped = (
+            tmp_path
+            / ".ai-sdlc"
+            / "local"
+            / "work-items"
+            / linked
+            / "resume-pack.yaml"
+        )
         snapshot = load_resume_pack(tmp_path).working_set_snapshot
-        root_pack = (tmp_path / ".ai-sdlc/state/resume-pack.yaml").read_text()
+        root_pack = root_pack_path.read_text()
         assert result.exit_code == 0
         assert "rebuilding from checkpoint" in result.output.lower()
         assert (snapshot.spec_path, snapshot.plan_path, snapshot.tasks_path) == tuple(
@@ -128,6 +136,7 @@ class TestCliRecover:
             for name in ("spec.md", "plan.md", "tasks.md")
         )
         assert root_pack == scoped.read_text()
+        assert not (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
 
     def test_recover_surfaces_continuity_handoff_next_steps(
         self, tmp_path: Path
@@ -315,7 +324,8 @@ class TestCliRecover:
         assert result.exit_code == 0
         assert "verify" in result.output.lower()
         assert "spec.md" in result.output
-        assert (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
+        assert (tmp_path / ".ai-sdlc" / "local" / "resume-pack.yaml").exists()
+        assert not (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
 
     def test_recover_reconcile_realigns_stale_checkpoint_to_current_branch_work_item(
         self,
@@ -362,10 +372,16 @@ class TestCliRecover:
         assert checkpoint.feature.feature_branch == f"feature/{work_item_id}-dev"
         assert "close" in result.output.lower()
         assert "Reconciled Spec Dir" in result.output
-        assert (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
+        assert (tmp_path / ".ai-sdlc" / "local" / "resume-pack.yaml").exists()
         assert (
-            tmp_path / ".ai-sdlc" / "work-items" / work_item_id / "resume-pack.yaml"
+            tmp_path
+            / ".ai-sdlc"
+            / "local"
+            / "work-items"
+            / work_item_id
+            / "resume-pack.yaml"
         ).exists()
+        assert not (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
 
     def test_recover_reconcile_stops_at_design_for_direct_formal_placeholders(
         self,
@@ -536,9 +552,12 @@ class TestCliRecover:
         assert runtime.last_committed_task == ""
         assert pack.current_stage == "execute"
         assert pack.current_batch == 0
-        root_pack_path = tmp_path / ".ai-sdlc/state/resume-pack.yaml"
+        root_pack_path = tmp_path / ".ai-sdlc/local/resume-pack.yaml"
         scoped_pack_path = (
-            tmp_path / ".ai-sdlc/work-items" / work_item_id / "resume-pack.yaml"
+            tmp_path
+            / ".ai-sdlc/local/work-items"
+            / work_item_id
+            / "resume-pack.yaml"
         )
         runtime_path = tmp_path / ".ai-sdlc/work-items" / work_item_id / "runtime.yaml"
         tracked_state = [
@@ -584,7 +603,22 @@ class TestCliRecover:
         assert result.exit_code == 0
         assert "reconcile" in result.output.lower()
         assert "verify" in result.output.lower()
-        assert (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
+        checkpoint = load_checkpoint(tmp_path)
+        assert checkpoint is not None
+        work_item_id = checkpoint.feature.id
+        root_pack_path = tmp_path / ".ai-sdlc" / "local" / "resume-pack.yaml"
+        scoped_pack_path = (
+            tmp_path
+            / ".ai-sdlc"
+            / "local"
+            / "work-items"
+            / work_item_id
+            / "resume-pack.yaml"
+        )
+        assert root_pack_path.exists()
+        assert scoped_pack_path.exists()
+        assert root_pack_path.read_bytes() == scoped_pack_path.read_bytes()
+        assert not (tmp_path / ".ai-sdlc" / "state" / "resume-pack.yaml").exists()
 
     def test_recover_stops_until_reconcile_is_applied_for_legacy_artifacts(
         self, tmp_path: Path

@@ -2217,15 +2217,23 @@ class ProgramService:
 
         snapshot_state = str(surface.get("snapshot_state", "")).strip()
         state = str(surface.get("state", "")).strip()
+
+        def ready_detail(scope: str) -> str:
+            if snapshot_state and snapshot_state != "fresh":
+                return (
+                    "live truth is ready; truth snapshot freshness is "
+                    f"{snapshot_state} (advisory); {scope}"
+                )
+            return f"truth snapshot is fresh and {scope}"
+
         if state == "migration_pending":
             if not matched_capabilities:
                 return ProgramSpecTruthReadinessResult(
                     required=True,
                     ready=True,
                     state="ready",
-                    detail=(
-                        "truth snapshot is fresh and spec is mapped; "
-                        "unrelated truth inventory remains pending"
+                    detail=ready_detail(
+                        "spec is mapped; unrelated truth inventory remains pending"
                     ),
                     matched_spec_ids=matched_spec_ids,
                     matched_capabilities=matched_capabilities,
@@ -2340,9 +2348,8 @@ class ProgramService:
                 required=True,
                 ready=True,
                 state="ready",
-                detail=(
-                    "truth snapshot is fresh and spec is mapped; "
-                    "unrelated release targets remain blocked"
+                detail=ready_detail(
+                    "spec is mapped; unrelated release targets remain blocked"
                 ),
                 matched_spec_ids=matched_spec_ids,
                 matched_capabilities=matched_capabilities,
@@ -2369,9 +2376,9 @@ class ProgramService:
                 matched_capabilities=matched_capabilities,
             )
 
-        detail = "truth snapshot is fresh and spec is mapped"
+        detail = ready_detail("spec is mapped")
         if matched_capabilities:
-            detail = "truth snapshot is fresh and matched release capabilities are ready"
+            detail = ready_detail("matched release capabilities are ready")
         return ProgramSpecTruthReadinessResult(
             required=True,
             ready=True,
