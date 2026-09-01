@@ -2054,7 +2054,6 @@ class ProgramService:
                 "update program-manifest.yaml specs[] so "
                 f"{normalized_id} -> {normalized_path}"
             ),
-            PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
         ]
 
         if not self.manifest_path.is_file():
@@ -2076,7 +2075,6 @@ class ProgramService:
                 spec_id=normalized_id,
                 spec_path=normalized_path,
                 written_paths=[_relative_to_root_or_str(self.root, self.manifest_path)],
-                next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
             )
 
         try:
@@ -2118,7 +2116,6 @@ class ProgramService:
                     status="existing",
                     spec_id=normalized_id,
                     spec_path=normalized_path,
-                    next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
                 )
 
             blockers: list[str] = []
@@ -2154,7 +2151,6 @@ class ProgramService:
             spec_id=normalized_id,
             spec_path=normalized_path,
             written_paths=[_relative_to_root_or_str(self.root, self.manifest_path)],
-            next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
         )
 
     def build_spec_truth_readiness(
@@ -2190,7 +2186,6 @@ class ProgramService:
                 ),
                 next_required_actions=[
                     f"update program-manifest.yaml specs[] so {spec_rel} is declared",
-                    PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
                 ],
             )
 

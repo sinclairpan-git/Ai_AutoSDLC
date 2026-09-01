@@ -26,10 +26,7 @@ from ai_sdlc.core.frontend_inheritance_truth import (
     summarize_frontend_inheritance_status_for_display,
 )
 from ai_sdlc.core.plan_check import PlanCheckResult, format_json, run_plan_check
-from ai_sdlc.core.program_service import (
-    PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
-    ProgramService,
-)
+from ai_sdlc.core.program_service import ProgramService
 from ai_sdlc.core.task_guard import evaluate_task_guard
 from ai_sdlc.core.workitem_scaffold import WorkitemScaffolder, WorkitemScaffoldError
 from ai_sdlc.core.workitem_truth import (
@@ -204,13 +201,9 @@ def workitem_init(
             "[cyan]Program truth handoff: materialized manifest mapping in "
             f"{', '.join(_dedupe_cli_text_items(manifest_sync.written_paths))}[/cyan]"
         )
-        console.print(
-            f"[cyan]Next required action: {PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND}[/cyan]"
-        )
     elif manifest_sync.status == "existing":
         console.print(
-            "[cyan]Program truth handoff: manifest mapping already exists; "
-            f"next required action: {PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND}[/cyan]"
+            "[cyan]Program truth handoff: manifest mapping already exists.[/cyan]"
         )
     elif manifest_sync.status == "blocked":
         console.print(

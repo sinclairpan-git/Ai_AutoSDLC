@@ -19,7 +19,9 @@ from typer.testing import CliRunner
 from ai_sdlc.cli.main import app
 from ai_sdlc.core.config import load_project_state
 from ai_sdlc.core.plan_check import parse_markdown_frontmatter
+from ai_sdlc.core.program_service import ProgramService
 from ai_sdlc.core.workitem_scaffold import WorkitemScaffolder
+from ai_sdlc.models.program import ProgramManifest
 from ai_sdlc.routers.bootstrap import init_project
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -577,7 +579,7 @@ class TestCliWorkitemInit:
         assert calls == []
         assert not (root / "adapter-proof.txt").exists()
 
-    def test_workitem_init_materializes_program_manifest_entry_and_guides_truth_sync(
+    def test_workitem_init_materializes_program_manifest_entry_without_truth_sync_guidance(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         root = tmp_path / "repo"
@@ -609,7 +611,8 @@ specs: []
         assert result.exit_code == 0
         assert "program truth handoff" in result.output.lower()
         assert "program-manifest.yaml" in result.output
-        assert "python -m ai_sdlc program truth sync --execute --yes" in result.output
+        assert "program truth sync --execute --yes" not in result.output
+        assert "next required action" not in result.output.lower()
 
         manifest = yaml.safe_load(
             (root / "program-manifest.yaml").read_text(encoding="utf-8")
@@ -620,6 +623,47 @@ specs: []
                 "path": "specs/148-program-truth-handoff-example",
                 "depends_on": [],
             }
+        ]
+
+    def test_program_manifest_handoff_requires_only_tracked_manifest_repairs(
+        self, tmp_path: Path
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        service = ProgramService(root)
+        spec_path = root / "specs" / "150-manifest-handoff"
+
+        added = service.ensure_manifest_spec_entry(
+            spec_id="150-manifest-handoff",
+            spec_path=spec_path,
+        )
+        existing = service.ensure_manifest_spec_entry(
+            spec_id="150-manifest-handoff",
+            spec_path=spec_path,
+        )
+        (root / "program-manifest.yaml").write_text(
+            "schema_version: '2'\nspecs:\n  - id: 150-manifest-handoff\n"
+            "    path: specs/other\n    depends_on: []\n",
+            encoding="utf-8",
+        )
+        blocked = service.ensure_manifest_spec_entry(
+            spec_id="150-manifest-handoff",
+            spec_path=spec_path,
+        )
+        unmapped = service.build_spec_truth_readiness(
+            ProgramManifest(schema_version="2"),
+            spec_path=spec_path,
+        )
+
+        assert added.next_required_actions == []
+        assert existing.next_required_actions == []
+        assert blocked.next_required_actions == [
+            "update program-manifest.yaml specs[] so "
+            "150-manifest-handoff -> specs/150-manifest-handoff"
+        ]
+        assert unmapped is not None
+        assert unmapped.next_required_actions == [
+            "update program-manifest.yaml specs[] so specs/150-manifest-handoff is declared"
         ]
 
     def test_workitem_init_bootstraps_program_manifest_when_missing(
