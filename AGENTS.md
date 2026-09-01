@@ -28,9 +28,10 @@ Use PowerShell syntax for commands, env vars, pipes, and filesystem operations. 
 
 ## Continuity Protocol
 
-For long-running Codex/ChatGPT tasks, maintain `.ai-sdlc/state/codex-handoff.md`.
-When a checkpoint is linked to an active work item, also keep the scoped copy at
-`.ai-sdlc/work-items/<wi-id>/codex-handoff.md`.
+For long-running Codex/ChatGPT tasks, the active canonical/scoped handoff and
+resume pack are ignored recovery caches below `.ai-sdlc/local/`. A clean clone
+may omit this local cache without changing lifecycle or Program Truth
+conclusions.
 
 Update the handoff with the active AI-SDLC CLI for the current context:
 
@@ -38,6 +39,11 @@ Update the handoff with the active AI-SDLC CLI for the current context:
   `python -m ai_sdlc handoff update`.
 - In this Ai_AutoSDLC repository's self-development workflow, use the
   repository source entrypoint: `uv run ai-sdlc handoff update`.
+
+These commands refresh only the ignored local recovery cache. Existing tracked
+handoff/resume files are legacy read-only fallback and must not be refreshed.
+Continuity evidence never authorizes execute, sponsor decisions, review
+approval, merge readiness, or completion.
 
 Update the handoff:
 
@@ -58,9 +64,9 @@ The handoff must include:
 - blockers or risks
 - exact next steps
 
-When resuming interrupted work, first run `ai-sdlc handoff show` or read
-`.ai-sdlc/state/codex-handoff.md`, then continue from its exact next steps.
-Keep the handoff concise enough for a fresh thread to read quickly.
+When resuming interrupted work, first run `ai-sdlc handoff show` or read the
+local recovery cache, then continue from its exact next steps. Keep the handoff
+concise enough for a fresh thread to read quickly.
 
 ## Local Repository PR Protocol
 
