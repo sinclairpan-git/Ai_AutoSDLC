@@ -16,7 +16,7 @@
 - 核对现有 `LoopRun / LoopRound`、`needs_user`、`finding-history.json`、`risk_accepted`、final report 与 attestation 是否足够复用。
 - 比较 repo-local 规则、Local PR Review runtime 和新增 sponsor artifact 三种落地方式。
 - 冻结一个后续最小候选、投入上限、终止结果及 No-Go 条件。
-- 同步路线图、Program Truth、固定库存期望、defect backlog 和 continuity。
+- 只在 WI225 formal carrier 内归档结论，并同步 Program Truth、固定库存期望和 continuity；路线图与 defect backlog 保持只读，避免越过 `formal_freeze_only` 控制面。
 
 ### 1.2 本次不覆盖
 
@@ -32,12 +32,12 @@
 | 证据 | 主线事实 | 对 G1 的含义 |
 |---|---|---|
 | `AGENTS.md` Local Repository PR Protocol | heartbeat 会持续处理 review/check，直到合并或用户输入 blocker，但没有两轮后的 terminal sponsor 分支 | 实际复发层在 repo-local PR/heartbeat 协议 |
-| `docs/FRAMEWORK_ROADMAP.zh-CN.md` | 已写明两轮上限、terminal sponsor decision、唯一改动/投入/结果冻结 | 原则已有，但没有进入实际执行协议 |
+| `docs/FRAMEWORK_ROADMAP.zh-CN.md`（只读） | 已写明两轮上限、terminal sponsor decision、唯一改动/投入/结果冻结 | 原则已有，但没有进入实际执行协议；本 Formal 不修改路线图 |
 | `src/ai_sdlc/core/loop_models.py` | 已有 `LoopRun`、`LoopRound`、`needs_user` 和默认 `max_rounds=2` | 不需要新状态机 |
 | `src/ai_sdlc/core/pr_review_service.py` | rerun 已按 severity/file/line/claim/risk 生成稳定签名并写 `finding-history.json` | 不需要新 finding schema |
 | `src/ai_sdlc/core/pr_review_service.py` | 达到上限时返回 `needs_user`，但提示仍允许 `increase --max-rounds` | 证明原则与现有 CLI 提示不一致，但不是本次实际复发的主控制层 |
 | `risk_accepted`、final report、attestation | 已能披露未解决 REQUIRED、写最终报告并用 digest 绑定 | 若未来扩展 Local PR Review，可复用现有终态，不应新造 artifact |
-| PR #194/#195 收口 | 产品和主线真值已完成；继续开 #196 只会修治理自闭环 | terminal decision 必须允许接受已知流程限制并停止 |
+| PR #194/#195 收口 | 产品和主线真值已完成；继续创建 WI224 records-only PR 只会修治理自闭环 | terminal decision 必须允许接受已知流程限制并停止；后续 GitHub 编号不代表 WI224 续修 |
 
 ## 3. 用户场景与测试
 

@@ -68,26 +68,26 @@ Batch 3: 同步 roadmap/Program Truth、验证、独立评审与 Formal PR
 - **任务编号**：T22
 - **优先级**：P0
 - **依赖**：T21
-- **文件**：`specs/225-review-terminal-sponsor-convergence/spec.md`、`specs/225-review-terminal-sponsor-convergence/plan.md`、`docs/framework-defect-backlog.zh-CN.md`
+- **文件**：`specs/225-review-terminal-sponsor-convergence/spec.md`、`specs/225-review-terminal-sponsor-convergence/plan.md`
 - **可并行**：否
 - **任务**：
   - [x] 冻结后续候选为一个规则实现 PR、总投入不超过 0.5 人日。
   - [x] 定义 `unique_delta / effort_cap / terminal_outcome` 三字段与新高风险事实边界。
   - [x] 定义第二文件/runtime/schema/第二例外/post-merge records PR 均触发 No-Go。
 - **验收标准**：模型仍可处理真实高风险证据，但不能借其恢复无限修复循环。
-- **验证**：`rg -n "unique_delta|effort_cap|terminal_outcome|No-Go|0.5" specs/225-review-terminal-sponsor-convergence docs/framework-defect-backlog.zh-CN.md`。
+- **验证**：`rg -n "unique_delta|effort_cap|terminal_outcome|No-Go|0.5" specs/225-review-terminal-sponsor-convergence`。
 
 ## Batch 3：Formal 真值与评审
 
-### Task 3.1 同步 roadmap、Program Truth 与固定库存期望
+### Task 3.1 同步 Formal Program Truth 与固定库存期望
 
 - **任务编号**：T31
 - **优先级**：P0
 - **依赖**：T22
-- **文件**：`docs/FRAMEWORK_ROADMAP.zh-CN.md`、`program-manifest.yaml`、`.ai-sdlc/project/config/project-state.yaml`、`tests/integration/test_repo_program_manifest.py`
+- **文件**：`program-manifest.yaml`、`.ai-sdlc/project/config/project-state.yaml`、`tests/integration/test_repo_program_manifest.py`
 - **可并行**：否
 - **任务**：
-  - [x] 将 G1 状态更新为 WI225 formal/admission，规则 execute 未授权。
+  - [x] 在 WI225 formal carrier 内冻结 G1 admission，规则 execute 未授权；roadmap/defect 保持只读。
   - [x] 同步 Program Truth，并确认原 16 个 blocker 不变。
   - [x] 仅同步固定库存期望到 `1174/1174 mapped`、missing 5、close `218/223`，不修改测试逻辑。
 - **验收标准**：inventory complete、unmapped 0；不补 `development-summary.md`；P3/P4/D2 状态不变。

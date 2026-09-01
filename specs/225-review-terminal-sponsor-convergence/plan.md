@@ -24,7 +24,7 @@
 | MUST-1 MVP/范围严控 | 只保留一个 repo-local 规则候选；runtime/schema 方向 No-Go |
 | MUST-2 关键路径可验证 | 用 exact-main、源码行、truth/manifest/constraints 与独立评审验证 |
 | MUST-3 范围/验证/回退 | formal 作为一个语义提交；可整体 revert |
-| MUST-4 状态落盘 | spec/plan/tasks/log、roadmap、defect、Program Truth 和 handoff 均落盘 |
+| MUST-4 状态落盘 | spec/plan/tasks/log、Program Truth 和 handoff 均落盘；roadmap/defect 保持只读输入 |
 | MUST-5 产品/开发框架隔离 | 候选只属于本仓库 Local Repository PR Protocol，不复制到普通用户 runtime |
 
 ## 4. 方案与决策
@@ -61,11 +61,11 @@
 
 **目标**：形成唯一候选、投入上限和 No-Go 触发器。
 
-**产物**：`spec.md / plan.md / tasks.md / task-execution-log.md`、roadmap 状态与 defect entry。
+**产物**：`spec.md / plan.md / tasks.md / task-execution-log.md` 内的完整 admission 决策；不修改 roadmap 或 defect backlog。
 
 **验证方式**：对账 FR/SC、占位符扫描、`workitem plan-check`、独立 formal/ROI 评审。
 
-**回退方式**：整体 revert formal 提交；路线图恢复 G1 未开始。
+**回退方式**：整体 revert formal 提交；路线图与 defect backlog 不需要回退。
 
 ### Phase 2：Formal 真值与 PR 收口
 

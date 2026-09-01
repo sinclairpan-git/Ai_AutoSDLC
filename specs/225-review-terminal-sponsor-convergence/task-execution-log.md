@@ -8,7 +8,7 @@
 ## 1. 归档规则
 
 - 本文件是 WI225 的 canonical 执行归档；不创建 `development-summary.md` 或第二套总结。
-- 本批只允许 formal、roadmap、defect、truth、库存期望和 continuity。
+- 本批只允许 classifier 已认可的 formal control、truth、库存期望和 continuity；roadmap/defect 保持只读。
 - `AGENTS.md` 规则实现、Local PR Review runtime、schema、状态机和 WI224 均不在本批。
 - Formal 合入后的预期终态为 `formal_freeze_only / execution_started=false / contained_in_main=true`。
 
@@ -21,7 +21,7 @@
 - 真值基线：`origin/main@e8a73ec409a7eb771abc41dcc996dc198c031a5d`。
 - 分支：`feature/225-review-terminal-sponsor-convergence-docs`。
 - worktree：`.worktrees/225-terminal-sponsor-decision-formal`。
-- WI224 处置：产品/主线完成；不创建 #196；暂停 heartbeat `monitor-wi224-pr-194` 已删除。
+- WI224 处置：产品/主线完成；未创建 WI224 follow-up PR；暂停 heartbeat `monitor-wi224-pr-194` 已删除。GitHub 后续将编号 #196 分配给 WI225 Formal PR，不代表 WI224 续修。
 - 固定排除：WI224 历史、runtime、CLI、schema、状态机、workflow、release、P3 其余 11 路、P4、D2 和用户排除的本地材料。
 
 #### 2.2 预读与证据
@@ -64,8 +64,8 @@ CLI 预读中曾使用大写阶段名，实际 CLI 明确只接受小写；随�
 
 #### 2.5 任务与 git lifecycle
 
-- `tasks.md`：T11-T31 与 T32 的验证/continuity 子项已完成；只等待 focused re-review 和 Formal PR。
-- `related_plan`：`docs/FRAMEWORK_ROADMAP.zh-CN.md` 已同步为 WI225 formal/admission，规则 execute 未授权。
+- `tasks.md`：T11-T31 与 T32 的验证/continuity/本地独立评审子项已完成；Formal PR #196 已创建，等待 Codex P1 聚焦修复的 exact-head re-review。
+- `related_plan`：`docs/FRAMEWORK_ROADMAP.zh-CN.md` 仅作为只读关联路线图；WI225 formal/admission 与规则 execute 未授权均由本工作项归档。
 - 当前批次 branch disposition：`merge-pending`。
 - 当前批次 worktree disposition：`retained(formal-admission-review)`。
 - 是否继续规则实现：否；必须等待 Formal PR 合并和新的用户 execute 授权。
@@ -77,7 +77,16 @@ CLI 预读中曾使用大写阶段名，实际 CLI 明确只接受小写；随�
 - 唯一一次 focused re-review 只复核该 stable finding 及其直接回归面，结论为：`未发现可操作问题；Ready`。
 - 回归面：canonical/scoped continuity 成对一致、两份 resume YAML 可解析、changed-files 与 `git status` 一致、`git diff --check` 通过、禁止路径为空。
 
-#### 2.7 下一步
+#### 2.7 GitHub Codex review round 1
 
-1. commit、push 当前唯一 Formal/Admission 变更集。
-2. 创建 Formal PR、请求一次 exact-head Codex review 并启动约五分钟 heartbeat。
+- PR #196 exact head `9ac797bb78f5fe63ba410e2e961b46d112b17307` 的 Codex review 提出一个 P1：roadmap 与 defect backlog 不属于 `_formal_control_paths()`，导致 Formal 被分类为 `branch_only_implemented / execution_started=true`。
+- 复现：`uv run ai-sdlc workitem truth-check --wi specs/225-review-terminal-sponsor-convergence --rev HEAD --json` 在该 head 返回 `branch_only_implemented`，finding 成立。
+- 聚焦决策：不修改 classifier/runtime；恢复 roadmap 与 defect backlog 到 exact base，只把完整 admission 决策保存在 WI225 formal carrier 内，并同步 continuity。该修复让 PR 聚合路径严格限制在既有 formal control set。
+- 删除注释原因：从 `docs/framework-defect-backlog.zh-CN.md` 删除本分支新增的标题及整条字段说明；被删标题摘要 token 为 `# F D - 2 0 2 6 - 0 8 -`，主题是“两轮评审后缺少终局 Sponsor 分支，导致关闭流程递归”。该路径不在现有 Formal 控制集；相同问题、决策、投入与验证合同已完整保留在 WI225 spec/plan/tasks/log，故不丢失治理真值。摘要分隔书写是为了避免把已删除编号重新登记为有效 backlog 引用。
+- 聚焦验证：PR 聚合路径相对 exact base 的 `extra=[]`；constraints 无 blocker；plan-check drift NO；program validate PASS；Program Truth audit 为 fresh/blocked，保留原 16 blockers 与 `1174/1174 mapped`、missing 5、close `218/223`；manifest regression `1 passed in 138.53s`；`git diff --check` PASS。
+- 本次计为第 1 个 GitHub review repair round；不得借此引入 G1 rules execute。
+
+#### 2.8 下一步
+
+1. 提交并推送聚焦修复；在 exact head 验证 `formal_freeze_only / execution_started=false`。
+2. 回复原 inline thread、请求一次 exact-head Codex re-review，并继续 heartbeat。
