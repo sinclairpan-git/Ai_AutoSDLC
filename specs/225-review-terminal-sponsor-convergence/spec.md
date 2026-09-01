@@ -109,7 +109,7 @@
 - **FR-225-005**：新的高风险事实可以把终局结果改为 No-Go/blocked，但不能自动获得下一轮修复。
 - **FR-225-006**：后续候选必须只作用于根 `AGENTS.md` 的 repo-local 协议；不得修改产品 runtime、review schema、状态机、WI224 或历史日志。
 - **FR-225-007**：后续候选总投入不得超过 0.5 人日、一个实现 PR、一次终局复核；超出任一边界立即 No-Go。
-- **FR-225-008**：formal/admission 只更新规格、路线图、defect、Program Truth 和 continuity，不创建 `development-summary.md`。
+- **FR-225-008**：formal/admission 只更新 WI225 的 spec/plan/tasks/task-execution-log、Program Truth 固定库存期望和 continuity；路线图与 defect backlog 保持只读，不创建 `development-summary.md`。
 
 ## 6. ROI 与实现边界
 

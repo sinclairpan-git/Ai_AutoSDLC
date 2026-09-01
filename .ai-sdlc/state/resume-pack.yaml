@@ -12,9 +12,9 @@ working_set_snapshot:
   - specs/225-review-terminal-sponsor-convergence/tasks.md
   - specs/225-review-terminal-sponsor-convergence/spec.md
   context_summary: 'Goal: 完成 WI225 G1 formal/admission，冻结两轮后 terminal sponsor decision
-    的唯一 repo-local 候选 | State: PR #196 round 1 P1 已聚焦整改并通过验证；roadmap/defect 已恢复
-    exact base，classifier/runtime 未修改 | Next: commit/push；在新 exact head 验证 formal_freeze_only/execution_started=false；回复原
-    inline thread并请求一次 re-review'
+    的唯一 repo-local 候选 | State: round 1 P1 已关闭；round 2 P2 已收窄 FR-225-008 并通过终局验证；不得启动第三轮修复
+    | Next: commit/push；验证 exact-head Formal classification；回复原 inline thread并请求一次终局
+    exact-head re-review'
 current_branch: feature/225-review-terminal-sponsor-convergence-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'

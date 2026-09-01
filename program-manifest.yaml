@@ -2094,10 +2094,10 @@ specs:
   path: specs/225-review-terminal-sponsor-convergence
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-09-01T02:16:23Z'
+  generated_at: '2026-09-01T02:38:06Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 9ac797bb
+  repo_revision: c481cf21
   authoring_hash: 5f683ed4d09e81e62a6837ee588b96501e066d0df95a7ba68ad9f6cf7e7f2232
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
@@ -2140,7 +2140,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 60a44a1f02bf90824eb75dc41fda81652d2c2236e022444a72bfd97e138e1418
+  snapshot_hash: 3f04b4796f1be0fecf6b6857daca24136c1068711a9aeaf8ebb047504c769cd7
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2174,8 +2174,8 @@ truth_snapshot:
     mapped_sources: 1174
     unmapped_sources: 0
     missing_sources: 5
-    phase_signal_count: 3839
-    deferred_signal_count: 6867
+    phase_signal_count: 3841
+    deferred_signal_count: 6869
     non_goal_signal_count: 404
     layer_totals:
       blueprint: 1
@@ -12232,8 +12232,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 225-review-terminal-sponsor-convergence
-      phase_signal_count: 3
-      deferred_signal_count: 7
+      phase_signal_count: 5
+      deferred_signal_count: 9
       non_goal_signal_count: 0
     - path: specs/225-review-terminal-sponsor-convergence/development-summary.md
       source_type: development_summary

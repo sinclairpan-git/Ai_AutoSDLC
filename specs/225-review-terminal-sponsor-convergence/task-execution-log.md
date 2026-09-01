@@ -86,7 +86,14 @@ CLI 预读中曾使用大写阶段名，实际 CLI 明确只接受小写；随�
 - 聚焦验证：PR 聚合路径相对 exact base 的 `extra=[]`；constraints 无 blocker；plan-check drift NO；program validate PASS；Program Truth audit 为 fresh/blocked，保留原 16 blockers 与 `1174/1174 mapped`、missing 5、close `218/223`；manifest regression `1 passed in 138.53s`；`git diff --check` PASS。
 - 本次计为第 1 个 GitHub review repair round；不得借此引入 G1 rules execute。
 
-#### 2.8 下一步
+#### 2.8 GitHub Codex review round 2（终局修复轮）
 
-1. 提交并推送聚焦修复；在 exact head 验证 `formal_freeze_only / execution_started=false`。
-2. 回复原 inline thread、请求一次 exact-head Codex re-review，并继续 heartbeat。
+- exact head `c481cf21a89062646be8e5459a48b8affec2a6b6` 的 Codex re-review 提出一个 P2：`FR-225-008` 仍指示 formal 更新 roadmap/defect，与同一规格和计划的只读边界冲突，未来执行会重引入 round 1 P1。
+- 聚焦修复只改 `FR-225-008`，把允许写入面精确收窄到 WI225 spec/plan/tasks/task-execution-log、Program Truth 固定库存期望和 continuity；roadmap/defect 明确只读。
+- 终局验证：normative scope 只保留 formal controls，聚合路径 `extra=[]`；constraints 无 blocker；plan-check drift NO；program validate PASS；truth audit fresh/blocked 且原 16 blockers、`1174/1174 mapped`、missing 5、close `218/223` 不变；manifest regression `1 passed in 131.35s`；`git diff --check` PASS。
+- 本次计为第 2 个、也是最后一个 GitHub review repair round。终局 re-review 只允许验证该稳定 finding 及直接回归；如仍有可操作问题，停止自动修复并进入 terminal sponsor decision，不申请第三轮。
+
+#### 2.9 下一步
+
+1. 提交并推送最后一轮聚焦修复；验证 exact-head Formal classification。
+2. 回复原 inline thread并请求一次终局 exact-head Codex re-review。
