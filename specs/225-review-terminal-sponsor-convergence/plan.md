@@ -22,7 +22,7 @@
 | 宪章门禁 | 计划响应 |
 |---|---|
 | MUST-1 MVP/范围严控 | 只保留一个 repo-local 规则候选；runtime/schema 方向 No-Go |
-| MUST-2 关键路径可验证 | 用 exact-main、源码行、truth/manifest/constraints 与独立评审验证 |
+| MUST-2 关键路径可验证 | Formal 用 exact-main、源码行、truth/manifest/constraints 与独立评审验证；后续候选必须同时增加一个静态规则标记回归测试 |
 | MUST-3 范围/验证/回退 | formal 作为一个语义提交；可整体 revert |
 | MUST-4 状态落盘 | spec/plan/tasks/log、Program Truth 和 handoff 均落盘；roadmap/defect 保持只读输入 |
 | MUST-5 产品/开发框架隔离 | 候选只属于本仓库 Local Repository PR Protocol，不复制到普通用户 runtime |
@@ -31,7 +31,7 @@
 
 ### 4.1 推荐：repo-local 协议补强
 
-只在未来获批的独立规则实现批次中修改根 `AGENTS.md`：两轮后暂停 heartbeat，Sponsor 只做一次 stop/approve 决策；approve 必须同时冻结唯一 delta、投入上限和终止结果。该方案直接覆盖真实复发层，预计不超过 0.5 人日。
+只在未来获批的独立规则实现批次中修改根 `AGENTS.md`，并在现有 `tests/unit/test_verify_constraints.py` 增加一个静态回归测试：两轮后暂停 heartbeat，Sponsor 只做一次 stop/approve 决策；approve 必须同时冻结唯一 delta、投入上限和终止结果。两个文件构成一个语义 delta，直接覆盖真实复发层并防止规则标记静默回退，预计不超过 0.5 人日。
 
 ### 4.2 拒绝：Local PR Review runtime 改造
 
@@ -89,16 +89,16 @@
 
 若本 formal 合入后用户明确批准 execute，另起一个 bounded rules-only 批次：
 
-1. 只修改根 `AGENTS.md` 的 Local Repository PR Protocol。
+1. 只修改根 `AGENTS.md` 的 Local Repository PR Protocol，以及现有 `tests/unit/test_verify_constraints.py` 中一个针对该协议必需标记的静态回归测试；两者构成一个语义 delta。
 2. 两轮后必须暂停 heartbeat；不得继续普通修复轮次。
 3. Sponsor 批准必须同时给出 `unique_delta / effort_cap / terminal_outcome`。
 4. 终局动作只允许一个规则/代码 delta；终局复核后无论 PASS、known-blocked 或 No-Go 都结束，不再申请第二个例外。
-5. 最小验证为 `rules-only` profile、`uv run ai-sdlc verify constraints`、针对规则标记的可复核检查和独立对抗评审。
+5. 最小验证为 `rules-only` profile、`uv run ai-sdlc verify constraints`、上述静态回归测试和独立对抗评审；不得借测试扩展为 runtime 行为改造。
 6. 只用一个实现 PR；不创建 post-merge records-only PR。
 
 ## 7. No-Go 与退出
 
-- 候选需要修改第二个实现文件、产品 runtime、review schema、状态机或新 artifact。
+- 候选需要修改上述两个冻结文件以外的实现文件、产品 runtime、review schema、状态机或新 artifact。
 - 总投入预计超过 0.5 人日。
 - 需要第二个修复 PR、第二次 sponsor 例外或 post-merge records PR。
 - 规则无法直接覆盖 heartbeat/PR 实际执行，或只能重复 roadmap 已有文字而无新增约束入口。

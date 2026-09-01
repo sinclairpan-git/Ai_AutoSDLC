@@ -58,7 +58,7 @@ Batch 3: 同步 Program Truth 与 formal controls、验证、独立评审与 For
 - **可并行**：否
 - **任务**：
   - [x] 比较 repo-local 协议、Local PR runtime、新 sponsor artifact。
-  - [x] 选择只修改根 `AGENTS.md` 的后续候选。
+  - [x] 选择根 `AGENTS.md` 加现有 `tests/unit/test_verify_constraints.py` 静态回归测试的单一语义候选。
   - [x] 将 runtime 和新 artifact 方案判为 No-Go。
 - **验收标准**：只有一个候选；候选作用于真实复发层；没有隐含 schema/状态机扩张。
 - **验证**：spec/plan 交叉对账；独立 formal/ROI 评审。
@@ -73,7 +73,7 @@ Batch 3: 同步 Program Truth 与 formal controls、验证、独立评审与 For
 - **任务**：
   - [x] 冻结后续候选为一个规则实现 PR、总投入不超过 0.5 人日。
   - [x] 定义 `unique_delta / effort_cap / terminal_outcome` 三字段与新高风险事实边界。
-  - [x] 定义第二文件/runtime/schema/第二例外/post-merge records PR 均触发 No-Go。
+  - [x] 定义冻结的两个候选文件以外的实现文件、runtime/schema、第二例外或 post-merge records PR 均触发 No-Go。
 - **验收标准**：模型仍可处理真实高风险证据，但不能借其恢复无限修复循环。
 - **验证**：`rg -n "unique_delta|effort_cap|terminal_outcome|No-Go|0.5" specs/225-review-terminal-sponsor-convergence`。
 
@@ -110,7 +110,7 @@ Batch 3: 同步 Program Truth 与 formal controls、验证、独立评审与 For
 
 ## 明确禁止的任务
 
-- 不得在 WI225 内修改 `AGENTS.md`；它只是后续唯一候选。
+- 不得在 WI225 内修改 `AGENTS.md` 或 `tests/unit/test_verify_constraints.py` 的测试逻辑；两者只构成后续唯一候选的一个语义 delta。
 - 不得修改 `src/`、CLI、review model/schema、workflow、release 或 WI224。
 - 不得新建 sponsor artifact、ledger、waiver、receipt、certificate 或新状态。
 - 不得创建 `development-summary.md` 或以 formal carrier 冒充实现完成。

@@ -35,7 +35,7 @@
 
 #### 2.3 Admission 决策
 
-- 推荐：后续只补根 `AGENTS.md` Local Repository PR Protocol，直接约束 GitHub PR/heartbeat 实际复发层。
+- 推荐：后续补根 `AGENTS.md` Local Repository PR Protocol，并在现有 `tests/unit/test_verify_constraints.py` 增加一个静态规则标记回归测试；两个文件构成一个语义 delta，直接约束 GitHub PR/heartbeat 实际复发层并防止规则静默回退。
 - No-Go：本次不改 Local PR Review runtime；单改 CLI 不能约束 GitHub heartbeat。
 - No-Go：不新增 SponsorDecision artifact/schema/command/state。
 - 后续候选投入上限：0.5 人日、一个规则实现 PR、无 post-merge records PR。
@@ -96,7 +96,19 @@ CLI 预读中曾使用大写阶段名，实际 CLI 明确只接受小写；随�
 - 闭包验证：穷尽扫描 WI225 spec/plan/tasks 的 11 处 roadmap/defect 引用，危险写入指令为 0；Formal 聚合路径 `extra=[]`；constraints 无 blocker；plan-check drift NO；program validate PASS；truth audit fresh/blocked 且原 16 blockers、`1174/1174 mapped`、missing 5、close `218/223` 不变；manifest regression `1 passed in 148.57s`；`git diff --check` PASS。
 - round 2 完成后只允许一次稳定 finding 终局复审；若出现不同签名的新问题，进入 terminal sponsor decision，不扩大本次修复。
 
-#### 2.9 下一步
+#### 2.9 Terminal sponsor decision：不同签名 P2
 
-1. 提交并推送已完成闭包的 round 2，验证 exact-head Formal classification。
-2. 回复原 inline thread并请求一次稳定 finding 终局 exact-head re-review。
+- exact head `1751db25c3de773c94c3eef2b45c6fa51e6af396` 的终局复审提出不同签名 P2：后续候选禁止测试逻辑，但 FR-225-002 至 FR-225-005 是行为规则；只写 `AGENTS.md` 会缺少自动化回归保护，与宪章 MUST-2 冲突。
+- 技术核验：现有 `verify constraints` 只覆盖 `AGENTS.md` 的启动路径标记，没有覆盖两轮上限或 terminal sponsor 字段；finding 成立，但不需要修改 runtime。
+- Sponsor 授权只修正 Formal admission，不授权现在实现规则：
+  - `unique_delta`：未来实现候选只允许根 `AGENTS.md` 加现有 `tests/unit/test_verify_constraints.py` 中一个静态规则标记回归测试；不得修改 `src/`。
+  - `effort_cap`：本次 Formal 修正不超过 1 小时、一个语义提交；未来实现仍不超过 0.5 人日、一个 PR。
+  - `terminal_outcome`：只再进行一次针对该 P2 及直接回归面的 exact-head 复核；PASS 即合并，新的可操作 finding 则记为 known-blocked/No-Go，不申请第二次例外。
+- 改动边界：只同步 WI225 spec/plan/tasks/log、continuity 与 fresh Program Truth snapshot；`AGENTS.md`、测试逻辑、`src/`、roadmap、defect backlog 和 Program Truth blocker 均不修改。
+- 改动前基线：`uv run pytest tests/integration/test_repo_program_manifest.py -q` 为 `1 passed in 151.00s`。
+- focused verification：constraints 无 blocker；plan-check drift NO；program validate PASS；truth audit 为 fresh/blocked，仍为原 16 blockers 与 `1174/1174 mapped`、missing 5、close `218/223`；manifest regression 为 `1 passed in 150.46s`；resume YAML 可解析；`git diff --check` PASS；聚合 PR 路径仍全部属于既有 Formal 控制集。
+
+#### 2.10 下一步
+
+1. 完成 Formal 文档与 continuity 同步，运行范围、真值、计划和固定库存回归验证。
+2. 提交并推送同一 PR，回复该 P2 inline thread并请求一次 terminal sponsor exact-head re-review。

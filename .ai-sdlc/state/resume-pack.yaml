@@ -11,14 +11,14 @@ working_set_snapshot:
   active_files:
   - specs/225-review-terminal-sponsor-convergence/tasks.md
   - specs/225-review-terminal-sponsor-convergence/spec.md
-  context_summary: 'Goal: 完成 WI225 G1 formal/admission，冻结两轮后 terminal sponsor decision
-    的唯一 repo-local 候选 | State: tasks Batch 3 同签名残留已作为 round 2 未完成项闭包；全文语义扫描与
-    focused verification 均通过 | Next: commit/push；验证 exact-head Formal classification；回复原
-    inline thread并请求一次终局 exact-head re-review'
+  context_summary: 'Goal: 完成 WI225 G1 formal/admission 的 terminal sponsor 最小边界修正 |
+    State: Formal 已冻结未来 AGENTS.md 加 tests/unit/test_verify_constraints.py 静态测试的一个语义
+    delta；focused gates 全部完成，待提交推送与一次终局复审 | Next: 提交并推送同一 PR #196；验证 exact-head formal
+    truth；回复 P2 并请求一次 terminal sponsor re-review；恢复 heartbeat'
 current_branch: feature/225-review-terminal-sponsor-convergence-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-09-01T02:00:01+00:00'
+timestamp: '2026-09-01T03:54:25+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-09-01T01:02:26+00:00'
 checkpoint_fingerprint: 5dc34ee31b457a955e3e5d4ab41c9bd41db75670b2766a7dfc0ca14002bbc7e9

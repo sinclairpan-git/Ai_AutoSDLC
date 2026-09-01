@@ -107,7 +107,7 @@
 - **FR-225-003**：terminal sponsor decision 只能为 `stop` 或 `approve-one-bounded-action`；批准必须同时冻结 `unique_delta`、`effort_cap`、`terminal_outcome`。
 - **FR-225-004**：终局复核必须优先消费稳定 finding 映射及冻结 delta 的直接回归；不得重新打开全量优化空间。
 - **FR-225-005**：新的高风险事实可以把终局结果改为 No-Go/blocked，但不能自动获得下一轮修复。
-- **FR-225-006**：后续候选必须只作用于根 `AGENTS.md` 的 repo-local 协议；不得修改产品 runtime、review schema、状态机、WI224 或历史日志。
+- **FR-225-006**：后续候选必须作为一个语义 delta，只修改根 `AGENTS.md` 的 repo-local 协议，并在现有 `tests/unit/test_verify_constraints.py` 增加一个针对两轮上限与 terminal sponsor 必需标记的静态回归测试；不得修改 `src/`、产品 runtime、review schema、状态机、WI224 或历史日志。
 - **FR-225-007**：后续候选总投入不得超过 0.5 人日、一个实现 PR、一次终局复核；超出任一边界立即 No-Go。
 - **FR-225-008**：formal/admission 只更新 WI225 的 spec/plan/tasks/task-execution-log、Program Truth 固定库存期望和 continuity；路线图与 defect backlog 保持只读，不创建 `development-summary.md`。
 
@@ -115,15 +115,15 @@
 
 1. **用户可观察收益或可复现风险**：减少重复 PR、CI、review 与记录收口；避免治理细节超过产品价值。
 2. **现状证据**：WI224 已完成产品/主线交付，但为 lifecycle close-check 继续提出 #196 会形成第二个 post-merge closeout；现有 repo-local 协议没有终局分支。
-3. **最小方案**：只补 `AGENTS.md` repo-local 协议；不改本地 PR runtime，因为它不是本次复发的实际控制层。
+3. **最小方案**：补 `AGENTS.md` repo-local 协议，并在现有 `tests/unit/test_verify_constraints.py` 增加一个静态回归测试，防止两轮上限或 terminal sponsor 必需标记被静默删除；不改本地 PR runtime，因为它不是本次复发的实际控制层。
 4. **总投入**：formal/admission 不超过 0.5 人日；后续规则实现若获批也不超过 0.5 人日。
-5. **范围与退出条件**：需要第二个实现文件、产品 runtime、测试逻辑、新 schema/artifact/命令、第二个修复 PR 或 post-merge records PR 时立即 No-Go。
+5. **范围与退出条件**：需要上述两个冻结文件以外的实现文件、静态标记检查以外的测试逻辑、产品 runtime、新 schema/artifact/命令、第二个修复 PR 或 post-merge records PR 时立即 No-Go。
 6. **决策**：`defer`；formal admission 支持一个规则候选，等待新的 execute 授权。
 
 ## 7. 成功标准
 
 - **SC-225-001**：formal 对账证明现有 `needs_user`、稳定 finding history 和终态 report/attestation 可复用，不新增状态机或 artifact。
-- **SC-225-002**：只保留一个后续候选，精确限定为根 `AGENTS.md`，投入上限 0.5 人日。
+- **SC-225-002**：只保留一个后续候选，精确限定为根 `AGENTS.md` 与现有 `tests/unit/test_verify_constraints.py` 的一个语义 delta，投入上限 0.5 人日。
 - **SC-225-003**：spec/plan/tasks 均明确 runtime/rules execute 未授权，且没有实现任务被勾选或暗示已落地。
 - **SC-225-004**：Program Truth 保持 fresh/blocked、原 16 个历史 blocker 不变；库存为 `1174/1174 mapped`、missing 5、close `218/223`。
 - **SC-225-005**：constraints、plan-check、manifest regression、truth audit 与 `git diff --check` 通过；独立 formal/ROI 评审无可操作问题后才允许创建 PR。
