@@ -1,5 +1,7 @@
 # R0+R1 生命周期收敛根治设计
 
+> Revision 2：已按两位独立专家的定向对抗评审整改；仍处于设计冻结阶段，未授权运行时实现。
+
 ## 1. 决策摘要
 
 本轮只批准两项根治性整改，不开发任何新特性：
@@ -7,7 +9,7 @@
 - **R0：修正工作项生命周期与合并闭环。** 复用现有 `WorkItemStatus` 与 `.ai-sdlc/work-items/<wi-id>/work-item.yaml`，让 sponsor 决策、执行授权、评审就绪和主线包含各自只有一个权威来源。
 - **R1：消除证据链写放大。** 把 handoff、resume、Program Truth 快照和清理动作从“每轮必须改动的评审内容”降为可再生或只读证据，并移除仓库测试中的固定库存计数。
 
-实施顺序固定为 R0 后 R1，最多两个修复 PR，总投入上限 5 人日。两个修复完成并通过验收前，继续冻结新特性。
+实施顺序不按编号，而是固定为 **先 R1、后 R0**：PR1 先拆除会让候选自失效的 evidence writer 与固定库存契约，PR2 再修正生命周期与 close transaction。最多两个修复 PR，总投入上限 5 人日。两个修复完成并通过验收前，继续冻结新特性。
 
 这不是再增加一套治理规则或机械 envelope。设计优先复用现有状态机、工作项账本、PR 评审和 truth/close-check 入口，只删掉互相矛盾的职责与未来事实依赖。
 
@@ -34,6 +36,7 @@
 - `workitem truth-check` 当前在 `formal_freeze_only` 时固定生成“start execute work”动作，说明 evidence classification 被错误地用作下一步授权。
 - `pr-review fix` 已把有效修复轮次限制为策略值与 CLI 值的较小者，但达到上限后仍提示增加 `--max-rounds`，与两轮后进入 sponsor 终局决策的规则冲突。
 - 仓库 Program Truth 测试直接断言 `total_sources/mapped_sources/missing_sources/close` 的固定数量，构成确定性的写放大源。
+- 本设计文档提交后，根 manifest 集成测试已经实证得到 `1175 total / 1174 mapped / 1 unmapped` 并失败，耗时 168.70 秒。这证明 R0 若先于 R1，会在进入生命周期实现前就被旧库存契约阻断。
 
 历史 closeout 中已观察到：reviewed PR head 与合并后主线可以拥有相同内容树，但仍因 commit SHA、handoff 文案或清理标记不同而被判定需要新 records PR。R0 必须以内容和生命周期语义闭环，而不是要求未来提交预先记录自身 SHA。
 
@@ -48,7 +51,7 @@
 - handoff、truth snapshot 和清理动作不再改变 semantic review identity。
 - 新增一个正常映射的工作项不再要求修改固定库存数字或因此运行全量测试。
 - shared checkout、clean clone 和 remote-only 检查对同一远端事实给出一致结论。
-- 保留现有 16 个 Program Truth blocker，不用本次整改删除、豁免或重写历史事实。
+- 以本次整改前的 16 个 Program Truth blocker ID 集合作为两个 PR 的前后对账基线，不用本次整改删除、豁免或重写历史事实；该数量不是永久产品常量。
 
 ### 4.2 非目标
 
@@ -65,11 +68,11 @@ R0+R1 将当前混在一起的五类事实拆开：
 
 | 事实 | 权威来源 | 可否授权动作 |
 | --- | --- | --- |
-| 生命周期状态 | 当前工作项的 `work-item.yaml` + 状态机 | 是，受合法 transition 与 sponsor 决策约束 |
+| 生命周期状态 | 统一 `LifecycleView` resolver；输入为 `work-item.yaml`、sponsor decision、review terminal decision 与只读 merge observation | 是，只有合法 transition 与 sponsor 决策事务可以改变持久状态 |
 | 执行证据分类 | `workitem truth-check` 对指定 revision 的只读观察 | 否，只回答是否存在 implementation evidence |
 | 评审结论 | PR provider / 本地 review run 对某个候选 head 的 verdict | 否，只决定候选内容是否可进入 merge-ready |
 | 主线包含 | 指定 target ref 上的 Git 内容比较 | 否，只回答 reviewed payload 是否已进入主线 |
-| 连续性/诊断缓存 | handoff、resume、truth snapshot | 否，可再生，不参与 semantic review identity |
+| 连续性/诊断缓存 | ignored local handoff/resume/truth cache | 否，可再生，不参与 semantic review identity；legacy tracked copy 冻结且仍属于评审内容 |
 
 最终状态不是把上述字段压成一个模糊 classification，而是明确组合：
 
@@ -78,6 +81,19 @@ R0+R1 将当前混在一起的五类事实拆开：
 - `DEV_REVIEWED + contained_in_main=false`：评审通过、等待合并，不得宣称完成。
 - `DEV_REVIEWED + contained_in_main=true`：只读投影为 `effective_status=COMPLETED`。
 - `formal_freeze_only`：仅说明没有实现证据，不能推导“必须开始 execute”。
+
+所有公开消费者必须调用同一个 `resolve_lifecycle_view(...)`，不得直接用 raw `WorkItem.status`、truth classification 或 checkpoint stage 推导下一步。统一返回至少包含：
+
+```text
+persisted_status
+effective_status
+sponsor_decision
+readiness_profile
+contained_in_main
+writeback_required
+```
+
+PR 流程中，持久状态在合并前冻结；`effective_status=COMPLETED` 只能由 `DEV_REVIEWED + verified merge observation` 投影得到。现有持久 `COMPLETED` 仅作为 legacy/non-PR 兼容状态，truth、close、status、Program Truth、release 与 next-action 均不得绕过 resolver 直接读取它。
 
 ## 6. R0：生命周期与合并闭环
 
@@ -91,25 +107,53 @@ R0+R1 将当前混在一起的五类事实拆开：
 
 不得从全局 checkpoint 中继承上一个工作项的 `current_stage`、feature 或 close 状态。全局 checkpoint 只描述当前运行器位置；一旦命令显式指定 `--wi`，当前工作项账本优先。
 
-兼容策略：
+兼容策略采用确定性矩阵：
 
-- 新工作项和本次 R0/R1 工作项使用账本。
-- 旧工作项没有账本时继续走只读兼容路径，不批量回填。
-- 对旧工作项发生新的写操作时，才按当前已知状态最小初始化，不推断未被证据证明的历史 transition。
+| 场景 | 行为 |
+| --- | --- |
+| 新工作项或本次 R0/R1 工作项 | 创建账本，从明确入口状态开始 |
+| legacy 工作项只读查询且无账本 | 不创建账本；只返回 evidence observation，生命周期为 `unavailable` |
+| legacy 工作项首次 sponsor mutation | 必须显式提供 `--initial-status`、sponsor decision 与 formal payload digest 后才初始化 |
+| legacy 证据冲突或不足 | `needs_user`，禁止自动推断已授权、已完成或历史 transition |
+
+不批量回填历史工作项。WI225 已有明确 defer 决策，本次回归的唯一合法初始化结果是 `SUSPENDED`，不能在 `SUSPENDED` 与 `DOCS_BASELINE` 之间任选。
 
 ### 6.2 sponsor 决策映射
 
-正式基线完成后，sponsor 决策必须映射到现有状态，而不是写在自然语言 handoff 里：
+正式基线完成后，sponsor 决策必须与状态 transition 一起写入现有 `work-item.yaml`，而不是只写在自然语言 handoff 里。最小决策字段为：
 
-| sponsor 决策 | 持久状态 | 后续动作 |
-| --- | --- | --- |
-| 授权 execute | `DEV_EXECUTING` | 只有显式执行授权通过后才能进入 |
-| 延期/等待条件 | `SUSPENDED` | 无 execute next action；以后需显式 resume + execute authorization |
-| No-Go/终止 | `FAILED` | 终态，不再申请修复轮次或启动实现 |
+```text
+decision
+actor
+decided_at
+scope
+formal_payload_digest
+lifecycle_revision
+```
 
-因此状态机需要允许 `DOCS_BASELINE -> SUSPENDED` 与 `DOCS_BASELINE -> FAILED`。`DOCS_BASELINE -> DEV_EXECUTING` 保留，但必须经过 execute authorization；close stage、truth classifier、handoff 文案均无权代替该授权。
+terminal remediation 还必须带 `single_change`、`investment_cap` 与 `terminal_outcome`。这些字段属于现有工作项账本，不新增 sponsor ledger 或 receipt artifact。
 
-`SUSPENDED -> RESUMED -> DEV_EXECUTING` 的最后一步同样必须重新校验授权，避免“恢复”被解释为自动开工。
+写入采用 compare-and-set：调用方提交 `expected_status + expected_lifecycle_revision`，实现必须在同一 repository write guard 内重新加载、校验 formal digest/scope、执行 transition、递增 revision 并原子替换文件。复用现有 `.git/ai-sdlc-write.lock` 机制，不增加第二把仓库写锁；并行 heartbeat 或人工操作看到 revision 不一致时返回 conflict，不允许最后写入者覆盖先前 defer/No-Go。
+
+完整 sponsor transition 矩阵如下：
+
+| 来源状态 | sponsor 事件 | 目标状态 | 限制 |
+| --- | --- | --- | --- |
+| `DOCS_BASELINE` | execute | `DEV_EXECUTING` | formal digest、scope 与 execute authorization 全部匹配 |
+| `DOCS_BASELINE` | defer | `SUSPENDED` | 不生成 execute next action |
+| `DOCS_BASELINE` | no-go | `FAILED` | 终态 |
+| `SUSPENDED` | resume | `RESUMED` | 只恢复评估，不自动授权 execute |
+| `RESUMED` | execute | `DEV_EXECUTING` | 重新校验 formal digest 与 scope |
+| `RESUMED` | defer / no-go | `SUSPENDED` / `FAILED` | 原子决策 |
+| `DEV_EXECUTING` | defer / no-go | `SUSPENDED` / `FAILED` | 保留已有执行证据，不再继续改动 |
+| `DEV_VERIFYING` | terminal remediation | `DEV_EXECUTING` | 仅允许冻结 finding 的唯一修复 |
+| `DEV_VERIFYING` | defer / no-go | `SUSPENDED` / `FAILED` | 两轮终局出口 |
+| `DEV_REVIEWED` | terminal remediation | `DEV_EXECUTING` | 必须产生唯一 H3 并重新定向评审 |
+| `DEV_REVIEWED` | defer / no-go | `SUSPENDED` / `FAILED` | 不再合并实现候选 |
+
+`FAILED` 无出边。`DOCS_BASELINE/RESUMED -> DEV_EXECUTING` 只能调用上述事务入口；禁止任何直接状态写入绕过 decision 校验。close stage 从 `_AUTHORIZED_STAGES` 删除，truth classifier、handoff 文案和 checkpoint stage 均无权代替执行授权。
+
+`ARCHIVING`、`KNOWLEDGE_REFRESHING` 和持久 `COMPLETED` 保留给 legacy/non-PR 流程。新的 PR 流程若有 archive 或 knowledge refresh 工作，必须在 `DEV_VERIFYING` 内完成后再进入 `DEV_REVIEWED`，不设计不存在的“回到可合并终点”transition。
 
 ### 6.3 evidence classification 不生成执行授权
 
@@ -127,12 +171,21 @@ R0+R1 将当前混在一起的五类事实拆开：
 
 #### A. pre-merge readiness（可写、合并前）
 
-`workitem close-check` 的主职责改为验证当前候选是否具备合并条件：
+`workitem close-check` 的主职责改为按 readiness profile 验证当前候选是否具备合并条件：
 
-- 任务、验收标准和必要验证已完成。
+| profile | 必须状态 | 验证范围 | 合并后的有效状态 |
+| --- | --- | --- | --- |
+| `formal-defer` | `SUSPENDED` | 正式文档、defer 决策、必要 review/check；实现任务 not-applicable | 保持 `SUSPENDED` |
+| `formal-no-go` | `FAILED` | 正式文档、No-Go 决策、必要 review/check；实现任务 not-applicable | 保持 `FAILED` |
+| `implementation` | `DEV_REVIEWED` | 授权范围内任务、验收、验证、review/check | merge observation 成立后投影 `COMPLETED` |
+
+共同规则：
+
+- 只验证 profile 范围内的任务、验收标准和必要验证；formal-defer/no-go 的实现任务明确为 not-applicable。
+- 任务完成判定复用 task guard 的结构化 status：implementation profile 中 `done` 通过，`todo/doing/blocked/needs-review` 阻断。Markdown checkbox 只作 legacy/advisory 输入，不能覆盖结构化状态；两者冲突时 `needs_user`，不靠删除 checkbox 获得通过。
 - 必要 reviewer gate 通过。
 - sponsor 授权范围内的 finding 已处理。
-- 工作项处于 `DEV_REVIEWED`；如有实际 archive/knowledge refresh 工作，可先经过现有状态再回到可合并终点。
+- 工作项状态与所选 profile 精确匹配。
 - 当前候选分支尚未包含于主线时，返回 `merge_pending=true`，但不把它当作 readiness blocker。
 - 合并 SHA、远端分支删除、工作树删除和主线包含不再是 pre-merge 必填字段。
 
@@ -140,11 +193,12 @@ pre-merge readiness 通过只表示“可合并”，绝不表示“已完成”
 
 #### B. post-merge reconcile（只读、合并后）
 
-reconcile 接收 PR 编号或显式 reviewed revision，从 provider/Git 读取事实：
+reconcile 接收 PR 编号或本地 immutable review run，从 provider/Git 读取事实：
 
-- reviewer 实际审查的 head。
-- target branch 当前 revision。
-- reviewed payload 在 target branch 中的内容等价性。
+- reviewer 实际审查的 head、PR base 与 required-check 集合。
+- provider 记录的 merge result 及其合并时点 target/base。
+- reviewed payload 与实际 merged PR payload 的完整内容等价性。
+- merge result 是否仍可从当前 target branch 到达。
 - 持久生命周期状态。
 
 当 `DEV_REVIEWED` 的 reviewed payload 已包含于 target main 时，CLI 返回：
@@ -155,58 +209,82 @@ contained_in_main=true
 writeback_required=false
 ```
 
-这个投影不修改仓库，不生成新的 closeout commit，也不要求删除源分支后再证明删除已经发生。若未包含于主线，仍是 merge pending；unmerged 候选永远不能报告 completed。
+这个 `LifecycleView` 投影是唯一完成视图，不修改仓库、不生成新的 closeout commit，也不要求删除源分支后再证明删除已经发生。若未包含于主线，仍是 merge pending；unmerged 候选永远不能报告 completed。
 
 ### 6.5 semantic payload identity
 
-R0 不再用“当前提交 SHA 必须已写入当前提交”这种自引用条件。比较对象改为 reviewed semantic payload：
+R0 不再用“当前提交 SHA 必须已写入当前提交”这种自引用条件。每次允许合并的候选必须绑定同一个 review tuple：
 
-- 以 PR provider 返回的实际 reviewed head 为起点。
-- 计算该 PR 变更中需要评审的内容集合及内容摘要。
-- 从 semantic payload 中排除 handoff、resume cache、可再生 truth snapshot、临时 review artifacts 和清理标记。
-- runtime、tests、规范正文、约束配置及会影响行为的 manifest 仍属于 semantic payload。
-- 在 target main 上对相同路径计算内容摘要，支持 fast-forward、merge commit、squash 和 rebase 后的等价判断。
+```text
+PR identity
+base OID
+reviewed head OID
+complete semantic payload digest
+required-check context set and successful results
+policy version
+```
 
-若 provider 无法给出 reviewed head，reconcile 必须 `needs_user`，允许用户显式提供 `--reviewed-rev`，但不得猜测最近 commit。
+完整 payload digest 覆盖 PR base 到 reviewed head 的全部 tracked 语义改动，包括新增、删除、rename、Git object type、file mode、路径和 blob 内容。只有已迁移到 ignored local path、且所有消费者都不能据其授权动作的 cache 才可排除。legacy tracked handoff/resume 在评审后冻结并继续计入 payload；不得一边让代理消费 tracked 指令，一边把它排除在评审身份之外。
 
-若 main 上相关内容与 reviewed payload 不等价，返回 tree mismatch 并停止；不得自动创建修补 PR。
+pre-merge readiness 强制验证：
+
+- 当前 PR head OID 或其完整 semantic digest 与 reviewed/check tuple 一致。
+- required checks 全部绑定同一候选，无旧 head 成功结果复用。
+- 当前 PR payload 不比 reviewed payload 多出任何 tracked 语义项。
+
+post-merge 不拿“当前 main 同一路径的最终内容”直接比较，而是读取 provider 的实际 merge result，在**合并时点**比较 reviewed payload 与 merged PR payload，并确认：
+
+- 无缺失、无额外语义项；
+- squash/rebase 后 semantic patch 等价；
+- merge conflict 没有引入未经评审的语义差异；
+- merge result 仍可从当前 target branch 到达。
+
+因此，合并后同一路径被后续 PR 合法修改，不会抹掉历史 contained 证明。若 provider/local review run 无法证明 reviewed head、checks 或 merge result，reconcile 返回 `needs_user`；显式 `--reviewed-rev` 只能用于已有本地 immutable review run，不能单独伪造远端 check binding。任何 payload mismatch 都 fail closed，且不得自动创建修补 PR。
 
 ### 6.6 两轮后 sponsor 终局
 
 本地与 GitHub PR 流程统一为：
 
-1. 初始候选 head 接受评审。
-2. 最多生成两个包含语义修复的 pushed heads。
-3. 达到上限仍有 REQUIRED/BLOCKER 时，进入一次 sponsor 终局决策。
+1. 初始候选 `H0` 接受评审。
+2. 最多生成两个常规语义修复候选 `H1`、`H2`，每个都必须重新接受定向评审与 required checks。
+3. `H2` 仍有稳定 REQUIRED/BLOCKER 时，进入一次 sponsor 终局决策。
 
 sponsor 若批准最后一次有界处理，必须同时冻结：
 
 - **唯一改动**：明确到稳定 finding 与允许修改的责任面。
 - **投入上限**：时间、文件面或测试面至少一项硬上限。
-- **终止结果**：成功则合并；未消除同一 finding 或出现越界则 No-Go/延期，不再开启第三轮。
+- **终止结果**：成功则合并；未消除同一 finding 或出现越界则 No-Go/延期。
 
-sponsor 决策不是新的常规 repair round。它只处理已稳定复现的 finding 及其直接回归面，不允许重新扫描并扩展无限问题空间。新的高风险安全/数据损坏证据可以 fail closed，但结果是终止或重新立项，不是给当前 PR 增加轮次。
+sponsor 可以无改动风险接受 `H2`、延期或 No-Go，也可以授权唯一 terminal remediation `H3`。`H3` 不是新的常规 round：它只处理冻结 finding 及直接回归面，只接受一次定向复评和 required checks；未通过即 `SUSPENDED/FAILED`，不得产生 `H4`。新的高风险安全/数据损坏证据可以 fail closed，但结果是终止或重新立项，不是给当前 PR 增加 head。
+
+为避免 sponsor 决策本身再次改变已评审 head，review-budget 终局使用现有 provider PR review/approval 或现有 local immutable review run 记录，并绑定当前 review tuple：
+
+- 无改动风险接受 `H2`：记录 merge approval，不修改 repo。
+- 授权 `H3`：在 provider 决策中冻结唯一改动、投入上限和终止结果；`H3` 内的 lifecycle mutation 仍按 6.2 的账本 CAS 执行。
+- defer/No-Go：不合并当前实现候选；`LifecycleView` 从绑定当前 tuple 的 terminal decision observation 投影 `SUSPENDED/FAILED`，不另开 records PR。
+
+该 provider/local review 记录只负责评审预算终局，不能授权 execute。常规 lifecycle sponsor decision 仍必须通过 6.2 的 `work-item.yaml` CAS；两者冲突时 fail closed。
 
 相应地：
 
 - `pr-review fix` 达到上限后的 next action 不再建议增加 `--max-rounds`。
 - CLI 参数不得突破项目策略上限。
 - 仓库 `AGENTS.md` 的 GitHub heartbeat 规则必须与本地上限一致。
-- heartbeat 只监控同一候选和批准范围；达到终局条件后暂停并报告，不继续自动请求评审。
+- heartbeat 只监控同一候选和批准范围；`H3` 评审结束后无条件停止自动修复路径。
 
 ## 7. R1：证据链与验证写放大收敛
 
 ### 7.1 handoff/resume 降为操作缓存
 
-handoff 与 resume 的职责是帮助中断恢复，不是证明代码正确。R1 固定以下边界：
+handoff 与 resume 的职责是帮助中断恢复，不是证明代码正确。R1 固定唯一持久化模型：
 
-- semantic freeze 之前可以更新 handoff。
-- 请求评审后，不因“当前 head、下一步、已 push”文案变化刷新 tracked handoff。
-- handoff 不参与 semantic payload identity，也不能使既有 reviewer verdict 失效。
-- clean clone 缺少本地 cache 时不影响 lifecycle/truth 结论。
-- 若仓库策略仍要求 committed continuity，只提交稳定目标、边界和恢复入口，不记录必然随每次 push 变化的瞬时 SHA 或待办语句。
+- canonical handoff、scoped handoff 和 resume pack 的**活动写入口**全部迁移到现有 ignored local cache；语义变更、测试、push 或每 20 分钟 checkpoint 都只能更新该 cache。
+- 仓库内已有 tracked handoff/resume 仅作 legacy 只读兼容，R1 起不再由任何 writer 刷新；它们在评审后保持冻结并计入 semantic payload。
+- 所有授权和 lifecycle consumer 禁止从 local cache 或 legacy handoff 推导 sponsor decision、execute authorization 或 completed。
+- clean clone 缺少 local cache 时不影响 lifecycle/truth 结论。
+- `AGENTS.md` 的连续性协议同步改为 local-cache 语义，不能继续要求产生 tracked dirty tree。
 
-这项修改必须同时覆盖 canonical handoff 与 scoped handoff，避免一份被降级、另一份仍触发写回。
+这项修改必须同时覆盖 canonical、scoped 与 resume-pack 三个入口。验收必须在评审后依次运行 handoff update 与 truth recompute，并证明 `git status --porcelain`、reviewed head OID 和 semantic digest 均不变化。
 
 ### 7.2 Program Truth 去固定库存计数
 
@@ -217,7 +295,7 @@ handoff 与 resume 的职责是帮助中断恢复，不是证明代码正确。R
 - `unmapped_paths` 与实际差集一致。
 - missing sources 与声明存在但远端/工作树缺失的实际集合一致。
 - 已知 capability 的关键 truth/close refs 精确匹配。
-- 既有 16 个 Program Truth blocker 数量和身份在本次整改中保持不变。
+- 既有 16 个 Program Truth blocker ID 集合只用于本次两个 PR 的 before/after 验收，不写入长期 `assert count == 16`。
 
 只有产品语义要求固定成员时才断言具体 ref；不再把全仓库总数当作行为契约。
 
@@ -229,7 +307,7 @@ Program Truth 输出分别暴露：
 - `observed_revision`：这次只读观察的 Git revision。
 - `semantic_tree_identity`：行为相关内容是否与被评审内容等价。
 
-三者不能再压缩成一个“exact head 是否一致”的 gate。快照过期可以要求重新计算，但重新计算默认写入本地 cache 或直接输出，不自动修改 tracked 文件。
+三者不能再压缩成一个“exact head 是否一致”的 gate。Program Truth 默认现场计算或写 ignored local cache，不自动修改 tracked 文件。现有 `program-manifest.yaml.truth_snapshot` 只作 legacy/advisory 输入：继续兼容解析，但不再是 freshness gate，R1 起不由 sync 命令重写。
 
 ### 7.4 清理动作改为运维结果
 
@@ -294,14 +372,16 @@ DOCS_BASELINE
 ### 8.4 两轮未收敛
 
 ```text
-review head 0
-  -> focused fix head 1
-  -> focused fix head 2
+initial review H0
+  -> regular focused fix H1 + review/checks
+  -> regular focused fix H2 + review/checks
   -> unresolved stable finding
   -> one sponsor terminal decision
-       approve bounded action -> merge or terminal no-go
+       accept H2 without changes -> merge
+       authorize one terminal remediation H3 -> one review/check run -> merge or terminal no-go
        defer -> SUSPENDED
        reject -> FAILED
+  -> H4 is forbidden
 ```
 
 ## 9. 失败处理与安全边界
@@ -309,9 +389,10 @@ review head 0
 - 缺少显式 execute authorization：保持 `DOCS_BASELINE` 或 `SUSPENDED`，不生成实现动作。
 - 生命周期账本与证据分类冲突：报告冲突并 `needs_user`，不自动改写状态。
 - reviewed payload 与 main 内容不一致：阻断 completed 投影，报告最小差异，不开新 PR。
-- provider review head 不可确定：要求显式 revision，不猜测。
+- provider 的 reviewed head、required-check binding 或 merge result 不可确定：`needs_user`，不猜测、不用单独 SHA 代替完整 tuple。
+- 生命周期 compare-and-set revision 冲突：重新读取并报告冲突；不得自动覆盖 sponsor decision。
 - sponsor 有界处理越过冻结文件面或投入上限：终止当前工作项，不扩大授权。
-- 两轮后出现新的高风险安全或数据损坏 finding：fail closed，进入 No-Go 或新工作项评估；不得把它伪装成第三轮。
+- `H3` 后任何 REQUIRED/BLOCKER 或新的高风险安全/数据损坏 finding：fail closed，进入 No-Go、延期或新工作项评估；不得产生 `H4`。
 - Program Truth snapshot 过期：现场重算并标记 freshness；默认不写 tracked snapshot。
 - 清理失败：advisory；只有涉及数据丢失或目标不明确时才停止并请求用户。
 
@@ -322,11 +403,11 @@ review head 0
 | 阶段 | 主要责任面 | 设计责任 |
 | --- | --- | --- |
 | R0 | `src/ai_sdlc/models/work.py` | 复用状态并承载最小 sponsor/lifecycle 语义 |
-| R0 | `src/ai_sdlc/core/state_machine.py` | 新增合法 defer/no-go transition；执行 transition 强制授权 |
+| R0 | `src/ai_sdlc/core/state_machine.py` | sponsor CAS transaction、完整 transition matrix 与统一 lifecycle resolver |
 | R0 | `src/ai_sdlc/core/execute_authorization.py` | 成为进入 execute 的唯一授权入口 |
 | R0 | `src/ai_sdlc/core/workitem_truth.py` | classification 只观察证据；next action 读取生命周期 |
 | R0 | `src/ai_sdlc/core/close_check.py` | close 改为 pre-merge readiness；未来事实不再阻塞 |
-| R0 | `src/ai_sdlc/core/workitem_traceability.py` | 解析当前工作项账本与 review/merge observation |
+| R0 | `src/ai_sdlc/core/workitem_traceability.py` | 在不新增 ledger 的前提下提供 merge observation 与 `LifecycleView` 输入 |
 | R0 | `src/ai_sdlc/core/pr_review_service.py`、loop policy | 两轮后 sponsor 终局，删除扩大轮次指引 |
 | R0 | `src/ai_sdlc/cli/workitem_cmd.py` | 清晰区分 readiness 与 read-only reconcile 输出 |
 | R0 | `AGENTS.md` | heartbeat 与本地两轮上限一致 |
@@ -335,51 +416,68 @@ review head 0
 | R1 | `tests/integration/test_repo_program_manifest.py` | 用集合不变量替代固定库存计数 |
 | R0/R1 | 对应 unit/integration tests | 只覆盖上述责任面与 merge strategy 回归 |
 
-如果源码追踪发现现有模块已能提供某项能力，优先删除重复路径或复用入口，不新建包装层。
+如果源码追踪发现现有模块已能提供某项能力，优先删除重复路径或复用入口，不新建包装层。实施计划必须在写代码前冻结每个 PR 的 `planned_production_files`；不允许新增 production module，任何计划外 production file 都必须先回到 sponsor 重估，不能以“顺手重构”扩大责任面。测试采用参数化单测覆盖状态/策略组合，仅保留一条代表性 clean-clone E2E，禁止形成合并策略 × 环境的全笛卡尔积。
 
 ## 11. 验收标准
 
 ### 11.1 R0 验收
 
-- 当前类似 WI225 的“正式基线已合主线但未授权实现”场景被表示为 `SUSPENDED` 或 `DOCS_BASELINE`，不再输出 start execute。
+- WI225 的已有 defer 决策精确解析为 `SUSPENDED`，不再输出 start execute。
 - sponsor No-Go 映射为 `FAILED`，close-check 对未执行任务返回 not-applicable，而非缺少实现证据 blocker。
-- `DOCS_BASELINE -> DEV_EXECUTING` 在无显式授权时失败。
-- pre-merge readiness 在所有当前可验证项通过、只差合并时成功并返回 `merge_pending=true`。
+- `DOCS_BASELINE/RESUMED -> DEV_EXECUTING` 在缺少同一 formal digest/scope 的显式授权时失败；close stage 永不授权 execute。
+- formal-defer、formal-no-go、implementation 三种 readiness profile 分别接受 `SUSPENDED`、`FAILED`、`DEV_REVIEWED`；只差合并时成功并返回 `merge_pending=true`。
 - 未合并候选永远不返回 `effective_status=COMPLETED`。
-- fast-forward、merge commit、squash、rebase 四类合并策略均能以 semantic payload 正确判断 contained。
+- fast-forward、merge commit、squash、rebase 四类合并策略均能以合并时点 semantic payload 正确判断 contained。
+- 评审后追加任一 tracked 语义路径、复用旧 head checks 或 merge conflict 引入语义差异时 fail closed。
+- 合并后同一路径被后续 PR 修改，历史 merge result 仍能证明原 payload contained。
 - 同一 main/reviewed revision 重复运行 reconcile 两次，第二次及以后产生零仓库变更。
-- 达到两轮后 CLI 与 heartbeat 都不允许通过提高 `--max-rounds` 继续；只返回 sponsor terminal decision。
+- sponsor decision 的并发 CAS 冲突不会覆盖 defer/No-Go；达到两轮后 CLI 与 heartbeat 都不允许提高 `--max-rounds`。
+- H3 只评审一次；失败后不产生 H4。
 
 ### 11.2 R1 验收
 
-- 请求评审后刷新本地 handoff cache，不改变 semantic payload identity，也不要求重新评审。
+- 请求评审后运行 canonical/scoped handoff update、resume refresh 与 truth recompute，`git status --porcelain`、reviewed head 和 semantic digest 均不变化。
+- legacy tracked handoff/resume 保持只读冻结，且仍计入 semantic payload。
 - clean clone 不含本地 handoff cache 时，生命周期、truth 和 reconcile 结论与 shared checkout 一致。
 - 新增一个正常映射的工作项或设计文档时，不修改固定库存数字测试。
 - Program Truth 的 freshness、observed revision、semantic tree identity 可分别断言。
+- 现有 manifest truth snapshot 过期只产生 advisory/live recompute，不产生 tracked diff。
 - 合并后保留或删除 feature branch/worktree 都不改变 completed 结论；未清理只产生 advisory。
-- 两个阶段完成后，既有 16 个 Program Truth blocker 的身份和数量保持不变。
+- 两个阶段完成后，本次基线中的 16 个 Program Truth blocker ID 集合保持不变；长期测试不固定数量。
 
 ### 11.3 端到端验收
 
 用一个新的最小 formal-only fixture 和一个最小 implementation fixture 验证：
 
-1. 初始化工作项账本。
+1. 验证 legacy 只读查询不建账，显式 sponsor mutation 才按给定 initial status 初始化。
 2. sponsor defer、No-Go、execute 三种路径各自进入正确状态。
-3. execute 路径完成评审和 pre-merge readiness。
-4. 通过四种 Git 合并策略验证只读 reconcile。
+3. execute 路径完成 review tuple 绑定和 pre-merge readiness。
+4. 用参数化 Git fixture 覆盖四种合并策略，并用一条 clean-clone E2E 验证只读 reconcile。
 5. 在 shared checkout、fresh clone 和仅远端 ref 可见环境中得到相同结论。
 6. 全流程不创建 post-merge records/truth closeout PR。
 
 ## 12. 迁移与 bootstrap
 
-当前仓库本身正受“未来事实必须写回当前提交”的旧规则约束，因此 R0+R1 使用一次性 bootstrap 方式：
+当前仓库本身正受“未来事实必须写回当前提交”的旧规则约束，因此 R0+R1 使用一次性 bootstrap，且顺序固定如下：
 
-- 以精确 base、候选 head、reviewed head 和 required checks 作为外部可验证事实。
-- R0 PR 只承载生命周期/close transaction 修复及其直接测试。
-- R1 PR 只承载 evidence write-amplification 修复及其直接测试。
-- 每个 PR 最多两个语义修复 heads；两轮后按本设计进入 sponsor 终局。
-- PR 合并后只在隔离 clone 中运行 reconcile 与验收，不再追加 records PR。
-- 不为满足旧固定计数而增加临时例外；R1 直接移除该固定计数契约。
+### PR1：R1 evidence substrate
+
+- 只承载动态 inventory、ignored continuity cache、live/ignored truth recompute、legacy tracked snapshot/advisory 兼容及直接测试。
+- 同一 PR 登记本设计文档，但不临时把 `1174` 改成 `1175`；测试改为集合不变量后自然通过。
+- 本地候选门禁：`verify constraints`、handoff unit/integration、Program Service 定向单测、根 manifest 集成测试、`git diff --check`；稳定候选只运行一次全量测试。
+- 评审 tuple 中冻结 GitHub target branch 当时要求的完整 required-check context 集合，所有结果必须绑定当前候选。
+- 合并后只读验收：handoff update 与 truth recompute 均为零 tracked diff。
+
+### PR2：R0 lifecycle transaction
+
+- 只承载 sponsor CAS、完整 transition/readiness matrix、唯一 `LifecycleView`、review/merge tuple、close/reconcile 及直接测试。
+- 本地候选门禁：`verify constraints`、state machine、execute authorization、truth/close、PR round limit、semantic merge matrix、`git diff --check`；稳定候选只运行一次全量测试。
+- 同样冻结并验证 GitHub required-check context 集合，禁止复用旧 head 成功结果。
+- 合并后只在隔离 clone 中运行 reconcile；重复运行零写回，不追加 records PR。
+
+PR1 合并后的过渡主线只改变 evidence writer/验证契约，不改变 lifecycle verdict；R0 未合并前仍不授权新特性。PR2 从这个无 tracked write-amplification 的基线启动。
+
+两个 PR 都遵守 `H0/H1/H2 + 可选唯一 H3` 规则。bootstrap 允许用外部 provider tuple 证明 review/merge 事实，但不允许绕过 reviewer gate、required checks 或执行授权。
 
 bootstrap 只适用于这两个根治 PR，不成为普通工作项绕过 reviewer gate、checks 或执行授权的永久入口。
 
@@ -387,17 +485,19 @@ bootstrap 只适用于这两个根治 PR，不成为普通工作项绕过 review
 
 | 项目 | 预期投入 | 直接价值 | ROI 判断 |
 | --- | ---: | --- | --- |
-| R0 生命周期/close transaction | 2.5–3 人日 | 消除错误 execute 授权、未来事实阻塞和 post-merge records PR | 最高，先做 |
-| R1 evidence 写放大 | 1.5–2 人日 | 消除 handoff/self-head 漂移、固定库存改测和重复全量验证 | 高，紧随 R0 |
+| R1 evidence substrate | 1.5–2 人日 | 先消除 handoff/self-head 漂移、固定库存改测和重复全量验证，为 R0 建立可合并基线 | 高，先做 |
+| R0 生命周期/close transaction | 2.5–3 人日 | 消除错误 execute 授权、未来事实阻塞和 post-merge records PR | 最高价值，第二个 PR 完成根治 |
 | 总缓冲 | 0–0.5 人日 | 仅处理上述责任面的真实回归 | 不得转为特性投入 |
 
 硬边界：
 
 - 总投入不超过 5 人日。
 - 最多两个修复 PR。
-- 每个 PR 最多两个语义修复 heads，之后只有一次 sponsor 终局决策。
+- 每个 PR 固定 H0 加最多 H1/H2 两个常规修复 heads；sponsor 最多再授权唯一 H3，H3 后禁止 H4。
 - 不新增治理 artifact 类型，不批量迁移历史工作项，不进入新特性。
-- 若 R0 无法在 3 人日内让“合并后零写回”验收成立，则暂停 R1，提交根因证据并 No-Go，不以更多例外掩盖失败。
+- 实施计划必须冻结每个 PR 的 production file 集；新增 module 或计划外 production file 先进入 sponsor 重估。
+- 若 R1 无法在 2 人日内让“handoff/truth 重算零 tracked diff”成立，则停止，不启动 R0。
+- 若 R0 无法在剩余总预算内让“合并后零写回”成立，则 No-Go，不以更多例外掩盖失败。
 
 ## 14. 发布判定
 
@@ -407,6 +507,6 @@ bootstrap 只适用于这两个根治 PR，不成为普通工作项绕过 review
 - 独立评审无未解决 REQUIRED/BLOCKER。
 - 两个 PR 合并后，隔离 clone 的 reconcile 产生零写回。
 - 当前正式延期/No-Go 工作项不再被提示自动进入 execute。
-- Program Truth 仍如实保留 16 个既有 blocker，没有用本次整改伪造绿色结论。
+- Program Truth 对整改前 16 个 blocker ID 集合完成前后对账，没有吞掉 blocker，也没有把数量固化成永久断言。
 
 满足后，下一步不是继续磨治理细节，而是回到已批准产品路线，按 ROI 重新选择一个工作项。
