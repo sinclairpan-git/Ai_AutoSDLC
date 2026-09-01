@@ -78,8 +78,8 @@ R0+R1 将当前混在一起的五类事实拆开：
 
 - `SUSPENDED + contained_in_main=true`：正式基线已进入主线，当前明确延期，不启动 execute。
 - `FAILED + contained_in_main=true`：正式基线已进入主线，sponsor No-Go，终止本项。
-- `DEV_REVIEWED + contained_in_main=false`：评审通过、等待合并，不得宣称完成。
-- `DEV_REVIEWED + contained_in_main=true`：只读投影为 `effective_status=COMPLETED`。
+- `DEV_VERIFYING + approved review tuple + contained_in_main=false`：账本保持不变，只读投影为 `effective_status=DEV_REVIEWED`，等待合并。
+- `DEV_VERIFYING + approved review tuple + contained_in_main=true`：只读投影为 `effective_status=COMPLETED`。
 - `formal_freeze_only`：仅说明没有实现证据，不能推导“必须开始 execute”。
 
 所有公开消费者必须调用同一个 `resolve_lifecycle_view(...)`，不得直接用 raw `WorkItem.status`、truth classification 或 checkpoint stage 推导下一步。统一返回至少包含：
@@ -93,7 +93,7 @@ contained_in_main
 writeback_required
 ```
 
-PR 流程中，持久状态在合并前冻结；`effective_status=COMPLETED` 只能由 `DEV_REVIEWED + verified merge observation` 投影得到。现有持久 `COMPLETED` 仅作为 legacy/non-PR 兼容状态，truth、close、status、Program Truth、release 与 next-action 均不得绕过 resolver 直接读取它。
+PR 流程在送审前把持久状态冻结于 `DEV_VERIFYING`；review 通过后不得再提交 `work-item.yaml` 状态变化。`effective_status=DEV_REVIEWED` 只能由 `DEV_VERIFYING + approved review tuple` 投影，`effective_status=COMPLETED` 再增加 verified merge observation。现有持久 `DEV_REVIEWED/COMPLETED` 仅作为 legacy/non-PR 兼容状态，truth、close、status、Program Truth、release 与 next-action 均不得绕过 resolver 直接读取它们。
 
 ## 6. R0：生命周期与合并闭环
 
@@ -148,12 +148,12 @@ terminal remediation 还必须带 `single_change`、`investment_cap` 与 `termin
 | `DEV_EXECUTING` | defer / no-go | `SUSPENDED` / `FAILED` | 保留已有执行证据，不再继续改动 |
 | `DEV_VERIFYING` | terminal remediation | `DEV_EXECUTING` | 仅允许冻结 finding 的唯一修复 |
 | `DEV_VERIFYING` | defer / no-go | `SUSPENDED` / `FAILED` | 两轮终局出口 |
-| `DEV_REVIEWED` | terminal remediation | `DEV_EXECUTING` | 必须产生唯一 H3 并重新定向评审 |
-| `DEV_REVIEWED` | defer / no-go | `SUSPENDED` / `FAILED` | 不再合并实现候选 |
+| `DEV_REVIEWED`（legacy persisted） | terminal remediation | `DEV_EXECUTING` | 仅兼容旧流程；新 PR 流程使用上方 `DEV_VERIFYING` 行 |
+| `DEV_REVIEWED`（legacy persisted） | defer / no-go | `SUSPENDED` / `FAILED` | 仅兼容旧流程；不再合并实现候选 |
 
 `FAILED` 无出边。`DOCS_BASELINE/RESUMED -> DEV_EXECUTING` 只能调用上述事务入口；禁止任何直接状态写入绕过 decision 校验。close stage 从 `_AUTHORIZED_STAGES` 删除，truth classifier、handoff 文案和 checkpoint stage 均无权代替执行授权。
 
-`ARCHIVING`、`KNOWLEDGE_REFRESHING` 和持久 `COMPLETED` 保留给 legacy/non-PR 流程。新的 PR 流程若有 archive 或 knowledge refresh 工作，必须在 `DEV_VERIFYING` 内完成后再进入 `DEV_REVIEWED`，不设计不存在的“回到可合并终点”transition。
+`ARCHIVING`、`KNOWLEDGE_REFRESHING`、持久 `DEV_REVIEWED` 和持久 `COMPLETED` 保留给 legacy/non-PR 流程。新的 PR 流程若有 archive 或 knowledge refresh 工作，必须在 `DEV_VERIFYING` 内完成；review tuple 通过后只投影有效 `DEV_REVIEWED`，不执行持久 transition，也不设计不存在的“回到可合并终点”transition。
 
 ### 6.3 evidence classification 不生成执行授权
 
@@ -177,7 +177,7 @@ terminal remediation 还必须带 `single_change`、`investment_cap` 与 `termin
 | --- | --- | --- | --- |
 | `formal-defer` | `SUSPENDED` | 正式文档、defer 决策、必要 review/check；实现任务 not-applicable | 保持 `SUSPENDED` |
 | `formal-no-go` | `FAILED` | 正式文档、No-Go 决策、必要 review/check；实现任务 not-applicable | 保持 `FAILED` |
-| `implementation` | `DEV_REVIEWED` | 授权范围内任务、验收、验证、review/check | merge observation 成立后投影 `COMPLETED` |
+| `implementation` | 持久 `DEV_VERIFYING`，有效 `DEV_REVIEWED` | 授权范围内任务、验收、验证、review/check | merge observation 成立后投影 `COMPLETED` |
 
 共同规则：
 
@@ -185,7 +185,7 @@ terminal remediation 还必须带 `single_change`、`investment_cap` 与 `termin
 - 任务完成判定复用 task guard 的结构化 status：implementation profile 中 `done` 通过，`todo/doing/blocked/needs-review` 阻断。Markdown checkbox 只作 legacy/advisory 输入，不能覆盖结构化状态；两者冲突时 `needs_user`，不靠删除 checkbox 获得通过。
 - 必要 reviewer gate 通过。
 - sponsor 授权范围内的 finding 已处理。
-- 工作项状态与所选 profile 精确匹配。
+- `LifecycleView` 的持久/有效状态组合与所选 profile 精确匹配；不得为通过 readiness 在 review 后改写账本。
 - 当前候选分支尚未包含于主线时，返回 `merge_pending=true`，但不把它当作 readiness blocker。
 - 合并 SHA、远端分支删除、工作树删除和主线包含不再是 pre-merge 必填字段。
 
@@ -201,7 +201,7 @@ reconcile 接收 PR 编号或本地 immutable review run，从 provider/Git 读�
 - merge result 是否仍可从当前 target branch 到达。
 - 持久生命周期状态。
 
-当 `DEV_REVIEWED` 的 reviewed payload 已包含于 target main 时，CLI 返回：
+当持久 `DEV_VERIFYING` 已由 approved review tuple 投影为有效 `DEV_REVIEWED`，且 reviewed payload 已包含于 target main 时，CLI 返回：
 
 ```text
 effective_status=completed
@@ -361,8 +361,8 @@ DOCS_BASELINE
   -> explicit execute authorization
   -> DEV_EXECUTING
   -> DEV_VERIFYING
-  -> reviewer gate approved
-  -> DEV_REVIEWED
+  -> semantic freeze; work-item.yaml remains DEV_VERIFYING
+  -> reviewer gate approved; effective_status=DEV_REVIEWED
   -> pre-merge readiness passes with merge_pending=true
   -> merge
   -> read-only reconcile confirms semantic payload in main
@@ -425,7 +425,8 @@ initial review H0
 - WI225 的已有 defer 决策精确解析为 `SUSPENDED`，不再输出 start execute。
 - sponsor No-Go 映射为 `FAILED`，close-check 对未执行任务返回 not-applicable，而非缺少实现证据 blocker。
 - `DOCS_BASELINE/RESUMED -> DEV_EXECUTING` 在缺少同一 formal digest/scope 的显式授权时失败；close stage 永不授权 execute。
-- formal-defer、formal-no-go、implementation 三种 readiness profile 分别接受 `SUSPENDED`、`FAILED`、`DEV_REVIEWED`；只差合并时成功并返回 `merge_pending=true`。
+- formal-defer、formal-no-go、implementation 三种 readiness profile 分别接受持久 `SUSPENDED`、持久 `FAILED`、以及“持久 `DEV_VERIFYING` + 有效 `DEV_REVIEWED`”；只差合并时成功并返回 `merge_pending=true`。
+- reviewer approval 不修改 `work-item.yaml`；review 前后 `git status --porcelain` 与候选 head 均不变化。
 - 未合并候选永远不返回 `effective_status=COMPLETED`。
 - fast-forward、merge commit、squash、rebase 四类合并策略均能以合并时点 semantic payload 正确判断 contained。
 - 评审后追加任一 tracked 语义路径、复用旧 head checks 或 merge conflict 引入语义差异时 fail closed。
