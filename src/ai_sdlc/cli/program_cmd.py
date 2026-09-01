@@ -5702,13 +5702,14 @@ def _render_truth_ledger_lines(surface: dict[str, object]) -> None:
 
 
 def _render_truth_observation_lines(surface: dict[str, object]) -> None:
+    observed_revision = surface.get("observed_revision") or "unavailable"
     console.print(
         "  - snapshot freshness: "
         f"{surface.get('snapshot_freshness', surface.get('snapshot_state', 'missing'))} (advisory)",
         markup=False,
     )
     console.print(
-        f"  - observed revision: {surface.get('observed_revision', 'unavailable')}",
+        f"  - observed revision: {observed_revision}",
         markup=False,
     )
     console.print(

@@ -77,6 +77,7 @@ from ai_sdlc.models.frontend_solution_confirmation import (
     build_mvp_solution_snapshot,
 )
 from ai_sdlc.models.project import ProjectConfig
+from ai_sdlc.routers.bootstrap import init_project
 from tests.support.managed_delivery import (
     build_dependency_install_subprocess_side_effect,
 )
@@ -3293,7 +3294,7 @@ specs:
         root = initialized_project_dir
         _init_truth_git_repo(root)
         _write_program_truth_fixture(root)
-        (root / ".gitignore").write_text(".ai-sdlc/local/\n", encoding="utf-8")
+        init_project(root)
         _commit_truth_repo(root, "seed local truth cache fixture")
         before_manifest = (root / "program-manifest.yaml").read_bytes()
         before_head = _git_output(root, "rev-parse", "HEAD")
@@ -3461,7 +3462,7 @@ specs:
                     "next_required_actions": [],
                     "next_required_action": "",
                     "snapshot_hash": "abc123",
-                    "observed_revision": "abc123",
+                    "observed_revision": None,
                     "semantic_tree_identity": "unavailable",
                     "release_targets": ["frontend-mainline-delivery"],
                     "release_capabilities": [
@@ -3489,7 +3490,7 @@ specs:
         assert "state: ready" in status.output.lower()
         assert "snapshot freshness: stale (advisory)" in status.output.lower()
         assert "live recompute is ready" in status.output
-        assert "observed revision: abc123" in status.output
+        assert "observed revision: unavailable" in status.output
         assert "semantic tree identity: unavailable" in status.output
         assert "python -m ai_sdlc program truth sync --execute --yes" not in status.output
 

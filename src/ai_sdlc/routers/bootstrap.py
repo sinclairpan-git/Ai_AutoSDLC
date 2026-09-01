@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import subprocess
 from pathlib import Path
 
 from ai_sdlc.core.config import (
@@ -59,6 +60,7 @@ def init_project(
         The resulting ProjectState.
     """
     existing = detect_project_state(root)
+    _ensure_local_cache_excluded(root)
     if existing == EXISTING_INITIALIZED:
         logger.info("Project already initialized at %s", root)
         return load_project_state(root)
@@ -109,6 +111,42 @@ def init_project(
 
     logger.info("Initialized AI-SDLC project '%s' at %s", project_name, root)
     return state
+
+
+def _ensure_local_cache_excluded(root: Path) -> None:
+    """Keep AI-SDLC's regenerable local cache out of a Git work tree's index."""
+    try:
+        is_work_tree = subprocess.run(
+            ["git", "rev-parse", "--is-inside-work-tree"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        if is_work_tree != "true":
+            return
+        git_path = subprocess.run(
+            ["git", "rev-parse", "--git-path", "info/exclude"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return
+
+    exclude_path = Path(git_path)
+    if not exclude_path.is_absolute():
+        exclude_path = root / exclude_path
+    existing = exclude_path.read_text(encoding="utf-8") if exclude_path.exists() else ""
+    if ".ai-sdlc/local/" in existing.splitlines():
+        return
+
+    exclude_path.parent.mkdir(parents=True, exist_ok=True)
+    separator = "" if not existing or existing.endswith("\n") else "\n"
+    exclude_path.write_text(
+        f"{existing}{separator}.ai-sdlc/local/\n", encoding="utf-8"
+    )
 
 
 def _bootstrap_governance_files(root: Path) -> None:

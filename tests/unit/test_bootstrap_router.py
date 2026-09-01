@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 
 from ai_sdlc.models.project import ProjectStatus
@@ -35,6 +36,51 @@ class TestDetectProjectState:
 
 
 class TestInitProject:
+    @staticmethod
+    def _init_git_repo(root: Path) -> Path:
+        subprocess.run(
+            ["git", "init"], cwd=root, check=True, capture_output=True, text=True
+        )
+        exclude_path = subprocess.run(
+            ["git", "rev-parse", "--git-path", "info/exclude"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        return root / exclude_path
+
+    def test_init_adds_local_cache_to_clone_local_exclude(self, tmp_project_dir: Path) -> None:
+        exclude = self._init_git_repo(tmp_project_dir)
+        exclude.parent.mkdir(parents=True, exist_ok=True)
+        exclude.write_text("existing-rule/\n", encoding="utf-8")
+
+        init_project(tmp_project_dir)
+
+        assert exclude.read_text(encoding="utf-8") == "existing-rule/\n.ai-sdlc/local/\n"
+        assert not (tmp_project_dir / ".gitignore").exists()
+
+    def test_initialized_rerun_backfills_local_exclude_idempotently(
+        self, tmp_project_dir: Path
+    ) -> None:
+        exclude = self._init_git_repo(tmp_project_dir)
+        init_project(tmp_project_dir)
+        exclude.write_text("existing-rule/\n", encoding="utf-8")
+
+        init_project(tmp_project_dir)
+        first_backfill = exclude.read_text(encoding="utf-8")
+        init_project(tmp_project_dir)
+
+        assert first_backfill == "existing-rule/\n.ai-sdlc/local/\n"
+        assert exclude.read_text(encoding="utf-8") == first_backfill
+
+    def test_init_non_git_project_does_not_create_git_metadata(
+        self, tmp_project_dir: Path
+    ) -> None:
+        init_project(tmp_project_dir)
+
+        assert not (tmp_project_dir / ".git").exists()
+
     def test_init_greenfield(self, tmp_project_dir: Path) -> None:
         state = init_project(tmp_project_dir, "test-proj")
         assert state.status == ProjectStatus.INITIALIZED
