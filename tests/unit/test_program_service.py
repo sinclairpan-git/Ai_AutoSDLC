@@ -2400,9 +2400,7 @@ specs:
     assert "manifest_validation:frontend-mainline-delivery" in capability.blocking_refs
 
 
-def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
-    tmp_path: Path,
-) -> None:
+def _seed_stale_truth_fixture(tmp_path: Path) -> tuple[ProgramService, ProgramManifest]:
     _init_truth_git_repo(tmp_path)
     (tmp_path / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
     (tmp_path / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
@@ -2458,11 +2456,10 @@ def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
         ),
     ):
         snapshot = svc.build_truth_snapshot(manifest)
-        svc.write_truth_snapshot(snapshot)
-
         payload = yaml.safe_load(
             (tmp_path / "program-manifest.yaml").read_text(encoding="utf-8")
         )
+        payload["truth_snapshot"] = snapshot.model_dump(mode="json")
         payload["program"]["goal"] = "Updated goal after sync"
         (tmp_path / "program-manifest.yaml").write_text(
             yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
@@ -2473,8 +2470,81 @@ def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
         surface = svc.build_truth_ledger_surface(updated_manifest)
 
     assert surface is not None
+    return svc, updated_manifest
+
+
+def test_write_truth_snapshot_writes_local_cache_and_preserves_manifest(
+    tmp_path: Path,
+) -> None:
+    _init_truth_git_repo(tmp_path)
+    _write_truth_ledger_manifest(tmp_path)
+    svc = ProgramService(tmp_path)
+    manifest = svc.load_manifest()
+    before = svc.manifest_path.read_bytes()
+
+    written = svc.write_truth_snapshot(svc.build_truth_snapshot(manifest))
+
+    assert written == tmp_path / ".ai-sdlc/local/program-truth-snapshot.yaml"
+    assert written.is_file()
+    assert svc.manifest_path.read_bytes() == before
+
+
+def test_truth_surface_reports_stale_legacy_snapshot_as_advisory(tmp_path: Path) -> None:
+    svc, manifest = _seed_stale_truth_fixture(tmp_path)
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+    ):
+        surface = svc.build_truth_ledger_surface(manifest)
+
+    assert surface is not None
+    assert surface["state"] == "ready"
+    assert surface["snapshot_freshness"] == "stale"
     assert surface["snapshot_state"] == "stale"
-    assert surface["state"] == "stale"
+    assert surface["observed_revision"] == svc.build_truth_snapshot(manifest).repo_revision
+    assert surface["semantic_tree_identity"] == "unavailable"
+    assert not any("truth sync" in item for item in surface["next_required_actions"])
+
+
+def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
+    tmp_path: Path,
+) -> None:
+    svc, updated_manifest = _seed_stale_truth_fixture(tmp_path)
+    with (
+        patch.object(
+            ProgramService,
+            "_run_close_check_ref",
+            return_value={"ok": True, "blockers": [], "checks": [], "error": None},
+        ),
+        patch.object(
+            ProgramService,
+            "_run_verify_ref",
+            return_value={
+                "ok": True,
+                "command": "uv run ai-sdlc verify constraints",
+                "blockers": [],
+                "warnings": [],
+            },
+        ),
+    ):
+        surface = svc.build_truth_ledger_surface(updated_manifest)
+
+    assert surface is not None
+    assert surface["snapshot_state"] == "stale"
+    assert surface["state"] == "ready"
     assert len(surface["release_capabilities"]) == 1
     capability = surface["release_capabilities"][0]
     assert capability["capability_id"] == "frontend-mainline-delivery"
@@ -2483,8 +2553,8 @@ def test_build_truth_ledger_surface_marks_stale_when_authoring_hash_changes(
     assert capability["blocking_refs"] == []
     assert (
         surface["detail"]
-        == "persisted truth snapshot is stale; current recompute is ready. "
-        "Refresh the snapshot as the terminal close-out step, then rerun program truth audit."
+        == "truth snapshot is fresh and release targets are ready; "
+        "truth snapshot freshness is stale (advisory)"
     )
 
 

@@ -219,6 +219,7 @@ PROGRAM_FRONTEND_BROWSER_GATE_BASELINE_COMMAND = (
 PROGRAM_TRUTH_SYNC_DRY_RUN_COMMAND = "python -m ai_sdlc program truth sync --dry-run"
 PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND = "python -m ai_sdlc program truth sync --execute --yes"
 PROGRAM_TRUTH_AUDIT_COMMAND = "python -m ai_sdlc program truth audit"
+LOCAL_TRUTH_SNAPSHOT_PATH = Path(".ai-sdlc/local/program-truth-snapshot.yaml")
 PROGRAM_FRONTEND_MAINLINE_DELIVERY_CAPABILITY_ID = "frontend-mainline-delivery"
 PROGRAM_FRONTEND_INHERITANCE_BLOCKER_PREFIX = "frontend_inheritance"
 PROGRAM_FRONTEND_FRAMEWORK_ARTIFACT_BLOCKER_PREFIX = "frontend_framework_artifact"
@@ -2410,7 +2411,7 @@ class ProgramService:
         matched_capabilities: list[str],
         validation_result: ProgramValidationResult,
     ) -> ProgramSpecTruthReadinessResult | None:
-        snapshot = manifest.truth_snapshot
+        snapshot = self.load_local_truth_snapshot()
         if snapshot is None or snapshot.state != "ready":
             return None
         if not self._truth_snapshot_hash_matches(snapshot):
@@ -3167,11 +3168,24 @@ class ProgramService:
         )
         return snapshot
 
-    def write_truth_snapshot(self, snapshot: ProgramTruthSnapshot) -> None:
-        payload = self._load_manifest_yaml_payload()
-        payload["truth_snapshot"] = snapshot.model_dump(mode="json")
-        serialized = yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)
-        self._atomic_write_text(self.manifest_path, serialized)
+    def write_truth_snapshot(self, snapshot: ProgramTruthSnapshot) -> Path:
+        path = self.root / LOCAL_TRUTH_SNAPSHOT_PATH
+        self._atomic_write_text(
+            path,
+            yaml.safe_dump(snapshot.model_dump(mode="json"), sort_keys=False, allow_unicode=True),
+        )
+        return path
+
+    def load_local_truth_snapshot(self) -> ProgramTruthSnapshot | None:
+        path = self.root / LOCAL_TRUTH_SNAPSHOT_PATH
+        if not path.is_file():
+            return None
+        try:
+            return ProgramTruthSnapshot.model_validate(
+                yaml.safe_load(path.read_text(encoding="utf-8"))
+            )
+        except (OSError, ValueError, yaml.YAMLError):
+            return None
 
     def build_truth_ledger_surface(
         self,
@@ -3191,30 +3205,31 @@ class ProgramService:
             manifest,
             validation_result=validation,
         )
-        persisted_snapshot = manifest.truth_snapshot
+        local_snapshot_path = self.root / LOCAL_TRUTH_SNAPSHOT_PATH
+        local_snapshot = self.load_local_truth_snapshot()
+        persisted_snapshot = (
+            local_snapshot if local_snapshot is not None else manifest.truth_snapshot
+        )
         migration_pending_specs = self._migration_pending_specs(validation.warnings)
         migration_pending_sources = self._migration_pending_sources(validation.warnings)
         migration_pending_count = len(migration_pending_specs) + len(
             migration_pending_sources
         )
 
-        if persisted_snapshot is None:
-            snapshot_state = "missing"
+        if local_snapshot_path.is_file() and local_snapshot is None:
+            snapshot_freshness = "invalid"
+        elif persisted_snapshot is None:
+            snapshot_freshness = "missing"
         elif not self._truth_snapshot_hash_matches(persisted_snapshot):
-            snapshot_state = "invalid"
+            snapshot_freshness = "invalid"
         elif self._truth_snapshot_stable_payload(
             persisted_snapshot
         ) != self._truth_snapshot_stable_payload(current_snapshot):
-            snapshot_state = "stale"
+            snapshot_freshness = "stale"
         else:
-            snapshot_state = "fresh"
+            snapshot_freshness = "fresh"
 
-        if snapshot_state == "missing":
-            state = "migration_pending"
-        elif snapshot_state in {"invalid", "stale"}:
-            state = snapshot_state
-        else:
-            state = current_snapshot.state or "ready"
+        state = current_snapshot.state or "ready"
 
         release_capability_map = {
             item.capability_id: item for item in current_snapshot.computed_capabilities
@@ -3313,14 +3328,14 @@ class ProgramService:
 
         detail = self._build_truth_ledger_detail(
             state=state,
-            snapshot_state=snapshot_state,
+            snapshot_state=snapshot_freshness,
             current_snapshot_state=current_snapshot.state or "ready",
             release_capabilities=release_capabilities,
             migration_pending_count=migration_pending_count,
         )
         next_required_actions = self._build_truth_ledger_next_actions(
             state=state,
-            snapshot_state=snapshot_state,
+            snapshot_state=snapshot_freshness,
             release_capabilities=release_capabilities,
             migration_pending_specs=migration_pending_specs,
             migration_pending_sources=migration_pending_sources,
@@ -3329,11 +3344,14 @@ class ProgramService:
 
         return {
             "state": state,
-            "snapshot_state": snapshot_state,
+            "snapshot_freshness": snapshot_freshness,
+            "snapshot_state": snapshot_freshness,
             "detail": detail,
             "next_required_actions": next_required_actions,
             "next_required_action": next_required_actions[0] if next_required_actions else "",
             "snapshot_hash": current_snapshot.snapshot_hash,
+            "observed_revision": current_snapshot.repo_revision,
+            "semantic_tree_identity": "unavailable",
             "release_targets": list(manifest.release_targets),
             "release_capabilities": release_capabilities,
             "migration_pending_count": migration_pending_count,
@@ -4138,15 +4156,12 @@ class ProgramService:
         validation_errors: list[str],
     ) -> list[str]:
         actions: list[str] = []
-        if snapshot_state in {"missing", "invalid", "stale"}:
-            actions.append(PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND)
-        elif validation_errors:
+        if validation_errors:
             actions.append("python -m ai_sdlc program validate")
         elif migration_pending_specs or migration_pending_sources or state == "migration_pending":
             actions.append(
                 "update program-manifest.yaml / source_registry for the pending truth items"
             )
-            actions.append(PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND)
         elif any(item.get("audit_state") != "ready" for item in release_capabilities) or (
             state not in {"", "ready"}
         ):
@@ -4163,19 +4178,10 @@ class ProgramService:
         migration_pending_count: int,
     ) -> str:
         if state == "ready":
-            return "truth snapshot is fresh and release targets are ready"
-        if snapshot_state == "missing":
-            return "truth snapshot has not been materialized"
-        if snapshot_state == "invalid":
-            return "persisted truth snapshot hash is invalid"
-        if snapshot_state == "stale":
-            if current_snapshot_state == "ready":
-                return (
-                    "persisted truth snapshot is stale; current recompute is ready. "
-                    "Refresh the snapshot as the terminal close-out step, then rerun "
-                    "program truth audit."
-                )
-            return "persisted truth snapshot is stale relative to current authoring/evidence"
+            detail = "truth snapshot is fresh and release targets are ready"
+            if snapshot_state in {"invalid", "stale"}:
+                return f"{detail}; truth snapshot freshness is {snapshot_state} (advisory)"
+            return detail
         prefix = (
             f"migration pending: {migration_pending_count}; "
             if migration_pending_count > 0
