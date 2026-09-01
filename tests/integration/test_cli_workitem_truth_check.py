@@ -272,6 +272,37 @@ class TestCliWorkitemTruthCheck:
         assert "src/mainline.py" not in payload["changed_paths"]
         assert _run(root, "git", "show-ref") == refs_before
 
+    def test_truth_check_uses_origin_main_when_clean_clone_lacks_local_main(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        root = tmp_path / "repo"
+        root.mkdir()
+        _init_repo(root)
+        base_revision = _commit_all(root, "init")
+        _set_origin_main(root, base_revision)
+        subprocess.run(
+            ["git", "checkout", "-b", "feature/clean-clone", base_revision],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            ["git", "branch", "-D", "main"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+        work_item_id = "219-mainline-truth-roi-contract"
+        _commit_formal_branch(root, work_item_id)
+        refs_before = _run(root, "git", "show-ref")
+
+        payload = _truth_payload(root, monkeypatch, work_item_id)
+
+        assert "refs/remotes/origin/main" in refs_before
+        assert payload["classification"] == "formal_freeze_only"
+        assert payload["execution_started"] is False
+        assert _run(root, "git", "show-ref") == refs_before
+
     @pytest.mark.parametrize("remote_state", ["missing", "local_ahead", "diverged"])
     def test_truth_check_keeps_local_main_when_origin_main_is_not_strictly_ahead(
         self,
