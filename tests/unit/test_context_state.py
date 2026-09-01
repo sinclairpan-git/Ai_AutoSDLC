@@ -50,6 +50,7 @@ def _write_handoff(
     goal: str = "Resume portable pack",
     state: str = "Ready",
     next_step: str = "Continue",
+    local: bool = False,
 ) -> None:
     content = (
         "# Continuity Handoff\n\n"
@@ -57,9 +58,11 @@ def _write_handoff(
         f"- Branch: {branch}\n\n## Key Decisions\n- Goal: section detail\n\n"
         f"## Exact Next Steps\n- {next_step}\n"
     )
+    state_dir = ".ai-sdlc/local" if local else ".ai-sdlc/state"
+    work_item_dir = ".ai-sdlc/local/work-items" if local else ".ai-sdlc/work-items"
     for path in (
-        root / ".ai-sdlc/state/codex-handoff.md",
-        root / ".ai-sdlc/work-items" / work_item_id / "codex-handoff.md",
+        root / state_dir / "codex-handoff.md",
+        root / work_item_dir / work_item_id / "codex-handoff.md",
     ):
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
@@ -254,6 +257,43 @@ class TestResumePack:
 
         assert loaded.current_stage == pack.current_stage
         assert not (tmp_path / ".ai-sdlc/local/resume-pack.yaml").exists()
+
+    def test_load_resume_pack_prefers_local_pair_over_legacy_pair(
+        self, tmp_path: Path
+    ) -> None:
+        self._prepare_checkpoint(tmp_path)
+        pack = build_resume_pack(tmp_path)
+        assert pack is not None
+        local_pack = pack.model_copy(update={"timestamp": "local-pack"})
+        legacy_pack = pack.model_copy(update={"timestamp": "legacy-pack"})
+        local_root = tmp_path / ".ai-sdlc/local/resume-pack.yaml"
+        local_scoped = tmp_path / ".ai-sdlc/local/work-items/001/resume-pack.yaml"
+        legacy_root = tmp_path / ".ai-sdlc/state/resume-pack.yaml"
+        legacy_scoped = tmp_path / ".ai-sdlc/work-items/001/resume-pack.yaml"
+        for path, value in (
+            (local_root, local_pack),
+            (local_scoped, local_pack),
+            (legacy_root, legacy_pack),
+            (legacy_scoped, legacy_pack),
+        ):
+            YamlStore.save(path, value)
+        before = (legacy_root.read_bytes(), legacy_scoped.read_bytes())
+
+        loaded = load_resume_pack(tmp_path)
+
+        assert loaded.timestamp == "local-pack"
+        assert (legacy_root.read_bytes(), legacy_scoped.read_bytes()) == before
+
+    def test_build_resume_pack_prefers_local_handoff_over_legacy_handoff(
+        self, tmp_path: Path
+    ) -> None:
+        _seed_linked_checkpoint(tmp_path)
+        _write_handoff(tmp_path, branch="legacy/branch")
+        _write_handoff(tmp_path, branch="local/branch", local=True)
+
+        pack = build_resume_pack(tmp_path)
+
+        assert pack.current_branch == "local/branch"
 
     def test_load_resume_pack_round_trip(self, tmp_path: Path) -> None:
         self._prepare_checkpoint(tmp_path)
