@@ -138,14 +138,14 @@ def _ensure_local_cache_excluded(root: Path) -> None:
     exclude_path = Path(git_path)
     if not exclude_path.is_absolute():
         exclude_path = root / exclude_path
-    existing = exclude_path.read_text(encoding="utf-8") if exclude_path.exists() else ""
-    if ".ai-sdlc/local/" in existing.splitlines():
+    existing = exclude_path.read_bytes() if exclude_path.exists() else b""
+    if b".ai-sdlc/local/" in existing.splitlines():
         return
 
     exclude_path.parent.mkdir(parents=True, exist_ok=True)
-    separator = "" if not existing or existing.endswith("\n") else "\n"
-    exclude_path.write_text(
-        f"{existing}{separator}.ai-sdlc/local/\n", encoding="utf-8"
+    separator = b"" if not existing or existing.endswith((b"\n", b"\r")) else b"\n"
+    exclude_path.write_bytes(
+        existing + separator + b".ai-sdlc/local/\n"
     )
 
 

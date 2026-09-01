@@ -74,6 +74,21 @@ class TestInitProject:
         assert first_backfill == "existing-rule/\n.ai-sdlc/local/\n"
         assert exclude.read_text(encoding="utf-8") == first_backfill
 
+    def test_init_preserves_crlf_exclude_prefix_when_adding_local_cache_rule(
+        self, tmp_project_dir: Path
+    ) -> None:
+        exclude = self._init_git_repo(tmp_project_dir)
+        original = b"# existing rule\r\nexisting-rule/\r\n"
+        exclude.write_bytes(original)
+
+        init_project(tmp_project_dir)
+        init_project(tmp_project_dir)
+
+        written = exclude.read_bytes()
+        assert written.startswith(original)
+        assert written.count(b".ai-sdlc/local/") == 1
+        assert written == original + b".ai-sdlc/local/\n"
+
     def test_init_non_git_project_does_not_create_git_metadata(
         self, tmp_project_dir: Path
     ) -> None:
