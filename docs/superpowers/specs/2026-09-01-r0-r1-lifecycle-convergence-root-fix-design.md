@@ -78,8 +78,8 @@ R0+R1 将当前混在一起的五类事实拆开：
 
 - `SUSPENDED + contained_in_main=true`：正式基线已进入主线，当前明确延期，不启动 execute。
 - `FAILED + contained_in_main=true`：正式基线已进入主线，sponsor No-Go，终止本项。
-- `DEV_VERIFYING + approved review tuple + contained_in_main=false`：账本保持不变，只读投影为 `effective_status=DEV_REVIEWED`，等待合并。
-- `DEV_VERIFYING + approved review tuple + contained_in_main=true`：只读投影为 `effective_status=COMPLETED`。
+- `DEV_VERIFYING + ApprovedReviewIdentity + contained_in_main=false`：账本保持不变，只读投影为 `effective_status=DEV_REVIEWED`，等待 readiness/check 收口。
+- `DEV_VERIFYING + MergeReadyTuple + contained_in_main=true`：只读投影为 `effective_status=COMPLETED`。
 - `formal_freeze_only`：仅说明没有实现证据，不能推导“必须开始 execute”。
 
 所有公开消费者必须调用同一个 `resolve_lifecycle_view(...)`，不得直接用 raw `WorkItem.status`、truth classification 或 checkpoint stage 推导下一步。统一返回至少包含：
@@ -93,7 +93,7 @@ contained_in_main
 writeback_required
 ```
 
-PR 流程在送审前把持久状态冻结于 `DEV_VERIFYING`；review 通过后不得再提交 `work-item.yaml` 状态变化。`effective_status=DEV_REVIEWED` 只能由 `DEV_VERIFYING + approved review tuple` 投影，`effective_status=COMPLETED` 再增加 verified merge observation。现有持久 `DEV_REVIEWED/COMPLETED` 仅作为 legacy/non-PR 兼容状态，truth、close、status、Program Truth、release 与 next-action 均不得绕过 resolver 直接读取它们。
+PR 流程在送审前把持久状态冻结于 `DEV_VERIFYING`；review 通过后不得再提交 `work-item.yaml` 状态变化。`effective_status=DEV_REVIEWED` 只能由 `DEV_VERIFYING + ApprovedReviewIdentity` 投影；`effective_status=COMPLETED` 必须再具备 `MergeReadyTuple + verified merge observation`。现有持久 `DEV_REVIEWED/COMPLETED` 仅作为 legacy/non-PR 兼容状态，truth、close、status、Program Truth、release 与 next-action 均不得绕过 resolver 直接读取它们。
 
 ## 6. R0：生命周期与合并闭环
 
@@ -153,7 +153,7 @@ terminal remediation 还必须带 `single_change`、`investment_cap` 与 `termin
 
 `FAILED` 无出边。`DOCS_BASELINE/RESUMED -> DEV_EXECUTING` 只能调用上述事务入口；禁止任何直接状态写入绕过 decision 校验。close stage 从 `_AUTHORIZED_STAGES` 删除，truth classifier、handoff 文案和 checkpoint stage 均无权代替执行授权。
 
-`ARCHIVING`、`KNOWLEDGE_REFRESHING`、持久 `DEV_REVIEWED` 和持久 `COMPLETED` 保留给 legacy/non-PR 流程。新的 PR 流程若有 archive 或 knowledge refresh 工作，必须在 `DEV_VERIFYING` 内完成；review tuple 通过后只投影有效 `DEV_REVIEWED`，不执行持久 transition，也不设计不存在的“回到可合并终点”transition。
+`ARCHIVING`、`KNOWLEDGE_REFRESHING`、持久 `DEV_REVIEWED` 和持久 `COMPLETED` 保留给 legacy/non-PR 流程。新的 PR 流程若有 archive 或 knowledge refresh 工作，必须在 `DEV_VERIFYING` 内完成；`ApprovedReviewIdentity` 成立后只投影有效 `DEV_REVIEWED`，不执行持久 transition，也不设计不存在的“回到可合并终点”transition。
 
 ### 6.3 evidence classification 不生成执行授权
 
@@ -177,7 +177,7 @@ terminal remediation 还必须带 `single_change`、`investment_cap` 与 `termin
 | --- | --- | --- | --- |
 | `formal-defer` | `SUSPENDED` | 正式文档、defer 决策、必要 review/check；实现任务 not-applicable | 保持 `SUSPENDED` |
 | `formal-no-go` | `FAILED` | 正式文档、No-Go 决策、必要 review/check；实现任务 not-applicable | 保持 `FAILED` |
-| `implementation` | 持久 `DEV_VERIFYING`，有效 `DEV_REVIEWED` | 授权范围内任务、验收、验证、review/check | merge observation 成立后投影 `COMPLETED` |
+| `implementation` | 持久 `DEV_VERIFYING`；`ApprovedReviewIdentity` 投影有效 `DEV_REVIEWED` | 授权范围内任务、验收、验证与 required checks；通过后形成 `MergeReadyTuple` | merge observation 成立后投影 `COMPLETED` |
 
 共同规则：
 
@@ -201,7 +201,7 @@ reconcile 接收 PR 编号或本地 immutable review run，从 provider/Git 读�
 - merge result 是否仍可从当前 target branch 到达。
 - 持久生命周期状态。
 
-当持久 `DEV_VERIFYING` 已由 approved review tuple 投影为有效 `DEV_REVIEWED`，且 reviewed payload 已包含于 target main 时，CLI 返回：
+当持久 `DEV_VERIFYING` 已由 `ApprovedReviewIdentity` 投影为有效 `DEV_REVIEWED`，`MergeReadyTuple` 已证明候选可合并，且 reviewed payload 已包含于 target main 时，CLI 返回：
 
 ```text
 effective_status=completed
@@ -213,26 +213,40 @@ writeback_required=false
 
 ### 6.5 semantic payload identity
 
-R0 不再用“当前提交 SHA 必须已写入当前提交”这种自引用条件。每次允许合并的候选必须绑定同一个 review tuple：
+R0 不再用“当前提交 SHA 必须已写入当前提交”这种自引用条件。评审身份和合并就绪拆成两个外部只读证明。
+
+`ApprovedReviewIdentity` 只证明“谁审了什么”，不要求 checks 已经结束：
 
 ```text
 PR identity
 base OID
 reviewed head OID
 complete semantic payload digest
+approved review verdict
+expected required-check context set
+policy version
+```
+
+`MergeReadyTuple` 只在 `ApprovedReviewIdentity` 已投影有效 `DEV_REVIEWED` 后生成：
+
+```text
+ApprovedReviewIdentity digest
+current head OID and semantic payload digest
+readiness-core result
 required-check context set and successful results
 policy version
 ```
 
 完整 payload digest 覆盖 PR base 到 reviewed head 的全部 tracked 语义改动，包括新增、删除、rename、Git object type、file mode、路径和 blob 内容。只有已迁移到 ignored local path、且所有消费者都不能据其授权动作的 cache 才可排除。legacy tracked handoff/resume 在评审后冻结并继续计入 payload；不得一边让代理消费 tracked 指令，一边把它排除在评审身份之外。
 
-pre-merge readiness 强制验证：
+pre-merge readiness 分两步且禁止递归：
 
-- 当前 PR head OID 或其完整 semantic digest 与 reviewed/check tuple 一致。
-- required checks 全部绑定同一候选，无旧 head 成功结果复用。
-- 当前 PR payload 不比 reviewed payload 多出任何 tracked 语义项。
+1. `readiness-core` 验证 `ApprovedReviewIdentity`、当前 head/payload、生命周期有效状态、任务、授权和非递归本地门禁；它不读取 `MergeReadyTuple`，也不要求自己的 GitHub check 结果已经存在。
+2. 外部只读 aggregator 在 `readiness-core` 结束后收集 required-check 结果并形成 `MergeReadyTuple`。aggregator 本身不是 required-check context；若 `close-check` 是 required check，它只承载 `readiness-core`，不得再验证 aggregate tuple。
 
-post-merge 不拿“当前 main 同一路径的最终内容”直接比较，而是读取 provider 的实际 merge result，在**合并时点**比较 reviewed payload 与 merged PR payload，并确认：
+最终 tuple 必须证明当前 PR head OID 或完整 semantic digest 与评审身份一致、required checks 全部绑定同一候选、无旧 head 成功结果复用，且当前 PR payload 不比 reviewed payload 多出任何 tracked 语义项。
+
+post-merge 绑定 `MergeReadyTuple`，不拿“当前 main 同一路径的最终内容”直接比较，而是读取 provider 的实际 merge result，在**合并时点**比较 reviewed payload 与 merged PR payload，并确认：
 
 - 无缺失、无额外语义项；
 - squash/rebase 后 semantic patch 等价；
@@ -257,7 +271,7 @@ sponsor 若批准最后一次有界处理，必须同时冻结：
 
 sponsor 可以无改动风险接受 `H2`、延期或 No-Go，也可以授权唯一 terminal remediation `H3`。`H3` 不是新的常规 round：它只处理冻结 finding 及直接回归面，只接受一次定向复评和 required checks；未通过即 `SUSPENDED/FAILED`，不得产生 `H4`。新的高风险安全/数据损坏证据可以 fail closed，但结果是终止或重新立项，不是给当前 PR 增加 head。
 
-为避免 sponsor 决策本身再次改变已评审 head，review-budget 终局使用现有 provider PR review/approval 或现有 local immutable review run 记录，并绑定当前 review tuple：
+为避免 sponsor 决策本身再次改变已评审 head，review-budget 终局使用现有 provider PR review/approval 或现有 local immutable review run 记录，并绑定当前 `ApprovedReviewIdentity`：
 
 - 无改动风险接受 `H2`：记录 merge approval，不修改 repo。
 - 授权 `H3`：在 provider 决策中冻结唯一改动、投入上限和终止结果；`H3` 内的 lifecycle mutation 仍按 6.2 的账本 CAS 执行。
@@ -362,7 +376,8 @@ DOCS_BASELINE
   -> DEV_EXECUTING
   -> DEV_VERIFYING
   -> semantic freeze; work-item.yaml remains DEV_VERIFYING
-  -> reviewer gate approved; effective_status=DEV_REVIEWED
+  -> reviewer gate approved; ApprovedReviewIdentity projects effective_status=DEV_REVIEWED
+  -> readiness-core and required checks produce MergeReadyTuple
   -> pre-merge readiness passes with merge_pending=true
   -> merge
   -> read-only reconcile confirms semantic payload in main
@@ -425,8 +440,9 @@ initial review H0
 - WI225 的已有 defer 决策精确解析为 `SUSPENDED`，不再输出 start execute。
 - sponsor No-Go 映射为 `FAILED`，close-check 对未执行任务返回 not-applicable，而非缺少实现证据 blocker。
 - `DOCS_BASELINE/RESUMED -> DEV_EXECUTING` 在缺少同一 formal digest/scope 的显式授权时失败；close stage 永不授权 execute。
-- formal-defer、formal-no-go、implementation 三种 readiness profile 分别接受持久 `SUSPENDED`、持久 `FAILED`、以及“持久 `DEV_VERIFYING` + 有效 `DEV_REVIEWED`”；只差合并时成功并返回 `merge_pending=true`。
+- formal-defer、formal-no-go、implementation 三种 readiness profile 分别接受持久 `SUSPENDED`、持久 `FAILED`、以及“持久 `DEV_VERIFYING` + `ApprovedReviewIdentity` 投影的有效 `DEV_REVIEWED`”；implementation 还必须生成非递归 `MergeReadyTuple`，只差合并时成功并返回 `merge_pending=true`。
 - reviewer approval 不修改 `work-item.yaml`；review 前后 `git status --porcelain` 与候选 head 均不变化。
+- `readiness-core` 不依赖自身 check 结果，`MergeReadyTuple` aggregator 不在 required-check context 集合中。
 - 未合并候选永远不返回 `effective_status=COMPLETED`。
 - fast-forward、merge commit、squash、rebase 四类合并策略均能以合并时点 semantic payload 正确判断 contained。
 - 评审后追加任一 tracked 语义路径、复用旧 head checks 或 merge conflict 引入语义差异时 fail closed。
@@ -452,7 +468,7 @@ initial review H0
 
 1. 验证 legacy 只读查询不建账，显式 sponsor mutation 才按给定 initial status 初始化。
 2. sponsor defer、No-Go、execute 三种路径各自进入正确状态。
-3. execute 路径完成 review tuple 绑定和 pre-merge readiness。
+3. execute 路径依次形成 `ApprovedReviewIdentity`、非递归 `MergeReadyTuple` 和 pre-merge readiness。
 4. 用参数化 Git fixture 覆盖四种合并策略，并用一条 clean-clone E2E 验证只读 reconcile。
 5. 在 shared checkout、fresh clone 和仅远端 ref 可见环境中得到相同结论。
 6. 全流程不创建 post-merge records/truth closeout PR。
@@ -466,14 +482,14 @@ initial review H0
 - 只承载动态 inventory、ignored continuity cache、live/ignored truth recompute、legacy tracked snapshot/advisory 兼容及直接测试。
 - 同一 PR 登记本设计文档，但不临时把 `1174` 改成 `1175`；测试改为集合不变量后自然通过。
 - 本地候选门禁：`verify constraints`、handoff unit/integration、Program Service 定向单测、根 manifest 集成测试、`git diff --check`；稳定候选只运行一次全量测试。
-- 评审 tuple 中冻结 GitHub target branch 当时要求的完整 required-check context 集合，所有结果必须绑定当前候选。
+- `ApprovedReviewIdentity` 冻结 GitHub target branch 当时要求的完整 check context 集合，`MergeReadyTuple` 收集的所有成功结果必须绑定当前候选。
 - 合并后只读验收：handoff update 与 truth recompute 均为零 tracked diff。
 
 ### PR2：R0 lifecycle transaction
 
 - 只承载 sponsor CAS、完整 transition/readiness matrix、唯一 `LifecycleView`、review/merge tuple、close/reconcile 及直接测试。
 - 本地候选门禁：`verify constraints`、state machine、execute authorization、truth/close、PR round limit、semantic merge matrix、`git diff --check`；稳定候选只运行一次全量测试。
-- 同样冻结并验证 GitHub required-check context 集合，禁止复用旧 head 成功结果。
+- 同样通过 `ApprovedReviewIdentity` 冻结 required-check context 集合，再由 `MergeReadyTuple` 验证结果，禁止复用旧 head 成功结果。
 - 合并后只在隔离 clone 中运行 reconcile；重复运行零写回，不追加 records PR。
 
 PR1 合并后的过渡主线只改变 evidence writer/验证契约，不改变 lifecycle verdict；R0 未合并前仍不授权新特性。PR2 从这个无 tracked write-amplification 的基线启动。
