@@ -95,6 +95,15 @@ capability_closure_audit:
   reviewed_at: '2026-04-18'
   open_clusters: []
 source_registry:
+- path: docs/superpowers/specs/2026-09-01-r0-r1-lifecycle-convergence-root-fix-design.md
+  source_type: design_doc
+  truth_layer: design
+- path: docs/superpowers/plans/2026-09-01-r1-evidence-substrate.md
+  source_type: design_doc
+  truth_layer: design
+- path: docs/superpowers/plans/2026-09-01-r0-lifecycle-transaction.md
+  source_type: design_doc
+  truth_layer: design
 - path: docs/FRAMEWORK_ROADMAP.zh-CN.md
   source_type: design_doc
   truth_layer: design

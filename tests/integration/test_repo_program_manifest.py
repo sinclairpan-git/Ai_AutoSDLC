@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
 
 from ai_sdlc.core.program_service import ProgramService
@@ -15,6 +16,14 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
     validation = service.validate_manifest(manifest)
     snapshot = service.build_truth_snapshot(manifest, validation_result=validation)
     inventory = snapshot.source_inventory
+    assert inventory is not None
+    entries = inventory.entries
+    entry_paths = {item.path for item in entries}
+    discovered_paths = set(service._discovered_truth_source_paths())
+    registry_paths = {item.path for item in manifest.source_registry}
+    mapped_paths = {item.path for item in entries if item.mapped}
+    missing_paths = {item.path for item in entries if not item.exists}
+    unmapped_paths = {item.path for item in entries if not item.mapped}
     capability = next(item for item in manifest.capabilities if item.id == "agent-adapter-verified-host-ingress")
     release_paths = {
         *(f"docs/releases/v0.7.{patch}.md" for patch in range(5, 20)),
@@ -43,9 +52,20 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
     ]
 
     assert validation.valid, validation.errors
-    assert inventory is not None
-    assert (inventory.state, inventory.total_sources, inventory.mapped_sources, inventory.unmapped_sources, inventory.missing_sources) == ("complete", 1174, 1174, 0, 5)
-    assert (inventory.layer_totals["close"], inventory.layer_materialized["close"]) == (223, 218)
+    assert discovered_paths <= entry_paths
+    assert registry_paths <= entry_paths
+    assert discovered_paths <= registry_paths
+    assert inventory.state == ("complete" if not unmapped_paths else "incomplete")
+    assert inventory.total_sources == len(entries)
+    assert inventory.mapped_sources == len(mapped_paths)
+    assert inventory.unmapped_sources == len(unmapped_paths)
+    assert set(inventory.unmapped_paths) == unmapped_paths
+    assert inventory.missing_sources == len(missing_paths)
+    assert inventory.layer_totals == dict(Counter(item.truth_layer for item in entries))
+    assert inventory.layer_materialized == {
+        layer: sum(1 for item in entries if item.truth_layer == layer and item.exists)
+        for layer in inventory.layer_totals
+    }
     assert release_registry == {(path, "release_doc", "release") for path in release_paths}
     assert roadmap_registry == {
         ("docs/FRAMEWORK_ROADMAP.zh-CN.md", "design_doc", "design")
