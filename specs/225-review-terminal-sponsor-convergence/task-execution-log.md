@@ -91,9 +91,12 @@ CLI 预读中曾使用大写阶段名，实际 CLI 明确只接受小写；随�
 - exact head `c481cf21a89062646be8e5459a48b8affec2a6b6` 的 Codex re-review 提出一个 P2：`FR-225-008` 仍指示 formal 更新 roadmap/defect，与同一规格和计划的只读边界冲突，未来执行会重引入 round 1 P1。
 - 聚焦修复只改 `FR-225-008`，把允许写入面精确收窄到 WI225 spec/plan/tasks/task-execution-log、Program Truth 固定库存期望和 continuity；roadmap/defect 明确只读。
 - 终局验证：normative scope 只保留 formal controls，聚合路径 `extra=[]`；constraints 无 blocker；plan-check drift NO；program validate PASS；truth audit fresh/blocked 且原 16 blockers、`1174/1174 mapped`、missing 5、close `218/223` 不变；manifest regression `1 passed in 131.35s`；`git diff --check` PASS。
-- 本次计为第 2 个、也是最后一个 GitHub review repair round。终局 re-review 只允许验证该稳定 finding 及直接回归；如仍有可操作问题，停止自动修复并进入 terminal sponsor decision，不申请第三轮。
+- exact head `194eb0ea40ae5e7e6b77d61a0780533c6cbda8f6` 的终局 re-review 又指出 `tasks.md` Batch 3 总览仍写“同步 roadmap”。该项与前述 P1/P2 具有相同签名和风险面，是 round 2 未完成的语义残留，不是第三个新 finding。
+- 轮次纠偏：repair round 只有在同一 stable finding 的规范、任务、总览和直接回归面完成穷尽闭包后才算完成；把漏修残留另计一轮属于错误。用户授权完成 round 2，本次只删除 Batch 3 总览中的 roadmap 写入指令。
+- 闭包验证：穷尽扫描 WI225 spec/plan/tasks 的 11 处 roadmap/defect 引用，危险写入指令为 0；Formal 聚合路径 `extra=[]`；constraints 无 blocker；plan-check drift NO；program validate PASS；truth audit fresh/blocked 且原 16 blockers、`1174/1174 mapped`、missing 5、close `218/223` 不变；manifest regression `1 passed in 148.57s`；`git diff --check` PASS。
+- round 2 完成后只允许一次稳定 finding 终局复审；若出现不同签名的新问题，进入 terminal sponsor decision，不扩大本次修复。
 
 #### 2.9 下一步
 
-1. 提交并推送最后一轮聚焦修复；验证 exact-head Formal classification。
-2. 回复原 inline thread并请求一次终局 exact-head Codex re-review。
+1. 提交并推送已完成闭包的 round 2，验证 exact-head Formal classification。
+2. 回复原 inline thread并请求一次稳定 finding 终局 exact-head re-review。

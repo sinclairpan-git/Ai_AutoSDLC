@@ -12,7 +12,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 ```text
 Batch 1: 冻结精确主线与真实复发层
 Batch 2: 完成方案/ROI admission 与唯一候选
-Batch 3: 同步 roadmap/Program Truth、验证、独立评审与 Formal PR
+Batch 3: 同步 Program Truth 与 formal controls、验证、独立评审与 Formal PR
 ```
 
 三个批次串行执行。任何规则或代码实现只记录为后续候选，不在 WI225 中落地。
