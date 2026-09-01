@@ -358,6 +358,6 @@ repo、signer workflow、tag ref/commit 与 build trigger。WI224 只允许修�
 - [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。
 - [ ] D2/WI221 已完成 11/16 admission audit；当前保持真实 blocked，等待用户决定是否另行批准多能力补缺范围。
-- [ ] G1 另立 formal governance work item，评估“稳定 finding 对比 + 两轮后 terminal sponsor decision”的最小落地；不得在 WI224 closeout 中修改通用 runtime、review schema 或状态机。
+- [ ] G1 已进入 WI225 formal/admission：现有稳定 finding history、`needs_user` 与终态 report/attestation 足够复用；唯一后续候选是补强根 `AGENTS.md` 的 repo-local PR/heartbeat 协议，总投入上限 0.5 人日。规则 execute 未授权，不得修改 WI224、通用 runtime、review schema 或状态机。
 
 当检查表与聊天记忆冲突时，以远端主线事实、正式 work item 和本文件最近一次经评审的更新为准。

@@ -5,21 +5,20 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/224-native-release-attestation-r02/spec.md
-  plan_path: specs/224-native-release-attestation-r02/plan.md
-  tasks_path: specs/224-native-release-attestation-r02/tasks.md
+  spec_path: specs/225-review-terminal-sponsor-convergence/spec.md
+  plan_path: specs/225-review-terminal-sponsor-convergence/plan.md
+  tasks_path: specs/225-review-terminal-sponsor-convergence/tasks.md
   active_files:
-  - specs/224-native-release-attestation-r02/tasks.md
-  - specs/224-native-release-attestation-r02/spec.md
-  context_summary: 'Goal: 完成 PR #195 两项 records/continuity P2 聚焦整改并重新请求 exact-head
-    review | State: PR #195 exact head 1f932591 的 Codex review 完成并提出两项 P2；roadmap
-    恢复清单已改为 R02 已合并/其余 11 路未授权，continuity 正刷新到当前 review/remediation 状态 | Next: 刷新
-    Program Truth dry-run/execute；运行 manifest、constraints、plan/truth/branch/close/continuity/diff；amend/push，回复两个
-    inline thread，并对新 head 请求一次 review'
-current_branch: codex/224-native-release-attestation-r02-post-merge-truth-closeout
+  - specs/225-review-terminal-sponsor-convergence/tasks.md
+  - specs/225-review-terminal-sponsor-convergence/spec.md
+  context_summary: 'Goal: 完成 WI225 G1 formal/admission，冻结两轮后 terminal sponsor decision
+    的唯一 repo-local 候选 | State: T11-T32、全量验证、独立 focused re-review 与最终 Program Truth/manifest
+    回归均已完成；Formal/Admission Ready，待 commit/push/PR | Next: commit/push 当前唯一 Formal/Admission
+    变更集；创建 Formal PR、请求一次 exact-head Codex review、启动约五分钟 heartbeat'
+current_branch: feature/225-review-terminal-sponsor-convergence-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-08-31T15:13:26+00:00'
+timestamp: '2026-09-01T02:00:01+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-08-31T07:12:30+00:00'
-checkpoint_fingerprint: b47fe77b2fabc3abb8a72b3052929c7cf195b740a4de40d9c5fad7c378e6aab2
+checkpoint_last_updated: '2026-09-01T01:02:26+00:00'
+checkpoint_fingerprint: 5dc34ee31b457a955e3e5d4ab41c9bd41db75670b2766a7dfc0ca14002bbc7e9

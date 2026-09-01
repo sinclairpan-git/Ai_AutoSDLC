@@ -1,5 +1,5 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-08-31T07:12:30+00:00'
+pipeline_last_updated: '2026-09-01T01:02:26+00:00'
 current_stage: close
 feature:
   id: 204-program-finalization-command-family-reduction-candidate
@@ -43,6 +43,6 @@ completed_stages:
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 224-native-release-attestation-r02
-linked_plan_uri: specs/224-native-release-attestation-r02/plan.md
-last_synced_at: '2026-08-31T07:12:30+00:00'
+linked_wi_id: 225-review-terminal-sponsor-convergence
+linked_plan_uri: specs/225-review-terminal-sponsor-convergence/plan.md
+last_synced_at: '2026-09-01T01:02:26+00:00'

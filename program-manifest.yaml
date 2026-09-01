@@ -2090,12 +2090,15 @@ specs:
   path: specs/224-native-release-attestation-r02
   depends_on:
   - 222-first-user-twelve-route-e2e-contract
+- id: 225-review-terminal-sponsor-convergence
+  path: specs/225-review-terminal-sponsor-convergence
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-08-31T15:20:38Z'
+  generated_at: '2026-09-01T01:51:02Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 1f932591
-  authoring_hash: fa4f8ac32ab424925d9b71d7036d5e1543ae2995daad93be8f44a95cbcf8b578
+  repo_revision: e8a73ec4
+  authoring_hash: 5f683ed4d09e81e62a6837ee588b96501e066d0df95a7ba68ad9f6cf7e7f2232
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 694fbf058775409c9ac373054323501942cebddcce74f540b4a8df9e9c2ce5a9
@@ -2137,7 +2140,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 892a161f0ca291f8e7378926b3801eee6a5c0b1cc133a45a759abe5e4502788a
+  snapshot_hash: 11a59b02d783fdebda3bfe8dd4771546205ce6f581484bfa8ef8f92fa0522c7d
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2167,30 +2170,30 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1169
-    mapped_sources: 1169
+    total_sources: 1174
+    mapped_sources: 1174
     unmapped_sources: 0
-    missing_sources: 4
-    phase_signal_count: 3833
-    deferred_signal_count: 6843
-    non_goal_signal_count: 403
+    missing_sources: 5
+    phase_signal_count: 3837
+    deferred_signal_count: 6865
+    non_goal_signal_count: 404
     layer_totals:
       blueprint: 1
-      spec: 222
-      plan: 222
-      tasks: 222
-      execution: 222
-      close: 222
+      spec: 223
+      plan: 223
+      tasks: 223
+      execution: 223
+      close: 223
       design: 9
       requirements: 2
       defect: 3
       release: 44
     layer_materialized:
       blueprint: 1
-      spec: 222
-      plan: 222
-      tasks: 222
-      execution: 222
+      spec: 223
+      plan: 223
+      tasks: 223
+      execution: 223
       close: 218
       design: 9
       requirements: 2
@@ -12196,6 +12199,51 @@ truth_snapshot:
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0
+    - path: specs/225-review-terminal-sponsor-convergence/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 225-review-terminal-sponsor-convergence
+      phase_signal_count: 1
+      deferred_signal_count: 7
+      non_goal_signal_count: 1
+    - path: specs/225-review-terminal-sponsor-convergence/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 225-review-terminal-sponsor-convergence
+      phase_signal_count: 1
+      deferred_signal_count: 4
+      non_goal_signal_count: 0
+    - path: specs/225-review-terminal-sponsor-convergence/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 225-review-terminal-sponsor-convergence
+      phase_signal_count: 1
+      deferred_signal_count: 5
+      non_goal_signal_count: 0
+    - path: specs/225-review-terminal-sponsor-convergence/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 225-review-terminal-sponsor-convergence
+      phase_signal_count: 1
+      deferred_signal_count: 4
+      non_goal_signal_count: 0
+    - path: specs/225-review-terminal-sponsor-convergence/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 225-review-terminal-sponsor-convergence
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
     - path: docs/FRAMEWORK_ROADMAP.zh-CN.md
       source_type: design_doc
       truth_layer: design
@@ -12203,7 +12251,7 @@ truth_snapshot:
       exists: true
       mapping_ref: docs/FRAMEWORK_ROADMAP.zh-CN.md
       phase_signal_count: 19
-      deferred_signal_count: 21
+      deferred_signal_count: 22
       non_goal_signal_count: 0
     - path: docs/SPEC_SPLIT_AND_PROGRAM.zh-CN.md
       source_type: requirement_doc
@@ -12239,7 +12287,7 @@ truth_snapshot:
       exists: true
       mapping_ref: docs/framework-defect-backlog.zh-CN.md
       phase_signal_count: 13
-      deferred_signal_count: 85
+      deferred_signal_count: 86
       non_goal_signal_count: 3
     - path: docs/plan-check-cli-spec.zh.md
       source_type: design_doc
