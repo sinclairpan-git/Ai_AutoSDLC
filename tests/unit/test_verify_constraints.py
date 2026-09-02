@@ -2765,6 +2765,26 @@ def test_agent_instructions_block_missing_agents_in_framework_source(
     assert any("AGENTS.md CLI path missing" in x for x in blockers)
 
 
+def test_root_agents_bounds_local_pr_review_convergence() -> None:
+    root = Path(__file__).resolve().parents[2]
+    text = (root / "AGENTS.md").read_text(encoding="utf-8")
+    required = (
+        "before every Codex review or re-review request",
+        "one focused candidate-preparation correction batch",
+        "at most two normal review repair rounds",
+        "tracked candidate delta",
+        "one no-delta infrastructure rerun",
+        "approve-one-bounded-action",
+        "unique_delta",
+        "effort_cap",
+        "terminal_outcome",
+        "required GitHub checks",
+        "delete the heartbeat",
+        "no records-only PR",
+    )
+    assert all(marker in text for marker in required)
+
+
 def test_agent_instructions_accept_current_init_first_path(tmp_path: Path) -> None:
     mem = tmp_path / ".ai-sdlc" / "memory"
     mem.mkdir(parents=True)

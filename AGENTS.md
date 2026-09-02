@@ -76,13 +76,24 @@ target, not the controlling framework for local repository development.
 When a Codex change is ready for mainline:
 
 - Push the branch and open a PR.
-- Request Codex review on the PR.
-- Immediately create or keep a heartbeat at about five-minute intervals for the
-  PR. The heartbeat must monitor Codex review results and required GitHub check
-  status until the PR is merged or a user-input blocker is reached.
-- If review finds actionable issues, implement focused fixes on the same branch,
-  rerun relevant local tests, push, re-request Codex review, and continue the
-  heartbeat monitoring loop.
+- Run the explicit plan command preflight before every Codex review or re-review request: `uv run ai-sdlc workitem plan-check --plan <explicit-plan>
+  --check-ai-sdlc-commands`; do not request a review or start a heartbeat before
+  its first pass.
+- The preflight reports all errors once; allow one focused candidate-preparation correction batch only. A second failure stops for `needs_user`.
+- An actionable finding plus its tracked candidate delta, direct regression, and
+  re-review is one normal repair round. Code, tests, rules, workflows, and
+  formal-record deltas count; allow at most two normal review repair rounds.
+- For infrastructure failure on the same exact HEAD, allow one no-delta infrastructure rerun only; stop on a repeat or an un-attributable failure.
+- After two rounds, pause the heartbeat. Sponsor may only `stop` or
+  `approve-one-bounded-action`; approval freezes `unique_delta`, `effort_cap`,
+  and `terminal_outcome`.
+- Terminal verification is for the exact HEAD: Codex review, direct regression,
+  and required GitHub checks. A deterministic failure executes the terminal
+  outcome with no further modification.
+- On PASS, known-blocked, or No-Go, delete the heartbeat. Do not grant a second
+  exception: no records-only PR.
+- New safety, privacy, data-destruction, or release-integrity evidence may go
+  directly to No-Go without adding repair rounds.
 - If Codex review reports no actionable issues and all required checks pass,
   mark the PR ready when needed and merge it into `main`.
 - This protocol is a local development rule for this repository only; do not
