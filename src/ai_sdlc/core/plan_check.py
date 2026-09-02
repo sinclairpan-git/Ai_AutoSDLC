@@ -67,7 +67,7 @@ def _extract_ai_sdlc_command_sources(markdown: str, errors: list[str]) -> tuple[
 def _tokenize_canonical_argv(text: str) -> tuple[tuple[str, ...], str | None]:
     if "\n" in text or "\r" in text:
         return (), "newline"
-    for character, reason in (("|", "pipe"), ("&", "command separator"), (";", "command separator"), ("<", "redirect"), (">", "redirect"), ("$", "variable expansion"), ("`", "backtick")):
+    for character, reason in (("$", "variable expansion"), ("`", "backtick")):
         if character in text:
             return (), reason
     tokens: list[str] = []
@@ -90,8 +90,8 @@ def _tokenize_canonical_argv(text: str) -> tuple[tuple[str, ...], str | None]:
             continue
         end = cursor
         while end < length and text[end] not in _ASCII_WHITESPACE:
-            if text[end] in "\"'":
-                return (), "quoted/unquoted concatenation"
+            if text[end] in "\"'|&;<>":
+                return (), {"|": "pipe", "&": "command separator", ";": "command separator", "<": "redirect", ">": "redirect"}.get(text[end], "quoted/unquoted concatenation")
             if text[end] == "\\":
                 return (), "escape"
             end += 1
@@ -148,6 +148,8 @@ def _validate_leaf_argv(command: object, argv: tuple[str, ...]) -> str | None:
     index = 0
     while index < len(argv):
         token = argv[index]
+        if token in (context_settings.get("help_option_names") or ("--help",)):
+            return None
         if token == "--":
             return "extra token: --"
         if token.startswith("-") and not re.fullmatch(r"-\d+(?:\.\d+)?", token):

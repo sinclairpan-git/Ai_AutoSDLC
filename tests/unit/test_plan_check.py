@@ -214,11 +214,13 @@ def test_command_surface_accepts_three_wrappers_and_secondary_flag() -> None:
                 "`python -m ai_sdlc workitem plan-check --wi specs/226`",
                 "`ai-sdlc program truth audit --manifest=program-manifest.yaml`",
                 "`ai-sdlc program truth sync --execute --yes`",
+                "`ai-sdlc program truth audit --help`",
+                "`ai-sdlc workitem plan-check --wi 'specs/226&safe'`",
             ]
         )
     )
 
-    assert report == CommandSurfaceReport(checked_command_count=5)
+    assert report == CommandSurfaceReport(checked_command_count=7)
     grouped = validate_plan_ai_sdlc_commands("`ai-sdlc program truth sync -xy`")
     assert grouped.valid is False
     assert "short option aggregation" in "\n".join(grouped.errors)
