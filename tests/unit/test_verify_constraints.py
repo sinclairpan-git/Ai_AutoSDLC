@@ -2793,6 +2793,48 @@ def test_agent_instructions_accept_current_init_first_path(tmp_path: Path) -> No
     assert not any("AGENTS.md CLI path" in x for x in blockers)
 
 
+def test_repository_pr_protocol_freezes_terminal_convergence_contract() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    instructions = (repo_root / "AGENTS.md").read_text(encoding="utf-8")
+    protocol = instructions.split("## Local Repository PR Protocol", maxsplit=1)[1]
+    normalized_protocol = " ".join(protocol.split())
+
+    required_contract_markers = (
+        "one repository delta followed by one exact-HEAD re-review",
+        "consumes the next repair round",
+        "even when it addresses the same finding",
+        "at most two regular repair rounds",
+        "pause the heartbeat",
+        "one terminal Sponsor decision",
+        "`stop` or `approve-one-bounded-action`",
+        "`candidate_verdict`",
+        "`observation_state`",
+        "`action_outcome`",
+        "`fresh` / `pending` / `unavailable`",
+        "A prior PASS is stale",
+        "Merge requires",
+        "Closing a `no_go`",
+        "does not require passing checks",
+        "three consecutive scheduled heartbeat cycles",
+        "`outcome_unknown`",
+        "read-after-write",
+        "must not be retried blindly",
+        "`blocked` must not be retried",
+        "external blocker is resolved",
+        "`unique_delta`",
+        "`effort_cap`",
+        "`terminal_outcome`",
+        "No second terminal action",
+        "post-merge records-only PR",
+    )
+
+    missing = [
+        marker for marker in required_contract_markers if marker not in normalized_protocol
+    ]
+    assert missing == []
+    assert "increase --max-rounds" not in normalized_protocol
+
+
 def test_adapter_template_blocks_old_manual_startup_path(tmp_path: Path) -> None:
     mem = tmp_path / ".ai-sdlc" / "memory"
     mem.mkdir(parents=True)

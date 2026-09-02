@@ -80,10 +80,65 @@ When a Codex change is ready for mainline:
 - Immediately create or keep a heartbeat at about five-minute intervals for the
   PR. The heartbeat must monitor Codex review results and required GitHub check
   status until the PR is merged or a user-input blocker is reached.
-- If review finds actionable issues, implement focused fixes on the same branch,
-  rerun relevant local tests, push, re-request Codex review, and continue the
-  heartbeat monitoring loop.
+- If review finds actionable issues and the repair budget below remains,
+  implement focused fixes on the same branch, rerun relevant local tests, push,
+  re-request Codex review, and continue the heartbeat monitoring loop.
 - If Codex review reports no actionable issues and all required checks pass,
   mark the PR ready when needed and merge it into `main`.
 - This protocol is a local development rule for this repository only; do not
   copy it into external user guidance or AI-SDLC framework runtime rules.
+
+Bound the repair and review loop as follows:
+
+- One repair round is one repository delta followed by one exact-HEAD re-review.
+  Any repository delta after that review consumes the next repair round, even
+  when it addresses the same finding. Finding signatures deduplicate evidence;
+  they never extend a round. Read-only observation, check reruns without a
+  delta, and action reconciliation do not consume a repair round.
+- Allow at most two regular repair rounds. If they do not converge, pause the
+  heartbeat and request one terminal Sponsor decision: `stop` or
+  `approve-one-bounded-action`.
+- `approve-one-bounded-action` must freeze `unique_delta`, `effort_cap`, and
+  `terminal_outcome` together. It permits one delta and one exact-HEAD review.
+  No second terminal action or additional repair round is allowed. New safety,
+  privacy, data-loss, or release-integrity evidence may change the frozen result
+  to No-Go, but it does not create another repair opportunity.
+
+Keep three decision dimensions separate in the current task context; do not add
+a persisted state machine for them:
+
+- `candidate_verdict` is `undetermined`, `pass`, or `no_go`. Only an actionable
+  review on the current HEAD, a completed candidate-attributable required-check
+  failure on that HEAD, or positively verified identity drift can produce
+  `no_go`. Timeout, 404, an empty response, ref propagation delay, cancellation,
+  and infrastructure startup failure are observation failures, not candidate
+  failures.
+- `observation_state` is `fresh` / `pending` / `unavailable`. A prior PASS is
+  stale and cannot authorize merge. Merge requires one fresh snapshot that
+  confirms the PR is open, base and HEAD are exact, the review applies to that
+  HEAD, and required checks for that HEAD have passed. Closing a `no_go` or
+  frozen `stop` requires a fresh open-PR and exact-identity snapshot plus the
+  still-valid terminal decision; it does not require passing checks. Normal
+  pending checks do not count as unavailable.
+- One observation cycle permits one primary read and at most one alternate
+  read-only read. After three consecutive scheduled heartbeat cycles remain
+  unavailable, pause the heartbeat and request user input without changing the
+  candidate verdict or repair budget. Any fresh complete snapshot resets the
+  unavailable-cycle count.
+- `action_outcome` is `not_attempted`, `succeeded`, `blocked`, or
+  `outcome_unknown`. A merge or close timeout or ambiguous transport failure is
+  `outcome_unknown`: perform read-after-write reconciliation first. The mutation
+  must not be retried blindly or treated as candidate failure. Retry only after
+  a fresh read proves it was not applied, identity remains exact, and the user
+  authorizes the frozen action again. A confirmed permission or protection-rule
+  rejection is `blocked`. `blocked` must not be retried; stop PR
+  mutations, pause the heartbeat, and request user action. Resume only after the
+  external blocker is resolved and a fresh snapshot reconfirms exact identity;
+  resuming does not reset the repair budget.
+
+Stopping is a valid truthful result. On `stop`, the frozen terminal outcome, or
+an exhausted observation budget, or a `blocked` action, stop PR mutations and
+pause or delete the heartbeat as appropriate. For this terminal protocol change
+itself, do not open a post-merge records-only PR; post-merge verification is
+read-only, and any later record update belongs in a normal product change
+explicitly authorized by the user.
