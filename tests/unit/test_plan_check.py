@@ -358,3 +358,53 @@ def test_plan_check_default_json_contract_has_no_command_surface_keys() -> None:
         "changed_paths",
         "error",
     }
+
+
+def test_command_surface_accepts_tab_wrapper_boundary() -> None:
+    report = validate_plan_ai_sdlc_commands("`ai-sdlc\tprogram truth audit`")
+
+    assert report == CommandSurfaceReport(checked_command_count=1)
+
+
+def test_command_surface_rejects_mixed_fences_and_keeps_fence_inline_syntax_inside() -> None:
+    mixed = validate_plan_ai_sdlc_commands(
+        "``~text\nai-sdlc program truth audit\n``~\n"
+    )
+    closer_mismatch = validate_plan_ai_sdlc_commands(
+        "```text\n"
+        "ai-sdlc program truth audit\n"
+        "~~~\n"
+        "`ai-sdlc program truth audit`\n"
+        "```\n"
+    )
+
+    assert mixed.errors == ("no approved ai-sdlc commands found",)
+    assert closer_mismatch == CommandSurfaceReport(checked_command_count=1)
+
+
+def test_command_surface_rejects_required_options_and_ambiguous_positionals() -> None:
+    required_option = click.Command(
+        "audit", params=[click.Option(["--manifest"], required=True)]
+    )
+    ambiguous_positionals = click.Command(
+        "audit",
+        params=[
+            click.Argument(["optional"], required=False),
+            click.Argument(["required"], required=True),
+        ],
+    )
+
+    assert pc._validate_leaf_argv(required_option, ()) == "missing option: --manifest"
+    assert pc._validate_leaf_argv(ambiguous_positionals, ("value",)) == (
+        "unsupported command metadata"
+    )
+
+
+def test_command_surface_tokenizer_permits_quoted_windows_paths_and_rejects_newlines() -> None:
+    argv, error = pc._tokenize_canonical_argv(
+        r'ai-sdlc workitem plan-check --wi "C:\repo\specs\226"'
+    )
+
+    assert error is None
+    assert argv[-1] == r"C:\repo\specs\226"
+    assert pc._tokenize_canonical_argv("ai-sdlc program\ntruth audit") == ((), "newline")

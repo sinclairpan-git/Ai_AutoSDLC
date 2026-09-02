@@ -34,52 +34,40 @@ class _CommandSource:
 _APPROVED_WRAPPERS = ("ai-sdlc", "uv run ai-sdlc", "python -m ai_sdlc")
 _ASCII_WHITESPACE = " \t\r\f\v"
 
-
-def _is_approved_command_source(text: str) -> bool:
-    return any(text == wrapper or text.startswith(f"{wrapper} ") for wrapper in _APPROVED_WRAPPERS)
-
-
 def _extract_ai_sdlc_command_sources(markdown: str) -> tuple[_CommandSource, ...]:
+    def accepts(text: str) -> bool:
+        return any(text.startswith(w) and (len(text) == len(w) or text[len(w)] in _ASCII_WHITESPACE) for w in _APPROVED_WRAPPERS)
+
     sources: set[_CommandSource] = set()
     fence: tuple[str, int] | None = None
-    for line_number, line in enumerate(markdown.splitlines(), start=1):
-        fence_match = re.match(r"^\s*([`~]{3,})", line)
+    for number, line in enumerate(markdown.splitlines(), start=1):
+        match = re.match(r"^\s*(`{3,}|~{3,})", line)
         if fence is not None:
-            if (
-                fence_match is not None
-                and fence_match.group(1)[0] == fence[0]
-                and len(fence_match.group(1)) >= fence[1]
-                and not line[fence_match.end() :].strip()
-            ):
+            if match and match.group(1)[0] == fence[0] and len(match.group(1)) >= fence[1] and not line[match.end() :].strip():
                 fence = None
                 continue
             text = line.strip()
-            if _is_approved_command_source(text):
-                sources.add(_CommandSource(line_number, text))
+            if accepts(text):
+                sources.add(_CommandSource(number, text))
             continue
-        if fence_match is not None:
-            fence = (fence_match.group(1)[0], len(fence_match.group(1)))
+        if match:
+            fence = (match.group(1)[0], len(match.group(1)))
             continue
         for match in re.finditer(r"(?<!`)`([^`\n]*)`(?!`)", line):
             text = match.group(1).strip()
-            if _is_approved_command_source(text):
-                sources.add(_CommandSource(line_number, text))
+            if accepts(text):
+                sources.add(_CommandSource(number, text))
     return tuple(sorted(sources, key=lambda source: (source.line, source.text)))
 
 
 def _tokenize_canonical_argv(text: str) -> tuple[tuple[str, ...], str | None]:
-    reasons = {
-        "|": "pipe", "&": "command separator", ";": "command separator",
-        "<": "redirect", ">": "redirect", "$": "variable expansion",
-        "`": "backtick", "\\": "escape",
-    }
-    for character, reason in reasons.items():
+    if "\n" in text or "\r" in text:
+        return (), "newline"
+    for character, reason in (("|", "pipe"), ("&", "command separator"), (";", "command separator"), ("<", "redirect"), (">", "redirect"), ("$", "variable expansion"), ("`", "backtick")):
         if character in text:
             return (), reason
-
     tokens: list[str] = []
-    cursor = 0
-    length = len(text)
+    cursor, length = 0, len(text)
     while cursor < length:
         while cursor < length and text[cursor] in _ASCII_WHITESPACE:
             cursor += 1
@@ -100,36 +88,23 @@ def _tokenize_canonical_argv(text: str) -> tuple[tuple[str, ...], str | None]:
         while end < length and text[end] not in _ASCII_WHITESPACE:
             if text[end] in "\"'":
                 return (), "quoted/unquoted concatenation"
+            if text[end] == "\\":
+                return (), "escape"
             end += 1
         tokens.append(text[cursor:end])
         cursor = end
     return tuple(tokens), None
 
 
-def _canonical_argv(argv: tuple[str, ...]) -> tuple[tuple[str, ...], str | None]:
-    for wrapper in (("ai-sdlc",), ("uv", "run", "ai-sdlc"), ("python", "-m", "ai_sdlc")):
-        if argv[: len(wrapper)] == wrapper:
-            return argv[len(wrapper) :], None
-    return (), "unsupported command wrapper"
-
-
-def _resolve_leaf_command(
-    argv: tuple[str, ...],
-) -> tuple[object | None, tuple[str, ...], str | None]:
+def _resolve_leaf_command(argv: tuple[str, ...]) -> tuple[object | None, tuple[str, ...], str | None]:
     """返回 leaf command、剩余 argv 和稳定错误；只遍历公开 commands。"""
     import typer.main
 
     from ai_sdlc.cli.command_names import collect_flat_command_strings
     from ai_sdlc.cli.main import app
-
-    paths = [
-        tuple(path.split())[1:]
-        for path in collect_flat_command_strings()
-        if tuple(path.split())[1:] == argv[: len(tuple(path.split())[1:])]
-    ]
-    if not paths:
+    path = max((p for value in collect_flat_command_strings() if (p := tuple(value.split()[1:])) == argv[: len(p)]), key=len, default=())
+    if not path:
         return None, (), "unknown command"
-    path = max(paths, key=len)
     command: object = typer.main.get_command(app)
     for part in path:
         commands = getattr(command, "commands", None)
@@ -138,76 +113,70 @@ def _resolve_leaf_command(
         command = commands[part]
     return command, argv[len(path) :], None
 
-
-def _is_negative_number(token: str) -> bool:
-    return re.fullmatch(r"-\d+(?:\.\d+)?", token) is not None
-
-
 def _validate_leaf_argv(command: object, argv: tuple[str, ...]) -> str | None:
     """只用公开 parameter metadata 校验 option spelling 与 token arity。"""
     context_settings = getattr(command, "context_settings", {})
-    if not isinstance(context_settings, dict) or any(
-        context_settings.get(key, False)
-        for key in ("allow_extra_args", "ignore_unknown_options")
-    ):
+    if not isinstance(context_settings, dict) or any(context_settings.get(key, False) for key in ("allow_extra_args", "ignore_unknown_options")):
         return "unsupported command metadata"
     params = getattr(command, "params", None)
     if not isinstance(params, list):
         return "unsupported command metadata"
     options: dict[str, object] = {}
     arguments: list[object] = []
+    required_options: list[tuple[int, str]] = []
     for param in params:
         param_type = getattr(param, "type", None)
-        if type(param_type).__module__ not in {"click.types", "typer.models"}:
+        if type(param_type).__module__ not in {"click.types", "typer.models"} or getattr(param, "callback", None) is not None or getattr(param, "prompt", None):
             return "unsupported command metadata"
-        if getattr(param, "callback", None) is not None or getattr(param, "prompt", None):
-            return "unsupported command metadata"
-        opts = tuple(getattr(param, "opts", ()))
-        secondary_opts = tuple(getattr(param, "secondary_opts", ()))
-        if any(option.startswith("-") for option in opts + secondary_opts):
-            for option in opts + secondary_opts:
-                if not isinstance(option, str) or not option.startswith("-"):
-                    return "unsupported command metadata"
-                options[option] = param
+        names = tuple(getattr(param, "opts", ())) + tuple(getattr(param, "secondary_opts", ()))
+        if any(name.startswith("-") for name in names):
+            if not all(isinstance(name, str) and name.startswith("-") for name in names):
+                return "unsupported command metadata"
+            options.update(dict.fromkeys(names, param))
+            if bool(getattr(param, "required", False)):
+                required_options.append((id(param), next((name for name in names if name.startswith("--")), names[0])))
         else:
             arguments.append(param)
-
+    if any(not bool(getattr(param, "required", False)) for param in arguments[:-1]):
+        return "unsupported command metadata"
     positionals: list[str] = []
+    provided_options: set[int] = set()
     index = 0
     while index < len(argv):
         token = argv[index]
         if token == "--":
             return "extra token: --"
-        if token.startswith("-") and not _is_negative_number(token):
+        if token.startswith("-") and not re.fullmatch(r"-\d+(?:\.\d+)?", token):
             option, equals, _ = token.partition("=")
             if token.startswith("-") and not token.startswith("--") and len(option) > 2:
                 return "short option aggregation"
             param = options.get(option)
             if param is None:
                 return f"unknown option: {option}"
-            is_flag = bool(getattr(param, "is_flag", False))
-            count = bool(getattr(param, "count", False))
-            nargs = getattr(param, "nargs", None)
-            if not isinstance(nargs, int) or nargs < 0:
-                return "unsupported command metadata"
+            provided_options.add(id(param))
+            is_flag, count = bool(getattr(param, "is_flag", False)), bool(getattr(param, "count", False))
+            if equals and (not option.startswith("--") or is_flag or count or getattr(param, "nargs", None) != 1):
+                return f"invalid option value: {option}"
             if equals:
-                if not option.startswith("--") or is_flag or count or nargs != 1:
-                    return f"invalid option value: {option}"
                 index += 1
                 continue
             if is_flag or count:
                 index += 1
                 continue
-            if index + nargs >= len(argv):
-                return f"missing value: {option}"
+            nargs = getattr(param, "nargs", None)
+            if not isinstance(nargs, int) or nargs < 0:
+                return "unsupported command metadata"
             values = argv[index + 1 : index + 1 + nargs]
-            if any(value.startswith("-") and not _is_negative_number(value) for value in values):
+            if len(values) != nargs or any(value.startswith("-") and not re.fullmatch(r"-\d+(?:\.\d+)?", value) for value in values):
                 return f"missing value: {option}"
             index += nargs + 1
             continue
         positionals.append(token)
         index += 1
 
+    for param_id, option in required_options:
+        if param_id not in provided_options:
+            return f"missing option: {option}"
     position = 0
     for param in arguments:
         nargs = getattr(param, "nargs", None)
@@ -232,7 +201,8 @@ def validate_plan_ai_sdlc_commands(markdown: str) -> CommandSurfaceReport:
         try:
             argv, error = _tokenize_canonical_argv(source.text)
             if error is None:
-                argv, error = _canonical_argv(argv)
+                wrapper = next((w for w in (("ai-sdlc",), ("uv", "run", "ai-sdlc"), ("python", "-m", "ai_sdlc")) if argv[: len(w)] == w), ())
+                argv, error = (argv[len(wrapper) :], None) if wrapper else ((), "unsupported command wrapper")
             if error is None:
                 command, remaining, error = _resolve_leaf_command(argv)
             if error is None and command is not None:
