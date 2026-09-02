@@ -246,11 +246,6 @@ def workitem_plan_check(
         "--plan",
         help="Explicit plan Markdown file (YAML frontmatter with todos).",
     ),
-    check_ai_sdlc_commands: bool = typer.Option(
-        False,
-        "--check-ai-sdlc-commands",
-        help="Validate AI-SDLC command paths and option arity in an explicit plan.",
-    ),
     as_json: bool = typer.Option(
         False,
         "--json",
@@ -265,17 +260,11 @@ def workitem_plan_check(
         console.print("[red]Use either --wi or --plan, not both.[/red]")
         raise typer.Exit(code=2)
 
-    if check_ai_sdlc_commands and (plan is None or wi is not None):
-        console.print("[red]--check-ai-sdlc-commands requires --plan and cannot be used with --wi.[/red]")
-        raise typer.Exit(code=2)
-
     if wi is None and plan is None:
         console.print("[red]Specify --wi <specs/WI-dir> or --plan <file>.[/red]")
         raise typer.Exit(code=2)
 
-    result = run_plan_check(
-        cwd=Path.cwd(), wi=wi, plan=plan, check_ai_sdlc_commands=check_ai_sdlc_commands
-    )
+    result = run_plan_check(cwd=Path.cwd(), wi=wi, plan=plan)
 
     if result.error:
         if as_json:
@@ -301,12 +290,6 @@ def _print_table(result: PlanCheckResult) -> None:
     table.add_row("Pending todos", str(result.pending_todos))
     table.add_row("Changed paths (git)", str(len(result.changed_paths)))
     table.add_row("Drift", "[red]YES[/red]" if result.drift else "[green]NO[/green]")
-    if result.command_surface_valid is not None:
-        table.add_row("Checked AI-SDLC commands", str(result.checked_command_count))
-        table.add_row(
-            "Command surface valid",
-            "[green]YES[/green]" if result.command_surface_valid else "[red]NO[/red]",
-        )
 
     console.print(table)
     if result.changed_paths:

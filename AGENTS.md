@@ -76,23 +76,20 @@ target, not the controlling framework for local repository development.
 When a Codex change is ready for mainline:
 
 - Push the branch and open a PR.
-- Run the explicit plan command preflight before every Codex review or re-review request: `uv run ai-sdlc workitem plan-check --plan <explicit-plan> --check-ai-sdlc-commands`; do not request a review or start a heartbeat before its first pass.
-- Request Codex review on the PR. Immediately create or keep a heartbeat at about five-minute intervals after the first preflight passes and the first review is requested. The heartbeat monitors review results and required GitHub checks until merge or a user-input blocker.
-- The preflight reports all errors once; allow one focused candidate-preparation correction batch only. A second failure stops for `needs_user`.
-- An actionable finding plus its tracked candidate delta, direct regression, and
-  re-review is one normal repair round. Code, tests, rules, workflows, and
-  formal-record deltas count; allow at most two normal review repair rounds.
-- For infrastructure failure on the same exact HEAD, allow one no-delta infrastructure rerun only; stop on a repeat or an un-attributable failure.
-- After two rounds, pause the heartbeat. Sponsor may only `stop` or
-  `approve-one-bounded-action`; approval freezes `unique_delta`, `effort_cap`,
-  and `terminal_outcome`.
-- Terminal verification is for the exact HEAD: Codex review, direct regression,
-  and required GitHub checks. A deterministic failure executes the terminal
-  outcome with no further modification.
-- On PASS, known-blocked, or No-Go, delete the heartbeat. Do not grant a second
-  exception: no records-only PR.
-- New safety, privacy, data-destruction, or release-integrity evidence may go
-  directly to No-Go without adding repair rounds.
+- Before the first external review, freeze one observable result, explicit non-goals, acceptance and risk boundaries, exit conditions, and one primary numeric review-budget unit. When that unit is meaningful, spend at most about 75% before review and reserve about 25% for findings and direct regression; otherwise the ratio is advisory only. Decide any deviation before the first review, never after exhaustion.
+- Never reset an exhausted candidate by changing its budget unit, denominator, or final-snapshot accounting. A terminal `effort_cap` is an exit bound, not a new normal review budget, and has no repair reserve.
+- Before requesting review, atomically verify exact HEAD, base, diff, budget or terminal cap, PR body, required-check target, and one continuity surface. Required checks may still be pending, but their check-suite HEAD must match the current exact HEAD; any non-zero native-command exit stops the sequence.
+- When a frozen terminal diff excludes formal records, an exact-HEAD PR body containing the terminal outcome is the continuity surface. Do not add a handoff-only delta or records-only PR.
+- Request Codex review on the PR. Immediately create or keep a heartbeat at about five-minute intervals after the review request; monitor review results and required GitHub checks until merge or a user-input blocker.
+- Re-review first verifies the original finding, the accepted delta, and its direct regression surface. A finding cluster is only for causal grouping and deduplication; it does not extend the repair allowance.
+- Each accepted candidate delta plus re-review is one normal repair round, including another delta for the same cluster. Allow at most two normal repair rounds. Code, tests, rules, workflows, and formal-record deltas count.
+- Allow one no-delta infrastructure rerun on the same exact HEAD without consuming a repair round. A repeated or unattributable infrastructure failure blocks the candidate.
+- Safety, privacy, data-destruction, release-integrity, or frozen-acceptance violations continue to block. Any different-root evidence that materially raises current risk or violates the frozen risk boundary also blocks; a required delta consumes the next available repair round, and exhausted allowance means terminal No-Go. Unrelated advice that does not raise risk goes to backlog.
+- Do not replace an approved architecture solely because commits accumulate, budget tightens, a new lower-priority finding appears, or one platform check fails. Require reproducible evidence that core invariants cannot coexist, one repair necessarily breaks another frozen acceptance, representative differentials prove systemic false results, or remaining effort clearly exceeds observable value; prefer subtraction or local replacement within the same goal.
+- After two normal repair rounds, pause the heartbeat. Sponsor may only `stop` or `approve-one-bounded-action`; approval freezes `unique_delta`, `effort_cap`, and `terminal_outcome` before execution.
+- Sponsor may surrender all remaining normal rounds and make the same terminal decision early; surrendered rounds never return and the terminal action is not a new candidate or budget.
+- If the terminal action fails or exposes a direct blocker, execute the frozen `terminal_outcome`. The same observable result across branches, PRs, names, and time remains one closed problem space unless new user-value or high-risk evidence materially changes it. Allow no second exception and no records-only PR.
+- Terminal verification binds Codex review, direct regression, and required GitHub checks to the exact HEAD. On PASS, known-blocked, or No-Go, delete the heartbeat.
 - If Codex review reports no actionable issues and all required checks pass,
   mark the PR ready when needed and merge it into `main`.
 - This protocol is a local development rule for this repository only; do not

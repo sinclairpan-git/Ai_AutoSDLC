@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
 from pathlib import Path
 from unittest.mock import patch
@@ -71,20 +70,6 @@ def _setup_git_ai_sdlc(root: Path) -> None:
         check=True,
         capture_output=True,
     )
-
-
-def _write_command_plan(root: Path, body: str) -> Path:
-    plan = root / "implementation-plan.md"
-    plan.write_text(body, encoding="utf-8")
-    return plan
-
-
-def _command_project(tmp_path: Path, name: str, monkeypatch: pytest.MonkeyPatch) -> Path:
-    root = tmp_path / name
-    root.mkdir()
-    _setup_git_ai_sdlc(root)
-    monkeypatch.chdir(root)
-    return root
 
 
 class TestCliWorkitemPlanCheck:
@@ -210,81 +195,3 @@ class TestCliWorkitemPlanCheck:
         assert result.exit_code == 1
         assert result.output.count("README.md") == 1
         assert result.output.count("src/example.py") == 1
-
-    def test_plan_check_command_surface_requires_explicit_plan_exit_2(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        _command_project(tmp_path, "requires-plan", monkeypatch)
-        results = [
-            runner.invoke(app, ["workitem", "plan-check", "--check-ai-sdlc-commands"]),
-            runner.invoke(app, ["workitem", "plan-check", "--wi", "specs/001-wi", "--check-ai-sdlc-commands"]),
-        ]
-        assert [result.exit_code for result in results] == [2, 2]
-        assert all("requires --plan" in result.output for result in results)
-
-    def test_plan_check_command_surface_invalid_command_exit_1_with_line(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        root = _command_project(tmp_path, "invalid-command", monkeypatch)
-        plan = _write_command_plan(root, "`ai-sdlc workitem plan-check --wi`\n")
-        result = runner.invoke(app, ["workitem", "plan-check", "--plan", str(plan), "--check-ai-sdlc-commands"], terminal_width=500)
-
-        assert result.exit_code == 1
-        assert str(plan.resolve()) in result.output.replace("\n", "")
-        assert "line 1:" in result.output
-        assert "missing value: --wi" in result.output
-
-    def test_plan_check_command_surface_success_text_and_json(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        root = _command_project(tmp_path, "valid-commands", monkeypatch)
-        plan = _write_command_plan(
-            root,
-            "`ai-sdlc program truth audit`\n"
-            "`uv run ai-sdlc workitem plan-check --plan implementation-plan.md`\n"
-            "`python -m ai_sdlc program truth sync --execute --yes`\n",
-        )
-        args = ["workitem", "plan-check", "--plan", str(plan), "--check-ai-sdlc-commands"]
-        text = runner.invoke(app, args)
-        as_json = runner.invoke(app, [*args, "--json"])
-
-        assert text.exit_code == 0, text.output
-        assert "Checked AI-SDLC commands" in text.output
-        assert "Command surface valid" in text.output
-        assert as_json.exit_code == 0, as_json.output
-        payload = json.loads(as_json.output)
-        assert payload["plan_file"] == str(plan.resolve())
-        assert payload["checked_command_count"] == 3
-        assert payload["command_surface_valid"] is True
-
-    def test_plan_check_command_surface_does_not_execute_program_truth_sync(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        root = _command_project(tmp_path, "no-execution", monkeypatch)
-        sentinel = root / "sentinel.txt"
-        sentinel.write_text("unchanged\n", encoding="utf-8")
-        program_truth = root / "program-manifest.yaml"
-        program_truth.write_text('schema_version: "2"\nprogram:\n  goal: "No execution"\n', encoding="utf-8")
-        plan = _write_command_plan(root, "`ai-sdlc program truth sync --execute --yes`\n")
-        status_before = subprocess.run(["git", "status", "--porcelain"], cwd=root, check=True, capture_output=True, text=True).stdout
-        truth_before = program_truth.read_bytes()
-        result = runner.invoke(app, ["workitem", "plan-check", "--plan", str(plan), "--check-ai-sdlc-commands"])
-        status_after = subprocess.run(["git", "status", "--porcelain"], cwd=root, check=True, capture_output=True, text=True).stdout
-        assert result.exit_code == 0, result.output
-        assert sentinel.read_text(encoding="utf-8") == "unchanged\n"
-        assert program_truth.read_bytes() == truth_before
-        assert status_after == status_before
-
-    def test_plan_check_legacy_text_json_and_exit_contract_unchanged(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        _command_project(tmp_path, "legacy-contract", monkeypatch)
-
-        text = runner.invoke(app, ["workitem", "plan-check", "--wi", "specs/001-wi"])
-        as_json = runner.invoke(app, ["workitem", "plan-check", "--plan", ".cursor/plans/p.md", "--json"])
-
-        assert text.exit_code == 0, text.output
-        assert "Checked AI-SDLC commands" not in text.output
-        assert as_json.exit_code == 0, as_json.output
-        payload = json.loads(as_json.output)
-        assert set(payload) == {"drift", "plan_file", "pending_todos", "changed_paths", "error"}
