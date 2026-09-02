@@ -76,9 +76,8 @@ target, not the controlling framework for local repository development.
 When a Codex change is ready for mainline:
 
 - Push the branch and open a PR.
-- Run the explicit plan command preflight before every Codex review or re-review request: `uv run ai-sdlc workitem plan-check --plan <explicit-plan>
-  --check-ai-sdlc-commands`; do not request a review or start a heartbeat before
-  its first pass.
+- Run the explicit plan command preflight before every Codex review or re-review request: `uv run ai-sdlc workitem plan-check --plan <explicit-plan> --check-ai-sdlc-commands`; do not request a review or start a heartbeat before its first pass.
+- Request Codex review on the PR. Immediately create or keep a heartbeat at about five-minute intervals after the first preflight passes and the first review is requested. The heartbeat monitors review results and required GitHub checks until merge or a user-input blocker.
 - The preflight reports all errors once; allow one focused candidate-preparation correction batch only. A second failure stops for `needs_user`.
 - An actionable finding plus its tracked candidate delta, direct regression, and
   re-review is one normal repair round. Code, tests, rules, workflows, and

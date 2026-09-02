@@ -2770,6 +2770,8 @@ def test_root_agents_bounds_local_pr_review_convergence() -> None:
     text = (root / "AGENTS.md").read_text(encoding="utf-8")
     required = (
         "before every Codex review or re-review request",
+        "Request Codex review on the PR",
+        "Immediately create or keep a heartbeat at about five-minute intervals",
         "one focused candidate-preparation correction batch",
         "at most two normal review repair rounds",
         "tracked candidate delta",

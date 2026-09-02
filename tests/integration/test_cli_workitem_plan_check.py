@@ -227,9 +227,10 @@ class TestCliWorkitemPlanCheck:
     ) -> None:
         root = _command_project(tmp_path, "invalid-command", monkeypatch)
         plan = _write_command_plan(root, "`ai-sdlc workitem plan-check --wi`\n")
-        result = runner.invoke(app, ["workitem", "plan-check", "--plan", str(plan), "--check-ai-sdlc-commands"])
+        result = runner.invoke(app, ["workitem", "plan-check", "--plan", str(plan), "--check-ai-sdlc-commands"], terminal_width=500)
 
         assert result.exit_code == 1
+        assert str(plan.resolve()) in result.output.replace("\n", "")
         assert "line 1:" in result.output
         assert "missing value: --wi" in result.output
 

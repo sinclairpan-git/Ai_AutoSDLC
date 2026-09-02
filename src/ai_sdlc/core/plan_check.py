@@ -34,29 +34,33 @@ class _CommandSource:
 _APPROVED_WRAPPERS = ("ai-sdlc", "uv run ai-sdlc", "python -m ai_sdlc")
 _ASCII_WHITESPACE = " \t\r\f\v"
 
-def _extract_ai_sdlc_command_sources(markdown: str) -> tuple[_CommandSource, ...]:
+def _extract_ai_sdlc_command_sources(markdown: str, errors: list[str]) -> tuple[_CommandSource, ...]:
     def accepts(text: str) -> bool:
         return any(text.startswith(w) and (len(text) == len(w) or text[len(w)] in _ASCII_WHITESPACE) for w in _APPROVED_WRAPPERS)
 
     sources: set[_CommandSource] = set()
-    fence: tuple[str, int] | None = None
+    fence: tuple[str, int, int] | None = None
     for number, line in enumerate(markdown.splitlines(), start=1):
         match = re.match(r"^\s*(`{3,}|~{3,})", line)
         if fence is not None:
             if match and match.group(1)[0] == fence[0] and len(match.group(1)) >= fence[1] and not line[match.end() :].strip():
                 fence = None
                 continue
+            if match and not line[match.end() :].strip():
+                errors.append(f"line {number}: mismatched fenced code block (opened line {fence[2]})")
             text = line.strip()
             if accepts(text):
                 sources.add(_CommandSource(number, text))
             continue
         if match:
-            fence = (match.group(1)[0], len(match.group(1)))
+            fence = (match.group(1)[0], len(match.group(1)), number)
             continue
         for match in re.finditer(r"(?<!`)`([^`\n]*)`(?!`)", line):
             text = match.group(1).strip()
             if accepts(text):
                 sources.add(_CommandSource(number, text))
+    if fence is not None:
+        errors.append(f"line {fence[2]}: unclosed fenced code block")
     return tuple(sorted(sources, key=lambda source: (source.line, source.text)))
 
 
@@ -193,10 +197,10 @@ def _validate_leaf_argv(command: object, argv: tuple[str, ...]) -> str | None:
 
 
 def validate_plan_ai_sdlc_commands(markdown: str) -> CommandSurfaceReport:
-    sources = _extract_ai_sdlc_command_sources(markdown)
-    if not sources:
-        return CommandSurfaceReport(0, ("no approved ai-sdlc commands found",))
     errors: list[str] = []
+    sources = _extract_ai_sdlc_command_sources(markdown, errors)
+    if not sources:
+        return CommandSurfaceReport(0, tuple(errors or ["no approved ai-sdlc commands found"]))
     for source in sources:
         try:
             argv, error = _tokenize_canonical_argv(source.text)
@@ -390,7 +394,7 @@ def run_plan_check(
             plan_file=plan_path,
             pending_todos=pending,
             changed_paths=[],
-            error="\n".join(report.errors) if report.errors else None,
+            error=f"{plan_path}: " + "\n".join(report.errors) if report.errors else None,
             checked_command_count=report.checked_command_count,
             command_surface_valid=report.valid,
         )

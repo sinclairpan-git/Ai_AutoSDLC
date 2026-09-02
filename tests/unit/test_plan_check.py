@@ -366,20 +366,25 @@ def test_command_surface_accepts_tab_wrapper_boundary() -> None:
     assert report == CommandSurfaceReport(checked_command_count=1)
 
 
-def test_command_surface_rejects_mixed_fences_and_keeps_fence_inline_syntax_inside() -> None:
+def test_command_surface_rejects_unclosed_and_mismatched_fences_with_lines() -> None:
     mixed = validate_plan_ai_sdlc_commands(
         "``~text\nai-sdlc program truth audit\n``~\n"
     )
-    closer_mismatch = validate_plan_ai_sdlc_commands(
-        "```text\n"
-        "ai-sdlc program truth audit\n"
-        "~~~\n"
+    malformed = validate_plan_ai_sdlc_commands(
         "`ai-sdlc program truth audit`\n"
+        "```text\n"
+        "ai-sdlc workitem plan-check --wi\n"
+        "~~~\n"
         "```\n"
+        "~~~text\n"
+        "ai-sdlc program truth audit\n"
     )
 
     assert mixed.errors == ("no approved ai-sdlc commands found",)
-    assert closer_mismatch == CommandSurfaceReport(checked_command_count=1)
+    assert malformed.checked_command_count == 3
+    assert "line 4: mismatched fenced code block (opened line 2)" in malformed.errors
+    assert "line 6: unclosed fenced code block" in malformed.errors
+    assert any("line 3:" in error and "missing value: --wi" in error for error in malformed.errors)
 
 
 def test_command_surface_rejects_required_options_and_ambiguous_positionals() -> None:
