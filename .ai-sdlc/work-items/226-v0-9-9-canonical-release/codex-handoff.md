@@ -1,14 +1,16 @@
 # Continuity Handoff
 
-- Updated: 2026-09-03T10:16:08+00:00
-- Reason: WI226 T31 v0.9.9 release truth completed.
-- Goal: Complete WI226 canonical v0.9.9 release plan.
-- State: T31 done; T32 is the sole todo.
+- Updated: 2026-09-03T10:56:09Z
+- Reason: WI226 T32 local validation completed; snapshot refresh is the final tracked truth write before commit.
+- Goal: Close WI226 canonical v0.9.9 repository-executable work.
+- State: All T32 local validations passed; T32 is marked done. Truth sync and the local closing commit are pending.
 - Stage: close
 - Work Item: 226-v0-9-9-canonical-release
 - Branch: feature/226-v0-9-9-canonical-release-docs
 
 ## Changed Files
+
+- M .ai-sdlc/work-items/226-v0-9-9-canonical-release/codex-handoff.md
 
 - M .ai-sdlc/project/config/project-state.yaml
 - M program-manifest.yaml
@@ -51,6 +53,10 @@
 
 ## Key Decisions
 
+- T32 changes only WI226 tracking and truth artifacts; source, workflow, version, and test logic remain out of scope.
+- Do not invoke the generic handoff updater because it rewrites resume-pack artifacts; update only canonical and WI226 scoped handoffs.
+- Controller owns all external Post-release handoff actions after this local commit.
+
 - Formal remediation is confined to this canonical WI226 baseline.
 - The parser/guard sees T23 as the unique next executable task; T31/T32 remain blocked.
 - T21 evaluates only the root release-candidate spec and its explicit DFS dependency closure through existing single-spec readiness.
@@ -62,6 +68,12 @@
   surfaces move to v0.9.9 while explicit post-v0.9.8 history remains unchanged.
 
 ## Commands / Tests
+
+- T32 focused suite: 875 passed in 216.73s.
+- T32 ruff: All checks passed.
+- T32 full pytest: 3428 passed, 3 skipped in 865.14s.
+- T32 constraints: no BLOCKERs.
+- T32 git diff --check: exit 0.
 
 - guard => PASS; selected T21.
 - program validate => PASS.
@@ -88,6 +100,9 @@
 
 ## Blockers / Risks
 
+- Local T32 has no blocker. The global truth audit remains intentionally blocked by 16 historical blockers; it is not a WI226 local validation failure.
+- External review, checks, merge, tag, release assets, and smoke receipts are intentionally not performed by this agent.
+
 - No T31 blocker. T32 must still run truth sync and its final local verification.
 
 ## Local PR Review
@@ -96,4 +111,4 @@
 
 ## Exact Next Steps
 
-- Execute T32 final local validation and truth refresh only.
+- Run program truth sync --execute --yes as the final tracked truth write, commit the local T32 artifacts, then run read-only global/WI226 audits and workitem close-check.

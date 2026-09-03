@@ -12,7 +12,7 @@
 - [x] T22 扩展既有 truth audit CLI。
 - [x] T23 接入 PR/tag 工作流门禁。
 - [x] T31 同步 v0.9.9 release truth。
-- [ ] T32 完成终局本地验证与 truth 刷新。
+- [x] T32 完成终局本地验证与 truth 刷新。
 
 ## Batch 1：formal baseline
 
@@ -148,7 +148,7 @@
 ### Task 3.2 完成终局本地验证和 truth 刷新
 
 - task_id: T32
-- status: todo
+- status: done
 - goal: 在不改写全局历史 blocker 的前提下完成本地交付证据，并刷新 WI226 的真实 snapshot。
 - depends:
   - T31

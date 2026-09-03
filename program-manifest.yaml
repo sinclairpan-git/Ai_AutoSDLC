@@ -2108,11 +2108,11 @@ specs:
   roles:
   - release_candidate
 truth_snapshot:
-  generated_at: '2026-09-03T07:40:19Z'
+  generated_at: '2026-09-03T11:00:11Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: 8f9df406
-  authoring_hash: 60f471021d31da459fd75f35dee670fdb21c8355fb3fcc4ac30ea6f654de5d84
+  repo_revision: 5d261e82
+  authoring_hash: 5301edf410ea56d5ed4e4ed0a7b5128fe099868ee71f6b6d0deac9f095efccf7
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 694fbf058775409c9ac373054323501942cebddcce74f540b4a8df9e9c2ce5a9
@@ -2154,7 +2154,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: e6f557f4d567b7fd79ae6d9cbfecb160e5844a996261d5bae11b342ee7593290
+  snapshot_hash: 91ffd0abe704eb0525b84a89500086a819132f9e7bbac13a726944534514ff56
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2184,12 +2184,12 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1179
-    mapped_sources: 1179
+    total_sources: 1180
+    mapped_sources: 1180
     unmapped_sources: 0
     missing_sources: 6
     phase_signal_count: 3850
-    deferred_signal_count: 6880
+    deferred_signal_count: 6882
     non_goal_signal_count: 404
     layer_totals:
       blueprint: 1
@@ -2201,7 +2201,7 @@ truth_snapshot:
       design: 9
       requirements: 2
       defect: 3
-      release: 44
+      release: 45
     layer_materialized:
       blueprint: 1
       spec: 224
@@ -2212,7 +2212,7 @@ truth_snapshot:
       design: 9
       requirements: 2
       defect: 3
-      release: 44
+      release: 45
     entries:
     - path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
       source_type: prd
@@ -12274,7 +12274,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 226-v0-9-9-canonical-release
       phase_signal_count: 0
-      deferred_signal_count: 0
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: specs/226-v0-9-9-canonical-release/tasks.md
       source_type: tasks_doc
@@ -12283,7 +12283,7 @@ truth_snapshot:
       exists: true
       mapping_ref: 226-v0-9-9-canonical-release
       phase_signal_count: 0
-      deferred_signal_count: 0
+      deferred_signal_count: 1
       non_goal_signal_count: 0
     - path: specs/226-v0-9-9-canonical-release/task-execution-log.md
       source_type: execution_log
@@ -12750,6 +12750,15 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: docs/releases/v0.9.8.md
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: docs/releases/v0.9.9.md
+      source_type: release_doc
+      truth_layer: release
+      mapped: true
+      exists: true
+      mapping_ref: docs/releases/v0.9.9.md
       phase_signal_count: 0
       deferred_signal_count: 0
       non_goal_signal_count: 0

@@ -184,3 +184,23 @@
 
 - T31 已完成；T32 是唯一 todo。
 - 未执行 truth sync、全量 pytest、外部 review、merge、tag、资产上传或 release smoke；这些仍属于 T32 或 Post-release handoff。
+
+## Batch 2026-09-03-009 | T32 final local validation and truth-refresh preparation
+
+### 范围
+
+- 只完成 WI226 的本地 T32 收口：验证、任务状态、执行日志、canonical 与 WI226 scoped handoff，以及随后一次 truth snapshot 刷新。
+- 不修改 `src/`、工作流、版本内容或测试逻辑；不执行 push、PR、merge、tag、publish 或任何外部发布操作。
+
+### 实际验证结果
+
+- `uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py tests/integration/test_repo_program_manifest.py -q`：`875 passed in 216.73s (0:03:36)`。
+- `uv run ruff check src tests`：通过，输出 `All checks passed!`。
+- `uv run pytest -q`：`3428 passed, 3 skipped in 865.14s (0:14:25)`。
+- `uv run ai-sdlc verify constraints`：通过，输出 `verify constraints: no BLOCKERs.`。
+- `git diff --check`：通过，退出码 `0`。
+
+### 收口边界
+
+- T32 的 checklist/status 已在全部本地验证完成后更新；本日志只记录已真实执行的本地结果。
+- 外部 exact-HEAD review、required checks、merge、tag、三平台资产、checksum、attestation、release smoke 与 12-route 回执仍仅属于 controller 的 Post-release handoff，未在此处预写成功结果。
