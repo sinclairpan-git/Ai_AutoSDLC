@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 from pathlib import Path
 from types import SimpleNamespace
@@ -81,6 +82,7 @@ from tests.support.managed_delivery import (
     build_dependency_install_subprocess_side_effect,
 )
 
+_ANSI_RE = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
 runner = CliRunner()
 SAMPLE_FIXTURE_SOURCE_REF = "tests/fixtures/frontend-contract-sample-src/match"
 
@@ -4176,7 +4178,7 @@ specs:
             result = runner.invoke(app, ["program", "truth", "audit", "--wi"])
 
         assert result.exit_code == 2, result.output
-        assert "Option '--wi' requires an argument" in result.output
+        assert "Option '--wi' requires an argument" in _ANSI_RE.sub("", result.output)
 
     def test_program_status_exposes_frontend_readiness(
         self, initialized_project_dir: Path
