@@ -11,23 +11,24 @@
 ## Changed Files
 
 - M .ai-sdlc/project/config/project-state.yaml
-- M .ai-sdlc/state/codex-handoff.md
 - M program-manifest.yaml
 - M tests/integration/test_repo_program_manifest.py
-- ?? .ai-sdlc/work-items/226-v0-9-9-canonical-release/
-- ?? specs/226-v0-9-9-canonical-release/
+- specs/226-v0-9-9-canonical-release/spec.md
+- specs/226-v0-9-9-canonical-release/plan.md
+- specs/226-v0-9-9-canonical-release/tasks.md
+- specs/226-v0-9-9-canonical-release/task-execution-log.md
 
 ## Key Decisions
 
-- Preserve the single WI226 formal baseline; canonical executable tasks select only T21.
-- Create and register the v0.9.9 release note atomically in T31; no release source is registered before the file exists.
-- End repository executable/checklist work at T32; retain post-release evidence only in GitHub.
+- Formal remediation is confined to this canonical WI226 baseline.
+- The parser/guard sees T21 as the unique next executable task; later repository tasks remain blocked.
+- T31 must create the release note before registering it, and T32 is the final repository executable/checklist task.
 
 ## Commands / Tests
 
-- uv run ai-sdlc workitem guard --wi specs/226-v0-9-9-canonical-release --request "进入 T21 生产实现" --json => PASS; selected T21.
-- uv run ai-sdlc program validate => PASS.
-- uv run ai-sdlc verify constraints => PASS; no BLOCKERs.
+- guard => PASS; selected T21.
+- program validate => PASS.
+- verify constraints => PASS; no BLOCKERs.
 - git diff --check => PASS.
 - uv run pytest tests/integration/test_repo_program_manifest.py -q => PASS; 1 passed in 132.58s.
 
@@ -41,4 +42,4 @@
 
 ## Exact Next Steps
 
-- Commit Task 1 formal baseline, then begin T21 TDD.
+- Commit this Task 1 formal baseline, then begin T21 TDD only.
