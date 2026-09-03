@@ -4433,6 +4433,76 @@ def test_release_candidate_truth_readiness_allows_ready_closure_with_unrelated_g
     assert readiness.detail == "truth snapshot is fresh and spec is mapped; unrelated release targets remain blocked"
 
 
+def test_release_candidate_truth_readiness_builds_one_surface_for_seven_members(
+    tmp_path: Path,
+) -> None:
+    manifest = ProgramManifest(
+        schema_version="2",
+        specs=[
+            ProgramSpecRef(
+                id="root",
+                path="specs/root",
+                depends_on=["left", "right"],
+                roles=["release_candidate"],
+            ),
+            ProgramSpecRef(
+                id="left",
+                path="specs/left",
+                depends_on=["left-a", "left-b"],
+            ),
+            ProgramSpecRef(id="left-a", path="specs/left-a"),
+            ProgramSpecRef(id="left-b", path="specs/left-b"),
+            ProgramSpecRef(
+                id="right",
+                path="specs/right",
+                depends_on=["right-a", "right-b"],
+            ),
+            ProgramSpecRef(id="right-a", path="specs/right-a"),
+            ProgramSpecRef(id="right-b", path="specs/right-b"),
+        ],
+    )
+    svc = ProgramService(tmp_path)
+    surface = {
+        "state": "ready",
+        "snapshot_state": "fresh",
+        "detail": "truth snapshot is fresh and release targets are ready",
+        "next_required_actions": [],
+        "next_required_action": "",
+        "snapshot_hash": "sha256:representative",
+        "release_targets": [],
+        "release_capabilities": [],
+        "migration_pending_count": 0,
+        "migration_pending_specs": [],
+        "migration_pending_sources": [],
+        "migration_suggestions": [],
+        "source_inventory": None,
+        "validation_errors": [],
+        "validation_warnings": [],
+    }
+    with patch.object(
+        svc,
+        "build_truth_ledger_surface",
+        return_value=surface,
+    ) as build_surface:
+        readiness = svc.build_release_candidate_truth_readiness(
+            manifest,
+            spec_path="specs/root",
+            validation_result=program_service_module.ProgramValidationResult(valid=True),
+        )
+
+    assert readiness.ready is True
+    assert readiness.matched_spec_ids == [
+        "root",
+        "left",
+        "left-a",
+        "left-b",
+        "right",
+        "right-a",
+        "right-b",
+    ]
+    build_surface.assert_called_once()
+
+
 def test_release_candidate_truth_readiness_reports_real_dependency_blocker_actions(
     tmp_path: Path,
 ) -> None:
@@ -4530,6 +4600,7 @@ def test_release_candidate_truth_readiness_evaluates_shared_transitive_dependenc
         *,
         spec_path: str | Path,
         validation_result: program_service_module.ProgramValidationResult | None = None,
+        truth_ledger_surface: dict[str, object] | None = None,
     ) -> program_service_module.ProgramSpecTruthReadinessResult:
         spec_id = Path(spec_path).name
         evaluated.append(spec_id)
@@ -4543,6 +4614,11 @@ def test_release_candidate_truth_readiness_evaluates_shared_transitive_dependenc
         )
 
     monkeypatch.setattr(svc, "build_spec_truth_readiness", build_member_readiness)
+    monkeypatch.setattr(
+        svc,
+        "build_truth_ledger_surface",
+        lambda *_args, **_kwargs: {},
+    )
 
     readiness = svc.build_release_candidate_truth_readiness(
         manifest,

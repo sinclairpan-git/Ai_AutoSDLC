@@ -2162,6 +2162,7 @@ class ProgramService:
         *,
         spec_path: str | Path,
         validation_result: ProgramValidationResult | None = None,
+        truth_ledger_surface: dict[str, object] | None = None,
     ) -> ProgramSpecTruthReadinessResult | None:
         if not self._manifest_truth_enabled(manifest):
             return None
@@ -2212,9 +2213,13 @@ class ProgramService:
         if quick_readiness is not None:
             return quick_readiness
 
-        surface = self.build_truth_ledger_surface(
-            manifest,
-            validation_result=validation,
+        surface = (
+            truth_ledger_surface
+            if truth_ledger_surface is not None
+            else self.build_truth_ledger_surface(
+                manifest,
+                validation_result=validation,
+            )
         )
         if surface is None:
             return None
@@ -2468,14 +2473,23 @@ class ProgramService:
                 if dependency is not None:
                     collect(dependency)
         collect(root)
-        members = [
-            self.build_spec_truth_readiness(
-                manifest,
-                spec_path=spec.path,
-                validation_result=validation,
-            )
-            for spec in closure
-        ]
+        shared_surface = self.build_truth_ledger_surface(
+            manifest,
+            validation_result=validation,
+        )
+        members = (
+            [
+                self.build_spec_truth_readiness(
+                    manifest,
+                    spec_path=spec.path,
+                    validation_result=validation,
+                    truth_ledger_surface=shared_surface,
+                )
+                for spec in closure
+            ]
+            if shared_surface is not None
+            else [None]
+        )
         if any(member is None for member in members):
             return ProgramSpecTruthReadinessResult(
                 required=True,
