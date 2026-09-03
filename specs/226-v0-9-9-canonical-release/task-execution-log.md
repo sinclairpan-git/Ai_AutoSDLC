@@ -187,12 +187,24 @@
 
 ## Batch 2026-09-03-009 | T32 final local validation and truth-refresh preparation
 
+### 结构化收口字段
+
+- **验证画像**：`code-change`
+- **改动范围**：本 WI 从 `origin/main@8f9df406e0a0a8fcb7a3da0be5ab164358918773` 到当前分支的实现、测试、工作流、v0.9.9 发布真值与 WI226 tracking 文件；本 Batch 本身只更新 tracking/truth。
+- **任务/计划同步状态**：T11、T12、T21、T22、T23、T31、T32 均为 done；repository executable/checklist 工作已经结束，外部 review、merge 与 release receipt 仍属于 Post-release handoff。
+- **代码审查**：T21、T22、T23、T31 已完成任务级审查与有界整改；当前完整候选仍须以 live PR exact HEAD 完成一次终局 Codex review，未在此预写通过。
+- **已完成 git 提交**：是（本地 T32 验证与 truth-refresh 首个载体为 `0df3051bdfe868cd8eee5ac5a09f9d3c5d7ed533`；本结构化字段以 live PR exact HEAD 复核）。
+- **提交哈希**：`0df3051bdfe868cd8eee5ac5a09f9d3c5d7ed533`（非自引用稳定标记；最终候选 SHA 以 live PR exact HEAD 为准）。
+- 关联 branch/worktree disposition 计划：`merged`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`retained(PR review)`
+
 ### 范围
 
 - 只完成 WI226 的本地 T32 收口：验证、任务状态、执行日志、canonical 与 WI226 scoped handoff，以及随后一次 truth snapshot 刷新。
 - 不修改 `src/`、工作流、版本内容或测试逻辑；不执行 push、PR、merge、tag、publish 或任何外部发布操作。
 
-### 实际验证结果
+### 统一验证命令与实际结果
 
 - `uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py tests/integration/test_repo_program_manifest.py -q`：`875 passed in 216.73s (0:03:36)`。
 - `uv run ruff check src tests`：通过，输出 `All checks passed!`。
@@ -204,3 +216,4 @@
 
 - T32 的 checklist/status 已在全部本地验证完成后更新；本日志只记录已真实执行的本地结果。
 - 外部 exact-HEAD review、required checks、merge、tag、三平台资产、checksum、attestation、release smoke 与 12-route 回执仍仅属于 controller 的 Post-release handoff，未在此处预写成功结果。
+- PR 前的 final close-check 预期仍会拒绝 `merge-pending`；合并并处置本分支后，在只含远端真值的隔离 clone 中执行最终零 blocker close-check。上一套未进入远端主线的本地 `feature/226-git-local-cache-exclusion-concurrency-contract-docs` 候选不作为 WI226 v0.9.9 的发布证据，也不在本批删除或改写。
