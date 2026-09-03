@@ -66,6 +66,21 @@
 - T21 已完成；生产代码净新增 149 行，未新增结果类型、schema 或 ledger。
 - T22 是唯一 todo；T23、T31、T32 仍保持 blocked。
 
+## Batch 2026-09-03-004 | T21 review repair round 1
+
+### 范围与结果
+
+- 按 review 收敛 T21 聚合为 89 行生产新增；移除前端状态选择，只聚合现有 readiness 的 state、summary、detail、actions 与 matched spec ids。
+- 三个 release-candidate 结果测试改为真实临时 ProgramService truth fixture，直接穿过既有 `build_spec_truth_readiness()`；只有共享传递依赖顺序测试保留 interaction double。
+- 先对底层 detail 去重再汇总，真实全局 blocker 与 stale snapshot 均验证只保留一条 detail。
+
+### 验证
+
+- `uv run pytest tests/unit/test_program_service.py -q -k 'release_candidate_truth_readiness'`：`5 passed, 416 deselected`。
+- `uv run pytest tests/unit/test_program_service.py -q -k 'build_spec_truth_readiness or release_candidate_truth_readiness'`：`12 passed, 409 deselected`。
+- Ruff 与 `git diff --check`：通过。
+- 相对 T21 parent 的生产差异：`89 0`，满足 review 的 `<=90` 新增行目标。
+
 ## Batch 2026-09-03-002 | Task 1 formal remediation
 
 ### 范围

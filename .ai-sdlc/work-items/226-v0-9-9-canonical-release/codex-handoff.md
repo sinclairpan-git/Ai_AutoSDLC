@@ -1,7 +1,7 @@
 # Continuity Handoff
 
-- Updated: 2026-09-03T09:12:45Z
-- Reason: WI226 Task 2 release-candidate truth readiness
+- Updated: 2026-09-03T09:29:37Z
+- Reason: WI226 Task 2 review repair round 1
 - Goal: Execute approved WI226 v0.9.9 canonical release plan
 - State: T11/T12/T21 done; T22 is the only todo; T23/T31/T32 remain blocked
 - Stage: design
@@ -27,6 +27,7 @@
 - Formal remediation is confined to this canonical WI226 baseline.
 - The parser/guard sees T22 as the unique next executable task; T23/T31/T32 remain blocked.
 - T21 evaluates only the root release-candidate spec and its explicit DFS dependency closure through existing single-spec readiness.
+- T21 is a thin 89-line production addition; global-blocked, dependency-blocked, and stale fixtures invoke real single-spec readiness.
 - T31 must create the release note before registering it, and T32 is the final repository executable/checklist task.
 
 ## Commands / Tests
@@ -39,6 +40,9 @@
 - uv run pytest tests/unit/test_program_service.py -q -k 'build_spec_truth_readiness or release_candidate_truth_readiness' => PASS; 12 passed, 409 deselected.
 - uv run ruff check src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py => PASS.
 - uv run ai-sdlc workitem guard --wi specs/226-v0-9-9-canonical-release --request "进入 T22 truth audit CLI TDD" --json => PASS; selected T22.
+- uv run pytest tests/unit/test_program_service.py -q -k 'release_candidate_truth_readiness' => PASS; 5 passed, 416 deselected.
+- uv run pytest tests/unit/test_program_service.py -q -k 'build_spec_truth_readiness or release_candidate_truth_readiness' => PASS; 12 passed, 409 deselected.
+- uv run ruff check src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py => PASS; git diff --check => PASS.
 - uv run pytest tests/integration/test_repo_program_manifest.py -q => PASS; 1 passed in 132.58s.
 
 ## Blockers / Risks

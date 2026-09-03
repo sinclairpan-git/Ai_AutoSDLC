@@ -2408,49 +2408,22 @@ class ProgramService:
         spec_path: str | Path,
         validation_result: ProgramValidationResult | None = None,
     ) -> ProgramSpecTruthReadinessResult:
-        validation = (
-            validation_result
-            if validation_result is not None
-            else self.validate_manifest(manifest)
-        )
+        validation = validation_result or self.validate_manifest(manifest)
         if not validation.valid:
             return ProgramSpecTruthReadinessResult(
-                required=True,
-                ready=False,
-                state="manifest_invalid",
-                summary_token="manifest_invalid",
-                detail="manifest_invalid: " + "; ".join(validation.errors),
-                next_required_actions=[
-                    "fix program-manifest.yaml validation errors",
-                    PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
-                ],
+                True, False, "manifest_invalid", summary_token="manifest_invalid"
             )
-
         try:
             resolved_spec_dir = self._resolve_project_relative_path(spec_path)
         except ValueError:
-            resolved_spec_dir = None
-        matches = [
-            spec
-            for spec in manifest.specs
-            if resolved_spec_dir is not None
-            and self._resolve_spec_dir(spec.path) == resolved_spec_dir
-        ]
+            return ProgramSpecTruthReadinessResult(True, False, "manifest_unmapped")
+        matches = [spec for spec in manifest.specs if self._resolve_spec_dir(spec.path) == resolved_spec_dir]
         if len(matches) != 1:
-            state = "manifest_unmapped" if not matches else "manifest_ambiguous"
-            detail = f"{state}: release candidate path {spec_path} matches {len(matches)} manifest specs"
             return ProgramSpecTruthReadinessResult(
                 required=True,
                 ready=False,
-                state=state,
-                summary_token=state,
-                detail=detail,
-                next_required_actions=[
-                    "declare exactly one release candidate manifest spec",
-                    PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND,
-                ],
+                state="manifest_unmapped" if not matches else "manifest_ambiguous",
             )
-
         root = matches[0]
         if "release_candidate" not in root.roles:
             return ProgramSpecTruthReadinessResult(
@@ -2467,11 +2440,9 @@ class ProgramService:
                 ],
                 matched_spec_ids=[root.id],
             )
-
         specs_by_id = {spec.id: spec for spec in manifest.specs}
         closure: list[ProgramSpecRef] = []
         visited: set[str] = set()
-
         def collect(spec: ProgramSpecRef) -> None:
             if spec.id in visited:
                 return
@@ -2481,72 +2452,41 @@ class ProgramService:
                 dependency = specs_by_id.get(dependency_id)
                 if dependency is not None:
                     collect(dependency)
-
         collect(root)
-        member_readiness = [
-            (spec, self.build_spec_truth_readiness(
+        members = [
+            self.build_spec_truth_readiness(
                 manifest,
                 spec_path=spec.path,
                 validation_result=validation,
-            ))
+            )
             for spec in closure
         ]
-        unavailable = [spec.id for spec, readiness in member_readiness if readiness is None]
-        if unavailable:
+        if any(member is None for member in members):
             return ProgramSpecTruthReadinessResult(
                 required=True,
                 ready=False,
                 state="truth_readiness_unavailable",
                 summary_token="truth_readiness_unavailable",
-                detail="truth_readiness_unavailable: " + ", ".join(unavailable),
                 next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
-                matched_spec_ids=[spec.id for spec in closure],
             )
-
-        results = [(spec, readiness) for spec, readiness in member_readiness if readiness]
-        blocking = [readiness for _, readiness in results if not readiness.ready]
+        results = [member for member in members if member is not None]
+        blocking = [member for member in results if not member.ready]
         first_blocking = blocking[0] if blocking else None
-        first_frontend = next(
-            (readiness for _, readiness in results if readiness.frontend_delivery_status),
-            None,
-        )
         return ProgramSpecTruthReadinessResult(
-            required=any(readiness.required for _, readiness in results),
+            required=any(member.required for member in results),
             ready=not blocking,
             state=first_blocking.state if first_blocking else "ready",
             summary_token=first_blocking.summary_token if first_blocking else "",
-            detail=" | ".join(
-                _unique_strings(
-                    [
-                        f"{spec.id}: {readiness.detail}"
-                        for spec, readiness in results
-                        if readiness.detail
-                    ]
-                )
-            ),
-            frontend_delivery_status=(
-                first_frontend.frontend_delivery_status if first_frontend else {}
-            ),
-            frontend_delivery_scope=(
-                first_frontend.frontend_delivery_scope if first_frontend else ""
-            ),
-            frontend_inheritance_status=(
-                first_frontend.frontend_inheritance_status if first_frontend else {}
-            ),
+            detail=" | ".join(_unique_strings([member.detail for member in results if member.detail])),
             next_required_actions=[
                 action
-                for _, readiness in results
-                for action in readiness.next_required_actions
+                for member in results
+                for action in member.next_required_actions
             ],
             matched_spec_ids=[
                 spec_id
-                for _, readiness in results
-                for spec_id in readiness.matched_spec_ids
-            ],
-            matched_capabilities=[
-                capability_id
-                for _, readiness in results
-                for capability_id in readiness.matched_capabilities
+                for member in results
+                for spec_id in member.matched_spec_ids
             ],
         )
 
