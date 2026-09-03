@@ -9,7 +9,7 @@
 - [x] T11 canonical formal baseline 已冻结。
 - [x] T12 实施计划已由用户明确批准。
 - [x] T21 聚合显式依赖闭包 readiness。
-- [ ] T22 扩展既有 truth audit CLI。
+- [x] T22 扩展既有 truth audit CLI。
 - [ ] T23 接入 PR/tag 工作流门禁。
 - [ ] T31 同步 v0.9.9 release truth。
 - [ ] T32 完成终局本地验证与 truth 刷新。
@@ -79,7 +79,7 @@
 ### Task 2.2 TDD 扩展既有 truth audit CLI
 
 - task_id: T22
-- status: todo
+- status: done
 - goal: 在既有 `program truth audit` 中增加可选 WI 审计入口，同时保持无参数路径兼容。
 - depends:
   - T21
@@ -96,7 +96,7 @@
 ### Task 2.3 接入不可跳过的 PR/tag 工作流门禁
 
 - task_id: T23
-- status: blocked
+- status: todo
 - goal: 让 PR Checks 与 Release Build 在同一命令、同一失败语义下消费 WI226 readiness。
 - depends:
   - T22

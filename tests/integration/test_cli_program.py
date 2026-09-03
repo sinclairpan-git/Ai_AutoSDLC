@@ -3959,6 +3959,196 @@ specs:
             == 1
         )
 
+    def test_program_truth_audit_release_candidate_renders_ready_closure(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        readiness = program_service_module.ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=True,
+            state="ready",
+            detail="root and dependency are ready",
+            next_required_actions=["publish release", "publish release"],
+            matched_spec_ids=["226-release", "225-dependency"],
+        )
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "load_manifest",
+                return_value=SimpleNamespace(),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_release_candidate_truth_readiness",
+                return_value=readiness,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["program", "truth", "audit", "--wi", "specs/226-release"],
+            )
+
+        assert result.exit_code == 0, result.output
+        assert "root WI: specs/226-release" in result.output
+        assert "closure specs: 226-release, 225-dependency" in result.output
+        assert "state: ready" in result.output
+        assert "detail: root and dependency are ready" in result.output
+        assert result.output.count("next action: publish release") == 1
+
+    def test_program_truth_audit_release_candidate_returns_one_for_closure_blocker(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        readiness = program_service_module.ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=False,
+            state="blocked",
+            detail="dependency release blocker",
+            next_required_actions=["repair dependency"],
+            matched_spec_ids=["226-release", "225-dependency"],
+        )
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "load_manifest",
+                return_value=SimpleNamespace(),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_release_candidate_truth_readiness",
+                return_value=readiness,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["program", "truth", "audit", "--wi", "specs/226-release"],
+            )
+
+        assert result.exit_code == 1, result.output
+        assert "state: blocked" in result.output
+        assert "detail: dependency release blocker" in result.output
+        assert "next action: repair dependency" in result.output
+
+    def test_program_truth_audit_release_candidate_returns_one_when_role_is_missing(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        readiness = program_service_module.ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=False,
+            state="release_candidate_role_missing",
+            detail="manifest spec 226-release is not a release candidate",
+            next_required_actions=["add release_candidate role to manifest spec 226-release"],
+            matched_spec_ids=["226-release"],
+        )
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "load_manifest",
+                return_value=SimpleNamespace(),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_release_candidate_truth_readiness",
+                return_value=readiness,
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["program", "truth", "audit", "--wi", "specs/226-release"],
+            )
+
+        assert result.exit_code == 1, result.output
+        assert "state: release_candidate_role_missing" in result.output
+        assert "next action: add release_candidate role" in result.output
+
+    def test_program_truth_audit_release_candidate_keeps_legacy_path(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        surface = {
+            "state": "blocked",
+            "snapshot_state": "fresh",
+            "detail": "legacy release targets blocked",
+            "next_required_actions": ["run truth sync"],
+            "release_targets": ["frontend-mainline-delivery"],
+            "release_capabilities": [],
+            "migration_pending_count": 0,
+            "migration_pending_specs": [],
+            "migration_pending_sources": [],
+            "migration_suggestions": [],
+            "source_inventory": None,
+            "validation_errors": [],
+            "validation_warnings": [],
+        }
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "load_manifest",
+                return_value=SimpleNamespace(),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "validate_manifest",
+                return_value=SimpleNamespace(),
+            ),
+            patch.object(
+                program_service_module.ProgramService,
+                "build_truth_ledger_surface",
+                return_value=surface,
+            ),
+        ):
+            result = runner.invoke(app, ["program", "truth", "audit"])
+
+        assert result.exit_code == 1, result.output
+        assert "snapshot state: fresh" in result.output
+        assert "release targets: frontend-mainline-delivery" in result.output
+        assert "root WI:" not in result.output
+
+    def test_program_truth_audit_release_candidate_keeps_load_error_exit_code(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+
+        with (
+            patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root),
+            patch.object(
+                program_service_module.ProgramService,
+                "load_manifest",
+                side_effect=ValueError("invalid manifest"),
+            ),
+        ):
+            result = runner.invoke(
+                app,
+                ["program", "truth", "audit", "--wi", "specs/226-release"],
+            )
+
+        assert result.exit_code == 2, result.output
+        assert "Failed to load manifest: invalid manifest" in result.output
+
     def test_program_status_exposes_frontend_readiness(
         self, initialized_project_dir: Path
     ) -> None:

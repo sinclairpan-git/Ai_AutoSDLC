@@ -81,6 +81,25 @@
 - Ruff 与 `git diff --check`：通过。
 - 相对 T21 parent 的生产差异：`89 0`，满足 review 的 `<=90` 新增行目标。
 
+## Batch 2026-09-03-005 | T22 truth audit CLI
+
+### 范围与结果
+
+- 为既有 `program truth audit` 增加可选 `--wi`，仅调用 T21 的 `build_release_candidate_truth_readiness()`。
+- 按 WI 路径渲染根 WI、稳定闭包 spec ids、state、detail 和去重后的 next actions；ready 返回 0，其余 readiness 状态返回 1。
+- 未携带 `--wi` 时保留既有 truth-ledger surface 路径；manifest 载入失败仍返回 2。
+
+### 实际 TDD 与验证
+
+- RED：`uv run pytest tests/integration/test_cli_program.py -q -k 'truth_audit and release_candidate'`：`3 failed, 1 passed, 233 deselected`；三个失败均为 Typer 的预期 `No such option: --wi`，退出码 2。
+- GREEN：同一命令：`5 passed, 233 deselected`。
+- 回归：`uv run pytest tests/integration/test_cli_program.py -q -k 'program_truth_audit'`：`9 passed, 229 deselected`。
+
+### 当前结论
+
+- T22 已完成；T23 是唯一 todo。
+- T31、T32 继续 blocked，未改动工作流、版本或发布真值。
+
 ## Batch 2026-09-03-002 | Task 1 formal remediation
 
 ### 范围

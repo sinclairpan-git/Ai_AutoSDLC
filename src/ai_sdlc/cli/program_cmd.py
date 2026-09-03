@@ -1014,6 +1014,11 @@ def program_truth_audit(
         "--manifest",
         help="Path to program manifest relative to project root.",
     ),
+    wi: str | None = typer.Option(
+        None,
+        "--wi",
+        help="Audit one release-candidate work item and its declared dependency closure.",
+    ),
 ) -> None:
     """Audit persisted truth snapshot freshness and release-target readiness."""
     root = _resolve_root()
@@ -1026,6 +1031,25 @@ def program_truth_audit(
         raise typer.Exit(code=2) from None
 
     validation = svc.validate_manifest(mf)
+    if wi is not None:
+        readiness = svc.build_release_candidate_truth_readiness(
+            mf,
+            spec_path=wi,
+            validation_result=validation,
+        )
+        console.print("[bold cyan]Program Truth Audit[/bold cyan]")
+        console.print(f"  - root WI: {wi}", markup=False)
+        console.print(
+            "  - closure specs: "
+            + (", ".join(_dedupe_cli_text_items(readiness.matched_spec_ids)) or "-"),
+            markup=False,
+        )
+        console.print(f"  - state: {readiness.state}", markup=False)
+        console.print(f"  - detail: {readiness.detail}", markup=False)
+        for action in _dedupe_cli_text_items(readiness.next_required_actions):
+            console.print(f"  - next action: {action}", markup=False)
+        raise typer.Exit(code=0 if readiness.ready else 1)
+
     surface = svc.build_truth_ledger_surface(mf, validation_result=validation)
     if surface is None:
         console.print("[yellow]Truth ledger is not enabled in the manifest.[/yellow]")
