@@ -148,7 +148,7 @@
 ### Task 3.2 完成终局本地验证和 truth 刷新
 
 - task_id: T32
-- status: done
+- status: blocked
 - goal: 在不改写全局历史 blocker 的前提下完成本地交付证据，并刷新 WI226 的真实 snapshot。
 - depends:
   - T31
@@ -169,6 +169,10 @@
   - uv run ai-sdlc program truth audit --wi specs/226-v0-9-9-canonical-release
   - git diff --check
 
+- blocked_by:
+  - exact head `a9140136` 的 scoped audit 运行超过 10 分钟仍无输出，未取得 required `ready` receipt。
+  - 终局审查确认 7 个闭包成员会各自重算一次全仓 truth surface；修正需要第三轮生产代码整改，触发本 WI 固定 No-Go。
+
 ## 固定止损规则
 
 - 生产代码净新增 `>150` 行、实施 `>1` 人日、需要新 schema/ledger/waiver 或第三轮代码修复：立即 No-Go。
@@ -177,4 +181,4 @@
 
 ## Post-release handoff
 
-T32 结束 repository executable/checklist 工作。之后仅在 GitHub 留存 release evidence：同一精确 HEAD 的独立 review、required checks、merge 与 `origin/main` 核验、tag/main SHA 一致性、三平台资产、SHA256 checksum、attestation、release smoke 和 12-route 自然回执。不得为回写这些外部结果创建第二个 closeout PR。
+只有后续经用户另行授权的新候选完成 T32，才进入 GitHub Post-release handoff：同一精确 HEAD 的独立 review、required checks、merge 与 `origin/main` 核验、tag/main SHA 一致性、三平台资产、SHA256 checksum、attestation、release smoke 和 12-route 自然回执。当前 `a9140136` 已终局 No-Go，不得 push/open PR；不得为回写外部结果创建第二个 closeout PR。

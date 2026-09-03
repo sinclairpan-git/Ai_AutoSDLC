@@ -1,9 +1,9 @@
 # Continuity Handoff
 
 - Updated: 2026-09-03
-- Reason: WI226 repository work is implemented and locally validated; preparing the exact-head review and single PR.
-- Goal: Deliver the canonical v0.9.9 release candidate without reopening design or adding a second closeout PR.
-- State: T11-T32 are done. Full local validation passed. Global Program Truth remains intentionally blocked by the same 16 historical blockers.
+- Reason: exact-head terminal review rejected the mandatory scoped audit path on measured cost and missing ready evidence.
+- Goal: Preserve the truthful WI226 No-Go state without reopening design or making a third code repair.
+- State: T11-T31 are done; T32 is blocked. Candidate `a9140136` must not be pushed or opened as a PR.
 - Stage: close
 - Work Item: 226-v0-9-9-canonical-release
 - Branch: feature/226-v0-9-9-canonical-release-docs
@@ -19,8 +19,9 @@
 
 - Production net addition is 129/150 lines; both permitted deterministic code-repair rounds are consumed.
 - No schema, ledger, waiver, second design, or second closeout PR was added.
-- T32 ends repository checklist work. Review, required checks, merge, tag, assets, attestation, smoke, and 12-route receipts remain one Post-release handoff.
-- A final close-check cannot truthfully pass before merge because it rejects `merge-pending`; run it in an isolated remote clone after the single PR merges and its branch is disposed.
+- T32 did not complete: the scoped audit ran beyond 10 minutes with no payload, and final review found seven repeated whole-repository truth builds.
+- The fixed 2/2 deterministic code-repair budget is exhausted, so reusing one truth surface cannot be implemented in this candidate.
+- Post-release review/check/merge/tag/publish work is not activated for this No-Go candidate.
 - The unrelated abandoned local `feature/226-git-local-cache-exclusion-concurrency-contract-docs` worktree is not remote-main evidence and is not modified or deleted here.
 
 ## Commands / Tests
@@ -30,21 +31,21 @@
 - `uv run pytest -q`: 3428 passed, 3 skipped.
 - `uv run ai-sdlc verify constraints`: no blockers.
 - Truth sync: passed with inventory 1180/1180 mapped and the 16 retained historical blockers; the canonical snapshot hash is read from `program-manifest.yaml` rather than duplicated here.
+- Scoped audit on clean `a9140136`: stopped after more than 10 minutes without output; no ready/exit-0 receipt.
 
 ## Blockers / Risks
 
-- No local implementation blocker is known.
-- Any new production-code finding at final review is terminal No-Go because the two-round repair budget is exhausted; network/API observation failure is retried on the same exact HEAD.
-- Final lifecycle closure necessarily waits for the single PR merge and branch cleanup.
+- Important: the mandatory audit rebuilds the full truth surface once per each of seven closure members and is unsafe under the 20-minute PR job budget.
+- T32 scoped-ready acceptance is unsatisfied. This is a deterministic local execution finding, not an API/network observation failure.
+- The candidate is terminal No-Go under the approved 2/2 repair ceiling.
 
 ## Local PR Review
 
-- T21, T22, T23, and T31 task-level reviews are clean after bounded corrections.
-- The one whole-branch exact-head review is the next gate; no final clean verdict is pre-recorded.
+- T21, T22, T23, and T31 task-level reviews were clean after bounded corrections.
+- Whole-branch review of `a9140136`: No-Go for repeated whole-repository computation and missing scoped-ready receipt.
 
 ## Exact Next Steps
 
-1. Refresh truth after the structured T32 receipt and commit it.
-2. Run the bounded whole-branch review and fresh final verification.
-3. Push one branch, open one PR, request exact-head Codex review, and start the five-minute monitor.
-4. When checks and review are clean, merge; verify exact remote main and complete the Post-release handoff without a second PR.
+1. Commit this terminal No-Go truth record and leave the worktree clean.
+2. Do not push, open a PR, merge, tag, or publish from `a9140136` or its No-Go receipt commit.
+3. Await explicit user direction before disposing this local evidence or authorizing any new candidate; do not reopen design automatically.

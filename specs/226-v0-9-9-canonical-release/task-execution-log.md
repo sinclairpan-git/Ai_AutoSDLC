@@ -191,13 +191,13 @@
 
 - **验证画像**：`code-change`
 - **改动范围**：本 WI 从 `origin/main@8f9df406e0a0a8fcb7a3da0be5ab164358918773` 到当前分支的实现、测试、工作流、v0.9.9 发布真值与 WI226 tracking 文件；本 Batch 本身只更新 tracking/truth。
-- **任务/计划同步状态**：T11、T12、T21、T22、T23、T31、T32 均为 done；repository executable/checklist 工作已经结束，外部 review、merge 与 release receipt 仍属于 Post-release handoff。
-- **代码审查**：T21、T22、T23、T31 已完成任务级审查与有界整改；当前完整候选仍须以 live PR exact HEAD 完成一次终局 Codex review，未在此预写通过。
+- **任务/计划同步状态**：T11、T12、T21、T22、T23、T31 为 done；T32 因未取得 scoped audit ready receipt 且终局审查判定门禁耗时不可接受而恢复为 blocked。
+- **代码审查**：T21、T22、T23、T31 已完成任务级审查与有界整改；完整候选 `a9140136` 的终局审查为 No-Go：闭包内 7 个 spec 各自重算全仓 truth surface，不能作为 20 分钟 PR job 的强制门禁。
 - **已完成 git 提交**：是（本地 T32 验证与 truth-refresh 首个载体为 `0df3051bdfe868cd8eee5ac5a09f9d3c5d7ed533`；本结构化字段以 live PR exact HEAD 复核）。
-- **提交哈希**：`0df3051bdfe868cd8eee5ac5a09f9d3c5d7ed533`（非自引用稳定标记；最终候选 SHA 以 live PR exact HEAD 为准）。
-- 关联 branch/worktree disposition 计划：`merged`
-- 当前批次 branch disposition 状态：`merge-pending`
-- 当前批次 worktree disposition 状态：`retained(PR review)`
+- **提交哈希**：本地 T32 首个载体 `0df3051bdfe868cd8eee5ac5a09f9d3c5d7ed533`；终局 reviewed candidate `a9140136`。
+- 关联 branch/worktree disposition 计划：`retained locally pending explicit NO-GO evidence disposition`
+- 当前批次 branch disposition 状态：`待最终收口`
+- 当前批次 worktree disposition 状态：`retained(NO-GO evidence)`
 
 ### 范围
 
@@ -211,9 +211,11 @@
 - `uv run pytest -q`：`3428 passed, 3 skipped in 865.14s (0:14:25)`。
 - `uv run ai-sdlc verify constraints`：通过，输出 `verify constraints: no BLOCKERs.`。
 - `git diff --check`：通过，退出码 `0`。
+- `uv run ai-sdlc program truth audit --wi specs/226-v0-9-9-canonical-release`：在 clean exact head `a9140136` 运行超过 10 分钟仍无输出，按观察上限中止；未取得 `ready` 或 exit 0 证据。
+- 终局静态审查确认 `build_release_candidate_truth_readiness()` 对 7 个闭包成员逐一调用 `build_spec_truth_readiness()`；全局 snapshot 为 `blocked` 时 fast path 不生效，每个成员都会重建完整 truth surface。
 
 ### 收口边界
 
-- T32 的 checklist/status 已在全部本地验证完成后更新；本日志只记录已真实执行的本地结果。
-- 外部 exact-HEAD review、required checks、merge、tag、三平台资产、checksum、attestation、release smoke 与 12-route 回执仍仅属于 controller 的 Post-release handoff，未在此处预写成功结果。
-- PR 前的 final close-check 预期仍会拒绝 `merge-pending`；合并并处置本分支后，在只含远端真值的隔离 clone 中执行最终零 blocker close-check。上一套未进入远端主线的本地 `feature/226-git-local-cache-exclusion-concurrency-contract-docs` 候选不作为 WI226 v0.9.9 的发布证据，也不在本批删除或改写。
+- focused/full/Ruff/constraints/diff-check 均通过，但 T32 的 scoped-ready 接受条件没有成立，因此状态为 blocked，不能以其他绿灯替代。
+- 两轮 deterministic code repair 已全部消耗；复用一次 truth surface 的生产修正属于第三轮代码整改，按固定止损规则终局 No-Go。当前分支不 push、不创建 PR、不进入 merge/tag/publish。
+- 上一套未进入远端主线的本地 `feature/226-git-local-cache-exclusion-concurrency-contract-docs` 候选仍不作为 WI226 v0.9.9 发布证据，也不在本批删除或改写。
