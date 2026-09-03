@@ -85,5 +85,6 @@ When a Codex change is ready for mainline:
   heartbeat monitoring loop.
 - If Codex review reports no actionable issues and all required checks pass,
   mark the PR ready when needed and merge it into `main`.
+- 在关闭或消耗最后一个实现修复额度前，必须先在 clean exact HEAD 上运行与最终门禁相同的真实规模关键路径，并记录输入规模、耗时、退出码和结果回执；focused/unit 结果不能替代该验证。只有真实规模门禁通过后，才允许进入终局 exact-HEAD review。API/网络观察失败仍按同一 HEAD 重试；由本地重复计算等确定性原因造成的超时属于实现 finding，必须在尚未关闭的修复额度内处理。
 - This protocol is a local development rule for this repository only; do not
   copy it into external user guidance or AI-SDLC framework runtime rules.

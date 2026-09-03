@@ -191,13 +191,13 @@
 
 - **验证画像**：`code-change`
 - **改动范围**：本 WI 从 `origin/main@8f9df406e0a0a8fcb7a3da0be5ab164358918773` 到当前分支的实现、测试、工作流、v0.9.9 发布真值与 WI226 tracking 文件；本 Batch 本身只更新 tracking/truth。
-- **任务/计划同步状态**：T11、T12、T21、T22、T23、T31 为 done；T32 因未取得 scoped audit ready receipt 且终局审查判定门禁耗时不可接受而恢复为 blocked。
-- **代码审查**：T21、T22、T23、T31 已完成任务级审查与有界整改；完整候选 `a9140136` 的终局审查为 No-Go：闭包内 7 个 spec 各自重算全仓 truth surface，不能作为 20 分钟 PR job 的强制门禁。
+- **任务/计划同步状态**：T11、T12、T21、T22、T23、T31、T32 均为 done；Sponsor 特批修复已通过真实规模 scoped audit，repository executable/checklist 工作结束。
+- **代码审查**：T21、T22、T23、T31 已完成任务级审查与有界整改；`a9140136` 的重复计算 No-Go finding 已由一次性 Sponsor 授权在 `3d2e8c6e` 精确修复，最终候选仍须完成唯一一次 exact-HEAD 复审，未在此预写通过。
 - **已完成 git 提交**：是（本地 T32 验证与 truth-refresh 首个载体为 `0df3051bdfe868cd8eee5ac5a09f9d3c5d7ed533`；本结构化字段以 live PR exact HEAD 复核）。
-- **提交哈希**：本地 T32 首个载体 `0df3051bdfe868cd8eee5ac5a09f9d3c5d7ed533`；终局 reviewed candidate `a9140136`。
-- 关联 branch/worktree disposition 计划：`retained locally pending explicit NO-GO evidence disposition`
-- 当前批次 branch disposition 状态：`待最终收口`
-- 当前批次 worktree disposition 状态：`retained(NO-GO evidence)`
+- **提交哈希**：本地 T32 首个载体 `0df3051bdfe868cd8eee5ac5a09f9d3c5d7ed533`；No-Go reviewed candidate `a9140136`；Sponsor 修复 `3d2e8c6e`；首次 fresh-snapshot acceptance head `aca1c283`。
+- 关联 branch/worktree disposition 计划：`merged`
+- 当前批次 branch disposition 状态：`merge-pending`
+- 当前批次 worktree disposition 状态：`retained(PR review)`
 
 ### 范围
 
@@ -211,11 +211,13 @@
 - `uv run pytest -q`：`3428 passed, 3 skipped in 865.14s (0:14:25)`。
 - `uv run ai-sdlc verify constraints`：通过，输出 `verify constraints: no BLOCKERs.`。
 - `git diff --check`：通过，退出码 `0`。
-- `uv run ai-sdlc program truth audit --wi specs/226-v0-9-9-canonical-release`：在 clean exact head `a9140136` 运行超过 10 分钟仍无输出，按观察上限中止；未取得 `ready` 或 exit 0 证据。
-- 终局静态审查确认 `build_release_candidate_truth_readiness()` 对 7 个闭包成员逐一调用 `build_spec_truth_readiness()`；全局 snapshot 为 `blocked` 时 fast path 不生效，每个成员都会重建完整 truth surface。
+- Sponsor RED：`uv run pytest tests/unit/test_program_service.py::test_release_candidate_truth_readiness_builds_one_surface_for_seven_members -q` 为 `1 failed`，精确显示期望 1 次、实际调用 `build_truth_ledger_surface` 7 次。
+- Sponsor GREEN：同一测试 `1 passed`；`uv run pytest tests/unit/test_program_service.py -q -k 'build_spec_truth_readiness or release_candidate_truth_readiness'` 为 `13 passed, 409 deselected`；Ruff 与 `git diff --check` 通过。
+- 生产修复只修改 `program_service.py` 与直接单测，Sponsor 净增 14 行；WI226 生产净增 `143/150`。闭包成员复用一次 shared truth surface，现有 ready/blocked/stale/CLI 语义保持不变。
+- 首次真实规模验收：clean `aca1c283` 上 `uv run ai-sdlc program truth audit --wi specs/226-v0-9-9-canonical-release` 返回 `ready`、exit 0，耗时 `159.234s`，闭包为 root 加 6 个显式依赖；全局 16 个历史 blocker 不变。
 
 ### 收口边界
 
-- focused/full/Ruff/constraints/diff-check 均通过，但 T32 的 scoped-ready 接受条件没有成立，因此状态为 blocked，不能以其他绿灯替代。
-- 两轮 deterministic code repair 已全部消耗；复用一次 truth surface 的生产修正属于第三轮代码整改，按固定止损规则终局 No-Go。当前分支不 push、不创建 PR、不进入 merge/tag/publish。
+- `a9140136` 的 No-Go 仅否决当时的候选，不代表目标无解；用户随后明确批准一次、同分支、两文件、剩余 21 行预算内的终局 Sponsor 修复。该例外已消费，不再允许第二个修复波次。
+- 最终 tracked truth 写回后，必须在最终 clean exact HEAD 重跑 scoped audit 并保持 `ready/0` 与不超过 3 分钟，再进行唯一一次 exact-HEAD 复审；任一失败即终止，不扩范围。
 - 上一套未进入远端主线的本地 `feature/226-git-local-cache-exclusion-concurrency-contract-docs` 候选仍不作为 WI226 v0.9.9 发布证据，也不在本批删除或改写。

@@ -1,9 +1,9 @@
 # Continuity Handoff
 
 - Updated: 2026-09-03
-- Reason: exact-head terminal review rejected the mandatory scoped audit path on measured cost and missing ready evidence.
-- Goal: Preserve the truthful WI226 No-Go state without reopening design or making a third code repair.
-- State: T11-T31 are done; T32 is blocked. Candidate `a9140136` must not be pushed or opened as a PR.
+- Reason: Sponsor-authorized same-branch repair removed the sevenfold truth-surface rebuild and passed the first real-scale acceptance.
+- Goal: Deliver the canonical v0.9.9 candidate through one final exact-head review and one PR without reopening design.
+- State: T11-T32 are done. Sponsor repair `3d2e8c6e` passed focused verification; `aca1c283` scoped audit returned ready in 159.234 seconds.
 - Stage: close
 - Work Item: 226-v0-9-9-canonical-release
 - Branch: feature/226-v0-9-9-canonical-release-docs
@@ -19,9 +19,9 @@
 
 - Production net addition is 129/150 lines; both permitted deterministic code-repair rounds are consumed.
 - No schema, ledger, waiver, second design, or second closeout PR was added.
-- T32 did not complete: the scoped audit ran beyond 10 minutes with no payload, and final review found seven repeated whole-repository truth builds.
-- The fixed 2/2 deterministic code-repair budget is exhausted, so reusing one truth surface cannot be implemented in this candidate.
-- Post-release review/check/merge/tag/publish work is not activated for this No-Go candidate.
+- The earlier `a9140136` No-Go was a candidate verdict; the user explicitly authorized one terminal Sponsor correction on the same branch.
+- All seven closure members now reuse one truth-ledger surface; production net is 143/150 lines.
+- The Sponsor exception is consumed. No second repair wave, redesign, new WI, schema, ledger, waiver, or second closeout PR is allowed.
 - The unrelated abandoned local `feature/226-git-local-cache-exclusion-concurrency-contract-docs` worktree is not remote-main evidence and is not modified or deleted here.
 
 ## Commands / Tests
@@ -31,21 +31,21 @@
 - `uv run pytest -q`: 3428 passed, 3 skipped.
 - `uv run ai-sdlc verify constraints`: no blockers.
 - Truth sync: passed with inventory 1180/1180 mapped and the 16 retained historical blockers; the canonical snapshot hash is read from `program-manifest.yaml` rather than duplicated here.
-- Scoped audit on clean `a9140136`: stopped after more than 10 minutes without output; no ready/exit-0 receipt.
+- Sponsor RED: expected one surface build, observed seven; GREEN: one build and focused 13 passed.
+- Scoped audit on clean `aca1c283`: ready, exit 0, 159.234 seconds.
 
 ## Blockers / Risks
 
-- Important: the mandatory audit rebuilds the full truth surface once per each of seven closure members and is unsafe under the 20-minute PR job budget.
-- T32 scoped-ready acceptance is unsatisfied. This is a deterministic local execution finding, not an API/network observation failure.
-- The candidate is terminal No-Go under the approved 2/2 repair ceiling.
+- Final tracked truth write must be followed by one fresh exact-head scoped audit under 3 minutes and one review.
+- Any failed final audit or new load-bearing review finding terminates the candidate; no further fix is authorized.
 
 ## Local PR Review
 
-- T21, T22, T23, and T31 task-level reviews were clean after bounded corrections.
-- Whole-branch review of `a9140136`: No-Go for repeated whole-repository computation and missing scoped-ready receipt.
+- Prior whole-branch review of `a9140136`: No-Go for repeated whole-repository computation.
+- Sponsor correction has not yet received its sole exact-head re-review; no clean verdict is pre-recorded.
 
 ## Exact Next Steps
 
-1. Commit this terminal No-Go truth record and leave the worktree clean.
-2. Do not push, open a PR, merge, tag, or publish from `a9140136` or its No-Go receipt commit.
-3. Await explicit user direction before disposing this local evidence or authorizing any new candidate; do not reopen design automatically.
+1. Refresh and commit final truth/continuity records.
+2. Run full tests and the final clean exact-head scoped audit; require ready/0 within 3 minutes.
+3. Perform the sole exact-head Sponsor re-review. If clean, push/open the one PR and start the required five-minute monitor.
