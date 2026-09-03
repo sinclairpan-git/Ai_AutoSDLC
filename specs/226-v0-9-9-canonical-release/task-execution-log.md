@@ -158,3 +158,29 @@
 
 - T23 已完成。
 - T31 是唯一 todo；T32 继续 blocked。
+
+## Batch 2026-09-03-008 | T31 v0.9.9 release truth
+
+### 范围与结果
+
+- 先将 release-consistency、workflow、offline guidance 与 manifest inventory
+  测试目标改为 `0.9.9`，随后同步当前版本入口、离线资产名、默认 release
+  tag、constraints 合同与 lockfile；明确的 `post-v0.9.8` 历史路线图叙述保留。
+- 新建面向用户的 `docs/releases/v0.9.9.md`，将 18 个主线载体归并为单一
+  入口与连续性、可验证的跨平台安装/恢复、以及按显式依赖闭包保护的发布边界。
+- 在 release note 存在的同一变更批次，将其以 `release_doc/release` 登记到
+  `source_registry`；没有改写 snapshot 或历史 release note。
+- `uv lock` 将本地包版本从 `0.9.8` 同步为 `0.9.9`。
+
+### 实际 TDD 与验证
+
+- RED：更新测试后，用户指引仍为 `v0.9.8`，离线 bundle 断言失败；随后完整
+  focused suite 也暴露所有尚未同步的当前发布入口。
+- GREEN：`uv run pytest tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py -q`：`213 passed`。
+- Manifest：`uv run pytest tests/integration/test_repo_program_manifest.py -q`：`1 passed`；inventory 为 `1180/1180 mapped`、unmapped `0`、missing `6`，release layer `45`。
+- `uv run ai-sdlc verify constraints`：PASS，无 blocker；`uv run ruff check src tests`：PASS；`git diff --check`：PASS。
+
+### 当前结论
+
+- T31 已完成；T32 是唯一 todo。
+- 未执行 truth sync、全量 pytest、外部 review、merge、tag、资产上传或 release smoke；这些仍属于 T32 或 Post-release handoff。

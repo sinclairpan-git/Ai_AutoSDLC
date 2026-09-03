@@ -248,6 +248,9 @@ source_registry:
 - path: docs/releases/v0.9.8.md
   source_type: release_doc
   truth_layer: release
+- path: docs/releases/v0.9.9.md
+  source_type: release_doc
+  truth_layer: release
 - path: docs/superpowers/specs/2026-03-27-telemetry-trace-governance-design.md
   source_type: design_doc
   truth_layer: design

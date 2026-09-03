@@ -6,7 +6,7 @@ on:
       tag:
         description: Published release tag to verify against the user guide.
         required: true
-        default: v0.9.8
+        default: v0.9.9
   release:
     types:
       - published
@@ -30,7 +30,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
-      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag || 'v0.9.8' }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag || 'v0.9.9' }}
       GH_TOKEN: ${{ github.token }}
       EXPECTED_SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/release-build.yml
       PYTHONUTF8: "1"

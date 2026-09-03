@@ -11,7 +11,7 @@
 - [x] T21 聚合显式依赖闭包 readiness。
 - [x] T22 扩展既有 truth audit CLI。
 - [x] T23 接入 PR/tag 工作流门禁。
-- [ ] T31 同步 v0.9.9 release truth。
+- [x] T31 同步 v0.9.9 release truth。
 - [ ] T32 完成终局本地验证与 truth 刷新。
 
 ## Batch 1：formal baseline
@@ -116,7 +116,7 @@
 ### Task 3.1 同步版本、指南、资产名和发布说明
 
 - task_id: T31
-- status: todo
+- status: done
 - goal: 只同步当前 v0.9.9 入口与真实发布说明，保留明确的 v0.9.8 历史叙述。
 - depends:
   - T23
@@ -148,7 +148,7 @@
 ### Task 3.2 完成终局本地验证和 truth 刷新
 
 - task_id: T32
-- status: blocked
+- status: todo
 - goal: 在不改写全局历史 blocker 的前提下完成本地交付证据，并刷新 WI226 的真实 snapshot。
 - depends:
   - T31
