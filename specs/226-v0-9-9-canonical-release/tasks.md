@@ -8,7 +8,7 @@
 
 - [x] T11 canonical formal baseline 已冻结。
 - [x] T12 实施计划已由用户明确批准。
-- [ ] T21 聚合显式依赖闭包 readiness。
+- [x] T21 聚合显式依赖闭包 readiness。
 - [ ] T22 扩展既有 truth audit CLI。
 - [ ] T23 接入 PR/tag 工作流门禁。
 - [ ] T31 同步 v0.9.9 release truth。
@@ -61,7 +61,7 @@
 ### Task 2.1 TDD 聚合显式依赖闭包 readiness
 
 - task_id: T21
-- status: todo
+- status: done
 - goal: 复用现有逐规格 readiness，为 WI226 显式依赖闭包建立唯一、可重复的 release-candidate 判定。
 - depends:
   - T12
@@ -79,7 +79,7 @@
 ### Task 2.2 TDD 扩展既有 truth audit CLI
 
 - task_id: T22
-- status: blocked
+- status: todo
 - goal: 在既有 `program truth audit` 中增加可选 WI 审计入口，同时保持无参数路径兼容。
 - depends:
   - T21

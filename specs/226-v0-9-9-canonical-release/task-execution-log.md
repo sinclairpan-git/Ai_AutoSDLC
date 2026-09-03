@@ -45,6 +45,27 @@
 - T11 已完成并通过 formal 自检。
 - T12 已完成用户批准；T21 是唯一待执行的 repository task，生产实现尚未开始。
 
+## Batch 2026-09-03-003 | T21 release-candidate truth readiness
+
+### 范围
+
+- 在 `ProgramService` 增加 release-candidate 显式依赖闭包聚合入口，复用现有 `ProgramSpecTruthReadinessResult` 与逐规格 `build_spec_truth_readiness()`。
+- 对根路径唯一匹配、`release_candidate` role、DFS 闭包、成员结果及其 detail/actions/spec ids 做稳定聚合；未读取 Git range、提交消息或 execution log。
+- 新增五类 TDD 行为测试：无关全局 blocker、闭包 blocker、stale snapshot、角色缺失、共享传递依赖。
+
+### 实际 TDD 与验证
+
+- RED：`uv run pytest tests/unit/test_program_service.py -q -k 'release_candidate_truth_readiness'`：`5 failed, 416 deselected`；全部因 `ProgramService` 尚无 `build_release_candidate_truth_readiness`。
+- GREEN：同一命令：`5 passed, 416 deselected`。
+- 回归：`uv run pytest tests/unit/test_program_service.py -q -k 'build_spec_truth_readiness or release_candidate_truth_readiness'`：`12 passed, 409 deselected`。
+- 静态检查：`uv run ruff check src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py`：通过。
+- `git diff --check`：通过。
+
+### 当前结论
+
+- T21 已完成；生产代码净新增 149 行，未新增结果类型、schema 或 ledger。
+- T22 是唯一 todo；T23、T31、T32 仍保持 blocked。
+
 ## Batch 2026-09-03-002 | Task 1 formal remediation
 
 ### 范围

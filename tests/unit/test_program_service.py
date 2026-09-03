@@ -4308,6 +4308,252 @@ specs:
     ]
 
 
+def test_release_candidate_truth_readiness_ignores_unrelated_global_blocker_when_closure_is_ready(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="root",
+                path="specs/root",
+                depends_on=["dependency"],
+                roles=["release_candidate"],
+            ),
+            ProgramSpecRef(id="dependency", path="specs/dependency"),
+            ProgramSpecRef(id="unrelated", path="specs/unrelated"),
+        ]
+    )
+    svc = ProgramService(tmp_path)
+
+    def build_member_readiness(
+        _manifest: ProgramManifest,
+        *,
+        spec_path: str | Path,
+        validation_result: program_service_module.ProgramValidationResult | None = None,
+    ) -> program_service_module.ProgramSpecTruthReadinessResult:
+        spec_id = Path(spec_path).name
+        if spec_id == "unrelated":
+            raise AssertionError("unrelated global blocker must not enter the closure")
+        return program_service_module.ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=True,
+            state="ready",
+            detail=f"{spec_id} is ready",
+            matched_spec_ids=[spec_id],
+        )
+
+    monkeypatch.setattr(svc, "build_spec_truth_readiness", build_member_readiness)
+
+    readiness = svc.build_release_candidate_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+        validation_result=program_service_module.ProgramValidationResult(valid=True),
+    )
+
+    assert readiness.ready is True
+    assert readiness.state == "ready"
+    assert readiness.matched_spec_ids == ["root", "dependency"]
+    assert readiness.detail == "root: root is ready | dependency: dependency is ready"
+
+
+def test_release_candidate_truth_readiness_reports_only_closure_blocker_actions(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="root",
+                path="specs/root",
+                depends_on=["dependency"],
+                roles=["release_candidate"],
+            ),
+            ProgramSpecRef(id="dependency", path="specs/dependency"),
+            ProgramSpecRef(id="unrelated", path="specs/unrelated"),
+        ]
+    )
+    svc = ProgramService(tmp_path)
+
+    def build_member_readiness(
+        _manifest: ProgramManifest,
+        *,
+        spec_path: str | Path,
+        validation_result: program_service_module.ProgramValidationResult | None = None,
+    ) -> program_service_module.ProgramSpecTruthReadinessResult:
+        spec_id = Path(spec_path).name
+        if spec_id == "unrelated":
+            raise AssertionError("unrelated blocker actions must not be reported")
+        if spec_id == "dependency":
+            return program_service_module.ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=False,
+                state="blocked",
+                summary_token="capability_blocked",
+                detail="dependency release capability is blocked",
+                next_required_actions=["repair dependency truth", "repair dependency truth"],
+                matched_spec_ids=[spec_id],
+            )
+        return program_service_module.ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=True,
+            state="ready",
+            detail="root is ready",
+            matched_spec_ids=[spec_id],
+        )
+
+    monkeypatch.setattr(svc, "build_spec_truth_readiness", build_member_readiness)
+
+    readiness = svc.build_release_candidate_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+        validation_result=program_service_module.ProgramValidationResult(valid=True),
+    )
+
+    assert readiness.ready is False
+    assert readiness.state == "blocked"
+    assert readiness.summary_token == "capability_blocked"
+    assert readiness.next_required_actions == ["repair dependency truth"]
+    assert "dependency: dependency release capability is blocked" in readiness.detail
+    assert "unrelated" not in readiness.detail
+
+
+def test_release_candidate_truth_readiness_propagates_stale_snapshot_failure(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="root",
+                path="specs/root",
+                depends_on=["dependency"],
+                roles=["release_candidate"],
+            ),
+            ProgramSpecRef(id="dependency", path="specs/dependency"),
+        ]
+    )
+    svc = ProgramService(tmp_path)
+
+    def build_member_readiness(
+        _manifest: ProgramManifest,
+        *,
+        spec_path: str | Path,
+        validation_result: program_service_module.ProgramValidationResult | None = None,
+    ) -> program_service_module.ProgramSpecTruthReadinessResult:
+        spec_id = Path(spec_path).name
+        if spec_id == "dependency":
+            return program_service_module.ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=False,
+                state="stale",
+                summary_token="truth_snapshot_stale",
+                detail="truth snapshot is stale",
+                next_required_actions=["refresh truth snapshot"],
+                matched_spec_ids=[spec_id],
+            )
+        return program_service_module.ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=True,
+            state="ready",
+            detail="root is ready",
+            matched_spec_ids=[spec_id],
+        )
+
+    monkeypatch.setattr(svc, "build_spec_truth_readiness", build_member_readiness)
+
+    readiness = svc.build_release_candidate_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+        validation_result=program_service_module.ProgramValidationResult(valid=True),
+    )
+
+    assert readiness.ready is False
+    assert readiness.state == "stale"
+    assert readiness.summary_token == "truth_snapshot_stale"
+    assert readiness.next_required_actions == ["refresh truth snapshot"]
+
+
+def test_release_candidate_truth_readiness_rejects_root_without_release_candidate_role(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    manifest = ProgramManifest(
+        specs=[ProgramSpecRef(id="root", path="specs/root")]
+    )
+    svc = ProgramService(tmp_path)
+    monkeypatch.setattr(
+        svc,
+        "build_spec_truth_readiness",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("role validation must precede member readiness")
+        ),
+    )
+
+    readiness = svc.build_release_candidate_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+        validation_result=program_service_module.ProgramValidationResult(valid=True),
+    )
+
+    assert readiness.ready is False
+    assert readiness.state == "release_candidate_role_missing"
+    assert readiness.summary_token == "release_candidate_role_missing"
+    assert readiness.next_required_actions == [
+        "add release_candidate role to manifest spec root"
+    ]
+
+
+def test_release_candidate_truth_readiness_evaluates_shared_transitive_dependency_once_in_dfs_order(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="root",
+                path="specs/root",
+                depends_on=["left", "right"],
+                roles=["release_candidate"],
+            ),
+            ProgramSpecRef(id="left", path="specs/left", depends_on=["shared"]),
+            ProgramSpecRef(id="right", path="specs/right", depends_on=["shared"]),
+            ProgramSpecRef(id="shared", path="specs/shared"),
+        ]
+    )
+    svc = ProgramService(tmp_path)
+    evaluated: list[str] = []
+
+    def build_member_readiness(
+        _manifest: ProgramManifest,
+        *,
+        spec_path: str | Path,
+        validation_result: program_service_module.ProgramValidationResult | None = None,
+    ) -> program_service_module.ProgramSpecTruthReadinessResult:
+        spec_id = Path(spec_path).name
+        evaluated.append(spec_id)
+        return program_service_module.ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=True,
+            state="ready",
+            detail=f"{spec_id} is ready",
+            next_required_actions=["recheck closure", "recheck closure"],
+            matched_spec_ids=[spec_id],
+        )
+
+    monkeypatch.setattr(svc, "build_spec_truth_readiness", build_member_readiness)
+
+    readiness = svc.build_release_candidate_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+        validation_result=program_service_module.ProgramValidationResult(valid=True),
+    )
+
+    assert evaluated == ["root", "left", "shared", "right"]
+    assert readiness.matched_spec_ids == ["root", "left", "shared", "right"]
+    assert readiness.next_required_actions == ["recheck closure"]
+
+
 def test_build_truth_ledger_detail_collects_first_three_unique_capabilities() -> None:
     svc = ProgramService(Path("/tmp"))
 
