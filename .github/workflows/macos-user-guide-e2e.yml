@@ -15,7 +15,10 @@ on:
       - ".github/workflows/macos-user-guide-e2e.yml"
       - "USER_GUIDE.zh-CN.md"
       - "pyproject.toml"
+      - "packaging_backend.py"
       - "packaging/offline/**"
+      - "src/ai_sdlc/**"
+      - "templates/**"
       - "tests/integration/test_github_workflows.py"
 
 permissions:

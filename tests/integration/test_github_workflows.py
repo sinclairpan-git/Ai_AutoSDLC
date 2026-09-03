@@ -413,7 +413,13 @@ def test_macos_user_guide_e2e_verifies_natural_release_before_install() -> None:
     )["run"]
 
     assert events["release"]["types"] == ["published"]
-    assert "pyproject.toml" in events["pull_request"]["paths"]
+    pull_request_paths = events["pull_request"]["paths"]
+    assert {
+        "src/ai_sdlc/**",
+        "templates/**",
+        "packaging_backend.py",
+        "pyproject.toml",
+    }.issubset(pull_request_paths)
     assert job["runs-on"] == "macos-latest"
     assert workflow["permissions"] == {"contents": "read", "attestations": "read"}
     assert "github.event.release.tag_name" in job["env"]["RELEASE_TAG"]
