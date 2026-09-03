@@ -227,6 +227,65 @@ def test_release_build_workflow_requires_exact_tag_checkout() -> None:
     assert "GITHUB_SHA" in guard_script
 
 
+def test_release_candidate_truth_gate_blocks_pr_and_release_build() -> None:
+    command = (
+        "uv run ai-sdlc program truth audit "
+        "--wi specs/226-v0-9-9-canonical-release"
+    )
+    pr_checks = yaml.safe_load(
+        (_WORKFLOWS_DIR / "pr-checks.yml").read_text(encoding="utf-8")
+    )
+    pr_steps = pr_checks["jobs"]["verify"]["steps"]
+    pr_gate = next(step for step in pr_steps if step.get("run") == command)
+    constraints = next(
+        step for step in pr_steps if step.get("name") == "Verify constraints"
+    )
+
+    assert pr_steps.index(constraints) < pr_steps.index(pr_gate)
+    assert "if" not in pr_gate
+    assert "continue-on-error" not in pr_gate
+
+    release_build = yaml.safe_load(
+        (_WORKFLOWS_DIR / "release-build.yml").read_text(encoding="utf-8")
+    )
+    release_steps = release_build["jobs"]["build-smoke-upload"]["steps"]
+    release_gate = next(step for step in release_steps if step.get("run") == command)
+    checkout = next(
+        step for step in release_steps if step.get("uses") == "actions/checkout@v6"
+    )
+    setup_python = next(
+        step for step in release_steps if step.get("name") == "Set up Python"
+    )
+    install_uv = next(step for step in release_steps if step.get("name") == "Install uv")
+    build_index = next(
+        index
+        for index, step in enumerate(release_steps)
+        if step.get("name") == "Build offline bundle"
+    )
+    attest_index = next(
+        index
+        for index, step in enumerate(release_steps)
+        if step.get("uses") == "actions/attest@v4"
+    )
+    upload_index = next(
+        index
+        for index, step in enumerate(release_steps)
+        if "gh release upload" in step.get("run", "")
+    )
+
+    assert (
+        release_steps.index(checkout)
+        < release_steps.index(setup_python)
+        < release_steps.index(install_uv)
+        < release_steps.index(release_gate)
+        < build_index
+        < attest_index
+        < upload_index
+    )
+    assert "if" not in release_gate
+    assert "continue-on-error" not in release_gate
+
+
 def test_release_build_workflow_grants_native_attestation_permissions() -> None:
     workflow = yaml.safe_load(
         (_WORKFLOWS_DIR / "release-build.yml").read_text(encoding="utf-8")

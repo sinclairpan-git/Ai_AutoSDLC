@@ -136,3 +136,25 @@
 - `uv run ai-sdlc verify constraints`：PASS；无 blocker。
 - `uv run pytest tests/integration/test_repo_program_manifest.py -q`：PASS，`1 passed in 132.58s`。
 - `git diff --check`：PASS。
+
+## Batch 2026-09-03-007 | T23 PR/tag release-candidate truth gate
+
+### 范围与结果
+
+- PR Checks 在 `Verify constraints` 后运行 WI226 release-candidate truth audit。
+- Release Build 在 exact-tag checkout、Python/uv setup 后且平台构建前运行同一 audit；步骤也位于 attestation 与 `gh release upload` 之前。
+- 两个门禁均为独立无条件步骤，未配置 `if` 或 `continue-on-error`。
+- 新增 YAML 合同回归，覆盖精确命令、PR 相对约束门禁的顺序，以及 Release Build 相对 checkout/setup/build/attestation/upload 的顺序。
+
+### 实际 TDD 与验证
+
+- RED：`uv run pytest tests/integration/test_github_workflows.py -q -k 'release_candidate_truth or release_build'`：`1 failed, 4 passed, 12 deselected`；仅因 PR workflow 缺少 truth gate 而失败。
+- GREEN：同一命令：`5 passed, 12 deselected`。
+- 全量 workflow 合同：`uv run pytest tests/integration/test_github_workflows.py -q`：`17 passed`。
+- 静态检查：`uv run ruff check tests/integration/test_github_workflows.py`：通过。
+- `git diff --check`：通过。
+
+### 当前结论
+
+- T23 已完成。
+- T31 是唯一 todo；T32 继续 blocked。

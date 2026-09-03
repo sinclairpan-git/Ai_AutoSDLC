@@ -10,7 +10,7 @@
 - [x] T12 实施计划已由用户明确批准。
 - [x] T21 聚合显式依赖闭包 readiness。
 - [x] T22 扩展既有 truth audit CLI。
-- [ ] T23 接入 PR/tag 工作流门禁。
+- [x] T23 接入 PR/tag 工作流门禁。
 - [ ] T31 同步 v0.9.9 release truth。
 - [ ] T32 完成终局本地验证与 truth 刷新。
 
@@ -96,7 +96,7 @@
 ### Task 2.3 接入不可跳过的 PR/tag 工作流门禁
 
 - task_id: T23
-- status: todo
+- status: done
 - goal: 让 PR Checks 与 Release Build 在同一命令、同一失败语义下消费 WI226 readiness。
 - depends:
   - T22
@@ -116,7 +116,7 @@
 ### Task 3.1 同步版本、指南、资产名和发布说明
 
 - task_id: T31
-- status: blocked
+- status: todo
 - goal: 只同步当前 v0.9.9 入口与真实发布说明，保留明确的 v0.9.8 历史叙述。
 - depends:
   - T23

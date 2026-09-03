@@ -1,9 +1,9 @@
 # Continuity Handoff
 
-- Updated: 2026-09-03T09:36:50+00:00
-- Reason: WI226 Task 3 terminal review repair round 2/2
+- Updated: 2026-09-03T10:00:00+00:00
+- Reason: WI226 T23 PR/tag workflow gate completed.
 - Goal: Execute approved WI226 v0.9.9 canonical release plan
-- State: T11/T12/T21/T22 done; T23 is the only todo; T31/T32 remain blocked
+- State: T11/T12/T21/T22/T23 done; T31 is the sole todo; T32 remains blocked
 - Stage: design
 - Work Item: 226-v0-9-9-canonical-release
 - Branch: feature/226-v0-9-9-canonical-release-docs
@@ -25,6 +25,10 @@
 - .ai-sdlc/state/codex-handoff.md
 - .superpowers/sdd/plan/task-2-report.md
 - .superpowers/sdd/plan/task-3-report.md
+- .github/workflows/pr-checks.yml
+- .github/workflows/release-build.yml
+- tests/integration/test_github_workflows.py
+- .superpowers/sdd/plan/task-4-report.md
 
 ## Key Decisions
 
@@ -34,6 +38,7 @@
 - T21 is a thin 89-line production addition; global-blocked, dependency-blocked, and stale fixtures invoke real single-spec readiness.
 - Aggregate preflight failures now return bounded detail/actions; readiness success logic is unchanged.
 - T31 must create the release note before registering it, and T32 is the final repository executable/checklist task.
+- PR Checks and Release Build use the exact same unconditional WI226 truth-audit command; Release Build places it before build, attestation, and upload.
 
 ## Commands / Tests
 
@@ -54,6 +59,8 @@
 - uv run ruff check src/ai_sdlc/cli/program_cmd.py tests/integration/test_cli_program.py => PASS; git diff --check => PASS.
 - uv run ai-sdlc workitem guard --wi specs/226-v0-9-9-canonical-release --request "进入 T23 PR/tag 工作流门禁" --json => PASS; selected T23.
 - terminal repair RED => 1 failed, 6 passed because README.md was unmapped with empty detail/actions; GREEN => 7 passed. Task2 focused => 12 passed; audit => 11 passed; Ruff and diff-check => PASS.
+- T23 RED => 1 failed, 4 passed, 12 deselected because the PR gate was absent; GREEN => 5 passed, 12 deselected. Full workflow contract => 17 passed; Ruff test file and diff-check => PASS.
+- `uv run ai-sdlc workitem guard --wi specs/226-v0-9-9-canonical-release --request '进入 T31 v0.9.9 release truth 同步' --json` => PASS; selected T31.
 
 ## Blockers / Risks
 
@@ -65,4 +72,4 @@
 
 ## Exact Next Steps
 
-- Begin T23 TDD only; do not activate T31 or T32.
+- Begin T31 TDD only; keep T32 blocked until T31 completes.
