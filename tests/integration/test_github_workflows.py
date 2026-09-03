@@ -413,6 +413,7 @@ def test_macos_user_guide_e2e_verifies_natural_release_before_install() -> None:
     )["run"]
 
     assert events["release"]["types"] == ["published"]
+    assert "pyproject.toml" in events["pull_request"]["paths"]
     assert job["runs-on"] == "macos-latest"
     assert workflow["permissions"] == {"contents": "read", "attestations": "read"}
     assert "github.event.release.tag_name" in job["env"]["RELEASE_TAG"]
@@ -425,6 +426,10 @@ def test_macos_user_guide_e2e_verifies_natural_release_before_install() -> None:
     assert "uname -m" in architecture_guard["run"]
     assert "arm64|aarch64" in architecture_guard["run"]
     assert '"${direct_tag_ref}" "${peeled_tag_ref}"' in replay
+    assert (
+        '''release_version="$(awk -F'"' '/^version =/ {print $2; exit}' "${GITHUB_WORKSPACE}/pyproject.toml")"'''
+        in replay
+    )
 
     verify_index = replay.index("gh attestation verify")
     install_index = replay.index("bash ./install_offline.sh --add-to-path")

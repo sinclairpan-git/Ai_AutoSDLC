@@ -14,6 +14,7 @@ on:
     paths:
       - ".github/workflows/macos-user-guide-e2e.yml"
       - "USER_GUIDE.zh-CN.md"
+      - "pyproject.toml"
       - "packaging/offline/**"
       - "tests/integration/test_github_workflows.py"
 
@@ -124,7 +125,15 @@ jobs:
           shasum -a 256 "${business_files[@]}" | LC_ALL=C sort \
             > "${evidence_root}/business-file-hashes-before.txt"
 
-          release_version="${RELEASE_TAG#v}"
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            release_version="$(awk -F'"' '/^version =/ {print $2; exit}' "${GITHUB_WORKSPACE}/pyproject.toml")"
+          else
+            release_version="${RELEASE_TAG#v}"
+          fi
+          if [[ -z "${release_version}" ]]; then
+            echo "Could not determine the package version for the R06 replay." >&2
+            exit 1
+          fi
           bundle_name="ai-sdlc-offline-${release_version}-macos-arm64"
           package_name="${bundle_name}.tar.gz"
           package_path="${work_root}/${package_name}"
