@@ -394,6 +394,89 @@ def test_windows_user_guide_e2e_records_recovery_bound_r02_receipt() -> None:
     ):
         assert evidence_field in replay
 
+
+def test_macos_user_guide_e2e_verifies_natural_release_before_install() -> None:
+    workflow_path = _WORKFLOWS_DIR / "macos-user-guide-e2e.yml"
+
+    assert workflow_path.is_file()
+
+    workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+    events = workflow.get("on", workflow.get(True))
+    job = workflow["jobs"]["existing-project-online-install"]
+    steps = job["steps"]
+    checkout = next(step for step in steps if step.get("uses") == "actions/checkout@v6")
+    architecture_guard = next(
+        step for step in steps if step.get("name") == "Verify macOS arm64 runner"
+    )
+    replay = next(
+        step for step in steps if step.get("name") == "Replay macOS existing-project guide path"
+    )["run"]
+
+    assert events["release"]["types"] == ["published"]
+    assert job["runs-on"] == "macos-latest"
+    assert workflow["permissions"] == {"contents": "read", "attestations": "read"}
+    assert "github.event.release.tag_name" in job["env"]["RELEASE_TAG"]
+    assert "github.event.release.tag_name" in checkout["with"]["ref"]
+    assert steps.index(architecture_guard) < next(
+        index
+        for index, step in enumerate(steps)
+        if step.get("name") == "Build macOS offline bundle for pull request replay"
+    )
+    assert "uname -m" in architecture_guard["run"]
+    assert "arm64|aarch64" in architecture_guard["run"]
+
+    verify_index = replay.index("gh attestation verify")
+    install_index = replay.index("bash ./install_offline.sh --add-to-path")
+    assert replay.index("curl --fail --location") < verify_index < install_index
+    for required_contract in (
+        "--signer-workflow",
+        "--source-ref",
+        "--source-digest",
+        "--deny-self-hosted-runners",
+        "buildTrigger",
+        "workflow_dispatch",
+    ):
+        assert required_contract in replay
+
+
+def test_macos_user_guide_e2e_records_recovery_bound_r06_receipt() -> None:
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "macos-user-guide-e2e.yml").read_text(encoding="utf-8")
+    )
+    steps = workflow["jobs"]["existing-project-online-install"]["steps"]
+    replay = next(
+        step for step in steps if step.get("name") == "Replay macOS existing-project guide path"
+    )["run"]
+
+    assert 'route_id: "R06"' in replay
+    assert 'os: "macos"' in replay
+    assert 'architecture: "arm64"' in replay
+    assert 'kind: "existing"' in replay
+    assert "init-existing-project.txt" in replay
+    assert "adopt-existing-project.txt" in replay
+    assert "recover-corrupted-resume-pack.txt" in replay
+    assert "business-file-hashes-before.txt" in replay
+    assert "business-file-hashes-after.txt" in replay
+    assert 'receipt_status="proven"' in replay
+    assert 'receipt_status="partial"' in replay
+    assert "route-receipt.json" in replay
+    for evidence_field in (
+        "route_id",
+        "environment",
+        "project_mode",
+        "acquisition_mode",
+        "source_binding",
+        "asset_integrity",
+        "installation",
+        "lifecycle",
+        "result_next",
+        "success_receipt",
+        "fault_recovery",
+        "evidence_links",
+    ):
+        assert evidence_field in replay
+
+
 def test_posix_offline_smoke_matrix_concurrency_is_job_scoped() -> None:
     workflow_path = _WORKFLOWS_DIR / "posix-offline-smoke.yml"
 

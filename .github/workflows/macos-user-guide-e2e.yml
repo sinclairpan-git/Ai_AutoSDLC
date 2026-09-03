@@ -1,0 +1,335 @@
+name: macOS User Guide E2E
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published release tag to verify against the user guide.
+        required: true
+        default: v0.9.8
+  release:
+    types:
+      - published
+  pull_request:
+    paths:
+      - ".github/workflows/macos-user-guide-e2e.yml"
+      - "USER_GUIDE.zh-CN.md"
+      - "packaging/offline/**"
+      - "tests/integration/test_github_workflows.py"
+
+permissions:
+  contents: read
+  attestations: read
+
+concurrency:
+  group: macos-user-guide-e2e-${{ github.event_name }}-${{ github.event.pull_request.number || github.event.release.tag_name || inputs.tag || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  existing-project-online-install:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag || 'v0.9.8' }}
+      GH_TOKEN: ${{ github.token }}
+      EXPECTED_SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/release-build.yml
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
+
+    steps:
+      - name: Checkout repository truth
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify macOS arm64 runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$(uname -m)" in
+            arm64|aarch64) ;;
+            *)
+              echo "R06 requires a macOS arm64 runner; got $(uname -m)." >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Set up package build Python
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Build macOS offline bundle for pull request replay
+        if: ${{ github.event_name == 'pull_request' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          uv python install 3.11
+          runtime_python="$(uv python find --managed-python 3.11)"
+          runtime_root="$(cd "$(dirname "${runtime_python}")/.." && pwd)"
+          PYTHON="${runtime_python}" \
+            PYTHONUTF8="1" \
+            PYTHONIOENCODING="utf-8" \
+            AI_SDLC_OFFLINE_PYTHON_RUNTIME="${runtime_root}" \
+            AI_SDLC_OFFLINE_ASSET_SUFFIX="-macos-arm64" \
+            bash packaging/offline/build_offline_bundle.sh
+
+      - name: Replay macOS existing-project guide path
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          evidence_root="${RUNNER_TEMP}/ai-sdlc-macos-user-guide-e2e"
+          work_root="${RUNNER_TEMP}/work"
+          project_root="${work_root}/my-existing-project"
+          rm -rf "${evidence_root}" "${work_root}"
+          mkdir -p "${evidence_root}" "${project_root}/src"
+
+          case "${GITHUB_EVENT_NAME}" in
+            pull_request) package_source_mode="pull_request_local_bundle" ;;
+            release) package_source_mode="natural_release" ;;
+            *) package_source_mode="published_release_manual" ;;
+          esac
+          printf 'release_tag=%s; package_source=%s\n' \
+            "${RELEASE_TAG}" "${package_source_mode}" > "${evidence_root}/scenario.txt"
+
+          cat > "${project_root}/package.json" <<'JSON'
+          {
+            "scripts": {
+              "build": "node -e \"console.log('existing project build placeholder')\""
+            },
+            "dependencies": {}
+          }
+          JSON
+          printf '%s\n' "console.log('existing project source file');" > "${project_root}/src/main.js"
+          printf '%s\n' "# Existing Project" > "${project_root}/README.md"
+          printf '%s\n' "- [ ] Existing imported task" > "${project_root}/TODO.md"
+          business_files=(
+            "${project_root}/package.json"
+            "${project_root}/src/main.js"
+            "${project_root}/README.md"
+            "${project_root}/TODO.md"
+          )
+          find "${project_root}" -type f -print | LC_ALL=C sort \
+            > "${evidence_root}/existing-project-before.txt"
+          shasum -a 256 "${business_files[@]}" | LC_ALL=C sort \
+            > "${evidence_root}/business-file-hashes-before.txt"
+
+          release_version="${RELEASE_TAG#v}"
+          bundle_name="ai-sdlc-offline-${release_version}-macos-arm64"
+          package_name="${bundle_name}.tar.gz"
+          package_path="${work_root}/${package_name}"
+          extract_root="${work_root}/.ai-sdlc-install"
+          workflow_repository="${GITHUB_REPOSITORY}"
+          workflow_commit="${GITHUB_SHA}"
+          release_repository="${workflow_repository}"
+          asset_commit="${workflow_commit}"
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            local_package="${GITHUB_WORKSPACE}/dist-offline/${package_name}"
+            if [[ ! -f "${local_package}" ]]; then
+              echo "Pull request guide replay expected local package: ${local_package}" >&2
+              exit 1
+            fi
+            cp "${local_package}" "${package_path}"
+          else
+            if [[ "${GITHUB_EVENT_NAME}" != "release" ]]; then
+              release_repository="sinclairpan-git/Ai_AutoSDLC"
+              direct_tag_ref="refs/tags/${RELEASE_TAG}"
+              peeled_tag_ref="${direct_tag_ref}^{}"
+              asset_commit="$(
+                git ls-remote --exit-code "https://github.com/${release_repository}.git" \
+                  "${peeled_tag_ref}" | awk 'NR == 1 { print $1 }'
+              )"
+              if [[ -z "${asset_commit}" ]]; then
+                asset_commit="$(
+                  git ls-remote --exit-code "https://github.com/${release_repository}.git" \
+                    "${direct_tag_ref}" | awk 'NR == 1 { print $1 }'
+                )"
+              fi
+              if [[ -z "${asset_commit}" ]]; then
+                echo "Could not resolve asset tag ${RELEASE_TAG} in ${release_repository}." >&2
+                exit 1
+              fi
+            fi
+            download_uri="https://github.com/${release_repository}/releases/download/${RELEASE_TAG}/${package_name}"
+            curl --fail --location --output "${package_path}" "${download_uri}"
+          fi
+
+          attestation_verified=false
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            expected_bundle="ai-sdlc-offline-${release_version}-macos-arm64"
+            expected_download="releases/download/${RELEASE_TAG}/${package_name}"
+            if ! grep -Fq "${expected_bundle}" "${GITHUB_WORKSPACE}/USER_GUIDE.zh-CN.md" || \
+               ! grep -Fq "${expected_download}" "${GITHUB_WORKSPACE}/USER_GUIDE.zh-CN.md"; then
+              echo "The release tag checkout guide does not describe the matching macOS asset." >&2
+              exit 1
+            fi
+
+            expected_ref="refs/tags/${RELEASE_TAG}"
+            tag_commit="$(git rev-parse "${RELEASE_TAG}^{commit}")"
+            checkout_commit="$(git rev-parse HEAD)"
+            asset_commit="${tag_commit}"
+            if [[ "${GITHUB_REF}" != "${expected_ref}" || \
+                  "${checkout_commit}" != "${tag_commit}" || \
+                  "${GITHUB_SHA}" != "${tag_commit}" ]]; then
+              echo "Natural release source ref, tag, event, and checkout commits must be identical." >&2
+              exit 1
+            fi
+
+            verification_json="$(
+              gh attestation verify "${package_path}" \
+                --repo "${GITHUB_REPOSITORY}" \
+                --signer-workflow "${EXPECTED_SIGNER_WORKFLOW}" \
+                --source-ref "${expected_ref}" \
+                --source-digest "${tag_commit}" \
+                --deny-self-hosted-runners \
+                --format json
+            )"
+            printf '%s\n' "${verification_json}" > "${evidence_root}/attestation-verification.json"
+            if ! jq -e 'length > 0' <<<"${verification_json}" >/dev/null; then
+              echo "Expected at least one verified release attestation." >&2
+              exit 1
+            fi
+            build_trigger="$(jq -r '.[0].verificationResult.signature.certificate.buildTrigger' <<<"${verification_json}")"
+            source_ref="$(jq -r '.[0].verificationResult.signature.certificate.sourceRepositoryRef' <<<"${verification_json}")"
+            source_digest="$(jq -r '.[0].verificationResult.signature.certificate.sourceRepositoryDigest' <<<"${verification_json}")"
+            if [[ "${build_trigger}" != "workflow_dispatch" || \
+                  "${source_ref}" != "${expected_ref}" || \
+                  "${source_digest}" != "${tag_commit}" ]]; then
+              echo "Verified attestation does not match the release producer and source." >&2
+              exit 1
+            fi
+            attestation_verified=true
+          fi
+
+          package_hash="$(shasum -a 256 "${package_path}" | awk '{ print tolower($1) }')"
+          mkdir -p "${extract_root}"
+          tar -xzf "${package_path}" -C "${extract_root}"
+          bundle_dir="${extract_root}/${bundle_name}"
+          if [[ ! -d "${bundle_dir}" ]]; then
+            echo "Expanded archive did not contain ${bundle_name}." >&2
+            exit 1
+          fi
+
+          pushd "${bundle_dir}" >/dev/null
+          chmod +x install_offline.sh
+          set +e
+          bash ./install_offline.sh --add-to-path 2>&1 | tee "${evidence_root}/install.log"
+          install_exit="${PIPESTATUS[0]}"
+          set -e
+          if [[ "${install_exit}" -ne 0 ]]; then
+            echo "install_offline.sh --add-to-path failed with exit code ${install_exit}." >&2
+            exit "${install_exit}"
+          fi
+          bundle_python="${bundle_dir}/.venv/bin/python"
+          direct_shim="${bundle_dir}/.venv/bin/ai-sdlc"
+          "${bundle_python}" -m ai_sdlc --help 2>&1 \
+            | tee "${evidence_root}/help-via-bundle-python.txt"
+          if [[ ! -x "${direct_shim}" ]]; then
+            echo "Expected Direct shim executable was missing: ${direct_shim}" >&2
+            exit 1
+          fi
+          popd >/dev/null
+
+          pushd "${project_root}" >/dev/null
+          "${direct_shim}" init . --agent-target codex --shell zsh 2>&1 \
+            | tee "${evidence_root}/init-existing-project.txt"
+          init_output="$(cat "${evidence_root}/init-existing-project.txt")"
+          if ! grep -Fq "当前结果 / Result" <<<"${init_output}" || \
+             ! grep -Fq "下一步 / Next" <<<"${init_output}"; then
+            echo "init output did not include the guide's bilingual Result/Next surface." >&2
+            exit 1
+          fi
+          if grep -Eqi "adapter ingress|materialized|unverified|host ingress|governance activation" \
+              <<<"${init_output}"; then
+            echo "init output exposed internal adapter diagnostic terminology." >&2
+            exit 1
+          fi
+          [[ -d "${project_root}/.ai-sdlc" ]]
+          [[ -f "${project_root}/AGENTS.md" ]]
+
+          "${direct_shim}" adopt . 2>&1 \
+            | tee "${evidence_root}/adopt-existing-project.txt"
+          if ! grep -Fq "接入已有项目" "${evidence_root}/adopt-existing-project.txt"; then
+            echo "adopt output did not include the guide's existing-project adoption wording." >&2
+            exit 1
+          fi
+
+          resume_pack_path="${project_root}/.ai-sdlc/state/resume-pack.yaml"
+          printf '%s\n' ': invalid yaml {{' > "${resume_pack_path}"
+          "${direct_shim}" recover 2>&1 \
+            | tee "${evidence_root}/recover-corrupted-resume-pack.txt"
+          "${bundle_python}" -c \
+            "import pathlib, sys, yaml; yaml.safe_load(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))" \
+            "${resume_pack_path}"
+
+          shasum -a 256 "${business_files[@]}" | LC_ALL=C sort \
+            > "${evidence_root}/business-file-hashes-after.txt"
+          if ! diff -u \
+              "${evidence_root}/business-file-hashes-before.txt" \
+              "${evidence_root}/business-file-hashes-after.txt" \
+              > "${evidence_root}/business-file-hash-diff.txt"; then
+            echo "init/adopt modified existing business files." >&2
+            exit 1
+          fi
+
+          receipt_status="partial"
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            receipt_status="proven"
+          fi
+          jq -n \
+            --arg package_source_mode "${package_source_mode}" \
+            --arg release_repository "${release_repository}" \
+            --arg release_tag "${RELEASE_TAG}" \
+            --arg asset_commit "${asset_commit}" \
+            --arg workflow_repository "${workflow_repository}" \
+            --arg workflow_commit "${workflow_commit}" \
+            --arg workflow_event "${GITHUB_EVENT_NAME}" \
+            --arg workflow_run_id "${GITHUB_RUN_ID}" \
+            --arg runner "${RUNNER_NAME}" \
+            --arg package_name "${package_name}" \
+            --arg package_hash "${package_hash}" \
+            --argjson attestation_verified "${attestation_verified}" \
+            --arg receipt_status "${receipt_status}" \
+            --arg release_version "${release_version}" \
+            --arg evidence_run "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
+            '{
+              route_id: "R06",
+              environment: {os: "macos", architecture: "arm64", runner: $runner},
+              project_mode: {kind: "existing", protected_files: 4},
+              acquisition_mode: $package_source_mode,
+              source_binding: {
+                asset: {repository: $release_repository, tag: $release_tag, commit: $asset_commit},
+                workflow: {repository: $workflow_repository, commit: $workflow_commit, event: $workflow_event, run_id: $workflow_run_id}
+              },
+              asset_integrity: {name: $package_name, sha256: $package_hash, attestation_verified: $attestation_verified},
+              installation: {command: "install_offline.sh --add-to-path", exit_code: 0},
+              lifecycle: {init: "passed", adopt: "passed"},
+              result_next: {captured: true, evidence: "init-existing-project.txt"},
+              success_receipt: {status: $receipt_status, version: $release_version, business_files_preserved: true},
+              fault_recovery: {fault: "corrupted resume-pack.yaml", command: "ai-sdlc recover", restored: true},
+              evidence_links: {guide: "USER_GUIDE.zh-CN.md", workflow: ".github/workflows/macos-user-guide-e2e.yml", run: $evidence_run, release_tag: $release_tag}
+            }' > "${evidence_root}/route-receipt.json"
+          jq -e 'length == 12 and .route_id == "R06" and .success_receipt.status == $status' \
+            --arg status "${receipt_status}" "${evidence_root}/route-receipt.json" >/dev/null
+          find "${project_root}" -type f -print | LC_ALL=C sort \
+            > "${evidence_root}/existing-project-after.txt"
+          popd >/dev/null
+
+      - name: Upload guide replay evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-user-guide-existing-project-evidence
+          path: ${{ runner.temp }}/ai-sdlc-macos-user-guide-e2e
+          if-no-files-found: error
