@@ -100,6 +100,19 @@
 - T22 已完成；T23 是唯一 todo。
 - T31、T32 继续 blocked，未改动工作流、版本或发布真值。
 
+## Batch 2026-09-03-006 | T22 terminal repair round 2/2
+
+### 范围与结果
+
+- 为 release-candidate 聚合的 `manifest_invalid`、项目外路径、零/多 manifest 映射和 `truth_readiness_unavailable` 补齐有界 detail 与 next action；未改 schema、结果类型、helper 或 ready 成功路径。
+- 新增真实 CLI 回归：未映射 `README.md` 返回 1 且输出 detail/action；缺失 `--wi` 值返回 2。
+
+### 验证
+
+- RED：`truth_audit and release_candidate` 为 `1 failed, 6 passed, 233 deselected`；仅因未映射路径 detail/action 为空。
+- GREEN：同一命令 `7 passed, 233 deselected`；Task2 focused `12 passed, 409 deselected`；全部 audit `11 passed, 229 deselected`。
+- Ruff 和 `git diff --check`：通过；累计生产净新增 `129` 行，未超过 `150` 行上限。
+
 ## Batch 2026-09-03-002 | Task 1 formal remediation
 
 ### 范围

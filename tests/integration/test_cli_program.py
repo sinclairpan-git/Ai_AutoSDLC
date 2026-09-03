@@ -4149,6 +4149,35 @@ specs:
         assert result.exit_code == 2, result.output
         assert "Failed to load manifest: invalid manifest" in result.output
 
+    def test_program_truth_audit_release_candidate_unmapped_path_has_recovery_action(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+        _write_manifest(root)
+        (root / "README.md").write_text("# unrelated\n", encoding="utf-8")
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(
+                app,
+                ["program", "truth", "audit", "--wi", "README.md"],
+            )
+
+        assert result.exit_code == 1, result.output
+        assert "state: manifest_unmapped" in result.output
+        assert "detail: manifest_unmapped:" in result.output
+        assert "next action:" in result.output
+
+    def test_program_truth_audit_release_candidate_requires_wi_value(
+        self, initialized_project_dir: Path
+    ) -> None:
+        root = initialized_project_dir
+
+        with patch("ai_sdlc.cli.program_cmd.find_project_root", return_value=root):
+            result = runner.invoke(app, ["program", "truth", "audit", "--wi"])
+
+        assert result.exit_code == 2, result.output
+        assert "Option '--wi' requires an argument" in result.output
+
     def test_program_status_exposes_frontend_readiness(
         self, initialized_project_dir: Path
     ) -> None:

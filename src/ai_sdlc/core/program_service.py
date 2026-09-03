@@ -2411,18 +2411,33 @@ class ProgramService:
         validation = validation_result or self.validate_manifest(manifest)
         if not validation.valid:
             return ProgramSpecTruthReadinessResult(
-                True, False, "manifest_invalid", summary_token="manifest_invalid"
+                True,
+                False,
+                "manifest_invalid",
+                summary_token="manifest_invalid",
+                detail="manifest_invalid: manifest validation failed",
+                next_required_actions=["run python -m ai_sdlc program validate"],
             )
         try:
             resolved_spec_dir = self._resolve_project_relative_path(spec_path)
         except ValueError:
-            return ProgramSpecTruthReadinessResult(True, False, "manifest_unmapped")
+            return ProgramSpecTruthReadinessResult(
+                True,
+                False,
+                "manifest_unmapped",
+                detail="manifest_unmapped: work item path is outside the project root",
+                next_required_actions=["select a manifest-mapped release candidate"],
+            )
         matches = [spec for spec in manifest.specs if self._resolve_spec_dir(spec.path) == resolved_spec_dir]
         if len(matches) != 1:
+            state = "manifest_unmapped" if not matches else "manifest_ambiguous"
             return ProgramSpecTruthReadinessResult(
                 required=True,
                 ready=False,
-                state="manifest_unmapped" if not matches else "manifest_ambiguous",
+                state=state,
+                summary_token=state,
+                detail=f"{state}: work item path must map to exactly one manifest spec",
+                next_required_actions=["select a manifest-mapped release candidate"],
             )
         root = matches[0]
         if "release_candidate" not in root.roles:
@@ -2467,6 +2482,7 @@ class ProgramService:
                 ready=False,
                 state="truth_readiness_unavailable",
                 summary_token="truth_readiness_unavailable",
+                detail="truth_readiness_unavailable: member readiness could not be built",
                 next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
             )
         results = [member for member in members if member is not None]

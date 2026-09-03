@@ -47,3 +47,29 @@ Outputs: `9 passed, 229 deselected in 0.83s`; Ruff reported `All checks passed!`
 - T22 is done.
 - T23 is the only todo.
 - T31 and T32 remain blocked.
+
+## Terminal repair round 2/2
+
+Review correctly identified that several release-candidate aggregate preflight outcomes were rendered as an empty detail with no repair action. The service now supplies bounded detail and next actions for `manifest_invalid`, paths outside the project root, zero or multiple manifest matches, and `truth_readiness_unavailable`. It adds no result type, helper, schema, or success-path behavior.
+
+### Repair RED
+
+```powershell
+uv run pytest tests/integration/test_cli_program.py -q -k 'truth_audit and release_candidate'
+```
+
+Output: `1 failed, 6 passed, 233 deselected in 1.30s`. The real `README.md` invocation exited `1` with `state: manifest_unmapped`, but its detail was blank and it emitted no next action. The missing `--wi` value regression passed with exit code `2`.
+
+### Repair GREEN and focused verification
+
+```powershell
+uv run pytest tests/integration/test_cli_program.py -q -k 'truth_audit and release_candidate'
+uv run pytest tests/unit/test_program_service.py -q -k 'build_spec_truth_readiness or release_candidate_truth_readiness'
+uv run pytest tests/integration/test_cli_program.py -q -k 'program_truth_audit'
+uv run ruff check src/ai_sdlc/core/program_service.py src/ai_sdlc/cli/program_cmd.py tests/unit/test_program_service.py tests/integration/test_cli_program.py
+git diff --check
+```
+
+Outputs: `7 passed, 233 deselected in 0.90s`; `12 passed, 409 deselected in 11.30s`; `11 passed, 229 deselected in 0.89s`; Ruff reported `All checks passed!`; diff-check exited `0`.
+
+The repair is net `+16` production lines (`+19/-3`) in `ProgramService`; WI226 production additions are now `+129` lines (`Task 2 +89`, CLI `+24`, repair `+16`), within the `150`-line limit.
