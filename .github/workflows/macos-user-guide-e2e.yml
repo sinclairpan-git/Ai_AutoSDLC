@@ -146,15 +146,16 @@ jobs:
               release_repository="sinclairpan-git/Ai_AutoSDLC"
               direct_tag_ref="refs/tags/${RELEASE_TAG}"
               peeled_tag_ref="${direct_tag_ref}^{}"
-              asset_commit="$(
+              if ! asset_commit_rows="$(
                 git ls-remote --exit-code "https://github.com/${release_repository}.git" \
-                  "${peeled_tag_ref}" | awk 'NR == 1 { print $1 }'
-              )"
+                  "${direct_tag_ref}" "${peeled_tag_ref}"
+              )"; then
+                echo "Could not resolve asset tag ${RELEASE_TAG} in ${release_repository}." >&2
+                exit 1
+              fi
+              asset_commit="$(awk -v ref="${peeled_tag_ref}" '$2 == ref { print $1; exit }' <<<"${asset_commit_rows}")"
               if [[ -z "${asset_commit}" ]]; then
-                asset_commit="$(
-                  git ls-remote --exit-code "https://github.com/${release_repository}.git" \
-                    "${direct_tag_ref}" | awk 'NR == 1 { print $1 }'
-                )"
+                asset_commit="$(awk -v ref="${direct_tag_ref}" '$2 == ref { print $1; exit }' <<<"${asset_commit_rows}")"
               fi
               if [[ -z "${asset_commit}" ]]; then
                 echo "Could not resolve asset tag ${RELEASE_TAG} in ${release_repository}." >&2
@@ -223,6 +224,7 @@ jobs:
 
           pushd "${bundle_dir}" >/dev/null
           chmod +x install_offline.sh
+          export SHELL=/bin/zsh
           set +e
           bash ./install_offline.sh --add-to-path 2>&1 | tee "${evidence_root}/install.log"
           install_exit="${PIPESTATUS[0]}"
@@ -232,22 +234,23 @@ jobs:
             exit "${install_exit}"
           fi
           bundle_python="${bundle_dir}/.venv/bin/python"
-          direct_shim="${bundle_dir}/.venv/bin/ai-sdlc"
-          "${bundle_python}" -m ai_sdlc --help 2>&1 \
-            | tee "${evidence_root}/help-via-bundle-python.txt"
-          if [[ ! -x "${direct_shim}" ]]; then
-            echo "Expected Direct shim executable was missing: ${direct_shim}" >&2
-            exit 1
-          fi
           popd >/dev/null
 
+          /bin/zsh -ic 'command -v ai-sdlc && ai-sdlc --help' 2>&1 \
+            | tee "${evidence_root}/help-via-fresh-shell.txt"
+
           pushd "${project_root}" >/dev/null
-          "${direct_shim}" init . --agent-target codex --shell zsh 2>&1 \
+          /bin/zsh -ic 'ai-sdlc init . --agent-target codex --shell zsh' 2>&1 \
             | tee "${evidence_root}/init-existing-project.txt"
           init_output="$(cat "${evidence_root}/init-existing-project.txt")"
           if ! grep -Fq "当前结果 / Result" <<<"${init_output}" || \
              ! grep -Fq "下一步 / Next" <<<"${init_output}"; then
             echo "init output did not include the guide's bilingual Result/Next surface." >&2
+            exit 1
+          fi
+          if ! grep -Fq "不用再手动执行初始化命令" <<<"${init_output}" || \
+             ! grep -Fq "AI 对话" <<<"${init_output}"; then
+            echo "init Next did not direct the user back to the AI conversation." >&2
             exit 1
           fi
           if grep -Eqi "adapter ingress|materialized|unverified|host ingress|governance activation" \
@@ -258,7 +261,7 @@ jobs:
           [[ -d "${project_root}/.ai-sdlc" ]]
           [[ -f "${project_root}/AGENTS.md" ]]
 
-          "${direct_shim}" adopt . 2>&1 \
+          /bin/zsh -ic 'ai-sdlc adopt .' 2>&1 \
             | tee "${evidence_root}/adopt-existing-project.txt"
           if ! grep -Fq "接入已有项目" "${evidence_root}/adopt-existing-project.txt"; then
             echo "adopt output did not include the guide's existing-project adoption wording." >&2
@@ -267,7 +270,7 @@ jobs:
 
           resume_pack_path="${project_root}/.ai-sdlc/state/resume-pack.yaml"
           printf '%s\n' ': invalid yaml {{' > "${resume_pack_path}"
-          "${direct_shim}" recover 2>&1 \
+          /bin/zsh -ic 'ai-sdlc recover' 2>&1 \
             | tee "${evidence_root}/recover-corrupted-resume-pack.txt"
           "${bundle_python}" -c \
             "import pathlib, sys, yaml; yaml.safe_load(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))" \

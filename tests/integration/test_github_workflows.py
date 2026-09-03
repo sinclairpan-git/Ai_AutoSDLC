@@ -424,6 +424,7 @@ def test_macos_user_guide_e2e_verifies_natural_release_before_install() -> None:
     )
     assert "uname -m" in architecture_guard["run"]
     assert "arm64|aarch64" in architecture_guard["run"]
+    assert '"${direct_tag_ref}" "${peeled_tag_ref}"' in replay
 
     verify_index = replay.index("gh attestation verify")
     install_index = replay.index("bash ./install_offline.sh --add-to-path")
@@ -457,6 +458,13 @@ def test_macos_user_guide_e2e_records_recovery_bound_r06_receipt() -> None:
     assert "recover-corrupted-resume-pack.txt" in replay
     assert "business-file-hashes-before.txt" in replay
     assert "business-file-hashes-after.txt" in replay
+    assert "/bin/zsh -ic 'command -v ai-sdlc && ai-sdlc --help'" in replay
+    assert (
+        "/bin/zsh -ic 'ai-sdlc init . --agent-target codex --shell zsh'" in replay
+    )
+    assert '"${direct_shim}" init .' not in replay
+    assert 'grep -Fq "不用再手动执行初始化命令"' in replay
+    assert 'grep -Fq "AI 对话"' in replay
     assert 'receipt_status="proven"' in replay
     assert 'receipt_status="partial"' in replay
     assert "route-receipt.json" in replay
