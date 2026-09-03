@@ -42,4 +42,4 @@
 
 ## Exact Next Steps
 
-- Commit this Task 1 formal baseline, then begin T21 TDD only.
+- Begin T21 TDD only.
