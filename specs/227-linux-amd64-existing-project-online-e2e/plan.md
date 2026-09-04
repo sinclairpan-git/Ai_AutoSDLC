@@ -12,7 +12,7 @@
 - 修改 `.github/workflows/macos-user-guide-e2e.yml`：增加两行矩阵并消除 R06/macOS 硬编码。
 - 修改 `tests/integration/test_github_workflows.py`：先写 R10 matrix 与动态绑定合同测试。
 - 修改 `docs/FRAMEWORK_ROADMAP.zh-CN.md`：只在真实 Ubuntu 证据取得后记录 R10 已进入主线候选，仍为 `partial`。
-- 修改 `program-manifest.yaml`、`.ai-sdlc/project/config/project-state.yaml` 与本 WI：登记 WI227 和真实执行证据。
+- 修改 `program-manifest.yaml`、`.ai-sdlc/project/config/project-state.yaml`、直接 inventory 合同测试与本 WI：登记 WI227 和真实执行证据。
 - 不创建 helper/script，不修改产品代码、用户指南、producer 或 schema。
 
 ## 实施顺序

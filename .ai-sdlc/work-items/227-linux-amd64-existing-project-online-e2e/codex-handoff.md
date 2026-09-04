@@ -1,17 +1,18 @@
 # Continuity Handoff
 
-- Updated: 2026-09-04T15:44:26+00:00
-- Reason: 工作方向从 R02 收口切换到已批准的 WI227 R10 bounded execute
+- Updated: 2026-09-04T15:58:36+00:00
+- Reason: T21/T22 完成 RED→GREEN，进入真实 Ubuntu 首验
 - Goal: 实施 WI227 R10 Linux AMD64 已有项目在线 E2E
-- State: T11 formal baseline 已冻结；workitem guard 允许 T21；尚未修改 workflow 或测试
+- State: T21/T22 已完成；单 job R06/R10 matrix 本地合同测试通过；T31 待 PR exact-head Ubuntu 验收
 - Stage: execute
 - Work Item: 227-linux-amd64-existing-project-online-e2e
-- Branch: feature/227-linux-amd64-existing-project-online-e2e-docs
+- Branch: feature/227-linux-amd64-existing-project-online-e2e-dev
 
 ## Changed Files
-- `.ai-sdlc/project/config/project-state.yaml`
-- `program-manifest.yaml`
+- `.github/workflows/macos-user-guide-e2e.yml`
+- `tests/integration/test_github_workflows.py`
 - `specs/227-linux-amd64-existing-project-online-e2e/`
+- canonical/scoped handoff
 
 ## Key Decisions
 - 一个 WI、同一分支原地从 docs 重命名为 dev、一个 PR。
@@ -20,9 +21,13 @@
 
 ## Commands / Tests
 - 基线 workflow tests: `18 passed in 1.59s`。
-- `program validate`: PASS。
-- `verify constraints`: no BLOCKERs。
-- `workitem guard`: `ALLOW_CODE_WITH_TASK T21`。
+- R10 matrix RED: `KeyError: strategy`，`1 failed in 0.31s`。
+- R10 matrix GREEN: `1 passed in 0.29s`。
+- 完整 workflow tests: `19 passed in 1.46s`。
+- Bash replay syntax: PASS。
+- Ruff: PASS。
+- Program validate / constraints: PASS / no BLOCKERs。
+- Repository inventory: `1 passed in 138.18s`，`1185/1185/0/7`、close `225/218`。
 
 ## Blockers / Risks
 - 无产品 blocker；API/网络/runner 排队仅为观察态，不消耗修复轮次。
@@ -31,6 +36,6 @@
 - none
 
 ## Exact Next Steps
-- 提交 formal baseline。
-- 将同一分支重命名为 `feature/227-linux-amd64-existing-project-online-e2e-dev`。
-- 先写并运行 R10 matrix 失败测试。
+- 完成唯一一次最终 Program Truth sync，随后不再修改 tracked 记录。
+- 提交并推送当前单一 dev 分支，创建唯一 PR。
+- 以首个 PR exact HEAD 验证真实 Ubuntu R10 partial receipt 与 R06 回归。

@@ -6,8 +6,8 @@
 ## Checklist
 
 - [x] T11 冻结 R10-only formal baseline、范围与停止条件。
-- [ ] T21 以直接 workflow 合同测试建立 R10 matrix RED。
-- [ ] T22 参数化现有 R06 POSIX consumer 并取得本地 GREEN。
+- [x] T21 以直接 workflow 合同测试建立 R10 matrix RED。
+- [x] T22 参数化现有 R06 POSIX consumer 并取得本地 GREEN。
 - [ ] T31 在 PR exact HEAD 上取得真实 Ubuntu R10 `partial` receipt。
 - [ ] T32 完成 exact-head 复审、合并与主线核验。
 
@@ -24,7 +24,7 @@
 ### Task 2.1 建立 R10 matrix RED
 
 - task_id: T21
-- status: todo
+- status: done
 - depends: none
 - scope:
   - tests/integration/test_github_workflows.py
@@ -36,13 +36,14 @@
 ### Task 2.2 参数化现有 consumer
 
 - task_id: T22
-- status: blocked
+- status: done
 - depends: T21
 - scope:
   - .github/workflows/macos-user-guide-e2e.yml
   - tests/integration/test_github_workflows.py
+  - tests/integration/test_repo_program_manifest.py
 - acceptance:
-  - 验收标准：单 job/单 run block 同时承载 R06 与 R10；直接测试和完整 workflow 测试通过。
+  - 验收标准：单 job/单 run block 同时承载 R06 与 R10；直接 workflow 测试通过；WI227 五层来源的现有 inventory 期望与实际一致。
 - verify:
   - .venv/bin/python -m pytest tests/integration/test_github_workflows.py -q
 
@@ -51,7 +52,7 @@
 ### Task 3.1 真实 Ubuntu 首验
 
 - task_id: T31
-- status: blocked
+- status: todo
 - depends: T22
 - scope:
   - docs/FRAMEWORK_ROADMAP.zh-CN.md
