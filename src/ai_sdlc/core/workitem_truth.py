@@ -89,11 +89,15 @@ class WorkitemTruthResult:
 
 def _detect_base_ref(git: GitClient) -> str | None:
     for candidate in ("main", "master"):
-        if not git.branch_exists(candidate):
-            continue
         remote = f"origin/{candidate}"
+        local_exists = git.branch_exists(candidate)
+        remote_exists = git.branch_exists(remote)
+        if not local_exists:
+            if remote_exists:
+                return remote
+            continue
         if (
-            git.branch_exists(remote)
+            remote_exists
             and git.resolve_revision(candidate) != git.resolve_revision(remote)
             and git.is_ancestor(candidate, remote)
         ):
