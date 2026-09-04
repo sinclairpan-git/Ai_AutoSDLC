@@ -2203,15 +2203,16 @@ class ProgramService:
             manifest,
             resolved_spec_dir,
         )
-        quick_readiness = self._build_persisted_spec_truth_readiness_fast_path(
-            manifest,
-            resolved_spec_dir=resolved_spec_dir,
-            matched_spec_ids=matched_spec_ids,
-            matched_capabilities=matched_capabilities,
-            validation_result=validation,
-        )
-        if quick_readiness is not None:
-            return quick_readiness
+        if truth_ledger_surface is None:
+            quick_readiness = self._build_persisted_spec_truth_readiness_fast_path(
+                manifest,
+                resolved_spec_dir=resolved_spec_dir,
+                matched_spec_ids=matched_spec_ids,
+                matched_capabilities=matched_capabilities,
+                validation_result=validation,
+            )
+            if quick_readiness is not None:
+                return quick_readiness
 
         surface = (
             truth_ledger_surface
@@ -2304,10 +2305,15 @@ class ProgramService:
                         matched_frontend_delivery_status
                     )
                     break
-        if matched_items and any(item.get("audit_state") != "ready" for item in matched_items):
+        missing_capabilities = set(matched_capabilities) - {
+            item.get("capability_id") for item in matched_items
+        }
+        if missing_capabilities or any(
+            item.get("audit_state") != "ready" for item in matched_items
+        ):
             blocked_capabilities = ", ".join(
-                f"{item.get('capability_id')} ({item.get('audit_state')})"
-                for item in matched_items
+                [f"{item.get('capability_id')} ({item.get('audit_state')})" for item in matched_items]
+                + [f"{item} (missing)" for item in sorted(missing_capabilities)]
             )
             blocked_delivery_summaries = _unique_strings(
                 [
@@ -2370,7 +2376,7 @@ class ProgramService:
                 matched_capabilities=matched_capabilities,
             )
 
-        if state not in {"", "ready"}:
+        if not matched_capabilities and state not in {"", "ready"}:
             return ProgramSpecTruthReadinessResult(
                 required=True,
                 ready=False,

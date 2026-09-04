@@ -1,50 +1,50 @@
 # Continuity Handoff
 
 - Updated: 2026-09-03
-- Goal: Finish the Sponsor-authorized WI226 recovery without another repair wave.
-- State: T11-T32 done; first real-scale audit ready at `aca1c283`; final truth/audit/review remain.
+- Goal: Complete the single approved WI226 `F-TRUTH-SCOPE-01` stabilization, pre-certify it at real scale, then freeze one exact HEAD for review.
+- State: T33 done; RED/GREEN, focused/full pre-certification and the first real-scale scoped audit pass; final truth sync, exact-HEAD certification and review remain.
 - Work Item: 226-v0-9-9-canonical-release
 - Branch: feature/226-v0-9-9-canonical-release-docs
+- Parent HEAD: df6e6b5c2ae2acf1f83654b66cb08aeb650019de
 
 ## Changed Files
 
-- WI226 records and continuity files
-- release-candidate truth readiness service/CLI and tests
-- PR/Release Build gates and workflow tests
-- v0.9.9 version, release, packaging, manifest, and consistency surfaces
+- `src/ai_sdlc/core/program_service.py`
+- `tests/unit/test_program_service.py`
+- WI226 `plan.md`, `tasks.md`, `task-execution-log.md`
+- canonical and scoped continuity handoffs
 
 ## Key Decisions
 
-- Implemented explicit dependency-closure readiness, optional `program truth audit --wi`, mandatory PR/tag gates, and synchronized v0.9.9 release truth.
-- Production net addition is 129/150 lines. Deterministic code-repair rounds are closed at 2/2.
-- Global Program Truth stays blocked by the same 16 historical blockers; WI226 does not erase or waive them.
-- User authorized one same-branch Sponsor correction after the `a9140136` No-Go; it does not reopen design or create a new WI.
-- Seven closure members reuse one shared truth surface; production net is 143/150 lines.
-- The Sponsor exception is consumed, so no further production repair is allowed.
-- The older local 226-named abandoned worktree is outside this release candidate and remains untouched.
+- T33 is the only authorized stabilization and only addresses `F-TRUTH-SCOPE-01`.
+- A supplied shared truth surface bypasses the independent-call persisted fast path.
+- Member readiness is determined by matched capability rows; unrelated global blockers do not override ready matched rows, while missing expected rows fail closed.
+- Production net addition is `149/150` lines. No new schema, ledger, waiver, cache, state machine, WI, branch, design, or PR is allowed.
+- Active engineering time is capped at 4 hours; CI/API/review waiting is excluded.
 
 ## Commands / Tests
 
-- Focused: 875 passed.
-- Ruff: passed.
-- Full pytest: 3428 passed, 3 skipped.
-- Constraints and diff check: passed.
-- Truth sync: 1180/1180 mapped, unmapped 0, missing 6, 16 historical blockers retained.
-- Sponsor RED/GREEN: seven surface builds reduced to one; readiness focused set 13 passed.
-- Scoped audit at clean `aca1c283`: ready, exit 0, 159.234 seconds.
+- Baseline focused suite before edits: `13 passed`.
+- RED focused suite: `3 failed, 12 passed`; observed snapshot builds `8`, ready matched row overridden by global blocked, and missing row false-ready.
+- GREEN focused suite: `15 passed, 409 deselected`.
+- Full `tests/unit/test_program_service.py`: `424 passed in 35.86s`.
+- Focused pre-certification: `878 passed in 219.88s`.
+- Full pytest: `3431 passed, 3 skipped in 891.23s`.
+- Ruff, constraints, program validate, budget and diff checks: passed.
+- Program Truth: global `blocked` with all 16 historical blockers retained; inventory `1180/1180`, missing `6`, close `218/224`.
+- Real-scale scoped audit: `ready`, exit `0`, `138.984s` for the seven-member closure.
 
 ## Blockers / Risks
 
-- Final truth records must be committed before repeating the exact-head audit.
-- Audit failure, runtime over 3 minutes, or a new load-bearing review finding is terminal; no second Sponsor repair is authorized.
+- Final truth refresh, clean candidate commit, exact-HEAD certification and frozen-scope review remain.
+- Same-family recurrence, a second finding family, scope/budget breach, or final load-bearing review finding terminates WI226.
 
 ## Local PR Review
 
-- Prior whole-branch review of `a9140136`: No-Go; its repeated-computation finding is addressed by `3d2e8c6e`.
-- The sole Sponsor exact-head re-review is pending and is not represented as passed.
+- Prior candidate review identified `F-TRUTH-SCOPE-01`; the current stabilization has not yet received its one frozen-scope exact-HEAD review.
 
 ## Exact Next Steps
 
-1. Refresh and commit the final truth/continuity state.
-2. Run full tests and the final exact-head scoped audit under 3 minutes.
-3. Run the sole exact-head review; only a clean result may proceed to the one PR.
+1. Perform the final truth refresh and commit the settled tracked candidate.
+2. Run full exact-HEAD certification, including the real-scale scoped audit.
+3. Perform one frozen-scope review; only a clean result may proceed to the original PR.

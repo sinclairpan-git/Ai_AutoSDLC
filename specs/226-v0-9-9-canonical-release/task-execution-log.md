@@ -221,3 +221,30 @@
 - `a9140136` 的 No-Go 仅否决当时的候选，不代表目标无解；用户随后明确批准一次、同分支、两文件、剩余 21 行预算内的终局 Sponsor 修复。该例外已消费，不再允许第二个修复波次。
 - 最终 tracked truth 写回后，必须在最终 clean exact HEAD 重跑 scoped audit 并保持 `ready/0` 与不超过 3 分钟，再进行唯一一次 exact-HEAD 复审；任一失败即终止，不扩范围。
 - 上一套未进入远端主线的本地 `feature/226-git-local-cache-exclusion-concurrency-contract-docs` 候选仍不作为 WI226 v0.9.9 发布证据，也不在本批删除或改写。
+
+## Batch 2026-09-03-010 | T33 F-TRUTH-SCOPE-01 stabilization
+
+### 激活与范围
+
+- 用户批准在同一 WI、同一分支和原 PR 上执行一次同根稳定化；没有创建新 WI、设计稿、分支或 PR。
+- `plan.md` 与 `tasks.md` 只增加 T33 激活记录，并明确 4 小时主动工程投入、150 行生产净新增和唯一 exact-HEAD 认证上限。
+- 生产修复仅修改 `program_service.py`，测试仅修改直接单测；没有新增 schema、ledger、waiver、缓存或状态机。
+
+### 根因与 TDD 证据
+
+- 根因：`build_spec_truth_readiness()` 在消费调用方传入的共享 truth surface 前先进入 persisted fast path；这既让七成员闭包形成 `1+N` 次 snapshot 构建，也让成员投影在 matched capability rows 已 ready 时仍被无关的全局 `blocked` 状态否决。
+- RED：`uv run pytest tests/unit/test_program_service.py -q -k 'build_spec_truth_readiness or release_candidate_truth_readiness'` 返回 `3 failed, 12 passed`。失败分别为七成员实际调用 `build_truth_snapshot()` 8 次、matched row ready 仍返回 blocked、预期 capability row 缺失仍返回 ready。
+- GREEN：同一命令返回 `15 passed, 409 deselected`。
+- 完整服务单测：`uv run pytest tests/unit/test_program_service.py -q` 返回 `424 passed in 35.86s`。
+- Focused 预认证：`uv run pytest tests/unit/test_program_service.py tests/integration/test_cli_program.py tests/unit/test_verify_constraints.py tests/integration/test_github_workflows.py tests/integration/test_offline_bundle_scripts.py tests/integration/test_repo_program_manifest.py -q` 返回 `878 passed in 219.88s (0:03:39)`。
+- 全量预认证：`uv run pytest -q` 返回 `3431 passed, 3 skipped in 891.23s (0:14:51)`。
+- 静态检查：`uv run ruff check src/ai_sdlc/core/program_service.py tests/unit/test_program_service.py` 通过。
+- 全仓静态与合同检查：`uv run ruff check src tests`、`uv run ai-sdlc program validate`、`git diff --check` 均通过。
+- `verify constraints` 首次运行只因本批精简 handoff 时遗漏既有 `## Local PR Review` 标题而失败；恢复该既有章节后，同一命令通过且无 blocker。该记录格式修正未修改生产代码或测试行为。
+- 当前生产代码总净新增 `149/150` 行。
+
+### 当前状态
+
+- Program Truth sync 已执行：全局保持 `blocked`，16 项历史 blocker 原样保留；inventory 为 `1180/1180 mapped`、unmapped `0`、missing `6`、close `218/224`。
+- 真实规模 scoped audit：`uv run ai-sdlc program truth audit --wi specs/226-v0-9-9-canonical-release` 返回 `ready`、exit `0`、耗时 `138.984s`；闭包为根 WI 加六个显式依赖，detail 明确闭包外 release targets 仍 blocked。
+- T33 已完成。最终 tracked 记录仍须再做一次 truth sync 并提交；exact-HEAD 认证与评审尚未执行，不预写通过。

@@ -13,6 +13,7 @@
 - [x] T23 接入 PR/tag 工作流门禁。
 - [x] T31 同步 v0.9.9 release truth。
 - [x] T32 完成终局本地验证与 truth 刷新。
+- [x] T33 完成 `F-TRUTH-SCOPE-01` 同根稳定化和真实规模预认证。
 
 ## Batch 1：formal baseline
 
@@ -171,10 +172,38 @@
 
 ## 固定止损规则
 
-- 生产代码净新增 `>150` 行、实施 `>1` 人日、需要新 schema/ledger/waiver 或第三轮代码修复：立即 No-Go。
+- 用户已批准的 T33 是对旧终局条款的唯一替代：它不是第三个 finding family 或新设计，只允许修复 `F-TRUTH-SCOPE-01`。
+- T33 主动工程投入 `>4` 小时、生产代码净新增 `>150` 行、需要新 schema/ledger/waiver、同 family 仍复现、出现第二个 family 或最终认证仍有 load-bearing finding：立即 No-Go。
 - API/网络观察失败不算代码修复轮次；在同一精确 HEAD 重试。
 - 范围外 finding 进入既有 backlog，不创建 WI226 的例外、替代设计或第二 PR。
 
+## Batch 4：同根稳定化
+
+### Task 4.1 修复共享 truth 上下文的生命周期与判定范围
+
+- task_id: T33
+- status: done
+- goal: 让七成员候选审计只构建一次 truth surface，并只由各成员命中的 capability rows 决定 readiness。
+- depends:
+  - T32
+- scope:
+  - src/ai_sdlc/core/program_service.py
+  - tests/unit/test_program_service.py
+  - specs/226-v0-9-9-canonical-release/
+- acceptance:
+  - persisted ready 和 persisted blocked 两种输入下，七成员审计均只调用一次 `build_truth_snapshot()`/evidence 构建。
+  - 共享 surface 存在时不得进入 persisted fast path，也不得重建 snapshot。
+  - 闭包内 matched capability rows 全部 ready 时结果为 ready；闭包外 16 项 blocker 原样保留但不参与成员判定。
+  - 缺失预期 row、相关 row 非 ready、snapshot stale 等情况继续 fail closed。
+- verify:
+  - uv run pytest tests/unit/test_program_service.py -q -k 'build_spec_truth_readiness or release_candidate_truth_readiness'
+  - uv run ruff check src tests
+  - uv run pytest -q
+  - uv run ai-sdlc verify constraints
+  - uv run ai-sdlc program validate
+  - uv run ai-sdlc program truth audit --wi specs/226-v0-9-9-canonical-release
+  - git diff --check
+
 ## Post-release handoff
 
-T32 结束 repository executable/checklist 工作。之后仅在 GitHub 留存 release evidence：同一精确 HEAD 的独立 review、required checks、merge 与 `origin/main` 核验、tag/main SHA 一致性、三平台资产、SHA256 checksum、attestation、release smoke 和 12-route 自然回执。不得为回写这些外部结果创建第二个 closeout PR。
+除用户已批准的 T33 外，T32 结束其他 repository executable/checklist 工作。T33 通过后仅在 GitHub 留存 release evidence：同一精确 HEAD 的独立 review、required checks、merge 与 `origin/main` 核验、tag/main SHA 一致性、三平台资产、SHA256 checksum、attestation、release smoke 和 12-route 自然回执。不得为回写这些外部结果创建第二个 closeout PR。

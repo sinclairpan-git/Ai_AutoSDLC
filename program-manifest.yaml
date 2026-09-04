@@ -2108,10 +2108,10 @@ specs:
   roles:
   - release_candidate
 truth_snapshot:
-  generated_at: '2026-09-03T14:51:27Z'
+  generated_at: '2026-09-04T04:13:32Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: aca1c283
+  repo_revision: df6e6b5c
   authoring_hash: 5301edf410ea56d5ed4e4ed0a7b5128fe099868ee71f6b6d0deac9f095efccf7
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
@@ -2154,7 +2154,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: d529d62ecd5452e0a49bd93507d1826c633b8316723963073a2ce39571152abb
+  snapshot_hash: c3a4ab1ab7c163bfc657cb28b7a0cb4157f3ccc7f30d9748499d1d81bb231be7
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2188,8 +2188,8 @@ truth_snapshot:
     mapped_sources: 1180
     unmapped_sources: 0
     missing_sources: 6
-    phase_signal_count: 3850
-    deferred_signal_count: 6882
+    phase_signal_count: 3851
+    deferred_signal_count: 6883
     non_goal_signal_count: 404
     layer_totals:
       blueprint: 1
@@ -12264,8 +12264,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 226-v0-9-9-canonical-release
-      phase_signal_count: 3
-      deferred_signal_count: 4
+      phase_signal_count: 4
+      deferred_signal_count: 5
       non_goal_signal_count: 0
     - path: specs/226-v0-9-9-canonical-release/plan.md
       source_type: plan_doc

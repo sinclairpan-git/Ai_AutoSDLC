@@ -1,6 +1,6 @@
 # v0.9.9 Canonical Release Implementation Plan
 
-> **执行约束：** 用户已批准本计划；当前只可从 T21 开始按顺序执行。T22、T23、T31、T32 保持 blocked，直到前置任务真实完成。
+> **执行约束：** T21、T22、T23、T31、T32 已完成。用户已批准在同一 WI、同一分支和原 PR 上执行一次 `F-TRUTH-SCOPE-01` 同根稳定化；本增补取代下方旧的“两轮后终止”表述，但不重新开启其他任务或范围。
 
 **Goal:** 用 WI226 的显式依赖闭包驱动现有逐规格 Program Truth readiness，并把它接入 v0.9.9 的 PR 与 tag 发布门禁。
 
@@ -12,8 +12,9 @@
 
 - 全局 Program Truth 继续 `blocked`，16 项历史 blocker 原样保留。
 - PR #200 仅属于 WI226 的 R06 partial release composition；不改 WI222/WI224 历史记录。
-- 一个 canonical WI、一个实施/发布 PR、最多两轮 focused repair。
+- 一个 canonical WI、一个实施/发布 PR；仅允许一次 `F-TRUTH-SCOPE-01` 稳定化和一次新的 exact-HEAD 认证。
 - 生产代码净新增不超过 150 行；实现与测试不超过 1 人日。
+- 本次稳定化主动工程投入硬上限为 4 小时；CI、GitHub API 和评审排队等待不计入。
 - API/网络 `unknown` 只重试观察，不消耗代码修复轮次。
 - 超预算或需要 schema/ledger/waiver/第二套设计时直接 No-Go，不做边缘修补。
 
@@ -215,10 +216,27 @@ uv run ai-sdlc verify constraints
 2. 运行 `uv run ai-sdlc program truth sync --execute --yes`，再运行全局 audit 与按 WI226 audit；前者必须保留 16 blocker，后者必须 ready。
 3. 更新任务日志，确保只有真实执行结果，不预写 merge/release 成功。
 4. 推送唯一实施/发布分支并打开一个 PR；请求一次精确 HEAD Codex review，并启动约五分钟 heartbeat。
-5. 只修复本 WI 直接导致的 actionable finding，最多两轮；外部 API `unknown` 在同一 HEAD 重试。
+5. 认证只接受冻结范围内的 finding；外部 API `unknown` 在同一 HEAD 重试，不记作候选失败或代码修复轮次。
 6. required checks 与 review 均通过后合并；确认 `origin/main` 精确等于 merge SHA。
 7. 在该 main SHA 创建 `v0.9.9` draft release，运行 Release Build；三平台资产、attestation 和 checksum/smoke 成功后发布。
 8. 验证 Windows/macOS 12-route 自然发布回执和 release artifact smoke；失败时只按本规格边界处理直接因果问题。
+
+### Task 7：`F-TRUTH-SCOPE-01` 同根稳定化
+
+**Files:**
+
+- Modify: `src/ai_sdlc/core/program_service.py`
+- Test: `tests/unit/test_program_service.py`
+- Modify: `specs/226-v0-9-9-canonical-release/tasks.md`
+- Append: `specs/226-v0-9-9-canonical-release/task-execution-log.md`
+
+**Steps:**
+
+1. 先增加 persisted ready/blocked 的七成员失败测试，证明共享上下文只能构建一次，且闭包外 blocker 不改变成员 readiness。
+2. 让传入的共享 truth surface 成为成员投影的权威输入；共享上下文存在时禁止进入 persisted fast path 或重建 snapshot。
+3. 只根据当前成员命中的 capability rows 判定 ready/blocked；缺少预期 row 时继续 fail closed。
+4. 运行 focused、全量、Ruff、constraints、program validate、diff-check 和真实规模 scoped audit；全部绑定同一候选 HEAD 后再请求一次冻结范围评审。
+5. 若同一 finding family 仍复现、出现第二个 family、超出 150 行/4 小时/文件范围，或最终认证仍有 load-bearing finding，则终止本 WI，不再申请例外。
 
 ## 计划自检
 
