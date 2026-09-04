@@ -75,15 +75,17 @@ target, not the controlling framework for local repository development.
 
 When a Codex change is ready for mainline:
 
-- Push the branch and open a PR.
-- Request Codex review on the PR.
-- Immediately create or keep a heartbeat at about five-minute intervals for the
-  PR. The heartbeat must monitor Codex review results and required GitHub check
-  status until the PR is merged or a user-input blocker is reached.
-- If review finds actionable issues, implement focused fixes on the same branch,
-  rerun relevant local tests, push, re-request Codex review, and continue the
-  heartbeat monitoring loop.
-- If Codex review reports no actionable issues and all required checks pass,
-  mark the PR ready when needed and merge it into `main`.
+- Push the branch and open the PR as a draft. Immediately create or keep a
+  heartbeat at about five-minute intervals to monitor required GitHub checks.
+- 在关闭或消耗最后一个实现修复额度前，必须先在 clean exact HEAD 上运行与最终门禁相同的真实规模关键路径，并记录输入规模、耗时、退出码和结果回执；focused/unit 结果不能替代该验证。远端 required checks 也必须在同一 HEAD 上全部通过，之后才允许冻结候选、标记 ready 并请求 Codex review。
+- If review finds actionable issues, implement focused fixes and re-review only
+  when the declared scope and an explicit repair allowance remain. A terminal
+  one-review contract overrides this generic loop; its finding ends the candidate.
+- Any new commit returns the PR to draft verification. Never reuse checks or a
+  review from an older HEAD, and do not write tracked handoff or truth records
+  after the final HEAD is frozen.
+- If Codex review reports no actionable issues and all required checks still
+  pass on the reviewed HEAD, merge it into `main`.
+- API/网络观察失败不是候选失败，只能在同一 HEAD 上重新观察；由本地重复计算等确定性原因造成的超时属于实现 finding，必须在尚未关闭的修复额度内处理。
 - This protocol is a local development rule for this repository only; do not
   copy it into external user guidance or AI-SDLC framework runtime rules.

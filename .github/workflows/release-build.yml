@@ -6,7 +6,7 @@ on:
       tag:
         description: Release tag that will receive the platform assets.
         required: true
-        default: v0.9.8
+        default: v0.9.9
       upload_to_release:
         description: Upload smoke-passed assets to the existing GitHub Release.
         required: true
@@ -85,6 +85,9 @@ jobs:
         uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
+
+      - name: Release-candidate truth audit
+        run: uv run ai-sdlc program truth audit --wi specs/226-v0-9-9-canonical-release
 
       - name: Compute platform asset suffix
         if: runner.os != 'Windows'

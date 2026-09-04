@@ -79,7 +79,7 @@ def test_windows_offline_smoke_workflow_covers_bundle_build_install_and_cli_chec
     assert "ai-sdlc --help" in workflow
     assert "Legacy Artifact Probe" in workflow
     assert "recover --reconcile" in workflow
-    assert '$upgradedVersion -notmatch "0\\.9\\.8"' in workflow
+    assert '$upgradedVersion -notmatch "0\\.9\\.9"' in workflow
     assert '$upgradedVersion -notmatch "0\\.9\\.7"' not in workflow
 
 
@@ -140,7 +140,7 @@ def test_release_artifact_smoke_workflow_installs_published_assets() -> None:
 
     assert "workflow_dispatch:" in workflow
     assert "release:" in workflow
-    assert "default: v0.9.8" in workflow
+    assert "default: v0.9.9" in workflow
     assert "gh release download" in workflow
     assert "windows-latest" in workflow
     assert "macos-latest" in workflow
@@ -176,7 +176,7 @@ def test_release_build_workflow_matrix_builds_smokes_and_uploads_assets() -> Non
     workflow = workflow_path.read_text(encoding="utf-8")
 
     assert "workflow_dispatch:" in workflow
-    assert "default: v0.9.8" in workflow
+    assert "default: v0.9.9" in workflow
     assert "windows-latest" in workflow
     assert "macos-latest" in workflow
     assert "ubuntu-latest" in workflow
@@ -225,6 +225,65 @@ def test_release_build_workflow_requires_exact_tag_checkout() -> None:
     assert 'refs/tags/${RELEASE_TAG}' in guard_script
     assert '${RELEASE_TAG}^{commit}' in guard_script
     assert "GITHUB_SHA" in guard_script
+
+
+def test_release_candidate_truth_gate_blocks_pr_and_release_build() -> None:
+    command = (
+        "uv run ai-sdlc program truth audit "
+        "--wi specs/226-v0-9-9-canonical-release"
+    )
+    pr_checks = yaml.safe_load(
+        (_WORKFLOWS_DIR / "pr-checks.yml").read_text(encoding="utf-8")
+    )
+    pr_steps = pr_checks["jobs"]["verify"]["steps"]
+    pr_gate = next(step for step in pr_steps if step.get("run") == command)
+    constraints = next(
+        step for step in pr_steps if step.get("name") == "Verify constraints"
+    )
+
+    assert pr_steps.index(constraints) < pr_steps.index(pr_gate)
+    assert "if" not in pr_gate
+    assert "continue-on-error" not in pr_gate
+
+    release_build = yaml.safe_load(
+        (_WORKFLOWS_DIR / "release-build.yml").read_text(encoding="utf-8")
+    )
+    release_steps = release_build["jobs"]["build-smoke-upload"]["steps"]
+    release_gate = next(step for step in release_steps if step.get("run") == command)
+    checkout = next(
+        step for step in release_steps if step.get("uses") == "actions/checkout@v6"
+    )
+    setup_python = next(
+        step for step in release_steps if step.get("name") == "Set up Python"
+    )
+    install_uv = next(step for step in release_steps if step.get("name") == "Install uv")
+    build_index = next(
+        index
+        for index, step in enumerate(release_steps)
+        if step.get("name") == "Build offline bundle"
+    )
+    attest_index = next(
+        index
+        for index, step in enumerate(release_steps)
+        if step.get("uses") == "actions/attest@v4"
+    )
+    upload_index = next(
+        index
+        for index, step in enumerate(release_steps)
+        if "gh release upload" in step.get("run", "")
+    )
+
+    assert (
+        release_steps.index(checkout)
+        < release_steps.index(setup_python)
+        < release_steps.index(install_uv)
+        < release_steps.index(release_gate)
+        < build_index
+        < attest_index
+        < upload_index
+    )
+    assert "if" not in release_gate
+    assert "continue-on-error" not in release_gate
 
 
 def test_release_build_workflow_grants_native_attestation_permissions() -> None:
@@ -288,7 +347,7 @@ def test_windows_user_guide_e2e_replays_existing_project_install_path() -> None:
     assert "workflow_dispatch:" in workflow
     assert "pull_request:" in workflow
     assert "windows-latest" in workflow
-    assert "default: v0.9.8" in workflow
+    assert "default: v0.9.9" in workflow
     assert "Build Windows offline bundle for pull request replay" in workflow
     assert "build_offline_bundle.sh" in workflow
     assert 'AI_SDLC_OFFLINE_ASSET_SUFFIX="-windows-amd64"' in workflow

@@ -57,3 +57,6 @@ jobs:
           git branch --force main HEAD^1
           git switch --create "$GITHUB_HEAD_REF" HEAD^2
           uv run ai-sdlc verify constraints
+
+      - name: Release-candidate truth audit
+        run: uv run ai-sdlc program truth audit --wi specs/226-v0-9-9-canonical-release

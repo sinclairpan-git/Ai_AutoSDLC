@@ -19,7 +19,7 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
     release_paths = {
         *(f"docs/releases/v0.7.{patch}.md" for patch in range(5, 20)),
         *(f"docs/releases/v0.8.{patch}.md" for patch in range(0, 11)),
-        *(f"docs/releases/v0.9.{patch}.md" for patch in range(0, 9)),
+        *(f"docs/releases/v0.9.{patch}.md" for patch in range(0, 10)),
     }
     release_registry = {
         (item.path, item.source_type, item.truth_layer)
@@ -44,8 +44,9 @@ def test_root_program_manifest_covers_specs_and_host_ingress_canonical_evidence(
 
     assert validation.valid, validation.errors
     assert inventory is not None
-    assert (inventory.state, inventory.total_sources, inventory.mapped_sources, inventory.unmapped_sources, inventory.missing_sources) == ("complete", 1174, 1174, 0, 5)
-    assert (inventory.layer_totals["close"], inventory.layer_materialized["close"]) == (223, 218)
+    assert (inventory.state, inventory.total_sources, inventory.mapped_sources, inventory.unmapped_sources, inventory.missing_sources) == ("complete", 1180, 1180, 0, 6)
+    assert (inventory.layer_totals["close"], inventory.layer_materialized["close"]) == (224, 218)
+    assert inventory.layer_totals["release"] == 45
     assert release_registry == {(path, "release_doc", "release") for path in release_paths}
     assert roadmap_registry == {
         ("docs/FRAMEWORK_ROADMAP.zh-CN.md", "design_doc", "design")

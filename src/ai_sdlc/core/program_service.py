@@ -2162,6 +2162,7 @@ class ProgramService:
         *,
         spec_path: str | Path,
         validation_result: ProgramValidationResult | None = None,
+        truth_ledger_surface: dict[str, object] | None = None,
     ) -> ProgramSpecTruthReadinessResult | None:
         if not self._manifest_truth_enabled(manifest):
             return None
@@ -2202,19 +2203,24 @@ class ProgramService:
             manifest,
             resolved_spec_dir,
         )
-        quick_readiness = self._build_persisted_spec_truth_readiness_fast_path(
-            manifest,
-            resolved_spec_dir=resolved_spec_dir,
-            matched_spec_ids=matched_spec_ids,
-            matched_capabilities=matched_capabilities,
-            validation_result=validation,
-        )
-        if quick_readiness is not None:
-            return quick_readiness
+        if truth_ledger_surface is None:
+            quick_readiness = self._build_persisted_spec_truth_readiness_fast_path(
+                manifest,
+                resolved_spec_dir=resolved_spec_dir,
+                matched_spec_ids=matched_spec_ids,
+                matched_capabilities=matched_capabilities,
+                validation_result=validation,
+            )
+            if quick_readiness is not None:
+                return quick_readiness
 
-        surface = self.build_truth_ledger_surface(
-            manifest,
-            validation_result=validation,
+        surface = (
+            truth_ledger_surface
+            if truth_ledger_surface is not None
+            else self.build_truth_ledger_surface(
+                manifest,
+                validation_result=validation,
+            )
         )
         if surface is None:
             return None
@@ -2234,37 +2240,14 @@ class ProgramService:
             )
 
         state = str(surface.get("state", "")).strip()
-        if state == "migration_pending":
-            if not matched_capabilities:
-                return ProgramSpecTruthReadinessResult(
-                    required=True,
-                    ready=True,
-                    state="ready",
-                    detail=(
-                        "truth snapshot is fresh and spec is mapped; "
-                        "unrelated truth inventory remains pending"
-                    ),
-                    matched_spec_ids=matched_spec_ids,
-                    matched_capabilities=matched_capabilities,
-                )
+        if state == "migration_pending" and not matched_capabilities:
             return ProgramSpecTruthReadinessResult(
                 required=True,
-                ready=False,
-                state=state,
-                summary_token="truth_inventory_incomplete",
+                ready=True,
+                state="ready",
                 detail=(
-                    "truth_inventory_incomplete: "
-                    f"{surface.get('detail', '')}"
-                ).strip(),
-                next_required_actions=self._build_truth_ledger_next_actions(
-                    state=state,
-                    snapshot_state=snapshot_state,
-                    release_capabilities=list(surface.get("release_capabilities", [])),
-                    migration_pending_specs=list(surface.get("migration_pending_specs", [])),
-                    migration_pending_sources=list(
-                        surface.get("migration_pending_sources", [])
-                    ),
-                    validation_errors=list(surface.get("validation_errors", [])),
+                    "truth snapshot is fresh and spec is mapped; "
+                    "unrelated truth inventory remains pending"
                 ),
                 matched_spec_ids=matched_spec_ids,
                 matched_capabilities=matched_capabilities,
@@ -2299,10 +2282,15 @@ class ProgramService:
                         matched_frontend_delivery_status
                     )
                     break
-        if matched_items and any(item.get("audit_state") != "ready" for item in matched_items):
+        missing_capabilities = set(matched_capabilities) - {
+            item.get("capability_id") for item in matched_items
+        }
+        if missing_capabilities or any(
+            item.get("audit_state") != "ready" for item in matched_items
+        ):
             blocked_capabilities = ", ".join(
-                f"{item.get('capability_id')} ({item.get('audit_state')})"
-                for item in matched_items
+                [f"{item.get('capability_id')} ({item.get('audit_state')})" for item in matched_items]
+                + [f"{item} (missing)" for item in sorted(missing_capabilities)]
             )
             blocked_delivery_summaries = _unique_strings(
                 [
@@ -2365,7 +2353,7 @@ class ProgramService:
                 matched_capabilities=matched_capabilities,
             )
 
-        if state not in {"", "ready"}:
+        if not matched_capabilities and state not in {"", "ready"}:
             return ProgramSpecTruthReadinessResult(
                 required=True,
                 ready=False,
@@ -2399,6 +2387,120 @@ class ProgramService:
             frontend_inheritance_status=matched_frontend_inheritance_status,
             matched_spec_ids=matched_spec_ids,
             matched_capabilities=matched_capabilities,
+        )
+
+    def build_release_candidate_truth_readiness(
+        self,
+        manifest: ProgramManifest,
+        *,
+        spec_path: str | Path,
+        validation_result: ProgramValidationResult | None = None,
+    ) -> ProgramSpecTruthReadinessResult:
+        validation = validation_result or self.validate_manifest(manifest)
+        if not validation.valid:
+            return ProgramSpecTruthReadinessResult(
+                True,
+                False,
+                "manifest_invalid",
+                summary_token="manifest_invalid",
+                detail="manifest_invalid: manifest validation failed",
+                next_required_actions=["run python -m ai_sdlc program validate"],
+            )
+        try:
+            resolved_spec_dir = self._resolve_project_relative_path(spec_path)
+        except ValueError:
+            return ProgramSpecTruthReadinessResult(
+                True,
+                False,
+                "manifest_unmapped",
+                detail="manifest_unmapped: work item path is outside the project root",
+                next_required_actions=["select a manifest-mapped release candidate"],
+            )
+        matches = [spec for spec in manifest.specs if self._resolve_spec_dir(spec.path) == resolved_spec_dir]
+        if len(matches) != 1:
+            state = "manifest_unmapped" if not matches else "manifest_ambiguous"
+            return ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=False,
+                state=state,
+                summary_token=state,
+                detail=f"{state}: work item path must map to exactly one manifest spec",
+                next_required_actions=["select a manifest-mapped release candidate"],
+            )
+        root = matches[0]
+        if "release_candidate" not in root.roles:
+            return ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=False,
+                state="release_candidate_role_missing",
+                summary_token="release_candidate_role_missing",
+                detail=(
+                    "release_candidate_role_missing: "
+                    f"manifest spec {root.id} is not a release candidate"
+                ),
+                next_required_actions=[
+                    f"add release_candidate role to manifest spec {root.id}"
+                ],
+                matched_spec_ids=[root.id],
+            )
+        specs_by_id = {spec.id: spec for spec in manifest.specs}
+        closure: list[ProgramSpecRef] = []
+        visited: set[str] = set()
+        def collect(spec: ProgramSpecRef) -> None:
+            if spec.id in visited:
+                return
+            visited.add(spec.id)
+            closure.append(spec)
+            for dependency_id in spec.depends_on:
+                dependency = specs_by_id.get(dependency_id)
+                if dependency is not None:
+                    collect(dependency)
+        collect(root)
+        shared_surface = self.build_truth_ledger_surface(
+            manifest,
+            validation_result=validation,
+        )
+        members = (
+            [
+                self.build_spec_truth_readiness(
+                    manifest,
+                    spec_path=spec.path,
+                    validation_result=validation,
+                    truth_ledger_surface=shared_surface,
+                )
+                for spec in closure
+            ]
+            if shared_surface is not None
+            else [None]
+        )
+        if any(member is None for member in members):
+            return ProgramSpecTruthReadinessResult(
+                required=True,
+                ready=False,
+                state="truth_readiness_unavailable",
+                summary_token="truth_readiness_unavailable",
+                detail="truth_readiness_unavailable: member readiness could not be built",
+                next_required_actions=[PROGRAM_TRUTH_SYNC_EXECUTE_COMMAND],
+            )
+        results = [member for member in members if member is not None]
+        blocking = [member for member in results if not member.ready]
+        first_blocking = blocking[0] if blocking else None
+        return ProgramSpecTruthReadinessResult(
+            required=any(member.required for member in results),
+            ready=not blocking,
+            state=first_blocking.state if first_blocking else "ready",
+            summary_token=first_blocking.summary_token if first_blocking else "",
+            detail=" | ".join(_unique_strings([member.detail for member in results if member.detail])),
+            next_required_actions=[
+                action
+                for member in results
+                for action in member.next_required_actions
+            ],
+            matched_spec_ids=[
+                spec_id
+                for member in results
+                for spec_id in member.matched_spec_ids
+            ],
         )
 
     def _build_persisted_spec_truth_readiness_fast_path(

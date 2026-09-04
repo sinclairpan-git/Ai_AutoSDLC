@@ -105,7 +105,7 @@ from ai_sdlc.models.frontend_solution_confirmation import (
 from ai_sdlc.models.frontend_theme_token_governance import (
     build_p2_frontend_theme_token_governance_baseline,
 )
-from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef
+from ai_sdlc.models.program import ProgramManifest, ProgramSpecRef, ProgramTruthSnapshot
 from ai_sdlc.models.project import ProjectConfig
 from ai_sdlc.models.state import Checkpoint, FeatureInfo
 from tests.support.managed_delivery import (
@@ -4306,6 +4306,470 @@ specs:
         "materialize browser gate evidence before rerunning verification",
         "python -m ai_sdlc program truth audit",
     ]
+
+
+def _release_candidate_truth_fixture(
+    root: Path,
+    *,
+    block_dependency: bool = False,
+    root_release_target: bool = False,
+) -> tuple[ProgramService, ProgramManifest]:
+    _init_truth_git_repo(root)
+    (root / ".ai-sdlc" / "project" / "config").mkdir(parents=True)
+    (root / ".ai-sdlc" / "project" / "config" / "project-state.yaml").write_text(
+        "status: initialized\nproject_name: demo\nnext_work_item_seq: 1\nversion: '1.0'\n",
+        encoding="utf-8",
+    )
+    (root / "PRD.md").write_text("# prd\n", encoding="utf-8")
+    for spec_id in ("root", "dependency", "unrelated"):
+        spec_dir = root / "specs" / spec_id
+        spec_dir.mkdir(parents=True)
+        (spec_dir / "spec.md").write_text("# Spec\n", encoding="utf-8")
+        (spec_dir / "plan.md").write_text("# Plan\n", encoding="utf-8")
+        (spec_dir / "tasks.md").write_text("- [x] done\n", encoding="utf-8")
+        (spec_dir / "task-execution-log.md").write_text(
+            "# Log\n\n统一验证命令\n代码审查\n任务/计划同步状态\n",
+            encoding="utf-8",
+        )
+    capabilities = [
+        {
+            "id": "unrelated-release",
+            "release_required": True,
+            "spec_refs": ["unrelated"],
+            "required_evidence": {
+                "truth_check_refs": ["specs/unrelated"],
+                "close_check_refs": ["specs/unrelated"],
+                "verify_refs": ["uv run ai-sdlc verify constraints"],
+            },
+        }
+    ]
+    release_targets = ["unrelated-release"]
+    dependency_refs: list[str] = []
+    root_refs: list[str] = []
+    if root_release_target:
+        capabilities.append(
+            {
+                "id": "root-release",
+                "release_required": True,
+                "spec_refs": ["root"],
+                "required_evidence": {
+                    "truth_check_refs": ["specs/root"],
+                    "close_check_refs": ["specs/root"],
+                    "verify_refs": ["uv run ai-sdlc verify constraints"],
+                },
+            }
+        )
+        release_targets.append("root-release")
+        root_refs.append("root-release")
+    if block_dependency:
+        capabilities.append(
+            {
+                "id": "dependency-release",
+                "release_required": True,
+                "spec_refs": ["dependency"],
+                "required_evidence": {
+                    "truth_check_refs": ["specs/dependency"],
+                    "close_check_refs": ["specs/dependency"],
+                    "verify_refs": ["uv run ai-sdlc verify constraints"],
+                },
+            }
+        )
+        release_targets.append("dependency-release")
+        dependency_refs.append("dependency-release")
+    _write_manifest_yaml(
+        root,
+        yaml.safe_dump(
+            {
+                "schema_version": "2",
+                "prd_path": "PRD.md",
+                "program": {"goal": "release candidate truth"},
+                "release_targets": release_targets,
+                "capabilities": capabilities,
+                "specs": [
+                    {
+                        "id": "root",
+                        "path": "specs/root",
+                        "depends_on": ["dependency"],
+                        "roles": ["release_candidate"],
+                        "capability_refs": root_refs,
+                    },
+                    {
+                        "id": "dependency",
+                        "path": "specs/dependency",
+                        "roles": ["runtime_carrier"],
+                        "capability_refs": dependency_refs,
+                    },
+                    {
+                        "id": "unrelated",
+                        "path": "specs/unrelated",
+                        "roles": ["runtime_carrier"],
+                        "capability_refs": ["unrelated-release"],
+                    },
+                ],
+            },
+            sort_keys=False,
+        ),
+    )
+    _commit_truth_repo(root, "seed release candidate truth fixture")
+    svc = ProgramService(root)
+    snapshot = svc.build_truth_snapshot(svc.load_manifest())
+    svc.write_truth_snapshot(snapshot)
+    return svc, svc.load_manifest()
+
+
+def test_release_candidate_truth_readiness_allows_ready_closure_with_unrelated_global_blocker(
+    tmp_path: Path,
+) -> None:
+    svc, manifest = _release_candidate_truth_fixture(tmp_path)
+
+    readiness = svc.build_release_candidate_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+    )
+
+    assert readiness.ready is True
+    assert readiness.state == "ready"
+    assert readiness.matched_spec_ids == ["root", "dependency"]
+    assert readiness.detail == "truth snapshot is fresh and spec is mapped; unrelated release targets remain blocked"
+
+
+def test_release_candidate_truth_readiness_builds_one_surface_for_seven_members(
+    tmp_path: Path,
+) -> None:
+    manifest = ProgramManifest(
+        schema_version="2",
+        specs=[
+            ProgramSpecRef(
+                id="root",
+                path="specs/root",
+                depends_on=["left", "right"],
+                roles=["release_candidate"],
+            ),
+            ProgramSpecRef(
+                id="left",
+                path="specs/left",
+                depends_on=["left-a", "left-b"],
+            ),
+            ProgramSpecRef(id="left-a", path="specs/left-a"),
+            ProgramSpecRef(id="left-b", path="specs/left-b"),
+            ProgramSpecRef(
+                id="right",
+                path="specs/right",
+                depends_on=["right-a", "right-b"],
+            ),
+            ProgramSpecRef(id="right-a", path="specs/right-a"),
+            ProgramSpecRef(id="right-b", path="specs/right-b"),
+        ],
+    )
+    svc = ProgramService(tmp_path)
+    snapshot = ProgramTruthSnapshot(authoring_hash="authoring", state="ready")
+    manifest.truth_snapshot = snapshot
+    surface = {
+        "state": "ready",
+        "snapshot_state": "fresh",
+        "detail": "truth snapshot is fresh and release targets are ready",
+        "next_required_actions": [],
+        "next_required_action": "",
+        "snapshot_hash": "sha256:representative",
+        "release_targets": [],
+        "release_capabilities": [],
+        "migration_pending_count": 0,
+        "migration_pending_specs": [],
+        "migration_pending_sources": [],
+        "migration_suggestions": [],
+        "source_inventory": None,
+        "validation_errors": [],
+        "validation_warnings": [],
+    }
+
+    def build_surface_once(*args: object, **kwargs: object) -> dict[str, object]:
+        svc.build_truth_snapshot(*args, **kwargs)
+        return surface
+
+    with (
+        patch.object(svc, "_truth_snapshot_hash_matches", return_value=True),
+        patch.object(svc, "_truth_authoring_hash", return_value="authoring"),
+        patch.object(
+            svc,
+            "_spec_truth_readiness_relevant_dirty_paths",
+            return_value=[],
+        ),
+        patch.object(svc, "build_truth_snapshot", return_value=snapshot) as build_snapshot,
+        patch.object(
+            svc,
+            "build_truth_ledger_surface",
+            side_effect=build_surface_once,
+        ) as build_surface,
+    ):
+        readiness = svc.build_release_candidate_truth_readiness(
+            manifest,
+            spec_path="specs/root",
+            validation_result=program_service_module.ProgramValidationResult(valid=True),
+        )
+
+    assert readiness.ready is True
+    assert readiness.matched_spec_ids == [
+        "root",
+        "left",
+        "left-a",
+        "left-b",
+        "right",
+        "right-a",
+        "right-b",
+    ]
+    build_surface.assert_called_once()
+    build_snapshot.assert_called_once()
+
+
+@pytest.mark.parametrize("global_state", ["ready", "blocked", "migration_pending"])
+def test_release_candidate_truth_readiness_uses_ready_matched_rows_across_global_states(
+    tmp_path: Path,
+    global_state: str,
+) -> None:
+    manifest = ProgramManifest(
+        schema_version="2",
+        release_targets=["root-release"],
+        capabilities=[
+            {
+                "id": "root-release",
+                "release_required": True,
+                "spec_refs": ["root"],
+            }
+        ],
+        specs=[
+            ProgramSpecRef(
+                id="root",
+                path="specs/root",
+                depends_on=["dependency"],
+                roles=["release_candidate"],
+            ),
+            ProgramSpecRef(id="dependency", path="specs/dependency"),
+        ],
+    )
+    surface = {
+        "state": global_state,
+        "snapshot_state": "fresh",
+        "detail": f"unrelated global truth remains {global_state}",
+        "release_capabilities": [
+            {"capability_id": "root-release", "audit_state": "ready"}
+        ],
+    }
+    svc = ProgramService(tmp_path)
+
+    with patch.object(svc, "build_truth_ledger_surface", return_value=surface):
+        readiness = svc.build_release_candidate_truth_readiness(
+            manifest,
+            spec_path="specs/root",
+            validation_result=program_service_module.ProgramValidationResult(valid=True),
+        )
+
+    assert readiness.ready is True
+    assert readiness.state == "ready"
+    assert readiness.matched_spec_ids == ["root", "dependency"]
+
+
+@pytest.mark.parametrize("global_state", ["ready", "blocked", "migration_pending"])
+def test_build_spec_truth_readiness_blocks_when_shared_surface_omits_expected_capability(
+    tmp_path: Path,
+    global_state: str,
+) -> None:
+    manifest = ProgramManifest(
+        schema_version="2",
+        release_targets=["root-release"],
+        capabilities=[
+            {
+                "id": "root-release",
+                "release_required": True,
+                "spec_refs": ["root"],
+            }
+        ],
+        specs=[ProgramSpecRef(id="root", path="specs/root")],
+    )
+    svc = ProgramService(tmp_path)
+
+    readiness = svc.build_spec_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+        validation_result=program_service_module.ProgramValidationResult(valid=True),
+        truth_ledger_surface={
+            "state": global_state,
+            "snapshot_state": "fresh",
+            "detail": "truth snapshot is fresh",
+            "release_capabilities": [],
+        },
+    )
+
+    assert readiness is not None
+    assert readiness.ready is False
+    assert readiness.summary_token == "capability_blocked"
+    assert "root-release (missing)" in readiness.detail
+
+
+@pytest.mark.parametrize("global_state", ["ready", "blocked", "migration_pending"])
+def test_build_spec_truth_readiness_blocks_non_ready_matched_row_across_global_states(
+    tmp_path: Path,
+    global_state: str,
+) -> None:
+    manifest = ProgramManifest(
+        schema_version="2",
+        release_targets=["root-release"],
+        capabilities=[
+            {
+                "id": "root-release",
+                "release_required": True,
+                "spec_refs": ["root"],
+            }
+        ],
+        specs=[ProgramSpecRef(id="root", path="specs/root")],
+    )
+    svc = ProgramService(tmp_path)
+
+    readiness = svc.build_spec_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+        validation_result=program_service_module.ProgramValidationResult(valid=True),
+        truth_ledger_surface={
+            "state": global_state,
+            "snapshot_state": "fresh",
+            "detail": "truth snapshot is fresh",
+            "release_capabilities": [
+                {"capability_id": "root-release", "audit_state": "blocked"}
+            ],
+        },
+    )
+
+    assert readiness is not None
+    assert readiness.ready is False
+    assert readiness.summary_token == "capability_blocked"
+    assert "root-release (blocked)" in readiness.detail
+
+
+def test_release_candidate_truth_readiness_reports_real_dependency_blocker_actions(
+    tmp_path: Path,
+) -> None:
+    svc, manifest = _release_candidate_truth_fixture(tmp_path, block_dependency=True)
+
+    readiness = svc.build_release_candidate_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+    )
+
+    assert readiness.ready is False
+    assert readiness.state == "blocked"
+    assert readiness.summary_token == "capability_blocked"
+    assert "python -m ai_sdlc program truth audit" in readiness.next_required_actions
+    assert len(readiness.next_required_actions) == len(
+        set(readiness.next_required_actions)
+    )
+    assert readiness.detail.count("capability_blocked:") == 1
+
+
+def test_release_candidate_truth_readiness_deduplicates_real_stale_detail(
+    tmp_path: Path,
+) -> None:
+    svc, manifest = _release_candidate_truth_fixture(tmp_path, root_release_target=True)
+    payload = yaml.safe_load((tmp_path / "program-manifest.yaml").read_text(encoding="utf-8"))
+    payload["capability_closure_audit"] = {
+        "reviewed_at": "2026-09-03T09:00:00Z",
+        "open_clusters": [],
+    }
+    (tmp_path / "program-manifest.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False),
+        encoding="utf-8",
+    )
+    manifest = svc.load_manifest()
+
+    readiness = svc.build_release_candidate_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+    )
+
+    assert readiness.ready is False
+    assert readiness.state == "stale"
+    assert readiness.summary_token == "truth_snapshot_stale"
+    assert (
+        readiness.detail
+        == "truth_snapshot_stale: persisted truth snapshot is stale relative to "
+        "current authoring/evidence"
+    )
+
+
+def test_release_candidate_truth_readiness_rejects_root_without_release_candidate_role(
+    tmp_path: Path,
+) -> None:
+    manifest = ProgramManifest(
+        specs=[ProgramSpecRef(id="root", path="specs/root")]
+    )
+    svc = ProgramService(tmp_path)
+
+    readiness = svc.build_release_candidate_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+        validation_result=program_service_module.ProgramValidationResult(valid=True),
+    )
+
+    assert readiness.ready is False
+    assert readiness.state == "release_candidate_role_missing"
+    assert readiness.summary_token == "release_candidate_role_missing"
+    assert readiness.next_required_actions == [
+        "add release_candidate role to manifest spec root"
+    ]
+
+
+def test_release_candidate_truth_readiness_evaluates_shared_transitive_dependency_once_in_dfs_order(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    manifest = ProgramManifest(
+        specs=[
+            ProgramSpecRef(
+                id="root",
+                path="specs/root",
+                depends_on=["left", "right"],
+                roles=["release_candidate"],
+            ),
+            ProgramSpecRef(id="left", path="specs/left", depends_on=["shared"]),
+            ProgramSpecRef(id="right", path="specs/right", depends_on=["shared"]),
+            ProgramSpecRef(id="shared", path="specs/shared"),
+        ]
+    )
+    svc = ProgramService(tmp_path)
+    evaluated: list[str] = []
+
+    def build_member_readiness(
+        _manifest: ProgramManifest,
+        *,
+        spec_path: str | Path,
+        validation_result: program_service_module.ProgramValidationResult | None = None,
+        truth_ledger_surface: dict[str, object] | None = None,
+    ) -> program_service_module.ProgramSpecTruthReadinessResult:
+        spec_id = Path(spec_path).name
+        evaluated.append(spec_id)
+        return program_service_module.ProgramSpecTruthReadinessResult(
+            required=True,
+            ready=True,
+            state="ready",
+            detail=f"{spec_id} is ready",
+            next_required_actions=["recheck closure", "recheck closure"],
+            matched_spec_ids=[spec_id],
+        )
+
+    monkeypatch.setattr(svc, "build_spec_truth_readiness", build_member_readiness)
+    monkeypatch.setattr(
+        svc,
+        "build_truth_ledger_surface",
+        lambda *_args, **_kwargs: {},
+    )
+
+    readiness = svc.build_release_candidate_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+        validation_result=program_service_module.ProgramValidationResult(valid=True),
+    )
+
+    assert evaluated == ["root", "left", "shared", "right"]
+    assert readiness.matched_spec_ids == ["root", "left", "shared", "right"]
+    assert readiness.next_required_actions == ["recheck closure"]
 
 
 def test_build_truth_ledger_detail_collects_first_three_unique_capabilities() -> None:
