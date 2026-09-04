@@ -4521,8 +4521,10 @@ def test_release_candidate_truth_readiness_builds_one_surface_for_seven_members(
     build_snapshot.assert_called_once()
 
 
-def test_release_candidate_truth_readiness_uses_ready_matched_rows_when_global_state_is_blocked(
+@pytest.mark.parametrize("global_state", ["ready", "blocked", "migration_pending"])
+def test_release_candidate_truth_readiness_uses_ready_matched_rows_across_global_states(
     tmp_path: Path,
+    global_state: str,
 ) -> None:
     manifest = ProgramManifest(
         schema_version="2",
@@ -4545,9 +4547,9 @@ def test_release_candidate_truth_readiness_uses_ready_matched_rows_when_global_s
         ],
     )
     surface = {
-        "state": "blocked",
+        "state": global_state,
         "snapshot_state": "fresh",
-        "detail": "unrelated capability remains blocked",
+        "detail": f"unrelated global truth remains {global_state}",
         "release_capabilities": [
             {"capability_id": "root-release", "audit_state": "ready"}
         ],
@@ -4566,8 +4568,10 @@ def test_release_candidate_truth_readiness_uses_ready_matched_rows_when_global_s
     assert readiness.matched_spec_ids == ["root", "dependency"]
 
 
+@pytest.mark.parametrize("global_state", ["ready", "blocked", "migration_pending"])
 def test_build_spec_truth_readiness_blocks_when_shared_surface_omits_expected_capability(
     tmp_path: Path,
+    global_state: str,
 ) -> None:
     manifest = ProgramManifest(
         schema_version="2",
@@ -4588,7 +4592,7 @@ def test_build_spec_truth_readiness_blocks_when_shared_surface_omits_expected_ca
         spec_path="specs/root",
         validation_result=program_service_module.ProgramValidationResult(valid=True),
         truth_ledger_surface={
-            "state": "ready",
+            "state": global_state,
             "snapshot_state": "fresh",
             "detail": "truth snapshot is fresh",
             "release_capabilities": [],
@@ -4599,6 +4603,45 @@ def test_build_spec_truth_readiness_blocks_when_shared_surface_omits_expected_ca
     assert readiness.ready is False
     assert readiness.summary_token == "capability_blocked"
     assert "root-release (missing)" in readiness.detail
+
+
+@pytest.mark.parametrize("global_state", ["ready", "blocked", "migration_pending"])
+def test_build_spec_truth_readiness_blocks_non_ready_matched_row_across_global_states(
+    tmp_path: Path,
+    global_state: str,
+) -> None:
+    manifest = ProgramManifest(
+        schema_version="2",
+        release_targets=["root-release"],
+        capabilities=[
+            {
+                "id": "root-release",
+                "release_required": True,
+                "spec_refs": ["root"],
+            }
+        ],
+        specs=[ProgramSpecRef(id="root", path="specs/root")],
+    )
+    svc = ProgramService(tmp_path)
+
+    readiness = svc.build_spec_truth_readiness(
+        manifest,
+        spec_path="specs/root",
+        validation_result=program_service_module.ProgramValidationResult(valid=True),
+        truth_ledger_surface={
+            "state": global_state,
+            "snapshot_state": "fresh",
+            "detail": "truth snapshot is fresh",
+            "release_capabilities": [
+                {"capability_id": "root-release", "audit_state": "blocked"}
+            ],
+        },
+    )
+
+    assert readiness is not None
+    assert readiness.ready is False
+    assert readiness.summary_token == "capability_blocked"
+    assert "root-release (blocked)" in readiness.detail
 
 
 def test_release_candidate_truth_readiness_reports_real_dependency_blocker_actions(

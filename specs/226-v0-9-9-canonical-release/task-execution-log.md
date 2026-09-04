@@ -248,3 +248,24 @@
 - Program Truth sync 已执行：全局保持 `blocked`，16 项历史 blocker 原样保留；inventory 为 `1180/1180 mapped`、unmapped `0`、missing `6`、close `218/224`。
 - 真实规模 scoped audit：`uv run ai-sdlc program truth audit --wi specs/226-v0-9-9-canonical-release` 返回 `ready`、exit `0`、耗时 `138.984s`；闭包为根 WI 加六个显式依赖，detail 明确闭包外 release targets 仍 blocked。
 - T33 已完成。最终 tracked 记录仍须再做一次 truth sync 并提交；exact-HEAD 认证与评审尚未执行，不预写通过。
+
+## Batch 2026-09-04-011 | Sponsor-authorized migration-pending projection correction
+
+### 决策与根因
+
+- `e54c0364` 的精确 HEAD Codex 复审确认：全局 `migration_pending` 在 matched capability rows 投影前提前返回，导致闭包外 pending 项否决 matched rows 已 ready 的成员。
+- 对抗复核确认这是 `F-TRUTH-SCOPE-01` 的同一根因、同一技术合同遗漏，不是新架构；用户明确批准继续使用 WI226、当前分支和 PR #201，且不重写设计。
+
+### TDD 与预认证
+
+- RED 决策矩阵返回 `3 failed, 7 passed`：只有 `migration_pending` 下的 matched-ready、matched-blocked 和 expected-row-missing 三种投影失败。
+- 唯一生产改动把全局 `migration_pending` 早退限制为无 matched capability 的成员；有 matched capability 时进入既有 row 投影。没有新增 helper、schema、cache、waiver、CLI、workflow 或 readiness 模型。
+- GREEN 决策矩阵返回 `10 passed, 421 deselected`；现有无 capability 的 unrelated-pending ready 语义保持不变。
+- 完整 `tests/unit/test_program_service.py` 返回 `431 passed in 35.94s`；focused Ruff 通过。
+- 六文件 focused 预认证返回 `885 passed in 218.26s (0:03:38)`。
+- WI226 生产代码相对 `origin/main` 为 `206` 行新增、`80` 行删除，净新增 `126/150`。
+
+### 当前状态
+
+- Program Truth 首次写回保持全局 `blocked` 与全部 16 项历史 blocker；inventory 为 `1180/1180 mapped`、unmapped `0`、missing `6`、close `218/224`，snapshot 为 `f20c8953123eeb97549c452bf79db7b54bd87f806313d231312bf7aef743e04a`。
+- 最终记录绑定的 truth sync、候选提交、exact-HEAD 全量测试、真实七成员审计与唯一终局复审仍未执行；不预写通过。

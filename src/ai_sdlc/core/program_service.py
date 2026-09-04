@@ -2240,37 +2240,14 @@ class ProgramService:
             )
 
         state = str(surface.get("state", "")).strip()
-        if state == "migration_pending":
-            if not matched_capabilities:
-                return ProgramSpecTruthReadinessResult(
-                    required=True,
-                    ready=True,
-                    state="ready",
-                    detail=(
-                        "truth snapshot is fresh and spec is mapped; "
-                        "unrelated truth inventory remains pending"
-                    ),
-                    matched_spec_ids=matched_spec_ids,
-                    matched_capabilities=matched_capabilities,
-                )
+        if state == "migration_pending" and not matched_capabilities:
             return ProgramSpecTruthReadinessResult(
                 required=True,
-                ready=False,
-                state=state,
-                summary_token="truth_inventory_incomplete",
+                ready=True,
+                state="ready",
                 detail=(
-                    "truth_inventory_incomplete: "
-                    f"{surface.get('detail', '')}"
-                ).strip(),
-                next_required_actions=self._build_truth_ledger_next_actions(
-                    state=state,
-                    snapshot_state=snapshot_state,
-                    release_capabilities=list(surface.get("release_capabilities", [])),
-                    migration_pending_specs=list(surface.get("migration_pending_specs", [])),
-                    migration_pending_sources=list(
-                        surface.get("migration_pending_sources", [])
-                    ),
-                    validation_errors=list(surface.get("validation_errors", [])),
+                    "truth snapshot is fresh and spec is mapped; "
+                    "unrelated truth inventory remains pending"
                 ),
                 matched_spec_ids=matched_spec_ids,
                 matched_capabilities=matched_capabilities,
