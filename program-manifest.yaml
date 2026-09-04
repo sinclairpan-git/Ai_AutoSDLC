@@ -2107,6 +2107,9 @@ specs:
   - 225-review-terminal-sponsor-convergence
   roles:
   - release_candidate
+- id: 227-linux-amd64-existing-project-online-e2e
+  path: specs/227-linux-amd64-existing-project-online-e2e
+  depends_on: []
 truth_snapshot:
   generated_at: '2026-09-04T06:48:22Z'
   generated_by: ai-sdlc program truth sync
