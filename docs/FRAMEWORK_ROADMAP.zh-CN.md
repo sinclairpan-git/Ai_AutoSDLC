@@ -304,7 +304,7 @@ receipt：`acquisition_mode=natural_release`、`attestation_verified=true`、`st
 
 ### 10.4 D2：历史 release-target provenance 回填
 
-**WI221 的 provenance-only admission 已 No-Go；后续 v0.9.9 已通过 WI226 的独立有界发布门正式发布，因此本项保留为
+**WI221 的 provenance-only admission 已 No-Go；其后 v0.9.9 已通过 WI226 的独立有界发布门正式发布，因此本项保留为
 portfolio debt，不再作为 v0.9.9 或当前正常特性开发的前置。** 在真实
 `origin/main@263abb3d0171a58762d382e73db9a9a692707268` 刷新 Program Truth 时，前端 14 个、Adapter 2 个历史 truth refs 仍被判定为
 `formal_freeze_only`。旧 ready snapshot 生成于未进入主线的 squash 前 release branch，其发布改动被误归为这些
