@@ -31,7 +31,7 @@
 | P0 | 主线真值复位 + 轻量 ROI 合同 | **已完成** | 9.5/10 | 实际已投入 | 4.5（原估） | 无 |
 | P1 | Diff-local Lean Advisory | **No-Go 已关闭（未合并）** | 8.0/10 | 实际：1 个 WI + 2 轮评审 | No-Go（及时止损） | P0 与 v0.9.8 已完成 |
 | P2 | 普通用户单入口收敛 | **已完成（WI220）** | 9.0/10 | 实际已投入 | 1.5（原估） | P1 已有证据 No-Go |
-| D2 | 历史 release-target provenance 恢复 | **WI221 admission No-Go；待用户决策** | 7.5/10 | 审计 <0.5 人日；补缺粗估 8–13 人日 | 0.6–0.9 | v0.9.9 的硬前置 |
+| D2 | 历史 release-target provenance 恢复 | **WI221 admission No-Go；保留为 portfolio debt** | 7.5/10 | 审计 <0.5 人日；补缺粗估 8–13 人日 | 0.6–0.9 | 不阻断正常特性；未来重启 Program Truth release target 时另行准入 |
 | P3 | 跨平台首次用户 12 路完整闭环 | **v0.9.9 已证明 R06；R02 上下文已修复并等待正常发布复验** | 9.5/10 | R02/R06 已完成 bounded execute；完整实现仍估 6–10 人日 | 下一候选 R10 | P2 默认入口稳定 |
 | P4 | 五类 Loop 有界动态专家 | **条件候选** | 10/10 | 10–15 人日 | 0.6 | P1–P3 的真实收益支持继续投资 |
 
@@ -304,13 +304,14 @@ receipt：`acquisition_mode=natural_release`、`attestation_verified=true`、`st
 
 ### 10.4 D2：历史 release-target provenance 回填
 
-**已进入 WI221；provenance-only admission 为 No-Go，等待用户决定是否补真实能力。** 在真实
+**WI221 的 provenance-only admission 已 No-Go；后续 v0.9.9 已通过 WI226 的独立有界发布门正式发布，因此本项保留为
+portfolio debt，不再作为 v0.9.9 或当前正常特性开发的前置。** 在真实
 `origin/main@263abb3d0171a58762d382e73db9a9a692707268` 刷新 Program Truth 时，前端 14 个、Adapter 2 个历史 truth refs 仍被判定为
 `formal_freeze_only`。旧 ready snapshot 生成于未进入主线的 squash 前 release branch，其发布改动被误归为这些
 历史 work item 的执行证据；因此当前必须保留真实 `blocked`，不得删 gate 换取假 ready。
 
 - 价值：7.5/10；审计投入小于 0.5 人日；若补齐真实能力，当前粗估 8–13 人日、ROI 约 0.6–0.9。价值集中在恢复未来发布可信度，不新增用户特性。
-- 触发器：准备下一次依赖 Program Truth release target 的发布，或有独立证据能把这些 work item 与真实主线实现提交、
+- 触发器：未来明确选择重新以 Program Truth release target 作为发布阻断门，或有独立证据能把这些 work item 与真实主线实现提交、
   路径和批次一一绑定。
 - 实施边界：建立独立 formal work item，逐项验证实际 implementation carrier；只回填可证明的 provenance，无法证明的
   项保持 blocker。不得修改历史叙事伪造执行，不得让无关提交充当证据。
@@ -319,8 +320,8 @@ receipt：`acquisition_mode=natural_release`、`attestation_verified=true`、`st
 - 2026-08-30 WI221 admission 结果：11/16 可绑定完整主线载体；`098` 缺少五态 posture detector / evidence precedence /
   sidecar recommendation，`099` 未消费 posture gate，`100/101` 缺少完整的 ledger whole-plan rollback 与同 action retry，
   `095` 因继承这些子合同只能部分归因。不得批量改历史 log 伪造 16/16。
-- 当前推荐保持 release target blocked。若业务仍要求解除发布门，需由用户另行批准一个重新定界的多能力实现批次；粗估
-  8–13 人日，已超过 WI221 的 provenance-only 边界。在新范围获批前不进入 runtime execute，也不启动 v0.9.9 版本变更。
+- 当前推荐保持该 release target 的历史真值为 `blocked`，但不重开 D2，也不阻断正常特性开发。未来若明确恢复该发布门，
+  需由用户另行批准一个重新定界的多能力实现批次；粗估 8–13 人日，已超过 WI221 的 provenance-only 边界。
 
 ## 11. 明确 No-Go 清单
 
@@ -359,7 +360,7 @@ receipt：`acquisition_mode=natural_release`、`attestation_verified=true`、`st
 - [ ] P4 Phase A 证明 Requirement/Design/Implementation 动态专家 ROI。
 - [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。
-- [ ] D2/WI221 已完成 11/16 admission audit；当前保持真实 blocked，等待用户决定是否另行批准多能力补缺范围。
+- [ ] D2/WI221 已完成 11/16 admission audit；当前保持真实 blocked 作为 portfolio debt，不阻断正常特性，仅在未来重启 Program Truth release target 时另行准入。
 - [ ] G1 另立 formal governance work item，评估“稳定 finding 对比 + 两轮后 terminal sponsor decision”的最小落地；不得在 WI224 closeout 中修改通用 runtime、review schema 或状态机。
 
 当检查表与聊天记忆冲突时，以远端主线事实、正式 work item 和本文件最近一次经评审的更新为准。
