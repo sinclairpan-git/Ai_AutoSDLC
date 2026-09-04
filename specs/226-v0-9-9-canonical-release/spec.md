@@ -2,8 +2,8 @@
 
 **功能编号**：`226-v0-9-9-canonical-release`
 **创建日期**：2026-09-03
-**状态**：formal baseline 已获用户批准；T21 待执行
-**决策来源**：终局合议 3:0 批准方案 B。
+**状态**：`bbb39ca4` 因 `F-TRUTH-SCOPE-01` 暂停合并；同根稳定化设计已获用户批准，待书面复核
+**决策来源**：原终局合议 3:0 批准方案 B；2026-09-03 对抗合议批准一次同根自动稳定化回退。
 
 ## 1. 目标与范围
 
@@ -78,7 +78,7 @@
 
 - **FR-001**：WI226 必须使用 `roles: [release_candidate]` 与显式 `depends_on`；禁止从 Git range、提交标题或历史 execution log 自动猜测范围。
 - **FR-002**：`program truth audit` 不带 `--wi` 时行为、输出和退出码保持不变。
-- **FR-003**：带 `--wi` 时，系统必须解析唯一 manifest spec，遍历其传递依赖并复用 `build_spec_truth_readiness`；不得复制 readiness 判定规则。
+- **FR-003**：带 `--wi` 时，系统必须解析唯一 manifest spec，遍历其传递依赖，并让所有成员消费同一次 truth 评估上下文；共享上下文存在时不得再进入 persisted fast path 或重建 snapshot，也不得复制 readiness 判定规则。
 - **FR-004**：根 WI 缺少 `release_candidate` role、路径未映射、依赖图无效、truth 未启用、snapshot stale 或任一闭包成员未 ready 时，按 WI 审计必须非零退出并给出有界修复动作。
 - **FR-005**：闭包外的 16 项历史 blocker 不得阻止 WI226；其数量、内容和全局 `blocked` 状态不得被改写。
 - **FR-006**：PR Checks 与 Release Build 必须调用同一个 `program truth audit --wi` 契约；Release Build 继续验证 tag/event/checkout 三者 SHA 一致。
@@ -90,7 +90,9 @@
 ## 5. 边界与失败语义
 
 - GitHub/API 暂时不可观察属于外部状态 `unknown/pending`，可在同一精确 HEAD 上重试；不得记作 candidate 代码失败，也不得消耗代码修复轮次。
-- 代码/测试确定性失败才消耗修复轮次。最多两轮 focused repair；第二轮后由 sponsor 对同一 HEAD 作终局 Go/No-Go，不重新打开需求空间。
+- 确定性 finding 以“不变量 + 责任边界/调用链 + 根因类别 + 可观察后果”归入 finding family；文件、行号或 reviewer 措辞变化不自动生成新 family。
+- 开发分为 `discovery/stabilize` 与 `certify`：前者完成同根场景饱和审查、合并修复和全量预认证，后者才冻结 exact HEAD。二者只是本仓开发流程标签，不是新的 runtime/manifest 状态。认证阶段发现同 family、同范围且未超预算的问题时，自动退回稳定化一次，不重建 WI、设计、计划或 PR，也不再次申请 Sponsor。
+- 当前只授权 `F-TRUTH-SCOPE-01` 一次稳定化 wave 和一次新的 exact-HEAD 认证。修复后同 family 仍复现、出现第二个 family、突破范围/预算或最终认证仍有 load-bearing finding 时，立即 No-Go。
 - `--wi` 只接受项目内路径；零匹配、多匹配、越界路径均 fail closed。
 - 同一依赖只检查一次；manifest 既有校验负责未知依赖和环检测。
 - 发布后自然回执失败仅修复与本 WI 改动有直接因果关系的问题；新发现的独立产品缺陷进入 backlog，不扩展 v0.9.9。
@@ -100,14 +102,30 @@
 - **收益**：结束“全局历史债务是否阻止当前版本”的反复争论；发布范围从口头清单变成一个可执行、CI 强制的显式依赖闭包。
 - **现状证据**：远端主线包含 18 个未发布 first-parent 载体；全局 truth 如实 `blocked`，而现有 per-spec readiness 已能区分相关与无关 blocker；当前工作流尚未消费该逐规格结果。
 - **最小性**：复用 manifest `roles/depends_on`、现有 readiness、现有 audit 命令和现有发布工作流；不建立 range ledger 或新状态机。
-- **投入上限**：实施与测试不超过 1 人日，CI/云端评审等待不计入；生产代码净新增不超过 150 行。
+- **投入上限**：实施与测试不超过 1 人日，CI/云端评审等待不计入；生产代码净新增不超过 150 行。当前 `143/150` 不获得额外额度，稳定化必须通过简化现有新增实现容纳正确修复；以后同类工作在初始实现阶段只消费 120 行，预留 30 行稳定化储备。
 - **删除/回退触发器**：如果无法在不复制 truth 逻辑的前提下实现，或需要新增 schema/waiver/ledger，则 No-Go 并整体回退该 audit 扩展；版本发布不以降级门禁继续。
-- **决策**：`implement`；终局合议与实施计划已获用户批准，下一步仅启动 T21。
+- **决策**：保持 PR #201 关闭；`bbb39ca4` 作为被否决候选的冻结证据，不得改写或冒充新候选。直到本增补通过书面复核，不得产生新的 implementation candidate；复核后只允许在同一 WI、同一分支、同一 PR 内执行 `F-TRUTH-SCOPE-01` 的一次稳定化 wave。
 
 ## 7. 成功标准
 
-- **SC-001**：按 WI 审计的正向、相关 blocker、stale、非 release candidate、兼容旧命令五类测试全部通过。
+- **SC-001**：按 WI 审计除既有正向、相关 blocker、stale、非 release candidate、兼容旧命令测试外，还必须覆盖：无 matched capability + 闭包外 blocker、matched capability 全 ready + 闭包外 blocker、matched capability blocked、应匹配 capability row 缺失四类状态。
 - **SC-002**：PR Checks 与 Release Build 对 WI226 的门禁均不可跳过，且工作流顺序测试通过。
 - **SC-003**：`uv run ai-sdlc verify constraints`、focused suite、全量 `uv run pytest -q` 均通过。
 - **SC-004**：全局 Program Truth 仍为 `blocked` 且保留全部 16 项 blocker；WI226 依赖闭包单独达到 ready。
 - **SC-005**：发布 tag 精确指向合并后的 `origin/main`，三平台资产、SHA256、attestation、release smoke 与 12-route 自然发布回执通过。
+- **SC-006**：persisted snapshot 为 ready 或 blocked 时，七成员候选审计均只允许一次 `build_truth_snapshot()`/truth evidence 构建；只统计 `build_truth_ledger_surface()` wrapper 不构成证明。
+- **SC-007**：稳定化后的 focused、全量、Ruff、constraints、program validate、diff-check、真实规模 scoped audit 和 required checks 必须绑定同一 exact HEAD；任一新提交使旧证据与认证失效。
+
+## 8. `F-TRUTH-SCOPE-01` 最终根治增补
+
+两个 P2 是同一根因的两种表现：`build_spec_truth_readiness()` 同时承担独立调用时的全局 truth 构建和共享上下文中的成员投影，但共享 surface 不是权威输入，造成计算生命周期泄漏与判定范围泄漏。
+
+**唯一技术合同**：
+
+1. 每次 release-candidate audit 只构建一个 current truth snapshot/surface，并由所有 closure member 只读消费。
+2. 共享上下文存在时跳过 persisted fast path；独立 spec readiness 调用仍可保留原 fast path。
+3. snapshot missing/invalid/stale、manifest/root/role/graph 无效继续 fail closed。
+4. snapshot fresh 后，成员只由 matched capability rows 判定：全部存在且 ready 则 ready；任一非 ready 则只返回相关 blocker/action；应存在的 row 缺失则 fail closed；闭包外 blocker 只保留在全局 truth。
+5. 生产修复只触及 `program_service.py` 与直接单测；另只允许在根 `AGENTS.md` 中把“任一 finding 终止”改为本节的两阶段规则。不修改 CLI、workflow、manifest schema、全局 snapshot/blocker、历史 execution log 或发布范围，不新增跨请求缓存、waiver、ledger 或第二套 readiness 状态机。
+
+**治理闭包**：PR #201 只允许从 `certify` 自动回退 `stabilize` 这一次。完成上述状态矩阵和真实规模预认证后才能重新冻结 HEAD 并请求认证；冻结前只做一次必要 continuity 更新，冻结后不得再写 tracked handoff/truth。该认证 clean 且同 HEAD required checks 仍绿才允许合并。认证失败直接保留候选 No-Go，不再追加例外。
