@@ -185,9 +185,9 @@ jobs:
             }
 
             $expectedRef = "refs/tags/$env:RELEASE_TAG"
-            $tagCommit = (git rev-parse "$env:RELEASE_TAG^{commit}").Trim()
+            $tagCommit = (git -C $env:GITHUB_WORKSPACE rev-parse "$env:RELEASE_TAG^{commit}").Trim()
             $assetCommit = $tagCommit
-            $checkoutCommit = (git rev-parse HEAD).Trim()
+            $checkoutCommit = (git -C $env:GITHUB_WORKSPACE rev-parse HEAD).Trim()
             if ($env:GITHUB_REF -ne $expectedRef -or $checkoutCommit -ne $tagCommit -or $env:GITHUB_SHA -ne $tagCommit) {
               throw "Natural release source ref, tag, event, and checkout commits must be identical."
             }

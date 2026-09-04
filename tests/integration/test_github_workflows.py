@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import os
+import shutil
+import subprocess
 from pathlib import Path
 
+import pytest
 import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -415,6 +419,56 @@ def test_windows_user_guide_e2e_verifies_natural_release_before_install() -> Non
         "workflow_dispatch",
     ):
         assert required_contract in replay
+
+
+def test_windows_user_guide_e2e_resolves_release_refs_outside_checkout(
+    tmp_path: Path,
+) -> None:
+    pwsh = shutil.which("pwsh")
+    if pwsh is None:
+        pytest.skip("PowerShell is required to execute the workflow Git contract")
+
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "windows-user-guide-e2e.yml").read_text(encoding="utf-8")
+    )
+    steps = workflow["jobs"]["existing-project-online-install"]["steps"]
+    replay = next(
+        step for step in steps if step.get("name") == "Replay Windows existing-project guide path"
+    )["run"]
+    assignments = [
+        line.strip()
+        for line in replay.splitlines()
+        if line.strip().startswith(("$tagCommit =", "$checkoutCommit ="))
+    ]
+    assert len(assignments) == 2
+
+    release_tag = "HEAD"
+    expected_commit = subprocess.run(
+        ["git", "-C", str(_REPO_ROOT), "rev-parse", "HEAD"],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
+
+    script = "\n".join(
+        [
+            '$ErrorActionPreference = "Stop"',
+            *assignments,
+            "Write-Output $tagCommit",
+            "Write-Output $checkoutCommit",
+        ]
+    )
+    result = subprocess.run(
+        [pwsh, "-NoProfile", "-Command", script],
+        cwd=tmp_path,
+        env=os.environ
+        | {"GITHUB_WORKSPACE": str(_REPO_ROOT), "RELEASE_TAG": release_tag},
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.splitlines() == [expected_commit, expected_commit]
 
 
 def test_windows_user_guide_e2e_records_recovery_bound_r02_receipt() -> None:
