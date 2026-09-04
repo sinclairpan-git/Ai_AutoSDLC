@@ -15,7 +15,9 @@
 - canonical/scoped handoff
 
 ## Key Decisions
-- 一个 WI、同一分支原地从 docs 重命名为 dev、一个 PR；单 job 两行 R06/R10 matrix；真实 Ubuntu 首验；不改 runtime/schema/producer/R02
+- 一个 WI、同一分支原地从 docs 重命名为 dev、一个 PR。
+- 单 job 两行 R06/R10 matrix；真实 Ubuntu 首验。
+- 不修改 runtime、receipt schema、release producer、R02 或其他路线。
 
 ## Commands / Tests
 - 基线 workflow tests: `18 passed in 1.59s`。
@@ -28,7 +30,7 @@
 - Repository inventory: `1 passed in 138.18s`，`1185/1185/0/7`、close `225/218`。
 
 ## Blockers / Risks
-- 无产品 blocker；API/网络/runner 排队仅为观察态，不消耗修复轮次
+- 无产品 blocker；API/网络/runner 排队仅为观察态，不消耗修复轮次。
 
 ## Local PR Review
 - none

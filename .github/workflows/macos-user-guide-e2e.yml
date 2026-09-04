@@ -31,12 +31,36 @@ concurrency:
 
 jobs:
   existing-project-online-install:
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - route_id: R06
+            runner: macos-latest
+            platform_os: macos
+            architecture: arm64
+            asset_suffix: macos-arm64
+            fresh_shell: /bin/zsh
+            shell_name: zsh
+          - route_id: R10
+            runner: ubuntu-latest
+            platform_os: linux
+            architecture: amd64
+            asset_suffix: linux-amd64
+            fresh_shell: /bin/bash
+            shell_name: bash
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
     env:
       RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag || 'v0.9.9' }}
       GH_TOKEN: ${{ github.token }}
       EXPECTED_SIGNER_WORKFLOW: ${{ github.repository }}/.github/workflows/release-build.yml
+      ROUTE_ID: ${{ matrix.route_id }}
+      PLATFORM_OS: ${{ matrix.platform_os }}
+      PLATFORM_ARCHITECTURE: ${{ matrix.architecture }}
+      ASSET_SUFFIX: ${{ matrix.asset_suffix }}
+      FRESH_SHELL: ${{ matrix.fresh_shell }}
+      SHELL_NAME: ${{ matrix.shell_name }}
       PYTHONUTF8: "1"
       PYTHONIOENCODING: utf-8
 
@@ -48,14 +72,23 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify macOS arm64 runner
+      - name: Verify POSIX runner identity
         shell: bash
         run: |
           set -euo pipefail
-          case "$(uname -m)" in
-            arm64|aarch64) ;;
+          actual_os="$(uname -s)"
+          actual_architecture="$(uname -m)"
+          case "${PLATFORM_OS}:${actual_os}" in
+            macos:Darwin|linux:Linux) ;;
             *)
-              echo "R06 requires a macOS arm64 runner; got $(uname -m)." >&2
+              echo "${ROUTE_ID} requires ${PLATFORM_OS}; got ${actual_os}." >&2
+              exit 1
+              ;;
+          esac
+          case "${PLATFORM_ARCHITECTURE}:${actual_architecture}" in
+            arm64:arm64|arm64:aarch64|amd64:x86_64|amd64:amd64) ;;
+            *)
+              echo "${ROUTE_ID} requires ${PLATFORM_ARCHITECTURE}; got ${actual_architecture}." >&2
               exit 1
               ;;
           esac
@@ -72,7 +105,7 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Build macOS offline bundle for pull request replay
+      - name: Build POSIX offline bundle for pull request replay
         if: ${{ github.event_name == 'pull_request' }}
         shell: bash
         run: |
@@ -84,15 +117,15 @@ jobs:
             PYTHONUTF8="1" \
             PYTHONIOENCODING="utf-8" \
             AI_SDLC_OFFLINE_PYTHON_RUNTIME="${runtime_root}" \
-            AI_SDLC_OFFLINE_ASSET_SUFFIX="-macos-arm64" \
+            AI_SDLC_OFFLINE_ASSET_SUFFIX="-${ASSET_SUFFIX}" \
             bash packaging/offline/build_offline_bundle.sh
 
-      - name: Replay macOS existing-project guide path
+      - name: Replay POSIX existing-project guide path
         shell: bash
         run: |
           set -euo pipefail
 
-          evidence_root="${RUNNER_TEMP}/ai-sdlc-macos-user-guide-e2e"
+          evidence_root="${RUNNER_TEMP}/ai-sdlc-${ROUTE_ID}-user-guide-e2e"
           work_root="${RUNNER_TEMP}/work"
           project_root="${work_root}/my-existing-project"
           rm -rf "${evidence_root}" "${work_root}"
@@ -134,10 +167,10 @@ jobs:
             release_version="${RELEASE_TAG#v}"
           fi
           if [[ -z "${release_version}" ]]; then
-            echo "Could not determine the package version for the R06 replay." >&2
+            echo "Could not determine the package version for the ${ROUTE_ID} replay." >&2
             exit 1
           fi
-          bundle_name="ai-sdlc-offline-${release_version}-macos-arm64"
+          bundle_name="ai-sdlc-offline-${release_version}-${ASSET_SUFFIX}"
           package_name="${bundle_name}.tar.gz"
           package_path="${work_root}/${package_name}"
           extract_root="${work_root}/.ai-sdlc-install"
@@ -180,11 +213,11 @@ jobs:
 
           attestation_verified=false
           if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            expected_bundle="ai-sdlc-offline-${release_version}-macos-arm64"
+            expected_bundle="${bundle_name}"
             expected_download="releases/download/${RELEASE_TAG}/${package_name}"
             if ! grep -Fq "${expected_bundle}" "${GITHUB_WORKSPACE}/USER_GUIDE.zh-CN.md" || \
                ! grep -Fq "${expected_download}" "${GITHUB_WORKSPACE}/USER_GUIDE.zh-CN.md"; then
-              echo "The release tag checkout guide does not describe the matching macOS asset." >&2
+              echo "The release tag checkout guide does not describe the matching ${PLATFORM_OS} asset." >&2
               exit 1
             fi
 
@@ -236,7 +269,7 @@ jobs:
 
           pushd "${bundle_dir}" >/dev/null
           chmod +x install_offline.sh
-          export SHELL=/bin/zsh
+          export SHELL="${FRESH_SHELL}"
           set +e
           bash ./install_offline.sh --add-to-path 2>&1 | tee "${evidence_root}/install.log"
           install_exit="${PIPESTATUS[0]}"
@@ -248,11 +281,11 @@ jobs:
           bundle_python="${bundle_dir}/.venv/bin/python"
           popd >/dev/null
 
-          /bin/zsh -ic 'command -v ai-sdlc && ai-sdlc --help' 2>&1 \
+          "${FRESH_SHELL}" -ic 'command -v ai-sdlc && ai-sdlc --help' 2>&1 \
             | tee "${evidence_root}/help-via-fresh-shell.txt"
 
           pushd "${project_root}" >/dev/null
-          /bin/zsh -ic 'ai-sdlc init . --agent-target codex --shell zsh' 2>&1 \
+          "${FRESH_SHELL}" -ic "ai-sdlc init . --agent-target codex --shell ${SHELL_NAME}" 2>&1 \
             | tee "${evidence_root}/init-existing-project.txt"
           init_output="$(cat "${evidence_root}/init-existing-project.txt")"
           if ! grep -Fq "当前结果 / Result" <<<"${init_output}" || \
@@ -273,7 +306,7 @@ jobs:
           [[ -d "${project_root}/.ai-sdlc" ]]
           [[ -f "${project_root}/AGENTS.md" ]]
 
-          /bin/zsh -ic 'ai-sdlc adopt .' 2>&1 \
+          "${FRESH_SHELL}" -ic 'ai-sdlc adopt .' 2>&1 \
             | tee "${evidence_root}/adopt-existing-project.txt"
           if ! grep -Fq "接入已有项目" "${evidence_root}/adopt-existing-project.txt"; then
             echo "adopt output did not include the guide's existing-project adoption wording." >&2
@@ -282,7 +315,7 @@ jobs:
 
           resume_pack_path="${project_root}/.ai-sdlc/state/resume-pack.yaml"
           printf '%s\n' ': invalid yaml {{' > "${resume_pack_path}"
-          /bin/zsh -ic 'ai-sdlc recover' 2>&1 \
+          "${FRESH_SHELL}" -ic 'ai-sdlc recover' 2>&1 \
             | tee "${evidence_root}/recover-corrupted-resume-pack.txt"
           "${bundle_python}" -c \
             "import pathlib, sys, yaml; yaml.safe_load(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))" \
@@ -317,10 +350,13 @@ jobs:
             --argjson attestation_verified "${attestation_verified}" \
             --arg receipt_status "${receipt_status}" \
             --arg release_version "${release_version}" \
+            --arg route_id "${ROUTE_ID}" \
+            --arg platform_os "${PLATFORM_OS}" \
+            --arg platform_architecture "${PLATFORM_ARCHITECTURE}" \
             --arg evidence_run "https://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             '{
-              route_id: "R06",
-              environment: {os: "macos", architecture: "arm64", runner: $runner},
+              route_id: $route_id,
+              environment: {os: $platform_os, architecture: $platform_architecture, runner: $runner},
               project_mode: {kind: "existing", protected_files: 4},
               acquisition_mode: $package_source_mode,
               source_binding: {
@@ -335,16 +371,17 @@ jobs:
               fault_recovery: {fault: "corrupted resume-pack.yaml", command: "ai-sdlc recover", restored: true},
               evidence_links: {guide: "USER_GUIDE.zh-CN.md", workflow: ".github/workflows/macos-user-guide-e2e.yml", run: $evidence_run, release_tag: $release_tag}
             }' > "${evidence_root}/route-receipt.json"
-          jq -e 'length == 12 and .route_id == "R06" and .success_receipt.status == $status' \
-            --arg status "${receipt_status}" "${evidence_root}/route-receipt.json" >/dev/null
+          jq -e 'length == 12 and .route_id == $route_id and .success_receipt.status == $status' \
+            --arg route_id "${ROUTE_ID}" --arg status "${receipt_status}" \
+            "${evidence_root}/route-receipt.json" >/dev/null
           find "${project_root}" -type f -print | LC_ALL=C sort \
             > "${evidence_root}/existing-project-after.txt"
           popd >/dev/null
 
-      - name: Upload guide replay evidence
+      - name: Upload POSIX guide replay evidence
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: macos-user-guide-existing-project-evidence
-          path: ${{ runner.temp }}/ai-sdlc-macos-user-guide-e2e
+          name: posix-user-guide-${{ matrix.route_id }}-existing-project-evidence
+          path: ${{ runner.temp }}/ai-sdlc-${{ matrix.route_id }}-user-guide-e2e
           if-no-files-found: error

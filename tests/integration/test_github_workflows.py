@@ -508,7 +508,7 @@ def test_windows_user_guide_e2e_records_recovery_bound_r02_receipt() -> None:
         assert evidence_field in replay
 
 
-def test_macos_user_guide_e2e_verifies_natural_release_before_install() -> None:
+def test_posix_user_guide_e2e_verifies_natural_release_before_install() -> None:
     workflow_path = _WORKFLOWS_DIR / "macos-user-guide-e2e.yml"
 
     assert workflow_path.is_file()
@@ -519,10 +519,10 @@ def test_macos_user_guide_e2e_verifies_natural_release_before_install() -> None:
     steps = job["steps"]
     checkout = next(step for step in steps if step.get("uses") == "actions/checkout@v6")
     architecture_guard = next(
-        step for step in steps if step.get("name") == "Verify macOS arm64 runner"
+        step for step in steps if step.get("name") == "Verify POSIX runner identity"
     )
     replay = next(
-        step for step in steps if step.get("name") == "Replay macOS existing-project guide path"
+        step for step in steps if step.get("name") == "Replay POSIX existing-project guide path"
     )["run"]
 
     assert events["release"]["types"] == ["published"]
@@ -533,17 +533,18 @@ def test_macos_user_guide_e2e_verifies_natural_release_before_install() -> None:
         "packaging_backend.py",
         "pyproject.toml",
     }.issubset(pull_request_paths)
-    assert job["runs-on"] == "macos-latest"
+    assert job["runs-on"] == "${{ matrix.runner }}"
     assert workflow["permissions"] == {"contents": "read", "attestations": "read"}
     assert "github.event.release.tag_name" in job["env"]["RELEASE_TAG"]
     assert "github.event.release.tag_name" in checkout["with"]["ref"]
     assert steps.index(architecture_guard) < next(
         index
         for index, step in enumerate(steps)
-        if step.get("name") == "Build macOS offline bundle for pull request replay"
+        if step.get("name") == "Build POSIX offline bundle for pull request replay"
     )
     assert "uname -m" in architecture_guard["run"]
-    assert "arm64|aarch64" in architecture_guard["run"]
+    assert "arm64:arm64|arm64:aarch64" in architecture_guard["run"]
+    assert "amd64:x86_64" in architecture_guard["run"]
     assert '"${direct_tag_ref}" "${peeled_tag_ref}"' in replay
     assert (
         '''release_version="$(awk -F'"' '/^version =/ {print $2; exit}' "${GITHUB_WORKSPACE}/pyproject.toml")"'''
@@ -564,28 +565,26 @@ def test_macos_user_guide_e2e_verifies_natural_release_before_install() -> None:
         assert required_contract in replay
 
 
-def test_macos_user_guide_e2e_records_recovery_bound_r06_receipt() -> None:
+def test_posix_user_guide_e2e_records_recovery_bound_receipt() -> None:
     workflow = yaml.safe_load(
         (_WORKFLOWS_DIR / "macos-user-guide-e2e.yml").read_text(encoding="utf-8")
     )
     steps = workflow["jobs"]["existing-project-online-install"]["steps"]
     replay = next(
-        step for step in steps if step.get("name") == "Replay macOS existing-project guide path"
+        step for step in steps if step.get("name") == "Replay POSIX existing-project guide path"
     )["run"]
 
-    assert 'route_id: "R06"' in replay
-    assert 'os: "macos"' in replay
-    assert 'architecture: "arm64"' in replay
+    assert "route_id: $route_id" in replay
+    assert "os: $platform_os" in replay
+    assert "architecture: $platform_architecture" in replay
     assert 'kind: "existing"' in replay
     assert "init-existing-project.txt" in replay
     assert "adopt-existing-project.txt" in replay
     assert "recover-corrupted-resume-pack.txt" in replay
     assert "business-file-hashes-before.txt" in replay
     assert "business-file-hashes-after.txt" in replay
-    assert "/bin/zsh -ic 'command -v ai-sdlc && ai-sdlc --help'" in replay
-    assert (
-        "/bin/zsh -ic 'ai-sdlc init . --agent-target codex --shell zsh'" in replay
-    )
+    assert '"${FRESH_SHELL}" -ic \'command -v ai-sdlc && ai-sdlc --help\'' in replay
+    assert "--agent-target codex --shell ${SHELL_NAME}" in replay
     assert '"${direct_shim}" init .' not in replay
     assert 'grep -Fq "不用再手动执行初始化命令"' in replay
     assert 'grep -Fq "AI 对话"' in replay
@@ -607,6 +606,64 @@ def test_macos_user_guide_e2e_records_recovery_bound_r06_receipt() -> None:
         "evidence_links",
     ):
         assert evidence_field in replay
+
+
+def test_posix_user_guide_e2e_runs_r06_and_r10_in_one_matrix() -> None:
+    workflow = yaml.safe_load(
+        (_WORKFLOWS_DIR / "macos-user-guide-e2e.yml").read_text(encoding="utf-8")
+    )
+    job = workflow["jobs"]["existing-project-online-install"]
+
+    assert job["strategy"]["matrix"]["include"] == [
+        {
+            "route_id": "R06",
+            "runner": "macos-latest",
+            "platform_os": "macos",
+            "architecture": "arm64",
+            "asset_suffix": "macos-arm64",
+            "fresh_shell": "/bin/zsh",
+            "shell_name": "zsh",
+        },
+        {
+            "route_id": "R10",
+            "runner": "ubuntu-latest",
+            "platform_os": "linux",
+            "architecture": "amd64",
+            "asset_suffix": "linux-amd64",
+            "fresh_shell": "/bin/bash",
+            "shell_name": "bash",
+        },
+    ]
+    assert job["runs-on"] == "${{ matrix.runner }}"
+    expected_matrix_env = {
+        "ROUTE_ID": "${{ matrix.route_id }}",
+        "PLATFORM_OS": "${{ matrix.platform_os }}",
+        "PLATFORM_ARCHITECTURE": "${{ matrix.architecture }}",
+        "ASSET_SUFFIX": "${{ matrix.asset_suffix }}",
+        "FRESH_SHELL": "${{ matrix.fresh_shell }}",
+        "SHELL_NAME": "${{ matrix.shell_name }}",
+    }
+    assert {key: job["env"][key] for key in expected_matrix_env} == expected_matrix_env
+
+    replay_steps = [
+        step
+        for step in job["steps"]
+        if step.get("name") == "Replay POSIX existing-project guide path"
+    ]
+    assert len(replay_steps) == 1
+    replay = replay_steps[0]["run"]
+    for binding in (
+        '--arg route_id "${ROUTE_ID}"',
+        '--arg platform_os "${PLATFORM_OS}"',
+        '--arg platform_architecture "${PLATFORM_ARCHITECTURE}"',
+        "route_id: $route_id",
+        "os: $platform_os",
+        "architecture: $platform_architecture",
+        'bundle_name="ai-sdlc-offline-${release_version}-${ASSET_SUFFIX}"',
+        '"${FRESH_SHELL}" -ic',
+        "--shell ${SHELL_NAME}",
+    ):
+        assert binding in replay
 
 
 def test_posix_offline_smoke_matrix_concurrency_is_job_scoped() -> None:
