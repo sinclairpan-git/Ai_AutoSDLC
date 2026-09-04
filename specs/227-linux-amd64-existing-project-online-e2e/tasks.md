@@ -8,8 +8,8 @@
 - [x] T11 冻结 R10-only formal baseline、范围与停止条件。
 - [x] T21 以直接 workflow 合同测试建立 R10 matrix RED。
 - [x] T22 参数化现有 R06 POSIX consumer 并取得本地 GREEN。
-- [ ] T31 在 PR exact HEAD 上取得真实 Ubuntu R10 `partial` receipt。
-- [ ] T32 完成 exact-head 复审、合并与主线核验。
+- [x] T31 在 PR exact HEAD 上取得真实 Ubuntu R10 `partial` receipt。
+- [x] T32 完成 exact-head 复审、合并与主线核验。
 
 ## Batch 1：formal baseline
 
@@ -52,7 +52,7 @@
 ### Task 3.1 真实 Ubuntu 首验
 
 - task_id: T31
-- status: todo
+- status: done
 - depends: T22
 - scope:
   - docs/FRAMEWORK_ROADMAP.zh-CN.md
@@ -60,12 +60,12 @@
 - acceptance:
   - 验收标准：Ubuntu AMD64 job 成功并上传合法 R10 partial receipt；macOS R06 同时成功。
 - verify:
-  - GitHub Actions exact-head run and artifact receipt
+  - PR #204 / run 33893698367 / artifact 9944905601
 
 ### Task 3.2 exact-head 合并收口
 
 - task_id: T32
-- status: blocked
+- status: done
 - depends: T31
 - scope:
   - specs/227-linux-amd64-existing-project-online-e2e/tasks.md
@@ -73,7 +73,7 @@
 - acceptance:
   - 验收标准：required checks 全绿、一次 Codex review 无可操作问题、合并树等于候选树；R10/R02 均不越权写成 proven。
 - verify:
-  - PR checks and review plus origin/main tree equality
+  - PR #204: 23 checks passed; Codex reviewed `1d3ceafd`; merged as `67ac5443`; candidate/main tree `badddda2`
 
 ## 固定止损
 

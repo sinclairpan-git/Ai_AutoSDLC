@@ -2,7 +2,7 @@
 
 **功能编号**：`227-linux-amd64-existing-project-online-e2e`  
 **创建日期**：2026-09-04  
-**当前状态**：T21/T22 本地 RED→GREEN 完成，T31 真实 Ubuntu 首验待执行
+**当前状态**：T31/T32 已完成；R10 以 `partial` 合并，等待未来正常发布自然复验
 
 ## Batch 2026-09-04-001 | T11
 
@@ -28,3 +28,24 @@
 - 仓库级 GREEN：同一命令 → exit 0，`1 passed in 138.18s (0:02:18)`。
 - 范围核对：未创建第二个 workflow/helper；未修改 runtime、schema、release producer、installer、USER_GUIDE 或 R02。
 - 结论：T21/T22 完成；下一步只提交并推送当前候选，执行 T31 真实 Ubuntu 首验。
+
+## Batch 2026-09-04-003 | T31-T32
+
+- **验证画像**：`truth-only`
+- **改动范围**：`specs/227-linux-amd64-existing-project-online-e2e/tasks.md`、`specs/227-linux-amd64-existing-project-online-e2e/task-execution-log.md`、`docs/FRAMEWORK_ROADMAP.zh-CN.md`、`.ai-sdlc/state/codex-handoff.md`、`.ai-sdlc/work-items/227-linux-amd64-existing-project-online-e2e/codex-handoff.md`、`program-manifest.yaml`。
+- **统一验证命令**：`uv run ai-sdlc verify constraints`、`uv run ai-sdlc program truth sync --dry-run`、`uv run ai-sdlc program truth sync --execute --yes`、`uv run ai-sdlc program validate`、`uv run ai-sdlc workitem close-check --wi specs/227-linux-amd64-existing-project-online-e2e`、`uv run pytest tests/integration/test_repo_program_manifest.py -q`、`git diff --check`。
+- **代码审查**：PR #204 对精确 head `1d3ceafd` 的 Codex review 无可操作问题；本 records-only transport 只接受同一真值范围复审，不重新开启实现架构。
+- **任务/计划同步状态**：T11、T21、T22、T31、T32 均为 done；plan 的 R10 `partial` 目标与 execution evidence 一致，R09 仍未准入。
+- **已完成 git 提交**：是（本 records-only envelope 由 live PR `HEAD` 承载，不自引用未来 squash SHA）。
+- **提交哈希**：`HEAD`（以 live records-only PR exact head 为准）；implementation reviewed head `1d3ceafdef8f5fab3d87fe85023d1869bcd8344c`；main merge `67ac544355356f912e30aa0adf208bc5ae872e5a`。
+- 关联 branch/worktree disposition 计划：`deleted`
+- 当前批次 branch disposition 状态：`deleted`
+- 当前批次 worktree disposition 状态：`removed`
+- **生命周期边界**：上述 disposition 指 WI227 原 implementation branch/worktree，均已在 PR #204 合并与树一致性核验后删除；当前 `codex/r10-records-closeout` 只是无 WI 序号的 records transport，不作为实现分支归因。
+- PR：[#204](https://github.com/sinclairpan-git/Ai_AutoSDLC/pull/204)，base `8a3973a555c4fe463cc31cdec1021a1c76b7f3a8`，reviewed head `1d3ceafdef8f5fab3d87fe85023d1869bcd8344c`。
+- 真实环境：GitHub Actions run `33893698367` 的 R10/Linux AMD64 job 通过（41 秒）；同矩阵 R06/macOS arm64 回归通过（47 秒）。
+- R10 receipt：artifact `9944905601`，artifact digest `sha256:34fd8a24656bea559c83c4371332d505f392cb5ff94e6e854e1c935142a1352c`；`route_id=R10`、`os=linux`、`architecture=amd64`、`status=partial`，install/init/adopt/recover 与业务文件保护均通过。
+- 候选验收：23 项 GitHub checks 全绿；Codex 对精确 head 无可操作问题；未消耗确定性修复轮次。
+- 合并：PR #204 squash merge 为 `origin/main@67ac544355356f912e30aa0adf208bc5ae872e5a`；候选树与主线树均为 `badddda235b01154eaa2dd1a593b7a9471a817ab`。
+- 主线真值：WI226 范围审计在精确主线返回 `ready`；Program Truth 保持 fresh，`1185/1185` mapped、missing `7`、close `218/225`，16 个无关历史 blocker 保留。
+- 结论：WI227 完成；R10 不越权提升为 `proven`。下一项仅推荐 R09，仍需独立 formal admission 与用户批准。
