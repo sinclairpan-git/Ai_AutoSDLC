@@ -2,7 +2,7 @@
 
 **功能编号**：`229-linux-amd64-empty-project-online-e2e`
 **创建日期**：2026-09-05
-**状态**：formal 唯一整改轮；未授权实现
+**状态**：formal 本地双专家 PASS0，等待 formal PR；未授权实现
 **主仓基线**：`origin/main@1111552d87ab6e09ec6c5f6989722af22319f7eb`
 **关联路线**：`docs/FRAMEWORK_ROADMAP.zh-CN.md` P3 / R09
 
@@ -166,7 +166,8 @@ R09 继续使用既有 12 个顶层字段，不新增第 13 个字段、不修�
 5. **范围与退出条件**：无 public API、依赖或持久化状态；一个 implementation PR，最多
    两轮确定性同路径修复。需修改冻结 allowlist、超过 220 gross additions、R06/R10 回归、
    receipt 无法表达 empty 语义或真实 Ubuntu 路径需要新平台机制时立即 No-Go。
-6. **决策**：`needs_user`。formal 与对抗评审通过后，仍需用户单独批准 implementation。
+6. **决策**：`needs_user`。formal 本地对抗评审已通过；formal PR 合并后仍需用户单独批准
+   implementation。
 
 ## 7. 成功标准
 

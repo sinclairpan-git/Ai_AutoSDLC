@@ -5,12 +5,12 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 **编号**：`229-linux-amd64-empty-project-online-e2e`
 **来源**：`spec.md` + `plan.md`
-**状态**：formal 唯一整改轮；implementation 未授权
+**状态**：formal 本地双专家 PASS0，T13 formal PR 进行中；implementation 未授权
 
 ## Checklist
 
 - [x] T11 冻结 R09-only formal baseline、ROI、allowlist、预算与停止条件。
-- [ ] T12 完成产品价值与架构纯洁两位专家的 exact-head 对抗评审并收敛为 PASS0。
+- [x] T12 完成产品价值与架构纯洁两位专家的 exact-head 对抗评审并收敛为 PASS0。
 - [ ] T13 完成 formal PR、Codex/CI 和 fresh-main 归档；停在 implementation execute gate。
 - [ ] T21 在直接 workflow 合同测试中建立 R09/empty/matrix RED（未授权）。
 - [ ] T22 在现有单一 POSIX consumer 中最小参数化 R09并取得本地 GREEN（未授权）。
@@ -45,7 +45,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 ### Task 1.2 对抗评审与 formal 收敛
 
 - task_id: T12
-- status: pending
+- status: done
 - depends: T11
 - scope:
   - specs/229-linux-amd64-empty-project-online-e2e/
@@ -59,7 +59,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 ### Task 1.3 formal PR 与 execute gate
 
 - task_id: T13
-- status: pending
+- status: in_progress
 - depends: T12
 - scope:
   - specs/229-linux-amd64-empty-project-online-e2e/

@@ -2,7 +2,7 @@
 
 **功能编号**：`229-linux-amd64-empty-project-online-e2e`
 **创建日期**：2026-09-05
-**状态**：formal 唯一整改轮；implementation 未授权
+**状态**：formal 本地双专家 PASS0，等待 formal PR；implementation 未授权
 
 ## 1. 归档规则
 
@@ -46,27 +46,30 @@
 - 最小候选是现有 consumer 的第三行矩阵与 empty 分支，不是新安装器或新 workflow。
 - formal 决策暂为 `needs_user`；draft `b34a5f2f` 已完成首轮对抗评审，不进入实现。
 - R09 PR 目标只能是 `partial`；`proven` 必须等待自然发布。
+- 唯一整改 HEAD `5a2a56abd753547dabc48e57f92ccf7c83b9a1cc` / tree
+  `084f1a818f257320aec5d45dbf0b566db7163048` 取得 PRODUCT PASS0 与 ARCHITECTURE PASS0，
+  两位专家均为 Critical 0 / Important 0 / Minor 0。
 
 #### 2.4 代码审查结论（Mandatory）
 
-- 宪章/规格对齐：PRODUCT 对 draft `b34a5f2f` 给出 PASS0；ARCHITECTURE 给出 NO-GO，
-  指出 empty receipt 投影、formal allowlist 与 terminal stop 尚未锁死，并附三项 Minor。
+- 宪章/规格对齐：draft `b34a5f2f` 的 PRODUCT PASS0 / ARCHITECTURE NO-GO 触发唯一整改；
+  整改 HEAD `5a2a56ab` 已由原两位专家共同复审为 PASS0，六项原问题全部关闭。
 - 代码质量：本批无产品或 workflow 代码。
 - 测试质量：本批只冻结 RED/真实 CI 策略，未执行实现测试。
-- 结论：待评审。
+- 结论：本地 formal 对抗评审通过；只允许进入 formal PR，不授权 implementation。
 
 #### 2.5 任务/计划同步状态（Mandatory）
 
-- `tasks.md`：T11 done；T12 正在唯一整改轮；T13 pending；T21–T32 blocked by execute gate。
+- `tasks.md`：T11/T12 done；T13 in_progress；T21–T32 blocked by execute gate。
 - `related_plan`：spec/plan/tasks 均限定 R09-only、单 consumer 与相同停止条件。
 - branch disposition：`merge-pending`。
 - worktree disposition：`retained(formal review in progress)`。
 
 #### 2.6 阻塞与下一步
 
-- 阻塞：唯一整改后的 exact-head 必须同时取得 PRODUCT/ARCHITECTURE PASS0。
-- 下一步：仅修复本轮已记录意见，重跑 Truth 与本地门禁后提交 remediation commit；复审仍有
-  Important/Critical 则 terminal No-Go，否则进入 formal PR。
+- 阻塞：formal PR 的 Codex review、required checks 与 fresh-main 归档尚未完成。
+- 下一步：记录双 PASS0，重跑 Truth/门禁并形成 review-record commit；两位专家确认 final
+  exact HEAD 仅增加真实评审记录后，推送 formal PR。
 
 #### 2.7 归档后动作
 

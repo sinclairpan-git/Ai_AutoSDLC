@@ -6,7 +6,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 **编号**：`229-linux-amd64-empty-project-online-e2e`
 **日期**：2026-09-05
 **规格**：`specs/229-linux-amd64-empty-project-online-e2e/spec.md`
-**状态**：formal 唯一整改轮；未授权 implementation
+**状态**：formal 本地双专家 PASS0，等待 formal PR；未授权 implementation
 
 ## 概述
 
