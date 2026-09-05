@@ -3,10 +3,10 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 ---
 # 实施计划：R09 Linux AMD64 空项目在线首次用户闭环
 
-**编号**：`229-linux-amd64-empty-project-online-e2e`  
-**日期**：2026-09-05  
-**规格**：`specs/229-linux-amd64-empty-project-online-e2e/spec.md`  
-**状态**：formal admission 对抗评审中；未授权 implementation
+**编号**：`229-linux-amd64-empty-project-online-e2e`
+**日期**：2026-09-05
+**规格**：`specs/229-linux-amd64-empty-project-online-e2e/spec.md`
+**状态**：formal 唯一整改轮；未授权 implementation
 
 ## 概述
 
@@ -17,11 +17,11 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 ## 技术背景
 
-**语言/格式**：GitHub Actions YAML、Bash、Python workflow 合同测试  
-**主要依赖**：现有 offline bundle、GitHub release/attestation、`jq`、fresh bash  
-**存储**：GitHub Actions 临时 evidence 目录与 artifact；不新增仓库运行时状态  
-**测试**：`tests/integration/test_github_workflows.py` + 真实 Ubuntu/macOS matrix jobs  
-**目标平台**：R09 Linux AMD64；R06 macOS arm64、R10 Linux AMD64 作为回归  
+**语言/格式**：GitHub Actions YAML、Bash、Python workflow 合同测试
+**主要依赖**：现有 offline bundle、GitHub release/attestation、`jq`、fresh bash
+**存储**：GitHub Actions 临时 evidence 目录与 artifact；不新增仓库运行时状态
+**测试**：`tests/integration/test_github_workflows.py` + 真实 Ubuntu/macOS matrix jobs
+**目标平台**：R09 Linux AMD64；R06 macOS arm64、R10 Linux AMD64 作为回归
 **约束**：单 job/单 replay；无 runtime/schema/producer/依赖/用户指南改动；220 gross additions
 
 ## 宪章检查
@@ -42,7 +42,9 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 - `specs/229-linux-amd64-empty-project-online-e2e/**`
 - `program-manifest.yaml`
 - `.ai-sdlc/project/config/project-state.yaml`
+- `.ai-sdlc/state/checkpoint.yml`
 - `.ai-sdlc/state/codex-handoff.md`
+- `.ai-sdlc/state/resume-pack.yaml`
 - `.ai-sdlc/work-items/229-linux-amd64-empty-project-online-e2e/codex-handoff.md`
 - `docs/FRAMEWORK_ROADMAP.zh-CN.md`（仅记录 formal admission 终态）
 - 必要的 Program Manifest 库存断言机械同步
@@ -51,7 +53,15 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 - `.github/workflows/macos-user-guide-e2e.yml`
 - `tests/integration/test_github_workflows.py`
-- 本 WI、路线图、Program Truth、continuity 和必要库存断言
+- `tests/integration/test_repo_program_manifest.py`（仅库存断言机械同步）
+- `specs/229-linux-amd64-empty-project-online-e2e/**`
+- `docs/FRAMEWORK_ROADMAP.zh-CN.md`
+- `program-manifest.yaml`
+- `.ai-sdlc/project/config/project-state.yaml`
+- `.ai-sdlc/state/checkpoint.yml`
+- `.ai-sdlc/state/codex-handoff.md`
+- `.ai-sdlc/state/resume-pack.yaml`
+- `.ai-sdlc/work-items/229-linux-amd64-empty-project-online-e2e/codex-handoff.md`
 
 以下任一出现即超范围：`src/ai_sdlc/**`、`pyproject.toml`、packaging/release producer、
 新 workflow/helper、receipt schema、`USER_GUIDE.zh-CN.md` 正文。
@@ -60,36 +70,38 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 ### Phase 0：formal admission
 
-**目标**：冻结 R09 用户价值、现状证据、最小切片、预算、allowlist 与停止条件。  
-**产物**：spec/plan/tasks/execution log、Program Truth、路线图状态。  
-**验证**：constraints、Program validate、plan-check、两位独立专家 exact-head PASS0。  
+**目标**：冻结 R09 用户价值、现状证据、最小切片、预算、allowlist 与停止条件。
+**产物**：spec/plan/tasks/execution log、Program Truth、路线图状态。
+**验证**：constraints、Program validate、plan-check、两位独立专家 exact-head PASS0。
 **回退**：未通过评审即关闭 formal No-Go，不创建 dev 分支。
 
 ### Phase 1：合同红测（implementation 获批后）
 
-**目标**：先固定 R06/R09/R10 三行矩阵、empty 语义和动态 receipt/artifact。  
-**产物**：仅修改 `tests/integration/test_github_workflows.py`。  
-**验证**：定向 pytest 必须因当前 workflow 缺少 R09/empty 而按预期失败。  
+**目标**：先固定 R06/R09/R10 三行矩阵、empty 语义和动态 receipt/artifact。
+**产物**：仅修改 `tests/integration/test_github_workflows.py`。
+**验证**：定向 pytest 必须因当前 workflow 缺少 R09/empty 而按预期失败。
 **回退**：红灯若暴露必须改 schema/producer，立即 No-Go。
 
 ### Phase 2：最小 workflow 参数化
 
-**目标**：加入一行 R09 和 `project_kind`，在同一 replay 中条件准备 empty/existing 项目。  
-**产物**：现有 POSIX workflow + 直接合同测试。  
-**验证**：定向测试、完整 workflow 集成测试、Ruff、constraints、Program validate、diff budget。  
+**目标**：加入一行 R09 和 `project_kind`，在同一 replay 中条件准备 empty/existing 项目。
+**产物**：现有 POSIX workflow + 直接合同测试。
+**验证**：定向测试、完整 workflow 集成测试、Ruff、constraints、Program validate、diff budget。
 **回退**：整体 revert；不得抽取新框架续做。
 
 ### Phase 3：真实环境与收口
 
-**目标**：在 PR exact HEAD 取得 R06/R09/R10 matrix 成功和 R09 partial receipt。  
-**产物**：同一 implementation PR 的 run/artifact/评审证据。  
-**验证**：receipt 12 字段、empty precondition、Result/Next、recover、R06/R10 回归。  
+**目标**：在 PR exact HEAD 取得 R06/R09/R10 matrix 成功和 R09 partial receipt。
+**产物**：同一 implementation PR 的 run/artifact/评审证据。
+**验证**：receipt 12 字段、empty precondition、Result/Next、recover、R06/R10 回归。
 **回退**：最多两轮同路径聚焦修复；仍失败则 No-Go 并撤回 implementation。
 
 ## 最小实现形态
 
 1. 矩阵增加 `project_kind`；R06/R10 为 `existing`，R09 为 `empty`。
-2. 保留 legacy job key，避免无价值地改变现有 required-check 身份。
+2. 保留 legacy job ID 以减少无关迁移；新增 `project_kind` 会改变 matrix check-run context，
+   实现 push 前必须核验仓库 ruleset 只依赖聚合 `Compatibility Gate` 而不依赖旧 matrix 名。
+   若存在旧名强绑定且无法在当前 allowlist 内兼容，则 WI229 No-Go。
 3. replay 共享资产、attestation、安装和 fresh shell；只在项目准备、`adopt`、文件 hash 与
    receipt 内层字段处按 `project_kind` 分支。
 4. artifact 名包含 route 与 project kind，避免 R09/R10 在同一 Ubuntu run 中混淆。
@@ -112,8 +124,8 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 | 问题 | 状态 | 阻塞阶段 |
 |---|---|---|
-| 现有 12 字段 receipt 的内层结构能否直接表达 empty/init | 预计可行，须由 RED 测试与架构评审确认 | implementation |
-| legacy job key 是否保留 | 冻结为保留，避免 required-check 身份漂移 | 已决策 |
+| R09 empty/init 的内层表达 | 已在 FR-229-006 / 5.1 冻结 mode-specific projection；RED 测试不得另行设计 | 已决策 |
+| legacy job ID 是否保留 | 保留；预期 matrix context 变化，push 前核验 ruleset 不依赖旧名称 | implementation |
 | R09 proven 何时取得 | 下一次正常 `release.published`，不为本项单独发版 | 非阻塞 |
 
 ## 实施顺序与门禁

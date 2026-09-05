@@ -1,9 +1,9 @@
 # 功能规格：R09 Linux AMD64 空项目在线首次用户闭环
 
-**功能编号**：`229-linux-amd64-empty-project-online-e2e`  
-**创建日期**：2026-09-05  
-**状态**：formal admission 对抗评审中；未授权实现  
-**主仓基线**：`origin/main@1111552d87ab6e09ec6c5f6989722af22319f7eb`  
+**功能编号**：`229-linux-amd64-empty-project-online-e2e`
+**创建日期**：2026-09-05
+**状态**：formal 唯一整改轮；未授权实现
+**主仓基线**：`origin/main@1111552d87ab6e09ec6c5f6989722af22319f7eb`
 **关联路线**：`docs/FRAMEWORK_ROADMAP.zh-CN.md` P3 / R09
 
 ## 1. 问题与决策目标
@@ -113,8 +113,8 @@ P3 的十二条首次用户路线当前为 `1/12 proven、11/12 partial、0/12 m
   捕获并验证双语 Result/Next、返回 AI 对话提示及内部诊断术语不泄露。
 - **FR-229-005**：R09 必须主动损坏 resume pack、调用现有 `recover` 并验证恢复结果；
   不新增恢复机制。
-- **FR-229-006**：receipt 必须保留现有 12 个顶层字段；R09 的 `project_mode` 与
-  `success_receipt` 必须反映 empty/init，不能沿用已有项目的保护文件断言。
+- **FR-229-006**：receipt 必须保留现有 12 个顶层字段，并严格使用 5.1 的 mode-specific
+  projection；R09 不能沿用已有项目的保护文件断言，也不能由实现者临时发明字段。
 - **FR-229-007**：PR/manual 证据只能为 `partial`；只有 `release.published`、正式 asset
   与强 attestation 同时成立时才允许 `proven`。
 - **FR-229-008**：R06/R10 的现有矩阵身份、init/adopt、业务文件 hash、恢复和 receipt
@@ -123,7 +123,35 @@ P3 的十二条首次用户路线当前为 `1/12 proven、11/12 partial、0/12 m
   路线图/Program Truth/continuity 文件；任何产品源码、依赖、producer、schema、新 workflow
   或用户指南正文改动均触发 No-Go。
 - **FR-229-010**：workflow 与直接合同测试合计 gross added lines 不得超过 220；超过预算
-  或需要第二个实现 PR 时必须停止并重新准入。
+  或需要第二个 implementation PR 时，WI229 terminal No-Go，不创建 replacement formal、
+  第二 WI 或续作。未来只有 Sponsor 基于全新用户证据明确授权的独立产品需求才可重新评估，
+  且不得视为 WI229 的延续。
+
+### 5.1 R09 receipt 精确投影
+
+R09 继续使用既有 12 个顶层字段，不新增第 13 个字段、不修改 runtime validator、producer
+或持久化 schema。只有以下三个顶层对象使用冻结的 empty-project 内层投影；其余九个字段
+沿用当前 consumer：
+
+```json
+{
+  "project_mode": {"kind": "empty", "initial_file_count": 0},
+  "lifecycle": {"init": "passed", "adopt": "not_applicable"},
+  "success_receipt": {
+    "status": "partial|proven",
+    "version": "<release_version>",
+    "initialized": true
+  }
+}
+```
+
+- `initial_file_count=0` 必须来自 `init` 前真实目录扫描，并保存
+  `empty-project-before.txt`；不能用常量直接写入 receipt。
+- `initialized=true` 必须同时由 `.ai-sdlc/`、`AGENTS.md` 和已验证的 Result/Next 支撑，
+  并保存 `empty-project-after.txt` 与 init 输出。
+- `adopt=not_applicable` 是空项目的显式不适用值；R09 不执行 `adopt`。
+- R06/R10 继续使用现有 existing projection：`protected_files=4`、`adopt=passed`、
+  `business_files_preserved=true`，不得随 R09 改动。
 
 ## 6. ROI 与实现边界
 
@@ -156,9 +184,11 @@ P3 的十二条首次用户路线当前为 `1/12 proven、11/12 partial、0/12 m
 
 ## 8. 固定终止与回退
 
-- formal 只允许一轮对抗意见修订；修订后任一专家仍有 Important/Critical 即 No-Go。
+- formal 只允许当前这一轮对抗意见修订；修订后任一专家仍有 Important/Critical 即 No-Go。
 - implementation 最多一个 PR、两轮确定性同路径修复；API/网络/runner 排队不计修复轮次。
 - 无法用现有 consumer 表达 R09 时整体回退，不以新 helper、workflow 或 runtime 扩围续命。
+- WI229 No-Go 后不得创建 replacement formal、第二 WI 或第二 implementation PR 续命；只有
+  Sponsor 基于全新用户证据另行明确授权的独立产品需求可在未来重新评估。
 - PR 候选可整体 `git revert`；自然发布证明不作为本实现 PR 的合并前置，也不得伪造。
 
 ---

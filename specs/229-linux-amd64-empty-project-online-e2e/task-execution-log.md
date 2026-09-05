@@ -1,8 +1,8 @@
 # 任务执行日志：R09 Linux AMD64 空项目在线首次用户闭环
 
-**功能编号**：`229-linux-amd64-empty-project-online-e2e`  
-**创建日期**：2026-09-05  
-**状态**：formal baseline 已冻结，等待对抗评审；implementation 未授权
+**功能编号**：`229-linux-amd64-empty-project-online-e2e`
+**创建日期**：2026-09-05
+**状态**：formal 唯一整改轮；implementation 未授权
 
 ## 1. 归档规则
 
@@ -44,29 +44,32 @@
 #### 2.3 当前结论
 
 - 最小候选是现有 consumer 的第三行矩阵与 empty 分支，不是新安装器或新 workflow。
-- formal 决策暂为 `needs_user`；T11 已完成，两位对抗专家未评审前不进入 PR，更不进入实现。
+- formal 决策暂为 `needs_user`；draft `b34a5f2f` 已完成首轮对抗评审，不进入实现。
 - R09 PR 目标只能是 `partial`；`proven` 必须等待自然发布。
 
 #### 2.4 代码审查结论（Mandatory）
 
-- 宪章/规格对齐：本地门禁通过；待产品价值与架构纯洁评审。
+- 宪章/规格对齐：PRODUCT 对 draft `b34a5f2f` 给出 PASS0；ARCHITECTURE 给出 NO-GO，
+  指出 empty receipt 投影、formal allowlist 与 terminal stop 尚未锁死，并附三项 Minor。
 - 代码质量：本批无产品或 workflow 代码。
 - 测试质量：本批只冻结 RED/真实 CI 策略，未执行实现测试。
 - 结论：待评审。
 
 #### 2.5 任务/计划同步状态（Mandatory）
 
-- `tasks.md`：T11 done；T12/T13 pending；T21–T32 blocked by execute gate。
+- `tasks.md`：T11 done；T12 正在唯一整改轮；T13 pending；T21–T32 blocked by execute gate。
 - `related_plan`：spec/plan/tasks 均限定 R09-only、单 consumer 与相同停止条件。
 - branch disposition：`merge-pending`。
 - worktree disposition：`retained(formal review in progress)`。
 
 #### 2.6 阻塞与下一步
 
-- 阻塞：两位独立 exact-head formal 评审。
-- 下一步：冻结 draft commit；只修订 formal 评审发现；两位 PASS0 后提交 formal PR，否则 No-Go。
+- 阻塞：唯一整改后的 exact-head 必须同时取得 PRODUCT/ARCHITECTURE PASS0。
+- 下一步：仅修复本轮已记录意见，重跑 Truth 与本地门禁后提交 remediation commit；复审仍有
+  Important/Critical 则 terminal No-Go，否则进入 formal PR。
 
 #### 2.7 归档后动作
 
-- 已完成 git 提交：否；须与 T11/T12 收敛后的 formal 批次一次提交。
+- 已完成 draft git 提交：是，`b34a5f2fa4e6ddcebda9303b412da9d51066af0e`；本次唯一
+  remediation 另作一个聚焦提交，不预写其提交哈希。
 - 是否继续实现：否；formal 合并后仍需用户显式批准。

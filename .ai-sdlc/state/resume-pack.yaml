@@ -12,13 +12,13 @@ working_set_snapshot:
   - specs/229-linux-amd64-empty-project-online-e2e/tasks.md
   - specs/229-linux-amd64-empty-project-online-e2e/spec.md
   context_summary: 'Goal: 完成 WI229 R09 Linux AMD64 空项目在线 E2E 的 formal admission 与对抗评审；不进入
-    implementation | State: T11 formal baseline 已冻结并通过本地门禁；T12 等待两位专家对 draft commit
-    做 exact-head 评审；T21-T32 被 execute gate 阻断 | Next: 提交唯一 draft commit，交 PRODUCT/ROI
-    与 ARCHITECTURE/LEAN 两位专家 exact-head 评审；最多一轮 formal 修订，PASS0 后创建 formal PR'
+    implementation | State: draft b34a5f2f 获 PRODUCT PASS0 / ARCHITECTURE NO-GO；唯一
+    formal 整改已完成并通过本地门禁，等待提交与双专家复审 | Next: 提交唯一 remediation commit；两位原专家只复审当前 exact
+    HEAD，任一仍有 Important/Critical 即 terminal No-Go，双 PASS0 才创建 formal PR'
 current_branch: feature/229-linux-amd64-empty-project-online-e2e-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-09-05T17:19:59+00:00'
+timestamp: '2026-09-05T17:36:10+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-09-05T17:05:28+00:00'
 checkpoint_fingerprint: 2b8d807065d0ee3a2310919ac9029a0a0c09423eef07360fc6c06403de1f12ba

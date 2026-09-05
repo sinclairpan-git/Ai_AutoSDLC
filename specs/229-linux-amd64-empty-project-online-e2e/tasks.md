@@ -3,9 +3,9 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 ---
 # 任务分解：R09 Linux AMD64 空项目在线首次用户闭环
 
-**编号**：`229-linux-amd64-empty-project-online-e2e`  
-**来源**：`spec.md` + `plan.md`  
-**状态**：formal admission 对抗评审中；implementation 未授权
+**编号**：`229-linux-amd64-empty-project-online-e2e`
+**来源**：`spec.md` + `plan.md`
+**状态**：formal 唯一整改轮；implementation 未授权
 
 ## Checklist
 
@@ -28,6 +28,10 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
   - specs/229-linux-amd64-empty-project-online-e2e/
   - program-manifest.yaml
   - .ai-sdlc/project/config/project-state.yaml
+  - .ai-sdlc/state/checkpoint.yml
+  - .ai-sdlc/state/codex-handoff.md
+  - .ai-sdlc/state/resume-pack.yaml
+  - .ai-sdlc/work-items/229-linux-amd64-empty-project-online-e2e/codex-handoff.md
   - docs/FRAMEWORK_ROADMAP.zh-CN.md
 - acceptance:
   - R09 用户链路、12 字段 receipt、`partial/proven` 边界和 empty 语义明确。
@@ -58,7 +62,15 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 - status: pending
 - depends: T12
 - scope:
-  - formal docs / Program Truth / roadmap / continuity / inventory assertion
+  - specs/229-linux-amd64-empty-project-online-e2e/
+  - program-manifest.yaml
+  - .ai-sdlc/project/config/project-state.yaml
+  - .ai-sdlc/state/checkpoint.yml
+  - .ai-sdlc/state/codex-handoff.md
+  - .ai-sdlc/state/resume-pack.yaml
+  - .ai-sdlc/work-items/229-linux-amd64-empty-project-online-e2e/codex-handoff.md
+  - docs/FRAMEWORK_ROADMAP.zh-CN.md
+  - tests/integration/test_repo_program_manifest.py
 - acceptance:
   - formal PR 不含 workflow、tests 行为或 `src/ai_sdlc/**` diff。
   - Codex 当前 HEAD 无可操作意见，required checks 全绿，fresh-main 验收通过。
@@ -78,6 +90,8 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
   - tests/integration/test_github_workflows.py
 - acceptance:
   - 测试要求 R06/R09/R10 三行矩阵、project kind、empty precondition、动态 receipt/artifact。
+  - R09 精确断言 `initial_file_count=0`、`init=passed`、`adopt=not_applicable`、
+    `initialized=true`；R06/R10 existing projection 保持不变。
   - 当前主线因缺少 R09 按预期失败，且不修改生产 workflow 来制造红灯。
 - verify:
   - uv run pytest tests/integration/test_github_workflows.py -q -k posix_user_guide
@@ -92,6 +106,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
   - tests/integration/test_github_workflows.py
 - acceptance:
   - 单 job/单 replay 承载 R06/R09/R10，R09 empty，R06/R10 existing。
+  - push 前核验 ruleset 不依赖新增 matrix 字段前的旧 check-run 名；无法兼容则 No-Go。
   - 不改 runtime、schema、producer、依赖、用户指南，不新建 workflow/helper。
   - workflow + 直接测试 gross additions <=220。
 - verify:
@@ -133,5 +148,6 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 - formal 一轮修订后仍有 Important/Critical：No-Go，不创建 dev 分支。
 - implementation 超出一个 PR、两轮确定性修复、220 gross additions或冻结 allowlist：No-Go。
-- 需要新 workflow/helper/runtime/schema/producer/依赖/用户指南正文：No-Go 或重新 formal 准入。
-- 不创建第二 WI、records-only PR 或为本项单独发布版本。
+- 需要新 workflow/helper/runtime/schema/producer/依赖/用户指南正文：WI229 terminal No-Go。
+- No-Go 后不创建 replacement formal、第二 WI、第二 implementation/records-only PR，也不为
+  本项单独发布版本；未来只有 Sponsor 基于全新用户证据明确授权的独立需求可重新评估。
