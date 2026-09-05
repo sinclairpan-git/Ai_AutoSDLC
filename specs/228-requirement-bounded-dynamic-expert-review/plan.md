@@ -5,11 +5,13 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 **编号**：`228-requirement-bounded-dynamic-expert-review` | **日期**：2026-09-05
 **规格**：`specs/228-requirement-bounded-dynamic-expert-review/spec.md`
-**状态**：G1 formal/admission；实现等待双专家一致 PASS
+**状态**：G4 NO-GO closed；runtime 候选已移除，仅归档 terminal closure
 
 ## 1. 概述
 
 本计划先归档 Requirement-only 动态专家合同，再用一个独立候选完成只读 review 输入、严格临时 execution、最多两个角色、两轮上限和 freeze 漂移保护。实现后必须用三个盲测价值回放作 Go/No-Go；未证明增量价值时不合并 runtime，也不扩展其余 Loop。
+
+执行终态为 NO-GO：价值回放通过，但最终实现复审仍有 Important，触发既定两轮停止条件。唯一 terminal PR 只保留 closure 文档和真值，不含 runtime、测试或用户入口改动；P4 Phase B 不启动。
 
 ## 2. 技术背景
 

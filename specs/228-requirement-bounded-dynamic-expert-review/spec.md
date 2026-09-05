@@ -2,7 +2,7 @@
 
 **功能编号**：`228-requirement-bounded-dynamic-expert-review`
 **创建日期**：2026-09-05
-**状态**：G1 formal/admission；实现须在双专家评审通过并归档后进入独立 implementation PR
+**状态**：G4 NO-GO closed；最终实现复审仍有 Important，runtime 候选已移除
 **真值基线**：`origin/main@71e4ff5098505d0c6321c9162c1b9b1647d155d1`
 **关联路线图**：`docs/FRAMEWORK_ROADMAP.zh-CN.md` P4 Phase A
 
@@ -11,6 +11,8 @@
 当前 Requirement Loop 能把需求与验收标准确定性落盘，并由用户显式 `freeze --yes` 关闭，但 `needs_review` 到 `closed` 之间没有独立专家输入、风险匹配或 reviewed-input 漂移保护。本工作项只实现 Requirement Loop 的一个纵向薄片：为当前需求结果生成只读、摘要绑定、最多两个临时角色的评审输入；允许一次修改后复审；冻结时拒绝已经失效的评审摘要。
 
 这不是现有 freeze 逻辑失效，而是主仓相对参赛版的新能力差距。目标是先用最小实现和三个盲测价值回放证明增量价值，再决定是否另立工作项扩展 Design Contract 或 Implementation。
+
+**终态**：三例价值回放达到 SC-228-007，但唯一整改后的 exact-head 架构复审复现了 round 2 空白 acceptance 会清空旧标准并形成不可恢复死锁。按 SC-228-008 与硬停止条件判定 NO-GO；候选 runtime/test/user-facing diff 全部撤回，不进入主线，也不创建延续本轮优化的新 work item。
 
 ### 1.1 本次覆盖
 

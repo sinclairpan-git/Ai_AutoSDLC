@@ -33,7 +33,7 @@
 | P2 | 普通用户单入口收敛 | **已完成（WI220）** | 9.0/10 | 实际已投入 | 1.5（原估） | P1 已有证据 No-Go |
 | D2 | 历史 release-target provenance 恢复 | **WI221 admission No-Go；保留为 portfolio debt** | 7.5/10 | 审计 <0.5 人日；补缺粗估 8–13 人日 | 0.6–0.9 | 不阻断正常特性；未来重启 Program Truth release target 时另行准入 |
 | P3 | 跨平台首次用户 12 路完整闭环 | **v0.9.9 已证明 R06；R02/R10 保持 partial 并等待正常发布复验** | 9.5/10 | R02/R06/R10 已完成 bounded execute；完整实现仍估 6–10 人日 | 下一候选 R09（需另行准入） | P2 默认入口稳定 |
-| P4 | 五类 Loop 有界动态专家 | **条件候选** | 10/10 | 10–15 人日 | 0.6 | P1–P3 的真实收益支持继续投资 |
+| P4 | 五类 Loop 有界动态专家 | **NO-GO / 非阻塞 backlog** | 10/10 | 10–15 人日 | 0.6 | WI228 最终实现复审未收敛，不进入 Phase B |
 
 此外保留两个非产品队列：`O1` 是发布后真实项目观察；`D1` 是无当前实现授权的延后候选。它们不得抢占 P1–P4 的正常产品顺序。
 
@@ -215,6 +215,8 @@ PR #204 / run `33893698367` 已在真实 Ubuntu AMD64 上完成 R10 existing-pro
 
 ## 8. P4：五类 Loop 有界动态专家
 
+**当前终态**：WI228 的 Requirement 纵向薄片在价值回放中证明了增量发现，但唯一整改后的最终架构复审仍发现 round 2 空白 acceptance 死锁。候选 runtime 已撤回，Phase A 判定 NO-GO；剩余能力差距保留为非阻塞 backlog，不自动创建后续 work item，不进入 Phase B。
+
 ### 8.1 目标与价值
 
 根据当前工作项风险动态选择少量独立只读专家，在 Requirement、Design Contract、Implementation、Frontend Evidence 和 Local PR Review 阶段发现单一模型容易遗漏的问题，同时保持输入绑定、有限轮次和用户决策权。
@@ -360,8 +362,8 @@ portfolio debt，不再作为 v0.9.9 或当前正常特性开发的前置。** �
 - [x] P1 Diff-local Lean Advisory 已按运行时合同缺陷有证据 No-Go 关闭；实现未合并，主线保留 WI219 轻量 ROI prompt。
 - [x] P2 普通用户单入口完成默认路径与高级兼容验证（WI220）。
 - [ ] P3 十二条首次用户路线完成真实 clean-environment E2E；v0.9.9 已将 R06 提升为 `proven`，R02 因确定性 Git 上下文失败保持 `partial`，R10 已由 PR #204 取得真实 Ubuntu `partial` receipt；当前仍为 `1/12 proven、11/12 partial、0/12 missing`。
-- [ ] P4 Phase A 证明 Requirement/Design/Implementation 动态专家 ROI。
-- [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
+- [x] P4 Phase A 已由 WI228 作出 NO-GO 并撤回 runtime 候选；不继续 Requirement/Design/Implementation 扩展。
+- [x] P4 Phase B 未获准启动；Frontend Evidence/Local PR Review 仅保留非阻塞 backlog。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。
 - [ ] D2/WI221 已完成 11/16 admission audit；当前保持真实 blocked 作为 portfolio debt，不阻断正常特性，仅在未来重启 Program Truth release target 时另行准入。
 - [ ] G1 另立 formal governance work item，评估“稳定 finding 对比 + 两轮后 terminal sponsor decision”的最小落地；不得在 WI224 closeout 中修改通用 runtime、review schema 或状态机。
