@@ -36,6 +36,6 @@
 - PR #205 focused correction in progress；等待新 exact-head Codex re-review 与 required checks。
 
 ## Exact Next Steps
-- 完成同一批六文件整改后运行一次 Program Truth sync，并确认 inventory 与 16 个历史 blocker 不被改写。
-- 运行 program validate、constraints、manifest 测试、WI227 close-check 和 diff 范围检查。
-- 提交并推送同一 PR #205；对新 exact head 只请求一次 Codex 复审。复审无可操作问题且 required checks 全绿后合并，再从精确 `origin/main` 做终态核验并停止 heartbeat。
+- 等待 PR #205 新 exact head 的唯一一次 Codex 复审与 required checks；不再运行 truth sync 或产生其他 tracked 变更。
+- 复审无可操作问题且 required checks 全绿后合并 PR #205。
+- 从精确 `origin/main` 只读核验 WI227 close-check 为 `ready`，随后停止 heartbeat。
