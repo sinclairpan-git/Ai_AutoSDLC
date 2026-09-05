@@ -5,21 +5,20 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/228-requirement-bounded-dynamic-expert-review/spec.md
-  plan_path: specs/228-requirement-bounded-dynamic-expert-review/plan.md
-  tasks_path: specs/228-requirement-bounded-dynamic-expert-review/tasks.md
+  spec_path: specs/229-linux-amd64-empty-project-online-e2e/spec.md
+  plan_path: specs/229-linux-amd64-empty-project-online-e2e/plan.md
+  tasks_path: specs/229-linux-amd64-empty-project-online-e2e/tasks.md
   active_files:
-  - specs/228-requirement-bounded-dynamic-expert-review/tasks.md
-  - specs/228-requirement-bounded-dynamic-expert-review/spec.md
-  context_summary: 'Goal: 合并 PR #207 的 WI228 NO-GO terminal closure，并完成 fresh-main
-    验收 | State: Codex exact-head review 发现 continuity 仍指向已完成的 truth/commit；该 P2 已在本提交改为仅剩
-    PR gates，runtime/行为测试 diff 继续为零 | Next: push 当前 closure head；解决旧 thread；请求一次新
-    HEAD Codex review；checks 全绿后 squash merge；detached fresh-main 验证 close-check、program
-    validate、constraints、runtime diff zero 与 clean'
-current_branch: archive/228-requirement-bounded-dynamic-expert-review-terminal
+  - specs/229-linux-amd64-empty-project-online-e2e/tasks.md
+  - specs/229-linux-amd64-empty-project-online-e2e/spec.md
+  context_summary: 'Goal: 修复并合并 PR #208 的 WI229 R09 formal；不进入 implementation | State:
+    Codex P1/P2 formal-only 修复完成：PR head checkout/actual HEAD/bundle/receipt 合同已绑定；两份
+    handoff Changed Files 与 origin/main 12 项 diff 精确一致 | Next: 保留 handoff 完整文件清单并提交聚焦修复；双专家
+    exact-head 复审后 push，resolve旧线程，重新@codex review，全部门禁绿后 squash merge并fresh-main验收'
+current_branch: feature/229-linux-amd64-empty-project-online-e2e-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-09-05T14:56:58+00:00'
+timestamp: '2026-09-05T18:03:46+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-09-05T08:59:51+00:00'
-checkpoint_fingerprint: deebc2aad162f29c02d9a3b9d08a6fa0c9656e3d44b6cddeb66ad0cb8785a661
+checkpoint_last_updated: '2026-09-05T17:05:28+00:00'
+checkpoint_fingerprint: 2b8d807065d0ee3a2310919ac9029a0a0c09423eef07360fc6c06403de1f12ba
