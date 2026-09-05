@@ -5,20 +5,22 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/225-review-terminal-sponsor-convergence/spec.md
-  plan_path: specs/225-review-terminal-sponsor-convergence/plan.md
-  tasks_path: specs/225-review-terminal-sponsor-convergence/tasks.md
+  spec_path: specs/228-requirement-bounded-dynamic-expert-review/spec.md
+  plan_path: specs/228-requirement-bounded-dynamic-expert-review/plan.md
+  tasks_path: specs/228-requirement-bounded-dynamic-expert-review/tasks.md
   active_files:
-  - specs/225-review-terminal-sponsor-convergence/tasks.md
-  - specs/225-review-terminal-sponsor-convergence/spec.md
-  context_summary: 'Goal: 完成 WI225 G1 formal/admission 的 terminal sponsor 最小边界修正 |
-    State: Formal 已冻结未来 AGENTS.md 加 tests/unit/test_verify_constraints.py 静态测试的一个语义
-    delta；focused gates 全部完成，待提交推送与一次终局复审 | Next: 提交并推送同一 PR #196；验证 exact-head formal
-    truth；回复 P2 并请求一次 terminal sponsor re-review；恢复 heartbeat'
-current_branch: feature/225-review-terminal-sponsor-convergence-docs
+  - specs/228-requirement-bounded-dynamic-expert-review/tasks.md
+  - specs/228-requirement-bounded-dynamic-expert-review/spec.md
+  context_summary: 'Goal: 完成 WI228 formal PR #206 并在合并后进入唯一 implementation PR | State:
+    Codex 对 21ce255e 的 re-review 提出的 round-cap needs_user 绕过与缺 canonical role_id 两项
+    finding 已聚焦修正；PRODUCT/ARCHITECTURE SECOND-GATE PASS0；最终 truth snapshot b9209e50，manifest
+    validation 与回归通过；尚无产品实现 | Next: 暂存并写出不可变 tree；提交第二次 focused formal fix；两位原专家绑定
+    exact commit/tree；推送并归档最小 receipt；回复/解决两条新 threads；请求新 head Codex review；全绿后合并与
+    fresh-main 验收'
+current_branch: feature/228-requirement-bounded-dynamic-expert-review-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-09-01T03:54:25+00:00'
+timestamp: '2026-09-05T10:22:16+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-09-01T01:02:26+00:00'
-checkpoint_fingerprint: 5dc34ee31b457a955e3e5d4ab41c9bd41db75670b2766a7dfc0ca14002bbc7e9
+checkpoint_last_updated: '2026-09-05T08:59:51+00:00'
+checkpoint_fingerprint: deebc2aad162f29c02d9a3b9d08a6fa0c9656e3d44b6cddeb66ad0cb8785a661
