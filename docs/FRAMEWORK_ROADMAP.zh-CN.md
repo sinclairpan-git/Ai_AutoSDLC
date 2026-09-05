@@ -32,7 +32,7 @@
 | P1 | Diff-local Lean Advisory | **No-Go 已关闭（未合并）** | 8.0/10 | 实际：1 个 WI + 2 轮评审 | No-Go（及时止损） | P0 与 v0.9.8 已完成 |
 | P2 | 普通用户单入口收敛 | **已完成（WI220）** | 9.0/10 | 实际已投入 | 1.5（原估） | P1 已有证据 No-Go |
 | D2 | 历史 release-target provenance 恢复 | **WI221 admission No-Go；保留为 portfolio debt** | 7.5/10 | 审计 <0.5 人日；补缺粗估 8–13 人日 | 0.6–0.9 | 不阻断正常特性；未来重启 Program Truth release target 时另行准入 |
-| P3 | 跨平台首次用户 12 路完整闭环 | **v0.9.9 已证明 R06；R02 上下文已修复并等待正常发布复验** | 9.5/10 | R02/R06 已完成 bounded execute；完整实现仍估 6–10 人日 | 下一候选 R10 | P2 默认入口稳定 |
+| P3 | 跨平台首次用户 12 路完整闭环 | **v0.9.9 已证明 R06；R02/R10 保持 partial 并等待正常发布复验** | 9.5/10 | R02/R06/R10 已完成 bounded execute；完整实现仍估 6–10 人日 | 下一候选 R09（需另行准入） | P2 默认入口稳定 |
 | P4 | 五类 Loop 有界动态专家 | **条件候选** | 10/10 | 10–15 人日 | 0.6 | P1–P3 的真实收益支持继续投资 |
 
 此外保留两个非产品队列：`O1` 是发布后真实项目观察；`D1` 是无当前实现授权的延后候选。它们不得抢占 P1–P4 的正常产品顺序。
@@ -160,13 +160,15 @@
 
 ## 7. P3：跨平台首次用户 12 路完整闭环
 
-**状态：WI222 P3-A formal 与 WI224 原生发布证明实现均已合并；v0.9.9 的自然发布已证明 R06，R02 保持
-`partial` 并先修复仓库上下文。** WI222 admission 的历史基线为
+**状态：WI222 P3-A formal、WI224 原生发布证明和 WI227 R10 PR 路线证明均已合并；v0.9.9 的自然发布已证明 R06，R02/R10 保持
+`partial` 并等待正常发布复验。** WI222 admission 的历史基线为
 `0/12 proven、12/12 partial、0/12 missing`。v0.9.9 的 macOS run `33857842202` 随后形成 R06 的完整 12 字段
 receipt：`acquisition_mode=natural_release`、`attestation_verified=true`、`status=proven`，asset/workflow 均绑定
 `v0.9.9@6969761b50045455651b3f3c1b64034e04314758`。同一发布的 Windows run `33857842230` 在离开 checkout 后以裸
 `git rev-parse` 解析 tag 时确定性失败，artifact 中没有 `route-receipt.json`，因此 R02 不得提升。当前真实状态为
-`1/12 proven、11/12 partial、0/12 missing`；主线修复只恢复下一次自然发布路径的可执行性，不能冒充 R02 成功证据。
+`1/12 proven、11/12 partial、0/12 missing`；主线修复只恢复下一次自然发布路径的可执行性，不能冒充 R02 成功证据。WI227 的
+PR #204 / run `33893698367` 已在真实 Ubuntu AMD64 上完成 R10 existing-project online 路径并生成合法 `partial` receipt；
+这证明当前候选路径可执行，但不替代未来自然发布的正式资产与 attestation 复验。
 
 ### 7.1 目标与价值
 
@@ -192,6 +194,7 @@ receipt：`acquisition_mode=natural_release`、`attestation_verified=true`、`st
 - [x] WI224 只为 Release Build producer 与 R02 natural-release consumer 增加签发、强验证、恢复和临时 receipt；实现已合并。
 - [x] v0.9.9 的 R06 natural-release receipt 已证明 macOS arm64 已有项目在线路线；R02 run 已产生可复现的 checkout 外 Git 上下文失败证据。
 - [x] Windows workflow 的两条 `rev-parse` 已显式绑定 checkout 并由仓库外真实 PowerShell 行为回归保护；R02 仍保持 `partial`，等待下一次正常发布验证。
+- [x] WI227 在同一 POSIX consumer 中以两行矩阵复用 R06，并由 PR #204 / run `33893698367` 取得 R10 Linux AMD64 `partial` receipt；未复制第二份大型 workflow。
 - [ ] 抽取跨平台共享步骤，使用矩阵参数化；禁止复制一份超过核心安装逻辑数倍的 POSIX workflow。
 - [ ] 补齐 macOS/Linux 完整 user-guide E2E、在线 bootstrap、系统 Python、下载工具和 glibc 等真实兼容边界。
 - [ ] 在干净 Windows/macOS/Linux 环境执行 12 条路线；模拟测试或文档 lint 不能替代真实 E2E。
@@ -345,7 +348,7 @@ portfolio debt，不再作为 v0.9.9 或当前正常特性开发的前置。** �
 1. 分别用上文两个仓库 URL 定位远端，并以 `git ls-remote <仓库 URL> refs/heads/main` 核对 `main` 精确 SHA；需要读取树时，只在各自独立 checkout 中 fetch 对应 `origin/main`。不得把两个 checkout 的 `origin` 当作同一仓库，也不读取产品站和本地材料分支作为决策真值。
 2. 阅读本文件，核对“总体队列”和当前项状态，不重新从零生成 P0–P4。
 3. 核对当前远端主线是否已经改变相关能力。若没有改变，直接选择队列中第一个“下一项/排队”事项。
-4. P2 已由 WI220 完成，v0.9.9 已从精确主线正式发布。Windows R02 checkout 外 Git 上下文已在主线修复，但在下一次正常发布产生完整 receipt 前仍为 `partial`；当前恢复正常特性开发，R10 仅作为下一候选另行准入。
+4. P2 已由 WI220 完成，v0.9.9 已从精确主线正式发布。Windows R02 checkout 外 Git 上下文已在主线修复，但在下一次正常发布产生完整 receipt 前仍为 `partial`；WI227/R10 已以 PR #204 的真实 Ubuntu evidence 完成 `partial` 路线证明。下一候选为 R09，仍须另行 formal admission 与用户批准。
 5. 路线图只作为规划输入；formal spec、plan、tasks、评审和用户 execute 批准仍分别完成。
 6. 每完成一个事项，在同一收口 PR 或紧随其后的 records-only PR 中更新：状态、实际投入、证据、未完成项、下一项和 handoff。
 7. 只有出现新事实导致价值、投入、风险或依赖显著变化时才重新排序；修订时保留旧决策和变化原因。
@@ -356,7 +359,7 @@ portfolio debt，不再作为 v0.9.9 或当前正常特性开发的前置。** �
 - [ ] O1 在 3–5 个真实项目完成 v0.9.8 真值观察。
 - [x] P1 Diff-local Lean Advisory 已按运行时合同缺陷有证据 No-Go 关闭；实现未合并，主线保留 WI219 轻量 ROI prompt。
 - [x] P2 普通用户单入口完成默认路径与高级兼容验证（WI220）。
-- [ ] P3 十二条首次用户路线完成真实 clean-environment E2E；v0.9.9 已将 R06 提升为 `proven`，R02 因确定性 Git 上下文失败保持 `partial`，当前为 `1/12 proven、11/12 partial、0/12 missing`。
+- [ ] P3 十二条首次用户路线完成真实 clean-environment E2E；v0.9.9 已将 R06 提升为 `proven`，R02 因确定性 Git 上下文失败保持 `partial`，R10 已由 PR #204 取得真实 Ubuntu `partial` receipt；当前仍为 `1/12 proven、11/12 partial、0/12 missing`。
 - [ ] P4 Phase A 证明 Requirement/Design/Implementation 动态专家 ROI。
 - [ ] P4 Phase B 仅在 Phase A 获得批准后评估 Frontend Evidence/Local PR Review。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。

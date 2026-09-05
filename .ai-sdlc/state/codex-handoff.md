@@ -1,39 +1,41 @@
 # Continuity Handoff
 
-- Updated: 2026-09-04T15:58:36+00:00
-- Reason: T21/T22 完成 RED→GREEN，进入真实 Ubuntu 首验
-- Goal: 实施 WI227 R10 Linux AMD64 已有项目在线 E2E
-- State: T21/T22 已完成；单 job R06/R10 matrix 本地合同测试通过；T31 待 PR exact-head Ubuntu 验收
-- Stage: execute
+- Updated: 2026-09-04T17:35:27Z
+- Reason: PR #205 exact-head Codex review 的三项 records/continuity P2 一次性整改
+- Goal: 在冻结的六文件范围内完成 WI227 records-only 真值收口，不重新开启实现
+- State: PR #205 exact head `250d04b222cf94d7c70ac6f5804df00b7ffc3d15` 收到三项可操作 P2；本批次补记 close-check 实际结果、显式承认第二 PR 合同例外，并把 handoff 收敛到复审/合并步骤
+- Stage: close
 - Work Item: 227-linux-amd64-existing-project-online-e2e
-- Branch: feature/227-linux-amd64-existing-project-online-e2e-dev
+- Branch: codex/r10-records-closeout
 
 ## Changed Files
-- `.github/workflows/macos-user-guide-e2e.yml`
-- `tests/integration/test_github_workflows.py`
-- `specs/227-linux-amd64-existing-project-online-e2e/`
+- `specs/227-linux-amd64-existing-project-online-e2e/tasks.md`
+- `specs/227-linux-amd64-existing-project-online-e2e/task-execution-log.md`
+- `docs/FRAMEWORK_ROADMAP.zh-CN.md`
 - canonical/scoped handoff
+- `program-manifest.yaml`（仅由最终 truth sync 机械刷新）
 
 ## Key Decisions
-- 一个 WI、同一分支原地从 docs 重命名为 dev、一个 PR；单 job 两行 R06/R10 matrix；真实 Ubuntu 首验；不改 runtime/schema/producer/R02
+- 本分支不重新设计、不修改实现/测试，只把 PR #204 已发生的终态证据写回主线记录。
+- R10 保持 `partial`；不为 receipt 单独发版。下一候选为 R09，但本分支不准入、不实现 R09。
+- 以后严格单 PR 的工作项不得把“合并后才可取得的证据”设为同一 PR 内必须落盘的前置任务。
+- 原“一个 WI、一个分支、一个 PR”合同没有完整满足：用户在被明确告知冲突后批准继续，PR #205 是唯一一次 records-only 第二 PR 例外；不把它描述为合同内动作，也不扩展任何产品实现。
 
 ## Commands / Tests
-- 基线 workflow tests: `18 passed in 1.59s`。
-- R10 matrix RED: `KeyError: strategy`，`1 failed in 0.31s`。
-- R10 matrix GREEN: `1 passed in 0.29s`。
-- 完整 workflow tests: `19 passed in 1.46s`。
-- Bash replay syntax: PASS。
-- Ruff: PASS。
-- Program validate / constraints: PASS / no BLOCKERs。
-- Repository inventory: `1 passed in 138.18s`，`1185/1185/0/7`、close `225/218`。
+- 基线：Program validate PASS；constraints 无 blocker；workflow tests `19 passed in 1.70s`。
+- 真实规模 manifest 基线：`1 passed in 145.60s`。
+- PR #204：run `33893698367`，R10 41 秒、R06 47 秒；23 checks 全绿；Codex reviewed head `1d3ceafd` 无可操作问题。
+- 合并：`origin/main@67ac5443`；candidate/main tree 均为 `badddda2`。
+- PR #205 初始 exact head `250d04b2`：WI227 close-check exit 0、全部 PASS、`done_gate=ready for completion`；program validate PASS；constraints 无 blocker；manifest `1 passed in 142.65s`。
+- PR #205 review：三项 P2 均限于 execution-log/continuity；当前执行冻结范围内唯一整改，整改后只允许一次新 exact-head 复审。
 
 ## Blockers / Risks
-- 无产品 blocker；API/网络/runner 排队仅为观察态，不消耗修复轮次
+- 无产品 blocker；Windows 3.11/3.12 checks 在初始 head 轮次仍为排队/运行观察态，不构成候选失败。
 
 ## Local PR Review
-- none
+- PR #205 focused correction in progress；等待新 exact-head Codex re-review 与 required checks。
 
 ## Exact Next Steps
-- 完成唯一一次最终 Program Truth sync，随后不再修改 tracked 记录。
-- 提交并推送当前单一 dev 分支，创建唯一 PR。
-- 以首个 PR exact HEAD 验证真实 Ubuntu R10 partial receipt 与 R06 回归。
+- 等待 PR #205 新 exact head 的唯一一次 Codex 复审与 required checks；不再运行 truth sync 或产生其他 tracked 变更。
+- 复审无可操作问题且 required checks 全绿后合并 PR #205。
+- 从精确 `origin/main` 只读核验 WI227 close-check 为 `ready`，随后停止 heartbeat。
