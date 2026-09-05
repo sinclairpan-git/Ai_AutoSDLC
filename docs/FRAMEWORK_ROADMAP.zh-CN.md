@@ -32,7 +32,7 @@
 | P1 | Diff-local Lean Advisory | **No-Go 已关闭（未合并）** | 8.0/10 | 实际：1 个 WI + 2 轮评审 | No-Go（及时止损） | P0 与 v0.9.8 已完成 |
 | P2 | 普通用户单入口收敛 | **已完成（WI220）** | 9.0/10 | 实际已投入 | 1.5（原估） | P1 已有证据 No-Go |
 | D2 | 历史 release-target provenance 恢复 | **WI221 admission No-Go；保留为 portfolio debt** | 7.5/10 | 审计 <0.5 人日；补缺粗估 8–13 人日 | 0.6–0.9 | 不阻断正常特性；未来重启 Program Truth release target 时另行准入 |
-| P3 | 跨平台首次用户 12 路完整闭环 | **v0.9.9 已证明 R06；R02/R10 保持 partial 并等待正常发布复验** | 9.5/10 | R02/R06/R10 已完成 bounded execute；完整实现仍估 6–10 人日 | 下一候选 R09（需另行准入） | P2 默认入口稳定 |
+| P3 | 跨平台首次用户 12 路完整闭环 | **v0.9.9 已证明 R06；R02/R10 保持 partial；WI229 正在做 R09 formal admission，implementation 未授权** | 9.5/10 | R02/R06/R10 已完成 bounded execute；R09 formal 上限 0.25 人日，获批后实现上限 1.5 人日 | WI229 只准入 R09 Linux AMD64 空项目在线薄片 | P2 默认入口稳定 |
 | P4 | 五类 Loop 有界动态专家 | **NO-GO / 非阻塞 backlog** | 10/10 | 10–15 人日 | 0.6 | WI228 最终实现复审未收敛，不进入 Phase B |
 
 此外保留两个非产品队列：`O1` 是发布后真实项目观察；`D1` 是无当前实现授权的延后候选。它们不得抢占 P1–P4 的正常产品顺序。
@@ -169,6 +169,11 @@ receipt：`acquisition_mode=natural_release`、`attestation_verified=true`、`st
 `1/12 proven、11/12 partial、0/12 missing`；主线修复只恢复下一次自然发布路径的可执行性，不能冒充 R02 成功证据。WI227 的
 PR #204 / run `33893698367` 已在真实 Ubuntu AMD64 上完成 R10 existing-project online 路径并生成合法 `partial` receipt；
 这证明当前候选路径可执行，但不替代未来自然发布的正式资产与 attestation 复验。
+
+2026-09-05 从主仓 `1111552d` 启动 WI229 的 R09 formal admission：只评估在现有 POSIX
+consumer 中增加 Linux AMD64 空项目在线矩阵行与 empty 分支，不新增 workflow、runtime、
+schema、producer 或依赖。formal 通过也不等于 implementation 授权；实现前仍需 Sponsor
+单独确认，PR 阶段只允许取得 `partial` receipt，`proven` 等待下一次自然发布。
 
 ### 7.1 目标与价值
 
@@ -350,7 +355,7 @@ portfolio debt，不再作为 v0.9.9 或当前正常特性开发的前置。** �
 1. 分别用上文两个仓库 URL 定位远端，并以 `git ls-remote <仓库 URL> refs/heads/main` 核对 `main` 精确 SHA；需要读取树时，只在各自独立 checkout 中 fetch 对应 `origin/main`。不得把两个 checkout 的 `origin` 当作同一仓库，也不读取产品站和本地材料分支作为决策真值。
 2. 阅读本文件，核对“总体队列”和当前项状态，不重新从零生成 P0–P4。
 3. 核对当前远端主线是否已经改变相关能力。若没有改变，直接选择队列中第一个“下一项/排队”事项。
-4. P2 已由 WI220 完成，v0.9.9 已从精确主线正式发布。Windows R02 checkout 外 Git 上下文已在主线修复，但在下一次正常发布产生完整 receipt 前仍为 `partial`；WI227/R10 已以 PR #204 的真实 Ubuntu evidence 完成 `partial` 路线证明。下一候选为 R09，仍须另行 formal admission 与用户批准。
+4. P2 已由 WI220 完成，v0.9.9 已从精确主线正式发布。Windows R02 checkout 外 Git 上下文已在主线修复，但在下一次正常发布产生完整 receipt 前仍为 `partial`；WI227/R10 已以 PR #204 的真实 Ubuntu evidence 完成 `partial` 路线证明。WI229 正在执行 R09 formal admission；用户只批准继续 formal，尚未批准 implementation。
 5. 路线图只作为规划输入；formal spec、plan、tasks、评审和用户 execute 批准仍分别完成。
 6. 每完成一个事项，在同一收口 PR 或紧随其后的 records-only PR 中更新：状态、实际投入、证据、未完成项、下一项和 handoff。
 7. 只有出现新事实导致价值、投入、风险或依赖显著变化时才重新排序；修订时保留旧决策和变化原因。
@@ -361,7 +366,7 @@ portfolio debt，不再作为 v0.9.9 或当前正常特性开发的前置。** �
 - [ ] O1 在 3–5 个真实项目完成 v0.9.8 真值观察。
 - [x] P1 Diff-local Lean Advisory 已按运行时合同缺陷有证据 No-Go 关闭；实现未合并，主线保留 WI219 轻量 ROI prompt。
 - [x] P2 普通用户单入口完成默认路径与高级兼容验证（WI220）。
-- [ ] P3 十二条首次用户路线完成真实 clean-environment E2E；v0.9.9 已将 R06 提升为 `proven`，R02 因确定性 Git 上下文失败保持 `partial`，R10 已由 PR #204 取得真实 Ubuntu `partial` receipt；当前仍为 `1/12 proven、11/12 partial、0/12 missing`。
+- [ ] P3 十二条首次用户路线完成真实 clean-environment E2E；v0.9.9 已将 R06 提升为 `proven`，R02 因确定性 Git 上下文失败保持 `partial`，R10 已由 PR #204 取得真实 Ubuntu `partial` receipt；当前仍为 `1/12 proven、11/12 partial、0/12 missing`。WI229 仅处于 R09 formal admission，未改变路线计数。
 - [x] P4 Phase A 已由 WI228 作出 NO-GO 并撤回 runtime 候选；不继续 Requirement/Design/Implementation 扩展。
 - [x] P4 Phase B 未获准启动；Frontend Evidence/Local PR Review 仅保留非阻塞 backlog。
 - [ ] D1 仅在满足真实触发器后重新评估；当前保持 defer。

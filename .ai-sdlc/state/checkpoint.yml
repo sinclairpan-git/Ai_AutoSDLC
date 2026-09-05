@@ -1,5 +1,5 @@
 pipeline_started_at: '2026-03-21T00:00:00'
-pipeline_last_updated: '2026-09-05T08:59:51+00:00'
+pipeline_last_updated: '2026-09-05T17:05:28+00:00'
 current_stage: close
 feature:
   id: 204-program-finalization-command-family-reduction-candidate
@@ -43,6 +43,6 @@ completed_stages:
 execute_progress: null
 ai_decisions_count: 0
 execution_mode: auto
-linked_wi_id: 228-requirement-bounded-dynamic-expert-review
-linked_plan_uri: docs/FRAMEWORK_ROADMAP.zh-CN.md
-last_synced_at: '2026-09-05T08:59:51+00:00'
+linked_wi_id: 229-linux-amd64-empty-project-online-e2e
+linked_plan_uri: specs/229-linux-amd64-empty-project-online-e2e/plan.md
+last_synced_at: '2026-09-05T17:05:28+00:00'

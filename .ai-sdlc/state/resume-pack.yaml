@@ -5,21 +5,20 @@ working_set_snapshot:
   prd_path: AI-SDLC 全自动化框架 产品需求文档（PRD）.md
   constitution_path: .ai-sdlc/memory/constitution.md
   tech_stack_path: .ai-sdlc/profiles/tech-stack.yml
-  spec_path: specs/228-requirement-bounded-dynamic-expert-review/spec.md
-  plan_path: specs/228-requirement-bounded-dynamic-expert-review/plan.md
-  tasks_path: specs/228-requirement-bounded-dynamic-expert-review/tasks.md
+  spec_path: specs/229-linux-amd64-empty-project-online-e2e/spec.md
+  plan_path: specs/229-linux-amd64-empty-project-online-e2e/plan.md
+  tasks_path: specs/229-linux-amd64-empty-project-online-e2e/tasks.md
   active_files:
-  - specs/228-requirement-bounded-dynamic-expert-review/tasks.md
-  - specs/228-requirement-bounded-dynamic-expert-review/spec.md
-  context_summary: 'Goal: 合并 PR #207 的 WI228 NO-GO terminal closure，并完成 fresh-main
-    验收 | State: Codex exact-head review 发现 continuity 仍指向已完成的 truth/commit；该 P2 已在本提交改为仅剩
-    PR gates，runtime/行为测试 diff 继续为零 | Next: push 当前 closure head；解决旧 thread；请求一次新
-    HEAD Codex review；checks 全绿后 squash merge；detached fresh-main 验证 close-check、program
-    validate、constraints、runtime diff zero 与 clean'
-current_branch: archive/228-requirement-bounded-dynamic-expert-review-terminal
+  - specs/229-linux-amd64-empty-project-online-e2e/tasks.md
+  - specs/229-linux-amd64-empty-project-online-e2e/spec.md
+  context_summary: 'Goal: 完成 WI229 R09 Linux AMD64 空项目在线 E2E 的 formal admission 与对抗评审；不进入
+    implementation | State: T11 formal baseline 已冻结并通过本地门禁；T12 等待两位专家对 draft commit
+    做 exact-head 评审；T21-T32 被 execute gate 阻断 | Next: 提交唯一 draft commit，交 PRODUCT/ROI
+    与 ARCHITECTURE/LEAN 两位专家 exact-head 评审；最多一轮 formal 修订，PASS0 后创建 formal PR'
+current_branch: feature/229-linux-amd64-empty-project-online-e2e-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-09-05T14:56:58+00:00'
+timestamp: '2026-09-05T17:19:59+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
-checkpoint_last_updated: '2026-09-05T08:59:51+00:00'
-checkpoint_fingerprint: deebc2aad162f29c02d9a3b9d08a6fa0c9656e3d44b6cddeb66ad0cb8785a661
+checkpoint_last_updated: '2026-09-05T17:05:28+00:00'
+checkpoint_fingerprint: 2b8d807065d0ee3a2310919ac9029a0a0c09423eef07360fc6c06403de1f12ba

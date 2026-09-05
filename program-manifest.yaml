@@ -2113,12 +2113,15 @@ specs:
 - id: 228-requirement-bounded-dynamic-expert-review
   path: specs/228-requirement-bounded-dynamic-expert-review
   depends_on: []
+- id: 229-linux-amd64-empty-project-online-e2e
+  path: specs/229-linux-amd64-empty-project-online-e2e
+  depends_on: []
 truth_snapshot:
-  generated_at: '2026-09-05T15:00:16Z'
+  generated_at: '2026-09-05T17:16:37Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: a9ec9b2c
-  authoring_hash: 274ec03fb239a6a1654089f49aaa483c961df20f147cea1c6421a82b8a05afe3
+  repo_revision: 1111552d
+  authoring_hash: 7b2fa5914c30640d94f2476a9b32aadd8d9525f9b04898ccb37bc12fba29a479
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
     truth_check:specs/096-frontend-mainline-host-runtime-manager-baseline: 694fbf058775409c9ac373054323501942cebddcce74f540b4a8df9e9c2ce5a9
@@ -2160,7 +2163,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 25e2c41518d3e9a00f73ec8a7d4af0736c06771c65083fbc09722666dc9f98fd
+  snapshot_hash: a95ed5b0604b91ebb6534e6c323057e72ee4f0502e2d2328545eb4aeeb8a0544
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2190,30 +2193,30 @@ truth_snapshot:
     stale_reason: ''
   source_inventory:
     state: complete
-    total_sources: 1190
-    mapped_sources: 1190
+    total_sources: 1195
+    mapped_sources: 1195
     unmapped_sources: 0
-    missing_sources: 7
-    phase_signal_count: 3858
-    deferred_signal_count: 6899
+    missing_sources: 8
+    phase_signal_count: 3865
+    deferred_signal_count: 6906
     non_goal_signal_count: 406
     layer_totals:
       blueprint: 1
-      spec: 226
-      plan: 226
-      tasks: 226
-      execution: 226
-      close: 226
+      spec: 227
+      plan: 227
+      tasks: 227
+      execution: 227
+      close: 227
       design: 9
       requirements: 2
       defect: 3
       release: 45
     layer_materialized:
       blueprint: 1
-      spec: 226
-      plan: 226
-      tasks: 226
-      execution: 226
+      spec: 227
+      plan: 227
+      tasks: 227
+      execution: 227
       close: 219
       design: 9
       requirements: 2
@@ -12398,6 +12401,51 @@ truth_snapshot:
       mapping_ref: 228-requirement-bounded-dynamic-expert-review
       phase_signal_count: 0
       deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/229-linux-amd64-empty-project-online-e2e/spec.md
+      source_type: spec_doc
+      truth_layer: spec
+      mapped: true
+      exists: true
+      mapping_ref: 229-linux-amd64-empty-project-online-e2e
+      phase_signal_count: 4
+      deferred_signal_count: 4
+      non_goal_signal_count: 0
+    - path: specs/229-linux-amd64-empty-project-online-e2e/plan.md
+      source_type: plan_doc
+      truth_layer: plan
+      mapped: true
+      exists: true
+      mapping_ref: 229-linux-amd64-empty-project-online-e2e
+      phase_signal_count: 2
+      deferred_signal_count: 2
+      non_goal_signal_count: 0
+    - path: specs/229-linux-amd64-empty-project-online-e2e/tasks.md
+      source_type: tasks_doc
+      truth_layer: tasks
+      mapped: true
+      exists: true
+      mapping_ref: 229-linux-amd64-empty-project-online-e2e
+      phase_signal_count: 0
+      deferred_signal_count: 0
+      non_goal_signal_count: 0
+    - path: specs/229-linux-amd64-empty-project-online-e2e/task-execution-log.md
+      source_type: execution_log
+      truth_layer: execution
+      mapped: true
+      exists: true
+      mapping_ref: 229-linux-amd64-empty-project-online-e2e
+      phase_signal_count: 1
+      deferred_signal_count: 1
+      non_goal_signal_count: 0
+    - path: specs/229-linux-amd64-empty-project-online-e2e/development-summary.md
+      source_type: development_summary
+      truth_layer: close
+      mapped: true
+      exists: false
+      mapping_ref: 229-linux-amd64-empty-project-online-e2e
+      phase_signal_count: 0
+      deferred_signal_count: 0
       non_goal_signal_count: 0
     - path: docs/FRAMEWORK_ROADMAP.zh-CN.md
       source_type: design_doc
