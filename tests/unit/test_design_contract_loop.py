@@ -18,6 +18,7 @@ from ai_sdlc.core.requirement_loop import (
     RequirementFreezeOptions,
     RequirementStartOptions,
     freeze_requirement_loop,
+    review_requirement_loop,
     start_requirement_loop,
 )
 
@@ -211,7 +212,8 @@ def test_check_design_contract_loop_blocks_unfrozen_current_requirement_loop(
         "design-contract check."
     )
     assert result.next_action == (
-        "Run ai-sdlc loop requirement freeze --loop-id req-current-unfrozen --yes."
+        "Run ai-sdlc loop requirement review --loop-id req-current-unfrozen, then "
+        "freeze with the current --review-result-file (legacy intake may use --yes)."
     )
 
 
@@ -265,7 +267,8 @@ def test_check_design_contract_loop_blocks_unfrozen_requirement_loop(
     )
     assert (
         result.next_action
-        == "Run ai-sdlc loop requirement freeze --loop-id req-unfrozen --yes."
+        == "Run ai-sdlc loop requirement review --loop-id req-unfrozen, then "
+        "freeze with the current --review-result-file (legacy intake may use --yes)."
     )
 
 
@@ -282,9 +285,7 @@ def test_check_design_contract_loop_accepts_frozen_requirement_loop(
         )
     )
     assert start_result.status == "ready"
-    freeze_result = freeze_requirement_loop(
-        RequirementFreezeOptions(root=tmp_path, loop_id="req-frozen", yes=True)
-    )
+    freeze_result = _freeze_requirement(tmp_path, "req-frozen")
     assert freeze_result.status == "ready"
     assert freeze_result.frozen is True
 
@@ -324,9 +325,7 @@ def test_check_design_contract_loop_blocks_mismatched_requirement_work_item(
             work_item_id="other-contract",
         )
     )
-    freeze_requirement_loop(
-        RequirementFreezeOptions(root=tmp_path, loop_id="req-other-work-item", yes=True)
-    )
+    _freeze_requirement(tmp_path, "req-other-work-item")
 
     result = check_design_contract_loop(
         DesignContractCheckOptions(
@@ -1583,7 +1582,37 @@ def _ensure_frozen_requirement_loop(root: Path, *, loop_id: str) -> None:
         )
     )
     assert start_result.status == "ready"
-    freeze_result = freeze_requirement_loop(
-        RequirementFreezeOptions(root=root, loop_id=loop_id, yes=True)
-    )
+    freeze_result = _freeze_requirement(root, loop_id)
     assert freeze_result.frozen is True
+
+
+def _freeze_requirement(root: Path, loop_id: str):
+    review_result = review_requirement_loop(root, loop_id)
+    assert review_result.review is not None
+    review = review_result.review
+    path = root / f"{loop_id}-review-execution.json"
+    path.write_text(
+        json.dumps(
+            {
+                "input_digest": review.input_digest,
+                "round_number": review.round_number,
+                "results": [
+                    {
+                        "role_id": role["role_id"],
+                        "status": "completed",
+                        "findings": [],
+                    }
+                    for role in review.roles
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return freeze_requirement_loop(
+        RequirementFreezeOptions(
+            root=root,
+            loop_id=loop_id,
+            yes=True,
+            review_result_file=path.as_posix(),
+        )
+    )

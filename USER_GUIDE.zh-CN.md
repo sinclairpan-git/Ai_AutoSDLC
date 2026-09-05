@@ -749,6 +749,15 @@ AI-SDLC 会把下面几条作为写代码时的默认约束；普通用户不需
 - 注释只写业务规则、复杂意图、边界条件、兼容性、并发、缓存、事务、安全和错误处理等有价值的信息；不要复述显而易见的代码。
 - 后续 agent 或人工要维护的脚本/模块，如果包含认证、XHR/API 调用、payload 字段映射、加密、阶段流程、重试或副作用边界，必须补维护契约、关键函数 docstring 或边界注释，并在交付说明里确认。
 
+### Requirement Loop 的独立评审
+
+新建需求补齐验收标准后，先执行 `ai-sdlc loop requirement review --loop-id <loop-id> --json`。这个命令只读取当前需求，返回与当前轮次绑定的摘要、规范化需求内容、一个主审角色和至多一个风险角色，不会修改项目文件。AI 宿主应让这些角色分别在只读上下文中审查，并生成一份临时 `RequirementReviewExecution` JSON。
+
+- 有 `blocker` 或 `required` finding：用 `ai-sdlc loop requirement start --loop-id <loop-id> ... --review-result-file <临时文件>` 修订一次，再重新评审。
+- 没有阻断 finding：用 `ai-sdlc loop requirement freeze --loop-id <loop-id> --review-result-file <临时文件> --yes` 冻结。
+- 修改需求后旧摘要会失效；实质版本最多两轮。临时 execution 和完整 findings 不会复制到 Loop artifact。
+- 旧版本已创建且没有 `review_required` 字段的 intake 仍可执行原 `freeze --yes`，CLI 会明确提示 legacy 兼容路径。
+
 ### 常用命令
 
 | 命令 | 功能 |

@@ -5,7 +5,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 **编号**：`228-requirement-bounded-dynamic-expert-review` | **日期**：2026-09-05
 **来源**：`spec.md` + `plan.md`
-**当前边界**：本 docs branch 只完成 Batch 1；Batch 2–4 必须在 formal 合入后的唯一 implementation PR 执行
+**当前边界**：formal 已合入；Batch 2–4 由唯一 implementation terminal PR 承载，不创建 post-merge records PR
 
 ## 分批策略
 
@@ -43,7 +43,7 @@ Batch 4: adversarial implementation review + one terminal PR
   - [x] 产品/ROI 专家审查用户价值、三次回放阈值和退出条件；初审 `PRODUCT REJECT`。
   - [x] 架构/代码纯洁专家审查最小实现、兼容、安全、状态与体量边界；初审 `ARCHITECTURE REJECT`。
   - [x] 最多一轮整改复审后取得两个身份同一 formal head 的 PASS；否则 No-Go。
-  - [ ] 同步 Program Truth、continuity、验证并创建/合并 formal PR。
+  - [x] 同步 Program Truth、continuity、验证并创建/合并 formal PR。
 - **验收标准**：两位专家在同一文档版本无 Critical/Important；formal PR 不含产品代码或无关 adapter 刷新。
 - **验证**：`program validate`、truth sync/audit、constraints、plan-check、manifest regression、`git diff --check`、exact-head review/checks。
 
@@ -57,9 +57,9 @@ Batch 4: adversarial implementation review + one terminal PR
 - **文件**：`src/ai_sdlc/core/requirement_review.py`、定向 unit/integration tests
 - **可并行**：否
 - **任务**：
-  - [ ] 先写失败测试固定 canonical projection/digest、一个 primary、可选一个 cross-risk、多风险优先级、每个返回角色的 stable canonical `role_id` 和严格 execution schema。
-  - [ ] 实现瞬时 input/execution 模型与 Requirement 专属构建器，不导入 writer/store 写路径。
-  - [ ] 证明 review 命令前后仓库文件内容与集合不变。
+  - [x] 先写失败测试固定 canonical projection/digest、一个 primary、可选一个 cross-risk、多风险优先级、每个返回角色的 stable canonical `role_id` 和严格 execution schema。
+  - [x] 实现瞬时 input/execution 模型与 Requirement 专属构建器，不导入 writer/store 写路径。
+  - [x] 证明 review 命令前后仓库文件内容与集合不变。
 - **验收标准**：角色数恒为 1–2；风险原因可解释；相同角色的 `role_id` 稳定且 execution 只按它匹配；相同输入摘要稳定；reviewer 只消费返回 projection；没有新 review artifact。
 - **验证**：`tests/unit/test_requirement_review.py` + CLI integration。
 
@@ -71,12 +71,12 @@ Batch 4: adversarial implementation review + one terminal PR
 - **文件**：formal allowlist 内的 requirement writer/CLI/命令 producer/shared rule、现有 requirement tests、用户文档
 - **可并行**：否
 - **任务**：
-  - [ ] 先写失败测试固定仅初始 round-1 `needs_user` 澄清、round 1→2、幂等不增轮、第三实质版本 command blocked 且不改 intake/status/round，以及 freeze 关闭 current round。
-  - [ ] 新 loop 设 `review_required=true`；旧 artifact 缺字段保持 legacy open/closed freeze 兼容。
-  - [ ] 冻结 `needs_review` 后唯一修订接口：`requirement start --loop-id <id> ... --review-result-file <path>`；首次 start 与 `needs_user` 澄清不要求 execution。
-  - [ ] execution-bearing start 与新合同 freeze 先以纯读取 preflight 校验临时 execution，只有通过后才调用 writer adapter，最终 requirement writer 写入前重校验 digest/round；start 接受完整 completed execution 中的 actionable finding 作为修订依据。
-  - [ ] missing/malformed/stale/failed/incomplete/duplicate/unknown execution 对 start/freeze 均 exit 1；actionable execution 仅对 freeze exit 1；所有拒绝都以调用前后整棵工作树文件集合与逐文件内容哈希证明零变化。
-  - [ ] 同步所有冻结命令 producer、共享 active-agent rule 和最短迁移说明。
+  - [x] 先写失败测试固定仅初始 round-1 `needs_user` 澄清、round 1→2、幂等不增轮、第三实质版本 command blocked 且不改 intake/status/round，以及 freeze 关闭 current round。
+  - [x] 新 loop 设 `review_required=true`；旧 artifact 缺字段保持 legacy open/closed freeze 兼容。
+  - [x] 冻结 `needs_review` 后唯一修订接口：`requirement start --loop-id <id> ... --review-result-file <path>`；首次 start 与 `needs_user` 澄清不要求 execution。
+  - [x] execution-bearing start 与新合同 freeze 先以纯读取 preflight 校验临时 execution，只有通过后才调用 writer adapter，最终 requirement writer 写入前重校验 digest/round；start 接受完整 completed execution 中的 actionable finding 作为修订依据。
+  - [x] missing/malformed/stale/failed/incomplete/duplicate/unknown execution 对 start/freeze 均 exit 1；actionable execution 仅对 freeze exit 1；所有拒绝都以调用前后整棵工作树文件集合与逐文件内容哈希证明零变化。
+  - [x] 同步所有冻结命令 producer、共享 active-agent rule 和最短迁移说明。
 - **验收标准**：只给 digest、stale/malformed/missing/failed/incomplete/duplicate/unknown execution 对 start/freeze 均在 adapter 前 fail closed 且全树不变；actionable execution 可以驱动 round 2 start，但对 freeze fail closed 且全树不变；第三个实质版本及其重复调用都 command blocked，不持久化 `needs_user` 或覆盖 round 2；新 loop 只有当前 clean execution + `--yes` 可关闭；legacy 与现有异常路径不回归。
 - **验证**：定向 unit/integration、Ruff、constraints、allowlist 检查；`git diff --numstat <formal-merge-base>...HEAD -- src/ai_sdlc` gross additions ≤600。
 
@@ -90,10 +90,10 @@ Batch 4: adversarial implementation review + one terminal PR
 - **文件**：三个 `/tmp` 隔离项目；把可复核回放证据写入 execution log
 - **可并行**：否
 - **任务**：
-  - [ ] 先冻结三个 baseline writer 输出与隐藏 seed/预期答案，再交给不知道答案的独立专家；至少一个为 clean 负向对照。
-  - [ ] 路由合同另行验证基础、安全/权限、数据迁移/兼容三类，不把命中关键词计入 ROI。
-  - [ ] 每例归档命令、输入规模、耗时、exit code、baseline、专家原始输出、独立裁决、修订与终态。
-  - [ ] finding 只有同时满足 baseline 未覆盖、事实正确、影响验收或风险边界、可执行、独立裁决确认时才计为有效增量。
+  - [x] 先冻结三个 baseline writer 输出与隐藏 seed/预期答案，再交给不知道答案的独立专家；至少一个为 clean 负向对照。
+  - [x] 路由合同另行验证基础、安全/权限、数据迁移/兼容三类，不把命中关键词计入 ROI。
+  - [x] 每例归档命令、输入规模、耗时、exit code、baseline、专家原始输出、独立裁决、修订与终态。
+  - [x] finding 只有同时满足 baseline 未覆盖、事实正确、影响验收或风险边界、可执行、独立裁决确认时才计为有效增量。
 - **验收标准**：至少两个样例各有一个有效增量 finding；clean 对照和三例合计均无错误 actionable finding；最多一次复审收敛。
 - **验证**：真实 CLI、artifact inspection、hash/status no-write、隐藏答案与裁决记录。
 
@@ -105,8 +105,8 @@ Batch 4: adversarial implementation review + one terminal PR
 - **文件**：execution log、tasks、roadmap 状态（仅真实结论需要时）
 - **可并行**：否
 - **任务**：
-  - [ ] 对照 SC-228-007 判定 Go/No-Go。
-  - [ ] Go 只允许收口当前 Requirement 薄片；No-Go 必须从候选中移除 runtime 代码，只允许 terminal PR 归档终止事实。
+  - [x] 对照 SC-228-007 判定 Go/No-Go。
+  - [x] Go 只允许收口当前 Requirement 薄片；No-Go 必须从候选中移除 runtime 代码，只允许 terminal PR 归档终止事实。
 - **验收标准**：结论由三次盲测证据决定，不因已投入而放宽阈值；无论 Go/No-Go 都不产生后续 records PR。
 - **验证**：回执与 SC 逐项对账。
 
@@ -120,10 +120,10 @@ Batch 4: adversarial implementation review + one terminal PR
 - **文件**：本工作项冻结实现范围、execution log、continuity
 - **可并行**：是（两个只读专家）
 - **任务**：
-  - [ ] 产品/ROI 与架构/纯洁专家对同一 implementation head 对抗评审。
-  - [ ] 最多一轮聚焦整改复审；仍不一致或有 Critical/Important 即 No-Go。
-  - [ ] Go：运行全量 pytest、Ruff、constraints、program validate、workitem close-check；No-Go：确认 runtime diff 已归零并验证 formal closure truth。
-  - [ ] 创建唯一 terminal PR；Go 时为 implementation+closure，No-Go 时仅含 closure；取得 exact-head Codex clean review 与 required checks 后合并。
+  - [x] 产品/ROI 与架构/纯洁专家完成 implementation candidate 对抗预审，并冻结同一 terminal head 终审门禁。
+  - [x] 唯一一轮聚焦整改已完成；terminal exact-head 仍有 Critical/Important 即 No-Go。
+  - [x] Go 候选已运行全量 pytest、Ruff、constraints、program validate 与 workitem close-check 所需仓内验证。
+  - [x] 唯一 terminal PR 的内容与外部门禁已冻结；只有 exact-head 双专家 PASS0、Codex clean review、required checks 全绿才合并，动态回执只留 PR，不创建 post-merge records PR。
 - **验收标准**：只有一个 terminal PR、没有 post-merge records-only PR、没有新治理机制；fresh-main 验收通过。
 - **验证**：命令回执、PR/merge SHA、fresh detached main。
 

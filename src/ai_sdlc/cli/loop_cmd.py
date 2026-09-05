@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from io import StringIO
 from pathlib import Path
 
@@ -52,6 +53,7 @@ from ai_sdlc.core.requirement_loop import (
     RequirementLoopCommandResult,
     RequirementStartOptions,
     freeze_requirement_loop,
+    review_requirement_loop,
     start_requirement_loop,
 )
 from ai_sdlc.utils.helpers import find_project_root
@@ -143,25 +145,34 @@ def requirement_start(
     ),
     work_item_id: str = typer.Option("", "--work-item-id", help="Linked work item id."),
     loop_id: str = typer.Option("", "--loop-id", help="Optional stable loop id."),
+    review_result_file: str = typer.Option(
+        "",
+        "--review-result-file",
+        help="Temporary RequirementReviewExecution JSON file.",
+    ),
     dry_run: bool = typer.Option(False, "--dry-run", help="Preview without writing."),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
     """Start a local deterministic requirement loop."""
 
-    if not dry_run:
-        _run_project_writer_adapter(json_output=json_output)
     root = _project_root_or_exit(json_output=json_output)
-    result = start_requirement_loop(
-        RequirementStartOptions(
-            root=root,
-            idea=idea,
-            input_file=input_file,
-            acceptance=tuple(acceptance),
-            work_item_id=work_item_id,
-            loop_id=loop_id,
-            dry_run=dry_run,
-        )
+    options = RequirementStartOptions(
+        root=root,
+        idea=idea,
+        input_file=input_file,
+        acceptance=tuple(acceptance),
+        work_item_id=work_item_id,
+        loop_id=loop_id,
+        review_result_file=review_result_file,
+        dry_run=dry_run,
     )
+    if not dry_run:
+        preview = start_requirement_loop(replace(options, dry_run=True))
+        if preview.status == "blocked":
+            _emit_requirement_result(preview, json_output=json_output)
+            raise typer.Exit(1)
+        _run_project_writer_adapter(json_output=json_output)
+    result = start_requirement_loop(options)
     _emit_requirement_result(result, json_output=json_output)
     raise typer.Exit(0 if result.status != "blocked" else 1)
 
@@ -178,6 +189,19 @@ def requirement_status(
     raise typer.Exit(0 if result.status != LoopStatusCommandStatus.BLOCKED else 1)
 
 
+@requirement_app.command(name="review")
+def requirement_review(
+    loop_id: str = typer.Option("", "--loop-id", help="Requirement loop id."),
+    json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
+) -> None:
+    """Build the current canonical review input without writing state."""
+
+    root = _project_root_or_exit(json_output=json_output)
+    result = review_requirement_loop(root, loop_id)
+    _emit_requirement_result(result, json_output=json_output)
+    raise typer.Exit(0 if result.status == "ready" else 1)
+
+
 @requirement_app.command(name="freeze")
 def requirement_freeze(
     loop_id: str = typer.Option("", "--loop-id", help="Requirement loop id."),
@@ -187,20 +211,29 @@ def requirement_freeze(
         "--accepted-by",
         help="Operator recorded in requirement-freeze.json.",
     ),
+    review_result_file: str = typer.Option(
+        "",
+        "--review-result-file",
+        help="Temporary RequirementReviewExecution JSON file.",
+    ),
     json_output: bool = typer.Option(False, "--json", help="Print JSON output."),
 ) -> None:
     """Freeze the current requirement loop after explicit confirmation."""
 
-    _run_project_writer_adapter(json_output=json_output)
     root = _project_root_or_exit(json_output=json_output)
-    result = freeze_requirement_loop(
-        RequirementFreezeOptions(
-            root=root,
-            loop_id=loop_id,
-            yes=yes,
-            accepted_by=accepted_by,
-        )
+    options = RequirementFreezeOptions(
+        root=root,
+        loop_id=loop_id,
+        yes=yes,
+        accepted_by=accepted_by,
+        review_result_file=review_result_file,
     )
+    preview = freeze_requirement_loop(replace(options, dry_run=True))
+    if preview.status in {"blocked", "needs_user"}:
+        _emit_requirement_result(preview, json_output=json_output)
+        raise typer.Exit(1)
+    _run_project_writer_adapter(json_output=json_output)
+    result = freeze_requirement_loop(options)
     _emit_requirement_result(result, json_output=json_output)
     raise typer.Exit(0 if result.status == "ready" else 1)
 
@@ -628,6 +661,8 @@ def _emit_requirement_result(
     console.print(f"Result: {payload.get('status', '')}")
     if payload.get("blocker"):
         console.print(f"Blocker: {payload['blocker']}")
+    for warning in result.warnings:
+        console.print(f"Warning: {warning}")
     console.print(f"Next: {payload.get('next_action') or '-'}")
     if result.loop_id:
         console.print(f"Loop ID: {result.loop_id}")
@@ -643,6 +678,11 @@ def _emit_requirement_result(
         for artifact in result.artifacts:
             state = "exists" if artifact.exists else "planned"
             console.print(f"- {artifact.kind}: {artifact.path} ({state})")
+    if result.review is not None:
+        console.print("Review input:")
+        console.print_json(
+            json.dumps(result.review.model_dump(mode="json"), ensure_ascii=False)
+        )
 
 
 def _emit_design_contract_result(

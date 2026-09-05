@@ -48,6 +48,7 @@ from ai_sdlc.core.requirement_loop import (
     RequirementFreezeOptions,
     RequirementStartOptions,
     freeze_requirement_loop,
+    review_requirement_loop,
     start_requirement_loop,
 )
 
@@ -504,8 +505,10 @@ def test_get_loop_status_reads_current_requirement_loop(tmp_path: Path) -> None:
     assert result.current_loop is not None
     assert result.current_loop.loop_type == "requirement"
     assert result.current_loop.status == "needs_review"
-    assert result.next_guidance.command == "ai-sdlc loop requirement freeze --yes"
-    assert result.next_guidance.requires_model is False
+    assert result.next_guidance.command == (
+        "ai-sdlc loop requirement review --loop-id req-status"
+    )
+    assert result.next_guidance.requires_model is True
     assert result.current_loop.requirement is not None
     assert result.current_loop.requirement.summary == (
         "运营用户需要订单审批流，范围只覆盖后台人工审批。"
@@ -591,7 +594,9 @@ def test_list_loops_reads_requirement_runs_and_marks_current(tmp_path: Path) -> 
     assert result.current_loop_id == "req-current"
     assert [item.loop_id for item in result.items] == ["req-current", "req-old"]
     assert result.items[0].is_current is True
-    assert result.items[0].next_guidance.command == "ai-sdlc loop requirement freeze --yes"
+    assert result.items[0].next_guidance.command == (
+        "ai-sdlc loop requirement review --loop-id req-current"
+    )
     assert result.items[1].is_current is False
     assert result.items[1].next_guidance.command == (
         "ai-sdlc loop list --type requirement --json"
@@ -719,7 +724,7 @@ def test_requirement_status_after_freeze_points_to_design_contract(
             acceptance=("审批通过后才能付款",),
         )
     )
-    freeze_requirement_loop(RequirementFreezeOptions(root=tmp_path, yes=True))
+    _freeze_requirement(tmp_path, "req-frozen-status")
 
     result = get_loop_status(tmp_path, loop_type="requirement")
 
@@ -1284,10 +1289,40 @@ def _ensure_frozen_requirement_loop(root: Path, *, loop_id: str) -> None:
         )
     )
     assert start_result.status == "ready"
-    freeze_result = freeze_requirement_loop(
-        RequirementFreezeOptions(root=root, loop_id=loop_id, yes=True)
-    )
+    freeze_result = _freeze_requirement(root, loop_id)
     assert freeze_result.frozen is True
+
+
+def _freeze_requirement(root: Path, loop_id: str):
+    review_result = review_requirement_loop(root, loop_id)
+    assert review_result.review is not None
+    review = review_result.review
+    path = root / f"{loop_id}-review-execution.json"
+    path.write_text(
+        json.dumps(
+            {
+                "input_digest": review.input_digest,
+                "round_number": review.round_number,
+                "results": [
+                    {
+                        "role_id": role["role_id"],
+                        "status": "completed",
+                        "findings": [],
+                    }
+                    for role in review.roles
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    return freeze_requirement_loop(
+        RequirementFreezeOptions(
+            root=root,
+            loop_id=loop_id,
+            yes=True,
+            review_result_file=path.as_posix(),
+        )
+    )
 
 
 def _write_review_run(

@@ -2,7 +2,7 @@
 
 **功能编号**：`228-requirement-bounded-dynamic-expert-review`
 **创建日期**：2026-09-05
-**状态**：G1 formal/admission 进行中；无产品实现
+**状态**：G3 三例真实盲测达到 GO；implementation 收口验证中
 
 ## 1. 归档规则
 
@@ -95,3 +95,127 @@
 
 - T11 已完成；T12 的初始 formal、唯一对抗整改、真值同步与本地验证已完成。首个 exact-head Codex review 给出三项合同补漏，当前按 required PR gate 聚焦修订，尚未取得新 head 的最终准入。
 - 当前 `execution_started=false`；没有实现代码或实现授权消费。
+
+### Batch 2026-09-05-002 | T21-T32 | Requirement 薄片与真实盲测
+
+#### 2.10 实现边界
+
+- implementation base：formal PR #206 merge `5967c87cfe8e7f384f319761e70f299b605379b0`；候选最初在 `feature/228-requirement-bounded-dynamic-expert-review-dev` 开发，terminal closure 前重命名为 archive carrier。
+- 新增 Requirement 专属瞬时 review input/execution；新 loop 强制评审，旧 intake 缺 `review_required` 时保持兼容并提示。
+- `review` 只返回 canonical projection、digest、1 个 primary 和至多 1 个 cross-risk；临时 execution 以同一打开句柄完成普通文件、非 symlink、256 KiB、UTF-8 JSON 和严格 schema 校验。
+- revision/freeze 在 adapter 前纯读取 preflight；writer 内按当前 intake/digest/round 再校验。只有 clean execution 可 freeze；actionable execution 只允许 round 1→2 修订；第三实质版本 command blocked。
+- 没有新增依赖、workflow、状态机、ledger、持久化 review artifact 或第二类 Loop。
+
+#### 2.11 实现期定向验证
+
+- `uv run pytest tests/unit/test_requirement_review.py tests/unit/test_requirement_loop.py tests/integration/test_cli_loop.py -q`：`91 passed`，exit 0。
+- 扩大回归（Requirement、Loop status、Design Contract、Implementation、constraints、CLI、new requirement flow）：`407 passed in 21.24s`，exit 0。
+- `uv run ruff check`（本批变更 Python 文件）：exit 0，`All checks passed`。
+- `uv run ai-sdlc verify constraints`：exit 0，`no BLOCKERs`。
+- `uv run ai-sdlc program validate`：exit 0，PASS。
+
+#### 2.12 三例盲测输入与 Round 1 只读回执
+
+三个 baseline 均在空目录经真实 CLI 初始化和 `start` 生成；专家只收到 canonical projection，不知道预期答案。A/B 仅在盲审完成后把原始输出重绑到语义相同、只更换随机 Loop ID 的 projection；两位原专家均重算并确认 digest。C 使用全新随机 ID 和全新 reviewer。命中风险短语只验证路由，不计有效 finding。
+
+复现公共前缀（本候选源码环境）：
+
+```powershell
+$Cli='/tmp/ai-sdlc-pr206-main-verify-5967c87c/.venv/bin/ai-sdlc'
+& $Cli init . --agent-target codex --shell powershell
+```
+
+- A / `req-p2c7`：idea=`客服管理员需要在内部控制台查看客户资料；只允许拥有客户支持权限的已登录员工访问。`；acceptance=`拥有客户支持权限的员工可以查看所属租户客户资料`、`无权限员工和跨租户访问均被拒绝并记录审计日志`。
+- B / `req-r8d4`：idea=`数据管理员需要把旧版 CSV 客户档案迁移到新系统；保留 customer_id；范围只覆盖 UTF-8 CSV。`；acceptance=`所有合法行导入后 customer_id 与总数保持一致`、`非法行被报告且不得覆盖已有记录`。
+- C / `req-m4v10`：idea=`框架开发者用户使用纯函数 normalize_slug(text) 生成内部配置键。输入必须是 Python str，规范化前用 len(text) 计算且不超过 200 个 Unicode code point；依次执行 NFKC、casefold，只保留 ASCII a-z 和 0-9，将每段连续其他字符替换为一个连字符，再移除首尾连字符。函数不读写文件、网络或进程级状态；不同输入允许产生相同结果，冲突由调用方处理。`；acceptance 依次为：非 str/超过 200 的精确异常；输出字符集和确定性；三个精确样例；空结果异常；200 边界、展开后不限长及冲突非目标。完整原文保存在本节下方 clean-control 回执。
+
+对应命令均为：
+
+```powershell
+& $Cli loop requirement start --loop-id <id> --idea <idea> --acceptance <criterion> ... --json
+& $Cli loop requirement review --loop-id <id> --json
+```
+
+输入字节按 `idea + LF + acceptance...` 的 UTF-8 长度计算。只读回执的树摘要算法为：递归枚举全部普通文件，按相对路径排序，逐行连接 `relative_path + TAB + lowercase_sha256(file)`，以 LF 连接后再取 SHA-256；因此既覆盖内容也覆盖文件集合。
+
+| Case | start receipt | Round 1 review receipt | full digest / roles |
+|---|---|---|---|
+| A 安全/权限 | 257 bytes；556 ms；exit 0 | 15 files；516 ms；exit 0；before=after=`5e9947cb8f0eb66192f02c1afee2a922178431b94969105e0bf4911d259cf0a0` | `879a0bf214476f5f97ca3f6d5ee513ac5002aadd993a130eb0f60a57b509824f`；quality + security |
+| B 数据迁移 | 222 bytes；554 ms；exit 0 | 15 files；524 ms；exit 0；before=after=`68a578bf643879c892920bf234d0ace18c10036796c282d73d411af16bc6dcb3` | `4ff6287709445a0f25a37ec7cf1f94d79cb1c4dd8307cfdb633b6e65d273e827`；quality + data |
+| C clean 对照 | 1056 bytes；567 ms；exit 0 | 15 files；541 ms；exit 0；before=after=`644682993efede84efa245e32c652b978da051b5fc6033faaf91a7103b055526` | `59b06e22b8d350fa0189795444cdb2e65054afc9d9fa7be39ef8ac52d53519f4`；quality |
+
+#### 2.13 专家原始输出与独立盲裁
+
+- A / `requirement-quality` 原始 findings：
+  - `required`，`intake.raw_text / intake.acceptance_criteria`：“客户资料”未定义允许展示字段及敏感字段处理；建议冻结字段白名单、隐藏/脱敏规则和验收。
+  - `required`，`intake.acceptance_criteria[1]`：未覆盖未登录、会话失效或身份无效请求；建议增加拒绝并审计验收。
+- A / `security-privacy-authorization` 原始 finding：
+  - `required`，`intake.raw_text / intake.acceptance_criteria`：字段可见性和敏感信息边界未定义；建议冻结允许字段、排除/脱敏和无权字段不出现在页面/响应的验收。
+- B / `requirement-quality` 原始 findings：
+  - `required`，`intake.acceptance_criteria`：“合法行/非法行”缺字段、类型和必填规则；建议冻结列、必填、类型和逐行合法性口径。
+  - `required`，`intake.acceptance_criteria[0..1]`：已有 ID、源内重复和重复执行语义不明；建议冻结冲突策略、重复规则、幂等和总数口径。
+- B / `data-integrity-migration-compatibility` 原始 finding：
+  - `required`，`intake.acceptance_criteria`：中途失败的提交、回退和重试语义不明；建议冻结原子回退或可识别部分成功与幂等重试验收。
+- C 的全新 `requirement-quality` reviewer 原始输出为 `findings=[]`。其五条完整 acceptance 为：
+  1. `非 str 输入抛出 TypeError("SLUG_TYPE")；规范化前 len(text)>200 抛出 ValueError("SLUG_TOO_LONG")；所有错误都不返回部分结果`
+  2. `输出非空时只含小写 ASCII a-z、0-9 和内部单个连字符；相同输入每次结果相同`
+  3. `输入 "  Hello__World  " 输出 "hello-world"；输入 "ＡＢＣ １２" 输出 "abc-12"；输入 "Straße" 输出 "strasse"`
+  4. `空字符串、只含分隔字符或经规则转换后为空时抛出 ValueError("SLUG_EMPTY")`
+  5. `len(text)=200 时允许处理；NFKC/casefold 展开后的输出不另设长度上限；函数不负责检测或解决不同输入的结果冲突`
+- 独立裁决逐条检查“baseline 未覆盖、隐藏真值一致、影响验收/风险、建议可执行、非审美偏好”：A 三条、B 三条均为有效增量；C clean；`valid_incremental_count=6`、`false_actionable_count=0`。A 中两个字段边界 finding 语义重叠，但相对 baseline 都正确，因此保留原始回执，只在 ROI 样例阈值上按一个 case 计数。
+- clean-control 资格筛选透明记录：`req-7f3a` 因缺 summary/detail、一致时间窗等真实缺口作废；`req-q9k2` 因 `order_id` 可能承载个人信息作废；`req-m4v8`、`req-m4v9` 因 clarification_count=1 未进入评审。所有失败尝试均作废而不是改判 clean，最终只计全新 `req-m4v10`。这防止通过暴露 `clean` 标签或反复调参制造零误报。
+
+#### 2.14 唯一修订、Round 2 与冻结终态
+
+- A 修订：冻结普通客服字段白名单、phone/email 脱敏、address/government_id 排除、supervisor 完整字段权限，以及未认证/失效会话/无权限/跨租户拒绝并审计；命令为上述 `start` 追加 `--review-result-file /tmp/ai-sdlc-wi228-executions/p2c7-round1.json`；618 bytes，572 ms，exit 0。
+- B 修订：冻结 `customer_id,email,status`、必填/email/status 规则、已有/源内重复跳过并报告、重复执行幂等及中途失败全量回退；命令为上述 `start` 追加 `--review-result-file /tmp/ai-sdlc-wi228-executions/r8d4-round1.json`；627 bytes，573 ms，exit 0。
+- Round 2 review：A digest `f6526339d884cdd5ff41822595c3908aff9f77111cd4ed31c63cb3e451379b0e`，15 files、530 ms、exit 0、before=after=`4166ac2b056d9f9911ce2a8e3f214acde36a9edc3c5e35e0b88510ee1262cc9a`；B digest `a11f437e496fe3f4fcea32dcb9ccfb37a7e9b4a99f9c936d81095f82cf4b327d`，15 files、528 ms、exit 0、before=after=`8eb4de785f4d4ce06660c398a7021274a821617288818e1c953de320aeb8da96`。
+- 原两位专家对 A/B Round 2 均返回各自角色 `status=completed, findings=[]`；没有第三轮。
+- freeze 精确命令为 `& $Cli loop requirement freeze --loop-id <id> --review-result-file <round-clean.json> --yes --json`：A execution 346 bytes、580 ms、exit 0；B execution 354 bytes、594 ms、exit 0；C execution 232 bytes、658 ms、exit 0。
+- artifact inspection：A/B `closed,current_round=2,rounds=2`；C `closed,current_round=1,rounds=1`；freeze 只记录 `review_input_digest/review_role_ids/reviewed_at`，三例 Loop 中 `execution|finding` 文件计数为 0。
+
+#### 2.15 Go/No-Go
+
+- SC-228-007：A、B 各有有效增量 finding；C clean；三例错误 actionable finding 为 0；A/B 均在唯一一次复审收敛。**GO**。
+- GO 只准许收口当前 Requirement 薄片。Design Contract、Implementation 及其余 Loop 不在本 PR 扩展，也不因本次结论自动创建后续 work item。
+- T21、T22、T31、T32 完成；进入 T41 的同一 implementation head 双专家实现评审与完整验证。
+
+### Batch 2026-09-05-003 | T41 | Implementation terminal candidate
+
+#### 2.16 准备
+
+- **验证画像**：`code-change`
+- **改动范围**：formal 冻结的 7 个 `src/ai_sdlc/**` allowlist 路径、Requirement/相邻兼容测试、README/用户指南、WI228 formal/closure 与 continuity；无 allowlist 外产品源码。
+- **体量**：formal merge base `5967c87c...` 起，tracked 产品新增 286 行，新模块 309 行，gross additions=`595/600`。
+- 关联 branch/worktree disposition 计划：`archive/228-requirement-bounded-dynamic-expert-review-terminal` 是唯一 terminal PR carrier，merge 后保留本地分支与当前 worktree；已合并的 formal 分支重命名为 `archive/requirement-expert-review-formal` 并保留本地历史，不再与 WI228 lifecycle 关联。
+
+#### 2.17 统一验证命令
+
+- 初始定向验证为 `91 passed`；实现预审唯一整改后，同一命令为 `101 passed in 3.53s`，exit 0。
+- 扩大 Requirement/相邻兼容回归：`407 passed in 21.24s`，exit 0。
+- 唯一整改后的最终 `uv run pytest -q`：`3486 passed, 3 skipped in 1019.87s`，exit 0。
+- `uv run ruff check <本批 Python 改动>`：`All checks passed!`，exit 0。
+- `uv run ai-sdlc verify constraints`：`no BLOCKERs`，exit 0。
+- `uv run ai-sdlc program validate`：PASS，exit 0。
+- `uv run ai-sdlc workitem plan-check --wi specs/228-requirement-bounded-dynamic-expert-review --json`：`drift=false,pending_todos=0`，exit 0。
+- `git diff --check`：exit 0。
+- `uv run ai-sdlc program truth sync --dry-run` 与 `--execute --yes`：exit 0；最终 snapshot hash 以同一 terminal tree 的 `program-manifest.yaml` 为准，inventory `1190/1190`、unmapped 0、missing 7、close `219/226`。snapshot 如实保留 16 个既有历史 truth blocker，WI228 五层均 materialized。
+- `uv run pytest tests/integration/test_repo_program_manifest.py -q`：首次按预期只因新增 development summary 使固定库存从 `missing 8/close 218` 变为 `7/219` 而失败；机械同步两个断言后最终重跑 `1 passed in 157.29s`，exit 0。
+- final Program Truth、全量 pytest 与 close-check 在 terminal content 完整后串行重跑，结果以本批同一 repo tree 回执及 PR 外部 exact-head gate 为准。
+
+#### 2.18 代码审查
+
+- 三例价值回放已经由 PRODUCT/ROI 主审、ARCHITECTURE/纯洁风险审和独立盲裁完成：A/B 各有有效增量且一次复审收敛，C clean，三例 `false_actionable=0`。
+- terminal candidate 必须由原 PRODUCT/ARCHITECTURE 两个身份审查同一完整实现 tree；任何 Critical/Important 只允许一轮聚焦整改，最终 PASS0 绑定 exact commit/tree 并在 PR conversation 留外部 receipt，避免修改本文件造成自引用失效。
+- GitHub Codex review 与 required checks 仅接受当前 PR HEAD；没有 clean review 和全绿 checks 不合并。
+- terminal candidate 预审发现并在唯一聚焦整改波次修复：临时执行文件 `findings` 必填；以同一文件描述符完成普通文件、大小和 inode/device 校验并拒绝 FIFO/设备/替换竞态；显式修订未重给 acceptance 时保留已有标准；拒绝 intake/loop-run 半套 artifact；blocked `next_action` 区分可修订、待评审与两轮终止；补齐最大文件、FIFO、路径替换、半套 artifact、adapter 最终重校验等测试。整改后 PRODUCT 指出的匿名 clean 对照和独立复现证据也由 2.12～2.14 的最终回放取代。
+- 本波次之后不再允许第二个整改波次；最终同头复审若仍有 Critical/Important，直接按 formal 判定 NO-GO。
+
+#### 2.19 任务/计划同步状态
+
+- T11～T32 已完成；T41 仓内内容和不可绕过的外部门禁已冻结。双专家 exact-head、Codex review、required checks、merge 与 fresh-main 事实只留在 PR/平台回执，不创建 post-merge records PR。
+- spec、plan、tasks、roadmap 与 development summary 已同步本次 GO：只交付 Requirement 薄片，不自动扩展 Design Contract、Implementation 或其他 Loop，不创建后续 records-only PR。
+- **已完成 git 提交**：是（本 marker 随 terminal candidate commit 一起落盘）。
+- **提交哈希**：`HEAD`；动态 exact-head 身份与最终 commit SHA 只写 PR 外部 receipt。
+- 当前批次 branch disposition 状态：`archived(terminal PR carrier retained after merge)`
+- 当前批次 worktree disposition 状态：`retained(terminal PR carrier; do not delete local branch after merge)`

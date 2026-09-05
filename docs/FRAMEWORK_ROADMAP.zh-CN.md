@@ -247,7 +247,7 @@ PR #204 / run `33893698367` 已在真实 Ubuntu AMD64 上完成 R10 existing-pro
 - [ ] 重新核对主仓五类 Loop 现状和参赛版远端稳定行为，只提取缺口，不复制 stage-review 实现。
 - [ ] 为 Phase A 冻结统一 Candidate/Input Digest/Reviewer Result 的最小合同，优先复用现有模型。
 - [ ] 定义阶段到 primary 角色、风险证据到可选 cross-risk 角色的有界映射；始终保留一个阶段 primary，不因缺少额外风险信号降为零 reviewer，也不生成无限角色。
-- [ ] 实现 Requirement 单 Loop 纵向薄片并验证输入变化使旧结果失效。
+- [x] 实现 Requirement 单 Loop 纵向薄片并验证输入变化使旧结果失效；WI228 三例盲测达到 GO，扩展其余 Loop 仍需独立立项。
 - [ ] 证明投入产出后扩展 Design Contract、Implementation；每次扩展独立 Go/No-Go。
 - [ ] Phase A 在真实项目中证明缺陷拦截收益后，才评估 Frontend Evidence 与 Local PR Review。
 - [ ] 完成隔离性、只读性、两轮上限、同输入复审、close authority 和 crash/recovery 回归。

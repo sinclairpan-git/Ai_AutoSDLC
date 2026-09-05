@@ -5,7 +5,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 **编号**：`228-requirement-bounded-dynamic-expert-review` | **日期**：2026-09-05
 **规格**：`specs/228-requirement-bounded-dynamic-expert-review/spec.md`
-**状态**：G1 formal/admission；实现等待双专家一致 PASS
+**状态**：G3 implementation GO；Requirement 薄片待同一候选 head 双专家终审与 terminal PR
 
 ## 1. 概述
 

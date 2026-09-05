@@ -1179,7 +1179,9 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
                     required_tokens=(
                         "requirement_app",
                         "requirement_start",
+                        "requirement_review",
                         "requirement_freeze",
+                        "--review-result-file",
                         "--type",
                     ),
                 ),
@@ -1193,6 +1195,7 @@ FEATURE_CONTRACT_SURFACES: dict[str, tuple[FeatureContractSurface, ...]] = {
                     required_tokens=(
                         "ai-sdlc loop requirement start",
                         "ai-sdlc loop status --type requirement",
+                        "ai-sdlc loop requirement review",
                         "ai-sdlc loop requirement freeze --yes",
                         "does not call any model service",
                         "does not modify application code",

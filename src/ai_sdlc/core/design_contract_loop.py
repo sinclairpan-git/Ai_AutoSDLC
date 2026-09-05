@@ -436,7 +436,8 @@ def _requirement_loop_gate(
         )
     artifacts = _requirement_artifacts(root, safe_loop_id)
     freeze_next_action = (
-        f"Run ai-sdlc loop requirement freeze --loop-id {safe_loop_id} --yes."
+        f"Run ai-sdlc loop requirement review --loop-id {safe_loop_id}, then "
+        "freeze with the current --review-result-file (legacy intake may use --yes)."
     )
     try:
         loop_run = _read_requirement_loop_run(artifacts.loop_run_path)

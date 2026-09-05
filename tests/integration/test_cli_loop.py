@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -33,11 +34,20 @@ from ai_sdlc.core.requirement_loop import (
     RequirementFreezeOptions,
     RequirementStartOptions,
     freeze_requirement_loop,
+    review_requirement_loop,
     start_requirement_loop,
 )
 
 runner = CliRunner()
 pytestmark = pytest.mark.usefixtures("isolated_cli_cwd")
+
+
+def _tree_hashes(root: Path) -> dict[str, str]:
+    return {
+        path.relative_to(root).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+        for path in root.rglob("*")
+        if path.is_file()
+    }
 
 
 def test_loop_help_lists_status_and_list() -> None:
@@ -90,8 +100,9 @@ def test_loop_status_json_guides_post_fix_review_to_rerun(tmp_path: Path) -> Non
     assert payload["next_guidance"]["command"] == "ai-sdlc pr-review rerun"
     assert payload["next_guidance"]["requires_model"] is True
     assert payload["next_guidance"]["safety"] == "may_call_local_review_agent"
-    assert ".ai-sdlc/reviews/pr/review-001/resolution.yaml" in (
-        payload["next_guidance"]["evidence"]
+    assert (
+        ".ai-sdlc/reviews/pr/review-001/resolution.yaml"
+        in (payload["next_guidance"]["evidence"])
     )
 
 
@@ -173,6 +184,41 @@ def test_loop_requirement_status_does_not_trigger_ide_adapter_hook(
         result = runner.invoke(app, ["loop", "requirement", "status", "--json"])
 
     assert result.exit_code == 0
+    adapter_hook.assert_not_called()
+
+
+def test_loop_requirement_review_is_read_only_and_reports_contract(
+    tmp_path: Path,
+) -> None:
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id="req-cli-review",
+            idea="管理员通过权限控制读取报表，范围只覆盖 CSV。",
+            acceptance=("授权管理员可以下载 CSV",),
+        )
+    )
+    before = _tree_hashes(tmp_path)
+    with (
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        result = runner.invoke(
+            app,
+            ["loop", "requirement", "review", "--loop-id", "req-cli-review", "--json"],
+        )
+
+    assert result.exit_code == 0
+    payload = json.loads(result.output)["review"]
+    assert len(payload["input_digest"]) == 64
+    assert payload["round_number"] == 1
+    assert payload["role_limit"] == 2
+    assert [role["role_id"] for role in payload["roles"]] == [
+        "requirement-quality",
+        "security-privacy-authorization",
+    ]
+    assert payload["execution_schema"]["input_digest"] == payload["input_digest"]
+    assert _tree_hashes(tmp_path) == before
     adapter_hook.assert_not_called()
 
 
@@ -298,9 +344,21 @@ def test_loop_requirement_freeze_triggers_ide_adapter_hook(
             ],
         )
         adapter_hook.reset_mock()
+        execution = _write_requirement_execution(
+            tmp_path,
+            loop_id="req-adapter-freeze",
+        )
         result = runner.invoke(
             app,
-            ["loop", "requirement", "freeze", "--yes", "--json"],
+            [
+                "loop",
+                "requirement",
+                "freeze",
+                "--yes",
+                "--review-result-file",
+                execution.as_posix(),
+                "--json",
+            ],
         )
 
     assert start.exit_code == 0
@@ -336,9 +394,21 @@ def test_loop_requirement_freeze_json_suppresses_adapter_notice(
                 "--json",
             ],
         )
+        execution = _write_requirement_execution(
+            tmp_path,
+            loop_id="req-adapter-freeze-json",
+        )
         result = runner.invoke(
             app,
-            ["loop", "requirement", "freeze", "--yes", "--json"],
+            [
+                "loop",
+                "requirement",
+                "freeze",
+                "--yes",
+                "--review-result-file",
+                execution.as_posix(),
+                "--json",
+            ],
         )
 
     assert start.exit_code == 0
@@ -348,6 +418,262 @@ def test_loop_requirement_freeze_json_suppresses_adapter_notice(
     assert "IDE adapter refreshed" not in start.output
     assert "IDE adapter refreshed" not in result.output
     assert adapter_hook.call_count == 2
+
+
+@pytest.mark.parametrize("operation", ["start", "freeze"])
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "missing",
+        "malformed",
+        "stale",
+        "failed",
+        "incomplete",
+        "missing-findings",
+        "duplicate",
+        "unknown",
+    ],
+)
+def test_invalid_review_execution_is_rejected_before_adapter_and_writes(
+    tmp_path: Path,
+    operation: str,
+    mutation: str,
+) -> None:
+    loop_id = f"req-invalid-{operation}-{mutation}"
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id=loop_id,
+            idea="运营用户需要导出报表，范围只覆盖 CSV。",
+            acceptance=("可以下载 CSV",),
+        )
+    )
+    review_result = review_requirement_loop(tmp_path, loop_id)
+    assert review_result.review is not None
+    review = review_result.review
+    path = tmp_path / f"{mutation}.json"
+    payload = {
+        "input_digest": review.input_digest,
+        "round_number": review.round_number,
+        "results": [
+            {"role_id": role["role_id"], "status": "completed", "findings": []}
+            for role in review.roles
+        ],
+    }
+    if mutation == "malformed":
+        path.write_text("{", encoding="utf-8")
+    elif mutation != "missing":
+        if mutation == "stale":
+            payload["input_digest"] = "0" * 64
+        elif mutation == "failed":
+            payload["results"][0]["status"] = "failed"
+        elif mutation == "incomplete":
+            payload["results"] = []
+        elif mutation == "missing-findings":
+            payload["results"][0].pop("findings")
+        elif mutation == "duplicate":
+            payload["results"].append(dict(payload["results"][0]))
+        elif mutation == "unknown":
+            payload["results"][0]["role_id"] = "unknown-role"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+    command = ["loop", "requirement", operation, "--loop-id", loop_id]
+    if operation == "start":
+        command.extend(
+            [
+                "--idea",
+                "运营用户需要导出报表并返回明确错误，范围只覆盖 CSV。",
+                "--acceptance",
+                "失败时返回可判定错误",
+            ]
+        )
+    else:
+        command.append("--yes")
+    command.extend(["--review-result-file", path.as_posix(), "--json"])
+    before = _tree_hashes(tmp_path)
+    with (
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        result = runner.invoke(app, command)
+
+    assert result.exit_code == 1
+    assert json.loads(result.output)["status"] == "blocked"
+    assert _tree_hashes(tmp_path) == before
+    adapter_hook.assert_not_called()
+
+
+def test_actionable_execution_blocks_freeze_but_can_drive_one_revision(
+    tmp_path: Path,
+) -> None:
+    loop_id = "req-actionable"
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id=loop_id,
+            idea="运营用户需要导出报表，范围只覆盖 CSV。",
+            acceptance=("可以下载 CSV",),
+        )
+    )
+    path = _write_requirement_execution(tmp_path, loop_id=loop_id)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["results"][0]["findings"] = [
+        {
+            "severity": "required",
+            "location": "intake.acceptance_criteria",
+            "description": "失败路径不可判定。",
+            "recommendation": "补充失败路径验收。",
+        }
+    ]
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    before = _tree_hashes(tmp_path)
+    with (
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        freeze = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "freeze",
+                "--loop-id",
+                loop_id,
+                "--yes",
+                "--review-result-file",
+                path.as_posix(),
+                "--json",
+            ],
+        )
+        adapter_hook.assert_not_called()
+        assert _tree_hashes(tmp_path) == before
+        revised = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                loop_id,
+                "--idea",
+                "运营用户需要导出报表，范围只覆盖 CSV，并返回明确错误。",
+                "--acceptance",
+                "失败时返回可判定错误",
+                "--review-result-file",
+                path.as_posix(),
+                "--json",
+            ],
+        )
+
+    assert freeze.exit_code == 1
+    freeze_payload = json.loads(freeze.output)
+    assert f"--loop-id {loop_id}" in freeze_payload["next_action"]
+    assert "--review-result-file" in freeze_payload["next_action"]
+    assert revised.exit_code == 0
+    adapter_hook.assert_called_once()
+    loop_run = json.loads(
+        (
+            tmp_path / ".ai-sdlc" / "loops" / "requirement" / loop_id / "loop-run.json"
+        ).read_text(encoding="utf-8")
+    )
+    assert loop_run["current_round"] == 2
+
+
+@pytest.mark.parametrize("remaining", ["intake", "loop-run"])
+def test_partial_requirement_artifacts_fail_before_adapter(
+    tmp_path: Path,
+    remaining: str,
+) -> None:
+    loop_id = f"req-partial-{remaining}"
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id=loop_id,
+            idea="运营用户需要导出 CSV。",
+            acceptance=("可以下载 CSV",),
+        )
+    )
+    loop_dir = tmp_path / ".ai-sdlc" / "loops" / "requirement" / loop_id
+    removed = "loop-run.json" if remaining == "intake" else "requirement-intake.json"
+    (loop_dir / removed).unlink()
+    before = _tree_hashes(tmp_path)
+    with (
+        patch("ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized") as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "start",
+                "--loop-id",
+                loop_id,
+                "--idea",
+                "运营用户需要导出租户 CSV。",
+                "--acceptance",
+                "可以下载租户 CSV",
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 1
+    assert "must exist together" in json.loads(result.output)["blocker"]
+    assert _tree_hashes(tmp_path) == before
+    adapter_hook.assert_not_called()
+
+
+def test_freeze_revalidates_after_adapter(tmp_path: Path) -> None:
+    loop_id = "req-adapter-revalidation"
+    start_requirement_loop(
+        RequirementStartOptions(
+            root=tmp_path,
+            loop_id=loop_id,
+            idea="运营用户需要导出 CSV。",
+            acceptance=("可以下载 CSV",),
+        )
+    )
+    execution = _write_requirement_execution(tmp_path, loop_id=loop_id)
+    intake_path = (
+        tmp_path
+        / ".ai-sdlc"
+        / "loops"
+        / "requirement"
+        / loop_id
+        / "requirement-intake.json"
+    )
+
+    def mutate_intake(*, console) -> None:
+        del console
+        payload = json.loads(intake_path.read_text(encoding="utf-8"))
+        payload["raw_text"] += " changed"
+        intake_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with (
+        patch(
+            "ai_sdlc.cli.loop_cmd.run_ide_adapter_if_initialized",
+            side_effect=mutate_intake,
+        ) as adapter_hook,
+        patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path),
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "loop",
+                "requirement",
+                "freeze",
+                "--loop-id",
+                loop_id,
+                "--yes",
+                "--review-result-file",
+                execution.as_posix(),
+                "--json",
+            ],
+        )
+
+    assert result.exit_code == 1
+    assert "stale" in json.loads(result.output)["blocker"]
+    assert not (intake_path.parent / "requirement-freeze.json").exists()
+    adapter_hook.assert_called_once()
 
 
 def test_loop_status_guidance_does_not_call_provider(tmp_path: Path) -> None:
@@ -429,8 +755,9 @@ def test_loop_list_json_guides_no_current_pointer_with_history_to_doctor(
     )
     assert payload["next_guidance"]["requires_model"] is False
     assert payload["next_guidance"]["writes_artifacts"] is False
-    assert "ai-sdlc pr-review start --base <branch>" in (
-        payload["next_guidance"]["alternatives"]
+    assert (
+        "ai-sdlc pr-review start --base <branch>"
+        in (payload["next_guidance"]["alternatives"])
     )
     assert payload["items"][0]["next_guidance"]["command"] == (
         "ai-sdlc loop list --json"
@@ -467,8 +794,9 @@ def test_loop_list_json_reports_malformed_current_pointer(
     assert payload["next_guidance"]["command"] == (
         "ai-sdlc pr-review start --base <branch>"
     )
-    assert ".ai-sdlc/reviews/pr/current-review.json" in (
-        payload["next_guidance"]["evidence"]
+    assert (
+        ".ai-sdlc/reviews/pr/current-review.json"
+        in (payload["next_guidance"]["evidence"])
     )
 
 
@@ -494,8 +822,9 @@ def test_loop_list_json_reports_missing_current_pointer_target(
         ".ai-sdlc/reviews/pr/missing/review-run.json"
     )
     assert payload["next_guidance"]["safety"] == "blocked"
-    assert ".ai-sdlc/reviews/pr/missing/review-run.json" in (
-        payload["next_guidance"]["evidence"]
+    assert (
+        ".ai-sdlc/reviews/pr/missing/review-run.json"
+        in (payload["next_guidance"]["evidence"])
     )
 
 
@@ -522,8 +851,9 @@ def test_loop_list_json_reports_malformed_current_review_run_guidance(
         ".ai-sdlc/reviews/pr/review-bad-current/review-run.json"
     )
     assert payload["next_guidance"]["safety"] == "blocked"
-    assert ".ai-sdlc/reviews/pr/review-bad-current/review-run.json" in (
-        payload["next_guidance"]["evidence"]
+    assert (
+        ".ai-sdlc/reviews/pr/review-bad-current/review-run.json"
+        in (payload["next_guidance"]["evidence"])
     )
 
 
@@ -598,9 +928,18 @@ def test_loop_requirement_start_status_and_freeze_json(tmp_path: Path) -> None:
             app,
             ["loop", "status", "--type", "requirement", "--json"],
         )
+        execution = _write_requirement_execution(tmp_path, loop_id="req-cli")
         freeze = runner.invoke(
             app,
-            ["loop", "requirement", "freeze", "--yes", "--json"],
+            [
+                "loop",
+                "requirement",
+                "freeze",
+                "--yes",
+                "--review-result-file",
+                execution.as_posix(),
+                "--json",
+            ],
         )
 
     assert start.exit_code == 0
@@ -621,7 +960,7 @@ def test_loop_requirement_start_status_and_freeze_json(tmp_path: Path) -> None:
     assert status_payload["current_loop"]["loop_type"] == "requirement"
     assert status_payload["current_loop"]["requirement"]["acceptance_count"] == 1
     assert status_payload["next_guidance"]["command"] == (
-        "ai-sdlc loop requirement freeze --yes"
+        "ai-sdlc loop requirement review --loop-id req-cli"
     )
 
     assert freeze.exit_code == 0
@@ -990,7 +1329,15 @@ def test_loop_implementation_start_record_status_and_close_json(
         )
         close = runner.invoke(
             app,
-            ["loop", "implementation", "close", "--loop-id", "impl-cli", "--yes", "--json"],
+            [
+                "loop",
+                "implementation",
+                "close",
+                "--loop-id",
+                "impl-cli",
+                "--yes",
+                "--json",
+            ],
         )
 
     assert design_check.exit_code == 0
@@ -1079,7 +1426,9 @@ def test_loop_frontend_evidence_start_status_and_close_json(
 ) -> None:
     work_item = _write_frontend_work_item(tmp_path)
     _write_closed_frontend_implementation(tmp_path, work_item)
-    _write_frontend_browser_gate_artifact(tmp_path, work_item_path="specs/demo-frontend")
+    _write_frontend_browser_gate_artifact(
+        tmp_path, work_item_path="specs/demo-frontend"
+    )
 
     with patch("ai_sdlc.cli.loop_cmd.find_project_root", return_value=tmp_path):
         start = runner.invoke(
@@ -1103,7 +1452,15 @@ def test_loop_frontend_evidence_start_status_and_close_json(
         )
         close = runner.invoke(
             app,
-            ["loop", "frontend-evidence", "close", "--loop-id", "fe-cli", "--yes", "--json"],
+            [
+                "loop",
+                "frontend-evidence",
+                "close",
+                "--loop-id",
+                "fe-cli",
+                "--yes",
+                "--json",
+            ],
         )
 
     assert start.exit_code == 0
@@ -1137,7 +1494,9 @@ def test_loop_frontend_evidence_start_needs_fix_exits_nonzero(
 ) -> None:
     work_item = _write_frontend_work_item(tmp_path)
     _write_closed_frontend_implementation(tmp_path, work_item)
-    _write_frontend_browser_gate_artifact(tmp_path, work_item_path="specs/demo-frontend")
+    _write_frontend_browser_gate_artifact(
+        tmp_path, work_item_path="specs/demo-frontend"
+    )
     artifact_path = (
         tmp_path / ".ai-sdlc" / "memory" / "frontend-browser-gate" / "latest.yaml"
     )
@@ -1474,7 +1833,9 @@ def _write_frontend_browser_gate_artifact(
             "playwright_trace_refs": [trace_ref],
             "screenshot_refs": [screenshot_ref],
             "check_receipts": [
-                _browser_gate_receipt("playwright_smoke", ["smoke-screenshot", "smoke-trace"]),
+                _browser_gate_receipt(
+                    "playwright_smoke", ["smoke-screenshot", "smoke-trace"]
+                ),
                 _browser_gate_receipt("visual_expectation", ["smoke-screenshot"]),
                 _browser_gate_receipt("basic_a11y", ["smoke-screenshot"]),
                 _browser_gate_receipt(
@@ -1504,7 +1865,9 @@ def _write_frontend_browser_gate_artifact(
     )
 
 
-def _browser_gate_receipt(check_name: str, artifact_ids: list[str]) -> dict[str, object]:
+def _browser_gate_receipt(
+    check_name: str, artifact_ids: list[str]
+) -> dict[str, object]:
     return {
         "check_name": check_name,
         "started_at": "2026-07-01T00:00:00Z",
@@ -1577,6 +1940,28 @@ def _write_design_contract_work_item(
     return work_item
 
 
+def _write_requirement_execution(
+    root: Path,
+    *,
+    loop_id: str,
+    name: str = "review-execution.json",
+) -> Path:
+    review_result = review_requirement_loop(root, loop_id)
+    assert review_result.review is not None
+    review = review_result.review
+    payload = {
+        "input_digest": review.input_digest,
+        "round_number": review.round_number,
+        "results": [
+            {"role_id": role["role_id"], "status": "completed", "findings": []}
+            for role in review.roles
+        ],
+    }
+    path = root / name
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
 def _ensure_frozen_requirement_loop(root: Path, *, loop_id: str) -> None:
     freeze_path = (
         root
@@ -1597,8 +1982,14 @@ def _ensure_frozen_requirement_loop(root: Path, *, loop_id: str) -> None:
         )
     )
     assert start_result.status == "ready"
+    execution = _write_requirement_execution(root, loop_id=loop_id)
     freeze_result = freeze_requirement_loop(
-        RequirementFreezeOptions(root=root, loop_id=loop_id, yes=True)
+        RequirementFreezeOptions(
+            root=root,
+            loop_id=loop_id,
+            yes=True,
+            review_result_file=execution.as_posix(),
+        )
     )
     assert freeze_result.frozen is True
 
