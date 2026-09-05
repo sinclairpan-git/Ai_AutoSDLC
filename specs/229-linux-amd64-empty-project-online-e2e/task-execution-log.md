@@ -76,3 +76,14 @@
 - 已完成 draft git 提交：是，`b34a5f2fa4e6ddcebda9303b412da9d51066af0e`；本次唯一
   remediation 另作一个聚焦提交，不预写其提交哈希。
 - 是否继续实现：否；formal 合并后仍需用户显式批准。
+
+### Batch 2026-09-05-002 | T13 | Codex formal PR review
+
+#### 2.8 Exact-head 评审
+
+- PR：`#208`。
+- 评审 HEAD：`3a8027f9c3aac382a954f6af018c431e1485ed57`。
+- Codex P1：现有 PR consumer 使用 synthetic merge `GITHUB_SHA`，formal 却声称 exact-head；
+  必须冻结 `pull_request.head.sha` checkout、实际 HEAD 对账与 receipt/source 绑定。
+- Codex P2：canonical/scoped handoff 的 Changed Files 未列出完整 formal diff。
+- 结论：两项均可操作且限定在 formal/continuity；同一 PR 聚焦修复，不进入 workflow 实现。

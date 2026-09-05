@@ -77,7 +77,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 ### Phase 1：合同红测（implementation 获批后）
 
-**目标**：先固定 R06/R09/R10 三行矩阵、empty 语义和动态 receipt/artifact。
+**目标**：先固定 R06/R09/R10 三行矩阵、empty 语义、PR head checkout 与动态 receipt/artifact。
 **产物**：仅修改 `tests/integration/test_github_workflows.py`。
 **验证**：定向 pytest 必须因当前 workflow 缺少 R09/empty 而按预期失败。
 **回退**：红灯若暴露必须改 schema/producer，立即 No-Go。
@@ -102,16 +102,19 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 2. 保留 legacy job ID 以减少无关迁移；新增 `project_kind` 会改变 matrix check-run context，
    实现 push 前必须核验仓库 ruleset 只依赖聚合 `Compatibility Gate` 而不依赖旧 matrix 名。
    若存在旧名强绑定且无法在当前 allowlist 内兼容，则 WI229 No-Go。
-3. replay 共享资产、attestation、安装和 fresh shell；只在项目准备、`adopt`、文件 hash 与
+3. PR 事件显式 checkout `pull_request.head.sha`，replay 用 `git rev-parse HEAD` 与 expected
+   head 对账，candidate bundle 与 receipt 均绑定该实际值；不使用 synthetic `GITHUB_SHA`。
+4. replay 共享资产、attestation、安装和 fresh shell；只在项目准备、`adopt`、文件 hash 与
    receipt 内层字段处按 `project_kind` 分支。
-4. artifact 名包含 route 与 project kind，避免 R09/R10 在同一 Ubuntu run 中混淆。
-5. 不抽取 helper：当前仅一个消费面，抽象不会减少重复。
+5. artifact 名包含 route 与 project kind，避免 R09/R10 在同一 Ubuntu run 中混淆。
+6. 不抽取 helper：当前仅一个消费面，抽象不会减少重复。
 
 ## 关键路径验证策略
 
 | 关键路径 | 主验证方式 | 次验证方式 |
 |---|---|---|
 | R09 矩阵身份 | YAML 直接合同测试 | GitHub job 名/runner 证据 |
+| PR exact-head 绑定 | head SHA checkout + `git rev-parse HEAD` 对账 | receipt/source artifact 检查 |
 | 空目录与 init | Ubuntu replay + pre-init file count | artifact 文件清单 |
 | 安装与 fresh shell | `command -v` + `ai-sdlc --help` | 安装日志 |
 | Result/Next | 精确用户可见字符串断言 | init 输出 artifact |

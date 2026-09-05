@@ -1,32 +1,38 @@
 # Continuity Handoff
 
-- Updated: 2026-09-05T17:45:16+00:00
-- Reason: WI229 dual PASS0 recorded for formal PR closeout
-- Goal: 合并 WI229 R09 formal PR；不进入 implementation
-- State: 唯一 formal 整改已在 5a2a56ab 获 PRODUCT PASS0 与 ARCHITECTURE PASS0；评审记录与路线图已归档并通过本地门禁，待 final exact-head 记录一致性确认
+- Updated: 2026-09-05T18:03:46+00:00
+- Reason: PR208 Codex P1/P2 fixed and fully verified
+- Goal: 修复并合并 PR #208 的 WI229 R09 formal；不进入 implementation
+- State: Codex P1/P2 formal-only 修复完成：PR head checkout/actual HEAD/bundle/receipt 合同已绑定；两份 handoff Changed Files 与 origin/main 12 项 diff 精确一致
 - Stage: close
 - Work Item: 229-linux-amd64-empty-project-online-e2e
 - Branch: feature/229-linux-amd64-empty-project-online-e2e-docs
 
 ## Changed Files
+- M .ai-sdlc/project/config/project-state.yaml
+- M .ai-sdlc/state/checkpoint.yml
+- M .ai-sdlc/state/codex-handoff.md
+- M .ai-sdlc/state/resume-pack.yaml
+- A .ai-sdlc/work-items/229-linux-amd64-empty-project-online-e2e/codex-handoff.md
 - M docs/FRAMEWORK_ROADMAP.zh-CN.md
 - M program-manifest.yaml
-- M specs/229-linux-amd64-empty-project-online-e2e/plan.md
-- M specs/229-linux-amd64-empty-project-online-e2e/spec.md
-- M specs/229-linux-amd64-empty-project-online-e2e/task-execution-log.md
-- M specs/229-linux-amd64-empty-project-online-e2e/tasks.md
+- A specs/229-linux-amd64-empty-project-online-e2e/plan.md
+- A specs/229-linux-amd64-empty-project-online-e2e/spec.md
+- A specs/229-linux-amd64-empty-project-online-e2e/task-execution-log.md
+- A specs/229-linux-amd64-empty-project-online-e2e/tasks.md
+- M tests/integration/test_repo_program_manifest.py
 
 ## Key Decisions
-- R09 准入为单 consumer/单 PR/220 gross additions 薄片；empty receipt 投影固定；No-Go 禁止 replacement formal/第二 WI/第二 PR；implementation 仍需用户批准
+- 不使用 pull_request synthetic GITHUB_SHA 声称 exact-head；implementation 仍只允许现有 consumer，未授权
 
 ## Commands / Tests
-- truth 1195/1195 mapped；constraints no BLOCKERs；program validate PASS；plan-check drift=false；POSIX contract 3 passed；diff-check 0
+- truth 1195/1195；constraints no BLOCKERs；program validate PASS；plan-check drift=false；POSIX contract 3 passed；manifest 1 passed in 143.18s；diff-check 0；handoff actual=listed=12/copies equal
 
 ## Blockers / Risks
-- formal PR 尚未创建；final record commit 尚待两位专家 exact-head 确认；implementation 未授权
+- 修复 HEAD 尚待 PRODUCT/ARCHITECTURE PASS0、push、Codex re-review 和 CI；implementation 未授权
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- 提交 review-record commit；两位专家确认 final exact HEAD 后推送 formal branch、创建 PR、请求 Codex review并监控 required checks，合并后 fresh-main 验收并停在 execute gate
+- 保留 handoff 完整文件清单并提交聚焦修复；双专家 exact-head 复审后 push，resolve旧线程，重新@codex review，全部门禁绿后 squash merge并fresh-main验收

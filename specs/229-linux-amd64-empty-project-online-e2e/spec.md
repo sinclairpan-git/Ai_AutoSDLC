@@ -25,6 +25,8 @@ P3 的十二条首次用户路线当前为 `1/12 proven、11/12 partial、0/12 m
   为 R09 增加一行 Linux AMD64 / empty / online 矩阵身份。
 - PR 事件使用当前候选构建的 Linux bundle，生成 `status=partial` 的 12 字段 R09 receipt；
   `release.published` 才允许生成 `status=proven`。
+- PR 事件必须 checkout `pull_request.head.sha`，并将工作树实际 HEAD、候选 bundle 和 receipt
+  绑定到同一个被评审提交；不得使用 synthetic merge `GITHUB_SHA` 冒充 exact HEAD。
 - 从真正空目录开始，安装后在 fresh bash 中运行 `ai-sdlc --help` 与
   `ai-sdlc init . --agent-target codex --shell bash`。
 - 验证 `.ai-sdlc/`、`AGENTS.md`、双语 Result/Next 和返回 AI 对话的下一步。
@@ -95,6 +97,8 @@ P3 的十二条首次用户路线当前为 `1/12 proven、11/12 partial、0/12 m
 - “空项目”定义为 replay 创建后、`init` 前 `find` 结果为零的独立目录；不能先放占位文件。
 - PR runner 上用于构建候选 bundle 的 Python 不得被当作用户安装前置；用户 replay 必须从
   bundle installer 与 fresh shell 开始。
+- GitHub `pull_request` 事件中的默认 `GITHUB_SHA` 指向 synthetic merge commit；只有显式
+  checkout `pull_request.head.sha` 并用 `git rev-parse HEAD` 复核相等后，才可声称 PR exact-head。
 - release/tag、asset、SHA256 或 attestation 任一绑定失败时必须在安装前失败。
 - R09 不执行 `adopt`，也不伪造 `business_files_preserved=true`；receipt 使用 empty-project
   语义记录初始化结果。
@@ -126,6 +130,10 @@ P3 的十二条首次用户路线当前为 `1/12 proven、11/12 partial、0/12 m
   或需要第二个 implementation PR 时，WI229 terminal No-Go，不创建 replacement formal、
   第二 WI 或续作。未来只有 Sponsor 基于全新用户证据明确授权的独立产品需求才可重新评估，
   且不得视为 WI229 的延续。
+- **FR-229-011**：`pull_request` 事件必须以 `github.event.pull_request.head.sha` 作为 checkout
+  ref 和 expected head；replay 必须从 checkout 后的仓库执行 `git rev-parse HEAD`，验证结果
+  等于 expected head，并把该值同时写入 candidate bundle/source 与 receipt
+  `source_binding.workflow.commit`。不得把 `GITHUB_SHA` 写成被评审 HEAD。
 
 ### 5.1 R09 receipt 精确投影
 
@@ -172,8 +180,9 @@ R09 继续使用既有 12 个顶层字段，不新增第 13 个字段、不修�
 ## 7. 成功标准
 
 - **SC-229-001**：直接 workflow 合同测试先对缺失 R09/empty 语义呈 RED，再在最小实现后 GREEN。
-- **SC-229-002**：PR exact HEAD 的 R06、R09、R10 三个真实 matrix job 均成功；R09 artifact
-  包含合法 12 字段 `partial` receipt。
+- **SC-229-002**：PR exact HEAD 的 R06、R09、R10 三个真实 matrix job 均成功；checkout 实际
+  HEAD、`pull_request.head.sha`、候选 bundle source 与 receipt workflow commit 四者一致；
+  R09 artifact 包含合法 12 字段 `partial` receipt。
 - **SC-229-003**：R09 证据证明 `init` 前目录零文件，初始化后 `.ai-sdlc/`、`AGENTS.md`、
   Result/Next 和 AI 对话下一步均成立。
 - **SC-229-004**：R09 的主动损坏与 `recover` 成功，恢复后的 resume pack 可解析。

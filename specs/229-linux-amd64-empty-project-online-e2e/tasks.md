@@ -89,9 +89,12 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 - scope:
   - tests/integration/test_github_workflows.py
 - acceptance:
-  - 测试要求 R06/R09/R10 三行矩阵、project kind、empty precondition、动态 receipt/artifact。
+  - 测试要求 R06/R09/R10 三行矩阵、project kind、empty precondition、PR head checkout、
+    实际 HEAD 对账和动态 receipt/artifact。
   - R09 精确断言 `initial_file_count=0`、`init=passed`、`adopt=not_applicable`、
     `initialized=true`；R06/R10 existing projection 保持不变。
+  - PR 事件精确断言 checkout ref 为 `pull_request.head.sha`，`git rev-parse HEAD` 与 expected
+    head 相等，receipt workflow commit 不接受 synthetic `GITHUB_SHA`。
   - 当前主线因缺少 R09 按预期失败，且不修改生产 workflow 来制造红灯。
 - verify:
   - uv run pytest tests/integration/test_github_workflows.py -q -k posix_user_guide
@@ -106,6 +109,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
   - tests/integration/test_github_workflows.py
 - acceptance:
   - 单 job/单 replay 承载 R06/R09/R10，R09 empty，R06/R10 existing。
+  - candidate bundle、checkout actual HEAD 与 receipt source binding 绑定同一 PR head SHA。
   - push 前核验 ruleset 不依赖新增 matrix 字段前的旧 check-run 名；无法兼容则 No-Go。
   - 不改 runtime、schema、producer、依赖、用户指南，不新建 workflow/helper。
   - workflow + 直接测试 gross additions <=220。
@@ -125,7 +129,7 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 - scope:
   - implementation PR exact HEAD workflow run/artifact
 - acceptance:
-  - R09/Linux AMD64 job 成功并上传合法 `partial` receipt。
+  - R09/Linux AMD64 job 成功并上传合法 `partial` receipt，且 artifact 绑定 PR exact head。
   - 空目录、init、Result/Next、recover 均有同一 artifact 证据。
   - 同 matrix 的 R06/R10 回归通过。
 - verify:
