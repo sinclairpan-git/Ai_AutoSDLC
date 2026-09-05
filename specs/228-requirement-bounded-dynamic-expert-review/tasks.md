@@ -73,9 +73,11 @@ Batch 4: adversarial implementation review + one terminal PR
 - **任务**：
   - [ ] 先写失败测试固定 `needs_user` 澄清、round 1→2、幂等不增轮、拒绝第三实质版本及 freeze 关闭 current round。
   - [ ] 新 loop 设 `review_required=true`；旧 artifact 缺字段保持 legacy open/closed freeze 兼容。
-  - [ ] freeze 在任何写入前校验临时 execution 的 digest/round/完整角色/completed/no-actionable-findings。
+  - [ ] 冻结 `needs_review` 后唯一修订接口：`requirement start --loop-id <id> ... --review-result-file <path>`；首次 start 与 `needs_user` 澄清不要求 execution。
+  - [ ] execution-bearing start 与新合同 freeze 先以纯读取 preflight 校验临时 execution，只有通过后才调用 writer adapter，最终 requirement writer 写入前重校验 digest/round；start 接受完整 completed execution 中的 actionable finding 作为修订依据。
+  - [ ] missing/malformed/stale/failed/incomplete/duplicate/unknown execution 对 start/freeze 均 exit 1；actionable execution 仅对 freeze exit 1；所有拒绝都以调用前后整棵工作树文件集合与逐文件内容哈希证明零变化。
   - [ ] 同步所有冻结命令 producer、共享 active-agent rule 和最短迁移说明。
-- **验收标准**：只给 digest、stale/malformed/missing/failed/incomplete/actionable execution 均 fail closed；新 loop 只有当前 clean execution + `--yes` 可关闭；legacy 与现有异常路径不回归。
+- **验收标准**：只给 digest、stale/malformed/missing/failed/incomplete/duplicate/unknown execution 对 start/freeze 均在 adapter 前 fail closed 且全树不变；actionable execution 可以驱动 round 2 start，但对 freeze fail closed 且全树不变；新 loop 只有当前 clean execution + `--yes` 可关闭；legacy 与现有异常路径不回归。
 - **验证**：定向 unit/integration、Ruff、constraints、allowlist 检查；`git diff --numstat <formal-merge-base>...HEAD -- src/ai_sdlc` gross additions ≤600。
 
 ## Batch 3：三个盲测价值回放与 Go/No-Go

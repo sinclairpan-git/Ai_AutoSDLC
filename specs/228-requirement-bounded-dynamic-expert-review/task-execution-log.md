@@ -70,15 +70,25 @@
 - `git diff --check`：整改后 exit 0；提交前再跑一次。
 - branch/worktree：`feature/228-requirement-bounded-dynamic-expert-review-docs` / `/tmp/ai-sdlc-wi228-requirement-expert`。
 
-#### 2.7 对抗评审 Round 2
+#### 2.7 对抗评审 Round 2 与首个 PR head
 
 - 绑定哈希：`spec=E479596E...E0826F`、`plan=6E57887A...CD3B4`、`tasks=F656BDEB...808B`、`log=1C308093...B13B`。
 - 产品/ROI 身份：`PRODUCT PASS`，Critical 0、Important 0；唯一 Minor 是把 T31 的“只写回执摘要”改为“写入可复核回放证据”，已按原有验收边界修正。
 - 架构/代码纯洁身份：`ARCHITECTURE PASS`，Critical 0、Important 0；实现期须保持 canonical `role_id` 一一对应，并以同一打开句柄完成普通文件、大小和内容校验，不新增机制或 formal 负担。
 - 措辞修正与评审证据落盘前的身份重绑结果：`PRODUCT PASS0`、`ARCHITECTURE PASS0`；Critical 0、Important 0。
-- 两个身份已经就唯一整改后的同一组正式内容达成一致；最终只做证据追加后的哈希重绑，不再开放新的实质整改轮次。
+- 首个 PR head `fa8813928f7990bd6bfce4033059f9f7ae18bfb4` 的 whitespace-normalized 内容哈希为：`spec=62583B4E...42004`、`plan=E54FD98C...FC378`、`tasks=4C0B1743...4C3EA`、`log=CDC214F3...A9AE`；两个身份分别返回 `PRODUCT PASS0 FINAL-WHITESPACE` 与 `ARCHITECTURE PASS0 FINAL-WHITESPACE`。
+- 两个身份已就唯一对抗整改达成一致；后续 required PR gate 只能补齐 Codex 指出的可执行合同，不重新开放对抗方案空间。最终实施准入以 PR conversation 中同时绑定 exact commit SHA 与两位原身份回执的外部 receipt 为准，避免把自指的当前日志哈希伪装成不可变证明。
 
-#### 2.8 批次结论
+#### 2.8 Codex exact-head required review
 
-- T11 已完成；T12 的 formal 内容、唯一整改、双身份一致通过、真值同步与本地验证均已完成，等待提交、exact-head PR review/checks 与合并。
+- PR：`#206`；reviewed commit：`fa8813928f7990bd6bfce4033059f9f7ae18bfb4`；Codex 于 2026-09-05T09:38:08Z 完成 review。
+- P1：评审后修订要求 execution，却没有冻结 `requirement start --review-result-file` 公共接口与测试。
+- P1：日志只显示早期内容哈希，必须让两位专家把最终判断绑定到不可变 exact head/tree，并在 PR 外部 receipt 归档。
+- P2：现有 CLI 在 core freeze validation 前调用 writer adapter；必须冻结纯读取 preflight → adapter → 最终复核 → write 的顺序，并以整树 no-mutation 测试覆盖所有 rejected execution。
+- 处理边界：只修订 formal 命令/顺序/验证合同；不写产品代码、不增加状态、文件、依赖或预算。修改后由原 PRODUCT/ARCHITECTURE 身份核对同一 staged tree，通过后提交，并在 PR comment 记录 exact commit + tree + 两份 PASS0；随后只请求一次 Codex re-review。
+- 原身份对首版补漏哈希 `spec=D087A549...FC562`、`plan=9E09D620...937DA`、`tasks=D48FE0DE...9FA46`、`log=9982C09F...FEEEE` 聚焦复审时一致发现：不能把 actionable finding 套入 start 的拒绝矩阵，否则真正发现问题的 round 1 无法驱动 round 2。最终合同拆为共享安全/身份/completed preflight，start 接受 actionable finding 修订，只有 freeze 要求 clean；该修正不新增状态或接口。
+
+#### 2.9 批次结论
+
+- T11 已完成；T12 的初始 formal、唯一对抗整改、真值同步与本地验证已完成。首个 exact-head Codex review 给出三项合同补漏，当前按 required PR gate 聚焦修订，尚未取得新 head 的最终准入。
 - 当前 `execution_started=false`；没有实现代码或实现授权消费。

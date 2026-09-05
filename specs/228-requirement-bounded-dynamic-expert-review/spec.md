@@ -98,9 +98,9 @@
 - **FR-228-003**：角色选择必须始终产生一个 Requirement 主角色；只有明确风险信号存在时增加至多一个不重复 cross-risk 角色，并返回选择理由。
 - **FR-228-004**：风险映射必须是小型、确定性、可测试的 heuristic 白名单；使用 NFKC + casefold、英文 token 边界和中文完整短语；多信号只按固定优先级选择一个，不宣称风险覆盖，不做评分、搜索、学习或 provider/model 路由。
 - **FR-228-005**：review 命令必须只读；调用前后不得新增或修改 Loop artifact、指针、源码、Git index 或工作树文件。
-- **FR-228-006**：新合同的 `freeze` 必须消费临时 `RequirementReviewExecution`，在任何写入前重建 current projection，并校验 digest/round、角色集合完整且唯一、全部执行成功、无 `blocker/required` finding；缺失、失败、格式错误或漂移均 fail closed。
+- **FR-228-006**：新合同的 `freeze` 必须消费临时 `RequirementReviewExecution`；CLI 须先定位项目并通过纯读取 preflight，重建 current projection，校验 digest/round、角色集合完整且唯一、全部执行成功、无 `blocker/required` finding，只有通过后才可调用 writer adapter；最终 requirement 写入前必须再次校验。缺失、失败、格式错误或漂移均 fail closed，且被拒绝时整个工作树不得变化。
 - **FR-228-007**：原 `freeze` writer 和用户 close authority 保持唯一；reviewer 不能写需求、推进状态或调用 close。
-- **FR-228-008**：同一 loop 的评审后实质版本必须使用现有 `LoopRound` 记录，最多两轮；`needs_user` 阶段的正常澄清和幂等重跑不增加轮次，只有绑定当前 execution 的修订可进入 round 2，第三轮返回 `needs_user`/No-Go。
+- **FR-228-008**：同一 loop 的评审后实质版本必须使用现有 `LoopRound` 记录，最多两轮；`needs_user` 阶段的正常澄清和幂等重跑不增加轮次；`needs_review` 后须通过现有 `requirement start --loop-id <id> ... --review-result-file <path>` 显式携带当前 completed execution，只有该路径可进入 round 2。`start` 允许该 execution 含 `blocker/required` finding，因为它们正是修订依据；第三轮返回 `needs_user`/No-Go。missing、malformed、stale、failed、角色不完整/重复/未知的执行文件必须在 writer adapter 之前拒绝。
 - **FR-228-009**：实现不得新增持久化 review/finding/pass artifact、外部依赖、workflow、required check、网络 API 或全局配置。临时 execution 文件必须为普通非 symlink 文件并设大小上限，消费后不由框架复制或保留。
 - **FR-228-010**：普通输出与 JSON 输出都必须明确显示 canonical projection、角色上限、当前摘要、execution schema、失败原因和下一步；共享 pipeline rule 与用户文档必须给出 review→独立只读角色→execution→必要时修订→freeze 的最短路径。
 - **FR-228-011**：新建 requirement 默认 `review_required=true`；旧 intake 缺字段时兼容为 `false`，未关闭旧 loop 可继续 `freeze --yes` 并收到 legacy warning，已关闭旧 loop 继续无摘要幂等返回。不得批量迁移旧 artifact。
@@ -143,7 +143,7 @@
 
 - **SC-228-001**：无风险需求返回 1 个角色；安全/权限或数据/兼容需求返回 2 个角色；任何输入都不超过 2 个。
 - **SC-228-002**：review 命令前后 tracked/untracked 文件集合与内容一致，且不写任何 review artifact；临时 execution 由宿主产生，框架不复制。
-- **SC-228-003**：只提供 digest、不完整角色、执行失败、actionable finding、输入或 round 漂移均不能 freeze；当前完整 clean execution + `--yes` 才能关闭。
+- **SC-228-003**：只提供 digest、missing/malformed/stale/failed/incomplete/duplicate/unknown role、输入或 round 漂移均不能 start 修订或 freeze；当前完整 completed execution（可含 actionable finding）可以驱动 round 2 修订，只有当前 clean execution + `--yes` 才能 freeze。每个被拒绝的 execution 用整个工作树文件集合与逐文件内容哈希证明调用前后完全不变，尤其不得先刷新 adapter metadata。
 - **SC-228-004**：`needs_user` 澄清留在 round 1；第一轮 execution 后修订进入 round 2；幂等重跑不增加；第三轮进入人工决策；freeze 关闭实际 current round。
 - **SC-228-005**：无验收标准、非法 loop id、损坏 artifact、新合同重复 freeze、legacy open/closed freeze 和显式用户确认行为均通过回归。
 - **SC-228-006**：`src/ai_sdlc/**` gross additions 不超过 600 行、产品源码不越过 allowlist、不新增依赖/状态机/持久化 review artifact/workflow，constraints 与全量测试通过。

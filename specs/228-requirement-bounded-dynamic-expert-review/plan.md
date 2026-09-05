@@ -37,12 +37,14 @@ related_plan: "docs/FRAMEWORK_ROADMAP.zh-CN.md"
 
 ```text
 ai-sdlc loop requirement review --loop-id <id> [--json]
+ai-sdlc loop requirement start --loop-id <id> [--idea <text> | --input-file <path>] [--acceptance <criterion>] --review-result-file <path>
 ai-sdlc loop requirement freeze --loop-id <id> --review-result-file <path> --yes
 ```
 
 - `review` 是纯读取命令，不调用 writer adapter，不落盘；输出包含 canonical projection、摘要、当前轮、风险信号、角色、execution schema 和宿主下一步。
 - active agent 为每个必需角色启动独立只读上下文，并生成一个大小受限的普通非 symlink 临时 execution 文件。
-- `freeze` 在任何写入前重建同一输入，要求 execution 的 digest/round 与当前值一致、角色集合精确、全部 completed 且没有 `blocker/required` finding。
+- `start --review-result-file` 是 `needs_review` 后唯一的实质修订入口；`needs_user` 澄清及首次 start 不要求该参数。当前、角色完整唯一且全部 completed 的 execution 可以含 `blocker/required` finding 并驱动修订；missing、malformed、stale、failed 或角色无效的 execution 不得推进轮次或调用 writer adapter。
+- 新合同 `freeze` 先定位 root，再用纯读取 preflight 重建同一输入并校验 execution；只有 preflight 通过才调用 writer adapter，随后在最终 requirement 写入前重校验 digest/round。缺失、malformed、stale、failed、角色不完整或含 actionable finding 的 execution 必须在任何 adapter/project 写入前拒绝。
 - 新 loop 强制新合同；legacy open/closed loop 保持旧 freeze 兼容并明确提示，不批量迁移。
 
 ### 4.2 输入摘要
@@ -76,8 +78,12 @@ schema version + loop id + loop type + current round
 
 - 新 loop 创建 `review_required=true`；旧 artifact 缺字段时为 false。
 - 首次 idea 及 `needs_user` 阶段补 acceptance/澄清均留在 round 1；幂等输入不增轮。
-- `needs_review` 后修改必须同时提供当前 completed execution；若 canonical 内容变化且当前为 round 1，append 现有 `LoopRound` 形成 round 2。failed/缺失 execution 不能驱动修订。
+- `needs_review` 后修改必须通过 `requirement start --loop-id <id> ... --review-result-file <path>` 同时提供当前 completed execution；若 canonical 内容变化且当前为 round 1，append 现有 `LoopRound` 形成 round 2。failed/缺失 execution 在 writer adapter 前拒绝，不能驱动修订或产生任何项目文件变化。
 - round 2 后任何基于评审的第三个实质版本返回 `needs_user` 且不写 round 3；freeze 关闭实际 `current_round`，不能强制回写 1。
+
+### 4.6 写入顺序与无副作用拒绝
+
+execution-bearing `start` 与新合同 `freeze` 共用 Requirement 专属纯读取 preflight，但不新建持久状态或通用事务层。调用顺序冻结为：定位 root → 以同一打开句柄校验普通文件/非 symlink/大小/内容并验证 current projection → 若可写才运行现有 writer adapter → 最终 writer 立即重建 projection 并复核 digest/round → 落盘。preflight 失败时不得调用 adapter。测试在命令前后对项目内 tracked/untracked 文件集合和每个文件内容哈希做全量比较；missing、malformed、stale、failed、角色缺失/重复/未知均须对 start/freeze 在 adapter 前 exit 1 且全树无变化。actionable finding 对 start 是有效修订依据，对 freeze 才是同样无副作用的拒绝条件。
 
 ## 5. 目标源码结构与预算
 
@@ -111,7 +117,7 @@ USER_GUIDE.zh-CN.md                          # 最短迁移与使用路径
 
 **目标**：先用红灯测试固定瞬时 input/execution、role cap、digest drift、legacy compatibility 与 round cap，再实现最小代码。
 **产物**：冻结文件集内的 Python、测试与用户文档。
-**验证**：定向 unit/integration、no-write 快照、execution 负向矩阵、legacy/new freeze、现有 requirement 回归。
+**验证**：定向 unit/integration、review 与 rejected execution 的整树 no-write 快照、execution 负向矩阵、execution-bearing start、legacy/new freeze、现有 requirement 回归。
 **回退**：整体 revert implementation PR；无 schema migration 或遗留 review artifact。
 
 ### Phase 2：真实回放与 Go/No-Go
@@ -134,9 +140,9 @@ USER_GUIDE.zh-CN.md                          # 最短迁移与使用路径
 |---|---|---|
 | 始终一个 primary、至多一个 cross-risk | unit 参数化 | 三类真实回放 |
 | review 全程只读 | 文件树/hash 前后快照 | Git status + 隔离项目检查 |
-| execution 确实完整 | 缺失/失败/角色/actionable finding 负向矩阵 | 盲测原始输出 |
+| execution 确实完整且先于 adapter 校验 | 共享无效矩阵 + freeze-only actionable 拒绝 + 整树 hash | 盲测原始输出 |
 | 输入变化使旧 execution 失效 | core + CLI integration | 真实回放 stale freeze |
-| 两轮上限与澄清幂等 | requirement loop unit | needs_user 澄清 + round 1→2→拒绝 3 |
+| 两轮上限与澄清幂等 | requirement loop unit + `start --review-result-file` CLI | needs_user 澄清 + round 1→2→拒绝 3 |
 | 原 freeze writer 唯一关闭 | 现有回归 + 新 CLI 测试 | artifact 终态检查 |
 | 新旧兼容 | legacy open/closed/new 参数化测试 | 旧 fixture + 新隔离项目 |
 | 跨平台/打包可用 | full suite + required checks | source/wheel smoke（若触发发布） |
