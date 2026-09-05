@@ -87,6 +87,9 @@
 - P2：现有 CLI 在 core freeze validation 前调用 writer adapter；必须冻结纯读取 preflight → adapter → 最终复核 → write 的顺序，并以整树 no-mutation 测试覆盖所有 rejected execution。
 - 处理边界：只修订 formal 命令/顺序/验证合同；不写产品代码、不增加状态、文件、依赖或预算。修改后由原 PRODUCT/ARCHITECTURE 身份核对同一 staged tree，通过后提交，并在 PR comment 记录 exact commit + tree + 两份 PASS0；随后只请求一次 Codex re-review。
 - 原身份对首版补漏哈希 `spec=D087A549...FC562`、`plan=9E09D620...937DA`、`tasks=D48FE0DE...9FA46`、`log=9982C09F...FEEEE` 聚焦复审时一致发现：不能把 actionable finding 套入 start 的拒绝矩阵，否则真正发现问题的 round 1 无法驱动 round 2。最终合同拆为共享安全/身份/completed preflight，start 接受 actionable finding 修订，只有 freeze 要求 clean；该修正不新增状态或接口。
+- 新 head `21ce255ec07368881cbd25a334966d93bb073724` / tree `b6a3737bc2d833873e07c94ed2d4f8b708fe8b01` 已取得 `PRODUCT EXACT-HEAD PASS0` 与 `ARCHITECTURE EXACT-HEAD PASS0`，并在 PR conversation 归档最小 receipt；Codex re-review 于 2026-09-05T10:10:49Z 仍发现两项可操作合同歧义。
+- P1：round 2 后若持久化 `needs_user`，后续 start 可能借免 execution 澄清路径覆盖 round 2。修正为现有 command `blocked`，不调用 adapter、不写 status/intake/round，重复实质修改仍 blocked；只保留对现有 round 2 重新 review 后 freeze 的路径。
+- P2：review role 缠绕了展示 `name` 与 execution `role_id`。修正为每个返回角色直接包含稳定 canonical `role_id`，execution validator 只按该字段核对精确唯一集合；不新增角色实体、registry 或状态。
 
 #### 2.9 批次结论
 

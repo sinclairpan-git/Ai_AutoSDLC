@@ -12,15 +12,15 @@ working_set_snapshot:
   - specs/228-requirement-bounded-dynamic-expert-review/tasks.md
   - specs/228-requirement-bounded-dynamic-expert-review/spec.md
   context_summary: 'Goal: 完成 WI228 formal PR #206 并在合并后进入唯一 implementation PR | State:
-    Codex 对 fa881392 提出的 revision CLI、exact-head expert binding、adapter-before-preflight
-    三项 finding 已在 formal 中聚焦修正；PRODUCT/ARCHITECTURE PR-GATE PASS0；最终 truth snapshot
-    7e21c9da，manifest validation 与回归通过；尚无产品实现 | Next: 暂存并写出不可变 tree；提交 focused formal
-    fix；两位原专家绑定 exact commit/tree；推送并在 PR comment 归档 receipt；回复/解决旧 threads；仅请求一次
-    Codex re-review；全绿后合并与 fresh-main 验收'
+    Codex 对 21ce255e 的 re-review 提出的 round-cap needs_user 绕过与缺 canonical role_id 两项
+    finding 已聚焦修正；PRODUCT/ARCHITECTURE SECOND-GATE PASS0；最终 truth snapshot b9209e50，manifest
+    validation 与回归通过；尚无产品实现 | Next: 暂存并写出不可变 tree；提交第二次 focused formal fix；两位原专家绑定
+    exact commit/tree；推送并归档最小 receipt；回复/解决两条新 threads；请求新 head Codex review；全绿后合并与
+    fresh-main 验收'
 current_branch: feature/228-requirement-bounded-dynamic-expert-review-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-09-05T10:03:12+00:00'
+timestamp: '2026-09-05T10:22:16+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-09-05T08:59:51+00:00'
 checkpoint_fingerprint: deebc2aad162f29c02d9a3b9d08a6fa0c9656e3d44b6cddeb66ad0cb8785a661

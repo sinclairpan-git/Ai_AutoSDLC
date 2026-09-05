@@ -19,7 +19,7 @@
 - 新增一个 Requirement 命名空间下的只读 review 输入入口；输出当前轮、canonical requirement projection、输入摘要、风险信号、一个阶段主角色和至多一个交叉风险角色。
 - active agent 必须按返回角色在独立只读上下文中执行评审，并生成一个临时 `RequirementReviewExecution` 文件；finding 交回原 requirement writer 修订，该文件不进入 Loop artifact 或 Git。
 - 新 loop 以现有 `RequirementIntake.review_required=true` 标记新合同；旧 artifact 缺字段时按 `false` 读取，继续原 freeze 行为并明确提示 legacy 路径，不做批量迁移。
-- review 前处于 `needs_user` 的正常澄清不消耗轮次；`needs_review` 后只有携带当前 completed review execution 的实质修订才能从 round 1 进入 round 2。第三轮进入 `needs_user`/No-Go。
+- 只有 round 1 初始 `needs_user` 的正常澄清不消耗轮次；`needs_review` 后只有携带当前 completed review execution 的实质修订才能从 round 1 进入 round 2。round 2 后第三个实质版本返回现有 command `blocked`，不持久化 `needs_user`、新 intake 或 round 3，因而不能伪装成免 execution 的澄清。
 - freeze 必须同时校验当前输入摘要、完整角色集合、执行成功和无 `blocker/required` finding；摘要本身不能冒充“评审已通过”。
 - 用路由合同测试与三个盲测价值回放分别验证机制和 ROI；至少包含一个无预埋缺口的负向对照。
 
@@ -77,7 +77,7 @@
 **验收场景**：
 
 1. **Given** round 1 已产生 review 摘要，**When** writer 形成 round 2，**Then** 旧摘要不能关闭 round 2。
-2. **Given** round 2 已存在，**When** 再提交实质不同输入，**Then** 状态进入 `needs_user`/No-Go，不能生成 round 3。
+2. **Given** round 2 已存在，**When** 再提交实质不同输入，**Then** 命令返回 `blocked`/No-Go，已持久化的 round-2 intake/status 保持不变，不能生成 round 3 或借 `needs_user` 澄清路径覆盖 round 2。
 3. **Given** 相同输入被幂等重跑，**When** 比较轮次，**Then** 不增加 `LoopRound`。
 
 ### 用户故事 US-228-4：用盲测而非预设 finding 证明价值（P0）
@@ -95,12 +95,12 @@
 
 - **FR-228-001**：必须新增 Requirement 专属只读 review 输入入口；不得新建顶级 review 平台或通用五阶段状态机。
 - **FR-228-002**：review 输入必须绑定 loop id、当前 round 和规范化后的 `RequirementIntake` 实质内容，并把同一 canonical projection 直接返回给 reviewer；artifact 路径只作信息引用，不能成为摘要外的第二内容源。
-- **FR-228-003**：角色选择必须始终产生一个 Requirement 主角色；只有明确风险信号存在时增加至多一个不重复 cross-risk 角色，并返回选择理由。
+- **FR-228-003**：角色选择必须始终产生一个 Requirement 主角色；只有明确风险信号存在时增加至多一个不重复 cross-risk 角色，并返回选择理由。每个 `RequirementReviewRole` 必须直接带稳定 canonical `role_id`；execution 只能用该字段匹配精确唯一角色集合，不能从展示名推导。
 - **FR-228-004**：风险映射必须是小型、确定性、可测试的 heuristic 白名单；使用 NFKC + casefold、英文 token 边界和中文完整短语；多信号只按固定优先级选择一个，不宣称风险覆盖，不做评分、搜索、学习或 provider/model 路由。
 - **FR-228-005**：review 命令必须只读；调用前后不得新增或修改 Loop artifact、指针、源码、Git index 或工作树文件。
 - **FR-228-006**：新合同的 `freeze` 必须消费临时 `RequirementReviewExecution`；CLI 须先定位项目并通过纯读取 preflight，重建 current projection，校验 digest/round、角色集合完整且唯一、全部执行成功、无 `blocker/required` finding，只有通过后才可调用 writer adapter；最终 requirement 写入前必须再次校验。缺失、失败、格式错误或漂移均 fail closed，且被拒绝时整个工作树不得变化。
 - **FR-228-007**：原 `freeze` writer 和用户 close authority 保持唯一；reviewer 不能写需求、推进状态或调用 close。
-- **FR-228-008**：同一 loop 的评审后实质版本必须使用现有 `LoopRound` 记录，最多两轮；`needs_user` 阶段的正常澄清和幂等重跑不增加轮次；`needs_review` 后须通过现有 `requirement start --loop-id <id> ... --review-result-file <path>` 显式携带当前 completed execution，只有该路径可进入 round 2。`start` 允许该 execution 含 `blocker/required` finding，因为它们正是修订依据；第三轮返回 `needs_user`/No-Go。missing、malformed、stale、failed、角色不完整/重复/未知的执行文件必须在 writer adapter 之前拒绝。
+- **FR-228-008**：同一 loop 的评审后实质版本必须使用现有 `LoopRound` 记录，最多两轮；只有 round 1 且 durable status 为初始 `needs_user` 的正常澄清和幂等重跑不增加轮次；`needs_review` 后须通过现有 `requirement start --loop-id <id> ... --review-result-file <path>` 显式携带当前 completed execution，只有该路径可进入 round 2。`start` 允许该 execution 含 `blocker/required` finding，因为它们正是修订依据。round 2 后第三个实质版本返回现有 `RequirementCommandStatus.BLOCKED`，不得持久化 `needs_user`、替换 intake/status 或创建 round 3。missing、malformed、stale、failed、角色不完整/重复/未知的执行文件必须在 writer adapter 之前拒绝。
 - **FR-228-009**：实现不得新增持久化 review/finding/pass artifact、外部依赖、workflow、required check、网络 API 或全局配置。临时 execution 文件必须为普通非 symlink 文件并设大小上限，消费后不由框架复制或保留。
 - **FR-228-010**：普通输出与 JSON 输出都必须明确显示 canonical projection、角色上限、当前摘要、execution schema、失败原因和下一步；共享 pipeline rule 与用户文档必须给出 review→独立只读角色→execution→必要时修订→freeze 的最短路径。
 - **FR-228-011**：新建 requirement 默认 `review_required=true`；旧 intake 缺字段时兼容为 `false`，未关闭旧 loop 可继续 `freeze --yes` 并收到 legacy warning，已关闭旧 loop 继续无摘要幂等返回。不得批量迁移旧 artifact。
@@ -109,7 +109,7 @@
 ## 5. 关键实体
 
 - **RequirementReviewInput（瞬时返回值）**：`loop_id`、`round_number`、`input_digest`、canonical `requirement` projection、信息性 `artifact_paths`、`risk_signals`、`roles`；不落盘，不含 close verdict。
-- **RequirementReviewRole（瞬时返回值）**：`name`、`focus`、`reason`、`kind=primary|cross-risk`；列表长度为 1–2。
+- **RequirementReviewRole（瞬时返回值）**：稳定 canonical `role_id`、展示 `name`、`focus`、`reason`、`kind=primary|cross-risk`；列表长度为 1–2。`role_id` 直接出现在 review JSON/schema 中，与 execution 一一对应。
 - **RequirementReviewExecution（临时调用输入）**：绑定 digest/round，且为每个必需 role 提供 `completed|failed` 与结构化 findings；只作为本次 start/freeze 的输入，不成为持久 authority。
 - **LoopRun / LoopRound（复用）**：保存原 requirement 的最多两个实质版本；不新增 review 状态。
 - **RequirementIntake / RequirementFreeze（复用并最小扩展）**：前者用默认兼容字段区分新旧合同；后者只记录最终 digest、实际角色和审查时间。它不是证书或可跨输入复用的授权。
@@ -141,10 +141,10 @@
 
 ## 8. 成功标准
 
-- **SC-228-001**：无风险需求返回 1 个角色；安全/权限或数据/兼容需求返回 2 个角色；任何输入都不超过 2 个。
+- **SC-228-001**：无风险需求返回 1 个角色；安全/权限或数据/兼容需求返回 2 个角色；任何输入都不超过 2 个；相同角色始终返回同一 canonical `role_id`，execution 不依赖展示名匹配。
 - **SC-228-002**：review 命令前后 tracked/untracked 文件集合与内容一致，且不写任何 review artifact；临时 execution 由宿主产生，框架不复制。
 - **SC-228-003**：只提供 digest、missing/malformed/stale/failed/incomplete/duplicate/unknown role、输入或 round 漂移均不能 start 修订或 freeze；当前完整 completed execution（可含 actionable finding）可以驱动 round 2 修订，只有当前 clean execution + `--yes` 才能 freeze。每个被拒绝的 execution 用整个工作树文件集合与逐文件内容哈希证明调用前后完全不变，尤其不得先刷新 adapter metadata。
-- **SC-228-004**：`needs_user` 澄清留在 round 1；第一轮 execution 后修订进入 round 2；幂等重跑不增加；第三轮进入人工决策；freeze 关闭实际 current round。
+- **SC-228-004**：仅初始 round-1 `needs_user` 澄清留在 round 1；第一轮 execution 后修订进入 round 2；幂等重跑不增加；第三个实质版本 command blocked 且不写任何 intake/status/round 变化，重复调用仍 blocked；freeze 关闭实际 current round。
 - **SC-228-005**：无验收标准、非法 loop id、损坏 artifact、新合同重复 freeze、legacy open/closed freeze 和显式用户确认行为均通过回归。
 - **SC-228-006**：`src/ai_sdlc/**` gross additions 不超过 600 行、产品源码不越过 allowlist、不新增依赖/状态机/持久化 review artifact/workflow，constraints 与全量测试通过。
 - **SC-228-007**：三次盲测价值回放均归档 baseline、专家原始输出、独立裁决、修订和终态；至少两个样例各有一个有效增量 finding，clean 对照无错误 actionable finding，三例合计错误 actionable finding 为 0；否则 runtime 候选不合并。

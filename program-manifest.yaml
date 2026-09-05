@@ -2114,10 +2114,10 @@ specs:
   path: specs/228-requirement-bounded-dynamic-expert-review
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-09-05T09:57:20Z'
+  generated_at: '2026-09-05T10:16:40Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: fa881392
+  repo_revision: 21ce255e
   authoring_hash: 274ec03fb239a6a1654089f49aaa483c961df20f147cea1c6421a82b8a05afe3
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
@@ -2160,7 +2160,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 7e21c9da5b0c2d6552bff895c825e1d7740821789024cb7c9606dbb18ccfa1ac
+  snapshot_hash: b9209e50e67d2c445a954232d486a9502fab835db74060162b2ca19fc7646e5f
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2194,8 +2194,8 @@ truth_snapshot:
     mapped_sources: 1190
     unmapped_sources: 0
     missing_sources: 8
-    phase_signal_count: 3858
-    deferred_signal_count: 6894
+    phase_signal_count: 3860
+    deferred_signal_count: 6897
     non_goal_signal_count: 405
     layer_totals:
       blueprint: 1
@@ -12387,8 +12387,8 @@ truth_snapshot:
       mapped: true
       exists: true
       mapping_ref: 228-requirement-bounded-dynamic-expert-review
-      phase_signal_count: 3
-      deferred_signal_count: 4
+      phase_signal_count: 5
+      deferred_signal_count: 7
       non_goal_signal_count: 0
     - path: specs/228-requirement-bounded-dynamic-expert-review/development-summary.md
       source_type: development_summary

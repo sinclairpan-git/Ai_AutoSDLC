@@ -60,26 +60,26 @@ schema version + loop id + loop type + current round
 
 ### 4.3 临时 execution 合同
 
-`RequirementReviewExecution` 绑定 `input_digest` 与 `round_number`，每个 selected role 恰有一个结果：`role_id`、`completed|failed`、结构化 findings。finding 只允许 `blocker|required|advisory`、位置、说明和建议。freeze 对失败、缺角色、重复角色、未知角色或 actionable finding 一律拒绝；`advisory` 不转为关闭 authority。临时文件不进入 Loop 目录、不写 history，`RequirementFreeze` 只记录最终 digest、实际角色和 review 时间。该合同是本地结构化流程证据，不是密码学身份、签名或远端 attestation。
+`RequirementReviewExecution` 绑定 `input_digest` 与 `round_number`，每个 selected role 恰有一个结果：review 输出直接提供的 canonical `role_id`、`completed|failed`、结构化 findings。validator 只按 `role_id` 比较精确唯一集合，不从 `name` 推导。finding 只允许 `blocker|required|advisory`、位置、说明和建议。freeze 对失败、缺角色、重复角色、未知角色或 actionable finding 一律拒绝；`advisory` 不转为关闭 authority。临时文件不进入 Loop 目录、不写 history，`RequirementFreeze` 只记录最终 digest、实际 role ids 和 review 时间。该合同是本地结构化流程证据，不是密码学身份、签名或远端 attestation。
 
 ### 4.4 角色路由
 
-- Primary：始终为 Requirement quality expert，关注目标、边界、验收可判定性和隐含假设。
+- Primary：始终为 Requirement quality expert，canonical `role_id=requirement-quality`，关注目标、边界、验收可判定性和隐含假设。
 - Cross-risk：只从小型有序白名单选择一个，初始族限定为：
-  1. security/privacy/authorization；
-  2. data integrity/migration/compatibility；
-  3. concurrency/reliability；
-  4. public API/integration；
-  5. frontend/accessibility。
+  1. `security-privacy-authorization`；
+  2. `data-integrity-migration-compatibility`；
+  3. `concurrency-reliability`；
+  4. `public-api-integration`；
+  5. `frontend-accessibility`。
 - 规范化冻结为 NFKC + casefold、英文 token 边界与中文完整短语；命中多个族时只取最高优先级，不评分、不学习、不路由 provider/model。
 - 该表只是“是否需要第二视角”的 heuristic，不证明风险已被完整识别；primary 仍审全部需求。无法识别时只返回 primary。
 
 ### 4.5 两轮、澄清与幂等
 
 - 新 loop 创建 `review_required=true`；旧 artifact 缺字段时为 false。
-- 首次 idea 及 `needs_user` 阶段补 acceptance/澄清均留在 round 1；幂等输入不增轮。
+- 首次 idea 及仅限 `current_round=1` 且 durable status 为初始 `needs_user` 时补 acceptance/澄清，均留在 round 1；幂等输入不增轮。
 - `needs_review` 后修改必须通过 `requirement start --loop-id <id> ... --review-result-file <path>` 同时提供当前 completed execution；若 canonical 内容变化且当前为 round 1，append 现有 `LoopRound` 形成 round 2。failed/缺失 execution 在 writer adapter 前拒绝，不能驱动修订或产生任何项目文件变化。
-- round 2 后任何基于评审的第三个实质版本返回 `needs_user` 且不写 round 3；freeze 关闭实际 `current_round`，不能强制回写 1。
+- round 2 后任何第三个实质版本返回现有 command status `blocked`，不调用 writer adapter，不持久化 `needs_user`，也不替换 round-2 intake/status 或写 round 3；重复提交仍以相同原因 blocked。当前 round 2 仍可在重新 review 后用 clean execution freeze；freeze 关闭实际 `current_round`，不能强制回写 1。
 
 ### 4.6 写入顺序与无副作用拒绝
 
@@ -138,11 +138,11 @@ USER_GUIDE.zh-CN.md                          # 最短迁移与使用路径
 
 | 关键路径 | 主验证 | 次验证 |
 |---|---|---|
-| 始终一个 primary、至多一个 cross-risk | unit 参数化 | 三类真实回放 |
+| 始终一个 primary、至多一个 cross-risk、stable role_id | unit 参数化 + execution 精确集合 | 三类真实回放 |
 | review 全程只读 | 文件树/hash 前后快照 | Git status + 隔离项目检查 |
 | execution 确实完整且先于 adapter 校验 | 共享无效矩阵 + freeze-only actionable 拒绝 + 整树 hash | 盲测原始输出 |
 | 输入变化使旧 execution 失效 | core + CLI integration | 真实回放 stale freeze |
-| 两轮上限与澄清幂等 | requirement loop unit + `start --review-result-file` CLI | needs_user 澄清 + round 1→2→拒绝 3 |
+| 两轮上限与澄清幂等 | requirement loop unit + `start --review-result-file` CLI | 初始 needs_user 澄清 + round 1→2→command blocked 且整树不变 |
 | 原 freeze writer 唯一关闭 | 现有回归 + 新 CLI 测试 | artifact 终态检查 |
 | 新旧兼容 | legacy open/closed/new 参数化测试 | 旧 fixture + 新隔离项目 |
 | 跨平台/打包可用 | full suite + required checks | source/wheel smoke（若触发发布） |
