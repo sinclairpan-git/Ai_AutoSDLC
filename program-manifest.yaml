@@ -2114,10 +2114,10 @@ specs:
   path: specs/228-requirement-bounded-dynamic-expert-review
   depends_on: []
 truth_snapshot:
-  generated_at: '2026-09-05T13:33:14Z'
+  generated_at: '2026-09-05T10:16:40Z'
   generated_by: ai-sdlc program truth sync
   generator_version: program_truth_snapshot_v2
-  repo_revision: efcea6e7
+  repo_revision: 21ce255e
   authoring_hash: 274ec03fb239a6a1654089f49aaa483c961df20f147cea1c6421a82b8a05afe3
   source_hashes:
     truth_check:specs/095-frontend-mainline-product-delivery-baseline: aea6dab61cd0cc1d3ef8bc6e7b95bd5f7a4bcb4b245fbd10c6c36aee5689505b
@@ -2160,7 +2160,7 @@ truth_snapshot:
     close_check:specs/121-agent-adapter-verified-host-ingress-truth-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/122-agent-adapter-verified-host-ingress-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
     close_check:specs/159-agent-adapter-canonical-consumption-proof-runtime-baseline: 30718682bfa252b51ee19c686a086d2d88034d5f143141b0a7db5185fde21155
-  snapshot_hash: 15965630e0d8a0dc4c5eb91756b1c377cc5d8ad6a981b38c0924f610bb7e594a
+  snapshot_hash: b9209e50e67d2c445a954232d486a9502fab835db74060162b2ca19fc7646e5f
   computed_capabilities:
   - capability_id: frontend-mainline-delivery
     closure_state: closed
@@ -2193,10 +2193,10 @@ truth_snapshot:
     total_sources: 1190
     mapped_sources: 1190
     unmapped_sources: 0
-    missing_sources: 7
+    missing_sources: 8
     phase_signal_count: 3860
-    deferred_signal_count: 6900
-    non_goal_signal_count: 406
+    deferred_signal_count: 6897
+    non_goal_signal_count: 405
     layer_totals:
       blueprint: 1
       spec: 226
@@ -2214,7 +2214,7 @@ truth_snapshot:
       plan: 226
       tasks: 226
       execution: 226
-      close: 219
+      close: 218
       design: 9
       requirements: 2
       defect: 3
@@ -12388,16 +12388,16 @@ truth_snapshot:
       exists: true
       mapping_ref: 228-requirement-bounded-dynamic-expert-review
       phase_signal_count: 5
-      deferred_signal_count: 9
-      non_goal_signal_count: 1
+      deferred_signal_count: 7
+      non_goal_signal_count: 0
     - path: specs/228-requirement-bounded-dynamic-expert-review/development-summary.md
       source_type: development_summary
       truth_layer: close
       mapped: true
-      exists: true
+      exists: false
       mapping_ref: 228-requirement-bounded-dynamic-expert-review
       phase_signal_count: 0
-      deferred_signal_count: 1
+      deferred_signal_count: 0
       non_goal_signal_count: 0
     - path: docs/FRAMEWORK_ROADMAP.zh-CN.md
       source_type: design_doc

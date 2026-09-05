@@ -24,7 +24,6 @@ from ai_sdlc.core.requirement_loop import (
     RequirementFreezeOptions,
     RequirementStartOptions,
     freeze_requirement_loop,
-    review_requirement_loop,
     start_requirement_loop,
 )
 
@@ -484,33 +483,11 @@ def _start_frozen_requirement(tmp_path: Path, work_item: Path) -> None:
             loop_id="req-demo-implementation-loop",
         )
     )
-    review_result = review_requirement_loop(tmp_path, "req-demo-implementation-loop")
-    assert review_result.review is not None
-    review = review_result.review
-    execution = tmp_path / "requirement-review-execution.json"
-    execution.write_text(
-        json.dumps(
-            {
-                "input_digest": review.input_digest,
-                "round_number": review.round_number,
-                "results": [
-                    {
-                        "role_id": role["role_id"],
-                        "status": "completed",
-                        "findings": [],
-                    }
-                    for role in review.roles
-                ],
-            }
-        ),
-        encoding="utf-8",
-    )
     freeze_requirement_loop(
         RequirementFreezeOptions(
             root=tmp_path,
             loop_id="req-demo-implementation-loop",
             yes=True,
-            review_result_file=execution.as_posix(),
         )
     )
 

@@ -11,14 +11,16 @@ working_set_snapshot:
   active_files:
   - specs/228-requirement-bounded-dynamic-expert-review/tasks.md
   - specs/228-requirement-bounded-dynamic-expert-review/spec.md
-  context_summary: 'Goal: 收口 WI228 Requirement Loop 有界动态专家评审并完成唯一 terminal PR | State:
-    terminal carrier 已按 close-check 最终 lifecycle 规则归档命名；产品/回放/全量验证不变；待 final truth
-    与 amended exact head | Next: final truth sync、amend commit、clean close-check；双专家
-    exact-head PASS0 后 push/open PR'
-current_branch: archive/228-requirement-bounded-dynamic-expert-review-terminal
+  context_summary: 'Goal: 完成 WI228 formal PR #206 并在合并后进入唯一 implementation PR | State:
+    Codex 对 21ce255e 的 re-review 提出的 round-cap needs_user 绕过与缺 canonical role_id 两项
+    finding 已聚焦修正；PRODUCT/ARCHITECTURE SECOND-GATE PASS0；最终 truth snapshot b9209e50，manifest
+    validation 与回归通过；尚无产品实现 | Next: 暂存并写出不可变 tree；提交第二次 focused formal fix；两位原专家绑定
+    exact commit/tree；推送并归档最小 receipt；回复/解决两条新 threads；请求新 head Codex review；全绿后合并与
+    fresh-main 验收'
+current_branch: feature/228-requirement-bounded-dynamic-expert-review-docs
 docs_baseline_ref: 6d2dc47fa57b589ecafaff9872a395684e535018
 docs_baseline_at: '2026-07-15T11:21:31+00:00'
-timestamp: '2026-09-05T13:30:50+00:00'
+timestamp: '2026-09-05T10:22:16+00:00'
 checkpoint_path: .ai-sdlc/state/checkpoint.yml
 checkpoint_last_updated: '2026-09-05T08:59:51+00:00'
 checkpoint_fingerprint: deebc2aad162f29c02d9a3b9d08a6fa0c9656e3d44b6cddeb66ad0cb8785a661

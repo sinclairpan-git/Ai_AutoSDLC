@@ -74,24 +74,15 @@ the requirement before moving into design-contract work:
 ```bash
 ai-sdlc loop requirement start --idea "Describe the requirement" --acceptance "How this will be accepted"
 ai-sdlc loop status --type requirement
-ai-sdlc loop requirement review --loop-id <loop-id> --json
-ai-sdlc loop requirement freeze --loop-id <loop-id> --review-result-file <temporary-execution.json> --yes
+ai-sdlc loop requirement freeze --yes
 ```
 
 `ai-sdlc loop requirement start` writes local requirement artifacts under
 `.ai-sdlc/loops/requirement/<loop-id>/`, including the requirement intake,
 plain-language clarification questions, and an acceptance checklist. It does not call any model service, does not contact a remote issue tracker, and does not modify application code. If no acceptance criterion is present, the loop remains
-in `needs_user` and cannot be frozen. For a new intake, `review` returns a
-digest-bound canonical projection, one primary role, and at most one risk role
-without writing project files. The host runs those roles in independent read-only
-contexts and writes one temporary execution JSON. `freeze --yes` consumes a
-current clean execution and records only its digest, role ids, and review time;
-the next loop is `design-contract`, not implementation. Legacy intakes created
-before this contract may still use `ai-sdlc loop requirement freeze --yes` and
-receive an explicit compatibility warning.
-
-If the execution contains `blocker` or `required` findings, revise once with
-`ai-sdlc loop requirement start --loop-id <loop-id> ... --review-result-file <temporary-execution.json>`, then review the new round before freezing.
+in `needs_user` and cannot be frozen. `freeze --yes` records explicit local
+confirmation in `requirement-freeze.json`; the next loop is `design-contract`,
+not implementation.
 
 ### Design Contract Loop
 

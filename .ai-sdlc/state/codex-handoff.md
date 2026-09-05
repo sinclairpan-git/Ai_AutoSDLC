@@ -1,27 +1,31 @@
 # Continuity Handoff
 
-- Updated: 2026-09-05T13:30:50+00:00
-- Reason: 修正 terminal branch lifecycle 最终 disposition
-- Goal: 收口 WI228 Requirement Loop 有界动态专家评审并完成唯一 terminal PR
-- State: terminal carrier 已按 close-check 最终 lifecycle 规则归档命名；产品/回放/全量验证不变；待 final truth 与 amended exact head
+- Updated: 2026-09-05T10:22:16+00:00
+- Reason: PR #206 第二次 required review findings 已修正并完成本地验证
+- Goal: 完成 WI228 formal PR #206 并在合并后进入唯一 implementation PR
+- State: Codex 对 21ce255e 的 re-review 提出的 round-cap needs_user 绕过与缺 canonical role_id 两项 finding 已聚焦修正；PRODUCT/ARCHITECTURE SECOND-GATE PASS0；最终 truth snapshot b9209e50，manifest validation 与回归通过；尚无产品实现
 - Stage: close
 - Work Item: 228-requirement-bounded-dynamic-expert-review
-- Branch: archive/228-requirement-bounded-dynamic-expert-review-terminal
+- Branch: feature/228-requirement-bounded-dynamic-expert-review-docs
 
 ## Changed Files
+- M program-manifest.yaml
+- M specs/228-requirement-bounded-dynamic-expert-review/plan.md
+- M specs/228-requirement-bounded-dynamic-expert-review/spec.md
 - M specs/228-requirement-bounded-dynamic-expert-review/task-execution-log.md
+- M specs/228-requirement-bounded-dynamic-expert-review/tasks.md
 
 ## Key Decisions
-- 使用 archive/228-requirement-bounded-dynamic-expert-review-terminal 作为唯一 PR carrier，合并后保留本地分支和 worktree
+- 第三实质版本用既有 command blocked 且不写 adapter/intake/status/round，不能转入免 execution 澄清；review role 直接返回 stable canonical role_id，execution 只按该字段匹配
 
 ## Commands / Tests
-- commit efcea6e7 内容验证通过；close-check 仅指出 merge-pending 非最终 disposition；manifest 1 passed
+- constraints no BLOCKERs；plan-check no drift；truth sync execute 1190/1190 snapshot b9209e50；program validate PASS；manifest regression 1 passed in 157.17s；git diff-check 待提交前复核
 
 ## Blockers / Risks
-- 无产品阻塞；需刷新 closure metadata 后生成最终 exact head
+- PR #206 需要新 exact head 的两位专家 commit/tree 绑定、Codex review 与当前 CI 全绿；Program Truth 仍为同步前既有16个 blockers
 
 ## Local PR Review
 - none
 
 ## Exact Next Steps
-- final truth sync、amend commit、clean close-check；双专家 exact-head PASS0 后 push/open PR
+- 暂存并写出不可变 tree；提交第二次 focused formal fix；两位原专家绑定 exact commit/tree；推送并归档最小 receipt；回复/解决两条新 threads；请求新 head Codex review；全绿后合并与 fresh-main 验收

@@ -20,19 +20,12 @@ from ai_sdlc.core.loop_models import (
     LoopType,
     utc_now_iso,
 )
-from ai_sdlc.core.requirement_review import (
-    RequirementReviewError,
-    RequirementReviewInput,
-    build_requirement_review,
-    validate_review_execution,
-)
 from ai_sdlc.utils.helpers import AI_SDLC_DIR
 
 CURRENT_REQUIREMENT_PATH = (
     Path(AI_SDLC_DIR) / "loops" / LoopType.REQUIREMENT.value / "current-requirement.json"
 )
 _SAFE_EXPLICIT_LOOP_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]*$")
-_LEGACY_REVIEW_WARNING = "Legacy requirement intake does not require a review execution."
 
 
 class RequirementSourceKind(StrEnum):
@@ -63,7 +56,6 @@ class RequirementIntake(LoopArtifactModel):
     summary: str
     clarification_questions: list[str] = Field(default_factory=list)
     acceptance_criteria: list[str] = Field(default_factory=list)
-    review_required: bool = False
 
     @field_validator("loop_id", "raw_text", "summary")
     @classmethod
@@ -83,9 +75,6 @@ class RequirementFreeze(LoopArtifactModel):
     intake_path: str
     acceptance_count: int = Field(ge=1)
     next_loop_type: LoopType = LoopType.DESIGN_CONTRACT
-    review_input_digest: str = ""
-    review_role_ids: list[str] = Field(default_factory=list)
-    reviewed_at: str = ""
 
     @field_validator("loop_id", "intake_path")
     @classmethod
@@ -138,8 +127,6 @@ class RequirementLoopCommandResult(BaseModel):
     next_action: str = ""
     artifacts: list[RequirementArtifactRef] = Field(default_factory=list)
     requirement: RequirementCommandSummary | None = None
-    review: RequirementReviewInput | None = None
-    warnings: list[str] = Field(default_factory=list)
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,7 +139,6 @@ class RequirementStartOptions:
     acceptance: tuple[str, ...] = ()
     work_item_id: str = ""
     loop_id: str = ""
-    review_result_file: str = ""
     dry_run: bool = False
 
 
@@ -164,8 +150,6 @@ class RequirementFreezeOptions:
     loop_id: str = ""
     yes: bool = False
     accepted_by: str = "local-user"
-    review_result_file: str = ""
-    dry_run: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -192,40 +176,6 @@ class _RequirementArtifacts:
         if include_freeze:
             refs.append(_artifact_ref(root, "requirement-freeze", self.freeze_path))
         return refs
-
-
-def review_requirement_loop(root: Path, loop_id: str = "") -> RequirementLoopCommandResult:
-    """Build the current review input without writing project state."""
-
-    root = root.resolve()
-    loop_path, blocker = _resolve_requirement_loop_run_path(root, loop_id)
-    if blocker:
-        return _review_blocked(loop_id, blocker)
-    try:
-        loop_run = _read_loop_run(loop_path)
-        artifacts = _requirement_artifacts(root, loop_run.loop_id)
-        intake = _read_intake(artifacts.intake_path)
-    except ValueError as exc:
-        return _review_blocked(loop_id, str(exc))
-    if intake.loop_id != loop_run.loop_id:
-        return _review_blocked(loop_run.loop_id, "Loop and intake ids differ.")
-    if loop_run.status != LoopStatus.NEEDS_REVIEW or not intake.acceptance_criteria:
-        return _review_blocked(
-            loop_run.loop_id,
-            "Requirement must reach needs_review before expert review.",
-        )
-    review = _current_review(root, loop_run, intake, artifacts)
-    return RequirementLoopCommandResult(
-        status=RequirementCommandStatus.READY,
-        result="Requirement review input ready.",
-        loop_id=loop_run.loop_id,
-        loop_status=loop_run.status,
-        next_action=(
-            "Run each returned role independently, then revise or freeze with "
-            "--review-result-file."
-        ),
-        review=review,
-    )
 
 
 def start_requirement_loop(
@@ -283,12 +233,6 @@ def start_requirement_loop(
             ),
             artifacts=planned_refs,
         )
-    existing_loop: LoopRun | None = None
-    if artifacts.loop_run_path.is_file():
-        try:
-            existing_loop = _read_loop_run(artifacts.loop_run_path)
-        except ValueError as exc:
-            return _review_blocked(loop_id, str(exc))
     source_text, source_kind, source_path, blocker = _read_requirement_source(
         options,
         root,
@@ -309,8 +253,7 @@ def start_requirement_loop(
 
     existing_acceptance = (
         tuple(existing_intake.acceptance_criteria)
-        if existing_intake is not None
-        and (not _has_explicit_source(options) or not options.acceptance)
+        if existing_intake is not None and not _has_explicit_source(options)
         else ()
     )
     acceptance = _clean_items((*existing_acceptance, *options.acceptance))
@@ -328,46 +271,7 @@ def start_requirement_loop(
         summary=summary,
         clarification_questions=questions,
         acceptance_criteria=acceptance,
-        review_required=(
-            existing_intake.review_required if existing_intake is not None else True
-        ),
     )
-    if existing_intake is not None and _same_requirement(existing_intake, intake):
-        assert existing_loop is not None
-        return RequirementLoopCommandResult(
-            status=(
-                RequirementCommandStatus.READY
-                if existing_loop.status == LoopStatus.NEEDS_REVIEW
-                else RequirementCommandStatus.NEEDS_USER
-            ),
-            result="Requirement input is unchanged.",
-            loop_id=loop_id,
-            loop_status=existing_loop.status,
-            next_action=existing_loop.next_action,
-        )
-    if existing_intake is not None and existing_intake.review_required:
-        assert existing_loop is not None
-        initial_clarification = (
-            existing_loop.current_round == 1
-            and existing_loop.status == LoopStatus.NEEDS_USER
-        )
-        if not initial_clarification:
-            if existing_loop.status != LoopStatus.NEEDS_REVIEW:
-                return _review_blocked(loop_id, "Requirement is not open for review.")
-            if existing_loop.current_round >= 2:
-                return _review_blocked(
-                    loop_id, "Requirement Loop permits only two substantive rounds."
-                )
-            try:
-                review = _current_review(root, existing_loop, existing_intake, artifacts)
-                validate_review_execution(
-                    root=root,
-                    path=options.review_result_file,
-                    review=review,
-                    require_clean=False,
-                )
-            except RequirementReviewError as exc:
-                return _review_blocked(loop_id, str(exc))
     if options.dry_run:
         return RequirementLoopCommandResult(
             status=RequirementCommandStatus.DRY_RUN,
@@ -397,35 +301,13 @@ def start_requirement_loop(
         artifacts.checklist_path,
         _render_acceptance_checklist(intake),
     )
-    if existing_loop is None:
-        loop_run = _build_loop_run(
-            intake=intake,
-            loop_status=loop_status,
-            next_action=next_action,
-            artifacts=artifacts,
-            root=root,
-        )
-    else:
-        if intake.review_required and existing_loop.status == LoopStatus.NEEDS_REVIEW:
-            existing_loop.current_round = 2
-            existing_loop.rounds.append(
-                LoopRound(
-                    round_number=2,
-                    input_artifacts=[intake.source_path or "inline-idea"],
-                    output_artifacts=list(existing_loop.rounds[-1].output_artifacts),
-                    command=["ai-sdlc", "loop", "requirement", "start"],
-                    status=loop_status,
-                    result="Requirement revised after review.",
-                    next_action=next_action,
-                )
-            )
-        else:
-            existing_loop.rounds[0].status = loop_status
-            existing_loop.rounds[0].next_action = next_action
-        existing_loop.status = loop_status
-        existing_loop.updated_at = utc_now_iso()
-        existing_loop.next_action = next_action
-        loop_run = existing_loop
+    loop_run = _build_loop_run(
+        intake=intake,
+        loop_status=loop_status,
+        next_action=next_action,
+        artifacts=artifacts,
+        root=root,
+    )
     store.write_json_artifact(artifacts.loop_run_path, loop_run)
     store.write_json_artifact(
         artifacts.pointer_path,
@@ -549,53 +431,25 @@ def freeze_requirement_loop(
             next_action=loop_run.next_action,
             artifacts=artifacts.refs(root, include_freeze=True),
             requirement=_command_requirement_summary(intake, frozen=True),
-            warnings=[] if intake.review_required else [_LEGACY_REVIEW_WARNING],
         )
 
-    review = None
-    execution = None
-    if intake.review_required:
-        try:
-            review = _current_review(root, loop_run, intake, artifacts)
-            execution = validate_review_execution(
-                root=root,
-                path=options.review_result_file,
-                review=review,
-                require_clean=True,
-            )
-        except RequirementReviewError as exc:
-            return _review_blocked(loop_run.loop_id, str(exc))
-    if options.dry_run:
-        return RequirementLoopCommandResult(
-            status=RequirementCommandStatus.DRY_RUN,
-            result="Requirement freeze preflight passed.",
-            loop_id=loop_run.loop_id,
-            dry_run=True,
-        )
     freeze = RequirementFreeze(
         loop_id=loop_run.loop_id,
         accepted_by=options.accepted_by.strip() or "local-user",
         intake_path=_repo_relative_path(root, artifacts.intake_path),
         acceptance_count=len(intake.acceptance_criteria),
-        review_input_digest=review.input_digest if review is not None else "",
-        review_role_ids=(
-            [item.role_id for item in execution.results] if execution is not None else []
-        ),
-        reviewed_at=utc_now_iso() if review is not None else "",
     )
     loop_run.status = LoopStatus.CLOSED
     loop_run.updated_at = utc_now_iso()
     loop_run.next_action = _design_contract_next_action(loop_run.loop_id)
-    current_round = next(
-        item for item in loop_run.rounds if item.round_number == loop_run.current_round
-    )
-    if current_round:
-        current_round.status = LoopStatus.CLOSED
-        current_round.output_artifacts = _append_unique(
-            current_round.output_artifacts,
+    loop_run.current_round = 1
+    if loop_run.rounds:
+        loop_run.rounds[0].status = LoopStatus.CLOSED
+        loop_run.rounds[0].output_artifacts = _append_unique(
+            loop_run.rounds[0].output_artifacts,
             _repo_relative_path(root, artifacts.freeze_path),
         )
-        current_round.next_action = loop_run.next_action
+        loop_run.rounds[0].next_action = loop_run.next_action
 
     store = LoopArtifactStore(root)
     store.write_json_artifact(artifacts.freeze_path, freeze)
@@ -615,7 +469,6 @@ def freeze_requirement_loop(
         next_action=loop_run.next_action,
         artifacts=artifacts.refs(root, include_freeze=True),
         requirement=_command_requirement_summary(intake, frozen=True),
-        warnings=[] if intake.review_required else [_LEGACY_REVIEW_WARNING],
     )
 
 
@@ -665,46 +518,6 @@ def _build_loop_run(
                 next_action=next_action,
             )
         ],
-        next_action=next_action,
-    )
-
-
-def _current_review(
-    root: Path,
-    loop_run: LoopRun,
-    intake: RequirementIntake,
-    artifacts: _RequirementArtifacts,
-) -> RequirementReviewInput:
-    return build_requirement_review(
-        loop_id=loop_run.loop_id,
-        round_number=loop_run.current_round,
-        intake=intake.model_dump(mode="json"),
-        artifact_paths=[item.path for item in artifacts.refs(root) if item.exists],
-    )
-
-
-def _same_requirement(left: RequirementIntake, right: RequirementIntake) -> bool:
-    ignored = {"created_at", "ai_sdlc_version", "created_by", "artifact_kind"}
-    return left.model_dump(mode="json", exclude=ignored) == right.model_dump(
-        mode="json", exclude=ignored
-    )
-
-
-def _review_blocked(loop_id: str, blocker: str) -> RequirementLoopCommandResult:
-    if blocker == "Requirement still has blocker or required findings.":
-        next_action = (
-            f"Revise with ai-sdlc loop requirement start --loop-id {loop_id} ... "
-            "--review-result-file <current-execution.json>."
-        )
-    elif blocker == "Requirement Loop permits only two substantive rounds.":
-        next_action = "Stop: the two-round substantive revision limit is reached."
-    else:
-        next_action = f"Run ai-sdlc loop requirement review --loop-id {loop_id or '<id>'}."
-    return RequirementLoopCommandResult(
-        status=RequirementCommandStatus.BLOCKED,
-        result="Requirement review contract rejected the command.",
-        loop_id=loop_id,
-        blocker=blocker,
         next_action=next_action,
     )
 
@@ -760,10 +573,8 @@ def _existing_intake_for_start(
     options: RequirementStartOptions,
     artifacts: _RequirementArtifacts,
 ) -> tuple[RequirementIntake | None, str]:
-    if not options.loop_id.strip():
+    if _has_explicit_source(options) or not options.loop_id.strip():
         return None, ""
-    if artifacts.intake_path.is_file() != artifacts.loop_run_path.is_file():
-        return None, "Requirement intake and loop-run artifacts must exist together."
     if not artifacts.intake_path.is_file():
         return None, ""
     try:
@@ -919,7 +730,7 @@ def _derive_clarification_questions(text: str, acceptance: list[str]) -> list[st
 
 def _next_action_for_requirement(loop_status: LoopStatus, loop_id: str) -> str:
     if loop_status == LoopStatus.NEEDS_REVIEW:
-        return f"Run ai-sdlc loop requirement review --loop-id {loop_id}."
+        return "Run ai-sdlc loop requirement freeze --yes."
     if loop_status == LoopStatus.NEEDS_USER:
         return (
             "Add acceptance criteria, then run ai-sdlc loop requirement start "
@@ -1003,6 +814,5 @@ __all__ = [
     "RequirementSourceKind",
     "RequirementStartOptions",
     "freeze_requirement_loop",
-    "review_requirement_loop",
     "start_requirement_loop",
 ]

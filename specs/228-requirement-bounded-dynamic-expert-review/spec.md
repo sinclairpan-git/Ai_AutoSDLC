@@ -2,7 +2,7 @@
 
 **功能编号**：`228-requirement-bounded-dynamic-expert-review`
 **创建日期**：2026-09-05
-**状态**：G3 implementation GO；三例盲测通过，待同一候选 head 双专家终审与 terminal PR
+**状态**：G1 formal/admission；实现须在双专家评审通过并归档后进入独立 implementation PR
 **真值基线**：`origin/main@71e4ff5098505d0c6321c9162c1b9b1647d155d1`
 **关联路线图**：`docs/FRAMEWORK_ROADMAP.zh-CN.md` P4 Phase A
 

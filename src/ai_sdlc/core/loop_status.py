@@ -2221,19 +2221,6 @@ def _guidance_for_requirement_loop(
             evidence=[*evidence, _repo_relative_path(root, loop_run_path.parent / "acceptance-checklist.md")],
         )
     if loop_run.status in {LoopStatus.NEEDS_REVIEW, LoopStatus.PASSED}:
-        if intake.review_required:
-            return LoopNextActionGuidance(
-                command=(
-                    "ai-sdlc loop requirement review "
-                    f"--loop-id {loop_run.loop_id}"
-                ),
-                reason="Build the digest-bound input before independent review.",
-                requires_model=True,
-                writes_artifacts=False,
-                writes_code=False,
-                safety=LoopNextActionSafety.MAY_CALL_LOCAL_REVIEW_AGENT,
-                evidence=evidence,
-            )
         return LoopNextActionGuidance(
             command="ai-sdlc loop requirement freeze --yes",
             reason=(
